@@ -14,7 +14,7 @@ public sealed partial class AppSmokeTests
 
     [Fact]
     [Trait("Surface", "ProjectStructure")]
-    public async Task Project_structure_process_run_output_SB012_INV_002_opens_project_processes_from_output_folder_node()
+    public async Task Project_structure_process_run_output_opens_project_processes_from_output_folder_node()
     {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "project-structure-run-output-sb012");

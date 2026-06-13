@@ -3,44 +3,51 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
     [Fact]
     public async Task Dispatch_candidate_hydration_occurs_only_after_durable_step_claim() {
-        var source = await ReadDispatchSourceAsync();
+        var dispatchSource = await ReadDispatchSourceAsync("ProcessRunAutomationDispatchService.Dispatch.cs");
+        var routeExecutionSource = await ReadDispatchSourceAsync("ProcessRunAutomationDispatchService.RouteExecution.cs");
 
-        var headerLoadIndex = FindRequired(source, "LoadDispatchCandidateHeadersAsync");
-        var claimIndex = FindRequired(source, "TryClaimStepDispatchAsync", headerLoadIndex);
-        var hydrationIndex = FindRequired(
-            source,
-            "LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId",
-            claimIndex);
+        var headerLoadIndex = FindRequired(dispatchSource, "LoadDispatchCandidateHeadersAsync");
+        var claimIndex = FindRequired(dispatchSource, "TryClaimStepDispatchAsync", headerLoadIndex);
+        var claimedRouteIndex = FindRequired(dispatchSource, "RunClaimedDispatchAsync(", claimIndex);
+        var hydrationIndex = FindRequired(routeExecutionSource, "CreateCandidateHydrationService().LoadRouteCandidateAsync");
+        var claimedStepIndex = FindRequired(routeExecutionSource, "execution.DispatchClaim.StepRunId", hydrationIndex);
 
         Assert.True(
-            headerLoadIndex < claimIndex && claimIndex < hydrationIndex,
+            headerLoadIndex < claimIndex && claimIndex < claimedRouteIndex,
             "Dispatch must load cheap candidate headers, durably claim a step, then hydrate the full candidate.");
+        Assert.True(
+            hydrationIndex < claimedStepIndex,
+            "Claimed dispatch route hydration must use the durable claimed step id.");
     }
 
     [Fact]
     public async Task Dispatch_claim_loss_is_checked_before_artifact_projection_and_completion_transition() {
         var source = await ReadDispatchSourceAsync();
+        var finalizerAdapterSource = await ReadDispatchSourceAsync("ProcessDispatchFinalizerAdapter.cs");
         var finalizerContextFactorySource = await ReadDispatchSourceAsync("ProcessRunAutomationDispatchService.FinalizerContextFactory.cs");
 
-        var executionIndex = FindRequired(source, "ExecuteUntilSettledAsync");
-        var claimLostGuardIndex = FindRequired(source, "dispatchHeartbeat.ThrowIfClaimLost();", executionIndex);
-        var artifactProjectionIndex = FindRequired(source, "FinalizeStepCompletionAsync", claimLostGuardIndex);
-        var directAgentContextIndex = FindRequired(source, "ProcessDispatchFinalizerContextFactory.ForDirectAgent", artifactProjectionIndex);
-        var transitionIndex = FindRequired(source, "TransitionStepWithClaimAsync", artifactProjectionIndex);
+        var executionIndex = FindRequired(source, "directAgentFacet.ExecuteUntilSettledAsync");
+        var claimLostGuardIndex = FindRequired(source, "DispatchHeartbeat?.ThrowIfClaimLost();", executionIndex);
+        var finalizerRouteIndex = FindRequired(source, "finalizerFacet.FinalizeDirectAgentCompletionAsync", claimLostGuardIndex);
+        var directAgentContextIndex = FindRequired(finalizerAdapterSource, "ProcessDispatchFinalizerContextFactory.ForDirectAgent");
+        var artifactProjectionIndex = FindRequired(finalizerAdapterSource, "finalizeStepCompletionAsync", directAgentContextIndex);
+        var transitionIndex = FindRequired(finalizerAdapterSource, "applyFinalizedStepTransitionAsync", artifactProjectionIndex);
         var directAgentFactoryIndex = FindRequired(finalizerContextFactorySource, "ForDirectAgent");
         var projectionFlagIndex = FindRequired(finalizerContextFactorySource, "ProjectExecutionArtifacts: true", directAgentFactoryIndex);
 
         Assert.True(
             executionIndex < claimLostGuardIndex &&
-            claimLostGuardIndex < artifactProjectionIndex &&
-            artifactProjectionIndex < directAgentContextIndex &&
-            artifactProjectionIndex < transitionIndex,
+            claimLostGuardIndex < finalizerRouteIndex,
             "Stale dispatch workers must stop before projecting artifacts or attempting completion transitions.");
+        Assert.True(
+            directAgentContextIndex < artifactProjectionIndex &&
+            artifactProjectionIndex < transitionIndex,
+            "Direct agent finalizer projection must occur before applying the claimed completion transition.");
         Assert.True(
             directAgentFactoryIndex < projectionFlagIndex,
             "Direct agent finalizer contexts must project execution artifacts.");
 
-        var transitionWindow = source.Substring(transitionIndex, Math.Min(900, source.Length - transitionIndex));
+        var transitionWindow = finalizerAdapterSource.Substring(transitionIndex, Math.Min(900, finalizerAdapterSource.Length - transitionIndex));
         Assert.Contains("dispatchClaim", transitionWindow, StringComparison.Ordinal);
     }
 
@@ -68,7 +75,7 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
     }
 
     private static Task<string> ReadDispatchSourceAsync()
-        => ReadDispatchSourceAsync("ProcessRunAutomationDispatchService.Dispatch.cs");
+        => ReadDispatchSourceAsync("ProcessDispatchRouteHandlers.cs");
 
     private static async Task<string> ReadDispatchSourceAsync(string fileName) {
         var repositoryRoot = FindRepositoryRoot();
@@ -104,7 +111,7 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
                 "CanDoItAll.Modules.Processes",
                 "Automation",
                 "Dispatch",
-                "ProcessRunAutomationDispatchService.Dispatch.cs");
+                "ProcessDispatchRouteHandlers.cs");
             if (File.Exists(candidatePath)) {
                 return directory.FullName;
             }

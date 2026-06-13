@@ -141,7 +141,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
     }
 
     [Fact]
-    public async Task ProjectStructureAgentApi_start_process_node_SB011_INV_001_creates_project_scoped_launch_plan_with_bridge_context()
+    public async Task ProjectStructureAgentApi_start_process_node_creates_project_scoped_launch_plan_with_bridge_context()
     {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
 
@@ -229,7 +229,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
     }
 
     [Fact]
-    public async Task ProjectStructureAgentApi_execute_process_node_SB012_INV_001_preserves_run_context_and_projects_output_folder()
+    public async Task ProjectStructureAgentApi_execute_process_node_preserves_run_context_and_projects_output_folder()
     {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
 

@@ -9,7 +9,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverBusinessAnalysisAlphaTests
 {
     [Fact]
-    public void Business_analysis_alpha_SB031_INV_001_verifies_supplied_deliverable_and_evidence_text_only()
+    public void Business_analysis_alpha_verifies_supplied_deliverable_and_evidence_text_only()
     {
         var verifier = new BusinessAnalysisAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -49,7 +49,7 @@ public sealed class ProcessDriverBusinessAnalysisAlphaTests
     }
 
     [Fact]
-    public void Business_analysis_alpha_SB032_INV_001_reports_missing_requirements_unsupported_assumptions_contradictions_and_evidence_gaps()
+    public void Business_analysis_alpha_reports_missing_requirements_unsupported_assumptions_contradictions_and_evidence_gaps()
     {
         var verifier = new BusinessAnalysisAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -77,7 +77,7 @@ public sealed class ProcessDriverBusinessAnalysisAlphaTests
     }
 
     [Fact]
-    public void Business_analysis_alpha_SB031_INV_002_reports_missing_supplied_metadata_without_raw_text_leakage()
+    public void Business_analysis_alpha_reports_missing_supplied_metadata_without_raw_text_leakage()
     {
         var verifier = new BusinessAnalysisAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -108,7 +108,7 @@ public sealed class ProcessDriverBusinessAnalysisAlphaTests
     }
 
     [Fact]
-    public void Business_analysis_alpha_SB031_INV_003_rejects_invalid_envelopes_and_business_record_mutation()
+    public void Business_analysis_alpha_rejects_invalid_envelopes_and_business_record_mutation()
     {
         var verifier = new BusinessAnalysisAlphaVerifier();
         var item = CreateCompleteDeliverableItem();
@@ -160,7 +160,7 @@ public sealed class ProcessDriverBusinessAnalysisAlphaTests
     }
 
     [Fact]
-    public void Business_analysis_alpha_SB031_INV_004_package_is_solution_bound_dependency_clean_and_record_mutation_free()
+    public void Business_analysis_alpha_package_is_solution_bound_dependency_clean_and_record_mutation_free()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");

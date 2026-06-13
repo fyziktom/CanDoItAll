@@ -128,7 +128,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return successfulReceipts.Any(receipt =>
         {
             var toolName = NormalizeToolToken(receipt.ToolName);
-            return toolName is "workspace_dotnet_build" or "workspace_dotnet_test" or "workspace_dotnet_run";
+            return toolName is
+                ToolContractCatalog.WorkspaceDotNetBuild or
+                ToolContractCatalog.WorkspaceDotNetTest or
+                ToolContractCatalog.WorkspaceDotNetRun;
         });
     }
 
@@ -145,9 +148,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             receipt.RequestSummary,
             receipt.WorkingDirectory,
             receipt.ExitSummary);
-        return inspectedText.Contains(".csproj", StringComparison.OrdinalIgnoreCase) ||
-               inspectedText.Contains(".slnx", StringComparison.OrdinalIgnoreCase) ||
-               inspectedText.Contains(".sln", StringComparison.OrdinalIgnoreCase);
+        return ProcessImplementationStackRules.ContainsProjectFileSignal(inspectedText);
     }
 
     private static bool CanSatisfyImplementationProofToolsWithCarriedProof(

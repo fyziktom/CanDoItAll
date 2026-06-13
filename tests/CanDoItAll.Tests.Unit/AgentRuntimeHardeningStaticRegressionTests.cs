@@ -187,12 +187,6 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
     [Fact]
     public void Dispatch_recovery_and_proof_stay_domain_neutral()
     {
-        var directiveSource = ReadRepositoryFile(
-            "src",
-            "CanDoItAll.Modules.Processes",
-            "Automation",
-            "Dispatch",
-            "ProcessRunAutomationDispatchService.RecoveryDirective.cs");
         var providerSource = ReadRepositoryFile(
             "src",
             "CanDoItAll.Modules.Processes",
@@ -205,18 +199,23 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
             "Automation",
             "Dispatch",
             "ProcessRunAutomationDispatchService.ImplementationProof.cs");
+        var softwareDeliveryDirectiveSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "Domain",
+            "SoftwareDelivery",
+            "ProcessRunAutomationDispatchService.RecoveryDirective.cs");
 
-        Assert.DoesNotContain("BuildWorkflowRecoveryFocusGuidance", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("BuildWorkflowRecoveryChecklist", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("BuildBlazorBuildRecoveryGuidance", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("WorkflowEngine", directiveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Components/Pages/Home.razor", directiveSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Workflow", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Blazor", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_dotnet", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Workflow", proofSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Blazor", proofSource, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_dotnet", proofSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSoftwareDeliveryEvidenceAdapter", proofSource, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet", softwareDeliveryDirectiveSource, StringComparison.Ordinal);
     }
 
     [Fact]

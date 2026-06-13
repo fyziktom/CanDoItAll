@@ -38,7 +38,7 @@ internal static class ProcessCriticalToolFailureRules
         ArgumentNullException.ThrowIfNull(context);
 
         var toolName = ProcessToolReceiptFacts.NormalizeToolToken(context.Receipt.ToolName);
-        if (!toolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal) ||
+        if (!ProcessImplementationStackRules.IsDotNetWorkspaceToolName(toolName) ||
             context.RequiredToolNames.Contains(toolName, StringComparer.Ordinal))
         {
             return false;

@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProcessStepRoleAssignmentEditorTests
 {
     [Fact]
-    public void Render_SB01_INV_003_exposes_accountable_responsibility_option()
+    public void Render_exposes_accountable_responsibility_option()
     {
         using var context = new TestContext();
         var roleId = Guid.NewGuid();

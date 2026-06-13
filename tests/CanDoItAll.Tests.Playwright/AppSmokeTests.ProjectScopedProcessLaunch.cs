@@ -23,7 +23,7 @@ public sealed partial class AppSmokeTests {
 
     [Fact]
     [Trait("Surface", "ProjectStructure")]
-    public async Task Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run() {
+    public async Task Project_structure_process_template_launch_launches_approved_template_from_structure_context_and_reads_back_run() {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-template-ui-live-e2e-runtime-readiness-sb02");
         ResetDirectory(artifactsDir);
@@ -351,7 +351,7 @@ public sealed partial class AppSmokeTests {
     }
 
     [Fact]
-    public async Task Project_scoped_process_workspace_SB010_INV_001_preserves_project_and_launch_plan_context() {
+    public async Task Project_scoped_process_workspace_preserves_project_and_launch_plan_context() {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "project-scoped-process-launch");
         ResetDirectory(artifactsDir);

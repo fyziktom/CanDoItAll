@@ -6,7 +6,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessAutomationReceiptObservationHelperTests
 {
     [Fact]
-    public void ResolveSuccessfulToolNames_SB08_INV_001_uses_process_snapshots_only()
+    public void ResolveSuccessfulToolNames_uses_process_snapshots_only()
     {
         var detail = CreateDetail(
         [
@@ -23,7 +23,7 @@ public sealed class ProcessAutomationReceiptObservationHelperTests
     }
 
     [Fact]
-    public void ResolveReceiptFamilies_SB08_INV_002_groups_receipts_by_normalized_family()
+    public void ResolveReceiptFamilies_groups_receipts_by_normalized_family()
     {
         var detail = CreateDetail(
         [
@@ -39,7 +39,7 @@ public sealed class ProcessAutomationReceiptObservationHelperTests
     }
 
     [Fact]
-    public void ResolveProviderMetadata_SB09_INV_001_reports_provider_metadata_for_successful_receipts_only()
+    public void ResolveProviderMetadata_reports_provider_metadata_for_successful_receipts_only()
     {
         var detail = CreateDetail(
         [

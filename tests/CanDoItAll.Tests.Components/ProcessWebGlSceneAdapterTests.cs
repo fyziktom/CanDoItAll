@@ -6,7 +6,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProcessWebGlSceneAdapterTests
 {
     [Fact]
-    public void Representative_templates_match_bundle_lock_and_reuse_stable_projected_ids()
+    public void Representative_templates_match_package_lock_and_reuse_stable_projected_ids()
     {
         var adapter = CreateAdapter();
 

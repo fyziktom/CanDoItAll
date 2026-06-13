@@ -157,7 +157,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
-    public async Task PowerShellRunScript_SB06_INV_001_fails_post_execution_audit_when_nonmutating_step_changes_product_root()
+    public async Task PowerShellRunScript_fails_post_execution_audit_when_nonmutating_step_changes_product_root()
     {
         if (!OperatingSystem.IsWindows())
         {

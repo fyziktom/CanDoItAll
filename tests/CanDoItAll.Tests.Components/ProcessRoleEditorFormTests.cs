@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProcessRoleEditorFormTests
 {
     [Fact]
-    public void Render_SB01_INV_001_preserves_template_executor_kind_options()
+    public void Render_preserves_template_executor_kind_options()
     {
         using var context = new TestContext();
         var role = new ProcessRoleEditorModel
@@ -47,7 +47,7 @@ public sealed class ProcessRoleEditorFormTests
     [InlineData("person-or-agent", "person-or-agent")]
     [InlineData("AI agent", "AI agent")]
     [InlineData("Workflow", "Workflow")]
-    public void NormalizeForSelection_SB01_INV_002_accepts_current_template_executor_vocabulary(
+    public void NormalizeForSelection_accepts_current_template_executor_vocabulary(
         string rawValue,
         string expectedSelection)
     {

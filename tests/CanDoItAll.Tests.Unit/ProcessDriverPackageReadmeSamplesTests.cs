@@ -13,7 +13,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverPackageReadmeSamplesTests
 {
     [Fact]
-    public void Process_driver_package_readmes_SB049_INV_001_all_alpha_samples_use_supplied_inmemory_payloads_only()
+    public void Process_driver_package_readmes_all_alpha_samples_use_supplied_inmemory_payloads_only()
     {
         var expectations = new[]
         {
@@ -62,7 +62,7 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
     }
 
     [Fact]
-    public void Process_driver_package_readmes_SB049_INV_002_observation_aggregation_sample_uses_existing_responses_only()
+    public void Process_driver_package_readmes_observation_aggregation_sample_uses_existing_responses_only()
     {
         var readme = ReadPackageReadme("CanDoItAll.Processes.Drivers.ObservationAggregation");
 
@@ -78,7 +78,7 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
     }
 
     [Fact]
-    public void Process_driver_package_readmes_SB042_INV_001_gateway_documents_typed_v1_migration_without_runtime_approval()
+    public void Process_driver_package_readmes_gateway_documents_typed_v1_migration_without_runtime_approval()
     {
         var readme = ReadPackageReadme("CanDoItAll.Processes.Drivers.VerificationGateway");
 
@@ -93,7 +93,7 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
     }
 
     [Fact]
-    public void Process_driver_package_readmes_SB040_INV_001_documents_verification_pack_manifest_without_registration_or_discovery()
+    public void Process_driver_package_readmes_documents_verification_pack_manifest_without_registration_or_discovery()
     {
         var readme = ReadPackageReadme("CanDoItAll.Processes.Drivers.VerificationGateway");
 
@@ -115,7 +115,7 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
     }
 
     [Fact]
-    public void Process_driver_package_readmes_SB043_SB044_INV_001_gateway_and_process_migration_docs_match_current_batch_orchestration_source()
+    public void Process_driver_package_readmes_gateway_and_process_migration_docs_match_current_batch_orchestration_source()
     {
         var gatewayReadme = ReadPackageReadme("CanDoItAll.Processes.Drivers.VerificationGateway");
         var processesReadme = ReadRepositoryFile("src", "CanDoItAll.Modules.Processes", "README.md");

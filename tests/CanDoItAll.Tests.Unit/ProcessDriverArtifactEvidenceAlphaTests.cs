@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverArtifactEvidenceAlphaTests
 {
     [Fact]
-    public void Artifact_evidence_alpha_SB034_INV_001_verifies_supplied_projection_and_validation_descriptors_without_mutation()
+    public void Artifact_evidence_alpha_verifies_supplied_projection_and_validation_descriptors_without_mutation()
     {
         var verifier = new ArtifactEvidenceAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -62,7 +62,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
     }
 
     [Fact]
-    public void Artifact_evidence_alpha_SB034_INV_002_reports_missing_descriptor_metadata_without_raw_reference_leakage()
+    public void Artifact_evidence_alpha_reports_missing_descriptor_metadata_without_raw_reference_leakage()
     {
         var verifier = new ArtifactEvidenceAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -136,7 +136,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
     }
 
     [Fact]
-    public void Artifact_evidence_alpha_SB035_INV_001_detects_projection_order_drift_duplicate_sources_and_missing_lineage()
+    public void Artifact_evidence_alpha_detects_projection_order_drift_duplicate_sources_and_missing_lineage()
     {
         var verifier = new ArtifactEvidenceAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -159,7 +159,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
     }
 
     [Fact]
-    public void Artifact_evidence_alpha_SB035_INV_002_detects_trust_sensitivity_and_satisfaction_inconsistencies_without_raw_text_leakage()
+    public void Artifact_evidence_alpha_detects_trust_sensitivity_and_satisfaction_inconsistencies_without_raw_text_leakage()
     {
         var verifier = new ArtifactEvidenceAlphaVerifier();
         var expectedSensitiveDeliverable = CreateExpectedArtifact(
@@ -219,7 +219,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
     }
 
     [Fact]
-    public void Artifact_evidence_alpha_SB034_INV_003_rejects_invalid_envelopes_wrong_families_empty_descriptors_and_mutation()
+    public void Artifact_evidence_alpha_rejects_invalid_envelopes_wrong_families_empty_descriptors_and_mutation()
     {
         var verifier = new ArtifactEvidenceAlphaVerifier();
         var lineage = CreateValidLineage(ProcessCoreArtifactProjectionSourceKind.FileWrite);
@@ -283,7 +283,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
     }
 
     [Fact]
-    public void Artifact_evidence_alpha_SB034_INV_004_package_is_solution_bound_dependency_clean_and_runtime_free()
+    public void Artifact_evidence_alpha_package_is_solution_bound_dependency_clean_and_runtime_free()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");

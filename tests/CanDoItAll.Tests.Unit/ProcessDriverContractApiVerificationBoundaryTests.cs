@@ -16,7 +16,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverContractApiVerificationBoundaryTests
 {
     [Fact]
-    public void Process_core_public_api_SB007_INV_001_snapshot_matches_owner_classification_and_descriptor_surface()
+    public void Process_core_public_api_snapshot_matches_owner_classification_and_descriptor_surface()
     {
         var snapshot = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -37,7 +37,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB008_INV_001_versioning_snapshot_matches_runtime_free_surface()
+    public void Process_driver_contract_api_versioning_snapshot_matches_runtime_free_surface()
     {
         var snapshot = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -61,7 +61,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB006_INV_001_contract_project_is_solution_bound_dependency_clean_and_runtime_free()
+    public void Process_driver_contract_api_contract_project_is_solution_bound_dependency_clean_and_runtime_free()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");
@@ -105,7 +105,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB009_INV_001_permission_modes_scopes_and_denials_represent_readonly_semantics()
+    public void Process_driver_contract_api_permission_modes_scopes_and_denials_represent_readonly_semantics()
     {
         var readonlyScopes = CreateReadonlyScopes();
         var sideEffectOperations = CreateSideEffectOperations();
@@ -147,7 +147,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB012_INV_001_audit_facts_redaction_and_evidence_references_are_immutable_contracts()
+    public void Process_driver_contract_api_audit_facts_redaction_and_evidence_references_are_immutable_contracts()
     {
         var redaction = new ProcessDriverRedactionDescriptor(
             ProcessDriverRedactionStatus.Redacted,
@@ -187,7 +187,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB015_INV_001_verification_request_response_cannot_claim_state_mutation()
+    public void Process_driver_contract_api_verification_request_response_cannot_claim_state_mutation()
     {
         var evidenceReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.BundleProofArtifact,
@@ -220,7 +220,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB021_INV_001_dotnet_rust_transcript_rehearsal_is_reference_only()
+    public void Process_driver_contract_api_dotnet_rust_transcript_rehearsal_is_reference_only()
     {
         var root = FindRepositoryRoot();
         var dotnetFixture = ReadRepositoryFile(
@@ -268,7 +268,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB024_INV_001_driver_evidence_vocabulary_maps_core_descriptor_families_without_reverse_dependency()
+    public void Process_driver_contract_api_driver_evidence_vocabulary_maps_core_descriptor_families_without_reverse_dependency()
     {
         var root = FindRepositoryRoot();
         var coreProject = ReadRepositoryFile("src", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Core.csproj");
@@ -292,7 +292,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB040_INV_001_core_descriptor_family_ordinals_are_backward_compatible_and_gateway_allow_list_is_explicit()
+    public void Process_driver_contract_api_core_descriptor_family_ordinals_are_backward_compatible_and_gateway_allow_list_is_explicit()
     {
         var expectedFamilies = new Dictionary<ProcessDriverCoreDescriptorFamily, int>
         {
@@ -328,7 +328,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB011_INV_001_runtime_host_contract_snapshot_stays_out_of_process_core()
+    public void Process_driver_contract_api_runtime_host_contract_snapshot_stays_out_of_process_core()
     {
         var coreProject = ReadRepositoryFile("src", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Core.csproj");
         var coreSource = string.Join(
@@ -354,7 +354,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB002_INV_002_runtime_host_contract_reports_readonly_safety_violations()
+    public void Process_driver_contract_api_runtime_host_contract_reports_readonly_safety_violations()
     {
         var safe = ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.DryRunExecution);
 
@@ -393,7 +393,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB002_INV_003_runtime_host_contract_carries_generic_identity_decision_audit_and_capability_refs()
+    public void Process_driver_contract_api_runtime_host_contract_carries_generic_identity_decision_audit_and_capability_refs()
     {
         var requestedAt = new DateTimeOffset(2026, 6, 10, 18, 20, 0, TimeSpan.Zero);
         var identity = new ProcessRuntimeHostRequestIdentity(
@@ -453,7 +453,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB002_INV_004_runtime_host_contract_rejects_invalid_identity_capability_and_domain_leakage()
+    public void Process_driver_contract_api_runtime_host_contract_rejects_invalid_identity_capability_and_domain_leakage()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -477,7 +477,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB007_INV_002_verification_gateway_static_descriptors_are_readonly_and_complete()
+    public void Process_driver_contract_api_verification_gateway_static_descriptors_are_readonly_and_complete()
     {
         var descriptors = ProcessDriverVerificationGatewayLaneRules.AllowedLanes;
 
@@ -494,7 +494,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB040_INV_002_contract_version_history_documents_every_public_descriptor_family_change()
+    public void Process_driver_contract_api_contract_version_history_documents_every_public_descriptor_family_change()
     {
         var snapshot = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -532,7 +532,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB041_INV_001_v1_migration_docs_match_current_contract_and_alpha_verifier_behavior()
+    public void Process_driver_contract_api_v1_migration_docs_match_current_contract_and_alpha_verifier_behavior()
     {
         var migrationDoc = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -581,7 +581,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB046_INV_001_runtime_host_approval_matrix_keeps_runtime_surfaces_unapproved()
+    public void Process_driver_contract_api_runtime_host_approval_matrix_keeps_runtime_surfaces_unapproved()
     {
         var matrix = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -638,7 +638,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB047_INV_001_future_runtime_prerequisites_are_exact_and_unsatisfied()
+    public void Process_driver_contract_api_future_runtime_prerequisites_are_exact_and_unsatisfied()
     {
         var prerequisites = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -694,7 +694,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB057_INV_001_roadmaps_deny_runtime_host_and_list_approval_gates()
+    public void Process_driver_contract_api_roadmaps_deny_runtime_host_and_list_approval_gates()
     {
         var coreRoadmap = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -760,7 +760,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB058_INV_001_next_bundle_keeps_production_host_registration_not_ready()
+    public void Process_driver_contract_api_next_package_keeps_production_host_registration_not_ready()
     {
         var decision = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -824,7 +824,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB059_INV_001_backlog_candidates_keep_runtime_host_and_execution_blocked()
+    public void Process_driver_contract_api_backlog_candidates_keep_runtime_host_and_execution_blocked()
     {
         var backlog = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
@@ -889,7 +889,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB058_SB059_INV_002_process_docs_describe_operator_readback_without_runtime_approval()
+    public void Process_driver_contract_api_process_docs_describe_operator_readback_without_runtime_approval()
     {
         var moduleReadme = ReadRepositoryFile(
             "src",
@@ -945,7 +945,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB027_INV_001_office_business_analysis_and_artifact_lanes_stay_readonly()
+    public void Process_driver_contract_api_office_business_analysis_and_artifact_lanes_stay_readonly()
     {
         var scopes = CreateReadonlyScopes();
         var officeScope = Assert.Single(scopes, scope => scope.Kind == ProcessDriverCapabilityScopeKind.OfficeEvidenceRead);
@@ -973,7 +973,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB019_INV_001_gateway_allow_list_is_explicit_typed_and_runtime_free()
+    public void Process_driver_contract_api_gateway_allow_list_is_explicit_typed_and_runtime_free()
     {
         var root = FindRepositoryRoot();
         var design = ReadProcessDriverMultiDomainFixtureFile(
@@ -1032,7 +1032,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB031_INV_001_gateway_v1_public_api_snapshot_freezes_typed_batch_surface()
+    public void Process_driver_contract_api_gateway_v1_public_api_snapshot_freezes_typed_batch_surface()
     {
         var publicTypeNames = ReadPublicTypeNames(typeof(ProcessDriverVerificationGateway).Assembly)
             .Where(typeName => typeName.StartsWith(
@@ -1095,7 +1095,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB032_INV_001_gateway_batch_migration_guard_is_documented_and_runtime_free()
+    public void Process_driver_contract_api_gateway_batch_migration_guard_is_documented_and_runtime_free()
     {
         var readme = ReadRepositoryFile(
             "src",
@@ -1133,7 +1133,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB022_INV_001_supplied_evidence_content_envelope_is_typed_hashable_and_payload_only()
+    public void Process_driver_contract_api_supplied_evidence_content_envelope_is_typed_hashable_and_payload_only()
     {
         const string transcriptText = "Build succeeded.";
         const string descriptorPayload = """{"executionRunId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}""";
@@ -1260,7 +1260,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB033_INV_001_runtime_alpha_remains_deferred_to_followup_decision()
+    public void Process_driver_contract_api_runtime_alpha_remains_deferred_to_followup_decision()
     {
         var root = FindRepositoryRoot();
         var contractSource = ReadContractSource(root);
@@ -1278,7 +1278,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB040_SB042_INV_001_current_bundle_runtime_host_matrix_keeps_runtime_surfaces_unapproved()
+    public void Process_driver_contract_api_current_package_runtime_host_matrix_keeps_runtime_surfaces_unapproved()
     {
         var decision = ReadProcessDriverReadonlyReleaseCandidateFixtureFile(
             "architecture",
@@ -1339,7 +1339,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB041_SB042_INV_001_current_readonly_pipeline_source_rejects_runtime_host_hooks()
+    public void Process_driver_contract_api_current_readonly_pipeline_source_rejects_runtime_host_hooks()
     {
         var root = FindRepositoryRoot();
         var sourceText = ReadReadonlyDriverPipelineSource(root);
@@ -1370,7 +1370,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB043_SB044_INV_001_future_execution_guards_remain_unsatisfied_and_source_rejects_premature_surfaces()
+    public void Process_driver_contract_api_future_execution_guards_remain_unsatisfied_and_source_rejects_premature_surfaces()
     {
         var root = FindRepositoryRoot();
         var ledger = ReadRepositoryFile("docs", "process-runtime-restoration-ledger.md");
@@ -1441,7 +1441,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB052_SB053_INV_001_current_bundle_roadmap_keeps_runtime_integration_blocked()
+    public void Process_driver_contract_api_current_package_roadmap_keeps_runtime_integration_blocked()
     {
         var root = FindRepositoryRoot();
         var decision = ReadProcessDriverReadonlyReleaseCandidateFixtureFile(

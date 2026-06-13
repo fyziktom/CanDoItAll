@@ -24,7 +24,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     private const string MaliciousTextPayload = "Requirement: supplied proof. Evidence: supplied source. secret=fixture-secret access_token=plain-token reviewer@example.invalid";
 
     [Fact]
-    public void Process_driver_verification_gateway_SB018_INV_001_explicitly_runs_all_approved_readonly_lanes()
+    public void Process_driver_verification_gateway_explicitly_runs_all_approved_readonly_lanes()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
         var implementedLanes = gateway.ImplementedLanes.Select(descriptor => descriptor.Lane).ToArray();
@@ -82,7 +82,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB018_INV_002_source_has_no_dynamic_registry_selector_di_or_manager_surface()
+    public void Process_driver_verification_gateway_source_has_no_dynamic_registry_selector_di_or_manager_surface()
     {
         var gatewayProject = ReadRepositoryFile(
             "src",
@@ -114,7 +114,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB012_INV_001_runs_explicit_typed_batch_without_generic_dispatch()
+    public void Process_driver_verification_gateway_runs_explicit_typed_batch_without_generic_dispatch()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
         var gatewaySource = ReadRepositoryFile(
@@ -160,7 +160,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB018_INV_003_rejects_side_effects_across_all_domain_lanes()
+    public void Process_driver_verification_gateway_rejects_side_effects_across_all_domain_lanes()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
 
@@ -187,7 +187,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB033_INV_001_audit_redaction_and_no_mutation_cover_accepted_and_denied_responses()
+    public void Process_driver_verification_gateway_audit_redaction_and_no_mutation_cover_accepted_and_denied_responses()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
         var acceptedTranscript = gateway.VerifyTranscript(CreateTranscriptRequest("Build succeeded."));
@@ -302,7 +302,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB024_INV_001_closes_no_secret_no_mutation_and_hash_mismatch_gates_across_all_lanes()
+    public void Process_driver_verification_gateway_closes_no_secret_no_mutation_and_hash_mismatch_gates_across_all_lanes()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
         var forbiddenFragments = new[] { "fixture-secret", "plain-token", "reviewer@example.invalid" };
@@ -752,8 +752,15 @@ public sealed class ProcessDriverVerificationGatewayTests
             "ProcessDriverRuntime",
             "ProcessDriverProvider",
             "ProcessDriverHost",
+            "IServiceProvider",
+            "GetRequiredService",
+            "Assembly.GetTypes",
+            "Activator.CreateInstance",
+            "dynamic",
             "IServiceCollection",
             "ServiceCollection",
+            "Dictionary<ProcessDriverVerificationGatewayLane",
+            "Func<ProcessDriverVerificationGatewayLane",
             "AddProcessDriver",
             "MapProcessDriver",
             "System.Diagnostics.Process",

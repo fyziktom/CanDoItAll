@@ -403,7 +403,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         var normalizedToolName = NormalizeToolToken(toolName);
         return string.Equals(normalizedToolName, "workspace_pwsh_run_script", StringComparison.Ordinal) ||
-               string.Equals(normalizedToolName, "workspace_dotnet_run", StringComparison.Ordinal) ||
+               string.Equals(normalizedToolName, ToolContractCatalog.WorkspaceDotNetRun, StringComparison.Ordinal) ||
                RequiredBrowserEvidenceToolNames.Contains(normalizedToolName);
     }
 

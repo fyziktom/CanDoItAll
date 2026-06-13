@@ -8,18 +8,24 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/Dotnet.gitignore
 
 output
-.codex/live-targets
-.codex/live-runner
-.codex/runlogs
-.codex/tmp
-.codex/temp
-.codex-artifacts
-.codex-tmp
-.codex-temp
-.playwright-mcp
 evidence
-codex/bundles/input/
-codex/bundles/realistic-project-memory-validation/validation/loader-stdout.log
+
+# Codex transient work-package outputs. The bundle preparation skill under
+# codex/skills/bundles is source tooling and must remain tracked.
+01-execution-report.md
+codex/bundles/**
+codex/bundle-exports/**
+codex/**/*.zip
+!codex/skills/**
+.codex/live-targets/**
+.codex/live-runner/**
+.codex/runlogs/**
+.codex/tmp/**
+.codex/temp/**
+**/.codex-artifacts/**
+**/.codex-tmp/**
+**/.codex-temp/**
+.playwright-mcp/**
 
 # Build results
 [Dd]ebug/

@@ -32,7 +32,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     private const string BusinessAnalysisPayload = """{"items":[{"kind":"deliverable","id":"analysis-1"},{"kind":"evidence","id":"evidence-1"}]}""";
 
     [Fact]
-    public void Process_artifact_evidence_readonly_adapter_SB021_INV_001_maps_supplied_descriptors_to_observation_without_mutation()
+    public void Process_artifact_evidence_readonly_adapter_maps_supplied_descriptors_to_observation_without_mutation()
     {
         var adapter = new ProcessArtifactEvidenceReadOnlyAdapter();
         var payload = CreateArtifactPayload();
@@ -64,7 +64,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_artifact_evidence_readonly_adapter_SB021_INV_002_denies_mutation_and_untrusted_sources_without_verifier_side_effects()
+    public void Process_artifact_evidence_readonly_adapter_denies_mutation_and_untrusted_sources_without_verifier_side_effects()
     {
         var adapter = new ProcessArtifactEvidenceReadOnlyAdapter();
 
@@ -91,7 +91,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_office_and_business_readonly_adapters_SB024_INV_001_map_supplied_items_and_deny_external_or_record_mutation()
+    public void Process_office_and_business_readonly_adapters_map_supplied_items_and_deny_external_or_record_mutation()
     {
         var officeAdapter = new ProcessOfficeEvidenceReadOnlyAdapter();
         var businessAdapter = new ProcessBusinessAnalysisReadOnlyAdapter();
@@ -128,7 +128,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_observation_aggregation_readonly_adapter_SB027_INV_001_combines_existing_responses_without_persistence()
+    public void Process_observation_aggregation_readonly_adapter_combines_existing_responses_without_persistence()
     {
         var adapter = new ProcessDriverObservationAggregationReadOnlyAdapter();
         var payload = new ProcessDriverObservationAggregationReadOnlyPayload(
@@ -165,7 +165,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_verification_batch_orchestrator_SB015_INV_001_runs_all_supplied_payload_lanes_without_runtime_host()
+    public void Process_readonly_verification_batch_orchestrator_runs_all_supplied_payload_lanes_without_runtime_host()
     {
         var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
         var payload = new ProcessReadOnlyVerificationBatchPayload(
@@ -231,7 +231,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_SB015_INV_002_selects_exact_lane_without_cross_lane_fallback()
+    public async Task Process_verification_runtime_host_selects_exact_lane_without_cross_lane_fallback()
     {
         var host = CreateHost(new ProcessVerificationRuntimeHostOptions());
         var payload = new ProcessReadOnlyVerificationBatchPayload(
@@ -271,7 +271,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_lane_selector_SB019_INV_001_returns_exact_selection_result()
+    public void Process_verification_lane_selector_returns_exact_selection_result()
     {
         var selector = new ProcessVerificationLaneSelector(new ProcessVerificationLaneRegistry());
 
@@ -300,7 +300,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_SB020_INV_001_denies_defined_but_unregistered_lane_without_fallback()
+    public async Task Process_verification_runtime_host_denies_defined_but_unregistered_lane_without_fallback()
     {
         var host = CreateHost(
             new ProcessVerificationRuntimeHostOptions(),
@@ -315,7 +315,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_lane_selector_SB020_INV_002_uses_explicit_registry_without_reflection_discovery_or_fallback()
+    public void Process_verification_lane_selector_uses_explicit_registry_without_reflection_discovery_or_fallback()
     {
         var selectorSource = ReadRepositoryFile(
             "src",
@@ -344,7 +344,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_SB018_INV_001_rejects_unsupported_or_empty_lane_without_fallback()
+    public async Task Process_verification_runtime_host_rejects_unsupported_or_empty_lane_without_fallback()
     {
         var host = CreateHost(new ProcessVerificationRuntimeHostOptions());
         var invalidLane = (ProcessDriverVerificationGatewayLane)999;
@@ -388,7 +388,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_SB013_INV_001_honors_cancellation_before_verification()
+    public async Task Process_verification_runtime_host_honors_cancellation_before_verification()
     {
         var host = CreateHost(new ProcessVerificationRuntimeHostOptions());
         using var cancellation = new CancellationTokenSource();
@@ -409,7 +409,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_runtime_host_options_SB016_INV_001_validate_configured_limits()
+    public void Process_verification_runtime_host_options_validate_configured_limits()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -430,7 +430,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_options_SB017_INV_001_deny_disabled_host_disabled_lane_and_payload_limit_breaches()
+    public async Task Process_verification_runtime_host_options_deny_disabled_host_disabled_lane_and_payload_limit_breaches()
     {
         var request = CreateBusinessAnalysisHostRequest();
 
@@ -472,7 +472,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_status_SB012_INV_001_reports_readiness_and_emergency_disable_without_execution_permission() {
+    public async Task Process_verification_runtime_host_status_reports_readiness_and_emergency_disable_without_execution_permission() {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
 
         var services = new ServiceCollection();
@@ -567,7 +567,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_SB046_INV_001_classifies_denials_with_reason_codes_audit_and_no_mutation_flags()
+    public async Task Process_verification_runtime_host_classifies_denials_with_reason_codes_audit_and_no_mutation_flags()
     {
         var request = CreateBusinessAnalysisHostRequest();
         var denialScenarios = new Dictionary<ProcessVerificationHostDenialCode, ProcessVerificationHostFailureCategory>
@@ -609,7 +609,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_manager_readonly_verification_command_SB024_INV_001_returns_diagnostics_and_audit_without_mutation()
+    public void Process_manager_readonly_verification_command_returns_diagnostics_and_audit_without_mutation()
     {
         var auditStore = new InMemoryProcessVerificationAuditStore();
         var command = new ProcessManagerReadOnlyVerificationCommandService(
@@ -643,7 +643,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_manager_readonly_verification_facade_SB025_INV_001_returns_structured_success_and_audit_query_without_mutation()
+    public async Task Process_manager_readonly_verification_facade_returns_structured_success_and_audit_query_without_mutation()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -699,7 +699,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_audit_retention_query_SB003_INV_001_lists_old_records_without_deleting_or_mutating()
+    public async Task Process_verification_audit_retention_query_lists_old_records_without_deleting_or_mutating()
     {
         var auditStore = new InMemoryProcessVerificationAuditStore();
         var oldRecord = new ProcessVerificationAuditRecord(
@@ -740,7 +740,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_manager_readonly_verification_facade_SB026_INV_001_enforces_requester_projection_query_and_denial_guards()
+    public async Task Process_manager_readonly_verification_facade_enforces_requester_projection_query_and_denial_guards()
     {
         var payload = new ProcessReadOnlyVerificationBatchPayload(
             ProcessRunId,
@@ -798,7 +798,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_manager_verification_readback_SB028_INV_001_exposes_diagnostics_dto_and_audit_records()
+    public async Task Process_manager_verification_readback_exposes_diagnostics_dto_and_audit_records()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -859,7 +859,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_manager_verification_readback_SB047_INV_001_projects_denial_category_reason_code_audit_and_no_mutation_flags()
+    public async Task Process_manager_verification_readback_projects_denial_category_reason_code_audit_and_no_mutation_flags()
     {
         var options = new ProcessVerificationRuntimeHostOptions
         {
@@ -923,7 +923,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_manager_verification_readback_api_smoke_SB029_INV_001_serializes_diagnostics_projection_without_mutation_permissions()
+    public async Task Process_manager_verification_readback_api_smoke_serializes_diagnostics_projection_without_mutation_permissions()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -969,7 +969,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_runtime_host_readback_SB04_INV_001_uses_real_process_run_step_ids_and_dry_run_denial_without_mutation() {
+    public async Task Process_runtime_host_readback_uses_real_process_run_step_ids_and_dry_run_denial_without_mutation() {
         await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
@@ -1103,7 +1103,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_manager_diagnostics_operator_smoke_SB055_INV_001_serializes_large_screen_api_readback_with_audit_contract()
+    public async Task Process_manager_diagnostics_operator_smoke_serializes_large_screen_api_readback_with_audit_contract()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -1164,7 +1164,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_run_detail_verification_audit_readback_SB056_INV_001_projects_process_step_audit_and_denial_metadata_without_mutation()
+    public async Task Process_run_detail_verification_audit_readback_projects_process_step_audit_and_denial_metadata_without_mutation()
     {
         var auditStore = new InMemoryProcessVerificationAuditStore();
         var host = CreateHost(
@@ -1227,7 +1227,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_verification_job_SB05_INV_002_models_scheduler_and_workflow_jobs_as_manager_readback_requests_without_mutation()
+    public void Process_readonly_verification_job_models_scheduler_and_workflow_jobs_as_manager_readback_requests_without_mutation()
     {
         var payload = new ProcessReadOnlyVerificationBatchPayload(
             ProcessRunId,
@@ -1300,7 +1300,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_readonly_verification_job_runner_SB05_INV_003_executes_scheduler_and_workflow_lifecycle_status_provenance_readback_without_mutation() {
+    public async Task Process_readonly_verification_job_runner_executes_scheduler_and_workflow_lifecycle_status_provenance_readback_without_mutation() {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
         services.AddInMemoryProcessVerificationAuditStoreForTests();
@@ -1438,7 +1438,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_future_execution_sandbox_policy_SB039_INV_001_stays_dry_run_and_denies_all_effectful_surfaces_until_approved() {
+    public void Process_future_execution_sandbox_policy_stays_dry_run_and_denies_all_effectful_surfaces_until_approved() {
         var policy = ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun;
 
         Assert.Equal(ProcessExecutionCapableDriverApprovalStatus.NotApproved, policy.ApprovalStatus);
@@ -1455,7 +1455,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_execution_capable_future_gate_SB042_INV_001_requires_complete_source_backed_approval_before_any_execution_surface_is_allowed() {
+    public void Process_execution_capable_future_gate_requires_complete_source_backed_approval_before_any_execution_surface_is_allowed() {
         var gate = new ProcessExecutionCapableDriverFutureGate();
         var blockedPolicy = ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun;
         var incompleteEvidence = ProcessExecutionCapableDriverApprovalEvidence.None;
@@ -1485,7 +1485,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_execution_capable_surface_matrix_SB025_INV_001_models_every_effectful_surface_as_denied_by_default()
+    public void Process_execution_capable_surface_matrix_models_every_effectful_surface_as_denied_by_default()
     {
         var expectedSurfaces = Enum
             .GetValues<ProcessExecutionCapableDriverSurface>()
@@ -1523,7 +1523,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_dry_run_execution_host_SB024_INV_001_denies_effectful_requests_with_structured_plan_without_mutation()
+    public async Task Process_dry_run_execution_host_denies_effectful_requests_with_structured_plan_without_mutation()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -1598,7 +1598,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_dry_run_execution_host_SB027_INV_001_requires_authorization_revocation_and_emergency_stop_evidence()
+    public async Task Process_dry_run_execution_host_requires_authorization_revocation_and_emergency_stop_evidence()
     {
         var host = new ProcessDryRunExecutionHost(new ProcessExecutionCapableDriverFutureGate());
         var policy = new ProcessExecutionCapableDriverSandboxPolicy(
@@ -1685,7 +1685,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_manager_runtime_host_readback_SB007_INV_001_projects_dry_run_plan_to_api_ready_json()
+    public async Task Process_manager_runtime_host_readback_projects_dry_run_plan_to_api_ready_json()
     {
         var host = new ProcessDryRunExecutionHost(new ProcessExecutionCapableDriverFutureGate());
         var request = new ProcessDryRunExecutionRequest(
@@ -1737,7 +1737,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_dry_run_execution_pipeline_SB003_INV_001_registers_explicit_stage_components()
+    public void Process_dry_run_execution_pipeline_registers_explicit_stage_components()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -1756,7 +1756,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_host_capability_catalog_SB007_INV_001_is_static_readonly_and_complete()
+    public void Process_verification_host_capability_catalog_is_static_readonly_and_complete()
     {
         var descriptors = ProcessVerificationHostCapabilityCatalog.StaticDescriptors;
         var providerDescriptors = ProcessVerificationHostCapabilityCatalog.StaticProvider.ListDescriptors();
@@ -1804,7 +1804,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Scheduler_workflow_verification_readiness_SB032_INV_001_does_not_call_process_drivers_directly()
+    public void Scheduler_workflow_verification_readiness_does_not_call_process_drivers_directly()
     {
         var forbiddenPatterns = new[]
         {
@@ -1826,7 +1826,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_SB021_INV_001_di_registration_resolves_host_command_and_shared_audit_boundary()
+    public async Task Process_verification_runtime_host_di_registration_resolves_host_command_and_shared_audit_boundary()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -1870,7 +1870,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_runtime_host_SB006_INV_002_core_registration_requires_explicit_audit_store()
+    public void Process_verification_runtime_host_core_registration_requires_explicit_audit_store()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -1884,7 +1884,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_runtime_host_SB006_INV_001_process_module_uses_ef_audit_store_by_default()
+    public async Task Process_verification_runtime_host_process_module_uses_ef_audit_store_by_default()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1897,7 +1897,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_audit_store_SB006_INV_003_persists_postgresql_audit_records_across_service_scopes()
+    public async Task Process_verification_audit_store_persists_postgresql_audit_records_across_service_scopes()
     {
         await using var application = await TestApplication.CreateAsync();
 
@@ -1946,7 +1946,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_verification_audit_store_SB023_INV_001_persists_redacted_hashes_and_supports_queries()
+    public async Task Process_verification_audit_store_persists_redacted_hashes_and_supports_queries()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
 
@@ -2034,7 +2034,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_audit_store_SB004_INV_001_model_keeps_readback_and_retention_indexes()
+    public void Process_verification_audit_store_model_keeps_readback_and_retention_indexes()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
 
@@ -2059,7 +2059,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_readonly_verification_security_SB049_SB050_INV_001_redacts_malicious_secret_corpus_from_diagnostics_audit_and_readback()
+    public async Task Process_readonly_verification_security_redacts_malicious_secret_corpus_from_diagnostics_audit_and_readback()
     {
         const string maliciousTranscript = """
             Build failed.
@@ -2144,7 +2144,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_verification_multi_domain_harness_SB037_SB038_INV_001_proves_current_lane_producers_and_orchestrator_consumer()
+    public void Process_readonly_verification_multi_domain_harness_proves_current_lane_producers_and_orchestrator_consumer()
     {
         var harness = new ProcessReadOnlyVerificationMultiDomainHarness();
         var payload = new ProcessReadOnlyVerificationBatchPayload(
@@ -2182,7 +2182,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_verification_batch_orchestrator_SB027_INV_002_feeds_artifact_projection_validation_and_satisfaction_descriptors_without_mutation()
+    public void Process_readonly_verification_batch_orchestrator_feeds_artifact_projection_validation_and_satisfaction_descriptors_without_mutation()
     {
         var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
         var expectedSensitiveDeliverable = CreateExpectedArtifact(
@@ -2284,7 +2284,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_verification_batch_orchestrator_SB030_INV_001_feeds_supplied_office_and_business_evidence_without_external_sources()
+    public void Process_readonly_verification_batch_orchestrator_feeds_supplied_office_and_business_evidence_without_external_sources()
     {
         var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
         var payload = new ProcessReadOnlyVerificationBatchPayload(
@@ -2388,7 +2388,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_verification_batch_orchestrator_SB030_INV_002_denies_office_and_business_external_calls_without_mutation()
+    public void Process_readonly_verification_batch_orchestrator_denies_office_and_business_external_calls_without_mutation()
     {
         var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
         var payload = new ProcessReadOnlyVerificationBatchPayload(
@@ -2510,7 +2510,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_manager_readonly_projection_SB031_INV_001_projects_supplied_observations_as_diagnostics_without_mutation()
+    public void Process_manager_readonly_projection_projects_supplied_observations_as_diagnostics_without_mutation()
     {
         var observation = CreateManagerProjectionSourceObservation();
 
@@ -2545,7 +2545,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_manager_readonly_projection_SB032_INV_001_attaches_evidence_envelope_only_when_requested()
+    public void Process_manager_readonly_projection_attaches_evidence_envelope_only_when_requested()
     {
         var observation = CreateManagerProjectionSourceObservation();
 
@@ -2588,7 +2588,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_manager_readonly_projection_SB033_INV_001_rejects_unnamed_attached_manager_request()
+    public void Process_manager_readonly_projection_rejects_unnamed_attached_manager_request()
     {
         var observation = CreateManagerProjectionSourceObservation();
 
@@ -2604,7 +2604,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_payload_builders_SB018_INV_001_create_hash_content_type_and_size_contracts_from_memory()
+    public void Process_readonly_payload_builders_create_hash_content_type_and_size_contracts_from_memory()
     {
         var transcriptPayload = CreateTranscriptPayload();
         var runtimePayload = CreateRuntimePayload();
@@ -2635,7 +2635,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_readonly_verification_cross_lane_SB035_INV_001_preserves_no_mutation_audit_redaction_and_evidence_hashes()
+    public void Process_readonly_verification_cross_lane_preserves_no_mutation_audit_redaction_and_evidence_hashes()
     {
         const string sensitiveTranscript = """
             Build succeeded.

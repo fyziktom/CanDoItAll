@@ -676,7 +676,7 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
     }
 
     [Fact]
-    public async Task Runtime_invariant_diagnostics_SB13_INV_001_exposes_generic_audit_issues()
+    public async Task Runtime_invariant_diagnostics_exposes_generic_audit_issues()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -746,7 +746,7 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB13_INV_001_records_manual_transition_validation_failure()
+    public async Task TransitionStepAsync_records_manual_transition_validation_failure()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();

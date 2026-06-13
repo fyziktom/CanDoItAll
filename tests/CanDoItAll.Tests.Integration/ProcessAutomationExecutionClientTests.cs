@@ -11,7 +11,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessAutomationExecutionClientTests
 {
     [Fact]
-    public async Task ExecuteRunAsync_SB05_INV_001_delegates_to_agent_framework_workspace_service()
+    public async Task ExecuteRunAsync_delegates_to_agent_framework_workspace_service()
     {
         var workspaceService = CreateWorkspaceService(out var proxy);
         var client = new ProcessAutomationExecutionClient(workspaceService);
@@ -45,7 +45,7 @@ public sealed class ProcessAutomationExecutionClientTests
     }
 
     [Fact]
-    public async Task ExecutionQueries_SB05_INV_002_delegate_to_agent_framework_workspace_service()
+    public async Task ExecutionQueries_delegate_to_agent_framework_workspace_service()
     {
         var workspaceService = CreateWorkspaceService(out var proxy);
         var client = new ProcessAutomationExecutionClient(workspaceService);
@@ -89,7 +89,7 @@ public sealed class ProcessAutomationExecutionClientTests
     }
 
     [Fact]
-    public async Task ExecuteRunAsync_SB06_INV_001_normalizes_agent_framework_execution_failures()
+    public async Task ExecuteRunAsync_normalizes_agent_framework_execution_failures()
     {
         var workspaceService = CreateWorkspaceService(out var proxy);
         var client = new ProcessAutomationExecutionClient(workspaceService);
@@ -114,7 +114,7 @@ public sealed class ProcessAutomationExecutionClientTests
     }
 
     [Fact]
-    public async Task CatalogAndEditorOperations_SB05_INV_003_delegate_to_agent_framework_workspace_service()
+    public async Task CatalogAndEditorOperations_delegate_to_agent_framework_workspace_service()
     {
         var workspaceService = CreateWorkspaceService(out var proxy);
         var client = new ProcessAutomationExecutionClient(workspaceService);
@@ -149,7 +149,7 @@ public sealed class ProcessAutomationExecutionClientTests
     }
 
     [Fact]
-    public void AddProcessesModule_SB05_INV_004_registers_process_owned_execution_client()
+    public void AddProcessesModule_registers_process_owned_execution_client()
     {
         var services = new ServiceCollection();
 

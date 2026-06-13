@@ -14,7 +14,7 @@ public sealed class ProcessTemplateExecutionE2ETests {
     private const string AutomationDispatchCommandKey = "dispatch-run-automation";
 
     [Fact]
-    public async Task Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback() {
+    public async Task Blazor_app_delivery_template_completes_through_automation_dispatch_finalizer_and_readback() {
         const string validationLabel = "Blazor process automation validation";
         string[] completedAutomationStepTitles =
         [
@@ -83,7 +83,7 @@ public sealed class ProcessTemplateExecutionE2ETests {
     }
 
     [Fact]
-    public async Task Blazor_app_delivery_template_SB03_INV_002_missing_process_mock_role_mapping_fails_before_dispatch() {
+    public async Task Blazor_app_delivery_template_missing_process_mock_role_mapping_fails_before_dispatch() {
         const string validationLabel = "Blazor process automation missing-role validation";
 
         await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync();
@@ -129,7 +129,7 @@ public sealed class ProcessTemplateExecutionE2ETests {
     }
 
     [Fact]
-    public async Task Software_delivery_template_SB04_INV_001_completes_multi_team_governance_through_automation_dispatch() {
+    public async Task Software_delivery_template_completes_multi_team_governance_through_automation_dispatch() {
         const string validationLabel = "Multi-team software delivery automation validation";
         string[] directGovernanceExecutionStepTitles =
         [

@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverOfficeEvidenceAlphaTests
 {
     [Fact]
-    public void Office_evidence_alpha_SB028_INV_001_verifies_supplied_email_and_document_metadata_text_only()
+    public void Office_evidence_alpha_verifies_supplied_email_and_document_metadata_text_only()
     {
         var verifier = new OfficeEvidenceAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -54,7 +54,7 @@ public sealed class ProcessDriverOfficeEvidenceAlphaTests
     }
 
     [Fact]
-    public void Office_evidence_alpha_SB028_INV_002_reports_missing_supplied_metadata_without_connector_calls()
+    public void Office_evidence_alpha_reports_missing_supplied_metadata_without_connector_calls()
     {
         var verifier = new OfficeEvidenceAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -87,7 +87,7 @@ public sealed class ProcessDriverOfficeEvidenceAlphaTests
     }
 
     [Fact]
-    public void Office_evidence_alpha_SB028_INV_003_rejects_untrusted_mismatched_and_wrong_envelopes_before_analysis()
+    public void Office_evidence_alpha_rejects_untrusted_mismatched_and_wrong_envelopes_before_analysis()
     {
         var verifier = new OfficeEvidenceAlphaVerifier();
         var item = CreateCompleteEmailItem();
@@ -132,7 +132,7 @@ public sealed class ProcessDriverOfficeEvidenceAlphaTests
     }
 
     [Fact]
-    public void Office_evidence_alpha_SB028_INV_004_package_is_solution_bound_dependency_clean_and_connector_free()
+    public void Office_evidence_alpha_package_is_solution_bound_dependency_clean_and_connector_free()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");
@@ -173,7 +173,7 @@ public sealed class ProcessDriverOfficeEvidenceAlphaTests
     }
 
     [Fact]
-    public void Office_evidence_alpha_SB029_INV_001_denies_category_mutation_task_creation_document_write_graph_call_and_attachment_fetch()
+    public void Office_evidence_alpha_denies_category_mutation_task_creation_document_write_graph_call_and_attachment_fetch()
     {
         var verifier = new OfficeEvidenceAlphaVerifier();
         var item = CreateCompleteEmailItem();

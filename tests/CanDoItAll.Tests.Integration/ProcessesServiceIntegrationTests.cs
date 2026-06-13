@@ -152,7 +152,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox() {
+    public async Task StartRunAsync_persists_project_context_runtime_rows_and_dispatch_outbox() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
@@ -255,7 +255,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunFromTriggerAsync_SB038_INV_001_starts_workflow_origin_process_without_runtime_driver_hook()
+    public async Task StartRunFromTriggerAsync_starts_workflow_origin_process_without_runtime_driver_hook()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -314,7 +314,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunFromTriggerAsync_SB05_INV_001_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks()
+    public async Task StartRunFromTriggerAsync_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -409,7 +409,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunFromTriggerAsync_SB038_INV_002_rejects_workflow_trigger_without_source_identity()
+    public async Task StartRunFromTriggerAsync_rejects_workflow_trigger_without_source_identity()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -427,7 +427,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunAsync_SB018_INV_002_rejects_invalid_not_ready_and_duplicate_start_attempts() {
+    public async Task StartRunAsync_rejects_invalid_not_ready_and_duplicate_start_attempts() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
@@ -588,7 +588,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task SaveAsync_SB09_INV_001_persists_explicit_artifact_output_mappings()
+    public async Task SaveAsync_persists_explicit_artifact_output_mappings()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -792,7 +792,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB03_INV_001_rejects_placeholder_required_artifact_on_manual_completion()
+    public async Task TransitionStepAsync_rejects_placeholder_required_artifact_on_manual_completion()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -888,7 +888,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB03_INV_002_rejects_malformed_json_required_artifact_on_manual_completion()
+    public async Task TransitionStepAsync_rejects_malformed_json_required_artifact_on_manual_completion()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -993,7 +993,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB08_INV_001_rejects_malformed_storage_backed_json_required_artifact_on_manual_completion()
+    public async Task TransitionStepAsync_rejects_malformed_storage_backed_json_required_artifact_on_manual_completion()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1128,7 +1128,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB10_INV_001_rejects_stale_execution_lineage_required_artifact_on_manual_completion()
+    public async Task TransitionStepAsync_rejects_stale_execution_lineage_required_artifact_on_manual_completion()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1235,7 +1235,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB01_INV_001_allows_automation_completion_with_matching_execution_lineage_required_artifact()
+    public async Task TransitionStepAsync_allows_automation_completion_with_matching_execution_lineage_required_artifact()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1345,7 +1345,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB01_INV_002_allows_automation_completion_when_transition_context_is_inferred_from_step_artifacts()
+    public async Task TransitionStepAsync_allows_automation_completion_when_transition_context_is_inferred_from_step_artifacts()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1967,7 +1967,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task RecordArtifactAsync_SB05_INV_001_dedupes_by_projection_identity_hash_before_display_key()
+    public async Task RecordArtifactAsync_dedupes_by_projection_identity_hash_before_display_key()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2046,7 +2046,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task RecordArtifactAsync_SB11_INV_001_rejects_projection_identity_for_wrong_step_expectation_scope()
+    public async Task RecordArtifactAsync_rejects_projection_identity_for_wrong_step_expectation_scope()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2184,7 +2184,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task RecordArtifactAsync_SB02_INV_001_dedupes_long_display_keys_by_projection_identity_hash()
+    public async Task RecordArtifactAsync_dedupes_long_display_keys_by_projection_identity_hash()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2266,7 +2266,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task RecordArtifactAsync_SB10_INV_001_computes_missing_workspace_content_hash()
+    public async Task RecordArtifactAsync_computes_missing_workspace_content_hash()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2333,7 +2333,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task RecordArtifactAsync_SB01_INV_001_reactivates_blocked_downstream_with_tracked_materialized_artifact()
+    public async Task RecordArtifactAsync_reactivates_blocked_downstream_with_tracked_materialized_artifact()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2509,7 +2509,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB09_INV_001_persists_typed_policy_denial_block_state()
+    public async Task TransitionStepAsync_persists_typed_policy_denial_block_state()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2559,7 +2559,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB05_INV_001_persists_own_output_artifact_contract_block_cause()
+    public async Task TransitionStepAsync_persists_own_output_artifact_contract_block_cause()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2610,7 +2610,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB05_INV_002_persists_upstream_input_materialization_block_cause()
+    public async Task TransitionStepAsync_persists_upstream_input_materialization_block_cause()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2661,7 +2661,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB12_INV_001_exposes_distinct_recovery_health_for_own_and_upstream_missing_artifacts()
+    public async Task TransitionStepAsync_exposes_distinct_recovery_health_for_own_and_upstream_missing_artifacts()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -2739,7 +2739,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task TransitionStepAsync_SB10_INV_001_persists_recovery_router_next_action_and_lifecycle_event()
+    public async Task TransitionStepAsync_persists_recovery_router_next_action_and_lifecycle_event()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -3433,7 +3433,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task PublishAsync_SB10_INV_001_applies_strict_lint_for_high_criticality_definitions()
+    public async Task PublishAsync_applies_strict_lint_for_high_criticality_definitions()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -3456,7 +3456,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task PublishAsync_SB12_INV_001_rejects_strict_version_missing_risky_operation_contract()
+    public async Task PublishAsync_rejects_strict_version_missing_risky_operation_contract()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -3479,7 +3479,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task PublishAsync_SB12_INV_002_allows_compatibility_version_with_visible_contract_warning()
+    public async Task PublishAsync_allows_compatibility_version_with_visible_contract_warning()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -3513,7 +3513,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunAsync_SB10_INV_001_applies_strict_lint_for_delegated_published_definitions()
+    public async Task StartRunAsync_applies_strict_lint_for_delegated_published_definitions()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -3553,7 +3553,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunAsync_SB01_INV_001_applies_strict_lint_for_governed_live_runtime()
+    public async Task StartRunAsync_applies_strict_lint_for_governed_live_runtime()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -4245,7 +4245,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task Save_export_import_and_publish_SB08_INV_001_preserve_step_operation_contract()
+    public async Task Save_export_import_and_publish_preserve_step_operation_contract()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();

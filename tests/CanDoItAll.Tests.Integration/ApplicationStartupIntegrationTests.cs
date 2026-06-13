@@ -30,7 +30,7 @@ public sealed class ApplicationStartupIntegrationTests {
         ProcessTemplateCatalogInventory.RequiredRepresentativeTemplates.ToArray();
 
     [Fact]
-    public async Task Web_app_startup_SB009_INV_001_starts_current_composition_with_process_module_registered() {
+    public async Task Web_app_startup_starts_current_composition_with_process_module_registered() {
         await using var host = await StartupSmokeHost.CreateAsync();
 
         var healthResponse = await host.Client.GetAsync("/health");
@@ -52,7 +52,7 @@ public sealed class ApplicationStartupIntegrationTests {
     }
 
     [Fact]
-    public async Task Process_template_catalog_SB012_INV_001_exposes_required_templates_to_api_and_ui_launch_surfaces() {
+    public async Task Process_template_catalog_exposes_required_templates_to_api_and_ui_launch_surfaces() {
         await using var host = await StartupSmokeHost.CreateAsync();
 
         var templates = await host.Client.GetFromJsonAsync<IReadOnlyList<ProcessTemplateCatalogItem>>("/api/processes/templates");

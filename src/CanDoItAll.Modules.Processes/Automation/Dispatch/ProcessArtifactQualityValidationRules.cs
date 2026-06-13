@@ -255,45 +255,7 @@ internal static class ProcessArtifactQualityValidationRules
 
     private static bool ContainsExplicitImplementationTestRequest(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        return text.Contains("dotnet test", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains(".Tests.csproj", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains(".Test.csproj", StringComparison.OrdinalIgnoreCase) ||
-               ContainsContractWord(text, "MSTest") ||
-               ContainsContractWord(text, "xUnit") ||
-               ContainsContractWord(text, "NUnit") ||
-               Regex.IsMatch(
-                   text,
-                   @"\b(?:add|create|write|include|implement|update|run|rerun|execute)\s+(?:the\s+)?(?:relevant\s+)?(?:automated\s+)?(?:unit\s+|integration\s+|regression\s+)?tests?\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
-               Regex.IsMatch(
-                   text,
-                   @"\bwith\s+(?:automated\s+)?(?:unit\s+|integration\s+|regression\s+)?tests?\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
-               Regex.IsMatch(
-                   text,
-                   @"\b(?:prove|verify|validate)\b.{0,80}\btests?\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
-               Regex.IsMatch(
-                   text,
-                   @"\b(?:implement|deliver|build)\b.{0,80}\btests?\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
-               Regex.IsMatch(
-                   text,
-                   @"\btests?\s+(?:pass|passes|passing|succeed|succeeds)\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
-               Regex.IsMatch(
-                   text,
-                   @"\b(?:unit|integration|regression)\s+tests?\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
-               Regex.IsMatch(
-                   text,
-                   @"\btest\s+project\b",
-                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return ProcessImplementationStackRules.ContainsExplicitImplementationTestRequest(text);
     }
 
     private static bool ContainsContractWord(string text, string word)

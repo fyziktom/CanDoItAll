@@ -8,11 +8,9 @@ internal static class ProcessManagedArtifactPathClassificationRules
         return string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".razor", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".cshtml", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".csproj", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".fsproj", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".vbproj", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".slnx", StringComparison.OrdinalIgnoreCase) ||
+               ProcessConcreteProductPathRules.IsCodeOrProjectExtension(extension) ||
                string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".css", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".js", StringComparison.OrdinalIgnoreCase) ||
@@ -64,4 +62,3 @@ internal static class ProcessManagedArtifactPathClassificationRules
                string.Equals(extension, ".webp", StringComparison.OrdinalIgnoreCase);
     }
 }
-

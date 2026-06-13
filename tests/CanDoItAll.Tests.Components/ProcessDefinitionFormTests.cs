@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProcessDefinitionFormTests
 {
     [Fact]
-    public void Render_SB10_INV_001_shows_all_lint_issues()
+    public void Render_shows_all_lint_issues()
     {
         using var context = new TestContext();
         var issues = Enumerable.Range(1, 5)

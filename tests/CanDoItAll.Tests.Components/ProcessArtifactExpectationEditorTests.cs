@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProcessArtifactExpectationEditorTests
 {
     [Fact]
-    public void Render_SB01_INV_004_exposes_decision_record_and_approval_required_options()
+    public void Render_exposes_decision_record_and_approval_required_options()
     {
         using var context = new TestContext();
         var artifact = new ProcessArtifactExpectationEditorModel

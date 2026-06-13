@@ -175,7 +175,143 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
-    public void Process_driver_multi_domain_gate_a_owns_current_bundle_fixture_and_rejects_report_only_closure()
+    public void Process_driver_projects_are_verification_only_and_module_independent()
+    {
+        var root = FindRepositoryRoot();
+        var driverDirectories = CreateProcessDriverPackageDirectories(root)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var driverProjectNames = driverDirectories
+            .Select(Path.GetFileName)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var expectedDriverProjectNames = new[]
+        {
+            "CanDoItAll.Processes.Drivers.Abstractions",
+            "CanDoItAll.Processes.Drivers.ArtifactEvidence",
+            "CanDoItAll.Processes.Drivers.BusinessAnalysis",
+            "CanDoItAll.Processes.Drivers.ObservationAggregation",
+            "CanDoItAll.Processes.Drivers.OfficeEvidence",
+            "CanDoItAll.Processes.Drivers.RuntimeEvidence",
+            "CanDoItAll.Processes.Drivers.TranscriptVerification",
+            "CanDoItAll.Processes.Drivers.VerificationGateway"
+        };
+        var forbiddenProjectReferenceTokens = new[]
+        {
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "CanDoItAll.Web",
+            "CanDoItAll.Composition",
+            "CanDoItAll.Plugin",
+            "CanDoItAll.Plugins",
+            "Microsoft.EntityFrameworkCore"
+        };
+        var forbiddenSourceTokens = new[]
+        {
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "Microsoft.EntityFrameworkCore",
+            "DbContext",
+            "IServiceProvider",
+            "GetRequiredService",
+            "Assembly.GetTypes",
+            "Activator.CreateInstance",
+            "HttpClient",
+            "System.Diagnostics.Process",
+            "Process.Start",
+            "File.",
+            "Directory.",
+            "IServiceCollection",
+            "AddScoped",
+            "AddSingleton",
+            "AddHostedService",
+            "BackgroundService",
+            "IHostedService",
+            "IWorkspace",
+            "WorkspacePathResolver",
+            "StoragePlacement",
+            "SaveChangesAsync",
+            "RecordArtifactAsync",
+            "ManagerCommand",
+            "IScheduler",
+            "WorkflowRuntime"
+        };
+        var driverSource = ReadProductionSourceTextFromDirectories(driverDirectories);
+
+        Assert.Equal(expectedDriverProjectNames, driverProjectNames);
+        foreach (var driverDirectory in driverDirectories)
+        {
+            var projectPath = Directory
+                .EnumerateFiles(driverDirectory, "*.csproj", SearchOption.TopDirectoryOnly)
+                .Single();
+            var projectSource = File.ReadAllText(projectPath);
+
+            Assert.DoesNotContain("<PackageReference", projectSource, StringComparison.OrdinalIgnoreCase);
+            foreach (var forbiddenProjectReferenceToken in forbiddenProjectReferenceTokens)
+            {
+                Assert.DoesNotContain(forbiddenProjectReferenceToken, projectSource, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        foreach (var forbiddenSourceToken in forbiddenSourceTokens)
+        {
+            Assert.DoesNotContain(forbiddenSourceToken, driverSource, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void SoftwareDelivery_fallback_adapter_is_the_only_premerge_driver_boundary_exception()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var softwareDeliveryDriverProject = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence",
+            "CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence.csproj");
+        var adapterPath = Path.Combine(dispatchDirectory, "ProcessSoftwareDeliveryEvidenceAdapter.cs");
+        var domainDirectory = Path.Combine(dispatchDirectory, "Domain", "SoftwareDelivery");
+        var adapterAndDomainSource = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(domainDirectory, "*.cs", SearchOption.AllDirectories)
+                .Append(adapterPath)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .Select(File.ReadAllText));
+        var forbiddenFallbackTokens = new[]
+        {
+            "SaveChangesAsync",
+            "DbContext",
+            "RecordArtifactAsync",
+            "HttpClient",
+            "GraphServiceClient",
+            "GetRequiredService",
+            "IServiceProvider",
+            "Assembly.GetTypes",
+            "Activator.CreateInstance",
+            "Process.Start("
+        };
+
+        Assert.False(File.Exists(softwareDeliveryDriverProject));
+        Assert.True(File.Exists(adapterPath), adapterPath);
+        Assert.True(Directory.Exists(domainDirectory), domainDirectory);
+        Assert.Contains("ProcessSoftwareDeliveryEvidenceAdapter", adapterAndDomainSource, StringComparison.Ordinal);
+
+        foreach (var forbiddenFallbackToken in forbiddenFallbackTokens)
+        {
+            Assert.DoesNotContain(forbiddenFallbackToken, adapterAndDomainSource, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_multi_domain_gate_a_owns_current_package_fixture_and_rejects_report_only_closure()
     {
         var readme = ReadProcessDriverMultiDomainFixtureFile(
             "README.md");
@@ -977,7 +1113,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
+    public void package_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
     {
         var proofRoot = CreateStableArchitectureFixtureRoot(FindRepositoryRoot());
         var forbiddenPathTokens = new[]
@@ -1003,7 +1139,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Artifact_boundary_bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
+    public void Artifact_boundary_package_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
     {
         var proofRoot = CreateStableArchitectureFixtureRoot(FindRepositoryRoot());
         var forbiddenPathTokens = new[]
@@ -1137,27 +1273,43 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch");
-        var helperFiles = new[]
+        var softwareDeliveryDomainDirectory = Path.Combine(
+            processesDispatchDirectory,
+            "Domain",
+            "SoftwareDelivery");
+        var domainHelperFiles = new[]
         {
             "ProcessImplementationStackRules.cs",
             "ProcessConcreteProductPathRules.cs",
             "ProcessImplementationReceiptTimeline.cs",
             "ProcessDotNetHostEvidenceRules.cs",
-            "ProcessCarriedImplementationProofRules.cs",
+            "ProcessCarriedImplementationProofRules.cs"
+        };
+        var rootHelperFiles = new[]
+        {
             "ProcessRunAutomationDispatchService.ImplementationProofBridges.cs"
         };
         var dispatcherPath = Path.Combine(processesDispatchDirectory, "ProcessRunAutomationDispatchService.ImplementationProof.cs");
+        var adapterPath = Path.Combine(processesDispatchDirectory, "ProcessSoftwareDeliveryEvidenceAdapter.cs");
         var artifactValidationPath = Path.Combine(processesDispatchDirectory, "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
 
         var helperSource = string.Join(
             Environment.NewLine,
-            helperFiles.Select(file =>
-            {
-                var path = Path.Combine(processesDispatchDirectory, file);
-                Assert.True(File.Exists(path), file);
-                return File.ReadAllText(path);
-            }));
+            domainHelperFiles
+                .Select(file =>
+                {
+                    var path = Path.Combine(softwareDeliveryDomainDirectory, file);
+                    Assert.True(File.Exists(path), file);
+                    return File.ReadAllText(path);
+                })
+                .Concat(rootHelperFiles.Select(file =>
+                {
+                    var path = Path.Combine(processesDispatchDirectory, file);
+                    Assert.True(File.Exists(path), file);
+                    return File.ReadAllText(path);
+                })));
         var dispatcherSource = File.ReadAllText(dispatcherPath);
+        var adapterSource = File.ReadAllText(adapterPath);
         var artifactValidationSource = File.ReadAllText(artifactValidationPath);
 
         Assert.Contains("internal sealed record ProcessImplementationContractSnapshot", helperSource, StringComparison.Ordinal);
@@ -1168,6 +1320,11 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.Contains("internal static class ProcessCarriedImplementationProofRules", helperSource, StringComparison.Ordinal);
         Assert.Contains("private static class ProcessMockImplementationProofBridge", helperSource, StringComparison.Ordinal);
         Assert.Contains("private static class ProcessImplementationArtifactWriteSatisfactionBridge", helperSource, StringComparison.Ordinal);
+        Assert.Contains("private static class ProcessSoftwareDeliveryEvidenceAdapter", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveMissingConcreteImplementationProofSummary", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveMissingRunnableApplicationProofSummary", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSoftwareDeliveryEvidenceAdapter.ResolveMissingConcreteImplementationProofSummary", dispatcherSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSoftwareDeliveryEvidenceAdapter.ResolveMissingRunnableApplicationProofSummary", dispatcherSource, StringComparison.Ordinal);
         Assert.Contains("ProcessImplementationContractSnapshot.RequiresCurrentAttemptProductMutation", dispatcherSource, StringComparison.Ordinal);
         Assert.Contains("ProcessImplementationStackRules.ImplementationContractMentionsDotNet", dispatcherSource, StringComparison.Ordinal);
         Assert.Contains("ProcessConcreteProductPathRules.HasConcreteProductPath", dispatcherSource, StringComparison.Ordinal);
@@ -1186,6 +1343,42 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.DoesNotContain("NotImplemented", helperSource, StringComparison.Ordinal);
         Assert.True(dispatcherSource.Split(Environment.NewLine).Length < 1120);
         AssertNarrowProcessCoreSeed(root);
+    }
+
+    [Fact]
+    public void SoftwareDelivery_proof_policy_stack_terms_stay_in_domain_adapter_seam()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var softwareDeliveryDomainDirectory = Path.Combine(
+            dispatchDirectory,
+            "Domain",
+            "SoftwareDelivery");
+        var adapterPath = Path.Combine(dispatchDirectory, "ProcessSoftwareDeliveryEvidenceAdapter.cs");
+        var forbiddenPattern = new Regex(
+            @"(Blazor|Razor|dotnet|\.csproj|\.slnx|npm|pnpm|yarn|vite|react|vue|svelte|javascript|typescript)",
+            RegexOptions.CultureInvariant);
+
+        var violations = Directory
+            .EnumerateFiles(dispatchDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.StartsWith(softwareDeliveryDomainDirectory, StringComparison.OrdinalIgnoreCase))
+            .Where(path => !string.Equals(path, adapterPath, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(path => File.ReadLines(path)
+                .Select((line, index) => new
+                {
+                    Path = path,
+                    LineNumber = index + 1,
+                    Line = line
+                }))
+            .Where(item => forbiddenPattern.IsMatch(item.Line))
+            .Select(item => $"{Path.GetRelativePath(dispatchDirectory, item.Path)}:{item.LineNumber}:{item.Line.Trim()}")
+            .ToArray();
+
+        Assert.True(violations.Length == 0, string.Join(Environment.NewLine, violations.Take(20)));
     }
 
     [Fact]
@@ -1226,7 +1419,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Tool_validation_boundary_bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
+    public void Tool_validation_boundary_package_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
     {
         var proofRoot = CreateStableArchitectureFixtureRoot(FindRepositoryRoot());
         var forbiddenPathTokens = new[]
@@ -1255,7 +1448,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_claim_route_gate_b_SB08_INV_001_records_concurrency_helper_parity_and_blocks_side_effect_drift()
+    public void Process_dispatch_claim_route_gate_b_records_concurrency_helper_parity_and_blocks_side_effect_drift()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -1315,11 +1508,11 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.Contains("Task.Delay", adoptionCoordinatorSource, StringComparison.Ordinal);
         Assert.Contains("new ProcessRunAutomationDispatchService.ConcurrentAutomationExecution", adoptionCoordinatorSource, StringComparison.Ordinal);
 
-        Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_001", integrationTestSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_002", integrationTestSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_003", integrationTestSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessRunAutomationDispatchService_SB07_INV_001", integrationTestSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessRunAutomationDispatchService_SB07_INV_002", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection_selects_latest_current_attempt_competing_run", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection_preserves_stale_and_approval_blocking_rules", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection_preserves_completion_and_fresh_recovery_skip_rules", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService_preserves_execution_run_selection_wrapper_parity", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService_preserves_transition_busy_and_fresh_skip_wrapper_parity", integrationTestSource, StringComparison.Ordinal);
         Assert.DoesNotContain(proofArtifactPaths, path =>
         {
             var relativePath = Path.GetRelativePath(proofRoot, path);
@@ -1329,7 +1522,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_claim_route_gate_b_SB08_INV_002_rejects_shallow_wrapper_migration_with_duplicate_selection_logic()
+    public void Process_dispatch_claim_route_gate_b_rejects_shallow_wrapper_migration_with_duplicate_selection_logic()
     {
         var concurrencySource = ReadRepositoryFile(
             "src",
@@ -1352,7 +1545,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_claim_route_gate_c_SB12_INV_001_proves_route_claim_start_and_heartbeat_boundaries_without_side_effect_drift()
+    public void Process_dispatch_claim_route_gate_c_proves_route_claim_start_and_heartbeat_boundaries_without_side_effect_drift()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -1481,15 +1674,15 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.Contains("ProcessDispatchLeaseHeartbeat", heartbeatSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchClaimLostException", heartbeatSource, StringComparison.Ordinal);
 
-        Assert.Contains("ProcessDispatchGuardLease_SB09_INV_001", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchGuardLease_serializes_same_step_and_removes_released_guard", integrationTestSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchLeaseHeartbeat_renews_outer_and_step_claims_during_long_work", integrationTestSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchStartTransitionPlanner_SB10_INV_001", integrationTestSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRoutePlanner_SB11_INV_001", integrationTestSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRoutePlanner_SB11_INV_002", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchStartTransitionPlanner_builds_start_request_without_executing_transition", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner_classifies_database_upstream_and_recovery_routes_without_side_effects", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner_routes_subprocess_workflow_and_agent_execution", integrationTestSource, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Process_dispatch_claim_route_gate_c_SB12_INV_002_records_line_counts_and_blocks_core_driver_or_viewport_drift()
+    public void Process_dispatch_claim_route_gate_c_records_line_counts_and_blocks_core_driver_or_viewport_drift()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -1560,7 +1753,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_main_loop_claim_lifecycle_boundary_SB88_INV_001_keeps_dispatch_facade_thin_and_side_effects_named()
+    public void Process_dispatch_main_loop_claim_lifecycle_boundary_keeps_dispatch_facade_thin_and_side_effects_named()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -1746,7 +1939,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB013_INV_001_uses_pre_execution_route_facts_without_source_payload()
+    public void Process_core_contract_candidate_driver_readiness_uses_pre_execution_route_facts_without_source_payload()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -1815,7 +2008,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB014_INV_001_separates_materialization_pure_rules_from_side_effects()
+    public void Process_core_contract_candidate_driver_readiness_separates_materialization_pure_rules_from_side_effects()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -1861,7 +2054,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB016_INV_001_moves_subprocess_runtime_to_route_input_model()
+    public void Process_core_contract_candidate_driver_readiness_moves_subprocess_runtime_to_route_input_model()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -1926,7 +2119,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB017_INV_001_extracts_subprocess_projection_persistence()
+    public void Process_core_contract_candidate_driver_readiness_extracts_subprocess_projection_persistence()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -1976,7 +2169,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB019_INV_001_moves_direct_agent_runtime_to_execution_input_model()
+    public void Process_core_contract_candidate_driver_readiness_moves_direct_agent_runtime_to_execution_input_model()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2033,7 +2226,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB020_INV_001_slims_route_execution_outcome_to_run_snapshot()
+    public void Process_core_contract_candidate_driver_readiness_slims_route_execution_outcome_to_run_snapshot()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2074,7 +2267,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB021_INV_001_preserves_execution_retry_provider_and_finalizer_paths()
+    public void Process_core_contract_candidate_driver_readiness_preserves_execution_retry_provider_and_finalizer_paths()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2157,7 +2350,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_claim_route_SB13_INV_001_extracts_finalizer_context_factory_with_route_field_parity()
+    public void Process_dispatch_claim_route_extracts_finalizer_context_factory_with_route_field_parity()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2221,7 +2414,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB007_INV_001_uses_route_finalizer_input_models()
+    public void Process_core_contract_candidate_driver_readiness_uses_route_finalizer_input_models()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2289,7 +2482,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB008_INV_001_moves_dispatcher_aliases_to_finalizer_adapter()
+    public void Process_core_contract_candidate_driver_readiness_moves_dispatcher_aliases_to_finalizer_adapter()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2338,7 +2531,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_stabilization_SB010_SB011_INV_001_confines_route_model_payload_bridge_to_adapters()
+    public void Process_core_stabilization_confines_route_model_payload_bridge_to_adapters()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2386,7 +2579,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_stabilization_SB013_SB014_INV_001_keeps_transition_intents_pure_and_adapter_owned()
+    public void Process_core_stabilization_keeps_transition_intents_pure_and_adapter_owned()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -2418,7 +2611,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_stabilization_SB019_SB020_INV_001_keeps_projection_validation_descriptors_pure_and_adapter_owned()
+    public void Process_core_stabilization_keeps_projection_validation_descriptors_pure_and_adapter_owned()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -2476,7 +2669,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_evidence_descriptors_SB004_SB006_INV_001_keeps_execution_descriptors_pure_and_adapter_owned()
+    public void Process_core_evidence_descriptors_keeps_execution_descriptors_pure_and_adapter_owned()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -2534,7 +2727,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_finalizer_evidence_descriptors_SB007_SB009_INV_001_keeps_finalizer_descriptors_pure_and_adapter_owned()
+    public void Process_core_finalizer_evidence_descriptors_keeps_finalizer_descriptors_pure_and_adapter_owned()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -2591,7 +2784,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_diagnostic_descriptors_SB010_SB012_INV_001_keeps_retry_provider_diagnostics_pure_and_adapter_owned()
+    public void Process_core_diagnostic_descriptors_keeps_retry_provider_diagnostics_pure_and_adapter_owned()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -2652,7 +2845,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_projection_evidence_descriptors_SB013_SB015_INV_001_keeps_projection_descriptors_pure_and_adapter_owned()
+    public void Process_core_projection_evidence_descriptors_keeps_projection_descriptors_pure_and_adapter_owned()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -2712,7 +2905,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_stabilization_SB023_INV_001_hardens_core_dependency_guard_against_runtime_and_driver_dependencies()
+    public void Process_core_stabilization_hardens_core_dependency_guard_against_runtime_and_driver_dependencies()
     {
         var root = FindRepositoryRoot();
         var coreRoot = Path.Combine(root, "src", "CanDoItAll.Processes.Core");
@@ -2757,7 +2950,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Step_completion_finalizer_gate_a_SB04_INV_002_preserves_nested_type_surface_before_movement()
+    public void Step_completion_finalizer_gate_a_preserves_nested_type_surface_before_movement()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2786,7 +2979,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Step_completion_finalizer_gate_b_SB08_INV_001_extracts_types_and_readers_without_surface_or_stub_drift()
+    public void Step_completion_finalizer_gate_b_extracts_types_and_readers_without_surface_or_stub_drift()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2824,7 +3017,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Step_completion_finalizer_gate_c_SB12_INV_001_extracts_validation_invariant_and_transition_helpers_with_field_parity()
+    public void Step_completion_finalizer_gate_c_extracts_validation_invariant_and_transition_helpers_with_field_parity()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -2905,7 +3098,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB023_INV_001_converges_validation_projection_and_satisfaction_expectation_snapshots()
+    public void Process_core_contract_candidate_driver_readiness_converges_validation_projection_and_satisfaction_expectation_snapshots()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -2977,7 +3170,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB024_INV_001_preserves_projection_validation_dto_parity_paths()
+    public void Process_core_contract_candidate_driver_readiness_preserves_projection_validation_dto_parity_paths()
     {
         var orchestratorSource = ReadRepositoryFile(
             "src",
@@ -3580,7 +3773,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB022_INV_001_splits_projection_run_snapshot_from_execution_detail_observations()
+    public void Process_core_contract_candidate_driver_readiness_splits_projection_run_snapshot_from_execution_detail_observations()
     {
         var projectionModelsSource = ReadRepositoryFile(
             "src",
@@ -3706,7 +3899,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_mock_projection_SB05_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+    public void Process_mock_projection_uses_write_coordinator_without_direct_storage_record_block()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -3729,7 +3922,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Workspace_written_projection_SB06_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+    public void Workspace_written_projection_uses_write_coordinator_without_direct_storage_record_block()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -3754,7 +3947,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Existing_managed_projection_SB07_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+    public void Existing_managed_projection_uses_write_coordinator_without_direct_storage_record_block()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -3780,7 +3973,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Response_text_projection_SB09_INV_001_uses_write_coordinator_without_moving_file_creation_or_short_circuit()
+    public void Response_text_projection_uses_write_coordinator_without_moving_file_creation_or_short_circuit()
     {
         var responseSection = ReadRepositoryFile(
             "src",
@@ -3822,7 +4015,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Provider_native_browser_projection_SB10_INV_001_uses_write_coordinator_for_expected_and_discovered_modes()
+    public void Provider_native_browser_projection_uses_write_coordinator_for_expected_and_discovered_modes()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -3869,7 +4062,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Completed_decision_projection_SB11_INV_001_uses_record_only_coordinator_without_storage_placement()
+    public void Completed_decision_projection_uses_record_only_coordinator_without_storage_placement()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -3912,7 +4105,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_candidate_hydration_gate_b_SB08_INV_001_uses_selector_and_snapshot_loader_without_side_effect_drift()
+    public void Process_dispatch_candidate_hydration_gate_b_uses_selector_and_snapshot_loader_without_side_effect_drift()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -3955,7 +4148,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB010_INV_001_splits_hydration_query_artifact_preparation_and_assembly()
+    public void Process_core_contract_candidate_driver_readiness_splits_hydration_query_artifact_preparation_and_assembly()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4013,7 +4206,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_candidate_hydration_gate_c_SB12_INV_001_uses_assembly_helpers_without_core_or_driver_drift()
+    public void Process_dispatch_candidate_hydration_gate_c_uses_assembly_helpers_without_core_or_driver_drift()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4063,7 +4256,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_candidate_hydration_gate_d_SB16_INV_001_keeps_binding_side_effects_explicit_and_recovery_queries_local()
+    public void Process_dispatch_candidate_hydration_gate_d_keeps_binding_side_effects_explicit_and_recovery_queries_local()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4112,7 +4305,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB011_INV_001_moves_direct_agent_binding_recovery_and_cooperation_to_explicit_assembler()
+    public void Process_core_contract_candidate_driver_readiness_moves_direct_agent_binding_recovery_and_cooperation_to_explicit_assembler()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4154,7 +4347,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_contract_candidate_driver_readiness_SB012_INV_001_preserves_hydration_parity_and_side_effect_ownership()
+    public void Process_core_contract_candidate_driver_readiness_preserves_hydration_parity_and_side_effect_ownership()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4230,7 +4423,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_candidate_factory_gate_a_SB04_INV_001_uses_module_local_side_effect_free_factory()
+    public void Process_dispatch_candidate_factory_gate_a_uses_module_local_side_effect_free_factory()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4289,7 +4482,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_candidate_factory_gate_b_SB08_INV_001_owns_all_dispatch_candidate_construction()
+    public void Process_dispatch_candidate_factory_gate_b_owns_all_dispatch_candidate_construction()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4312,7 +4505,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_cooperation_resolver_SB13_INV_001_moves_profile_resolution_without_driver_api()
+    public void Process_dispatch_cooperation_resolver_moves_profile_resolution_without_driver_api()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -4339,7 +4532,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_dispatch_execution_retry_provider_gate_a_SB04_INV_001_keeps_refactor_module_local_without_driver_or_ui_proof()
+    public void Process_dispatch_execution_retry_provider_gate_a_keeps_refactor_module_local_without_driver_or_ui_proof()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -4395,7 +4588,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_driver_readonly_orchestration_SB034_SB035_INV_001_refreshes_core_consumer_map_and_rejects_global_using_drift()
+    public void Process_driver_readonly_orchestration_refreshes_core_consumer_map_and_rejects_global_using_drift()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -4435,7 +4628,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Process_core_pre_extraction_consolidation_SB005_INV_001_confines_route_adapters_to_application_edges()
+    public void Process_core_pre_extraction_consolidation_confines_route_adapters_to_application_edges()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),

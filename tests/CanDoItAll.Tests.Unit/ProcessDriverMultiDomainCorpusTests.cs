@@ -22,7 +22,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     private const string SecretPattern = @"sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{30,}|github_pat_[A-Za-z0-9_]{20,}|AccountKey=[A-Za-z0-9+/]{60,}={0,2}";
 
     [Fact]
-    public void Process_driver_multi_domain_corpus_SB043_INV_001_transcript_fixtures_drive_positive_negative_dotnet_and_rust_paths()
+    public void Process_driver_multi_domain_corpus_transcript_fixtures_drive_positive_negative_dotnet_and_rust_paths()
     {
         var verifier = new TranscriptVerificationAlphaVerifier();
         var dotnetPositiveText = ReadCorpusFile("transcript", "dotnet-positive-clean-build.txt");
@@ -84,7 +84,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     }
 
     [Fact]
-    public void Process_driver_multi_domain_corpus_SB043_INV_002_runtime_fixtures_drive_consistent_and_contradictory_descriptor_paths()
+    public void Process_driver_multi_domain_corpus_runtime_fixtures_drive_consistent_and_contradictory_descriptor_paths()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var positivePayload = ReadCorpusFile("runtime", "runtime-positive-consistent-descriptors.json");
@@ -169,7 +169,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     }
 
     [Fact]
-    public void Process_driver_multi_domain_corpus_SB043_INV_003_office_fixtures_drive_complete_and_missing_metadata_paths()
+    public void Process_driver_multi_domain_corpus_office_fixtures_drive_complete_and_missing_metadata_paths()
     {
         var verifier = new OfficeEvidenceAlphaVerifier();
         var positivePayload = ReadCorpusFile("office", "office-positive-escalation.json");
@@ -223,7 +223,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     }
 
     [Fact]
-    public void Process_driver_multi_domain_corpus_SB043_INV_004_business_fixtures_drive_supported_and_unsupported_analysis_paths()
+    public void Process_driver_multi_domain_corpus_business_fixtures_drive_supported_and_unsupported_analysis_paths()
     {
         var verifier = new BusinessAnalysisAlphaVerifier();
         var positiveText = ReadCorpusFile("business", "business-positive-churn-analysis.md");
@@ -277,7 +277,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     }
 
     [Fact]
-    public void Process_driver_multi_domain_corpus_SB043_INV_005_artifact_fixtures_drive_valid_and_drifted_projection_paths()
+    public void Process_driver_multi_domain_corpus_artifact_fixtures_drive_valid_and_drifted_projection_paths()
     {
         var verifier = new ArtifactEvidenceAlphaVerifier();
         var positivePayload = ReadCorpusFile("artifact", "artifact-positive-release-notes.json");
@@ -353,7 +353,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     }
 
     [Fact]
-    public void Process_driver_multi_domain_corpus_SB043_INV_006_fixture_inventory_is_source_backed_secret_safe_and_runtime_free()
+    public void Process_driver_multi_domain_corpus_fixture_inventory_is_source_backed_secret_safe_and_runtime_free()
     {
         var expectedFixtures = new[]
         {

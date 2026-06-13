@@ -77,7 +77,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     }
 
     [Fact]
-    public void Live_process_run_smoke_SB03_INV_001_model_override_is_optional_when_budgets_are_present()
+    public void Live_process_run_smoke_model_override_is_optional_when_budgets_are_present()
     {
         using var environment = new EnvironmentVariableScope(
             (LiveModelVariable, null),
@@ -94,7 +94,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     [Theory]
     [InlineData(LiveTimeoutSecondsVariable)]
     [InlineData(LiveMaxTotalTokensVariable)]
-    public void Live_process_run_smoke_SB03_INV_002_rejects_missing_budget_without_secret_leakage(string environmentVariable)
+    public void Live_process_run_smoke_rejects_missing_budget_without_secret_leakage(string environmentVariable)
     {
         using var environment = new EnvironmentVariableScope(
             (LiveModelVariable, null),
@@ -117,7 +117,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     [InlineData(LiveMaxTotalTokensVariable, "9999")]
     [InlineData(LiveMaxTotalTokensVariable, "500001")]
     [InlineData(LiveMaxTotalTokensVariable, "not-an-integer")]
-    public void Live_process_run_smoke_SB03_INV_003_rejects_invalid_budget_bounds_without_secret_leakage(
+    public void Live_process_run_smoke_rejects_invalid_budget_bounds_without_secret_leakage(
         string environmentVariable,
         string value)
     {
@@ -135,7 +135,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     }
 
     [Fact]
-    public void Live_process_run_smoke_SB03_INV_004_uses_explicit_model_override_when_present()
+    public void Live_process_run_smoke_uses_explicit_model_override_when_present()
     {
         var provider = CreateProviderProfile(defaultModel: "managed-default-model", suggestedModels: ["suggested-model"]);
 
@@ -146,7 +146,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     }
 
     [Fact]
-    public void Live_process_run_smoke_SB03_INV_005_uses_managed_provider_default_when_override_is_absent()
+    public void Live_process_run_smoke_uses_managed_provider_default_when_override_is_absent()
     {
         var provider = CreateProviderProfile(defaultModel: "managed-default-model", suggestedModels: ["suggested-model"]);
 
@@ -157,7 +157,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     }
 
     [Fact]
-    public void Live_process_run_smoke_SB03_INV_006_uses_first_suggested_model_when_default_is_empty()
+    public void Live_process_run_smoke_uses_first_suggested_model_when_default_is_empty()
     {
         var provider = CreateProviderProfile(defaultModel: " ", suggestedModels: [" ", "suggested-model", "later-model"]);
 
@@ -168,7 +168,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     }
 
     [Fact]
-    public void Live_process_run_smoke_SB03_INV_007_fails_as_provider_default_missing_without_default_or_suggestions()
+    public void Live_process_run_smoke_fails_as_provider_default_missing_without_default_or_suggestions()
     {
         var provider = CreateProviderProfile(defaultModel: "", suggestedModels: [" ", ""]);
 
@@ -183,7 +183,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     }
 
     [Fact]
-    public void Live_process_run_smoke_SB02_INV_001_provider_failure_diagnostics_include_sanitized_exception_detail()
+    public void Live_process_run_smoke_provider_failure_diagnostics_include_sanitized_exception_detail()
     {
         var diagnosticMethod = typeof(MafAgentRuntime).GetMethod(
             "BuildProviderFailureDiagnostic",

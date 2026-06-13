@@ -98,7 +98,7 @@ public sealed class ProcessStepEditorFormTests
     }
 
     [Fact]
-    public void Render_SB08_INV_001_operation_contract_controls_update_model()
+    public void Render_operation_contract_controls_update_model()
     {
         using var context = new TestContext();
         var currentStep = new ProcessStepEditorModel

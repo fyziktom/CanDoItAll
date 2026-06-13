@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverTranscriptVerificationAlphaTests
 {
     [Fact]
-    public void Process_driver_transcript_alpha_SB010_INV_001_internals_are_split_without_runtime_or_io_surface()
+    public void Process_driver_transcript_alpha_internals_are_split_without_runtime_or_io_surface()
     {
         var root = FindRepositoryRoot();
         var source = ReadProjectSource(root);
@@ -26,7 +26,7 @@ public sealed class ProcessDriverTranscriptVerificationAlphaTests
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB011_INV_001_malicious_corpus_is_supplied_text_only_redacted_and_readonly()
+    public void Process_driver_transcript_alpha_malicious_corpus_is_supplied_text_only_redacted_and_readonly()
     {
         var verifier = new TranscriptVerificationAlphaVerifier();
         var corpus = new[]
@@ -80,7 +80,7 @@ public sealed class ProcessDriverTranscriptVerificationAlphaTests
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB012_INV_001_dotnet_semantic_diagnostics_are_readonly_redacted_and_audited()
+    public void Process_driver_transcript_alpha_dotnet_semantic_diagnostics_are_readonly_redacted_and_audited()
     {
         const string transcript = """
 CSC : warning CS8618: Non-nullable property 'Name' must contain a non-null value.
@@ -132,7 +132,7 @@ token=sk-live-secret lucy@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB015_INV_001_rust_semantic_diagnostics_are_readonly_redacted_and_audited()
+    public void Process_driver_transcript_alpha_rust_semantic_diagnostics_are_readonly_redacted_and_audited()
     {
         const string transcript = """
 error[E0425]: cannot find value `answer` in this scope
@@ -174,7 +174,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB018_INV_001_permission_denials_and_response_mapping_reject_side_effects()
+    public void Process_driver_transcript_alpha_permission_denials_and_response_mapping_reject_side_effects()
     {
         var verifier = new TranscriptVerificationAlphaVerifier();
 
@@ -200,7 +200,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB023_INV_001_supplied_content_policy_rejects_untrusted_mismatched_oversized_and_invalid_content_type()
+    public void Process_driver_transcript_alpha_supplied_content_policy_rejects_untrusted_mismatched_oversized_and_invalid_content_type()
     {
         const string transcript = "Build succeeded.";
         var verifier = new TranscriptVerificationAlphaVerifier();
@@ -262,7 +262,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB024_INV_003_evidence_boundary_rejects_missing_supplied_content_envelope_without_parsing()
+    public void Process_driver_transcript_alpha_evidence_boundary_rejects_missing_supplied_content_envelope_without_parsing()
     {
         const string transcript = "Build succeeded.";
         var verifier = new TranscriptVerificationAlphaVerifier();
@@ -287,7 +287,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB025_INV_001_audit_facts_include_caller_lane_operation_evidence_denial_and_output_hash()
+    public void Process_driver_transcript_alpha_audit_facts_include_caller_lane_operation_evidence_denial_and_output_hash()
     {
         var verifier = new TranscriptVerificationAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -308,7 +308,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB024_INV_001_evidence_hash_policy_rejects_mismatch_and_normalizes_references()
+    public void Process_driver_transcript_alpha_evidence_hash_policy_rejects_mismatch_and_normalizes_references()
     {
         var verifier = new TranscriptVerificationAlphaVerifier();
         var mismatchResult = verifier.Verify(CreateRequest(
@@ -336,7 +336,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB024_INV_002_evidence_uri_policy_rejects_unapproved_sources_without_mutation()
+    public void Process_driver_transcript_alpha_evidence_uri_policy_rejects_unapproved_sources_without_mutation()
     {
         var verifier = new TranscriptVerificationAlphaVerifier();
         var localTranscriptResult = verifier.Verify(CreateRequest(
@@ -370,7 +370,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB033_INV_001_alpha_package_and_process_adapter_have_no_runtime_hook()
+    public void Process_driver_transcript_alpha_alpha_package_and_process_adapter_have_no_runtime_hook()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");
@@ -427,7 +427,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB039_INV_001_docs_and_roadmap_keep_runtime_deferred()
+    public void Process_driver_transcript_alpha_docs_and_roadmap_keep_runtime_deferred()
     {
         var packageReadme = ReadRepositoryFile(
             "src",

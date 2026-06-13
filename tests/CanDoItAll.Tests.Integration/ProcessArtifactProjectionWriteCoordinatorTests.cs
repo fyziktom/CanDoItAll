@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessArtifactProjectionWriteCoordinatorTests
 {
     [Fact]
-    public async Task WriteAsync_SB03_INV_001_returns_structured_outcome_and_records_request()
+    public async Task WriteAsync_returns_structured_outcome_and_records_request()
     {
         var recordId = Guid.NewGuid();
         ProcessArtifactRecordRequest? capturedRecord = null;
@@ -52,7 +52,7 @@ public sealed class ProcessArtifactProjectionWriteCoordinatorTests
     }
 
     [Fact]
-    public async Task WriteAsync_SB03_INV_002_returns_record_errors_without_success_outcome_when_recording_fails()
+    public async Task WriteAsync_returns_record_errors_without_success_outcome_when_recording_fails()
     {
         var storage = new RecordingStoragePlacementService("managed/process/evidence.txt");
         var coordinator = new ProcessArtifactProjectionWriteCoordinator(

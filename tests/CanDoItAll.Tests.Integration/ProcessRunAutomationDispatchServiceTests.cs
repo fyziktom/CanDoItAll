@@ -42,6 +42,22 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessRunAutomationDispatchServiceTests
 {
+    private static readonly ProcessStepOperation[] ProjectStructureWritebackOperations =
+    [
+        ProcessStepOperation.ReadProcessContext,
+        ProcessStepOperation.ReadProjectStructure,
+        ProcessStepOperation.ReadUpstreamArtifacts,
+        ProcessStepOperation.WriteManagedProcessArtifacts,
+        ProcessStepOperation.ExecuteExternalAction
+    ];
+
+    private static readonly ProcessStepOperation[] ValidationAndScriptOperations =
+    [
+        ProcessStepOperation.ReadProcessContext,
+        ProcessStepOperation.WriteManagedProcessArtifacts,
+        ProcessStepOperation.RunValidation
+    ];
+
     [Fact]
     public void DispatchDecisionServices_expose_typed_resolver_boundaries()
     {
@@ -253,7 +269,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     [InlineData(ProcessStepBlockReasonCode.NoProgress, ProcessStepBlockCause.RuntimeEvidence, ProcessStepRecoveryOption.FreshAgentSession)]
     [InlineData(ProcessStepBlockReasonCode.PolicyDeniedExternalPath, ProcessStepBlockCause.PolicyDenied, ProcessStepRecoveryOption.HumanEscalation)]
     [InlineData(ProcessStepBlockReasonCode.ValidationFailed, ProcessStepBlockCause.RuntimeEvidence, ProcessStepRecoveryOption.RepairImplementation)]
-    public void ProcessRecoveryRouter_SB10_INV_001_selects_deterministic_next_action(
+    public void ProcessRecoveryRouter_selects_deterministic_next_action(
         ProcessStepBlockReasonCode blockReasonCode,
         ProcessStepBlockCause blockCause,
         ProcessStepRecoveryOption expectedAction)
@@ -273,7 +289,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessRecoveryRouter_SB10_INV_002_escalates_repeated_no_progress_without_new_evidence()
+    public void ProcessRecoveryRouter_escalates_repeated_no_progress_without_new_evidence()
     {
         var recentAttempt = new ProcessRecoveryRoutingAttempt(
             ProcessStepRecoveryOption.FreshAgentSession,
@@ -295,7 +311,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessBlockStateClassifier_SB11_INV_001_classifies_typed_causes_without_step_mutation()
+    public void ProcessBlockStateClassifier_classifies_typed_causes_without_step_mutation()
     {
         var classification = ProcessBlockStateClassifier.Classify(
             "The upstream vendor intake packet has not materialized.",
@@ -308,7 +324,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessHealthInvariantAuditor_SB11_INV_001_builds_generic_actionable_recovery_health()
+    public void ProcessHealthInvariantAuditor_builds_generic_actionable_recovery_health()
     {
         var stepRun = new ProcessStepRun
         {
@@ -348,7 +364,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessSubprocessLifecycleRules_SB05_INV_001_preserves_transition_field_parity()
+    public void ProcessSubprocessLifecycleRules_preserves_transition_field_parity()
     {
         var stepRunId = Guid.NewGuid();
         var concurrencyToken = Guid.NewGuid();
@@ -398,7 +414,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessCoreSubprocessLifecycleRules_SB006_INV_001_preserve_parent_status_reason_semantics()
+    public void ProcessCoreSubprocessLifecycleRules_preserve_parent_status_reason_semantics()
     {
         var stepRunId = Guid.NewGuid();
         var concurrencyToken = Guid.NewGuid();
@@ -429,7 +445,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessSubprocessCapabilityGapInspector_SB09_INV_001_formats_unassigned_gap_steps()
+    public void ProcessSubprocessCapabilityGapInspector_formats_unassigned_gap_steps()
     {
         var summary = ProcessSubprocessCapabilityGapInspector.BuildStepSummary(
             new ProcessSubprocessCapabilityGapStep(
@@ -443,7 +459,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessSubprocessBoundary_SB18_INV_001_dispatch_delegates_runtime_projection_side_effects()
+    public void ProcessSubprocessBoundary_dispatch_delegates_runtime_projection_side_effects()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -493,7 +509,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void WorkflowSubprocessArtifactMapper_SB11_INV_001_resolves_explicit_mappings_without_dispatch_partials()
+    public void WorkflowSubprocessArtifactMapper_resolves_explicit_mappings_without_dispatch_partials()
     {
         var workflowExpectation = new ProcessArtifactExpectation
         {
@@ -555,7 +571,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessCoreSubprocessArtifactSourceResolver_SB009_INV_001_rejects_ambiguous_child_mapping_and_selects_latest_eligible_artifact()
+    public void ProcessCoreSubprocessArtifactSourceResolver_rejects_ambiguous_child_mapping_and_selects_latest_eligible_artifact()
     {
         var childExpectationId = Guid.NewGuid();
         var firstParentId = Guid.NewGuid();
@@ -605,7 +621,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessCoreArtifactExpectationSatisfactionRules_SB016_INV_001_reports_trust_and_sensitivity_failures()
+    public void ProcessCoreArtifactExpectationSatisfactionRules_reports_trust_and_sensitivity_failures()
     {
         var expectation = CreateCoreExpectation(
             Guid.NewGuid(),
@@ -646,7 +662,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessCoreArtifactProjectionEligibilityRules_SB019_INV_001_describes_projection_sources_without_storage_paths()
+    public void ProcessCoreArtifactProjectionEligibilityRules_describes_projection_sources_without_storage_paths()
     {
         var agentExecutionDescriptor = CoreArtifactProjectionEligibilityRules.Describe(
             CoreArtifactProjectionSourceKind.AgentExecutionArtifact);
@@ -667,7 +683,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessCoreArtifactProjectionEvidenceDescriptorRules_SB013_SB015_preserve_order_lineage_and_provider_browser_facts()
+    public void ProcessCoreArtifactProjectionEvidenceDescriptorRules_preserve_order_lineage_and_provider_browser_facts()
     {
         var sourceOrder = new[]
         {
@@ -723,7 +739,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessCoreArtifactValidationRequirementDescriptorRules_SB020_INV_001_preserves_mode_and_policy_classification()
+    public void ProcessCoreArtifactValidationRequirementDescriptorRules_preserves_mode_and_policy_classification()
     {
         var runtimeProof = CreateCoreExpectation(
             Guid.NewGuid(),
@@ -785,7 +801,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessCoreArtifactExpectationMatcher_SB015_INV_001_disambiguates_by_kind_and_recorded_satisfaction_ids()
+    public void ProcessCoreArtifactExpectationMatcher_disambiguates_by_kind_and_recorded_satisfaction_ids()
     {
         var deliverableId = Guid.NewGuid();
         var evidenceId = Guid.NewGuid();
@@ -945,7 +961,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchRouteSnapshot_SB05_INV_001_captures_trigger_status_and_current_attempt_facts()
+    public void ProcessDispatchRouteSnapshot_captures_trigger_status_and_current_attempt_facts()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -990,7 +1006,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     [InlineData(ProcessRunStatus.Failed, ProcessStepRunStatus.Ready, false, true)]
     [InlineData(ProcessRunStatus.Completed, ProcessStepRunStatus.InProgress, true, true)]
     [InlineData(ProcessRunStatus.Active, ProcessStepRunStatus.WaitingApproval, true, false)]
-    public void ProcessDispatchRouteEligibility_SB05_INV_002_preserves_run_and_step_dispatch_rules(
+    public void ProcessDispatchRouteEligibility_preserves_run_and_step_dispatch_rules(
         ProcessRunStatus runStatus,
         ProcessStepRunStatus stepStatus,
         bool expectedDispatchable,
@@ -1115,7 +1131,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessAutomationExecutionRunSelection_SB06_INV_001_selects_latest_current_attempt_competing_run()
+    public void ProcessAutomationExecutionRunSelection_selects_latest_current_attempt_competing_run()
     {
         var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
         var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
@@ -1150,7 +1166,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessAutomationExecutionRunSelection_SB06_INV_002_preserves_stale_and_approval_blocking_rules()
+    public void ProcessAutomationExecutionRunSelection_preserves_stale_and_approval_blocking_rules()
     {
         var createdAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
         var now = createdAtUtc.AddMinutes(11);
@@ -1196,7 +1212,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessAutomationExecutionRunSelection_SB06_INV_003_preserves_completion_and_fresh_recovery_skip_rules()
+    public void ProcessAutomationExecutionRunSelection_preserves_completion_and_fresh_recovery_skip_rules()
     {
         var currentAttemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T02:00:00+00:00");
 
@@ -1223,7 +1239,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessRunAutomationDispatchService_SB07_INV_001_preserves_execution_run_selection_wrapper_parity()
+    public void ProcessRunAutomationDispatchService_preserves_execution_run_selection_wrapper_parity()
     {
         var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
         var now = attemptStartedAtUtc.AddMinutes(4);
@@ -1293,7 +1309,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessRunAutomationDispatchService_SB07_INV_002_preserves_transition_busy_and_fresh_skip_wrapper_parity()
+    public void ProcessRunAutomationDispatchService_preserves_transition_busy_and_fresh_skip_wrapper_parity()
     {
         var currentAttemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T02:00:00+00:00");
         var now = currentAttemptStartedAtUtc.AddMinutes(1);
@@ -1333,7 +1349,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchStartTransitionPlanner_SB10_INV_001_builds_start_request_without_executing_transition()
+    public void ProcessDispatchStartTransitionPlanner_builds_start_request_without_executing_transition()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -1384,7 +1400,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchStartTransitionPlanner_SB10_INV_002_preserves_fresh_skip_wrapper_parity()
+    public void ProcessDispatchStartTransitionPlanner_preserves_fresh_skip_wrapper_parity()
     {
         var currentAttemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T02:00:00+00:00");
         var now = currentAttemptStartedAtUtc.AddMinutes(1);
@@ -1421,7 +1437,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public async Task StartTransitionRouteHandler_SB015_INV_001_preserves_reload_and_continue_candidates_behavior()
+    public async Task StartTransitionRouteHandler_preserves_reload_and_continue_candidates_behavior()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -1491,7 +1507,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchRoutePlanner_SB11_INV_001_classifies_database_upstream_and_recovery_routes_without_side_effects()
+    public void ProcessDispatchRoutePlanner_classifies_database_upstream_and_recovery_routes_without_side_effects()
     {
         var agentRoute = ProcessDispatchRouteSnapshot.Create(
             Guid.NewGuid(),
@@ -1540,7 +1556,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchRoutePlanner_SB11_INV_002_routes_subprocess_workflow_and_agent_execution()
+    public void ProcessDispatchRoutePlanner_routes_subprocess_workflow_and_agent_execution()
     {
         var agentRoute = ProcessDispatchRouteSnapshot.Create(
             Guid.NewGuid(),
@@ -1580,7 +1596,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchRoutePlanner_SB007_INV_001_exposes_additive_diagnostics_without_changing_decisions()
+    public void ProcessDispatchRoutePlanner_exposes_additive_diagnostics_without_changing_decisions()
     {
         var agentRoute = ProcessDispatchRouteSnapshot.Create(
             Guid.NewGuid(),
@@ -1635,7 +1651,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchRoutePipeline_SB38_INV_001_preserves_exact_dispatch_stage_order()
+    public void ProcessDispatchRoutePipeline_preserves_exact_dispatch_stage_order()
     {
         Assert.Equal(
         [
@@ -1655,7 +1671,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessDispatchDatabaseRequirementBlocker_SB05_INV_001_preserves_status_targets_and_transition_shape()
+    public void ProcessDispatchDatabaseRequirementBlocker_preserves_status_targets_and_transition_shape()
     {
         var stepRunId = Guid.NewGuid();
         var concurrencyToken = Guid.NewGuid();
@@ -1697,7 +1713,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessMissingUpstreamArtifactMaterializationFacts_SB07_INV_001_selects_only_missing_runnable_agent_source()
+    public void ProcessMissingUpstreamArtifactMaterializationFacts_selects_only_missing_runnable_agent_source()
     {
         var runnableSourceStepRunId = Guid.NewGuid();
         var runnableConcurrencyToken = Guid.NewGuid();
@@ -1761,7 +1777,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessMissingUpstreamArtifactMaterializationFingerprint_SB09_INV_001_is_order_stable_and_target_sensitive()
+    public void ProcessMissingUpstreamArtifactMaterializationFingerprint_is_order_stable_and_target_sensitive()
     {
         var sourceStepDefinitionA = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var sourceStepDefinitionB = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -1813,7 +1829,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ProcessMissingUpstreamArtifactRerunRequestBuilder_SB12_INV_001_preserves_rerun_fields_and_directive_scope()
+    public void ProcessMissingUpstreamArtifactRerunRequestBuilder_preserves_rerun_fields_and_directive_scope()
     {
         var sourceStepRunId = Guid.NewGuid();
         var sourceConcurrencyToken = Guid.NewGuid();
@@ -1859,7 +1875,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void ResolveBlockingAutomationExecutionRunId_SB09_INV_001_ignores_active_runs_from_previous_attempt_window()
+    public void ResolveBlockingAutomationExecutionRunId_ignores_active_runs_from_previous_attempt_window()
     {
         var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
         var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
@@ -1878,7 +1894,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public void HasPriorNoProgressRetrySignal_SB09_INV_001_detects_repeated_fingerprint_after_restart()
+    public void HasPriorNoProgressRetrySignal_detects_repeated_fingerprint_after_restart()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -1973,7 +1989,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public async Task ProcessDispatchGuardLease_SB09_INV_001_serializes_same_step_and_removes_released_guard()
+    public async Task ProcessDispatchGuardLease_serializes_same_step_and_removes_released_guard()
     {
         var stepRunId = Guid.NewGuid();
         var dispatchGuards = new ConcurrentDictionary<Guid, SemaphoreSlim>();
@@ -1996,7 +2012,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public async Task ProcessDispatchGuardLease_SB09_INV_002_rejects_empty_step_id()
+    public async Task ProcessDispatchGuardLease_rejects_empty_step_id()
     {
         var dispatchGuards = new ConcurrentDictionary<Guid, SemaphoreSlim>();
 
@@ -3681,7 +3697,13 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             {
                 Key = "start-app-once",
                 Title = "Start app once",
-                StepKind = ProcessStepKind.Work
+                StepKind = ProcessStepKind.Work,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.LaunchRuntime
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly
             },
             new ProcessStepRun
             {
@@ -3827,7 +3849,15 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             {
                 Key = "review-and-store-screenshot",
                 Title = "Review and store screenshot",
-                StepKind = ProcessStepKind.Review
+                StepKind = ProcessStepKind.Review,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.ExecuteExternalAction
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalActionControlled
             },
             new ProcessStepRun
             {
@@ -3919,7 +3949,16 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             {
                 Key = "generate-layout-recommendation",
                 Title = "Generate layout recommendation",
-                StepKind = ProcessStepKind.Work
+                StepKind = ProcessStepKind.Work,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.ExecuteExternalAction
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalActionControlled
             },
             new ProcessStepRun
             {
@@ -6870,7 +6909,7 @@ Requirements from project-level planning context:
     }
 
     [Fact]
-    public void BuildProcessInvocationMetadataJson_SB04_INV_001_keeps_stale_upstream_product_alias_read_only_for_mutating_step()
+    public void BuildProcessInvocationMetadataJson_keeps_stale_upstream_product_alias_read_only_for_mutating_step()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
@@ -6932,7 +6971,7 @@ Requirements from project-level planning context:
     }
 
     [Fact]
-    public void ProcessInvocationMetadataBuilder_SB04_INV_001_builds_external_artifact_destination_metadata_without_reflection()
+    public void ProcessInvocationMetadataBuilder_builds_external_artifact_destination_metadata_without_reflection()
     {
         var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
             "Create the market expansion business plan and write it to the governed report destination.",
@@ -6973,7 +7012,7 @@ Requirements from project-level planning context:
     }
 
     [Fact]
-    public void ProcessStepOperationContractResolver_SB04_INV_001_resolves_persisted_contract_without_reflection()
+    public void ProcessStepOperationContractResolver_resolves_persisted_contract_without_reflection()
     {
         var stepDefinition = new ProcessStepDefinition
         {
@@ -7005,7 +7044,7 @@ Requirements from project-level planning context:
     }
 
     [Fact]
-    public void ProcessTargetGroundingLedgerBuilder_SB04_INV_001_resolves_current_run_grounding_without_reflection()
+    public void ProcessTargetGroundingLedgerBuilder_resolves_current_run_grounding_without_reflection()
     {
         var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
             "Implement the requested app and prove build, tests, and startup smoke.",
@@ -7352,7 +7391,7 @@ Requirements from project-level planning context:
     }
 
     [Fact]
-    public void BuildProcessInvocationMetadataJson_SB08_INV_001_uses_persisted_operation_contract_without_text_markers()
+    public void BuildProcessInvocationMetadataJson_uses_persisted_operation_contract_without_text_markers()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
@@ -7547,7 +7586,7 @@ Requirements from project-level planning context:
         var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
         var candidate = CreateDispatchCandidateCore(
-            "Verify the repaired package from the source document and project structure. The deliverable is a JavaScript static web page with no backend.",
+            "Verify the repaired package from the source document and project structure. The deliverable is a JavaScript static web page with no backend. Capture browser proof with browser_snapshot, browser_take_screenshot, and browser_console_messages for the static page.",
             ProcessStepKind.Review,
             [],
             false,
@@ -7555,7 +7594,17 @@ Requirements from project-level planning context:
             [],
             triggerReason: "Run launched from selected project-structure node.",
             stepTitle: "Re-run QA validation and runtime or browser proof after repair",
-            processName: "Multi-team software delivery");
+            processName: "Multi-team software delivery",
+            allowedOperations:
+            [
+                ProcessStepOperation.ReadProcessContext,
+                ProcessStepOperation.ReadProjectStructure,
+                ProcessStepOperation.ReadUpstreamArtifacts,
+                ProcessStepOperation.WriteManagedProcessArtifacts,
+                ProcessStepOperation.RunValidation,
+                ProcessStepOperation.CaptureRuntimeProof
+            ],
+            operationTargetScope: ProcessStepTargetScope.ExternalProductTargetReadOnly);
         const string projectStructureGroundingSummary = """
             Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
             Grounded external target paths from the selected project structure:
@@ -8554,8 +8603,11 @@ Requirements from project-level planning context:
         var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
 
-        var candidate = CreateDispatchCandidate(
-            "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
+        var candidate = CreateDispatchCandidateWithOperationContract(
+            "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.",
+            ProcessStepKind.Work,
+            ValidationAndScriptOperations,
+            ProcessStepTargetScope.ManagedProcessArtifactsOnly);
         var now = DateTimeOffset.UtcNow;
         var detail = new ProcessAutomationExecutionRunDetail(
             new ProcessAutomationExecutionRunRecord(
@@ -9681,13 +9733,15 @@ Downstream artifact expectations: implementation change set, migration checklist
             .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
                                        method.GetParameters().Length == 5)
             ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
-        var candidate = CreateDispatchCandidateWithStepTitle(
+        var candidate = CreateDispatchCandidateWithStepTitleAndOperationContract(
             "Review and store screenshot",
             """
             Review the captured screenshot and store accepted screenshots through project_structure_asset_create with sourceWorkspacePath.
             Do not recapture browser proof in this review step.
             """,
             ProcessStepKind.Review,
+            ProjectStructureWritebackOperations,
+            ProcessStepTargetScope.ExternalActionControlled,
             (ProcessArtifactKind.Evidence, "Screenshot review findings", true, "Must state accepted or rejected with the visual reason."),
             (ProcessArtifactKind.Evidence, "Project image asset storage receipt", true, "Must include project id, image asset node id, content type, original file name, and storage locator."));
         var responseText = StructuredOutcome(
@@ -9765,12 +9819,14 @@ Reason: Screenshot shows the requested inventory route.
             .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
                                        method.GetParameters().Length == 5)
             ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
-        var candidate = CreateDispatchCandidateWithStepTitle(
+        var candidate = CreateDispatchCandidateWithStepTitleAndOperationContract(
             "Review and store screenshot",
             """
             Review the captured screenshot and store accepted screenshots through project_structure_asset_create with sourceWorkspacePath.
             """,
             ProcessStepKind.Review,
+            ProjectStructureWritebackOperations,
+            ProcessStepTargetScope.ExternalActionControlled,
             (ProcessArtifactKind.Evidence, "Screenshot review findings", true, "Must state accepted or rejected with the visual reason."),
             (ProcessArtifactKind.Evidence, "Project image asset storage receipt", true, "Must include project id, image asset node id, content type, original file name, and storage locator."));
         var responseText = StructuredOutcome(
@@ -9853,13 +9909,15 @@ File: artifacts/process-runs/run-001/03-inventory-page.png
             .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
                                        method.GetParameters().Length == 5)
             ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
-        var candidate = CreateDispatchCandidateWithStepTitle(
+        var candidate = CreateDispatchCandidateWithStepTitleAndOperationContract(
             "Record delivery results and evidence index",
             """
             Write a compact run evidence index and final verdict back into project structure through APIs/tools.
             Must call project_structure_node_create before completing.
             """,
-            ProcessStepKind.Review);
+            ProcessStepKind.Review,
+            ProjectStructureWritebackOperations,
+            ProcessStepTargetScope.ExternalActionControlled);
         var responseText = StructuredOutcome(
             ProcessStepOutcomeStatus.Completed,
             "Run evidence index and project-structure writeback summary were prepared.",
@@ -9932,13 +9990,15 @@ Process artifacts: artifacts/process-runs/run-001/07-run-evidence-index.md
             .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
                                        method.GetParameters().Length == 5)
             ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
-        var candidate = CreateDispatchCandidateWithStepTitle(
+        var candidate = CreateDispatchCandidateWithStepTitleAndOperationContract(
             "Record delivery results and evidence index",
             """
             Write the final verdict back into project structure through tools.
             Must call project_structure_node_create before completing.
             """,
-            ProcessStepKind.Review);
+            ProcessStepKind.Review,
+            ProjectStructureWritebackOperations,
+            ProcessStepTargetScope.ExternalActionControlled);
         var responseText = StructuredOutcome(
             ProcessStepOutcomeStatus.Blocked,
             "project_structure_node_create failed or was unavailable.",
@@ -10998,8 +11058,11 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var resolveRequiredToolNames = serviceType.GetMethod("ResolveRequiredToolNames", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
 
-        var candidate = CreateDispatchCandidate(
-            "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude. Do not use workspace_append_file for canonical deliverables.");
+        var candidate = CreateDispatchCandidateWithOperationContract(
+            "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude. Do not use workspace_append_file for canonical deliverables.",
+            ProcessStepKind.Work,
+            ValidationAndScriptOperations,
+            ProcessStepTargetScope.ManagedProcessArtifactsOnly);
 
         var requiredToolNames = resolveRequiredToolNames.Invoke(null, [candidate]) as IReadOnlyList<string>;
 
@@ -12718,7 +12781,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Fact]
-    public void CompletedDecisionArtifactExternalReferenceKey_SB11_INV_001_preserves_step_expectation_format()
+    public void CompletedDecisionArtifactExternalReferenceKey_preserves_step_expectation_format()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var buildCompletedDecisionArtifactExternalReferenceKey = serviceType.GetMethod(
@@ -12737,7 +12800,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
     [InlineData(ProcessArtifactTrustRequirement.ReviewRequired, ProcessArtifactTrustStatus.ReviewRequired)]
     [InlineData(ProcessArtifactTrustRequirement.HumanApproved, ProcessArtifactTrustStatus.Approved)]
     [InlineData(ProcessArtifactTrustRequirement.ApprovalRequired, ProcessArtifactTrustStatus.Approved)]
-    public void CompletedDecisionArtifactTrustStatus_SB11_INV_002_preserves_existing_mapping(
+    public void CompletedDecisionArtifactTrustStatus_preserves_existing_mapping(
         ProcessArtifactTrustRequirement trustRequirement,
         ProcessArtifactTrustStatus expected)
     {
@@ -16551,7 +16614,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ApplyArtifactProjectionLineage_SB02_INV_001_uses_compact_key_for_long_recovery_lineage()
+    public void ApplyArtifactProjectionLineage_uses_compact_key_for_long_recovery_lineage()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var lineageType = serviceType.GetNestedType("ArtifactProjectionLineage", BindingFlags.NonPublic)
@@ -16581,7 +16644,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactProjectionLineageBuilder_SB05_INV_001_hashes_recovery_key_and_records_lineage()
+    public void ProcessArtifactProjectionLineageBuilder_hashes_recovery_key_and_records_lineage()
     {
         var recoveryExecutionRunId = Guid.NewGuid();
         var recoveredForExecutionRunId = Guid.NewGuid();
@@ -16622,7 +16685,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactExpectationMatcher_SB05_INV_002_disambiguates_strong_match_by_kind()
+    public void ProcessArtifactExpectationMatcher_disambiguates_strong_match_by_kind()
     {
         var deliverableId = Guid.NewGuid();
         var evidenceId = Guid.NewGuid();
@@ -16657,7 +16720,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactExpectationMatcher_SB008_INV_001_exposes_match_diagnostics_without_changing_legacy_match()
+    public void ProcessArtifactExpectationMatcher_exposes_match_diagnostics_without_changing_legacy_match()
     {
         var firstEvidenceId = Guid.NewGuid();
         var secondEvidenceId = Guid.NewGuid();
@@ -16740,7 +16803,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactProjectionPlanner_SB07_INV_001_plans_execution_artifact_without_storage_side_effects()
+    public void ProcessArtifactProjectionPlanner_plans_execution_artifact_without_storage_side_effects()
     {
         var executionRunId = Guid.NewGuid();
         var expectation = CreateProjectionExpectation(
@@ -16781,7 +16844,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactProjectionPlanner_SB09_INV_001_normalizes_projection_adapter_keys()
+    public void ProcessArtifactProjectionPlanner_normalizes_projection_adapter_keys()
     {
         var executionRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -16813,7 +16876,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactProjectionSourceAdapters_SB05_SB08_preserve_key_and_lineage_parity()
+    public void ProcessArtifactProjectionSourceAdapters_preserve_key_and_lineage_parity()
     {
         var executionRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -16904,7 +16967,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactEvidenceValidationRules_SB10_INV_001_rejects_stranded_evidence_and_requires_durable_paths()
+    public void ProcessArtifactEvidenceValidationRules_rejects_stranded_evidence_and_requires_durable_paths()
     {
         Assert.False(ProcessArtifactEvidenceValidationRules.IsProducerAllowedForMode(
             ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Evidence,
@@ -16925,7 +16988,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void WorkflowArtifactProjectionMapping_SB09_INV_001_uses_explicit_output_id_when_same_kind_names_conflict()
+    public void WorkflowArtifactProjectionMapping_uses_explicit_output_id_when_same_kind_names_conflict()
     {
         var stepDefinitionId = Guid.NewGuid();
         var workflowRunId = WorkflowRunId.New();
@@ -16980,7 +17043,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void WorkflowArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_explicit_output_id()
+    public void WorkflowArtifactProjectionMapping_blocks_same_kind_heuristic_without_explicit_output_id()
     {
         var stepDefinitionId = Guid.NewGuid();
         var workflowRunId = WorkflowRunId.New();
@@ -17032,7 +17095,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void WorkflowArtifactProjectionMapping_SB09_INV_001_warns_when_legacy_same_kind_fallback_maps()
+    public void WorkflowArtifactProjectionMapping_warns_when_legacy_same_kind_fallback_maps()
     {
         var stepDefinitionId = Guid.NewGuid();
         var workflowRunId = WorkflowRunId.New();
@@ -17066,7 +17129,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void SubprocessArtifactProjectionMapping_SB09_INV_001_uses_child_expectation_id_when_same_kind_titles_conflict()
+    public void SubprocessArtifactProjectionMapping_uses_child_expectation_id_when_same_kind_titles_conflict()
     {
         var childFinanceExpectationId = Guid.NewGuid();
         var childComplianceExpectationId = Guid.NewGuid();
@@ -17143,7 +17206,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void SubprocessArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_child_mapping()
+    public void SubprocessArtifactProjectionMapping_blocks_same_kind_heuristic_without_child_mapping()
     {
         var parentFinanceExpectation = new ProcessArtifactExpectation
         {
@@ -17185,7 +17248,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void SubprocessArtifactProjectionMapping_SB09_INV_001_warns_when_legacy_same_kind_fallback_maps()
+    public void SubprocessArtifactProjectionMapping_warns_when_legacy_same_kind_fallback_maps()
     {
         var parentExpectation = new ProcessArtifactExpectation
         {
@@ -17583,7 +17646,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessArtifactIdentityService_SB07_INV_001_normalizes_projection_identity_without_runtime()
+    public void ProcessArtifactIdentityService_normalizes_projection_identity_without_runtime()
     {
         var workflowRunId = Guid.NewGuid();
         var workflowArtifactId = Guid.NewGuid();
@@ -17606,7 +17669,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessCompletionArtifactValidator_SB07_INV_001_accepts_generic_nonsoftware_deliverable_without_dispatch_runtime()
+    public void ProcessCompletionArtifactValidator_accepts_generic_nonsoftware_deliverable_without_dispatch_runtime()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -17642,7 +17705,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB07_INV_001_classifies_missing_required_artifact_as_own_output()
+    public void ArtifactContractValidation_classifies_missing_required_artifact_as_own_output()
     {
         var expectation = CreateDispatchArtifactExpectation(
             ProcessArtifactKind.Evidence,
@@ -17806,7 +17869,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB02_INV_008_accepts_markdown_evidence_pack_that_references_screenshot_paths()
+    public void ArtifactContractValidation_accepts_markdown_evidence_pack_that_references_screenshot_paths()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -17876,7 +17939,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB02_INV_009_rejects_markdown_when_expectation_is_screenshot_artifact()
+    public void ArtifactContractValidation_rejects_markdown_when_expectation_is_screenshot_artifact()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -17982,7 +18045,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB04_INV_001_reads_catalog_backed_storage_reference()
+    public void ArtifactContractValidation_reads_catalog_backed_storage_reference()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
@@ -18099,7 +18162,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB05_INV_001_rejects_malformed_json_from_relative_managed_storage_path()
+    public void ArtifactContractValidation_rejects_malformed_json_from_relative_managed_storage_path()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
         var relativePath = "artifacts/process-runs/current/finance-approval-packet.json";
@@ -18153,7 +18216,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB05_INV_001_reports_missing_relative_managed_storage_content()
+    public void ArtifactContractValidation_reports_missing_relative_managed_storage_content()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
@@ -18206,7 +18269,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB11_INV_001_reports_missing_required_brief_content()
+    public void ArtifactContractValidation_reports_missing_required_brief_content()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
@@ -18260,7 +18323,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB05_INV_001_rejects_relative_managed_storage_content_over_validation_limit()
+    public void ArtifactContractValidation_rejects_relative_managed_storage_content_over_validation_limit()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
         var relativePath = "artifacts/process-runs/current/oversized-approval-packet.json";
@@ -18314,7 +18377,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB09_INV_001_accepts_current_run_org_scoped_path_with_matching_typed_lineage()
+    public void ArtifactContractValidation_accepts_current_run_org_scoped_path_with_matching_typed_lineage()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
         var processRunId = Guid.NewGuid();
@@ -18379,7 +18442,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB10_INV_001_reports_content_hash_mismatch_without_stale_run_classification()
+    public void ArtifactContractValidation_reports_content_hash_mismatch_without_stale_run_classification()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
         var relativePath = "artifacts/process-runs/current/content-hash-mismatch.md";
@@ -18476,7 +18539,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactContractValidation_SB02_INV_001_accepts_manager_recovery_with_compact_key_and_typed_lineage()
+    public void ArtifactContractValidation_accepts_manager_recovery_with_compact_key_and_typed_lineage()
     {
         var processRunId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
@@ -18602,7 +18665,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public async Task ProcessDispatchFinalizerAdapter_SB009_INV_001_preserves_route_dto_context_parity_and_apply_conditions()
+    public async Task ProcessDispatchFinalizerAdapter_preserves_route_dto_context_parity_and_apply_conditions()
     {
         var recoveredForExecutionRunId = Guid.NewGuid();
         var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
@@ -18820,7 +18883,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public async Task ProcessDispatchFinalizerAdapter_SB011_INV_001_rejects_dispatch_claim_not_created_by_route_adapter()
+    public async Task ProcessDispatchFinalizerAdapter_rejects_dispatch_claim_not_created_by_route_adapter()
     {
         var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
             "Reject locally created route claim.",
@@ -18851,7 +18914,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public async Task ProcessRedTeamScenarioHarness_SB14_INV_001_blocks_architecture_mutation_and_allows_external_destination()
+    public async Task ProcessRedTeamScenarioHarness_blocks_architecture_mutation_and_allows_external_destination()
     {
         var architectureCandidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
             "Review the target architecture and produce an ADR. Do not modify product files.",
@@ -18956,7 +19019,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessRedTeamScenarioHarness_SB14_INV_001_validates_generic_artifact_producers_and_recovery_actions()
+    public void ProcessRedTeamScenarioHarness_validates_generic_artifact_producers_and_recovery_actions()
     {
         var legalResult = ValidateDirectArtifact(
             ProcessArtifactKind.Decision,
@@ -19178,7 +19241,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessStepRunBlockState_SB05_INV_001_maps_own_missing_required_artifact_to_artifact_contract_recovery()
+    public void ProcessStepRunBlockState_maps_own_missing_required_artifact_to_artifact_contract_recovery()
     {
         var stepRun = new ProcessStepRun();
 
@@ -19194,7 +19257,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessStepRunBlockState_SB05_INV_002_maps_upstream_missing_artifact_to_materialization_recovery()
+    public void ProcessStepRunBlockState_maps_upstream_missing_artifact_to_materialization_recovery()
     {
         var stepRun = new ProcessStepRun();
 
@@ -19210,7 +19273,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessStepRunBlockState_SB05_INV_003_does_not_infer_own_required_artifact_as_upstream()
+    public void ProcessStepRunBlockState_does_not_infer_own_required_artifact_as_upstream()
     {
         var code = ProcessStepRunBlockState.InferBlockReasonCode("missing required artifact: Delivery readiness evidence");
 
@@ -19218,7 +19281,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessBlockStateClassifier_SB12_INV_001_prefers_typed_block_cause_over_prose_inference()
+    public void ProcessBlockStateClassifier_prefers_typed_block_cause_over_prose_inference()
     {
         var classification = ProcessBlockStateClassifier.Classify(
             "Required upstream artifacts are missing in the diagnostic text, but the missing output belongs to this step.",
@@ -19231,7 +19294,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ProcessStepRunBlockState_SB12_INV_001_uses_legacy_text_inference_only_when_block_cause_is_absent()
+    public void ProcessStepRunBlockState_uses_legacy_text_inference_only_when_block_cause_is_absent()
     {
         var ownOutputStep = new ProcessStepRun();
         var ownOutputDecision = ProcessStepRunBlockState.Apply(
@@ -19259,7 +19322,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ResolveArtifactContractBlockCause_SB05_INV_001_prefers_upstream_ownership_when_present()
+    public void ResolveArtifactContractBlockCause_prefers_upstream_ownership_when_present()
     {
         var results = new[]
         {
@@ -19295,7 +19358,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactDispositionRouter_SB07_INV_001_blocks_missing_own_required_artifact_even_with_negative_branch()
+    public void ArtifactDispositionRouter_blocks_missing_own_required_artifact_even_with_negative_branch()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var method = serviceType.GetMethod("ResolveArtifactContractDispositionBranchOutcome", BindingFlags.NonPublic | BindingFlags.Static)
@@ -22142,6 +22205,27 @@ Ancestor path to the target work node:
             stepTitle);
     }
 
+    private static object CreateDispatchCandidateWithStepTitleAndOperationContract(
+        string stepTitle,
+        string workBriefText,
+        ProcessStepKind stepKind,
+        IReadOnlyCollection<ProcessStepOperation> allowedOperations,
+        ProcessStepTargetScope operationTargetScope,
+        params (ProcessArtifactKind ArtifactKind, string Title, bool IsRequired, string ValidationRequirementSummary)[] expectedArtifactDefinitions)
+    {
+        return CreateDispatchCandidateCore(
+            workBriefText,
+            stepKind,
+            [],
+            false,
+            expectedArtifactDefinitions,
+            [],
+            "Deliver the workflow showcase.",
+            stepTitle,
+            allowedOperations: allowedOperations,
+            operationTargetScope: operationTargetScope);
+    }
+
     private static object CreateDispatchCandidate(
         string workBriefText,
         ProcessStepKind stepKind = ProcessStepKind.Work,
@@ -22154,6 +22238,24 @@ Ancestor path to the target work node:
             false,
             expectedArtifactDefinitions,
             []);
+    }
+
+    private static object CreateDispatchCandidateWithOperationContract(
+        string workBriefText,
+        ProcessStepKind stepKind,
+        IReadOnlyCollection<ProcessStepOperation> allowedOperations,
+        ProcessStepTargetScope operationTargetScope,
+        params (ProcessArtifactKind ArtifactKind, string Title, bool IsRequired, string ValidationRequirementSummary)[] expectedArtifactDefinitions)
+    {
+        return CreateDispatchCandidateCore(
+            workBriefText,
+            stepKind,
+            [],
+            false,
+            expectedArtifactDefinitions,
+            [],
+            allowedOperations: allowedOperations,
+            operationTargetScope: operationTargetScope);
     }
 
     private static object CreateProjectStructureDispatchCandidate(
@@ -22551,7 +22653,9 @@ Ancestor path to the target work node:
         string processSlug = "",
         string stepKey = "",
         string manualRecoveryDirective = "",
-        string runName = "Showcase run")
+        string runName = "Showcase run",
+        IReadOnlyCollection<ProcessStepOperation>? allowedOperations = null,
+        ProcessStepTargetScope? operationTargetScope = null)
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
@@ -22668,7 +22772,9 @@ Ancestor path to the target work node:
                            OutputContractSummary = outputContractSummary,
                            EvidenceContractSummary = expectedArtifactDefinitions.Length == 0
                                ? "Implementation change set"
-                               : string.Join(", ", expectedArtifactDefinitions.Select(item => item.Title))
+                               : string.Join(", ", expectedArtifactDefinitions.Select(item => item.Title)),
+                           AllowedOperations = allowedOperations?.ToList() ?? [],
+                           OperationTargetScope = operationTargetScope
                        },
                        new ProcessWorkBrief
                        {

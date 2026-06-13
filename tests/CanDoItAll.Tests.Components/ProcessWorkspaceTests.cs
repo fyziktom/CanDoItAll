@@ -327,7 +327,7 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
-    public async Task Run_steps_dialog_SB15_INV_001_exposes_contract_branch_and_recovery_diagnostics_for_ui_preflight()
+    public async Task Run_steps_dialog_exposes_contract_branch_and_recovery_diagnostics_for_ui_preflight()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -577,7 +577,7 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
-    public async Task Runs_operator_console_SB13_INV_001_surfaces_invariant_diagnostics_and_recommended_action()
+    public async Task Runs_operator_console_surfaces_invariant_diagnostics_and_recommended_action()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();

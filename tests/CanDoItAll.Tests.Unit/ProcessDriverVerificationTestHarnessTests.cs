@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverVerificationTestHarnessTests
 {
     [Fact]
-    public void Process_driver_shared_harness_SB016_INV_001_exposes_readonly_scopes_side_effect_denials_and_evidence_references()
+    public void Process_driver_shared_harness_exposes_readonly_scopes_side_effect_denials_and_evidence_references()
     {
         var transcriptScope = ProcessDriverVerificationTestHarness.CreateReadonlyScope(
             ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification,
@@ -40,7 +40,7 @@ public sealed class ProcessDriverVerificationTestHarnessTests
     }
 
     [Fact]
-    public void Process_driver_shared_harness_SB017_INV_001_asserts_audit_redaction_and_no_mutation_contracts()
+    public void Process_driver_shared_harness_asserts_audit_redaction_and_no_mutation_contracts()
     {
         var scope = ProcessDriverVerificationTestHarness.CreateReadonlyScope(
             ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification,
@@ -101,7 +101,7 @@ public sealed class ProcessDriverVerificationTestHarnessTests
     }
 
     [Fact]
-    public void Process_driver_shared_harness_SB026_INV_001_central_redaction_policy_redacts_secret_email_connection_string_and_bounds_summaries()
+    public void Process_driver_shared_harness_central_redaction_policy_redacts_secret_email_connection_string_and_bounds_summaries()
     {
         var sensitiveSummary = string.Join(
             Environment.NewLine,

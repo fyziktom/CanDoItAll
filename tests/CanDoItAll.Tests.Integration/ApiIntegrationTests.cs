@@ -283,7 +283,7 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
-    public async Task Api_process_run_detail_SB12_INV_001_exposes_upstream_missing_artifact_recovery_health()
+    public async Task Api_process_run_detail_exposes_upstream_missing_artifact_recovery_health()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
 

@@ -77,6 +77,44 @@ internal sealed record ProcessImplementationContractSnapshot(string Text, string
 
 internal static class ProcessImplementationStackRules
 {
+    internal static string JavaScriptContractToken => "javascript";
+
+    internal static bool IsDotNetWorkspaceToolName(string normalizedToolName)
+    {
+        return normalizedToolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal);
+    }
+
+    internal static bool ContainsProjectFileSignal(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains(".csproj", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains(".slnx", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains(".sln", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool ContainsDevelopmentProfileSignal(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return ContainsContractWord(text, "developer") ||
+               ContainsContractWord(text, "engineer") ||
+               ContainsContractWord(text, "implementation") ||
+               ContainsContractWord(text, "implement") ||
+               ContainsContractWord(text, "build") ||
+               ContainsContractWord(text, "code") ||
+               ContainsAffirmativeImplementationStackToken(text, "blazor") ||
+               ContainsAffirmativeImplementationStackToken(text, ".net") ||
+               ContainsAffirmativeImplementationStackToken(text, "dotnet") ||
+               ContainsAffirmativeImplementationStackToken(text, "c#");
+    }
+
     internal static bool ContainsRunnableApplicationContractSignal(
         ProcessRunAutomationDispatchService.DispatchCandidate candidate)
     {

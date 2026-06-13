@@ -10,7 +10,7 @@ public sealed class ProcessDriverFakeProofResistanceTests
     private const string SecretPattern = @"sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{30,}|github_pat_[A-Za-z0-9_]{20,}|AccountKey=[A-Za-z0-9+/]{60,}={0,2}";
 
     [Fact]
-    public void Process_driver_fake_proof_SB044_INV_001_rejects_status_only_and_non_empty_diagnostic_claims()
+    public void Process_driver_fake_proof_rejects_status_only_and_non_empty_diagnostic_claims()
     {
         var statusOnly = new FakeProofEvidence(
             ReportRowSaysPassed: true,
@@ -43,7 +43,7 @@ public sealed class ProcessDriverFakeProofResistanceTests
     }
 
     [Fact]
-    public void Process_driver_fake_proof_SB044_INV_002_rejects_unredacted_secrets_and_fixture_only_parsing()
+    public void Process_driver_fake_proof_rejects_unredacted_secrets_and_fixture_only_parsing()
     {
         var unredactedSecret = new FakeProofEvidence(
             ReportRowSaysPassed: false,
@@ -76,7 +76,7 @@ public sealed class ProcessDriverFakeProofResistanceTests
     }
 
     [Fact]
-    public void Process_driver_fake_proof_SB044_INV_003_accepts_only_source_backed_multi_domain_corpus_proof()
+    public void Process_driver_fake_proof_accepts_only_source_backed_multi_domain_corpus_proof()
     {
         var evidence = LoadActualSb043Evidence();
         var issues = Evaluate(evidence);
@@ -85,7 +85,7 @@ public sealed class ProcessDriverFakeProofResistanceTests
     }
 
     [Fact]
-    public void Process_driver_fake_proof_SB003_INV_004_stable_architecture_fixtures_do_not_embed_transient_bundle_paths()
+    public void Process_driver_fake_proof_stable_architecture_fixtures_do_not_embed_transient_package_paths()
     {
         var repositoryRoot = FindRepositoryRoot();
         var fixtureRoots = new[]

@@ -11,7 +11,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessTranscriptVerificationReadOnlyAdapterTests
 {
     [Fact]
-    public void Process_transcript_readonly_adapter_SB012_INV_001_maps_supplied_dotnet_evidence_to_readonly_observation()
+    public void Process_transcript_readonly_adapter_maps_supplied_dotnet_evidence_to_readonly_observation()
     {
         const string transcript = """
 CSC : warning CS8618: Non-nullable property 'Name' must contain a non-null value.
@@ -51,7 +51,7 @@ token=sk-test-secret process.owner@example.com
     }
 
     [Fact]
-    public void Process_transcript_readonly_adapter_SB015_INV_001_rejects_hash_mismatch_before_verifier_invocation()
+    public void Process_transcript_readonly_adapter_rejects_hash_mismatch_before_verifier_invocation()
     {
         var verifierCalled = false;
         var adapter = new ProcessTranscriptVerificationReadOnlyAdapter(_ =>
@@ -79,7 +79,7 @@ token=sk-test-secret process.owner@example.com
     }
 
     [Fact]
-    public void Process_transcript_readonly_adapter_SB021_INV_001_denies_mutation_and_untrusted_sources_without_verifier_invocation()
+    public void Process_transcript_readonly_adapter_denies_mutation_and_untrusted_sources_without_verifier_invocation()
     {
         var adapter = new ProcessTranscriptVerificationReadOnlyAdapter(_ =>
             throw new InvalidOperationException("Verifier must not be invoked for read-only adapter preflight denial."));
@@ -104,7 +104,7 @@ token=sk-test-secret process.owner@example.com
     }
 
     [Fact]
-    public void Process_transcript_readonly_adapter_SB024_INV_001_rehearses_process_consumer_evidence_flow_without_state_mutation()
+    public void Process_transcript_readonly_adapter_rehearses_process_consumer_evidence_flow_without_state_mutation()
     {
         const string transcript = """
 error[E0425]: cannot find value `answer` in this scope
@@ -140,7 +140,7 @@ test result: FAILED. 1 passed; 1 failed
     [Theory]
     [InlineData(ProcessDriverCapabilityScopeKind.OfficeEvidenceRead)]
     [InlineData(ProcessDriverCapabilityScopeKind.BusinessAnalysisRead)]
-    public void Process_transcript_readonly_adapter_SB036_INV_001_denies_non_dotnet_rust_lanes(
+    public void Process_transcript_readonly_adapter_denies_non_dotnet_rust_lanes(
         ProcessDriverCapabilityScopeKind scopeKind)
     {
         var adapter = new ProcessTranscriptVerificationReadOnlyAdapter(_ =>

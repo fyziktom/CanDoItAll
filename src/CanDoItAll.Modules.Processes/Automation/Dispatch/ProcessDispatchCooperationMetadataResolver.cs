@@ -124,18 +124,7 @@ internal static class ProcessDispatchCooperationMetadataResolver
 
     private static bool ContainsDevelopmentProfileSignal(string text)
     {
-        return ContainsAny(
-            text,
-            "developer",
-            "engineer",
-            "implementation",
-            "implement",
-            "build",
-            "code",
-            "blazor",
-            ".net",
-            "dotnet",
-            "c#");
+        return ProcessImplementationStackRules.ContainsDevelopmentProfileSignal(text);
     }
 
     private static string BuildCooperationSummary(

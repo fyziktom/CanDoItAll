@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverContractPrerequisitesVerificationTests
 {
     [Fact]
-    public void Process_driver_prerequisites_SB003_INV_001_preserve_baseline_branch_and_no_runtime_guardrails()
+    public void Process_driver_prerequisites_preserve_baseline_branch_and_no_runtime_guardrails()
     {
         var root = FindRepositoryRoot();
         var branchName = RunGit(root, "branch", "--show-current").Single();
@@ -27,7 +27,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB006_INV_001_keep_core_public_api_governed_and_dependency_clean()
+    public void Process_driver_prerequisites_keep_core_public_api_governed_and_dependency_clean()
     {
         var root = FindRepositoryRoot();
         var coreProject = ReadRepositoryFile("src", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Core.csproj");
@@ -51,7 +51,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB009_INV_001_enforce_permission_modes_and_capability_denials()
+    public void Process_driver_prerequisites_enforce_permission_modes_and_capability_denials()
     {
         var existingEvidenceId = Guid.NewGuid();
         var allOperations = Enum.GetValues<DriverOperation>();
@@ -112,7 +112,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB012_INV_001_capture_audit_facts_and_redact_sensitive_values()
+    public void Process_driver_prerequisites_capture_audit_facts_and_redact_sensitive_values()
     {
         var fact = BuildAuditFact(
             callerId: "manager:lucy",
@@ -138,7 +138,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB015_INV_001_keep_command_and_sandbox_policy_denial_only()
+    public void Process_driver_prerequisites_keep_command_and_sandbox_policy_denial_only()
     {
         var policy = CreateCurrentSandboxPolicy();
         var futurePolicy = CreateFutureSandboxPrerequisites();
@@ -176,7 +176,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB018_INV_001_rehearse_verification_contract_without_production_runtime_api()
+    public void Process_driver_prerequisites_rehearse_verification_contract_without_production_runtime_api()
     {
         var root = FindRepositoryRoot();
         var request = new VerificationEvidenceRequest(
@@ -203,7 +203,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB021_INV_001_make_dotnet_rust_transcript_lane_readonly()
+    public void Process_driver_prerequisites_make_dotnet_rust_transcript_lane_readonly()
     {
         var evidenceId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var diagnostics = InspectTranscript(new TranscriptInspectionRequest(
@@ -231,7 +231,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB024_INV_001_keep_core_descriptor_consumers_allowlisted()
+    public void Process_driver_prerequisites_keep_core_descriptor_consumers_allowlisted()
     {
         var root = FindRepositoryRoot();
         var dispatchRoot = Path.Combine(root, "src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch");
@@ -253,7 +253,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB027_INV_001_keep_office_and_business_lanes_readonly()
+    public void Process_driver_prerequisites_keep_office_and_business_lanes_readonly()
     {
         var evidenceId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
         var officeDeniedOperations = new[]
@@ -296,7 +296,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB030_INV_001_defer_production_driver_contract_until_all_prerequisites_are_green()
+    public void Process_driver_prerequisites_defer_production_driver_contract_until_all_prerequisites_are_green()
     {
         var root = FindRepositoryRoot();
         var decisionDoc = ReadBundleFile("architecture", "06-runtime-host-deferral.md");
@@ -317,7 +317,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB033_INV_001_document_core_package_rules_without_broad_runtime_ownership()
+    public void Process_driver_prerequisites_document_core_package_rules_without_broad_runtime_ownership()
     {
         var targetSolution = ReadBundleFile("architecture", "01-target-solution.md");
         var governanceDoc = ReadBundleFile("requirements", "02-hard-constraints.md");
@@ -333,7 +333,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB036_INV_001_keep_domain_driver_roadmap_consistent_with_deferred_runtime()
+    public void Process_driver_prerequisites_keep_domain_driver_roadmap_consistent_with_deferred_runtime()
     {
         var laneRoadmap = ReadBundleFile("architecture", "05-driver-domain-roadmap.md");
         var longRangeRoadmap = ReadBundleFile("analysis", "03-roadmap-to-stable-core-and-domain-drivers.md");
@@ -351,7 +351,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     }
 
     [Fact]
-    public void Process_driver_prerequisites_SB039_INV_001_keep_final_report_rows_separate_and_source_free_of_stubs()
+    public void Process_driver_prerequisites_keep_final_report_rows_separate_and_source_free_of_stubs()
     {
         var root = FindRepositoryRoot();
         var executionReport = ReadBundleFile("reviews", "01-execution-report.md");

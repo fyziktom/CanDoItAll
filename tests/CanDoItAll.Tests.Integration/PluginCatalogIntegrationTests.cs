@@ -29,7 +29,7 @@ public sealed class PluginCatalogIntegrationTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public async Task PluginCatalog_lists_bundled_source_and_persists_installation_state()
+    public async Task PluginCatalog_lists_packaged_source_and_persists_installation_state()
     {
         var descriptor = CreatePluginDescriptor();
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-catalog-tests");
@@ -64,7 +64,7 @@ public sealed class PluginCatalogIntegrationTests
     }
 
     [Fact]
-    public async Task PluginInstallation_returns_unavailable_when_bundled_source_disappears()
+    public async Task PluginInstallation_returns_unavailable_when_packaged_source_disappears()
     {
         var descriptor = CreatePluginDescriptor();
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-installation-tests");
@@ -331,7 +331,7 @@ public sealed class PluginCatalogIntegrationTests
     }
 
     [Fact]
-    public async Task Runtime_package_assembly_registers_executor_without_bundled_descriptor()
+    public async Task Runtime_package_assembly_registers_executor_without_packaged_descriptor()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-assembly-tests");
         var profile = environment.CreatePostgreSqlProfile("plugins");
@@ -483,7 +483,7 @@ public sealed class PluginCatalogIntegrationTests
 
     [Theory]
     [MemberData(nameof(BundledPluginSimulationCases))]
-    public async Task Bundled_plugin_preview_simulation_avoids_live_external_effects(
+    public async Task packaged_plugin_preview_simulation_avoids_live_external_effects(
         WorkflowExecutorDescriptor descriptor,
         string expectedPayloadFragment)
     {

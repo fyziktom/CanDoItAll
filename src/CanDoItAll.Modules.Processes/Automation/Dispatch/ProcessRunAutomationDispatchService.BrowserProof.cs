@@ -313,9 +313,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ContainsNaturalBrowserConsoleEvidenceSignal(string text)
     {
+        var scriptToken = Regex.Escape(ProcessImplementationStackRules.JavaScriptContractToken);
         return Regex.IsMatch(
             text,
-            @"(?<![A-Za-z0-9_])(?:browser|javascript)\s+console(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])console\s+(?:messages?|logs?|diagnostics?)(?![A-Za-z0-9_])",
+            $@"(?<![A-Za-z0-9_])(?:browser|{scriptToken})\s+console(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])console\s+(?:messages?|logs?|diagnostics?)(?![A-Za-z0-9_])",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 

@@ -17,7 +17,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
 {
     [Fact]
-    public void Process_runtime_evidence_readonly_adapter_SB030_INV_001_maps_supplied_core_descriptors_to_readonly_observation()
+    public void Process_runtime_evidence_readonly_adapter_maps_supplied_core_descriptors_to_readonly_observation()
     {
         var adapter = new ProcessRuntimeEvidenceVerificationReadOnlyAdapter();
         var payload = CreatePayload(
@@ -73,7 +73,7 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_runtime_evidence_readonly_adapter_SB030_INV_002_denies_mutation_and_untrusted_sources_without_mutation()
+    public void Process_runtime_evidence_readonly_adapter_denies_mutation_and_untrusted_sources_without_mutation()
     {
         var adapter = new ProcessRuntimeEvidenceVerificationReadOnlyAdapter();
 
@@ -105,7 +105,7 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_runtime_evidence_readonly_adapter_SB030_INV_003_keeps_driver_references_allowlisted_and_unregistered()
+    public void Process_runtime_evidence_readonly_adapter_keeps_driver_references_allowlisted_and_unregistered()
     {
         var root = FindRepositoryRoot();
         var moduleProject = ReadRepositoryFile(
@@ -122,16 +122,20 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         {
             "ProcessArtifactEvidenceReadOnlyAdapter.cs",
             "ProcessBusinessAnalysisReadOnlyAdapter.cs",
+            "ProcessDryRunExecutionPipeline.cs",
             "ProcessDryRunExecutionHost.cs",
             "ProcessExecutionCapableDriverFutureGate.cs",
             "ProcessDriverObservationAggregationReadOnlyAdapter.cs",
             "ProcessManagerReadOnlyVerificationCommandService.cs",
             "ProcessManagerReadOnlyVerificationProjection.cs",
+            "ProcessManagerReadOnlyVerificationReadback.cs",
+            "ProcessManagerRuntimeHostDryRunReadback.cs",
             "ProcessOfficeEvidenceReadOnlyAdapter.cs",
             "ProcessReadOnlyVerificationAggregateObservation.cs",
             "ProcessReadOnlyVerificationBatchModels.cs",
             "ProcessReadOnlyVerificationBatchOrchestrator.cs",
             "ProcessReadOnlyVerificationJobModel.cs",
+            "ProcessReadOnlyVerificationJobRunner.cs",
             "ProcessReadOnlyVerificationOperationPolicy.cs",
             "ProcessReadOnlyVerificationPayloadBuilder.cs",
             "ProcessReadOnlyVerificationRequestFactory.cs",
@@ -193,7 +197,7 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_runtime_host_contract_models_SB011_INV_001_stay_contract_local_and_driver_free()
+    public void Process_runtime_host_contract_models_stay_contract_local_and_driver_free()
     {
         var source = ReadRepositoryFile(
             "src",

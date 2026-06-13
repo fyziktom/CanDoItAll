@@ -43,7 +43,7 @@ public sealed class ProcessTemplateGovernanceTests
     ];
 
     [Fact]
-    public async Task Blazor_process_templates_SB04_INV_001_constrain_product_mutation_to_implementation_and_repair_steps()
+    public async Task Blazor_process_templates_constrain_product_mutation_to_implementation_and_repair_steps()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -116,7 +116,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Process_template_catalog_SB02_INV_001_maps_multi_team_development_to_source_backed_software_delivery_template()
+    public async Task Process_template_catalog_maps_multi_team_development_to_source_backed_software_delivery_template()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -148,7 +148,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Process_template_catalog_SB02_INV_002_exposes_reverse_family_mapping_for_multi_team_software_delivery()
+    public async Task Process_template_catalog_exposes_reverse_family_mapping_for_multi_team_software_delivery()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -175,7 +175,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Process_template_catalog_SB04_INV_002_uses_software_delivery_as_canonical_multi_team_representative_without_alias_key()
+    public async Task Process_template_catalog_uses_software_delivery_as_canonical_multi_team_representative_without_alias_key()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -314,7 +314,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Blazor_wasm_pwa_baseline_SB05_INV_001_keeps_app_topic_generic_in_scenario_data()
+    public async Task Blazor_wasm_pwa_baseline_keeps_app_topic_generic_in_scenario_data()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -356,7 +356,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Blazor_wasm_pwa_live_run_profile_SB02_INV_001_starts_fresh_and_takes_topic_from_run_request()
+    public async Task Blazor_wasm_pwa_live_run_profile_starts_fresh_and_takes_topic_from_run_request()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -401,7 +401,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Project_structure_templates_SB07_INV_001_require_execute_external_action_for_project_structure_writeback()
+    public async Task Project_structure_templates_require_execute_external_action_for_project_structure_writeback()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -424,7 +424,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Baseline_scenarios_SB14_INV_001_cover_typed_contracts_branching_and_recovery_metadata()
+    public async Task Baseline_scenarios_cover_typed_contracts_branching_and_recovery_metadata()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -478,7 +478,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Manifest_process_templates_SB08_INV_001_all_steps_declare_typed_operation_contracts()
+    public async Task Manifest_process_templates_all_steps_declare_typed_operation_contracts()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -523,7 +523,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public void Process_template_artifact_projection_SB09_INV_001_preserves_explicit_output_mappings()
+    public void Process_template_artifact_projection_preserves_explicit_output_mappings()
     {
         var childExpectationId = Guid.NewGuid();
 
@@ -554,7 +554,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Process_template_vocabulary_SB01_INV_001_maps_to_supported_ui_and_domain_options()
+    public async Task Process_template_vocabulary_maps_to_supported_ui_and_domain_options()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -591,7 +591,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Dotnet_feature_template_SB01_INV_002_preserves_accountable_decision_record_and_approval_required()
+    public async Task Dotnet_feature_template_preserves_accountable_decision_record_and_approval_required()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();

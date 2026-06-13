@@ -27,7 +27,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
     };
 
     [Fact]
-    public async Task Run_sb06_postgresql_throughput_benchmark_when_enabled() {
+    public async Task Run_postgresql_throughput_benchmark_when_enabled() {
         if (!string.Equals(Environment.GetEnvironmentVariable(RunVariable), "1", StringComparison.Ordinal)) {
             return;
         }

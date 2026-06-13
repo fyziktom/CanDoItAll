@@ -6,7 +6,7 @@ namespace CanDoItAll.Tests.Playwright;
 
 public sealed partial class AppSmokeTests {
     [Fact]
-    public async Task Process_run_detail_recovery_SB030_large_screen_displays_blocked_recovery_and_artifact_readback() {
+    public async Task Process_run_detail_recovery_large_screen_displays_blocked_recovery_and_artifact_readback() {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-run-detail-recovery-sb030");
         ResetDirectory(artifactsDir);
@@ -173,7 +173,7 @@ public sealed partial class AppSmokeTests {
     }
 
     [Fact]
-    public async Task Process_start_SB015_INV_001_large_screen_imports_template_and_executes_ready_launch_from_ui() {
+    public async Task Process_start_large_screen_imports_template_and_executes_ready_launch_from_ui() {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-start-smoke");
         ResetDirectory(artifactsDir);

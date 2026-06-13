@@ -211,7 +211,7 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     }
 
     [Fact]
-    public void GroundPromptExternalTargetAliases_SB04_INV_001_keeps_process_free_text_alias_read_only_even_when_product_mutation_is_allowed()
+    public void GroundPromptExternalTargetAliases_keeps_process_free_text_alias_read_only_even_when_product_mutation_is_allowed()
     {
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             $"{{\"{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}\":true}}",

@@ -6,7 +6,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessDefinitionLinterTests
 {
     [Fact]
-    public void ProcessStepOperationContractState_SB06_INV_001_adds_target_scope_implied_operations_and_validation_issues()
+    public void ProcessStepOperationContractState_adds_target_scope_implied_operations_and_validation_issues()
     {
         var normalized = ProcessStepOperationContractState.NormalizeDeclaredContract(
             ProcessStepKind.Review,
@@ -101,7 +101,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB08_INV_001_warns_when_operation_contract_is_text_inferred()
+    public void Analyze_warns_when_operation_contract_is_text_inferred()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel
@@ -130,7 +130,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB12_INV_001_strict_rejects_text_inferred_operation_contract()
+    public void Analyze_strict_rejects_text_inferred_operation_contract()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel
@@ -159,7 +159,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB08_INV_001_accepts_typed_operation_contract_without_text_markers()
+    public void Analyze_accepts_typed_operation_contract_without_text_markers()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel
@@ -194,7 +194,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB08_INV_001_rejects_partial_typed_operation_contract()
+    public void Analyze_rejects_partial_typed_operation_contract()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel
@@ -227,7 +227,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB06_INV_001_strict_rejects_invalid_typed_operation_contract_combination()
+    public void Analyze_strict_rejects_invalid_typed_operation_contract_combination()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel
@@ -327,7 +327,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB10_INV_001_accepts_architecture_report_without_product_mutation_contract()
+    public void Analyze_accepts_architecture_report_without_product_mutation_contract()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel
@@ -436,7 +436,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB09_INV_001_strict_rejects_required_workflow_artifact_without_explicit_output_mapping()
+    public void Analyze_strict_rejects_required_workflow_artifact_without_explicit_output_mapping()
     {
         var workflowRoleId = Guid.NewGuid();
         var model = CreateBaseDefinition();
@@ -479,7 +479,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB09_INV_001_accepts_required_workflow_artifact_with_explicit_output_mapping()
+    public void Analyze_accepts_required_workflow_artifact_with_explicit_output_mapping()
     {
         var workflowRoleId = Guid.NewGuid();
         var model = CreateBaseDefinition();
@@ -548,7 +548,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB09_INV_001_strict_rejects_required_subprocess_artifact_without_child_mapping()
+    public void Analyze_strict_rejects_required_subprocess_artifact_without_child_mapping()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel
@@ -577,7 +577,7 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
-    public void Analyze_SB09_INV_001_accepts_required_subprocess_artifact_with_child_mapping()
+    public void Analyze_accepts_required_subprocess_artifact_with_child_mapping()
     {
         var model = CreateBaseDefinition();
         model.Steps.Add(new ProcessStepEditorModel

@@ -337,7 +337,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB03_INV_001_denies_pwsh_script_product_write_when_process_step_disallows_product_mutation()
+    public async Task EvaluateAsync_denies_pwsh_script_product_write_when_process_step_disallows_product_mutation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -366,7 +366,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB03_INV_001_denies_python_script_product_write_when_process_step_disallows_product_mutation()
+    public async Task EvaluateAsync_denies_python_script_product_write_when_process_step_disallows_product_mutation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -394,7 +394,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB03_INV_001_allows_read_only_validation_script_when_process_step_disallows_product_mutation()
+    public async Task EvaluateAsync_allows_read_only_validation_script_when_process_step_disallows_product_mutation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -421,7 +421,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB03_INV_001_denies_uninspected_script_when_process_step_disallows_product_mutation()
+    public async Task EvaluateAsync_denies_uninspected_script_when_process_step_disallows_product_mutation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -444,7 +444,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_001_denies_governed_script_without_side_effect_manifest()
+    public async Task EvaluateAsync_denies_governed_script_without_side_effect_manifest()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -469,7 +469,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_002_allows_declared_no_mutation_script()
+    public async Task EvaluateAsync_allows_declared_no_mutation_script()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -496,7 +496,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_003_denies_powershell_static_io_product_write()
+    public async Task EvaluateAsync_denies_powershell_static_io_product_write()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -521,7 +521,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_004_denies_powershell_redirection_to_product_target()
+    public async Task EvaluateAsync_denies_powershell_redirection_to_product_target()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -549,7 +549,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_005_denies_undeclared_cmd_delegation()
+    public async Task EvaluateAsync_denies_undeclared_cmd_delegation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -574,7 +574,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_006_denies_encoded_powershell_command()
+    public async Task EvaluateAsync_denies_encoded_powershell_command()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -601,7 +601,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_007_denies_python_path_open_write()
+    public async Task EvaluateAsync_denies_python_path_open_write()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -629,7 +629,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_008_allows_declared_current_run_artifact_script_write()
+    public async Task EvaluateAsync_allows_declared_current_run_artifact_script_write()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -655,7 +655,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_009_allows_declared_external_artifact_destination_write()
+    public async Task EvaluateAsync_allows_declared_external_artifact_destination_write()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -682,7 +682,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB06_INV_010_allows_product_mutation_step_script_with_declared_authority()
+    public async Task EvaluateAsync_allows_product_mutation_step_script_with_declared_authority()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -710,7 +710,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ProcessScriptSideEffectAnalyzer_SB07_INV_001_detects_writes_and_child_scripts_without_runtime()
+    public void ProcessScriptSideEffectAnalyzer_detects_writes_and_child_scripts_without_runtime()
     {
         var analysis = ProcessScriptSideEffectAnalyzer.Analyze(
             AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
@@ -721,7 +721,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ProcessToolOperationAuthorizer_SB07_INV_001_denies_missing_operation_without_full_policy_runtime()
+    public void ProcessToolOperationAuthorizer_denies_missing_operation_without_full_policy_runtime()
     {
         var context = CreateContext(
             "workspace_dotnet_test",
@@ -751,7 +751,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("workspace_dotnet_run", "LaunchRuntime")]
     [InlineData(ToolContractCatalog.BrowserClick, "CaptureRuntimeProof")]
     [InlineData("processes_step_transition", "ExecuteExternalAction")]
-    public void ProcessToolOperationAuthorizer_SB01_INV_001_denies_governed_step_with_missing_operation_contract(
+    public void ProcessToolOperationAuthorizer_denies_governed_step_with_missing_operation_contract(
         string toolName,
         string requiredOperation)
     {
@@ -1678,7 +1678,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("workspace_unregistered_side_effect")]
     [InlineData("browser_unregistered_side_effect")]
     [InlineData("arbitrary_unregistered_tool")]
-    public void Classify_SB02_INV_001_does_not_fallback_unknown_tools_to_read(string toolName)
+    public void Classify_does_not_fallback_unknown_tools_to_read(string toolName)
     {
         var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
 
@@ -1686,7 +1686,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ToolPolicyMetadata_SB02_INV_002_classifies_high_risk_catalog_tools_explicitly()
+    public void ToolPolicyMetadata_classifies_high_risk_catalog_tools_explicitly()
     {
         Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceCommandRun));
         Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceCommandRun));
@@ -1705,7 +1705,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_003_denies_command_run_without_execute_external_action_operation()
+    public async Task EvaluateAsync_denies_command_run_without_execute_external_action_operation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -1728,7 +1728,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ToolCapabilityRegistry_SB02_INV_004_registers_every_known_catalog_tool()
+    public void ToolCapabilityRegistry_registers_every_known_catalog_tool()
     {
         var registeredToolNames = ToolCapabilityRegistry.Capabilities
             .Select(capability => capability.Name)
@@ -1744,7 +1744,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ToolCapabilityRegistry_SB02_INV_005_declares_static_operation_requirements_for_high_risk_tools()
+    public void ToolCapabilityRegistry_declares_static_operation_requirements_for_high_risk_tools()
     {
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceCommandRun, out var commandRun));
         Assert.Equal(ToolCapabilityOperationRequirementKind.Static, commandRun.OperationRequirementKind);
@@ -1763,7 +1763,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ToolCapabilityRegistry_SB02_INV_006_declares_side_effect_target_scope_and_proof_metadata()
+    public void ToolCapabilityRegistry_declares_side_effect_target_scope_and_proof_metadata()
     {
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceCommandRun, out var commandRun));
         Assert.Equal(ToolCapabilitySideEffectKind.LocalProcessExecution, commandRun.SideEffectKind);
@@ -1788,7 +1788,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ProjectStructureToolInventory_SB07_INV_001_classifies_all_runtime_project_structure_tools()
+    public void ProjectStructureToolInventory_classifies_all_runtime_project_structure_tools()
     {
         var expectedReadTools = new[]
         {
@@ -1842,7 +1842,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public void ProcessToolInventory_SB06_INV_001_registers_every_process_tool_in_catalog_and_capability_registry()
+    public void ProcessToolInventory_registers_every_process_tool_in_catalog_and_capability_registry()
     {
         var expectedProcessTools = new[]
         {
@@ -1970,7 +1970,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_001_denies_validation_without_run_validation_operation()
+    public async Task EvaluateAsync_denies_validation_without_run_validation_operation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -1994,7 +1994,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_002_allows_validation_when_run_validation_operation_is_allowed()
+    public async Task EvaluateAsync_allows_validation_when_run_validation_operation_is_allowed()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2018,7 +2018,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_003_allows_bounded_dotnet_run_with_run_validation_operation()
+    public async Task EvaluateAsync_allows_bounded_dotnet_run_with_run_validation_operation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2046,7 +2046,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_003_denies_kept_alive_runtime_launch_without_launch_runtime_operation()
+    public async Task EvaluateAsync_denies_kept_alive_runtime_launch_without_launch_runtime_operation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2079,7 +2079,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(ToolContractCatalog.BrowserClick)]
     [InlineData(ToolContractCatalog.BrowserPressKey)]
     [InlineData(ToolContractCatalog.BrowserType)]
-    public async Task EvaluateAsync_SB04_INV_001_denies_browser_tools_without_capture_runtime_proof_operation(string toolName)
+    public async Task EvaluateAsync_denies_browser_tools_without_capture_runtime_proof_operation(string toolName)
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2107,7 +2107,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(ToolContractCatalog.BrowserClick)]
     [InlineData(ToolContractCatalog.BrowserPressKey)]
     [InlineData(ToolContractCatalog.BrowserType)]
-    public async Task EvaluateAsync_SB04_INV_002_allows_browser_tools_with_capture_runtime_proof_operation(string toolName)
+    public async Task EvaluateAsync_allows_browser_tools_with_capture_runtime_proof_operation(string toolName)
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2130,7 +2130,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_004_allows_artifact_only_write_under_current_run_artifacts()
+    public async Task EvaluateAsync_allows_artifact_only_write_under_current_run_artifacts()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2157,7 +2157,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_005_allows_product_write_when_external_product_root_is_named_output()
+    public async Task EvaluateAsync_allows_product_write_when_external_product_root_is_named_output()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         const string productRoot = "external-target/C/programovani/dotnet-demo/output";
@@ -2188,7 +2188,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_006_denies_copying_previous_run_product_into_current_product_target()
+    public async Task EvaluateAsync_denies_copying_previous_run_product_into_current_product_target()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         const string productRoot = "external-target/C/programovani/dotnet-demo/output";
@@ -2222,7 +2222,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_007_denies_validation_against_previous_run_product_archive()
+    public async Task EvaluateAsync_denies_validation_against_previous_run_product_archive()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         const string productRoot = "external-target/C/programovani/dotnet-demo/output";
@@ -2255,7 +2255,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB07_INV_001_denies_project_structure_mutation_without_execute_external_action()
+    public async Task EvaluateAsync_denies_project_structure_mutation_without_execute_external_action()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2281,7 +2281,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB07_INV_002_allows_project_structure_mutation_with_execute_external_action()
+    public async Task EvaluateAsync_allows_project_structure_mutation_with_execute_external_action()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2305,7 +2305,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB07_INV_003_allows_project_structure_read_without_execute_external_action()
+    public async Task EvaluateAsync_allows_project_structure_read_without_execute_external_action()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(

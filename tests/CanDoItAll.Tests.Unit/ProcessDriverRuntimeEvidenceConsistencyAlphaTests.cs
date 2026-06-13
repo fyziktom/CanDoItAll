@@ -15,7 +15,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
 {
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB013_INV_001_internals_are_split_without_runtime_or_io_surface()
+    public void Runtime_evidence_consistency_alpha_internals_are_split_without_runtime_or_io_surface()
     {
         var root = FindRepositoryRoot();
         var source = ReadProjectSource(root);
@@ -34,7 +34,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB014_INV_001_expands_contradiction_matrix_across_descriptor_families()
+    public void Runtime_evidence_consistency_alpha_expands_contradiction_matrix_across_descriptor_families()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var request = CreateRequest(
@@ -96,7 +96,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB018_INV_001_detects_contradictory_core_descriptors_without_mutation()
+    public void Runtime_evidence_consistency_alpha_detects_contradictory_core_descriptors_without_mutation()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var request = CreateRequest(
@@ -143,7 +143,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB018_INV_002_accepts_consistent_descriptors_and_rejects_mutation_operations()
+    public void Runtime_evidence_consistency_alpha_accepts_consistent_descriptors_and_rejects_mutation_operations()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var consistent = verifier.Verify(CreateRequest(
@@ -180,7 +180,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB018_INV_003_rejects_untrusted_descriptor_evidence_without_mutation()
+    public void Runtime_evidence_consistency_alpha_rejects_untrusted_descriptor_evidence_without_mutation()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -199,7 +199,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB023_INV_001_supplied_content_policy_rejects_untrusted_mismatched_oversized_and_invalid_content_type()
+    public void Runtime_evidence_consistency_alpha_supplied_content_policy_rejects_untrusted_mismatched_oversized_and_invalid_content_type()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var executionEvidence = CreateExecutionEvidence(ProcessAutomationRunOutcome.Succeeded);
@@ -265,7 +265,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB024_INV_001_evidence_boundary_rejects_missing_supplied_content_envelope_without_descriptor_analysis()
+    public void Runtime_evidence_consistency_alpha_evidence_boundary_rejects_missing_supplied_content_envelope_without_descriptor_analysis()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -292,7 +292,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB025_INV_001_audit_facts_include_caller_lane_operation_evidence_denial_and_output_hash()
+    public void Runtime_evidence_consistency_alpha_audit_facts_include_caller_lane_operation_evidence_denial_and_output_hash()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
         var result = verifier.Verify(CreateRequest(
@@ -316,7 +316,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
     }
 
     [Fact]
-    public void Runtime_evidence_consistency_alpha_SB021_INV_001_package_is_solution_bound_and_runtime_free()
+    public void Runtime_evidence_consistency_alpha_package_is_solution_bound_and_runtime_free()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");

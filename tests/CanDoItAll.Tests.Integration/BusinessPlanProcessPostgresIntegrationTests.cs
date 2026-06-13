@@ -99,7 +99,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     }
 
     [Fact]
-    public async Task Business_plan_process_SB05_INV_001_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback()
+    public async Task Business_plan_process_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback()
     {
         const string validationLabel = "Business-analysis automation validation";
 

@@ -32,11 +32,11 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     private static readonly LongRunningE2EProofContract[] LongRunningTemplateAutomationProofs =
     [
         new(
-            "Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback",
-            "SB03_INV_001"),
+            "Blazor_app_delivery_template_completes_through_automation_dispatch_finalizer_and_readback",
+            "automation_dispatch_finalizer_and_readback"),
         new(
-            "Software_delivery_template_SB04_INV_001_completes_multi_team_governance_through_automation_dispatch",
-            "SB04_INV_001")
+            "Software_delivery_template_completes_multi_team_governance_through_automation_dispatch",
+            "multi_team_governance_through_automation_dispatch")
     ];
 
     private static readonly string[] ProductionAutomationPathTokens =
@@ -51,7 +51,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     ];
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_001_source_inventory_is_not_bundle_path_coupled()
+    public void Process_runtime_host_codefirst_source_inventory_is_not_package_path_coupled()
     {
         var root = FindRepositoryRoot();
         var sourceFiles = new[]
@@ -80,7 +80,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_002_long_lived_runtime_host_tests_do_not_read_concrete_bundle_files()
+    public void Process_runtime_host_codefirst_long_lived_runtime_host_tests_do_not_read_concrete_package_files()
     {
         var root = FindRepositoryRoot();
         var coupledFiles = EnumerateRuntimeHostGuardedFiles(root)
@@ -97,7 +97,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_006_numstat_command_requires_explicit_current_bundle_start_sha()
+    public void Process_runtime_host_codefirst_numstat_command_requires_explicit_current_package_start_sha()
     {
         var arguments = ProcessRuntimeHostCodeFirstDiffSummary.BuildNumstatArguments("0123456");
 
@@ -107,7 +107,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_009_ratio_report_rejects_conservative_head_fallback_unless_blocked()
+    public void Process_runtime_host_codefirst_ratio_report_rejects_conservative_head_fallback_unless_blocked()
     {
         var blockedFallback = ProcessRuntimeHostCodeFirstClosureReport.FromLines(
         [
@@ -137,7 +137,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_010_worktree_numstat_command_requires_explicit_start_sha()
+    public void Process_runtime_host_codefirst_worktree_numstat_command_requires_explicit_start_sha()
     {
         var arguments = ProcessRuntimeHostCodeFirstDiffSummary.BuildWorktreeNumstatArguments("0123456");
 
@@ -148,7 +148,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_011_ratio_failure_is_advisory_when_runtime_release_evidence_is_green()
+    public void Process_runtime_host_codefirst_ratio_failure_is_advisory_when_runtime_release_evidence_is_green()
     {
         var runtimeStableWithRatioChurn = StabilizationReleaseEvidence.FromProof(
             deterministicRuntimePass: true,
@@ -178,7 +178,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_007_long_running_template_e2e_proof_cites_production_dispatch_path()
+    public void Process_runtime_host_codefirst_long_running_template_e2e_proof_cites_production_dispatch_path()
     {
         var root = FindRepositoryRoot();
         var e2eSource = File.ReadAllText(Path.Combine(
@@ -201,7 +201,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         {
             var methodBody = ExtractMethodBody(e2eSource, proof.MethodName);
 
-            Assert.Contains(proof.InvariantId, proof.MethodName, StringComparison.Ordinal);
+            Assert.Contains(proof.RequiredMethodNameToken, proof.MethodName, StringComparison.Ordinal);
             Assert.Contains("ExecuteTemplateWithProcessMockAgentsAsync", methodBody, StringComparison.Ordinal);
             Assert.Contains("AssertFinalizerSummaries", methodBody, StringComparison.Ordinal);
             Assert.Contains("AssertArtifact", methodBody, StringComparison.Ordinal);
@@ -210,7 +210,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_008_manual_contract_tests_are_not_counted_as_automation_proofs()
+    public void Process_runtime_host_codefirst_manual_contract_tests_are_not_counted_as_automation_proofs()
     {
         var root = FindRepositoryRoot();
         var e2eSource = File.ReadAllText(Path.Combine(
@@ -232,7 +232,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB03_INV_011_business_plan_postgres_automation_proof_is_not_manual_transition_contract()
+    public void Process_runtime_host_codefirst_business_plan_postgres_automation_proof_is_not_manual_transition_contract()
     {
         var root = FindRepositoryRoot();
         var businessPlanSource = File.ReadAllText(Path.Combine(
@@ -242,7 +242,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
             "BusinessPlanProcessPostgresIntegrationTests.cs"));
         var automationMethodBody = ExtractMethodBody(
             businessPlanSource,
-            "Business_plan_process_SB05_INV_001_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback");
+            "Business_plan_process_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback");
 
         Assert.Contains("ExecuteTemplateWithProcessMockAgentsAsync", automationMethodBody, StringComparison.Ordinal);
         Assert.Contains("AssertBusinessAutomationDispatchReadback", automationMethodBody, StringComparison.Ordinal);
@@ -268,7 +268,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB05_INV_004_scheduler_workflow_lifecycle_proof_uses_process_owned_readonly_paths() {
+    public void Process_runtime_host_codefirst_scheduler_workflow_lifecycle_proof_uses_process_owned_readonly_paths() {
         var root = FindRepositoryRoot();
         var processServiceTestsSource = File.ReadAllText(Path.Combine(
             root,
@@ -287,10 +287,10 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
             "SchedulerPlannerService.cs"));
         var triggerMethodBody = ExtractMethodBody(
             processServiceTestsSource,
-            "StartRunFromTriggerAsync_SB05_INV_001_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks");
+            "StartRunFromTriggerAsync_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks");
         var jobRunnerMethodBody = ExtractMethodBody(
             readOnlyJobTestsSource,
-            "Process_readonly_verification_job_runner_SB05_INV_003_executes_scheduler_and_workflow_lifecycle_status_provenance_readback_without_mutation");
+            "Process_readonly_verification_job_runner_executes_scheduler_and_workflow_lifecycle_status_provenance_readback_without_mutation");
         var launchProcessStart = schedulerPlannerSource.IndexOf(
             "private async Task<SchedulerTargetLaunchResult> LaunchProcessAsync",
             StringComparison.Ordinal);
@@ -329,7 +329,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_003_numstat_summary_groups_source_tests_docs_and_bundle_lines()
+    public void Process_runtime_host_codefirst_numstat_summary_groups_source_tests_docs_and_package_lines()
     {
         var summary = ProcessRuntimeHostCodeFirstDiffSummary.FromNumstatLines(
         [
@@ -350,7 +350,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_004_numstat_summary_blocks_bundle_heavy_closure()
+    public void Process_runtime_host_codefirst_numstat_summary_blocks_package_heavy_closure()
     {
         var summary = ProcessRuntimeHostCodeFirstDiffSummary.FromNumstatLines(
         [
@@ -365,7 +365,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
-    public void Process_runtime_host_codefirst_SB01_INV_005_numstat_summary_accepts_exact_five_to_one_source_test_dominance()
+    public void Process_runtime_host_codefirst_numstat_summary_accepts_exact_five_to_one_source_test_dominance()
     {
         var summary = ProcessRuntimeHostCodeFirstDiffSummary.FromNumstatLines(
         [
@@ -511,7 +511,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         throw new InvalidOperationException($"Could not locate a test method before line {startIndex + 1}.");
     }
 
-    private sealed record LongRunningE2EProofContract(string MethodName, string InvariantId);
+    private sealed record LongRunningE2EProofContract(string MethodName, string RequiredMethodNameToken);
 
     private enum StabilizationReleaseOutcome
     {

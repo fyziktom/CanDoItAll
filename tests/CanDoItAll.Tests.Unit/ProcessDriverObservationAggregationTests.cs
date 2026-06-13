@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverObservationAggregationTests
 {
     [Fact]
-    public void Process_driver_observation_aggregation_SB037_INV_001_combines_all_readonly_verifier_observations_without_mutation()
+    public void Process_driver_observation_aggregation_combines_all_readonly_verifier_observations_without_mutation()
     {
         var responses = new[]
         {
@@ -92,7 +92,7 @@ public sealed class ProcessDriverObservationAggregationTests
     }
 
     [Fact]
-    public void Process_driver_observation_aggregation_SB037_INV_002_rejects_empty_auditless_and_mixed_lane_responses()
+    public void Process_driver_observation_aggregation_rejects_empty_auditless_and_mixed_lane_responses()
     {
         var aggregator = new ProcessDriverObservationAggregator();
         var auditless = CreateResponse(
@@ -127,7 +127,7 @@ public sealed class ProcessDriverObservationAggregationTests
     }
 
     [Fact]
-    public void Process_driver_observation_aggregation_SB037_INV_003_package_is_solution_bound_dependency_clean_and_runtime_free()
+    public void Process_driver_observation_aggregation_package_is_solution_bound_dependency_clean_and_runtime_free()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");
@@ -181,7 +181,7 @@ public sealed class ProcessDriverObservationAggregationTests
     }
 
     [Fact]
-    public void Process_driver_observation_aggregation_SB038_INV_001_returns_readonly_snapshot_envelopes_without_tracking_mutable_inputs()
+    public void Process_driver_observation_aggregation_returns_readonly_snapshot_envelopes_without_tracking_mutable_inputs()
     {
         var responses = new List<ProcessDriverVerificationResponse>
         {
@@ -228,7 +228,7 @@ public sealed class ProcessDriverObservationAggregationTests
     }
 
     [Fact]
-    public void Process_driver_observation_aggregation_SB038_INV_002_remains_unregistered_unpersisted_unscheduled_and_command_free()
+    public void Process_driver_observation_aggregation_remains_unregistered_unpersisted_unscheduled_and_command_free()
     {
         var root = FindRepositoryRoot();
         var packageSource = ReadProjectSource(root);
