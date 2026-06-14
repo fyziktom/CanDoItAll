@@ -71,8 +71,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (missingRequiredTools.Count > 0)
         {
+            var missingDotNetNewForSetupScaffold =
+                missingRequiredTools.Contains(ToolContractCatalog.WorkspaceDotNetNew, StringComparer.Ordinal) &&
+                IsDotNetSolutionSetupScaffoldMutationStep(candidate);
             builder.AppendLine($"Missing required step tools: {string.Join(", ", missingRequiredTools)}.");
-            builder.AppendLine("On this retry, call the missing required tools against the concrete deliverable or artifact paths before returning a final step outcome.");
+            if (missingDotNetNewForSetupScaffold)
+            {
+                builder.AppendLine($"No successful current-run {ToolContractCatalog.WorkspaceDotNetNew} receipt exists for this setup scaffold step.");
+                builder.AppendLine($"If the requested solution or project files are absent or have not been proven with current-run workspace_stat_path and workspace_read_file receipts, call {ToolContractCatalog.WorkspaceDotNetNew} against the concrete scaffold target before writing final evidence or calling {AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}.");
+                builder.AppendLine("The prior scaffold contract or markdown summary is not the solution/test change-set artifact and is not a substitute for a scaffold tool receipt.");
+                builder.AppendLine("For a .NET solution setup scaffold step, do not rerun workspace_dotnet_new into an already scaffolded target only to satisfy a receipt gate. If workspace_dotnet_new was denied because the solution or project files already exist, inspect the existing .slnx, .sln, and .csproj files with workspace_stat_path and workspace_read_file, write the required current-run managed change-set artifact, and return Completed when the scaffold satisfies the step contract.");
+                builder.AppendLine("If the existing scaffold is missing or invalid, create or repair it with workspace_dotnet_new or workspace_pwsh_run_script using ProductMutation before returning a final step outcome.");
+                builder.AppendLine("For every other missing required tool, call it against the concrete deliverable or artifact paths before returning a final step outcome.");
+            }
+            else
+            {
+                builder.AppendLine("On this retry, call the missing required tools against the concrete deliverable or artifact paths before returning a final step outcome.");
+            }
+
             builder.AppendLine("Do not substitute repeated path polling or summaries for a required validation, browser, inspection, or artifact-write tool.");
         }
 
@@ -157,6 +173,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("Do not read, rewrite, or cite shallow files directly under a shared `artifacts/scopes/<scope>/<id>/`, `output/scopes/<scope>/<id>/`, `integration-map/scopes/<scope>/<id>/`, or `data/scopes/<scope>/<id>/` root as current-run truth.");
         }
 
+        if (!RequiresConcreteImplementationProof(candidate) &&
+            candidate.ExpectedArtifacts.Any(item => item.IsRequired))
+        {
+            builder.AppendLine($"If a prior workspace_write_file call was denied because it targeted source, test, or product files for required evidence, rewrite that evidence under `{BuildCurrentRunManagedArtifactRoot(candidate)}` unless the required artifact contract lists an exact grounded artifact path.");
+            builder.AppendLine("Do not convert a product/source path-policy denial into `Blocked` when the required evidence artifact can be produced as a current-run managed artifact.");
+        }
+
         if (recoverableGovernedOutcomeGap &&
             missingRequiredTools.Count == 0 &&
             unresolvedCriticalToolFailures.Count == 0)
@@ -167,6 +190,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (recoverableFinalizerValidationFailure)
         {
             builder.AppendLine($"{finalizerFailureSummary} On this retry, call `{AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}` exactly once with a valid ProcessStepOutcomeResult before concluding.");
+            builder.AppendLine("Pass exactly one `result` object argument shaped like `{ \"status\": \"Completed\", \"reason\": \"...\", \"evidenceRefs\": [\"artifacts/process-runs/...\"], \"nextActions\": [], \"humanReadableSummaryMarkdown\": \"...\" }`; do not pass scalar `result`, `status`, or `reason` sibling arguments.");
             builder.AppendLine("Do not answer only in prose, markdown, or a JSON snippet; the process source of truth is the required finalizer call.");
         }
 
@@ -278,6 +302,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             builder.AppendLine("Do not conclude this governed retry without returning a valid structured ProcessStepOutcomeResult.");
             builder.AppendLine("Use the configured structured output format. Status must be one of Completed, Blocked, Failed, WaitingApproval, or Refused, and Reason must be concrete.");
+            builder.AppendLine($"If `{AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}` is available, call it exactly once with one `result` object; the object must contain `status` and `reason`.");
             builder.AppendLine("Put display-only markdown in HumanReadableSummaryMarkdown. Do not encode the workflow decision in markdown or an HTML comment.");
             if (candidate.RequiresExplicitBranchOutcomeSelection)
             {

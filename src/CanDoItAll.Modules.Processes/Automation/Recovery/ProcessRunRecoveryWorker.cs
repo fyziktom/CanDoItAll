@@ -26,6 +26,15 @@ internal sealed class ProcessRunRecoveryService(
     public async Task<int> RecoverActiveRunsAsync(
         bool reclaimExpiredAutomationDispatchLeases,
         CancellationToken cancellationToken = default)
+        => await RecoverActiveRunsAsync(
+            reclaimExpiredAutomationDispatchLeases,
+            startupCutoffUtc: null,
+            cancellationToken);
+
+    internal async Task<int> RecoverActiveRunsAsync(
+        bool reclaimExpiredAutomationDispatchLeases,
+        DateTimeOffset? startupCutoffUtc,
+        CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var candidates = await (
@@ -52,23 +61,33 @@ internal sealed class ProcessRunRecoveryService(
                     runSteps.Key.ProcessDefinitionId))
             .Take(MaxRunBatchSize)
             .ToListAsync(cancellationToken);
-        if (candidates.Count == 0)
-        {
-            return 0;
-        }
 
         if (reclaimExpiredAutomationDispatchLeases)
         {
-            var releasedLeaseCount = await ReleaseExpiredAutomationDispatchLeasesAsync(
+            var leaseRecoveryRunIds = await ListActiveRunIdsWithRecoverableAutomationDispatchLeasesAsync(
                 dbContext,
-                candidates.Select(candidate => candidate.RunId).ToArray(),
+                startupCutoffUtc,
+                cancellationToken);
+            var releasedLeaseCount = await ReleaseRecoverableAutomationDispatchLeasesAsync(
+                dbContext,
+                candidates
+                    .Select(candidate => candidate.RunId)
+                    .Concat(leaseRecoveryRunIds)
+                    .Distinct()
+                    .ToArray(),
+                startupCutoffUtc,
                 cancellationToken);
             if (releasedLeaseCount > 0)
             {
                 logger.LogWarning(
-                    "Released {ReleasedLeaseCount} expired process automation dispatch lease(s) during runtime recovery startup scan.",
+                    "Released {ReleasedLeaseCount} stale process automation dispatch lease(s) during runtime recovery startup scan.",
                     releasedLeaseCount);
             }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return 0;
         }
 
         var queuedCount = 0;
@@ -193,9 +212,35 @@ internal sealed class ProcessRunRecoveryService(
                 cancellationToken);
     }
 
-    private async Task<int> ReleaseExpiredAutomationDispatchLeasesAsync(
+    private async Task<IReadOnlyList<Guid>> ListActiveRunIdsWithRecoverableAutomationDispatchLeasesAsync(
+        AppDbContext dbContext,
+        DateTimeOffset? startupCutoffUtc,
+        CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        var records = await (
+                from record in dbContext.Set<ProcessOutboxRecord>().AsNoTracking()
+                where record.CommandKey == ProcessOutboxService.AutomationDispatchCommandKey &&
+                      record.Status == ProcessOutboxRecordStatus.Pending &&
+                      record.ProcessRunId.HasValue &&
+                      record.LeaseExpiresAtUtc.HasValue
+                join run in dbContext.Set<ProcessRun>().AsNoTracking() on record.ProcessRunId equals (Guid?)run.Id
+                where run.Status != ProcessRunStatus.Completed &&
+                      run.Status != ProcessRunStatus.Cancelled
+                select record)
+            .ToListAsync(cancellationToken);
+
+        return records
+            .Where(record => IsRecoverableAutomationDispatchOutboxLease(record, now, startupCutoffUtc))
+            .Select(record => record.ProcessRunId!.Value)
+            .Distinct()
+            .ToList();
+    }
+
+    private async Task<int> ReleaseRecoverableAutomationDispatchLeasesAsync(
         AppDbContext dbContext,
         IReadOnlyCollection<Guid> runIds,
+        DateTimeOffset? startupCutoffUtc,
         CancellationToken cancellationToken)
     {
         if (runIds.Count == 0)
@@ -210,11 +255,11 @@ internal sealed class ProcessRunRecoveryService(
                     item.CommandKey == ProcessOutboxService.AutomationDispatchCommandKey &&
                     item.Status == ProcessOutboxRecordStatus.Pending)
                 .ToListAsync(cancellationToken))
-            .Where(item =>
-                item.ProcessRunId.HasValue &&
-                runIdSet.Contains(item.ProcessRunId.Value) &&
-                item.LeaseExpiresAtUtc.HasValue &&
-                item.LeaseExpiresAtUtc.Value <= now)
+            .Where(item => ShouldReleaseAutomationDispatchOutboxLeaseForRecovery(
+                item,
+                runIdSet,
+                now,
+                startupCutoffUtc))
             .ToList();
         foreach (var record in records)
         {
@@ -223,8 +268,101 @@ internal sealed class ProcessRunRecoveryService(
             record.UpdatedAtUtc = now;
         }
 
+        var steps = (await dbContext.Set<ProcessStepRun>()
+                .Where(item => runIds.Contains(item.ProcessRunId) &&
+                    item.AutomationDispatchLeaseExpiresAtUtc.HasValue &&
+                    (item.Status == ProcessStepRunStatus.Ready ||
+                     item.Status == ProcessStepRunStatus.WaitingApproval ||
+                     item.Status == ProcessStepRunStatus.InProgress))
+                .ToListAsync(cancellationToken))
+            .Where(item => ShouldReleaseStepDispatchClaimForRecovery(
+                item,
+                runIdSet,
+                now,
+                startupCutoffUtc))
+            .ToList();
+        foreach (var step in steps)
+        {
+            step.AutomationDispatchClaimToken = string.Empty;
+            step.AutomationDispatchClaimedBy = string.Empty;
+            step.AutomationDispatchClaimedAtUtc = null;
+            step.AutomationDispatchLeaseExpiresAtUtc = null;
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
-        return records.Count;
+        return records.Count + steps.Count;
+    }
+
+    internal static bool ShouldReleaseAutomationDispatchOutboxLeaseForRecovery(
+        ProcessOutboxRecord record,
+        IReadOnlySet<Guid> runIds,
+        DateTimeOffset now,
+        DateTimeOffset? startupCutoffUtc)
+    {
+        if (record.ProcessRunId is not { } runId ||
+            !runIds.Contains(runId) ||
+            !string.Equals(record.CommandKey, ProcessOutboxService.AutomationDispatchCommandKey, StringComparison.Ordinal) ||
+            record.Status != ProcessOutboxRecordStatus.Pending ||
+            !record.LeaseExpiresAtUtc.HasValue)
+        {
+            return false;
+        }
+
+        return IsRecoverableAutomationDispatchOutboxLease(record, now, startupCutoffUtc);
+    }
+
+    internal static bool ShouldReleaseStepDispatchClaimForRecovery(
+        ProcessStepRun stepRun,
+        IReadOnlySet<Guid> runIds,
+        DateTimeOffset now,
+        DateTimeOffset? startupCutoffUtc)
+    {
+        if (!runIds.Contains(stepRun.ProcessRunId) ||
+            !stepRun.AutomationDispatchLeaseExpiresAtUtc.HasValue ||
+            stepRun.Status is not (
+                ProcessStepRunStatus.Ready or
+                ProcessStepRunStatus.WaitingApproval or
+                ProcessStepRunStatus.InProgress))
+        {
+            return false;
+        }
+
+        return stepRun.AutomationDispatchLeaseExpiresAtUtc.Value <= now ||
+            IsPreStartupLease(stepRun.AutomationDispatchClaimedAtUtc, startupCutoffUtc);
+    }
+
+    private static bool IsRecoverableAutomationDispatchOutboxLease(
+        ProcessOutboxRecord record,
+        DateTimeOffset now,
+        DateTimeOffset? startupCutoffUtc)
+    {
+        return record.LeaseExpiresAtUtc.HasValue &&
+            (record.LeaseExpiresAtUtc.Value <= now ||
+             IsPreStartupLease(ResolveOutboxLeaseOwnershipTime(record), startupCutoffUtc));
+    }
+
+    private static DateTimeOffset? ResolveOutboxLeaseOwnershipTime(ProcessOutboxRecord record)
+    {
+        if (record.LastAttemptAtUtc.HasValue)
+        {
+            return record.LastAttemptAtUtc.Value;
+        }
+
+        if (record.UpdatedAtUtc != default)
+        {
+            return record.UpdatedAtUtc;
+        }
+
+        return record.CreatedAtUtc == default
+            ? null
+            : record.CreatedAtUtc;
+    }
+
+    private static bool IsPreStartupLease(DateTimeOffset? ownershipAtUtc, DateTimeOffset? startupCutoffUtc)
+    {
+        return startupCutoffUtc.HasValue &&
+            ownershipAtUtc.HasValue &&
+            ownershipAtUtc.Value <= startupCutoffUtc.Value;
     }
 
     private static AgentRecoveryLedgerEntry? TryReadLedgerEntry(string json)
@@ -270,6 +408,7 @@ public sealed class ProcessRunRecoveryWorker(
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan FailureBackoff = TimeSpan.FromSeconds(2);
+    private readonly DateTimeOffset startupCutoffUtc = DateTimeOffset.UtcNow;
     private bool startupExpiredLeaseRecoveryCompleted;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -283,6 +422,7 @@ public sealed class ProcessRunRecoveryWorker(
                 var reclaimExpiredAutomationDispatchLeases = !startupExpiredLeaseRecoveryCompleted;
                 var dispatchedCount = await recoveryService.RecoverActiveRunsAsync(
                     reclaimExpiredAutomationDispatchLeases,
+                    startupCutoffUtc,
                     stoppingToken);
                 startupExpiredLeaseRecoveryCompleted = true;
                 startupGate.MarkStartupRecoveryCompleted();

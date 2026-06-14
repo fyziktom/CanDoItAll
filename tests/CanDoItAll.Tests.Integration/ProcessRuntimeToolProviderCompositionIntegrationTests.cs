@@ -99,6 +99,99 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
     }
 
     [Fact]
+    public async Task ProjectStructureRuntimeToolProvider_bounds_unfiltered_governed_process_structure_read()
+    {
+        const string storedStatus = "Stored";
+
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var projectStructureProvider = Assert.Single(
+            scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>()
+                .OfType<ProjectStructureAgentRuntimeToolProvider>());
+        var projectId = await CreateProjectAsync(
+            scope.ServiceProvider.GetRequiredService<ProjectsService>(),
+            "Governed process project-structure default read");
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var storedSeeds = Enumerable
+            .Range(0, 95)
+            .Select(index => new ProjectObjectSeedRequest(
+                ProjectObjectType.File,
+                $"Stored process output noise {index:000}",
+                "Historical output",
+                "Should not crowd the governed default read.",
+                ObjectSubtype: "text"))
+            .ToList();
+        await workbenchService.SeedProjectObjectsAsync(projectId, storedSeeds);
+        var storedNodeIds = (await workbenchService.GetStructureAsync(projectId))
+            .Nodes
+            .Where(node => node.Title.StartsWith("Stored process output noise ", StringComparison.Ordinal))
+            .Select(node => node.Id)
+            .ToList();
+        await workbenchService.UpdateObjectStatusesAsync(projectId, storedNodeIds, storedStatus);
+
+        for (var index = 0; index < 3; index++)
+        {
+            await workbenchService.CreateObjectAsync(
+                projectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.WorkItem,
+                    $"Visible draft work {index:000}",
+                    "Current work",
+                    "Should remain visible in the governed default read.",
+                    $"project:{projectId:D}"));
+        }
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProjectStructureAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = false,
+                    CanWrite = false,
+                    AllowAllProjects = false
+                })
+        };
+        using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+            CreateTrustedProcessRun(agent.Id, projectId));
+        var tools = await projectStructureProvider.CreateToolsAsync(
+            CreateProjectScopedProviderContext(agent, provider, projectId),
+            CancellationToken.None);
+        var readTool = Assert.IsAssignableFrom<AIFunction>(
+            Assert.Single(tools, item => string.Equals(item.Name, "project_structure_read", StringComparison.OrdinalIgnoreCase)));
+
+        var defaultRead = ReadToolResult<ProjectStructureReadToolData>(await readTool.InvokeAsync(
+            new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["projectId"] = projectId
+            })));
+        var explicitStoredRead = ReadToolResult<ProjectStructureReadToolData>(await readTool.InvokeAsync(
+            new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureReadRequest(
+                    Statuses: [storedStatus],
+                    Take: 120)
+            })));
+
+        Assert.DoesNotContain(defaultRead.Nodes, node => string.Equals(node.Status, storedStatus, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(defaultRead.Nodes, node => node.Title == "Visible draft work 000");
+        Assert.Contains(
+            defaultRead.Warnings,
+            warning => warning.Contains("Governed process default applied", StringComparison.Ordinal));
+        Assert.Equal(95, explicitStoredRead.Nodes.Count);
+        Assert.All(explicitStoredRead.Nodes, node => Assert.Equal(storedStatus, node.Status));
+        Assert.DoesNotContain(
+            explicitStoredRead.Warnings,
+            warning => warning.Contains("Governed process default applied", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ProjectStructureRuntimeToolProvider_grants_governed_process_scoped_current_project_asset_write_without_global_project_write()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -168,6 +261,85 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
         var projectStructureException = AssertProjectStructureException(exception);
 
         Assert.Equal("ProjectStructureWriteDenied", projectStructureException.ErrorCode);
+    }
+
+    [Fact]
+    public async Task ProjectStructureRuntimeToolProvider_reuses_project_structure_launch_agent_for_scoped_project_lease_reentry()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var projectStructureProvider = Assert.Single(
+            scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>()
+                .OfType<ProjectStructureAgentRuntimeToolProvider>());
+        var projectId = await CreateProjectAsync(
+            scope.ServiceProvider.GetRequiredService<ProjectsService>(),
+            "Process scoped project-structure lease owner");
+        var launchAgent = new ProjectStructureAgentIdentityDescriptor(
+            "codex-launch-owner",
+            "Codex Launch Owner",
+            "LUCYSPOWER",
+            @"C:\repositories\CanDoItAll",
+            "maf-processes-refactor",
+            "session-launch-owner");
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        await leaseService.AcquireAsync(
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                "Process scoped launch owner regression",
+                15),
+            new ProjectStructureAgentContext(
+                launchAgent.AgentId,
+                launchAgent.AgentName,
+                launchAgent.MachineName,
+                launchAgent.RepositoryRoot,
+                launchAgent.BranchName,
+                launchAgent.SessionId),
+            CancellationToken.None);
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var executingAgent = seededAgent with
+        {
+            Id = Guid.NewGuid(),
+            Name = "Scoped process role agent",
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProjectStructureAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = false,
+                    CanWrite = false,
+                    AllowAllProjects = false
+                })
+        };
+        using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+            CreateTrustedProcessRun(executingAgent.Id, projectId, launchAgent));
+        var tools = await projectStructureProvider.CreateToolsAsync(
+            CreateProjectScopedProviderContext(executingAgent, provider, projectId),
+            CancellationToken.None);
+        var nodeCreateTool = Assert.IsAssignableFrom<AIFunction>(
+            Assert.Single(tools, item => string.Equals(item.Name, "project_structure_node_create", StringComparison.OrdinalIgnoreCase)));
+
+        var createdNode = ReadToolResult<ProjectStructureNodeSummary>(await nodeCreateTool.InvokeAsync(
+            new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureNodeCreateInput(
+                    ProjectObjectType.WorkItem,
+                    "Scoped process command writeback",
+                    "Lease owner regression proof",
+                    "Created while the active project lease is owned by the project-structure launch agent.",
+                    $"project:{projectId:D}",
+                    240,
+                    160,
+                    ObjectSubtype: "task")
+            })));
+
+        Assert.Equal(ProjectObjectType.WorkItem, createdNode.ObjectType);
+        Assert.Equal("Scoped process command writeback", createdNode.Title);
     }
 
     [Fact]
@@ -245,7 +417,10 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
             });
     }
 
-    private static ExecutionRunRecord CreateTrustedProcessRun(Guid agentId, Guid projectId)
+    private static ExecutionRunRecord CreateTrustedProcessRun(
+        Guid agentId,
+        Guid projectId,
+        ProjectStructureAgentIdentityDescriptor? launchAgent = null)
     {
         var now = DateTimeOffset.UtcNow;
         var metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
@@ -258,6 +433,7 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
             }
             """,
             WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+        metadataJson = ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(metadataJson, launchAgent);
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),
             AgentId: agentId,

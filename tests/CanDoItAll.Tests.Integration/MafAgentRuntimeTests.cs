@@ -196,6 +196,253 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void ApplyResponseFormat_skips_structured_schema_for_required_finalizer()
+    {
+        var applyMethod = typeof(MafAgentRuntime).GetMethod(
+                              "ApplyResponseFormat",
+                              BindingFlags.NonPublic | BindingFlags.Static)
+                          ?? throw new InvalidOperationException("ApplyResponseFormat method was not found.");
+        var chatOptions = new ChatOptions();
+        var executionOptions = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Required,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 1,
+            RequireJsonResponseFormat: true,
+            ResponseFormatJsonSchema:
+            """
+            {
+              "type": "object",
+              "additionalProperties": true
+            }
+            """,
+            ResponseFormatSchemaName: "unused_required_finalizer_response",
+            ResponseFormatSchemaDescription: "Should not be applied for required finalizer runs.");
+
+        applyMethod.Invoke(null, [chatOptions, executionOptions]);
+
+        Assert.Null(chatOptions.ResponseFormat);
+    }
+
+    [Fact]
+    public void EnsureStructuredOutputCapability_allows_required_finalizer_without_native_structured_output()
+    {
+        var ensureMethod = typeof(MafAgentRuntime).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+                               .Single(method =>
+                                   method.Name == "EnsureStructuredOutputCapability" &&
+                                   method.GetParameters().Length == 2 &&
+                                   method.GetParameters()[1].ParameterType == typeof(AgentRuntimeExecutionOptions))
+                           ?? throw new InvalidOperationException("EnsureStructuredOutputCapability method was not found.");
+        var provider = CreateProvider("{}");
+        var executionOptions = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Required,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 1,
+            RequireJsonResponseFormat: true,
+            ResponseFormatJsonSchema: string.Empty,
+            ResponseFormatSchemaName: "process_step_outcome_result",
+            ResponseFormatSchemaDescription: "Process step outcome contract.");
+
+        var exception = Record.Exception(() => ensureMethod.Invoke(null, [provider, executionOptions]));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void EnsureStructuredOutputCapability_rejects_native_structured_output_when_finalizer_is_disabled()
+    {
+        var ensureMethod = typeof(MafAgentRuntime).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+                               .Single(method =>
+                                   method.Name == "EnsureStructuredOutputCapability" &&
+                                   method.GetParameters().Length == 2 &&
+                                   method.GetParameters()[1].ParameterType == typeof(AgentRuntimeExecutionOptions))
+                           ?? throw new InvalidOperationException("EnsureStructuredOutputCapability method was not found.");
+        var provider = CreateProvider("{}");
+        var executionOptions = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0,
+            RequireJsonResponseFormat: true,
+            ResponseFormatJsonSchema: string.Empty,
+            ResponseFormatSchemaName: "process_step_outcome_result",
+            ResponseFormatSchemaDescription: "Process step outcome contract.");
+
+        var exception = Assert.IsType<TargetInvocationException>(
+            Record.Exception(() => ensureMethod.Invoke(null, [provider, executionOptions])));
+
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
+    }
+
+    [Fact]
+    public void ShouldRequestMissingRequiredFinalizerRepair_only_repairs_absent_required_finalizer()
+    {
+        var decisionMethod = typeof(MafAgentRuntime).GetMethod(
+                                 "ShouldRequestMissingRequiredFinalizerRepair",
+                                 BindingFlags.NonPublic | BindingFlags.Static)
+                             ?? throw new InvalidOperationException("Missing-finalizer repair decision method was not found.");
+        var executionOptions = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Required,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 1);
+
+        var missingArguments = new object?[]
+        {
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required,
+            executionOptions,
+            Array.Empty<ToolApprovalRequestContent>(),
+            Array.Empty<AgentFinalizerInvocation>(),
+            null
+        };
+        var shouldRepairMissing = Assert.IsType<bool>(decisionMethod.Invoke(null, missingArguments));
+
+        Assert.True(shouldRepairMissing);
+        Assert.IsType<AgentFinalizerPolicy>(missingArguments[5]);
+
+        var capturedArguments = new object?[]
+        {
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required,
+            executionOptions,
+            Array.Empty<ToolApprovalRequestContent>(),
+            new[]
+            {
+                new AgentFinalizerInvocation(
+                    AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+                    "{}",
+                    Sequence: 1)
+            },
+            null
+        };
+        var shouldRepairCaptured = Assert.IsType<bool>(decisionMethod.Invoke(null, capturedArguments));
+
+        Assert.False(shouldRepairCaptured);
+
+        var disabledRepairArguments = new object?[]
+        {
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required,
+            executionOptions with { MaxStructuredOutputRepairAttempts = 0 },
+            Array.Empty<ToolApprovalRequestContent>(),
+            Array.Empty<AgentFinalizerInvocation>(),
+            null
+        };
+        var shouldRepairDisabled = Assert.IsType<bool>(decisionMethod.Invoke(null, disabledRepairArguments));
+
+        Assert.False(shouldRepairDisabled);
+    }
+
+    [Fact]
+    public void CreateEffectiveFinalizerInvocations_preserves_streamed_payload_when_trace_exists_without_capture()
+    {
+        var mergeMethod = typeof(MafAgentRuntime).GetMethod(
+                              "CreateEffectiveFinalizerInvocations",
+                              BindingFlags.NonPublic | BindingFlags.Static)
+                          ?? throw new InvalidOperationException("Effective finalizer merge method was not found.");
+        var finalizerInvocation = new AgentFinalizerInvocation(
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+            """
+            {"status":"Completed","reason":"Scope packet created.","evidenceRefs":["artifacts/process-runs/run/01-scope.md"],"nextActions":[]}
+            """,
+            Sequence: 2);
+        var capturedTrace = new AgentToolInvocationTrace(
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+            ToolInvocationClassification.Mutation,
+            Sequence: 2,
+            StartedAtUtc: DateTimeOffset.UtcNow,
+            CompletedAtUtc: DateTimeOffset.UtcNow,
+            Succeeded: true,
+            FailureMessage: string.Empty);
+
+        var merged = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(mergeMethod.Invoke(
+            null,
+            [
+                AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+                AgentFinalizerMode.Required,
+                Array.Empty<AgentFinalizerInvocation>(),
+                new[] { capturedTrace },
+                new[] { finalizerInvocation }
+            ]));
+
+        var result = Assert.Single(merged);
+        Assert.Equal(finalizerInvocation, result);
+    }
+
+    [Fact]
+    public void CreateRequiredFinalizerRepairRunOptions_uses_auto_tool_choice_for_repair_turn()
+    {
+        var createMethod = typeof(MafAgentRuntime).GetMethod(
+                               "CreateRequiredFinalizerRepairRunOptions",
+                               BindingFlags.NonPublic | BindingFlags.Static)
+                           ?? throw new InvalidOperationException("Required-finalizer repair run option method was not found.");
+        Assert.True(AgentFinalizerPolicies.TryResolveForStructuredOutput(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            out var policy));
+        var sourceChatOptions = new ChatOptions
+        {
+            ToolMode = ChatToolMode.RequireAny
+        };
+        var sourceRunOptions = new ChatClientAgentRunOptions(sourceChatOptions)
+        {
+            AllowBackgroundResponses = true
+        };
+
+        var repairRunOptions = Assert.IsType<ChatClientAgentRunOptions>(createMethod.Invoke(
+            null,
+            [sourceRunOptions, policy]));
+
+        Assert.False(repairRunOptions.AllowBackgroundResponses);
+        Assert.NotSame(sourceRunOptions.ChatOptions, repairRunOptions.ChatOptions);
+        Assert.False(repairRunOptions.ChatOptions!.AllowMultipleToolCalls);
+        Assert.Null(repairRunOptions.ChatOptions.ToolMode);
+
+        var sourceToolMode = Assert.IsType<RequiredChatToolMode>(sourceRunOptions.ChatOptions!.ToolMode);
+        Assert.Null(sourceToolMode.RequiredFunctionName);
+    }
+
+    [Fact]
+    public void BuildRequiredFinalizerRepairPrompt_is_bounded_to_finalizer_submission()
+    {
+        var buildMethod = typeof(MafAgentRuntime).GetMethod(
+                              "BuildRequiredFinalizerRepairPrompt",
+                              BindingFlags.NonPublic | BindingFlags.Static)
+                          ?? throw new InvalidOperationException("Required-finalizer repair prompt method was not found.");
+        Assert.True(AgentFinalizerPolicies.TryResolveForStructuredOutput(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            out var policy));
+
+        var prompt = Assert.IsType<string>(buildMethod.Invoke(
+            null,
+            [policy, "Draft outcome text."]));
+
+        Assert.Contains($"Call `{policy.ToolName}` exactly once now", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call any other tool", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not emit Markdown, prose, or machine JSON outside the finalizer tool call", prompt, StringComparison.Ordinal);
+        Assert.Contains("Previous assistant text:", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ShouldApplyStructuredOutputResponseFormat_keeps_shadow_finalizer_schema_response()
+    {
+        var decisionMethod = typeof(MafAgentRuntime).GetMethod(
+                                 "ShouldApplyStructuredOutputResponseFormat",
+                                 BindingFlags.NonPublic | BindingFlags.Static)
+                             ?? throw new InvalidOperationException("Response-format decision method was not found.");
+        var executionOptions = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Shadow,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0);
+
+        var shouldApply = Assert.IsType<bool>(decisionMethod.Invoke(null, [executionOptions]));
+
+        Assert.True(shouldApply);
+    }
+
+    [Fact]
     public void CreateFinalizerCapture_attaches_process_step_outcome_tool()
     {
         var createMethod = typeof(MafAgentRuntime).GetMethod(
@@ -372,6 +619,36 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void ExecuteRunAsync_repairs_missing_required_finalizer_before_serializing_normal_response()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var runtimeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.cs"));
+        var terminalResponseIndex = runtimeSource.IndexOf(
+            "if (!ShouldContinueBackgroundRun(agent, provider, response, approvalRequests))",
+            StringComparison.Ordinal);
+        var repairIndex = runtimeSource.IndexOf(
+            "TryRunMissingRequiredFinalizerRepairAsync(response, approvalRequests)",
+            terminalResponseIndex,
+            StringComparison.Ordinal);
+        var serializeIndex = runtimeSource.IndexOf(
+            "Serializing the Microsoft Agent Framework session.",
+            terminalResponseIndex,
+            StringComparison.Ordinal);
+
+        Assert.True(terminalResponseIndex >= 0, "The runtime must identify terminal provider responses.");
+        Assert.True(repairIndex > terminalResponseIndex, "Missing required finalizers must be repaired only after the provider completes.");
+        Assert.True(serializeIndex > repairIndex, "The repair turn must run before the runtime serializes and returns a normal response.");
+        Assert.Contains("runtimeOptions.MaxStructuredOutputRepairAttempts <= 0", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("chatOptions.AllowMultipleToolCalls = false", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("chatOptions.ToolMode = null", runtimeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Required_finalizer_tool_call_short_circuits_before_post_finalizer_model_turn()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -390,6 +667,9 @@ public sealed class MafAgentRuntimeTests
 
         Assert.Contains("catch (RequiredFinalizerCapturedException exception)", runtimeSource, StringComparison.Ordinal);
         Assert.Contains("TryCreateFinalizerResponseAfterEarlyFinalizerAsync", runtimeSource, StringComparison.Ordinal);
+        Assert.Contains("var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode)", factorySource, StringComparison.Ordinal);
+        Assert.Contains("? ToolInvocationClassification.Read", factorySource, StringComparison.Ordinal);
+        Assert.Contains("IsKnownTool: isRequiredFinalizerTool || knownToolNames.Contains(functionName)", factorySource, StringComparison.Ordinal);
         Assert.Contains("throw new RequiredFinalizerCapturedException(functionName)", factorySource, StringComparison.Ordinal);
         Assert.Contains("IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode)", factorySource, StringComparison.Ordinal);
     }
@@ -429,7 +709,7 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
-    public void AppendFinalizerInstructions_uses_json_response_wording_for_required_mode()
+    public void AppendFinalizerInstructions_uses_finalizer_only_wording_for_required_mode_without_response_format()
     {
         var appendMethod = typeof(MafAgentRuntime).GetMethod(
                                "AppendFinalizerInstructions",
@@ -441,11 +721,14 @@ public sealed class MafAgentRuntimeTests
 
         var instructions = Assert.IsType<string>(appendMethod.Invoke(
             null,
-            ["Base instructions.", policy, AgentFinalizerMode.Required, true]));
+            ["Base instructions.", policy, AgentFinalizerMode.Required, false]));
 
         Assert.Contains("Call `submit_process_step_outcome` exactly once", instructions, StringComparison.Ordinal);
-        Assert.Contains("return exactly one JSON object", instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Do not use Markdown, prose, code fences, or any extra text", instructions, StringComparison.Ordinal);
+        Assert.Contains("Pass exactly one `result` object argument to `submit_process_step_outcome`", instructions, StringComparison.Ordinal);
+        Assert.Contains("do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments", instructions, StringComparison.Ordinal);
+        Assert.Contains("\"status\": \"Completed|Blocked|Failed|WaitingApproval|Refused\"", instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not emit separate machine output after the finalizer call", instructions, StringComparison.Ordinal);
+        Assert.DoesNotContain("return exactly one JSON object", instructions, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1013,6 +1296,86 @@ public sealed class MafAgentRuntimeTests
         {
             Directory.Delete(workspaceRoot, recursive: true);
             Directory.Delete(externalParent, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task WorkspaceRuntimePlugin_accepts_object_side_effect_manifest_for_script_execution()
+    {
+        var workspaceRoot = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cda-workspace-{Guid.NewGuid():N}")).FullName;
+        var scriptRelativePath = Path.Combine("artifacts", "process-runs", Guid.NewGuid().ToString("N"), "validate.ps1");
+        var scriptFullPath = Path.Combine(workspaceRoot, scriptRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(scriptFullPath)!);
+        await File.WriteAllTextAsync(scriptFullPath, "Write-Output 'ok'");
+
+        try
+        {
+            var agent = CreateToolAgent() with
+            {
+                ConfigurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                    "{}",
+                    AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment))
+            };
+            var provider = CreateProvider("{}");
+            var run = CreateExecutionRunForAuditScope(agent, provider, "{}") with
+            {
+                SourceKind = "process-step",
+                SourceId = Guid.NewGuid().ToString("D"),
+                RequestedByKind = "system",
+                ProcessRunId = Guid.NewGuid().ToString("D"),
+                ProcessStepId = Guid.NewGuid().ToString("D")
+            };
+            var pluginType = typeof(MafAgentRuntime).GetNestedType("WorkspaceRuntimePlugin", BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("WorkspaceRuntimePlugin type was not found.");
+            var processHost = new CapturingWorkspaceProcessHost();
+            var commandService = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+            var artifactService = new WorkspaceArtifactToolService(workspaceRoot, commandService);
+            var plugin = Activator.CreateInstance(
+                             pluginType,
+                             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                             binder: null,
+                             args:
+                             [
+                                 new WorkspaceFileService(workspaceRoot),
+                                 commandService,
+                                 artifactService,
+                                 workspaceRoot,
+                                 AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson)
+                             ],
+                             culture: null)
+                         ?? throw new InvalidOperationException("WorkspaceRuntimePlugin could not be created.");
+            var runScriptMethod = pluginType.GetMethod("RunWorkspacePowerShellScript", BindingFlags.Public | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("RunWorkspacePowerShellScript method was not found.");
+            using var manifest = JsonDocument.Parse(
+                """
+                {
+                  "version": 1,
+                  "mode": "NoMutation"
+                }
+                """);
+
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var invocation = runScriptMethod.Invoke(
+                    plugin,
+                    [
+                        scriptRelativePath,
+                        null,
+                        null,
+                        null,
+                        300,
+                        manifest.RootElement.Clone()
+                    ]);
+                var task = Assert.IsAssignableFrom<Task<WorkspaceCommandExecutionResult>>(invocation);
+                var result = await task;
+
+                Assert.True(result.Succeeded, result.Message);
+                Assert.Equal("workspace_pwsh_run_script", processHost.LastRequest?.ToolName);
+            }
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
         }
     }
 

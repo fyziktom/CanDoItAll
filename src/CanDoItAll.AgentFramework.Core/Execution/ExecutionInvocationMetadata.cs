@@ -21,10 +21,17 @@ public static class ExecutionInvocationMetadata
     public const string ProcessStepAllowsProductMutationMetadataKey = "agentProcessStepAllowsProductMutation";
     public const string ProcessGroundedTargetAliasLedgerMetadataKey = "agentProcessGroundedTargetAliasLedger";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
+    public const string ProjectStructureLaunchAgentMetadataKey = "agentProjectStructureLaunchAgent";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
     private const string ContextWorkspaceScopeKindPropertyName = "kind";
     private const string ContextWorkspaceScopeKeyPropertyName = "key";
+    private const string ProjectStructureLaunchAgentIdPropertyName = "agentId";
+    private const string ProjectStructureLaunchAgentNamePropertyName = "agentName";
+    private const string ProjectStructureLaunchAgentMachineNamePropertyName = "machineName";
+    private const string ProjectStructureLaunchAgentRepositoryRootPropertyName = "repositoryRoot";
+    private const string ProjectStructureLaunchAgentBranchNamePropertyName = "branchName";
+    private const string ProjectStructureLaunchAgentSessionIdPropertyName = "sessionId";
 
     public static string Build(
         string? metadataJson,
@@ -77,6 +84,28 @@ public static class ExecutionInvocationMetadata
         {
             [ContextWorkspaceScopeKindPropertyName] = scope.Kind.ToString(),
             [ContextWorkspaceScopeKeyPropertyName] = scope.Key
+        };
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyProjectStructureLaunchAgent(
+        string? metadataJson,
+        ProjectStructureAgentIdentityDescriptor? launchAgent)
+    {
+        var metadata = ParseObject(metadataJson);
+        if (launchAgent?.HasLeaseOwnerIdentity != true)
+        {
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        metadata[ProjectStructureLaunchAgentMetadataKey] = new JsonObject
+        {
+            [ProjectStructureLaunchAgentIdPropertyName] = launchAgent.AgentId.Trim(),
+            [ProjectStructureLaunchAgentNamePropertyName] = launchAgent.AgentName.Trim(),
+            [ProjectStructureLaunchAgentMachineNamePropertyName] = launchAgent.MachineName.Trim(),
+            [ProjectStructureLaunchAgentRepositoryRootPropertyName] = launchAgent.RepositoryRoot.Trim(),
+            [ProjectStructureLaunchAgentBranchNamePropertyName] = launchAgent.BranchName.Trim(),
+            [ProjectStructureLaunchAgentSessionIdPropertyName] = launchAgent.SessionId.Trim()
         };
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
@@ -283,6 +312,15 @@ public static class ExecutionInvocationMetadata
 
         return IsTrustedGovernedProcessRun(run)
             ? ResolveContextWorkspaceScope(run.MetadataJson)
+            : null;
+    }
+
+    public static ProjectStructureAgentIdentityDescriptor? ResolveProjectStructureLaunchAgent(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run)
+            ? ResolveProjectStructureLaunchAgent(run.MetadataJson)
             : null;
     }
 
@@ -536,6 +574,46 @@ public static class ExecutionInvocationMetadata
         {
             return null;
         }
+    }
+
+    private static ProjectStructureAgentIdentityDescriptor? ResolveProjectStructureLaunchAgent(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty(ProjectStructureLaunchAgentMetadataKey, out var agentElement) ||
+                agentElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var descriptor = new ProjectStructureAgentIdentityDescriptor(
+                ReadObjectString(agentElement, ProjectStructureLaunchAgentIdPropertyName),
+                ReadObjectString(agentElement, ProjectStructureLaunchAgentNamePropertyName),
+                ReadObjectString(agentElement, ProjectStructureLaunchAgentMachineNamePropertyName),
+                ReadObjectString(agentElement, ProjectStructureLaunchAgentRepositoryRootPropertyName),
+                ReadObjectString(agentElement, ProjectStructureLaunchAgentBranchNamePropertyName),
+                ReadObjectString(agentElement, ProjectStructureLaunchAgentSessionIdPropertyName));
+            return descriptor.HasLeaseOwnerIdentity ? descriptor : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string ReadObjectString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value) &&
+               value.ValueKind == JsonValueKind.String
+            ? value.GetString()?.Trim() ?? string.Empty
+            : string.Empty;
     }
 
     private static void MergeExternalTargetAliases(

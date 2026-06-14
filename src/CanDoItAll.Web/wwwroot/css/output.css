@@ -276,9 +276,6 @@
   .static {
     position: static;
   }
-  .sticky {
-    position: sticky;
-  }
   .start {
     inset-inline-start: var(--spacing);
   }
@@ -290,9 +287,6 @@
   }
   .right-4 {
     right: calc(var(--spacing) * 4);
-  }
-  .isolate {
-    isolation: isolate;
   }
   .z-50 {
     z-index: 50;
@@ -468,6 +462,9 @@
   .min-h-\[9rem\] {
     min-height: 9rem;
   }
+  .min-h-\[12rem\] {
+    min-height: 12rem;
+  }
   .min-h-\[26rem\] {
     min-height: 26rem;
   }
@@ -546,6 +543,9 @@
   .min-w-6 {
     min-width: calc(var(--spacing) * 6);
   }
+  .min-w-\[10rem\] {
+    min-width: 10rem;
+  }
   .min-w-\[14rem\] {
     min-width: 14rem;
   }
@@ -563,9 +563,6 @@
   }
   .shrink-0 {
     flex-shrink: 0;
-  }
-  .grow {
-    flex-grow: 1;
   }
   .border-collapse {
     border-collapse: collapse;
@@ -1325,9 +1322,6 @@
       color: color-mix(in oklab, var(--color-white) 70%, transparent);
     }
   }
-  .capitalize {
-    text-transform: capitalize;
-  }
   .lowercase {
     text-transform: lowercase;
   }
@@ -1396,10 +1390,6 @@
   }
   .backdrop-blur {
     --tw-backdrop-blur: blur(8px);
-    -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
-    backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
-  }
-  .backdrop-filter {
     -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
     backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
   }

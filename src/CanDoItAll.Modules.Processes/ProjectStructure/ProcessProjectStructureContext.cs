@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -13,6 +14,8 @@ public sealed class ProcessProjectStructureContext
     public string? ParentNodeId { get; set; }
 
     public string ParentNodeTitle { get; set; } = string.Empty;
+
+    public ProjectStructureAgentIdentityDescriptor? LaunchAgent { get; set; }
 
     public string ResolveTargetNodeId()
         => string.IsNullOrWhiteSpace(ParentNodeId) ? NodeId : ParentNodeId.Trim();

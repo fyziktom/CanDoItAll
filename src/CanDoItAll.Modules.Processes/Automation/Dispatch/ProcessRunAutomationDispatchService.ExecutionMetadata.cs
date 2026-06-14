@@ -182,10 +182,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ProcessTargetGroundingSourceKind.LaunchPlan or
                     ProcessTargetGroundingSourceKind.ProjectStructureCurrentRun or
                     ProcessTargetGroundingSourceKind.ExplicitStepContract)
-                .Select(grounding => grounding.Alias));
+                .Select(grounding => grounding.Alias)
+                .Concat(targetGroundings
+                    .Where(grounding => grounding.SourceKind is
+                        ProcessTargetGroundingSourceKind.UpstreamArtifact or
+                        ProcessTargetGroundingSourceKind.UpstreamArtifactProvenance)
+                    .Select(grounding => grounding.Alias)));
 
         var productAliases = trustedAliases
             .Where(alias => !IsNonProductExternalTargetAlias(alias))
+            .Where(alias => !IsManagedWorkspaceArtifactExternalTargetAlias(alias))
             .Where(alias => !IsLikelyExternalTargetFileAlias(alias))
             .ToArray();
 
@@ -348,7 +354,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (TryResolvePersistedOperationContract(candidate.StepDefinition, out var persistedContract))
         {
-            return persistedContract;
+            return ApplyDotNetValidationRepairOperationContract(candidate, persistedContract);
         }
 
         // Legacy prose inference remains only for definitions that have not declared persisted operation contracts.
@@ -367,7 +373,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (TryResolveExplicitOperationContract(candidate.StepRun.StepKind, contractText, out var explicitContract))
         {
-            return explicitContract;
+            return ApplyDotNetValidationRepairOperationContract(candidate, explicitContract);
         }
 
         var operations = new SortedSet<ProcessStepOperation>();
@@ -396,21 +402,25 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (candidate.StepRun.StepKind == ProcessStepKind.Subprocess)
         {
             operations.Add(ProcessStepOperation.ExecuteExternalAction);
-            return CreateOperationContract(
-                candidate.StepRun.StepKind,
-                operations,
-                ProcessStepTargetScope.ExternalActionControlled,
-                isExplicit: false);
+            return ApplyDotNetValidationRepairOperationContract(
+                candidate,
+                CreateOperationContract(
+                    candidate.StepRun.StepKind,
+                    operations,
+                    ProcessStepTargetScope.ExternalActionControlled,
+                    isExplicit: false));
         }
 
         if (LooksLikeExternalArtifactDestination(candidate, contractText))
         {
             operations.Add(ProcessStepOperation.WriteExternalArtifactDestination);
-            return CreateOperationContract(
-                candidate.StepRun.StepKind,
-                operations,
-                ProcessStepTargetScope.ExternalArtifactDestination,
-                isExplicit: false);
+            return ApplyDotNetValidationRepairOperationContract(
+                candidate,
+                CreateOperationContract(
+                    candidate.StepRun.StepKind,
+                    operations,
+                    ProcessStepTargetScope.ExternalArtifactDestination,
+                    isExplicit: false));
         }
 
         if (RequiresConcreteImplementationProof(candidate) ||
@@ -419,27 +429,51 @@ internal sealed partial class ProcessRunAutomationDispatchService
             LooksLikeProductMutationBoundary(candidate, contractText, requireStrongSignal: true))
         {
             operations.Add(ProcessStepOperation.MutateProductTarget);
-            return CreateOperationContract(
-                candidate.StepRun.StepKind,
-                operations,
-                ProcessStepTargetScope.ExternalProductTargetMutable,
-                isExplicit: false);
+            return ApplyDotNetValidationRepairOperationContract(
+                candidate,
+                CreateOperationContract(
+                    candidate.StepRun.StepKind,
+                    operations,
+                    ProcessStepTargetScope.ExternalProductTargetMutable,
+                    isExplicit: false));
         }
 
         if (IsProductReadOnlyValidationStep(candidate))
         {
-            return CreateOperationContract(
+            return ApplyDotNetValidationRepairOperationContract(
+                candidate,
+                CreateOperationContract(
+                    candidate.StepRun.StepKind,
+                    operations,
+                    ProcessStepTargetScope.ExternalProductTargetReadOnly,
+                    isExplicit: false));
+        }
+
+        return ApplyDotNetValidationRepairOperationContract(
+            candidate,
+            CreateOperationContract(
                 candidate.StepRun.StepKind,
                 operations,
-                ProcessStepTargetScope.ExternalProductTargetReadOnly,
-                isExplicit: false);
+                ProcessStepTargetScope.ManagedProcessArtifactsOnly,
+                isExplicit: false));
+    }
+
+    private static ProcessStepOperationContract ApplyDotNetValidationRepairOperationContract(
+        DispatchCandidate candidate,
+        ProcessStepOperationContract operationContract)
+    {
+        if (operationContract.AllowsProductMutation ||
+            (operationContract.IsExplicit && !IsDotNetSolutionSetupProcess(candidate)) ||
+            !IsDotNetValidationRepairStep(candidate, operationContract))
+        {
+            return operationContract;
         }
 
         return CreateOperationContract(
             candidate.StepRun.StepKind,
-            operations,
-            ProcessStepTargetScope.ManagedProcessArtifactsOnly,
-            isExplicit: false);
+            operationContract.AllowedOperations.Append(ProcessStepOperation.MutateProductTarget),
+            ProcessStepTargetScope.ExternalProductTargetMutable,
+            operationContract.IsExplicit);
     }
 
     private static bool TryResolvePersistedOperationContract(
@@ -795,7 +829,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate.StepRun.CurrentExecutorName,
                 candidate.WorkBrief?.Title,
                 candidate.WorkBrief?.WorkBriefText,
-                candidate.WorkBrief?.ExpectedOutcome))
+                candidate.WorkBrief?.ExpectedOutcome,
+                string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
+                string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))))
             .ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(stepText))
         {
@@ -805,7 +841,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return RequiresConcreteBrowserProof(candidate) ||
                stepText.Contains("qa", StringComparison.Ordinal) ||
                stepText.Contains("quality", StringComparison.Ordinal) ||
+               stepText.Contains("validate", StringComparison.Ordinal) ||
+               stepText.Contains("validation", StringComparison.Ordinal) ||
                stepText.Contains("proof", StringComparison.Ordinal) ||
+               stepText.Contains("runtime", StringComparison.Ordinal) ||
                stepText.Contains("review", StringComparison.Ordinal) ||
                stepText.Contains("scope", StringComparison.Ordinal) ||
                stepText.Contains("intake", StringComparison.Ordinal) ||
@@ -1252,6 +1291,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsNonProductExternalTargetAlias(string alias)
         => ProcessExternalTargetGroundingService.IsNonProductExternalTargetAlias(alias);
+
+    private static bool IsManagedWorkspaceArtifactExternalTargetAlias(string alias)
+    {
+        if (string.IsNullOrWhiteSpace(alias))
+        {
+            return false;
+        }
+
+        var normalizedAlias = alias.Replace('\\', '/');
+        return normalizedAlias.Contains("/CanDoItAll/workspace/artifacts/", StringComparison.OrdinalIgnoreCase) ||
+               normalizedAlias.Contains("/workspace/artifacts/", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool IsExternalTargetAliasAncestor(string alias, string other)
         => ProcessExternalTargetGroundingService.IsExternalTargetAliasAncestor(alias, other);

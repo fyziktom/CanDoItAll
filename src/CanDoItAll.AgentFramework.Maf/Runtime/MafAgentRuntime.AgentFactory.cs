@@ -124,7 +124,7 @@ public sealed partial class MafAgentRuntime
             agent.Instructions,
             finalizerCapture?.Policy,
             runtimeOptions.FinalizerMode,
-            runtimeOptions.StructuredOutput is not null);
+            ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
         chatOptions.AllowMultipleToolCalls = !capabilityState.HasApprovalTools;
 
         if (capabilityState.Tools.Count > 0)
@@ -468,7 +468,10 @@ public sealed partial class MafAgentRuntime
             var functionName = context.Function?.Name ?? "unknown";
             var invocationArguments = ResolveFunctionInvocationArguments(context).ToArray();
             var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(invocationArguments);
-            var classification = AgentToolInvocationPolicyMetadata.Classify(functionName);
+            var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode);
+            var classification = isRequiredFinalizerTool
+                ? ToolInvocationClassification.Read
+                : AgentToolInvocationPolicyMetadata.Classify(functionName);
             var auditScope = WorkspaceExecutionAuditContext.Current;
             var scriptSideEffectManifestJson = TryGetStringArgument(
                 invocationArguments,
@@ -484,7 +487,7 @@ public sealed partial class MafAgentRuntime
                 ToolName: functionName,
                 RedactedArguments: redactedArguments,
                 Classification: classification,
-                IsKnownTool: knownToolNames.Contains(functionName),
+                IsKnownTool: isRequiredFinalizerTool || knownToolNames.Contains(functionName),
                 AutoApprovalAllowed: suppressApprovalRequirements,
                 ApprovalWrapperAvailable: approvalWrappedToolNames.Contains(functionName),
                 ExecutionRunId: auditScope?.ExecutionRunId.ToString("D") ?? string.Empty,
@@ -894,6 +897,12 @@ public sealed partial class MafAgentRuntime
         ArgumentNullException.ThrowIfNull(runtimeOptions);
         if (runtimeOptions.StructuredOutput is not null)
         {
+            if (runtimeOptions.FinalizerMode == AgentFinalizerMode.Required &&
+                AgentFinalizerPolicies.TryResolveForStructuredOutput(runtimeOptions.StructuredOutput, out _))
+            {
+                return;
+            }
+
             EnsureStructuredOutputCapability(provider, runtimeOptions.StructuredOutput);
             return;
         }
@@ -1081,6 +1090,7 @@ public sealed partial class MafAgentRuntime
               $"- Call `{finalizerPolicy.ToolName}` exactly once after all other significant tool work is complete.{Environment.NewLine}" +
               "- A normal assistant response without that finalizer tool is invalid for this run and will fail the execution even if the work itself succeeded." + Environment.NewLine +
               $"- The finalizer arguments are the authoritative machine output for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
+              BuildRequiredFinalizerArgumentInstructions(finalizerPolicy) +
               (hasStructuredResponseFormat
                   ? $"- After the tool call, return exactly one JSON object matching the same `{finalizerPolicy.OutputContract.ContractKey}` schema through the configured structured response format.{Environment.NewLine}" +
                     "- Do not use Markdown, prose, code fences, or any extra text around the JSON object."
@@ -1089,6 +1099,20 @@ public sealed partial class MafAgentRuntime
         return string.IsNullOrWhiteSpace(instructions)
             ? finalizerInstructions.Trim()
             : instructions.TrimEnd() + finalizerInstructions;
+    }
+
+    private static string BuildRequiredFinalizerArgumentInstructions(AgentFinalizerPolicy finalizerPolicy)
+    {
+        if (!string.Equals(
+                finalizerPolicy.OutputContract.ContractKey,
+                AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
+               "- The `result` object must have this JSON shape: `{ \"status\": \"Completed|Blocked|Failed|WaitingApproval|Refused\", \"reason\": \"...\", \"branchOutcomeKey\": \"\", \"branchOutcomeTitle\": \"\", \"evidenceRefs\": [\"artifacts/process-runs/...\"], \"nextActions\": [], \"humanReadableSummaryMarkdown\": \"...\" }`." + Environment.NewLine;
     }
 
     private ScriptContentInspection ResolveScriptContentInspectionForPolicy(

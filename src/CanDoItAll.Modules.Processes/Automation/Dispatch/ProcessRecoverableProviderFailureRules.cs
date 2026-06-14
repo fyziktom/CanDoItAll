@@ -37,6 +37,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 }
             }
 
+            if (TryMapRequiredFinalizerMissingWithoutProviderProgress(detail, candidateTexts, out failureSummary))
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -128,6 +133,43 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             return false;
+        }
+
+        private static bool TryMapRequiredFinalizerMissingWithoutProviderProgress(
+            ProcessAutomationExecutionRunDetail detail,
+            IEnumerable<string?> candidateTexts,
+            out string failureSummary)
+        {
+            failureSummary = string.Empty;
+            if (detail.Run.State != ProcessAutomationExecutionState.Failed ||
+                detail.Run.Outcome != ProcessAutomationRunOutcome.Failed ||
+                !candidateTexts.Any(MentionsProcessStepOutcomeFinalizerMissing))
+            {
+                return false;
+            }
+
+            if (detail.ToolReceipts.Count > 0 ||
+                HasNonFinalizerToolLog(detail.ExecutionLog))
+            {
+                return false;
+            }
+
+            var latestAssistantText = ResolveLatestAssistantResponseText(detail.Run.SerializedSessionStateJson);
+            if (!string.IsNullOrWhiteSpace(latestAssistantText) &&
+                !MentionsProcessStepOutcomeFinalizerMissing(latestAssistantText))
+            {
+                return false;
+            }
+
+            failureSummary = "The assigned provider ended without usable assistant text or tool progress before the required finalizer.";
+            return true;
+        }
+
+        private static bool HasNonFinalizerToolLog(IEnumerable<ProcessAutomationExecutionLogEntry> executionLog)
+        {
+            return executionLog.Any(entry =>
+                string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) &&
+                !entry.Message.Contains(AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

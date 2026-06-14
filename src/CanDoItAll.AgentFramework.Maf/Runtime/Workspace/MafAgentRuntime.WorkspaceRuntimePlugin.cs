@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -18,6 +20,7 @@ public sealed partial class MafAgentRuntime
         private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
         private readonly string workspaceRootWithSeparator = EnsureTrailingSeparator(Path.GetFullPath(workspaceRoot));
         private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
+        private static readonly JsonSerializerOptions ScriptManifestJsonOptions = CreateScriptManifestJsonOptions();
         private static readonly HashSet<string> ProtectedExternalTargetDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
         {
             "components",
@@ -154,14 +157,14 @@ public sealed partial class MafAgentRuntime
             return commandExecutionService.DotnetNew(template, name, allowedParentDirectory, force, timeoutSeconds);
         }
 
-        public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
+        public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, object? sideEffectManifest = null)
         {
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
-            return commandExecutionService.PythonRunFile(allowedPath, arguments, allowedWorkingDirectory, timeoutSeconds, sideEffectManifest);
+            return commandExecutionService.PythonRunFile(allowedPath, arguments, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
         }
 
-        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
+        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, object? sideEffectManifest = null)
         {
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
@@ -169,7 +172,7 @@ public sealed partial class MafAgentRuntime
                 .Select(outputPath => PrepareFileWritePath(outputPath) ?? outputPath)
                 .ToArray();
 
-            return commandExecutionService.PowerShellRunScript(allowedPath, arguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds, sideEffectManifest);
+            return commandExecutionService.PowerShellRunScript(allowedPath, arguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
         }
 
         public Task<WorkspaceDocumentConversionResult> ConvertDocumentToMarkdown(string path, string? outputPath = null, int previewCharacters = 4000)
@@ -495,6 +498,27 @@ public sealed partial class MafAgentRuntime
             return trimmedAlias.EndsWith('/')
                 ? trimmedAlias
                 : trimmedAlias + "/";
+        }
+
+        private static string? NormalizeScriptSideEffectManifest(object? sideEffectManifest)
+        {
+            return sideEffectManifest switch
+            {
+                null => null,
+                string value => value,
+                JsonElement { ValueKind: JsonValueKind.Null } => null,
+                JsonElement { ValueKind: JsonValueKind.Undefined } => null,
+                JsonElement { ValueKind: JsonValueKind.String } value => value.GetString(),
+                JsonElement value => value.GetRawText(),
+                _ => JsonSerializer.Serialize(sideEffectManifest, sideEffectManifest.GetType(), ScriptManifestJsonOptions)
+            };
+        }
+
+        private static JsonSerializerOptions CreateScriptManifestJsonOptions()
+        {
+            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            options.Converters.Add(new JsonStringEnumConverter());
+            return options;
         }
 
         private bool IsManagedWorkspaceAbsolutePath(string path)

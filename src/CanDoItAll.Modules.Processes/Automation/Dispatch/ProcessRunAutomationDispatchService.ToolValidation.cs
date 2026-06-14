@@ -33,14 +33,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail detail)
     {
         return ResolveUnresolvedCriticalToolFailures(detail)
-            .Where(receipt => !ShouldIgnoreStackInapplicableCriticalToolFailure(candidate, receipt))
+            .Where(receipt => !ShouldIgnoreStackInapplicableCriticalToolFailure(candidate, detail, receipt))
             .ToList();
     }
 
     private static bool ShouldIgnoreStackInapplicableCriticalToolFailure(
         DispatchCandidate candidate,
+        ProcessAutomationExecutionRunDetail detail,
         ProcessAutomationToolExecutionReceipt receipt)
     {
+        if (ShouldIgnoreRecoveredDotNetValidationToolFailure(candidate, detail, receipt))
+        {
+            return true;
+        }
+
         return ProcessCriticalToolFailureRules.ShouldIgnoreStackInapplicableCriticalToolFailure(
             new ProcessCriticalToolFailureStackContext(
                 receipt,
@@ -48,6 +54,43 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ImplementationContractMentionsDotNet(candidate),
                 ImplementationContractMentionsJavaScript(candidate),
                 ImplementationContractNegatesDotNet(candidate)));
+    }
+
+    private static bool ShouldIgnoreRecoveredDotNetValidationToolFailure(
+        DispatchCandidate candidate,
+        ProcessAutomationExecutionRunDetail detail,
+        ProcessAutomationToolExecutionReceipt receipt)
+    {
+        var toolName = NormalizeToolToken(receipt.ToolName);
+        if (!RequiresDotNetValidationRepairGuidance(candidate) ||
+            !IsDotNetValidationToolName(toolName) ||
+            ResolveRequiredToolNames(candidate).Contains(toolName, StringComparer.Ordinal) ||
+            !IsFailedToolReceipt(receipt))
+        {
+            return false;
+        }
+
+        return detail.ToolReceipts.Any(IsSuccessfulDotNetValidationPowerShellHarnessReceipt);
+    }
+
+    private static bool IsDotNetValidationToolName(string toolName)
+    {
+        return string.Equals(toolName, ToolContractCatalog.WorkspaceDotNetRestore, StringComparison.Ordinal) ||
+               string.Equals(toolName, ToolContractCatalog.WorkspaceDotNetBuild, StringComparison.Ordinal) ||
+               string.Equals(toolName, ToolContractCatalog.WorkspaceDotNetTest, StringComparison.Ordinal);
+    }
+
+    private static bool IsSuccessfulDotNetValidationPowerShellHarnessReceipt(ProcessAutomationToolExecutionReceipt receipt)
+    {
+        if (!string.Equals(NormalizeToolToken(receipt.ToolName), ToolContractCatalog.WorkspacePowerShellRunScript, StringComparison.Ordinal) ||
+            IsFailedToolReceipt(receipt))
+        {
+            return false;
+        }
+
+        var receiptText = CollapsePromptWhitespace(string.Join(' ', receipt.RequestSummary, receipt.WorkingDirectory));
+        return receiptText.Contains(".ps1", StringComparison.OrdinalIgnoreCase) &&
+               receiptText.Contains("process-runs", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<string> ResolveMissingRequiredToolExecutions(
@@ -90,7 +133,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ResolveProcessMockSatisfiedToolNames(candidate, detail, requiredToolNames),
                 RequiresConcreteImplementationProof(candidate),
                 RequiresConcreteBrowserProof(candidate),
-                CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(detail),
+                CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(candidate, detail),
                 CanSatisfyImplementationProofToolsWithCarriedProof(candidate, detail, carriedImplementationProof),
                 CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(candidate, detail),
                 CreateRequiredToolValidationPolicy()));
@@ -112,8 +155,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ImplicitBrowserProofToolNames;
     }
 
-    private static bool CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(ProcessAutomationExecutionRunDetail detail)
+    private static bool CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(
+        DispatchCandidate candidate,
+        ProcessAutomationExecutionRunDetail detail)
     {
+        if (!IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            return false;
+        }
+
         var successfulReceipts = ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(detail);
         if (successfulReceipts.Count == 0)
         {
@@ -126,14 +176,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        return successfulReceipts.Any(receipt =>
-        {
-            var toolName = NormalizeToolToken(receipt.ToolName);
-            return toolName is
-                ToolContractCatalog.WorkspaceDotNetBuild or
-                ToolContractCatalog.WorkspaceDotNetTest or
-                ToolContractCatalog.WorkspaceDotNetRun;
-        });
+        return successfulReceipts.Any(IsCurrentRunManagedArtifactWriteReceipt);
     }
 
     private static bool IsDotnetScaffoldInspectionReceipt(ProcessAutomationToolExecutionReceipt receipt)
@@ -150,6 +193,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             receipt.WorkingDirectory,
             receipt.ExitSummary);
         return SoftwareDeliveryContractRules.ContainsProjectFileSignal(inspectedText);
+    }
+
+    private static bool IsCurrentRunManagedArtifactWriteReceipt(ProcessAutomationToolExecutionReceipt receipt)
+    {
+        return string.Equals(NormalizeToolToken(receipt.ToolName), ToolContractCatalog.WorkspaceWriteFile, StringComparison.Ordinal) &&
+               IsResponseProjectableTextArtifact(receipt.RequestSummary);
     }
 
     private static bool CanSatisfyImplementationProofToolsWithCarriedProof(

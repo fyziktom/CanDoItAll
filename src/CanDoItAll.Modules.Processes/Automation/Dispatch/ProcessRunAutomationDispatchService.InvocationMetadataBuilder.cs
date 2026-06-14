@@ -70,10 +70,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
             baseMetadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
                 baseMetadataJson,
                 ResolveContextWorkspaceScope(candidate));
+            baseMetadataJson = ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(
+                baseMetadataJson,
+                ResolveProjectStructureLaunchAgent(candidate));
             var cooperationMetadataJson = ExecutionInvocationMetadata.ApplyProcessCooperation(
                 baseMetadataJson,
                 ResolveBoundaryAwareCooperationMetadata(candidate.CooperationMetadata, executionBoundary));
             return ExecutionInvocationMetadata.Build(cooperationMetadataJson, processInvocationPolicy);
+        }
+
+        private static ProjectStructureAgentIdentityDescriptor? ResolveProjectStructureLaunchAgent(DispatchCandidate candidate)
+        {
+            ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
+            return projectStructureContext?.LaunchAgent?.HasLeaseOwnerIdentity == true
+                ? projectStructureContext.LaunchAgent
+                : null;
         }
     }
 }

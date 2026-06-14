@@ -1549,7 +1549,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         return ToolInvocationPolicyDecision.Deny(
             signature,
-            "This governed .NET scaffold step is tool-only for product files. Create or modify product solution, project, and source files with scaffold/build tools such as workspace_dotnet_new or a reviewed script, and use workspace_write_file only for current-run artifacts.");
+            $"This governed .NET scaffold step is tool-only for product files. Use {ToolContractCatalog.WorkspaceDotNetNew} for new scaffolds or {ToolContractCatalog.WorkspacePowerShellRunScript} with a ProductMutation sideEffectManifest for surgical dotnet CLI operations or project-file repair. Do not retry {ToolContractCatalog.WorkspaceWriteFile} against external-target product paths; use it only for current-run artifacts.");
     }
 
     private static bool IsGovernedProcessRun(ToolInvocationPolicyContext context)

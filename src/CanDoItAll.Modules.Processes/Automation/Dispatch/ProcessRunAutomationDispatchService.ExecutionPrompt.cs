@@ -145,7 +145,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- Paths mentioned inside no-go, prohibited, out-of-scope, or exclusion language are constraints, not grounded targets. Do not stat, list, read, write, launch, or validate those paths unless the same current-run artifact also names them as the accepted product root.");
             builder.AppendLine("- Do not cite a file, path, tool result, example, or source artifact as evidence unless it was grounded by the current-run project structure, inspected by a current execution tool call, provided by an upstream artifact, or loaded from an attached skill/template resource. If source inspection was not performed in this run, say that instead of naming remembered files.");
             builder.AppendLine("- Do not include a `provided context`, `source-document context`, `ignored context`, or similar note that lists out-of-scope paths. If a path is unrelated to the current grounded product root, omit it from final artifacts entirely.");
-            builder.AppendLine($"- In governed process steps, every `workspace_pwsh_run_script` or `workspace_python_run_file` call must include a `{GovernedScriptSideEffectManifest.ArgumentName}` JSON value. Use `NoMutation` for read-only scripts, `ManagedProcessArtifacts` with declared current-run artifact write paths for evidence writers, `ExternalArtifactDestination` for governed external artifact destinations, and `ProductMutation` only when this step explicitly permits product mutation.");
+            builder.AppendLine($"- In governed process steps, every `workspace_pwsh_run_script` or `workspace_python_run_file` call must include a `{GovernedScriptSideEffectManifest.ArgumentName}` string containing a `GovernedScriptSideEffectManifest` JSON document. Use `NoMutation` for read-only scripts, `ManagedProcessArtifacts` with declared current-run artifact write paths for evidence writers, `ExternalArtifactDestination` for governed external artifact destinations, and `ProductMutation` only when this step explicitly permits product mutation.");
             AppendPromptLines(builder, softwareDeliveryGuidance.ProjectStructureExecutionRuleLines);
             builder.AppendLine("- Treat missing project-structure inspection as incomplete work for this step.");
             if (allowsProjectStructureMutation)
@@ -175,6 +175,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine();
         }
 
+        if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            builder.AppendLine(".NET scaffold tool rules:");
+            builder.AppendLine($"- Use `{ToolContractCatalog.WorkspaceDotNetNew}` for solution, app project, and test project scaffold creation.");
+            builder.AppendLine($"- Before any prose conclusion or `{AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}` call, follow one current-run branch: either call `{ToolContractCatalog.WorkspaceDotNetNew}` for the missing requested scaffold, or prove the existing scaffold with `workspace_stat_path` and `workspace_read_file` receipts for the concrete `.slnx`, `.sln`, or `.csproj` files.");
+            builder.AppendLine($"- If the product root directory exists but the requested solution or project files are absent or unverified, the verified-existing-scaffold exception is unavailable. Call `{ToolContractCatalog.WorkspaceDotNetNew}` instead of writing only a scaffold contract, plan, or summary artifact.");
+            builder.AppendLine("- The upstream scaffold contract artifact is input only. It does not satisfy the required solution/test change-set artifact, and it does not replace scaffold creation or current-run existing-scaffold proof.");
+            builder.AppendLine($"- `{ToolContractCatalog.WorkspaceDotNetNew}` is a creation tool, not a receipt-only command. If the target already contains the requested `.slnx`, `.sln`, or `.csproj` files and `{ToolContractCatalog.WorkspaceDotNetNew}` is denied because re-scaffolding would overwrite files or run inside an existing project, inspect the existing scaffold with `workspace_stat_path` and `workspace_read_file`, verify target-framework and package compatibility for the requested stack, write the required current-run managed change-set artifact, and return `Completed` only when the scaffold satisfies the step contract.");
+            builder.AppendLine($"- Treat stale scaffold metadata as invalid. For example, a project targeting `net8.0` with .NET `10.x` ASP.NET or Blazor package references does not satisfy a .NET 10 scaffold contract; repair the project file with `{ToolContractCatalog.WorkspacePowerShellRunScript}` and `{GovernedScriptSideEffectManifest.ArgumentName}` of `ProductMutation`, reread it, then write the change-set artifact.");
+            builder.AppendLine($"- Use `{ToolContractCatalog.WorkspacePowerShellRunScript}` with a `{GovernedScriptSideEffectManifest.ArgumentName}` of `ProductMutation` for surgical dotnet CLI operations or project-file repairs that scaffold tools cannot express.");
+            builder.AppendLine($"- If the existing scaffold is missing or invalid, use `{ToolContractCatalog.WorkspaceDotNetNew}` or `{ToolContractCatalog.WorkspacePowerShellRunScript}` with `{GovernedScriptSideEffectManifest.ArgumentName}` of `ProductMutation` to create or repair it. Return `Blocked` or `Failed` only when no safe scaffold or repair path exists.");
+            builder.AppendLine($"- Do not call `{ToolContractCatalog.WorkspaceWriteFile}`, `{ToolContractCatalog.WorkspaceAppendFile}`, `{ToolContractCatalog.WorkspaceCopyPath}`, `{ToolContractCatalog.WorkspaceMovePath}`, or `{ToolContractCatalog.WorkspaceDeletePath}` against product files under `external-target/` during scaffold steps; those direct file mutation tools are only for current-run artifacts here.");
+            builder.AppendLine($"- If `{ToolContractCatalog.WorkspaceWriteFile}` is denied for an `external-target/` product path, do not retry it with a temporary, probe, or alternate product path. Use the allowed scaffold or script tool, or return `Failed` with the exact policy reason.");
+            builder.AppendLine();
+        }
+
         builder.AppendLine("Work brief:");
         builder.AppendLine(workBrief?.WorkBriefText ?? "No work brief was captured for this step.");
         builder.AppendLine();
@@ -201,9 +217,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var requiredToolNames = ResolveRequiredToolNamesCore(candidate, browserProofGroundingText);
         if (requiredToolNames.Count > 0)
         {
+            var hasVerifiedExistingDotNetScaffoldException =
+                requiredToolNames.Contains(ToolContractCatalog.WorkspaceDotNetNew, StringComparer.Ordinal) &&
+                IsDotNetSolutionSetupScaffoldMutationStep(candidate);
             builder.AppendLine("Required tool execution checklist:");
             builder.AppendLine($"- Completion of this step is gated on successful current-run tool receipts for: {string.Join(", ", requiredToolNames.Select(toolName => $"`{toolName}`"))}.");
-            builder.AppendLine("- These are not optional hints. If a required tool is unavailable, denied, or cannot be run against the concrete target, return Blocked or Failed with the exact tool and reason.");
+            if (hasVerifiedExistingDotNetScaffoldException)
+            {
+                builder.AppendLine($"- Verified existing scaffold exception: do not return `Blocked` solely because there is no successful current-run `{ToolContractCatalog.WorkspaceDotNetNew}` receipt when the target already contains the requested solution or project files, `{ToolContractCatalog.WorkspaceDotNetNew}` was denied because the scaffold already exists, `workspace_stat_path` and `workspace_read_file` verified those files, and the current attempt wrote the required managed change-set artifact.");
+                builder.AppendLine("- The verified existing scaffold exception applies only when the inspected scaffold is semantically compatible with the requested .NET stack. Do not use it for stale target-framework/package metadata such as `net8.0` with .NET `10.x` Blazor packages.");
+                builder.AppendLine("- These are not optional hints. Except for the scoped verified-existing-scaffold rule above, if a required tool is unavailable, denied, or cannot be run against the concrete target, return Blocked or Failed with the exact tool and reason.");
+            }
+            else
+            {
+                builder.AppendLine("- These are not optional hints. If a required tool is unavailable, denied, or cannot be run against the concrete target, return Blocked or Failed with the exact tool and reason.");
+            }
+
             if (RequiresConcreteImplementationProof(candidate))
             {
                 builder.AppendLine("- For implementation steps, `workspace_write_file` is required for durable handoff evidence after concrete product mutation and validation. It does not replace creating, scaffolding, editing, reading, and validating real product files.");
@@ -224,7 +253,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine();
         }
 
-        AppendRequiredArtifactResponseContract(builder, candidate.ExpectedArtifacts);
+        AppendRequiredArtifactResponseContract(builder, candidate.ExpectedArtifacts, requiredArtifactDefaultRoot);
         builder.AppendLine("Upstream artifacts:");
         builder.AppendLine(BuildArtifactInputSummary(candidate.ArtifactInputs));
         builder.AppendLine();
@@ -315,6 +344,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 {
                     builder.AppendLine("- Use workspace_write_file to write required markdown or text artifacts at their governed managed paths instead of relying on response projection. If the artifact expectation does not list an exact path, use the suggested current-run path under the current-run managed artifact root.");
                 }
+
+                builder.AppendLine($"- If a pathless required artifact can be produced from current context, create it under `{requiredArtifactDefaultRoot}` with a filename derived from the artifact title instead of writing it to source, test, or other product paths.");
+                builder.AppendLine("- Do not write required evidence artifacts to `src/...`, `tests/...`, or other product/source paths unless the required artifact contract lists that exact grounded artifact path. A denied product/source write for required evidence should be retried as a managed artifact, not converted into `Blocked`.");
             }
 
             builder.AppendLine();
@@ -330,12 +362,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine($"- Use `{currentRunManagedOutputRoot}` for generated product files only when this run has no grounded external product root. Keep generated source, tests, scripts, and project files under that run-specific output root.");
             builder.AppendLine("- Paths under `artifacts/`, `output/`, `integration-map/`, and `data/` are managed workspace aliases. Do not write shallow shared scope files directly under `artifacts/scopes/<scope>/<id>/`, `output/scopes/<scope>/<id>/`, `integration-map/scopes/<scope>/<id>/`, or `data/scopes/<scope>/<id>/`; concurrent runs can overwrite those files. Use the current-run root unless a required artifact input or output gives an exact deeper managed path.");
         builder.AppendLine("- Treat run-level paths and planned solution targets as context unless the current step contract explicitly tells you to create, inspect, build, test, launch, or review them. Only then must that concrete output exist before you conclude.");
+        builder.AppendLine("- For scope, architecture, research, planning, and classification steps, lack of existing product files is not a blocker when project_structure_read and upstream durable artifacts provide enough context to record assumptions, boundaries, decisions, and downstream validation hooks.");
         builder.AppendLine("- If the current step contract describes greenfield implementation or gives you a bootstrap or init script, missing solution or project files are expected pre-bootstrap state, not a blocker. Run the bootstrap or init step first, then inspect the scaffolded files and continue.");
         builder.AppendLine("- Do not claim that planned scaffold targets are missing deliverables when the current step contract explicitly tells you to create, bootstrap, or scaffold them in this step.");
             builder.AppendLine("- If a required build, test, launch, browser check, or artifact import fails, inspect the real diagnostics, fix the underlying problem, and rerun the same required validation before you conclude. Do not treat the first failed validation as acceptable end-state evidence.");
             builder.AppendLine("- After a failed validation tool call, the next tool call must inspect the failing diagnostics or mutate files that directly address the failure. Repeating the same failed build/test/run command without an intervening cause-directed change is no-progress behavior.");
             builder.AppendLine("- Do not make validation pass by writing fake package, framework, runtime, browser, or test-tool shims. Fix real dependencies and project references, or return Blocked with the exact missing dependency or environment issue.");
             builder.AppendLine("- Do not stop after inspection, reconnaissance, bootstrap confirmation, or a next-steps summary if required tools, concrete deliverables required by this step, or required artifacts are still missing.");
+        if (RequiresDotNetValidationRepairGuidance(candidate))
+        {
+            builder.AppendLine(".NET validation repair rules:");
+            builder.AppendLine($"- Use `{ToolContractCatalog.WorkspacePowerShellRunScript}` as an executed validation or repair harness for this .NET validation step. Writing a `.ps1` file without running it does not satisfy the required tool receipt or the validation contract.");
+            builder.AppendLine($"- When calling `{ToolContractCatalog.WorkspacePowerShellRunScript}`, pass `{GovernedScriptSideEffectManifest.ArgumentName}` as serialized JSON text for a `GovernedScriptSideEffectManifest`, not as a nested object. For validation-only scripts that write logs under current-run managed artifacts, the string content should be `{{ \"version\": 1, \"mode\": \"ManagedProcessArtifacts\", \"declaredWritePaths\": [ \"artifacts/process-runs/<run-id>/...\" ] }}`. For scoped project-file repairs, use string content `{{ \"version\": 1, \"mode\": \"ProductMutation\", \"declaredReadPaths\": [ \"external-target/...\" ], \"declaredWritePaths\": [ \"external-target/...\" ] }}`.");
+            builder.AppendLine($"- Do not use `{GovernedScriptSideEffectManifest.ArgumentName}` keys such as `kind` or `writes`; they are ignored by the governed script contract. Set the script `path` to the workspace-root-relative `.ps1` path, and either omit `workingDirectory` or set it to the script directory so relative log paths resolve predictably.");
+            builder.AppendLine($"- For this repair-guided validation boundary, put restore, build, and test discovery inside the `{ToolContractCatalog.WorkspacePowerShellRunScript}` harness. Do not call `{ToolContractCatalog.WorkspaceDotNetRestore}`, `{ToolContractCatalog.WorkspaceDotNetBuild}`, or `{ToolContractCatalog.WorkspaceDotNetTest}` directly after the harness; direct MSBuild-client timeout receipts are diagnostic inputs, not the authoritative validation path.");
+            builder.AppendLine("- Every PowerShell validation harness that runs `dotnet restore`, `dotnet build`, or `dotnet test` must execute `dotnet build-server shutdown` before validation and must pass `--disable-build-servers` on every restore, build, and test command. Do not omit these flags on first validation attempts.");
+            builder.AppendLine("- PowerShell `dotnet` commands must use real host filesystem paths such as `C:\\...` or paths relative to the host working directory. Workspace aliases such as `external-target/...` are tool aliases, not valid PowerShell or MSBuild project paths.");
+            builder.AppendLine("- When writing the PowerShell harness, keep process exit-code capture separate from logging. Do not assign the output of a helper function that writes to the pipeline into an exit-code variable; write logs with `Add-Content` or `Write-Host`, capture `$LASTEXITCODE` immediately after each `dotnet` invocation, and exit non-zero only when the final validation result is actually failed.");
+            builder.AppendLine($"- If `{ToolContractCatalog.WorkspaceDotNetRestore}`, `{ToolContractCatalog.WorkspaceDotNetBuild}`, or `{ToolContractCatalog.WorkspaceDotNetTest}` fails before project diagnostics with an MSBuild client, server, or named-pipe `System.TimeoutException`, run a governed `{ToolContractCatalog.WorkspacePowerShellRunScript}` validation script that executes `dotnet build-server shutdown`, then rerun the same restore, build, or test command with `--disable-build-servers`.");
+            builder.AppendLine($"- If a direct `{ToolContractCatalog.WorkspaceDotNetRestore}`, `{ToolContractCatalog.WorkspaceDotNetBuild}`, or `{ToolContractCatalog.WorkspaceDotNetTest}` receipt fails after a validation script has run, the timeout recovery still requires a fresh `{ToolContractCatalog.WorkspacePowerShellRunScript}` receipt after that failure. Do not select `Error`, `Blocked`, or `Failed` from stale timeout receipts.");
+            builder.AppendLine("- Treat `MSB5021`, `build was canceled`, and `Terminating the task executable \"csc\"` as validation-infrastructure cancellation signals, not unresolved product warnings. Rerun the harness from a clean build-server state and do not select `Error`, `Blocked`, or `Failed` only because a canceled build emitted `MSB5021`.");
+            builder.AppendLine($"- After a `--disable-build-servers` rerun exposes concrete diagnostics such as `NU1202`, stop rewriting or rerunning the build-server retry script. The next tool call must inspect or repair the affected project file with `{ToolContractCatalog.WorkspacePowerShellRunScript}` using `{GovernedScriptSideEffectManifest.ArgumentName}` of `ProductMutation`.");
+            builder.AppendLine($"- If the rerun exposes project, package, or framework diagnostics such as `NU1202`, `NETSDK`, `CS`, or target-framework/package incompatibility, treat that as a stale scaffold repair. Inspect the affected `.csproj` or props files, repair them with `{ToolContractCatalog.WorkspacePowerShellRunScript}` using `{GovernedScriptSideEffectManifest.ArgumentName}` of `ProductMutation`, reread the changed files, and rerun restore, build, and test discovery before selecting a branch outcome.");
+            builder.AppendLine("- Do not select `Error`, `Blocked`, or `Failed` while a safe project-file repair can address stale existing scaffold metadata such as a target-framework/package-version mismatch.");
+        }
+
         if (RequiresConcreteImplementationProof(candidate))
         {
             builder.AppendLine("- Because this is an implementation step, create the real deliverable now. A markdown change set alone is not completed implementation.");
@@ -352,6 +403,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- After the final concrete product mutation, read at least one representative changed source, project, document, workbook, deck, or deliverable file before writing final evidence artifacts or submitting the outcome. If you mutate another product file after that read, repeat the read and rerun the required validation before concluding.");
             builder.AppendLine("- If you repair product files after a failed build, test, run, browser, lint, or validation tool, rerun that same validation against the same concrete target after the repair. Returning Blocked only because you did not rerun validation after your own repair is an incomplete attempt.");
             builder.AppendLine("- If you start from a template, replace placeholder output with the requested product, document, analysis, workflow, or other concrete deliverable before you conclude.");
+            builder.AppendLine("- If the requested deliverable is interactive, such as an application, game, workflow UI, editor, or keyboard/control-driven screen, a static layout preview, screenshot, or mockup is not an implementation. Implement representative input-driven state changes before you conclude.");
             builder.AppendLine("- Do not write implementation artifacts that say the requested behavior, analysis, artifacts, tests, rollout preparation, or operational changes will happen in a later step while this implementation step still returns `Completed`.");
             if (artifactInputInspectionPaths.StatPaths.Count > 0 || artifactInputInspectionPaths.ReadPaths.Count > 0)
             {
@@ -369,6 +421,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             builder.AppendLine("- If the concrete deliverable does not exist yet, create the correct working structure now using the tools and folder conventions that fit this step, its assigned agent, and its domain.");
             builder.AppendLine("- If the inherited requirements describe browser-visible UI, leave a runnable or reviewable browser surface for downstream QA instead of concluding with only service, library, or text output.");
+            builder.AppendLine("- For Blazor deliverables, audit every component `@inject`, `[Inject]`, and constructor-injected application service against the app startup service collection such as `Program.cs`. Register or remove mismatched services before build/run proof; a component activation error from a missing DI registration is an incomplete implementation, even when compile-time tests pass.");
+            builder.AppendLine("- For Blazor WebAssembly deliverables, verify the static asset mode matches the target framework and package versions. Do not leave `#[.{fingerprint}]` HTML placeholders, an empty import map, or `OverrideHtmlAssetPlaceholders` in a net8.0 or ASP.NET Core 8.x app unless browser proof confirms every fingerprinted asset and imported JavaScript module URL returns 200. Prefer stable dev-server paths such as `_framework/blazor.webassembly.js` and direct `wwwroot` module paths for net8.0 apps.");
             builder.AppendLine("- If the requested deliverable starts a local host, API, service, interactive UI, or executable workflow, perform a startup smoke with the appropriate run or launch tool after the latest build/test validation before writing final evidence.");
             AppendPromptLines(builder, softwareDeliveryGuidance.ImplementationProofLines);
 
@@ -393,6 +447,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         builder.AppendLine("- Produce the final machine-readable result as a ProcessStepOutcomeResult through the configured structured output format.");
         builder.AppendLine("- If the runtime exposes `submit_process_step_outcome`, call that finalizer tool exactly once with the same ProcessStepOutcomeResult before concluding.");
+        builder.AppendLine("- When calling `submit_process_step_outcome`, pass exactly one `result` object argument shaped like `{ \"status\": \"Completed\", \"reason\": \"...\", \"evidenceRefs\": [\"artifacts/process-runs/...\"], \"nextActions\": [], \"humanReadableSummaryMarkdown\": \"...\" }`; do not pass scalar `result`, `status`, or `reason` sibling arguments.");
         builder.AppendLine("- Set Status to one of Completed, Blocked, Failed, WaitingApproval, or Refused. This Status field is the only source of truth for workflow continuation.");
         builder.AppendLine("- Put display-only markdown in HumanReadableSummaryMarkdown. Do not encode the workflow decision in markdown or an HTML comment.");
         builder.AppendLine("- Include a concrete Reason, EvidenceRefs for files/artifacts/tool outputs you relied on when available, and NextActions when the step is not completed.");
@@ -438,7 +493,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static void AppendRequiredArtifactResponseContract(
         StringBuilder builder,
-        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts)
+        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
+        string requiredArtifactDefaultRoot)
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(expectedArtifacts);
@@ -475,6 +531,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             builder.AppendLine("- The migration/rollout checklist is required even when the implemented app has no database or persistent data. If no data migration is needed, say `No data migration required` and still name data changes, operational preconditions, validation evidence, and rollback steps.");
             builder.AppendLine("- A DB-free checklist is valid only when it explicitly says no schema migration, seed update, backfill, or data rollback is required, then lists rollout preconditions and code rollback steps.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(requiredArtifactDefaultRoot))
+        {
+            builder.AppendLine($"- For pathless required text or markdown artifacts, create it under `{requiredArtifactDefaultRoot}` with a filename derived from the artifact title before finalizing.");
+            builder.AppendLine("- Do not write pathless required evidence artifacts to `src/...`, `tests/...`, or other product/source paths unless the required artifact contract lists that exact grounded artifact path.");
+            builder.AppendLine("A denied product/source write for required evidence should be retried as a managed artifact, not converted into `Blocked`.");
         }
 
         builder.AppendLine("- If you finish the step successfully, keep those exact section titles in HumanReadableSummaryMarkdown.");

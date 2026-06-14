@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
@@ -24,7 +25,7 @@ public sealed class ProjectStructureProcessNodeService(
             request.LeaseToken,
             agent,
             "start-process-node",
-            cancellationToken => StartCoreAsync(projectId, nodeId, request, cancellationToken),
+            cancellationToken => StartCoreAsync(projectId, nodeId, request, agent, cancellationToken),
             cancellationToken);
     }
 
@@ -32,6 +33,7 @@ public sealed class ProjectStructureProcessNodeService(
         Guid projectId,
         string nodeId,
         ProjectStructureProcessNodeStartInput request,
+        ProjectStructureAgentContext agent,
         CancellationToken cancellationToken)
     {
         var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
@@ -42,7 +44,7 @@ public sealed class ProjectStructureProcessNodeService(
         }
 
         var processDefinitionId = ResolveProcessDefinitionId(node, request.ProcessDefinitionId);
-        var startContext = CreateStartContext(projectId, node, processDefinitionId, surface, nodesById);
+        var startContext = CreateStartContext(projectId, node, processDefinitionId, surface, nodesById, agent);
         var requestedBy = ResolveRequestedBy(request.RequestedBy);
         var launchName = string.Equals(startContext.ResolveTargetNodeId(), node.Id, StringComparison.Ordinal)
             ? startContext.ResolveTargetNodeTitle()
@@ -193,8 +195,10 @@ public sealed class ProjectStructureProcessNodeService(
         ProjectStructureNode node,
         Guid processDefinitionId,
         ProjectStructureSurface surface,
-        IReadOnlyDictionary<string, ProjectStructureNode> nodesById)
+        IReadOnlyDictionary<string, ProjectStructureNode> nodesById,
+        ProjectStructureAgentContext agent)
     {
+        var launchAgent = MapLaunchAgent(agent);
         if (!ProjectStructureProcessNodeKeys.TryParseProcessDefinitionNodeKey(node.Id, out _))
         {
             var processNodeId = ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(processDefinitionId);
@@ -205,7 +209,8 @@ public sealed class ProjectStructureProcessNodeService(
                 NodeId = processNode?.Id ?? processNodeId,
                 NodeTitle = processNode?.Title ?? "Process definition",
                 ParentNodeId = node.Id,
-                ParentNodeTitle = node.Title
+                ParentNodeTitle = node.Title,
+                LaunchAgent = launchAgent
             };
         }
 
@@ -218,8 +223,20 @@ public sealed class ProjectStructureProcessNodeService(
             NodeId = node.Id,
             NodeTitle = node.Title,
             ParentNodeId = parentNode?.Id,
-            ParentNodeTitle = parentNode?.Title ?? string.Empty
+            ParentNodeTitle = parentNode?.Title ?? string.Empty,
+            LaunchAgent = launchAgent
         };
+    }
+
+    private static ProjectStructureAgentIdentityDescriptor MapLaunchAgent(ProjectStructureAgentContext agent)
+    {
+        return new ProjectStructureAgentIdentityDescriptor(
+            agent.AgentId.Trim(),
+            agent.AgentName.Trim(),
+            agent.MachineName.Trim(),
+            agent.RepositoryRoot.Trim(),
+            agent.BranchName.Trim(),
+            agent.SessionId.Trim());
     }
 
     private static ProjectStructureNode? ResolveProcessStartTargetNode(

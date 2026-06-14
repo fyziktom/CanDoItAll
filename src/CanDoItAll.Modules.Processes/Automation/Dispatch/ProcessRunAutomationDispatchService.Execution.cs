@@ -238,7 +238,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 attemptNumber);
             carriedImplementationProof = postAttemptFacts.CarriedImplementationProof;
 
-            finalOutcome = new DispatchExecutionOutcome(
+            finalOutcome = TryCreateProviderFailureArtifactRecoveryOutcome(
+                candidate,
+                detail,
+                responseText,
+                postAttemptFacts,
+                attemptNumber) ?? new DispatchExecutionOutcome(
                 detail,
                 responseText,
                 executionEvidence.Attempt.CompletionStatus,
@@ -248,8 +253,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executionEvidence.Attempt.SelectedBranchOutcomeId);
             CleanupKeptAliveDotnetRunProcesses(candidate, detail);
 
-            if (postAttemptFacts.CompletionStatus == ProcessStepRunStatus.Completed)
+            if (finalOutcome.CompletionStatus == ProcessStepRunStatus.Completed)
             {
+                if (postAttemptFacts.CompletionStatus != ProcessStepRunStatus.Completed)
+                {
+                    logger.LogWarning(
+                        "Recovered failed AgentFramework execution run {ExecutionRunId} for process run {RunId}, step {StepRunId} from durable current-run artifacts after provider runtime failure.",
+                        executionRunId,
+                        candidate.Run.Id,
+                        candidate.StepRun.Id);
+                }
+
                 return finalOutcome;
             }
 

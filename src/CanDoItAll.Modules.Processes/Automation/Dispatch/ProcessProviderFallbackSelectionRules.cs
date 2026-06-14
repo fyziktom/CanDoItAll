@@ -10,15 +10,37 @@ internal static class ProcessProviderFallbackSelectionRules
         Guid failedProviderId)
     {
         return providers
-            .Where(item =>
-                item.IsEnabled &&
-                item.SupportsTools &&
-                item.Id != failedProviderId &&
-                item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
-            .OrderBy(item => item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ? 0 : 1)
+            .Where(item => IsEligibleFallbackProvider(item, failedProviderId))
+            .OrderBy(item => HasFallbackTag(item) ? 0 : 1)
+            .ThenBy(item => item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ? 0 : 1)
             .ThenBy(item => item.Transport == ProviderTransportKind.Responses ? 0 : 1)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static bool HasFallbackTag(ProviderProfile provider)
+    {
+        return provider.Tags.Any(tag => string.Equals(tag, "fallback", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsEligibleFallbackProvider(
+        ProviderProfile provider,
+        Guid failedProviderId)
+    {
+        return provider.IsEnabled &&
+               provider.SupportsTools &&
+               provider.Id != failedProviderId &&
+               provider.Purpose == ProviderProfilePurpose.Chat &&
+               provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi or ProviderKind.Ollama &&
+               !IsScenarioHarnessProvider(provider);
+    }
+
+    private static bool IsScenarioHarnessProvider(ProviderProfile provider)
+    {
+        return provider.BaseUrl.StartsWith("scenario://", StringComparison.OrdinalIgnoreCase) ||
+               provider.Name.Contains("Scenario Harness", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(provider.DefaultModel, "scenario-local", StringComparison.OrdinalIgnoreCase) ||
+               provider.Tags.Any(tag => string.Equals(tag, "scenario-harness", StringComparison.OrdinalIgnoreCase));
     }
 
     public static string ResolveFallbackProviderModel(
@@ -43,15 +65,8 @@ internal static class ProcessProviderFallbackSelectionRules
     public static string NormalizeFallbackEditorModel(
         ProcessRunAutomationDispatchService.ProviderFallbackResolution fallbackResolution)
     {
-        if (!string.IsNullOrWhiteSpace(fallbackResolution.Provider.DefaultModel) &&
-            string.Equals(
-                fallbackResolution.Model,
-                fallbackResolution.Provider.DefaultModel,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Empty;
-        }
-
-        return fallbackResolution.Model;
+        return !string.IsNullOrWhiteSpace(fallbackResolution.Model)
+            ? fallbackResolution.Model
+            : fallbackResolution.Provider.DefaultModel;
     }
 }

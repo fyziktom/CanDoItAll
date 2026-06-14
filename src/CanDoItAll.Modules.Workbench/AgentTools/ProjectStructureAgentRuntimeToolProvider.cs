@@ -12,6 +12,17 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeToolProvider
 {
     private const int ProviderOrder = 900;
+    private const int GovernedProcessDefaultStructureReadTake = 80;
+    private const string ProjectStructurePlannedStatus = "Planned";
+    private const string ProjectStructurePublishedStatus = "Published";
+
+    private static readonly IReadOnlyList<string> GovernedProcessDefaultStructureReadStatuses =
+    [
+        ProjectStatus.Active.ToString(),
+        ProjectStatus.Draft.ToString(),
+        ProjectStructurePlannedStatus,
+        ProjectStructurePublishedStatus
+    ];
 
     private readonly ProjectStructureToolBuilder toolBuilder;
 
@@ -282,7 +293,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.SaveProjectAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.SaveProjectAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -334,7 +345,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         EnsureProjectWriteAllowed(accessState, request.CurrentParentProjectId.Value);
                     }
 
-                    await agentService.ChangeSubprojectAsync(parentProjectId, request, BuildAgentContext(agent), cancellationToken);
+                    await agentService.ChangeSubprojectAsync(parentProjectId, request, BuildAgentContext(agent, accessState, parentProjectId), cancellationToken);
                     return new OperationAck(true);
                 },
                 cancellationToken);
@@ -359,7 +370,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.MoveNodesToNewSubprojectAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.MoveNodesToNewSubprojectAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -382,16 +393,59 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectReadAllowed(accessState, projectId);
-                    var response = await agentService.GetStructureAsync(projectId, request ?? new ProjectStructureReadRequest(), cancellationToken);
+                    var effectiveRequest = ResolveGovernedProcessReadRequest(accessState, request, out var appliedDefaultScope);
+                    var response = await agentService.GetStructureAsync(projectId, effectiveRequest, cancellationToken);
+                    var warnings = appliedDefaultScope
+                        ? response.Warnings
+                            .Append(
+                                $"Governed process default applied: unfiltered project_structure_read returned only Active, Draft, Planned, and Published nodes with take={GovernedProcessDefaultStructureReadTake}. Pass an explicit request with statuses, take, nodeIds, subtreeRootIds, objectTypes, projectRoles, or maxPriority when broader graph context is required.")
+                            .ToList()
+                        : response.Warnings;
                     return new ProjectStructureReadToolData(
                         response.ProjectId,
                         response.ProjectName,
                         response.Nodes.Select(MapCompactNode).ToList(),
                         response.Links,
-                        response.Warnings);
+                        warnings);
                 },
                 cancellationToken);
         }
+
+        private static ProjectStructureReadRequest ResolveGovernedProcessReadRequest(
+            ProjectStructureAccessState accessState,
+            ProjectStructureReadRequest? request,
+            out bool appliedDefaultScope)
+        {
+            var effectiveRequest = request ?? new ProjectStructureReadRequest();
+            appliedDefaultScope = false;
+
+            if (accessState.ScopedProcessAccess is null ||
+                !IsUnscopedStructureRead(effectiveRequest))
+            {
+                return effectiveRequest;
+            }
+
+            appliedDefaultScope = true;
+            return effectiveRequest with
+            {
+                Statuses = GovernedProcessDefaultStructureReadStatuses,
+                Take = GovernedProcessDefaultStructureReadTake
+            };
+        }
+
+        private static bool IsUnscopedStructureRead(ProjectStructureReadRequest request)
+        {
+            return IsNullOrEmpty(request.NodeIds) &&
+                   IsNullOrEmpty(request.SubtreeRootIds) &&
+                   IsNullOrEmpty(request.ObjectTypes) &&
+                   IsNullOrEmpty(request.ProjectRoles) &&
+                   IsNullOrEmpty(request.Statuses) &&
+                   request.MaxPriority is null &&
+                   request.Take is null;
+        }
+
+        private static bool IsNullOrEmpty<T>(IReadOnlyCollection<T>? values)
+            => values is null || values.Count == 0;
 
         private Task<ProjectStructureNodeCatalogResponse> ProjectStructureNodeCatalogAsync(
             AgentDefinition agent,
@@ -481,7 +535,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     return await agentService.LinkNodesAsync(
                         projectId,
                         request with { Kind = ProjectObjectLinkKind.DependsOn },
-                        BuildAgentContext(agent),
+                        BuildAgentContext(agent, accessState, projectId),
                         cancellationToken);
                 },
                 cancellationToken);
@@ -508,7 +562,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     return await agentService.UnlinkNodesAsync(
                         projectId,
                         request with { Kind = ProjectObjectLinkKind.DependsOn },
-                        BuildAgentContext(agent),
+                        BuildAgentContext(agent, accessState, projectId),
                         cancellationToken);
                 },
                 cancellationToken);
@@ -533,7 +587,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.CreateNodeAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.CreateNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -558,7 +612,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -582,7 +636,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    await agentService.MoveNodeAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    await agentService.MoveNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationAck(true);
                 },
                 cancellationToken);
@@ -607,7 +661,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.RecomposeNodeAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.RecomposeNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -631,7 +685,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.ReparentNodeAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.ReparentNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -654,7 +708,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.CreateApprovalRequestAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.CreateApprovalRequestAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -701,7 +755,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.CreateAssetAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.CreateAssetAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -726,7 +780,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.CreateAssetRevisionAsync(projectId, nodeId, request, BuildAgentContext(agent), cancellationToken);
+                    return await agentService.CreateAssetRevisionAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -869,7 +923,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                             projectId.ToString("D"),
                             reason,
                             durationMinutes),
-                        BuildAgentContext(agent),
+                        BuildAgentContext(agent, accessState, projectId),
                         cancellationToken);
                 },
                 cancellationToken);
@@ -958,7 +1012,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 new { scope, leaseToken },
                 async cancellationToken =>
                 {
-                    var context = BuildAgentContext(agent, resolvedScope.BranchName, resolvedScope.RepositoryRoot);
+                    var context = BuildAgentContext(agent, accessState, resolvedScope.ProjectId, resolvedScope.BranchName, resolvedScope.RepositoryRoot);
                     return await leaseService.ReleaseAsync(
                         new ProjectStructureLeaseReleaseRequest(
                             resolvedScope.ScopeKind,
@@ -1063,6 +1117,25 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 string.IsNullOrWhiteSpace(repositoryRoot) ? workspaceRoot : repositoryRoot.Trim(),
                 branchName?.Trim() ?? string.Empty,
                 agent.Id.ToString("D"));
+        }
+
+        private ProjectStructureAgentContext BuildAgentContext(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid? projectId,
+            string? branchName = null,
+            string? repositoryRoot = null)
+        {
+            if (projectId.HasValue &&
+                string.IsNullOrWhiteSpace(branchName) &&
+                string.IsNullOrWhiteSpace(repositoryRoot) &&
+                accessState.ScopedProcessAccess is { AgentContext: { } scopedAgentContext } scopedProcessAccess &&
+                scopedProcessAccess.ProjectId == projectId.Value)
+            {
+                return scopedAgentContext;
+            }
+
+            return BuildAgentContext(agent, branchName, repositoryRoot);
         }
 
         private string ResolveRepositoryRoot(string repositoryRoot)
@@ -1331,7 +1404,24 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 ProcessOperationContractNames.ExecuteExternalAction);
             return !canRead && !canWrite
                 ? null
-                : new ProjectStructureScopedProcessAccess(projectId, canRead, canWrite);
+                : new ProjectStructureScopedProcessAccess(
+                    projectId,
+                    canRead,
+                    canWrite,
+                    MapScopedProcessAgentContext(auditScope.ProjectStructureLaunchAgent));
+        }
+
+        private static ProjectStructureAgentContext? MapScopedProcessAgentContext(ProjectStructureAgentIdentityDescriptor? descriptor)
+        {
+            return descriptor?.HasLeaseOwnerIdentity == true
+                ? new ProjectStructureAgentContext(
+                    descriptor.AgentId.Trim(),
+                    string.IsNullOrWhiteSpace(descriptor.AgentName) ? "Unnamed agent" : descriptor.AgentName.Trim(),
+                    descriptor.MachineName.Trim(),
+                    descriptor.RepositoryRoot.Trim(),
+                    descriptor.BranchName.Trim(),
+                    descriptor.SessionId.Trim())
+                : null;
         }
 
         private static bool TryResolveProjectScopeId(
@@ -1411,6 +1501,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             CanWriteUnscoped = normalized.CanWrite;
             AllowAllProjects = normalized.AllowAllProjects;
             AllowedProjectIds = normalized.AllowedProjectIds.ToHashSet();
+            ScopedProcessAccess = scopedProcessAccess;
             if (scopedProcessAccess is not null)
             {
                 AllowedProjectIds.Add(scopedProcessAccess.ProjectId);
@@ -1426,12 +1517,15 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         public bool AllowAllProjects { get; }
 
         public HashSet<Guid> AllowedProjectIds { get; }
+
+        public ProjectStructureScopedProcessAccess? ScopedProcessAccess { get; }
     }
 
     private sealed record ProjectStructureScopedProcessAccess(
         Guid ProjectId,
         bool CanRead,
-        bool CanWrite);
+        bool CanWrite,
+        ProjectStructureAgentContext? AgentContext);
 
     private sealed record ProjectStructureResolvedScope(
         ProjectStructureLeaseScopeKind ScopeKind,

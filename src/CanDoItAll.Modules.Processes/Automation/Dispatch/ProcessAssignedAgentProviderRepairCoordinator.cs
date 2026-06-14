@@ -52,6 +52,7 @@ internal sealed class ProcessAssignedAgentProviderRepairCoordinator(
 
                 editor.ProviderProfileId = fallbackResolution.Provider.Id;
                 editor.Model = resolvedEditorModel;
+                editor.ConfigurationJson = ManagedSeedProviderFallbacks.EnableProviderRepairFallbackOverride(editor.ConfigurationJson);
                 await executionClient.SaveAgentAsync(editor, cancellationToken);
                 affectedAgentCount++;
             }

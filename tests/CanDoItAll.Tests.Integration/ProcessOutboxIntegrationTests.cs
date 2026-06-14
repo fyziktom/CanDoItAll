@@ -701,6 +701,44 @@ public sealed class ProcessOutboxIntegrationTests
         Assert.Equal(1, harness.AutomationDispatch.CallCount);
     }
 
+    [Fact]
+    public async Task RecoverActiveRunsAsync_releases_pre_startup_automation_dispatch_leases_without_recovery_candidates()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var recoveryService = scope.ServiceProvider.GetRequiredService<ProcessRunRecoveryService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process recovery pre-startup lease without candidate");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runId = await StartDeferredAutomationRunAsync(processesService, saveResult.Value, projectId, "Recovery pre-startup automation lease without candidate");
+        var automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runId));
+        await LeaseAutomationDispatchAsync(dbContextFactory, automationDispatchRecord.Id, DateTimeOffset.UtcNow.AddMinutes(30));
+        var startupCutoffUtc = DateTimeOffset.UtcNow.AddSeconds(1);
+
+        Assert.Equal(0, await CountRecoveryCandidateStepsAsync(dbContextFactory, runId));
+
+        Assert.Equal(0, await recoveryService.RecoverActiveRunsAsync(
+            reclaimExpiredAutomationDispatchLeases: true,
+            startupCutoffUtc: startupCutoffUtc));
+
+        automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runId));
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
+        Assert.Equal(0, automationDispatchRecord.AttemptCount);
+        Assert.Equal(string.Empty, automationDispatchRecord.LeaseToken);
+        Assert.Null(automationDispatchRecord.LeaseExpiresAtUtc);
+
+        Assert.Equal(1, await outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1)));
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel

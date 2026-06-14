@@ -275,9 +275,14 @@ public sealed partial class MafAgentRuntime
         ArgumentNullException.ThrowIfNull(chatOptions);
         ArgumentNullException.ThrowIfNull(runtimeOptions);
 
-        if (runtimeOptions.StructuredOutput is not null)
+        if (ShouldApplyStructuredOutputResponseFormat(runtimeOptions))
         {
             ApplyStructuredResponseFormat(chatOptions, runtimeOptions.StructuredOutput);
+            return;
+        }
+
+        if (runtimeOptions.StructuredOutput is not null)
+        {
             return;
         }
 
@@ -297,6 +302,14 @@ public sealed partial class MafAgentRuntime
             document.RootElement.Clone(),
             string.IsNullOrWhiteSpace(runtimeOptions.ResponseFormatSchemaName) ? null : runtimeOptions.ResponseFormatSchemaName,
             string.IsNullOrWhiteSpace(runtimeOptions.ResponseFormatSchemaDescription) ? null : runtimeOptions.ResponseFormatSchemaDescription);
+    }
+
+    internal static bool ShouldApplyStructuredOutputResponseFormat(AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+
+        return runtimeOptions.StructuredOutput is not null &&
+               runtimeOptions.FinalizerMode != AgentFinalizerMode.Required;
     }
 
     private static bool ShouldRestoreSerializedSession(

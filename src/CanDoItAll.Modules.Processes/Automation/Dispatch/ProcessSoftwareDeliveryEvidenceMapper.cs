@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 using System.Text.RegularExpressions;
 
@@ -33,7 +34,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail.Artifacts
                 .Select(CreateSoftwareDeliveryArtifactRecordSnapshot)
                 .ToList(),
-            CreateSoftwareDeliveryBrowserEvidenceSnapshot(candidate),
+            CreateSoftwareDeliveryBrowserEvidenceSnapshot(candidate, detail),
             new SoftwareDeliveryRunnableHostSnapshot(
                 runnableDotNetProjectPaths,
                 ResolveInvalidRunnableDotNetHostSummary(runnableDotNetProjectPaths)),
@@ -216,9 +217,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return new SoftwareDeliveryPathFacts(
             workspacePaths,
             outputFiles,
-            [],
+            ResolveSoftwareDeliveryExpectedArtifactPaths(candidate),
             [BuildCurrentRunManagedArtifactRoot(candidate)],
             [BuildCurrentRunManagedOutputRoot(candidate)]);
+    }
+
+    private static IReadOnlyList<string> ResolveSoftwareDeliveryExpectedArtifactPaths(
+        DispatchCandidate candidate)
+    {
+        return candidate.ExpectedArtifacts
+            .Select(static artifact => TryExtractExpectedArtifactRelativePath(
+                artifact.ValidationRequirementSummary,
+                out var expectedPath)
+                ? WorkspaceScopeDescriptor.NormalizeRelativePath(expectedPath)
+                : string.Empty)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static SoftwareDeliveryExternalTargetSnapshot CreateSoftwareDeliveryExternalTargetSnapshot(
@@ -240,15 +256,46 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static SoftwareDeliveryBrowserEvidenceSnapshot CreateSoftwareDeliveryBrowserEvidenceSnapshot(
-        DispatchCandidate candidate)
+        DispatchCandidate candidate,
+        ProcessAutomationExecutionRunDetail detail)
     {
+        var outputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
+        var artifactPaths = outputsByToolName
+            .SelectMany(pair => pair.Value)
+            .Select(WorkspaceScopeDescriptor.NormalizeRelativePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
+        var hasConsoleErrorEvidence = ResolveBrowserConsoleEvidenceTexts(
+                detail,
+                browserWorkingDirectory,
+                outputsByToolName)
+            .Any(ContainsActiveBrowserConsoleError);
+
         return new SoftwareDeliveryBrowserEvidenceSnapshot(
             RequiresConcreteBrowserProof(candidate),
-            HasCurrentRunBrowserEvidence: false,
-            HasConsoleErrorEvidence: false,
+            HasCurrentRunBrowserEvidence: artifactPaths.Count > 0,
+            HasConsoleErrorEvidence: hasConsoleErrorEvidence,
             Routes: [],
-            ArtifactPaths: [],
-            Summary: string.Empty);
+            ArtifactPaths: artifactPaths,
+            Summary: CreateSoftwareDeliveryBrowserEvidenceSummary(outputsByToolName));
+    }
+
+    private static string CreateSoftwareDeliveryBrowserEvidenceSummary(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
+    {
+        if (outputsByToolName.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(
+            "; ",
+            outputsByToolName
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                .Select(pair => $"{pair.Key}: {string.Join(", ", pair.Value)}"));
     }
 
     private static IReadOnlyList<SoftwareDeliveryToolReceiptSnapshot> MapSoftwareDeliveryToolReceipts(
@@ -348,7 +395,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             expectation.Title,
             expectation.IsRequired,
             expectation.ValidationRequirementSummary,
-            ExpectedPath: string.Empty,
+            TryExtractExpectedArtifactRelativePath(expectation.ValidationRequirementSummary, out var expectedPath)
+                ? WorkspaceScopeDescriptor.NormalizeRelativePath(expectedPath)
+                : string.Empty,
             expectation.ArtifactKind.ToString());
     }
 

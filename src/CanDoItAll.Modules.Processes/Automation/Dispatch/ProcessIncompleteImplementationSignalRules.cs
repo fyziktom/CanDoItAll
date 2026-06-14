@@ -49,6 +49,30 @@ internal static class ProcessIncompleteImplementationSignalRules
             (normalizedResponse.Contains("required", StringComparison.Ordinal) &&
              normalizedResponse.Contains("is not present yet", StringComparison.Ordinal));
 
+        var reportsStaticPreviewInsteadOfInteractiveBehavior =
+            (normalizedResponse.Contains("static preview", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("static layout preview", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("layout preview", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("layout-only", StringComparison.Ordinal)) &&
+            (normalizedResponse.Contains("not full gameplay", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("not full game play", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("not actual gameplay", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("not playable", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("not interactive", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("no gameplay", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("without gameplay", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("avoided gameplay", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("does not implement gameplay", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("does not include gameplay", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("not full application behavior", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("no input-driven state", StringComparison.Ordinal) ||
+             normalizedResponse.Contains("no input driven state", StringComparison.Ordinal));
+
+        if (reportsStaticPreviewInsteadOfInteractiveBehavior)
+        {
+            return "the response says the step only produced a static or layout preview and did not implement the requested interactive behavior";
+        }
+
         var reportsDeferredExecution =
             !ContainsNegatedDeferredExecutionPhrase(normalizedResponse) &&
             (normalizedResponse.Contains("next required actions", StringComparison.Ordinal) ||
@@ -85,4 +109,3 @@ internal static class ProcessIncompleteImplementationSignalRules
             : string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
     }
 }
-

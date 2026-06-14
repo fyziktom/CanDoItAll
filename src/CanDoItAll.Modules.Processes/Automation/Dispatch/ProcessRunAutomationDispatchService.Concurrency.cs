@@ -498,11 +498,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         out string failureSummary)
     {
         failureSummary = string.Empty;
-        if (!RequiresGovernedStepOutcome(candidate.StepRun))
-        {
-            return false;
-        }
-
         var candidateTexts = new[]
         {
             responseText,
@@ -525,6 +520,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 failureSummary = $"Required finalizer tool '{AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName}' failed validation.";
                 return true;
             }
+        }
+
+        if (TryResolveRequiredFinalizerRepairProviderFailure(detail, responseText, out failureSummary))
+        {
+            return true;
         }
 
         return false;

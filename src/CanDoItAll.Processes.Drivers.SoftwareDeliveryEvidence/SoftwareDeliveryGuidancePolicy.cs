@@ -2,17 +2,6 @@ namespace CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 
 public static class SoftwareDeliveryGuidancePolicy
 {
-    public static SoftwareDeliveryGuidanceResult Create(SoftwareDeliveryGuidanceRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        return new SoftwareDeliveryGuidanceResult(
-            ImplementationGuidanceLines: [],
-            BrowserGuidanceLines: [],
-            RecoveryFocusLines: [],
-            FinalCautionLines: []);
-    }
-
     public static SoftwareDeliveryExecutionGuidanceResult CreateExecutionGuidance(
         SoftwareDeliveryExecutionGuidanceRequest request)
     {
@@ -435,29 +424,6 @@ public static class SoftwareDeliveryGuidancePolicy
         lines.Add("If `browser_snapshot` fails because of a tool-side selector, parsing, or accessibility-tree issue after navigation, screenshot, console diagnostics, and representative visible-state checks succeeded, replace it with `browser_evaluate` DOM or state proof and cite the snapshot failure. Do not block solely on the missing snapshot artifact unless the step explicitly requires that exact artifact.");
         return lines;
     }
-}
-
-public sealed record SoftwareDeliveryGuidanceRequest(
-    SoftwareDeliveryImplementationContractSnapshot Contract,
-    SoftwareDeliveryProofPolicyResult ProofPolicy,
-    IReadOnlyList<string> MissingRequiredTools,
-    IReadOnlyList<string> CriticalFailureSummaries,
-    bool HasProjectStructureGrounding,
-    bool HasCurrentRunBrowserProof,
-    bool IsRetryAfterFailedAttempt,
-    string RecoveryFactsSummary);
-
-public sealed record SoftwareDeliveryGuidanceResult(
-    IReadOnlyList<string> ImplementationGuidanceLines,
-    IReadOnlyList<string> BrowserGuidanceLines,
-    IReadOnlyList<string> RecoveryFocusLines,
-    IReadOnlyList<string> FinalCautionLines)
-{
-    public bool IsEmpty =>
-        ImplementationGuidanceLines.Count == 0 &&
-        BrowserGuidanceLines.Count == 0 &&
-        RecoveryFocusLines.Count == 0 &&
-        FinalCautionLines.Count == 0;
 }
 
 public sealed record SoftwareDeliveryExecutionGuidanceRequest(

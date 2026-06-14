@@ -52,7 +52,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private const int DefaultMaxExecutionAttempts = 3;
     private const int ConcreteImplementationMaxExecutionAttempts = 5;
     private const int MaxBrowserSnapshotInspectionCharacters = 262_144;
-    private static readonly TimeSpan ProviderFallbackHealthProbeTimeout = TimeSpan.FromSeconds(15);
+    internal static readonly TimeSpan ProviderFallbackHealthProbeTimeout = TimeSpan.FromSeconds(90);
     private const string ProcessMockSessionFlagPropertyName = "processMockAgent";
     private const string ProcessMockRoleKeyPropertyName = "roleKey";
     private const string ProcessMockArtifactRootPropertyName = "artifactRoot";

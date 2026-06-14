@@ -98,15 +98,100 @@ public sealed class SoftwareDeliveryEvidenceDriverTests
         Assert.Contains("workspace_dotnet_run", recoveryLines, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SoftwareDelivery_evidence_policy_accepts_realistic_dotnet_receipts()
+    {
+        var request = CreatePolicyRequest(
+            SoftwareDeliveryEvidencePolicy.EmptyCarriedProof,
+            CreateRealisticDotNetReceiptTimeline(),
+            contractText: "Implement a .NET Blazor browser app in ProductApp.csproj.");
+
+        var result = SoftwareDeliveryEvidencePolicy.Evaluate(request);
+
+        Assert.False(result.HasMissingProof);
+        Assert.Equal(SoftwareDeliveryImplementationStack.DotNet, result.Stack);
+        Assert.True(result.HasSuccessfulConcreteProductMutation);
+        Assert.True(result.HasConcreteImplementationProofEvidence);
+        Assert.True(result.HasRunnableApplicationProofEvidence);
+        Assert.NotNull(result.LatestConcreteProductReadReceipt);
+        Assert.NotNull(result.LatestConcreteProductMutationReceipt);
+        Assert.NotNull(result.LatestImplementationValidationReceipt);
+    }
+
+    [Fact]
+    public void SoftwareDelivery_evidence_policy_rejects_metadata_only_proof_snapshots()
+    {
+        var request = CreatePolicyRequest(
+            SoftwareDeliveryEvidencePolicy.EmptyCarriedProof,
+            receiptSnapshots: [],
+            contractText: "Implement a .NET Blazor browser app in ProductApp.csproj.")
+            with
+            {
+                PathFacts = new SoftwareDeliveryPathFacts(
+                    WorkspacePaths: ["external-target/C/app/Program.cs"],
+                    OutputFiles: ["external-target/C/app/bin/Debug/app.dll"],
+                    ExpectedArtifactPaths: ["artifacts/process-runs/current/browser-proof.json"],
+                    ManagedArtifactRoots: ["artifacts/process-runs/current"],
+                    ManagedOutputRoots: ["output/process-runs/current"]),
+                ExpectedArtifacts =
+                [
+                    new SoftwareDeliveryArtifactExpectationSnapshot(
+                        Id: "browser-proof",
+                        Title: "Browser proof",
+                        IsRequired: true,
+                        ValidationRequirementSummary: "Write browser proof to artifacts/process-runs/current/browser-proof.json.",
+                        ExpectedPath: "artifacts/process-runs/current/browser-proof.json",
+                        ArtifactKind: "Evidence")
+                ],
+                ArtifactRecords =
+                [
+                    new SoftwareDeliveryArtifactRecordSnapshot(
+                        Id: "artifact",
+                        DisplayName: "Browser proof",
+                        RelativePath: "artifacts/process-runs/current/browser-proof.json",
+                        ContentType: "application/json",
+                        ProducedBy: "agent",
+                        Summary: "Claimed proof without receipts.",
+                        CreatedAtUtc: new DateTimeOffset(2026, 6, 13, 0, 0, 0, TimeSpan.Zero))
+                ],
+                BrowserEvidence = new SoftwareDeliveryBrowserEvidenceSnapshot(
+                    BrowserProofRequired: true,
+                    HasCurrentRunBrowserEvidence: true,
+                    HasConsoleErrorEvidence: false,
+                    Routes: ["http://localhost:5000"],
+                    ArtifactPaths: ["artifacts/process-runs/current/browser-proof.json"],
+                    Summary: "Browser output exists.")
+            };
+
+        var result = SoftwareDeliveryEvidencePolicy.Evaluate(request);
+
+        Assert.True(result.HasMissingProof);
+        Assert.Equal(
+            "the current attempt did not read any concrete product source or project file",
+            result.MissingConcreteImplementationProofSummary);
+        Assert.False(result.HasSuccessfulConcreteProductMutation);
+        Assert.False(result.HasConcreteImplementationProofEvidence);
+        Assert.False(result.HasRunnableApplicationProofEvidence);
+    }
+
     private static SoftwareDeliveryProofPolicyRequest CreatePolicyRequest(
         SoftwareDeliveryCarriedProofSnapshot carriedProof,
-        bool requiresConcreteImplementationProof = true)
+        IReadOnlyList<SoftwareDeliveryToolReceiptSnapshot>? receiptSnapshots = null,
+        bool requiresConcreteImplementationProof = true,
+        string contractText = "Implement the requested product behavior.")
     {
+        var toolReceipts = receiptSnapshots ?? [];
         return new SoftwareDeliveryProofPolicyRequest(
-            CreateContract(requiresConcreteImplementationProof),
+            CreateContract(requiresConcreteImplementationProof, contractText),
             new SoftwareDeliveryPathFacts(
-                WorkspacePaths: [],
-                OutputFiles: [],
+                WorkspacePaths: toolReceipts
+                    .SelectMany(receipt => receipt.WorkspacePaths)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                OutputFiles: toolReceipts
+                    .SelectMany(receipt => receipt.OutputFiles)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
                 ExpectedArtifactPaths: [],
                 ManagedArtifactRoots: ["artifacts/process-runs/current"],
                 ManagedOutputRoots: ["output/process-runs/current"]),
@@ -118,7 +203,7 @@ public sealed class SoftwareDeliveryEvidenceDriverTests
                 HasScaffoldTarget: false,
                 CurrentRunManagedArtifactRoot: "artifacts/process-runs/current",
                 CurrentRunManagedOutputRoot: "output/process-runs/current"),
-            ToolReceipts: [],
+            toolReceipts,
             ExpectedArtifacts: [],
             ArtifactRecords: [],
             new SoftwareDeliveryBrowserEvidenceSnapshot(
@@ -132,16 +217,62 @@ public sealed class SoftwareDeliveryEvidenceDriverTests
                 RunnableProjectPaths: [],
                 InvalidHostSummary: string.Empty),
             carriedProof,
-            RequiredToolNames: [],
+            RequiredToolNames: toolReceipts
+                .Select(receipt => SoftwareDeliveryEvidencePolicy.NormalizeToolToken(receipt.ToolName))
+                .Where(SoftwareDeliveryReceiptTimeline.IsImplementationValidationToolName)
+                .Distinct(StringComparer.Ordinal)
+                .ToList(),
             HasConcreteImplementationMockProof: false,
             new DateTimeOffset(2026, 6, 13, 0, 0, 0, TimeSpan.Zero));
     }
 
+    private static IReadOnlyList<SoftwareDeliveryToolReceiptSnapshot> CreateRealisticDotNetReceiptTimeline()
+    {
+        var start = new DateTimeOffset(2026, 6, 13, 0, 0, 0, TimeSpan.Zero);
+        return
+        [
+            CreateReceipt(
+                "workspace_write_file",
+                start.AddMinutes(1),
+                ["external-target/C/app/Program.cs"]),
+            CreateReceipt(
+                "workspace_read_file",
+                start.AddMinutes(2),
+                ["external-target/C/app/Program.cs"]),
+            CreateReceipt(
+                "workspace_dotnet_build",
+                start.AddMinutes(3),
+                ["external-target/C/app/ProductApp.csproj"]),
+            CreateReceipt(
+                "workspace_dotnet_run",
+                start.AddMinutes(4),
+                ["external-target/C/app/ProductApp.csproj"])
+        ];
+    }
+
+    private static SoftwareDeliveryToolReceiptSnapshot CreateReceipt(
+        string toolName,
+        DateTimeOffset startedAtUtc,
+        IReadOnlyList<string> workspacePaths)
+    {
+        return new SoftwareDeliveryToolReceiptSnapshot(
+            toolName,
+            startedAtUtc,
+            startedAtUtc.AddSeconds(15),
+            Succeeded: true,
+            RequestSummary: string.Join(' ', workspacePaths),
+            WorkingDirectory: string.Empty,
+            ExitSummary: "Succeeded",
+            workspacePaths,
+            OutputFiles: []);
+    }
+
     private static SoftwareDeliveryImplementationContractSnapshot CreateContract(
-        bool requiresConcreteImplementationProof = true)
+        bool requiresConcreteImplementationProof = true,
+        string contractText = "Implement the requested product behavior.")
     {
         return new SoftwareDeliveryImplementationContractSnapshot(
-            ContractText: "Implement the requested product behavior.",
+            ContractText: contractText,
             TriggerText: "Process step execution",
             AdditionalGroundingText: string.Empty,
             RequiresConcreteImplementationProof: requiresConcreteImplementationProof,

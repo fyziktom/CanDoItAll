@@ -2,6 +2,8 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessAutomationExecutionRunSelection
 {
+    private const string HostRestartCancelledRunMarker = "host restarted before the run completed";
+
     public static bool HasBlockingAutomationExecutionRun(
         IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns,
         DateTimeOffset now,
@@ -75,6 +77,7 @@ internal static class ProcessAutomationExecutionRunSelection
             .Where(executionRun =>
                 IsAutomationActorExecutionRun(executionRun, automationActor) &&
                 executionRun.State is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed &&
+                !IsHostRestartCancelledRun(executionRun) &&
                 IsRecoverableExecutionRunForCurrentAttempt(executionRun, currentAttemptStartedAtUtc))
             .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
             .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
@@ -217,6 +220,13 @@ internal static class ProcessAutomationExecutionRunSelection
         string automationActor)
     {
         return string.Equals(executionRun.RequestedBy, automationActor, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsHostRestartCancelledRun(ProcessAutomationExecutionRunRecord executionRun)
+    {
+        return executionRun.State == ProcessAutomationExecutionState.Failed &&
+               executionRun.Outcome == ProcessAutomationRunOutcome.Cancelled &&
+               executionRun.ResultSummary.Contains(HostRestartCancelledRunMarker, StringComparison.OrdinalIgnoreCase);
     }
 
     private static DateTimeOffset ResolveLastProgressAtUtc(ProcessAutomationExecutionRunRecord executionRun)

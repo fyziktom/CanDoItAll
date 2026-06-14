@@ -248,8 +248,9 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     private static bool RequiresOpenAiAssignmentRepair(
         AgentDefinition agent)
     {
-        return ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent) ||
-               IsCrmHrRuntimeAgent(agent);
+        return !ManagedSeedProviderFallbacks.HasProviderRepairFallbackOverride(agent) &&
+               (ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent) ||
+                IsCrmHrRuntimeAgent(agent));
     }
 
     private static bool IsCrmHrRuntimeAgent(

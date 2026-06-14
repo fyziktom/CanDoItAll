@@ -92,11 +92,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
+        if (RequiresDotNetValidationPowerShellHarnessReceipt(candidate))
+        {
+            requiredToolNames.Add(ToolContractCatalog.WorkspacePowerShellRunScript);
+        }
+
         if (BrowserProofRequirementResolver.Resolve(candidate, additionalGroundingText).IsRequired)
         {
             requiredToolNames.AddRange(ImplicitBrowserProofToolNames);
-            if (!ImplementationContractMentionsDotNet(candidate, additionalGroundingText) &&
-                ImplementationContractMentionsJavaScript(candidate, additionalGroundingText))
+            if (RequiresJavaScriptBrowserProofHarness(candidate, additionalGroundingText))
             {
                 requiredToolNames.Add(ToolContractCatalog.WorkspacePowerShellRunScript);
             }
@@ -534,12 +538,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
         {
             return toolName is
-                "project_structure_read" or
-                "workspace_create_directory" or
-                "workspace_dotnet_new" or
-                "workspace_read_file" or
-                "workspace_stat_path" or
-                "workspace_write_file";
+                AgentToolInvocationPolicyMetadata.ProjectStructureRead or
+                ToolContractCatalog.WorkspaceCreateDirectory or
+                ToolContractCatalog.WorkspaceDotNetNew or
+                ToolContractCatalog.WorkspacePowerShellRunScript or
+                ToolContractCatalog.WorkspaceReadFile or
+                ToolContractCatalog.WorkspaceStatPath;
         }
 
         if (toolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal) &&
@@ -861,14 +865,147 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
-        if (!string.Equals(candidate.Definition.Slug, "dotnet-solution-setup", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(candidate.Definition.Name, ".NET solution setup subprocess", StringComparison.OrdinalIgnoreCase))
+        if (!IsDotNetSolutionSetupProcess(candidate))
         {
             return false;
         }
 
         return string.Equals(candidate.StepDefinition.Key, "create-dotnet-project", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(candidate.StepDefinition.Key, "add-test-project", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDotNetSolutionSetupProcess(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        return string.Equals(candidate.Definition.Slug, "dotnet-solution-setup", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(candidate.Definition.Name, ".NET solution setup subprocess", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool RequiresDotNetValidationRepairGuidance(DispatchCandidate candidate)
+        => IsDotNetValidationRepairStep(candidate, ResolveProcessStepOperationContract(candidate));
+
+    private static bool RequiresDotNetValidationPowerShellHarnessReceipt(DispatchCandidate candidate)
+    {
+        if (!RequiresDotNetValidationRepairGuidance(candidate))
+        {
+            return false;
+        }
+
+        if (IsDotNetSolutionSetupProcess(candidate))
+        {
+            return true;
+        }
+
+        var contractText = BuildImplementationContractText(candidate);
+        return ContainsAnyToken(
+            contractText,
+            ToolContractCatalog.WorkspacePowerShellRunScript,
+            "validation harness",
+            "governed script",
+            "build-server",
+            "build server",
+            "--disable-build-servers",
+            "msb5021",
+            "named pipe",
+            "named-pipe",
+            "system.timeoutexception");
+    }
+
+    private static bool RequiresJavaScriptBrowserProofHarness(
+        DispatchCandidate candidate,
+        string? additionalGroundingText)
+    {
+        if (ImplementationContractMentionsDotNet(candidate, additionalGroundingText) ||
+            !ImplementationContractMentionsJavaScript(candidate, additionalGroundingText))
+        {
+            return false;
+        }
+
+        var contractText = BuildImplementationContractText(candidate, additionalGroundingText);
+        return !ContainsNegatedImplementationStackToken(contractText, "javascript") &&
+               !ContainsNegatedImplementationStackToken(contractText, "typescript") &&
+               !ContainsNegatedImplementationStackToken(contractText, "node") &&
+               !ContainsNegatedImplementationStackToken(contractText, "npm") &&
+               !ContainsNegatedImplementationStackToken(contractText, "vite");
+    }
+
+    private static bool IsDotNetValidationRepairStep(
+        DispatchCandidate candidate,
+        ProcessStepOperationContract operationContract)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        if (!operationContract.AllowedOperations.Contains(ProcessStepOperation.RunValidation))
+        {
+            return false;
+        }
+
+        var stepText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            candidate.Definition.Name,
+            candidate.Definition.Slug,
+            candidate.StepDefinition.Key,
+            candidate.StepRun.Title,
+            candidate.StepRun.CurrentExecutorName,
+            candidate.StepRun.RoleSnapshotSummary,
+            candidate.WorkBrief?.Title,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            candidate.StepDefinition.InputContractSummary,
+            candidate.StepDefinition.OutputContractSummary,
+            candidate.StepDefinition.EvidenceContractSummary,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))));
+        if (string.IsNullOrWhiteSpace(stepText) ||
+            ImplementationContractNegatesDotNet(candidate, stepText) ||
+            !ImplementationContractMentionsDotNet(candidate, stepText))
+        {
+            return false;
+        }
+
+        if (!HasDotNetValidationRepairContext(candidate, stepText))
+        {
+            return false;
+        }
+
+        return ContainsAnyToken(
+            stepText,
+            "restore",
+            "build",
+            "test",
+            "test discovery");
+    }
+
+    private static bool HasDotNetValidationRepairContext(
+        DispatchCandidate candidate,
+        string stepText)
+    {
+        if (IsDotNetSolutionSetupProcess(candidate) ||
+            ContainsProductRepairIntent(candidate))
+        {
+            return true;
+        }
+
+        return ContainsAnyToken(
+            stepText,
+            "repair",
+            "repaired",
+            "repairing",
+            "stale scaffold",
+            "project-file repair",
+            "package incompatibility",
+            "target-framework",
+            "build-server",
+            "build server",
+            "--disable-build-servers",
+            "msb5021",
+            "nu1202",
+            "netsdk",
+            "system.timeoutexception",
+            "named pipe",
+            "named-pipe");
     }
 
     private static bool ContainsConcreteQualityProofStepSignal(string value)

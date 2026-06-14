@@ -306,7 +306,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var document = XDocument.Load(fullPath, LoadOptions.None);
             var sdk = document.Root?.Attribute("Sdk")?.Value ?? string.Empty;
             if (sdk.Contains("Microsoft.NET.Sdk.Web", StringComparison.OrdinalIgnoreCase) ||
-                sdk.Contains("Microsoft.NET.Sdk.Worker", StringComparison.OrdinalIgnoreCase))
+                sdk.Contains("Microsoft.NET.Sdk.Worker", StringComparison.OrdinalIgnoreCase) ||
+                sdk.Contains("Microsoft.NET.Sdk.BlazorWebAssembly", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

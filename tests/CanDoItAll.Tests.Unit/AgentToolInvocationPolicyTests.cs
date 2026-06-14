@@ -800,6 +800,8 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
         Assert.Contains("scaffold step is tool-only", decision.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace_dotnet_new", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("workspace_pwsh_run_script", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("Do not retry workspace_write_file", decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]

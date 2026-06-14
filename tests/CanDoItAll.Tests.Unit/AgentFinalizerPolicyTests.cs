@@ -295,6 +295,54 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void ExecutionInvocationMetadata_resolves_project_structure_launch_agent_for_trusted_process_run()
+    {
+        var launchAgent = new ProjectStructureAgentIdentityDescriptor(
+            "codex-sb05-tetris-e2e",
+            "Codex SB05 Tetris E2E",
+            "LUCYSPOWER",
+            @"C:\repositories\CanDoItAll",
+            "maf-processes-refactor",
+            "session-001");
+        var metadataJson = ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(null, launchAgent);
+        var run = CreateRun(metadataJson);
+
+        var resolved = ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run);
+
+        Assert.NotNull(resolved);
+        Assert.Equal(launchAgent.AgentId, resolved!.AgentId);
+        Assert.Equal(launchAgent.AgentName, resolved.AgentName);
+        Assert.Equal(launchAgent.MachineName, resolved.MachineName);
+        Assert.Equal(launchAgent.RepositoryRoot, resolved.RepositoryRoot);
+        Assert.Equal(launchAgent.BranchName, resolved.BranchName);
+        Assert.Equal(launchAgent.SessionId, resolved.SessionId);
+    }
+
+    [Fact]
+    public void ExecutionInvocationMetadata_ignores_project_structure_launch_agent_for_untrusted_run()
+    {
+        var metadataJson = ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(
+            null,
+            new ProjectStructureAgentIdentityDescriptor(
+                "codex-sb05-tetris-e2e",
+                "Codex SB05 Tetris E2E",
+                "LUCYSPOWER",
+                @"C:\repositories\CanDoItAll",
+                "maf-processes-refactor",
+                "session-001"));
+        var run = CreateRun(metadataJson) with
+        {
+            RequestedByKind = "user",
+            ProcessRunId = string.Empty,
+            ProcessStepId = string.Empty
+        };
+
+        var resolved = ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run);
+
+        Assert.Null(resolved);
+    }
+
+    [Fact]
     public void AgentFramework_runtime_options_include_context_workspace_scope_from_metadata()
     {
         var projectId = Guid.Parse("d3441d50-39c0-427a-976d-38f8c11e8312");
