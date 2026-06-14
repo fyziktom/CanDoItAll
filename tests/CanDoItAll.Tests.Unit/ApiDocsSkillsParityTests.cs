@@ -69,7 +69,7 @@ public sealed class ApiDocsSkillsParityTests
 
         Assert.Contains("/nodes/{nodeId}/workflow/status", projectStructure, StringComparison.Ordinal);
         Assert.Contains("/leases/renew", projectStructure, StringComparison.Ordinal);
-        Assert.Contains("28 direct tools", projectStructure, StringComparison.Ordinal);
+        Assert.Contains("51 direct tools", projectStructure, StringComparison.Ordinal);
 
         Assert.Contains("38 routes per surface", cognitiveMemory, StringComparison.Ordinal);
         Assert.Contains("CognitiveMemoryRetentionCleanupApiRequest", cognitiveMemory, StringComparison.Ordinal);
@@ -99,6 +99,7 @@ public sealed class ApiDocsSkillsParityTests
         Assert.Contains("dryRun", workflows, StringComparison.Ordinal);
 
         Assert.Contains("project_structure_node_create", projectStructure, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_delete", projectStructure, StringComparison.Ordinal);
         Assert.Contains("project_structure_asset_create", projectStructure, StringComparison.Ordinal);
         Assert.Contains("current-run lineage", projectStructure, StringComparison.OrdinalIgnoreCase);
     }

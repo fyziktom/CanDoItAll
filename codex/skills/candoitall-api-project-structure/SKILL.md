@@ -27,9 +27,9 @@ Use this skill when a task needs project, hierarchy, project-structure, dependen
 
 ## Direct Tool Boundary
 
-The internal MAF project-structure tool surface currently exposes 28 direct tools. The HTTP API exposes 51 project-structure routes. Node type-only changes, metadata/status/progress/marker/priority bulk and single update routes, node command execution, node process/workflow operations, node delete, generic link/unlink routes, asset content download, and lease renew are HTTP-only unless a typed runtime tool is deliberately added with policy and approval coverage.
+The internal project-structure runtime tool surface currently exposes 51 direct tools and covers the current 51-route HTTP project-structure API set. Direct runtime tools include node create (`project_structure_node_create`), node delete (`project_structure_node_delete`), focused node updates, generic links, asset create/content (`project_structure_asset_create`, `project_structure_asset_content_get`), lease renew, process/workflow node operations, and the existing read/write/import/lease tools. These tools are composed through `ProjectStructureAgentRuntimeToolProvider` and classified by `AgentToolInvocationPolicy`; destructive and mutating tools still require project-structure write access and the normal approval path.
 
-When a process or agent asks for `project_structure_node_create`, `project_structure_asset_create`, or another direct project-structure tool and that tool is unavailable, use the HTTP API skill for the equivalent governed action. Do not reinstall or infer a removed ProjectStructure MCP server.
+When a process or agent asks for a direct project-structure tool and that tool is unavailable in the running host, use the HTTP API skill for the equivalent governed action and record the missing tool name as an environment/runtime issue. Do not reinstall or infer a removed ProjectStructure MCP server.
 
 ## Operating Rules
 

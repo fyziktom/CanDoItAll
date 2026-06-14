@@ -192,6 +192,84 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
     }
 
     [Fact]
+    public async Task ProjectStructureRuntimeToolProvider_node_delete_tool_removes_subtree()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var projectStructureProvider = Assert.Single(
+            scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>()
+                .OfType<ProjectStructureAgentRuntimeToolProvider>());
+        var projectId = await CreateProjectAsync(
+            scope.ServiceProvider.GetRequiredService<ProjectsService>(),
+            "Runtime provider project-structure delete");
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var parentNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProcessRun,
+                "Process run branch",
+                "Cleanup candidate",
+                "Runtime provider delete proof.",
+                $"project:{projectId:D}",
+                420,
+                220,
+                ObjectSubtype: "process-run"));
+        var outputNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "process-run-output.md",
+                "Generated output",
+                "Nested process-run output.",
+                parentNode.Id,
+                700,
+                280,
+                ObjectSubtype: "process-run-output"));
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProjectStructureAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = true,
+                    CanWrite = true,
+                    AllowAllProjects = true
+                })
+        };
+        var tools = await projectStructureProvider.CreateToolsAsync(
+            new AgentRuntimeToolProviderContext(
+                agent,
+                provider,
+                [],
+                SuppressApprovalRequirements: false,
+                AgentRuntimeToolProviderPurpose.InteractiveChat,
+                RuntimeSessionKey: "project-structure-delete-tool-proof",
+                Tags: new Dictionary<string, string>()),
+            CancellationToken.None);
+        var deleteTool = Assert.IsAssignableFrom<AIFunction>(
+            Assert.Single(tools, item => string.Equals(item.Name, "project_structure_node_delete", StringComparison.OrdinalIgnoreCase)));
+
+        var deleted = ReadToolResult<OperationCount>(await deleteTool.InvokeAsync(
+            new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["projectId"] = projectId,
+                ["nodeId"] = parentNode.Id,
+                ["request"] = new ProjectStructureNodeDeleteInput()
+            })));
+        var surfaceAfterDelete = await workbenchService.GetStructureAsync(projectId);
+
+        Assert.Equal(2, deleted.Count);
+        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => node.Id == parentNode.Id);
+        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => node.Id == outputNode.Id);
+    }
+
+    [Fact]
     public async Task ProjectStructureRuntimeToolProvider_grants_governed_process_scoped_current_project_asset_write_without_global_project_write()
     {
         await using var application = await TestApplication.CreateAsync();

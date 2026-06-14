@@ -162,6 +162,46 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_node_update",
                     "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureNodeTypeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeTypeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_type_update",
+                    "Updates only the objectType/objectSubtype classification for an existing project-structure node while preserving its title, notes, timing, metadata, and duration."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureNodeMetadataInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMetadataUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_metadata_update",
+                    "Updates a node's metadata JSON and optional notes/status without changing its type or layout."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureStatusBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesStatusUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_nodes_status_update",
+                    "Updates the status for multiple project-structure nodes in one governed mutation."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureStatusInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeStatusUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_status_update",
+                    "Updates the status for one project-structure node."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureProgressBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesProgressUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_nodes_progress_update",
+                    "Updates progress mode and percent for multiple project-structure nodes in one governed mutation."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureProgressInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeProgressUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_progress_update",
+                    "Updates progress mode and percent for one project-structure node."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureMarkerBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesMarkerUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_nodes_marker_update",
+                    "Replaces marker icon, tone, and label for multiple project-structure nodes in one governed mutation."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureMarkerInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMarkerUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_marker_update",
+                    "Changes a single node marker using replace, add, toggle, remove, or clear semantics."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructurePriorityBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesPriorityUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_nodes_priority_update",
+                    "Updates priority for multiple project-structure nodes in one governed mutation."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructurePriorityInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodePriorityUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_priority_update",
+                    "Updates priority for one project-structure node."),
+                AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeMoveInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMoveAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_move",
                     "Moves an existing project-structure node to exact canvas coordinates. Use this when recomposition still leaves overlap, crowding, or unreadable spacing."),
@@ -173,6 +213,42 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     (Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeReparentAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_reparent",
                     "Reconnects an existing project-structure node under a new logical parent node or back to the project root."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureSubtreeTransferInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeDescendantsToProjectMoveAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_descendants_to_project_move",
+                    "Moves all descendants of a source node into an existing target project. Use project_structure_nodes_to_new_subproject when the target project should be created first."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureNodeCommandInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCommandExecuteAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_command_execute",
+                    "Executes a supported project-structure node command such as Open, Wizard, Branch, Validate, Test, Skip, or MarkUsed and returns the resulting artifact reference."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureProcessDefinitionLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeProcessDefinitionLinkAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_process_definition_link",
+                    "Links a project-structure node to a process definition using a Uses link."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureProcessNodeStartInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeProcessStartAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_process_start",
+                    "Starts or prepares the process linked to a project-structure node. This can create launch plans and optionally execute a process run when requested."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureWorkflowAddOptionsInput request, CancellationToken cancellationToken = default) => ProjectStructureNodeWorkflowAddOptionsAsync(agent, accessState, projectId, nodeId, request, cancellationToken),
+                    "project_structure_node_workflow_add_options",
+                    "Returns workflow definitions and input-preview options that can be added under a project-structure node."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureWorkflowNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeWorkflowDefinitionCreateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_workflow_definition_create",
+                    "Creates a workflow-definition node under the supplied project-structure parent node."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureWorkflowNodeStartInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeWorkflowStartAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_workflow_start",
+                    "Starts the workflow represented by a project-structure workflow node and returns the initial run status."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureNodeWorkflowStatusGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
+                    "project_structure_node_workflow_status_get",
+                    "Reads the current workflow run status for a project-structure workflow node."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, ProjectStructureNodeDeleteInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeDeleteAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_node_delete",
+                    "Deletes a project-structure node and its editable descendants. This is destructive: read the branch first, acquire or pass a lease when coordinating with other agents, and use only when the requested cleanup is explicit."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_approval_request",
@@ -186,9 +262,21 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_asset_get",
                     "Returns readonly metadata for an existing managed asset node."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetContentGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
+                    "project_structure_asset_content_get",
+                    "Returns readonly metadata and base64 content for an existing managed asset node when bytes are needed for proof or transfer."),
+                AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureAssetRevisionRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_asset_create_revision",
                     "Creates a new revision asset node under an existing asset node instead of overwriting the original asset."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureLinkCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_link_create",
+                    "Creates a generic project-structure link with the supplied link kind. Use dependency-specific tools for DependsOn links unless another link kind is explicitly needed."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureLinkUnlinkAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_link_unlink",
+                    "Removes a generic project-structure link with the supplied link kind. Use dependency-specific tools for DependsOn links unless another link kind is explicitly needed."),
                 AIFunctionFactory.Create(
                     (ProjectStructureImportRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureImportAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
                     "project_structure_import",
@@ -213,6 +301,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     (ProjectStructureScopeInput scope, CancellationToken cancellationToken = default) => ProjectStructureLeaseGetAsync(agent, accessState, scope, cancellationToken),
                     "project_structure_lease_get",
                     "Gets the current active project, node, or repo-branch lease for the supplied scope."),
+                AIFunctionFactory.Create(
+                    (ProjectStructureScopeInput scope, string leaseToken, int durationMinutes = 15, CancellationToken cancellationToken = default) => ProjectStructureLeaseRenewAsync(agent, accessState, scope, leaseToken, durationMinutes, cancellationToken),
+                    "project_structure_lease_renew",
+                    "Renews an owned project, node, or repo-branch lease token for continued coordinated mutation work."),
                 AIFunctionFactory.Create(
                     (ProjectStructureScopeInput scope, string leaseToken, CancellationToken cancellationToken = default) => ProjectStructureLeaseReleaseAsync(agent, accessState, scope, leaseToken, cancellationToken),
                     "project_structure_lease_release",
@@ -617,6 +709,272 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 cancellationToken);
         }
 
+        private Task<ProjectStructureNodeSummary> ProjectStructureNodeTypeUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureNodeTypeInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-type",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.UpdateNodeTypeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureNodeSummary> ProjectStructureNodeMetadataUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureNodeMetadataInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-metadata",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.UpdateNodeMetadataAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodesStatusUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureStatusBatchInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-statuses",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.UpdateNodeStatusesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodeStatusUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureStatusInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-status",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.UpdateNodeStatusesAsync(
+                        projectId,
+                        new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken),
+                        BuildAgentContext(agent, accessState, projectId),
+                        cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodesProgressUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureProgressBatchInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-progress",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.UpdateNodeProgressAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodeProgressUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureProgressInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-progress-single",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.UpdateNodeProgressAsync(
+                        projectId,
+                        new ProjectStructureProgressBatchInput([nodeId], request.ProgressMode, request.ProgressPercent, request.LeaseToken),
+                        BuildAgentContext(agent, accessState, projectId),
+                        cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodesMarkerUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureMarkerBatchInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-markers",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.UpdateNodeMarkerAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodeMarkerUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureMarkerInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-marker",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.ChangeNodeMarkerAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodesPriorityUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructurePriorityBatchInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-priorities",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.UpdateNodePriorityAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodePriorityUpdateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructurePriorityInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-priority",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.UpdateNodePriorityAsync(
+                        projectId,
+                        new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken),
+                        BuildAgentContext(agent, accessState, projectId),
+                        cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
         private Task<OperationAck> ProjectStructureNodeMoveAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
@@ -690,6 +1048,230 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 cancellationToken);
         }
 
+        private Task<ProjectStructureSubprojectTransferResult> ProjectStructureNodeDescendantsToProjectMoveAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureSubtreeTransferInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-transfer-descendants",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    EnsureProjectWriteAllowed(accessState, request.TargetProjectId);
+                    return await agentService.MoveDescendantsToProjectAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ArtifactReference> ProjectStructureNodeCommandExecuteAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureNodeCommandInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-command",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.ExecuteNodeCommandAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureLinkChangeResult> ProjectStructureNodeProcessDefinitionLinkAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureProcessDefinitionLinkInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-link-process-definition",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.LinkProcessDefinitionAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureProcessNodeStartResult> ProjectStructureNodeProcessStartAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureProcessNodeStartInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-start-process",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.StartProcessNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureWorkflowAddOptionsResult> ProjectStructureNodeWorkflowAddOptionsAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureWorkflowAddOptionsInput request,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-workflow-add-options",
+                projectId,
+                nodeId,
+                null,
+                null,
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectReadAllowed(accessState, projectId);
+                    return await agentService.GetWorkflowAddOptionsAsync(projectId, nodeId, request, cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureWorkflowNodeCreateResult> ProjectStructureNodeWorkflowDefinitionCreateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureWorkflowNodeCreateInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-create-workflow-definition",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.CreateWorkflowNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureWorkflowNodeStartResult> ProjectStructureNodeWorkflowStartAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureWorkflowNodeStartInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-start-workflow",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.StartWorkflowNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureWorkflowRunStatus> ProjectStructureNodeWorkflowStatusGetAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-workflow-status",
+                projectId,
+                nodeId,
+                null,
+                null,
+                null,
+                async cancellationToken =>
+                {
+                    EnsureProjectReadAllowed(accessState, projectId);
+                    return await agentService.GetWorkflowNodeStatusAsync(projectId, nodeId, cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodeDeleteAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            ProjectStructureNodeDeleteInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-delete",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.DeleteNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
         private Task<ProjectStructureNodeSummary> ProjectStructureApprovalRequestAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
@@ -732,6 +1314,29 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectReadAllowed(accessState, projectId);
                     return await agentService.GetAssetAsync(projectId, nodeId, cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureAssetContentDescriptor> ProjectStructureAssetContentGetAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            string nodeId,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "assets.get-content",
+                projectId,
+                nodeId,
+                null,
+                null,
+                null,
+                async cancellationToken =>
+                {
+                    EnsureProjectReadAllowed(accessState, projectId);
+                    return await agentService.GetAssetContentAsync(projectId, nodeId, cancellationToken);
                 },
                 cancellationToken);
         }
@@ -781,6 +1386,54 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     return await agentService.CreateAssetRevisionAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureLinkChangeResult> ProjectStructureLinkCreateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureLinkInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.link-create",
+                projectId,
+                request.SourceNodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.LinkNodesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureLinkChangeResult> ProjectStructureLinkUnlinkAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureLinkInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.link-delete",
+                projectId,
+                request.SourceNodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.UnlinkNodesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -991,6 +1644,38 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 resolvedScope.ScopeKey,
                 scope,
                 async cancellationToken => await leaseService.GetActiveLeaseAsync(resolvedScope.ScopeKind, resolvedScope.ScopeKey, cancellationToken),
+                cancellationToken);
+        }
+
+        private async Task<ProjectStructureLeaseSnapshot> ProjectStructureLeaseRenewAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            ProjectStructureScopeInput scope,
+            string leaseToken,
+            int durationMinutes,
+            CancellationToken cancellationToken)
+        {
+            var resolvedScope = await ResolveScopeAsync(agent, accessState, scope, true, cancellationToken);
+            return await ExecuteAsync(
+                agent,
+                "leases.renew",
+                resolvedScope.ProjectId,
+                null,
+                resolvedScope.ScopeKind,
+                resolvedScope.ScopeKey,
+                new { scope, leaseToken, durationMinutes },
+                async cancellationToken =>
+                {
+                    var context = BuildAgentContext(agent, accessState, resolvedScope.ProjectId, resolvedScope.BranchName, resolvedScope.RepositoryRoot);
+                    return await leaseService.RenewAsync(
+                        new ProjectStructureLeaseRenewRequest(
+                            resolvedScope.ScopeKind,
+                            resolvedScope.ScopeKey,
+                            leaseToken,
+                            durationMinutes),
+                        context,
+                        cancellationToken);
+                },
                 cancellationToken);
         }
 
@@ -1459,6 +2144,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 ProjectStructureDependencyResponse dependencyResponse => dependencyResponse.Warnings,
                 ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
                 ProjectStructureImportResult importResult => importResult.Warnings,
+                ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
+                ProjectStructureWorkflowNodeCreateResult workflowNodeCreateResult => workflowNodeCreateResult.Warnings,
+                ProjectStructureWorkflowAddOptionsResult workflowAddOptionsResult => workflowAddOptionsResult.Warnings,
+                ProjectStructureWorkflowNodeStartResult workflowNodeStartResult => workflowNodeStartResult.Warnings,
                 _ => []
             };
         }
@@ -1536,6 +2225,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 }
 
 public sealed record OperationAck(bool Ok);
+
+public sealed record OperationCount(int Count);
 
 public sealed record ProjectStructureScopeInput(
     ProjectStructureLeaseScopeKind ScopeKind,

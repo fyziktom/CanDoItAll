@@ -387,6 +387,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.True(architectEditor.ProcessAccess.CanRead);
         Assert.False(architectEditor.ProcessAccess.CanWrite);
         Assert.True(architectEditor.ProcessAccess.AllowAllDefinitions);
+        Assert.Contains("project_structure_node_delete", architectEditor.Instructions, StringComparison.Ordinal);
 
         var deliveryManager = Assert.Single(
             await workspaceService.ListAgentsAsync(includeTemplates: false),

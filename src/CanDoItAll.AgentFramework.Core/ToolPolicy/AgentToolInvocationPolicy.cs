@@ -1908,19 +1908,42 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureDependencyUnlink = "project_structure_dependency_unlink";
     public const string ProjectStructureNodeCreate = "project_structure_node_create";
     public const string ProjectStructureNodeUpdate = "project_structure_node_update";
+    public const string ProjectStructureNodeTypeUpdate = "project_structure_node_type_update";
+    public const string ProjectStructureNodeMetadataUpdate = "project_structure_node_metadata_update";
+    public const string ProjectStructureNodesStatusUpdate = "project_structure_nodes_status_update";
+    public const string ProjectStructureNodeStatusUpdate = "project_structure_node_status_update";
+    public const string ProjectStructureNodesProgressUpdate = "project_structure_nodes_progress_update";
+    public const string ProjectStructureNodeProgressUpdate = "project_structure_node_progress_update";
+    public const string ProjectStructureNodesMarkerUpdate = "project_structure_nodes_marker_update";
+    public const string ProjectStructureNodeMarkerUpdate = "project_structure_node_marker_update";
+    public const string ProjectStructureNodesPriorityUpdate = "project_structure_nodes_priority_update";
+    public const string ProjectStructureNodePriorityUpdate = "project_structure_node_priority_update";
     public const string ProjectStructureNodeMove = "project_structure_node_move";
     public const string ProjectStructureNodeRecompose = "project_structure_node_recompose";
     public const string ProjectStructureNodeReparent = "project_structure_node_reparent";
+    public const string ProjectStructureNodeDescendantsToProjectMove = "project_structure_node_descendants_to_project_move";
+    public const string ProjectStructureNodeCommandExecute = "project_structure_node_command_execute";
+    public const string ProjectStructureNodeProcessDefinitionLink = "project_structure_node_process_definition_link";
+    public const string ProjectStructureNodeProcessStart = "project_structure_node_process_start";
+    public const string ProjectStructureNodeWorkflowAddOptions = "project_structure_node_workflow_add_options";
+    public const string ProjectStructureNodeWorkflowDefinitionCreate = "project_structure_node_workflow_definition_create";
+    public const string ProjectStructureNodeWorkflowStart = "project_structure_node_workflow_start";
+    public const string ProjectStructureNodeWorkflowStatusGet = "project_structure_node_workflow_status_get";
+    public const string ProjectStructureNodeDelete = "project_structure_node_delete";
     public const string ProjectStructureApprovalRequest = "project_structure_approval_request";
     public const string ProjectStructureAssetCreate = "project_structure_asset_create";
     public const string ProjectStructureAssetGet = "project_structure_asset_get";
+    public const string ProjectStructureAssetContentGet = "project_structure_asset_content_get";
     public const string ProjectStructureAssetCreateRevision = "project_structure_asset_create_revision";
+    public const string ProjectStructureLinkCreate = "project_structure_link_create";
+    public const string ProjectStructureLinkUnlink = "project_structure_link_unlink";
     public const string ProjectStructureImport = "project_structure_import";
     public const string ProjectStructureKnowledgeQuery = "project_structure_knowledge_query";
     public const string ProjectStructureAnalyticsQuery = "project_structure_analytics_query";
     public const string ProjectStructureProjectLeaseAcquire = "project_structure_project_lease_acquire";
     public const string ProjectStructureRepoBranchLeaseAcquire = "project_structure_repo_branch_lease_acquire";
     public const string ProjectStructureLeaseGet = "project_structure_lease_get";
+    public const string ProjectStructureLeaseRenew = "project_structure_lease_renew";
     public const string ProjectStructureLeaseRelease = "project_structure_lease_release";
 
     private static readonly string[] ProjectStructureReadToolNames =
@@ -1932,6 +1955,9 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureChecklist,
         ProjectStructureDependenciesQuery,
         ProjectStructureAssetGet,
+        ProjectStructureAssetContentGet,
+        ProjectStructureNodeWorkflowAddOptions,
+        ProjectStructureNodeWorkflowStatusGet,
         ProjectStructureKnowledgeQuery,
         ProjectStructureAnalyticsQuery,
         ProjectStructureLeaseGet
@@ -1947,15 +1973,35 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureDependencyUnlink,
         ProjectStructureNodeCreate,
         ProjectStructureNodeUpdate,
+        ProjectStructureNodeTypeUpdate,
+        ProjectStructureNodeMetadataUpdate,
+        ProjectStructureNodesStatusUpdate,
+        ProjectStructureNodeStatusUpdate,
+        ProjectStructureNodesProgressUpdate,
+        ProjectStructureNodeProgressUpdate,
+        ProjectStructureNodesMarkerUpdate,
+        ProjectStructureNodeMarkerUpdate,
+        ProjectStructureNodesPriorityUpdate,
+        ProjectStructureNodePriorityUpdate,
         ProjectStructureNodeMove,
         ProjectStructureNodeRecompose,
         ProjectStructureNodeReparent,
+        ProjectStructureNodeDescendantsToProjectMove,
+        ProjectStructureNodeCommandExecute,
+        ProjectStructureNodeProcessDefinitionLink,
+        ProjectStructureNodeProcessStart,
+        ProjectStructureNodeWorkflowDefinitionCreate,
+        ProjectStructureNodeWorkflowStart,
+        ProjectStructureNodeDelete,
         ProjectStructureApprovalRequest,
         ProjectStructureAssetCreate,
         ProjectStructureAssetCreateRevision,
+        ProjectStructureLinkCreate,
+        ProjectStructureLinkUnlink,
         ProjectStructureImport,
         ProjectStructureProjectLeaseAcquire,
         ProjectStructureRepoBranchLeaseAcquire,
+        ProjectStructureLeaseRenew,
         ProjectStructureLeaseRelease
     ];
 
