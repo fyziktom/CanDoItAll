@@ -347,6 +347,70 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task DeleteObjectAsync_hides_projected_process_run_branch_without_deleting_process_history()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processes = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench process run projection delete");
+        var definitionResult = await processes.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processes.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionResult.Value,
+            ProjectId = projectId,
+            RunName = "Projected process run to hide",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Projection hide validation"
+        });
+
+        Assert.True(runResult.IsSuccess);
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "projected-output.md",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected output folder proof.",
+            AllowedFutureUsageSummary = "Validate projected process run cleanup.",
+            ReviewSummary = "Process-run output should hide with the projected run branch.",
+            ManagedStoragePath = $"managed-files/processes/{runResult.Value:N}/projected-output.md"
+        })).IsSuccess);
+
+        var processRunNodeKey = BuildProcessRunNodeKey(runResult.Value);
+        var initialSurface = await workbench.GetStructureAsync(projectId);
+        var outputNode = Assert.Single(initialSurface.Nodes, node =>
+            string.Equals(node.ParentId, processRunNodeKey, StringComparison.Ordinal) &&
+            string.Equals(node.ArtifactKind, "process-run-output-folder", StringComparison.Ordinal));
+
+        var deletedCount = await workbench.DeleteObjectAsync(projectId, processRunNodeKey);
+        var surfaceAfterDelete = await workbench.GetStructureAsync(projectId);
+
+        Assert.Equal(2, deletedCount);
+        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => string.Equals(node.Id, processRunNodeKey, StringComparison.Ordinal));
+        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => string.Equals(node.Id, outputNode.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(surfaceAfterDelete.Links, link =>
+            string.Equals(link.SourceId, processRunNodeKey, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, processRunNodeKey, StringComparison.Ordinal) ||
+            string.Equals(link.SourceId, outputNode.Id, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, outputNode.Id, StringComparison.Ordinal));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.True(await dbContext.Set<ProcessRun>().AnyAsync(item => item.Id == runResult.Value));
+        var layout = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == processRunNodeKey);
+        Assert.True(layout.IsHidden);
+    }
+
+    [Fact]
     public void ProcessRunFolderProjectionPolicy_resolves_current_run_roots_and_ignores_noisy_paths()
     {
         var runId = Guid.Parse("11111111-2222-3333-4444-555555555555");
@@ -2719,7 +2783,8 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             dbContextFactory,
             clock,
             mutationCoordinator,
-            mutationProcessor);
+            mutationProcessor,
+            assemblyService);
         var relationService = new ProjectWorkbenchRelationService(
             dbContextFactory,
             clock,

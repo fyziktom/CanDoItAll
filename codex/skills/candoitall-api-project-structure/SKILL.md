@@ -40,6 +40,7 @@ When a process or agent asks for a direct project-structure tool and that tool i
 - Mermaid diagrams are `File` asset nodes with `objectSubtype` `mermaid`; put Mermaid source in notes or asset content.
 - Other generated files should also be `File` nodes with an appropriate subtype, not invented project block enum names.
 - Write approval blockers into the graph with `/approvals/request` instead of leaving them only in chat.
+- Deleting projected `process-run:*` nodes hides the process-run branch from that project structure; it does not delete the backing process history.
 - After mutations, query analytics and read back only the affected nodes or links.
 - Use `/nodes/{nodeId}/workflow/status` after starting node-linked workflows. Do not infer workflow completion from process or project node state alone.
 - Use `/assets/{nodeId}/content` when the actual file bytes matter; metadata alone is not content proof.

@@ -204,28 +204,40 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
             scope.ServiceProvider.GetRequiredService<ProjectsService>(),
             "Runtime provider project-structure delete");
         var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
-        var parentNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.ProcessRun,
-                "Process run branch",
-                "Cleanup candidate",
-                "Runtime provider delete proof.",
-                $"project:{projectId:D}",
-                420,
-                220,
-                ObjectSubtype: "process-run"));
-        var outputNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.File,
-                "process-run-output.md",
-                "Generated output",
-                "Nested process-run output.",
-                parentNode.Id,
-                700,
-                280,
-                ObjectSubtype: "process-run-output"));
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var definitionResult = await processesService.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionResult.Value,
+            ProjectId = projectId,
+            RunName = "Projected process run branch",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Runtime provider delete proof."
+        });
+
+        Assert.True(runResult.IsSuccess);
+        Assert.True((await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "process-run-output.md",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected process-run output folder proof.",
+            AllowedFutureUsageSummary = "Runtime provider delete validation.",
+            ReviewSummary = "Output folder should disappear with the projected process run branch.",
+            ManagedStoragePath = $"managed-files/processes/{runResult.Value:N}/process-run-output.md"
+        })).IsSuccess);
+
+        var processRunNodeKey = $"process-run:{runResult.Value:D}";
+        var surfaceBeforeDelete = await workbenchService.GetStructureAsync(projectId);
+        var outputNode = Assert.Single(surfaceBeforeDelete.Nodes, node =>
+            string.Equals(node.ParentId, processRunNodeKey, StringComparison.Ordinal) &&
+            string.Equals(node.ArtifactKind, "process-run-output-folder", StringComparison.Ordinal));
 
         var seed = SandboxWorkspaceSeedFactory.Create();
         var seededAgent = seed.Agents[0];
@@ -259,13 +271,13 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
             new AIFunctionArguments(new Dictionary<string, object?>
             {
                 ["projectId"] = projectId,
-                ["nodeId"] = parentNode.Id,
+                ["nodeId"] = processRunNodeKey,
                 ["request"] = new ProjectStructureNodeDeleteInput()
             })));
         var surfaceAfterDelete = await workbenchService.GetStructureAsync(projectId);
 
         Assert.Equal(2, deleted.Count);
-        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => node.Id == parentNode.Id);
+        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => node.Id == processRunNodeKey);
         Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => node.Id == outputNode.Id);
     }
 
@@ -554,6 +566,67 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
 
         Assert.True(result.IsSuccess, string.Join(" | ", result.Errors.Select(error => error.Message)));
         return result.Value;
+    }
+
+    private static ProcessDefinitionEditorModel BuildProcessDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var stepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Runtime provider projected process",
+            Summary = "Project a process run into the structure graph.",
+            ValueStatement = "Validate project-structure runtime tools against projected process nodes.",
+            CustomerName = "Runtime provider validation",
+            OwnerName = "Process architecture reviewer",
+            GovernancePolicySummary = "Projected process nodes remain process-runtime history.",
+            ChangeSummary = "Initial runtime provider projection test definition.",
+            ConstitutionRuleSummary = "The role contract remains stable while executors change.",
+            OperatingModeSummary = "Assisted execution routed through the project-scoped process workspace.",
+            SimulationReadinessSummary = "Safe for integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own the projected process flow.",
+                    StaffingIntent = "Assigned from the project manager lane.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Delivery owner role snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = stepId,
+                    Key = "intake",
+                    Title = "Capture integration intake",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Structure-side scope request.",
+                    OutputContractSummary = "Typed intake package.",
+                    EvidenceContractSummary = "Capture the intake context.",
+                    DecisionRightsSummary = "Delivery owner moves the request forward.",
+                    ExceptionPolicySummary = "Escalate missing scope or governance details.",
+                    TargetLeadHours = 2,
+                    CanvasX = 140,
+                    CanvasY = 140,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Delivery owner confirms the projected run."
+                        }
+                    ]
+                }
+            ]
+        };
     }
 
     private static ProjectStructureAgentException AssertProjectStructureException(Exception? exception)

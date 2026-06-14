@@ -9,7 +9,8 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     ProjectCrossModuleMutationCoordinator mutationCoordinator,
-    ProjectCrossModuleMutationProcessor mutationProcessor)
+    ProjectCrossModuleMutationProcessor mutationProcessor,
+    ProjectStructureAssemblyService projectStructureAssemblyService)
 {
     public async Task<int> DeleteObjectAsync(
         Guid projectId,
@@ -25,7 +26,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var root = records.FirstOrDefault(item => item.NodeKey == nodeKey && !item.IsSystemManaged);
         if (root is null)
         {
-            return 0;
+            return await HideProjectedProcessRunNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
         }
 
         var keysToDelete = CollectEditableDescendantKeys(records, root.NodeKey);
@@ -64,6 +65,69 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             "Deleting the subtree committed the Workbench change, but canonical assignment reconciliation failed.",
             cancellationToken);
         return recordsToDelete.Count;
+    }
+
+    private async Task<int> HideProjectedProcessRunNodeAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken)
+    {
+        if (!IsProjectedProcessRunDeleteCandidate(nodeKey))
+        {
+            return 0;
+        }
+
+        var snapshot = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
+        var root = snapshot.Nodes.FirstOrDefault(item =>
+            item.IsSystemManaged &&
+            string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal));
+        if (root is null || !IsProjectedProcessRunDeleteCandidate(root))
+        {
+            return 0;
+        }
+
+        var removedNodeKeys = CollectSystemManagedDescendantKeys(snapshot.Nodes, root.NodeKey);
+        var userLinksToDelete = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item =>
+                item.ProjectId == projectId &&
+                !item.IsSystemManaged &&
+                (removedNodeKeys.Contains(item.SourceNodeKey) || removedNodeKeys.Contains(item.TargetNodeKey)))
+            .ToListAsync(cancellationToken);
+        if (userLinksToDelete.Count > 0)
+        {
+            dbContext.RemoveRange(userLinksToDelete);
+        }
+
+        var layout = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .SingleOrDefaultAsync(
+                item => item.ProjectId == projectId && item.NodeKey == root.NodeKey,
+                cancellationToken);
+        var updatedAtUtc = clock.GetUtcNow();
+        if (layout is null)
+        {
+            await dbContext.Set<ProjectStructureProjectionLayoutRecord>().AddAsync(
+                new ProjectStructureProjectionLayoutRecord
+                {
+                    ProjectId = projectId,
+                    NodeKey = root.NodeKey,
+                    PositionX = root.PositionX,
+                    PositionY = root.PositionY,
+                    IsHidden = true,
+                    UpdatedAtUtc = updatedAtUtc
+                },
+                cancellationToken);
+        }
+        else
+        {
+            layout.PositionX = root.PositionX;
+            layout.PositionY = root.PositionY;
+            layout.IsHidden = true;
+            layout.UpdatedAtUtc = updatedAtUtc;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return removedNodeKeys.Count;
     }
 
     public async Task<ProjectStructureSubprojectTransferResult?> MoveDescendantsToProjectAsync(
@@ -315,6 +379,55 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         }
 
         return collectedKeys;
+    }
+
+    private static HashSet<string> CollectSystemManagedDescendantKeys(
+        IReadOnlyCollection<ProjectObjectRecord> records,
+        string rootNodeKey)
+    {
+        var childrenByParent = records
+            .Where(item => item.IsSystemManaged && !string.IsNullOrWhiteSpace(item.ParentNodeKey))
+            .GroupBy(item => item.ParentNodeKey!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+        var collectedKeys = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>();
+        queue.Enqueue(rootNodeKey);
+
+        while (queue.Count > 0)
+        {
+            var currentNodeKey = queue.Dequeue();
+            if (!collectedKeys.Add(currentNodeKey))
+            {
+                continue;
+            }
+
+            if (!childrenByParent.TryGetValue(currentNodeKey, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                queue.Enqueue(child.NodeKey);
+            }
+        }
+
+        return collectedKeys;
+    }
+
+    private static bool IsProjectedProcessRunDeleteCandidate(string nodeKey)
+    {
+        return ProjectStructureProcessNodeKeys.TryParseProcessRunNodeKey(nodeKey, out _) ||
+               ProjectStructureProcessNodeKeys.TryParseProcessRunOutputNodeKey(nodeKey, out _);
+    }
+
+    private static bool IsProjectedProcessRunDeleteCandidate(ProjectObjectRecord node)
+    {
+        return node.IsSystemManaged &&
+               (node.ObjectType == ProjectObjectType.ProcessRun ||
+                string.Equals(node.Binding.ExternalArtifactKind, "process-run", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(node.Binding.ExternalArtifactKind, "process-run-output-folder", StringComparison.OrdinalIgnoreCase) ||
+                ProjectStructureProcessNodeKeys.TryParseProcessRunOutputNodeKey(node.NodeKey, out _));
     }
 
     private static (HashSet<string> MovedNodeKeys, HashSet<string> MovedRootKeys) CollectEditableMoveKeys(

@@ -4,6 +4,7 @@ internal static class ProjectStructureProcessNodeKeys
 {
     public const string ProcessDefinitionPrefix = "process-definition:";
     public const string ProcessRunPrefix = "process-run:";
+    public const string ProcessRunOutputPrefix = "process-run-output:";
 
     public static string BuildProcessDefinitionNodeKey(Guid definitionId)
     {
@@ -18,6 +19,27 @@ internal static class ProjectStructureProcessNodeKeys
     public static bool TryParseProcessDefinitionNodeKey(string nodeKey, out Guid definitionId)
     {
         return TryParsePrefixedGuidNodeKey(nodeKey, ProcessDefinitionPrefix, out definitionId);
+    }
+
+    public static bool TryParseProcessRunNodeKey(string nodeKey, out Guid runId)
+    {
+        return TryParsePrefixedGuidNodeKey(nodeKey, ProcessRunPrefix, out runId);
+    }
+
+    public static bool TryParseProcessRunOutputNodeKey(string nodeKey, out Guid runId)
+    {
+        runId = Guid.Empty;
+        if (!nodeKey.StartsWith(ProcessRunOutputPrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var remaining = nodeKey[ProcessRunOutputPrefix.Length..];
+        var separatorIndex = remaining.IndexOf(':', StringComparison.Ordinal);
+        var runIdText = separatorIndex < 0
+            ? remaining
+            : remaining[..separatorIndex];
+        return Guid.TryParse(runIdText, out runId);
     }
 
     private static bool TryParsePrefixedGuidNodeKey(string nodeKey, string prefix, out Guid value)

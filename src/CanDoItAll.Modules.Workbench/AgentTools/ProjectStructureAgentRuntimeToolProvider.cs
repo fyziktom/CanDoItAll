@@ -248,7 +248,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeDeleteInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeDeleteAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_delete",
-                    "Deletes a project-structure node and its editable descendants. This is destructive: read the branch first, acquire or pass a lease when coordinating with other agents, and use only when the requested cleanup is explicit."),
+                    "Deletes a project-structure node and its editable descendants. For projected process-run branches, this hides the projection from the current project structure without deleting process history. This is destructive for editable nodes: read the branch first, acquire or pass a lease when coordinating with other agents, and use only when the requested cleanup is explicit."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_approval_request",
