@@ -4,7 +4,7 @@
 
 This review applies the `analyzing-dotnet-performance` skill to the new Process architecture bundle. The current task is architecture-only, so the scan uses the current Process implementation as risk evidence and then translates the findings into rewrite guardrails.
 
-The result is not a request to optimize the old module. The old module remains reference material. The result is a set of required performance constraints for the new Process runtime, dispatcher, manager, projections, templates, drivers, adapters, and UI implementation subbundles.
+The result is not a request to optimize the old module. The old module remains reference material. The result is a set of required performance constraints for the new Process runtime, dispatcher, manager, projections, templates, drivers, adapters, candidate readiness evaluation, and UI implementation subbundles.
 
 ## Scan Scope
 
@@ -37,6 +37,7 @@ The new implementation must treat these as performance-sensitive paths:
 - subprocess parent/child message routing,
 - template migration over many templates,
 - Git status/diff operations over configuration trees,
+- role candidate readiness evaluation over HR, agent, workflow, provider, rights, tool, project-assignment, and approval evidence,
 - UI projection queries for definition lists, runs, activity, live dashboards, and canvases,
 - external adapter calls to agents, workflows, browser proof, file systems, and HTTP services.
 
@@ -155,12 +156,21 @@ The new implementation must treat these as performance-sensitive paths:
 
 **Architecture fix:** Future implementation classes in runtime, dispatcher, manager, persistence, projectors, adapters, and UI presenters should be sealed by default. Keep interfaces for real boundaries and tests, not for trivial single-implementation abstractions.
 
+#### PERF-011. Candidate readiness evaluation must use shared evidence snapshots
+
+**Impact:** Launch planning can evaluate many candidates for many roles. If every candidate triggers separate HR, agent, workflow, provider-profile, rights, project-assignment, and tool-availability lookups, the launch screen will become slow and unreliable before runtime even starts.
+
+**Evidence:** Current launch planning already combines candidate discovery, HR scoring, provisioning hints, team membership, direct messaging permission, workflow selection, and gap candidates. The new readiness architecture adds more explicit evidence, so batching is required.
+
+**Architecture fix:** Compile `RoleExecutionRequirementSet` once per launch role, load shared evidence snapshots by candidate kind and project scope, then evaluate candidates against typed in-memory evidence. Reassessment after provisioning should reload only affected evidence and must not recompute unrelated candidates.
+
 ## Architecture Adjustments Required
 
 - Add a dedicated performance guardrail architecture file for runtime, dispatcher, persistence, projectors, templates, drivers, adapters, and UI.
 - Add performance scan and review gates to future implementation and QA prompts.
 - Add a hardening gate requiring exact scan counts, not estimates.
 - Add stop conditions for sync-over-async, unbounded queues, uncached serializer options, per-call clients, UI load-all queries, and old dispatcher fallback.
+- Add candidate readiness performance rules requiring batched evidence snapshots and no repeated per-candidate provider calls where shared evidence is available.
 - Require each future subbundle touching hot-path C# code to report performance scan counts and any accepted tradeoffs.
 
 ## Disclaimer

@@ -42,7 +42,7 @@ Each subbundle contains:
 - SB09-SB11 cover manager/branch/subprocess/projections/adapters before migration and UI.
 - SB12 makes template and runtime history compatibility explicit before UI work.
 - SB13-SB20 split definition-authoring UI into smaller browser-verifiable packages.
-- SB21-SB27 split launch, runtime, operator, evidence, live/history, project, and API/tool compatibility into smaller packages.
+- SB21-SB27 split launch, candidate readiness, runtime, operator, evidence, live/history, project, and API/tool compatibility into smaller packages.
 - SB28 requires full user-story regression and final hardening.
 - C# hot-path subbundles must apply the .NET performance antipattern checklist and record exact scan counts.
 
@@ -54,3 +54,4 @@ Each subbundle contains:
 - Future agents must not execute downstream work when stop-and-report conditions are triggered.
 - Future agents must include a story coverage table for every owned US-### story.
 - Future agents must include a performance scan block when they create or modify runtime, dispatcher, manager, projection, template, Git, adapter, persistence, or UI service hot paths.
+- SB21 must prove role candidate readiness with typed missing tool/right findings, blocked launch states, provisioning reassessment, redaction, and Playwright evidence.

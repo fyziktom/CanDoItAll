@@ -27,16 +27,17 @@ Prepare the architecture foundation and future implementation roadmap for a grou
 - Manager behavior runs through a control loop and cannot become a hidden dispatcher.
 - Execution integrations for workflows, agents, agent groups, handoffs, scheduler starts, and project/workbench integrations are adapters/strategies, not core concepts.
 - Runtime history compatibility must be proven through migration/archive/read-only projection decisions; old runtime code is not kept alive only for history.
-- Current Process user stories US-001 through US-055 are explicit coverage requirements for future implementation and final regression.
+- Current Process user stories US-001 through US-056 are explicit coverage requirements for future implementation and final regression.
 - Browser-facing story proof must be captured in the owning UI subbundle with Playwright MCP evidence and screenshots, not deferred to final closure.
 - Runtime, dispatcher, manager, projection, template, Git, adapter, and UI implementation must follow explicit .NET performance guardrails: async end-to-end, bounded queues, source-generated JSON, cached serializers, bounded UI queries, and no allocation-heavy hot paths without proof.
+- Process launch candidate selection must not be score-only. HR recommendations are advisory; deterministic readiness assessment must expose missing required tools, rights, capabilities, approvals, bindings, and provisioning blockers.
 
 ## Bundle Map
 
 - [inputs/](inputs/) captures the preserved request, improvement instructions, and structured input extraction.
-- [analysis/](analysis/) describes the current Process implementation, why it is insufficient, the current user-story map, and .NET performance risk signals.
+- [analysis/](analysis/) describes the current Process implementation, why it is insufficient, the current user-story map, .NET performance risk signals, and current role-candidate readiness gaps.
 - [requirements/](requirements/) normalizes every architectural requirement into stable IDs.
-- [architecture/](architecture/) contains the target architecture, state models, builders, drivers, manager, artifacts, monitoring, template/Git model, governance, persistence/event stores, branch contracts, adapters, UI projection inventory, runtime history compatibility, user-story coverage model, and .NET performance guardrails.
+- [architecture/](architecture/) contains the target architecture, state models, builders, drivers, manager, artifacts, monitoring, template/Git model, governance, persistence/event stores, branch contracts, adapters, UI projection inventory, runtime history compatibility, user-story coverage model, .NET performance guardrails, and role-candidate readiness model.
 - [inventories/](inventories/) lists current reusable and non-reusable repo surfaces.
 - [plan/](plan/) defines the phased rewrite plan, hardening gates, project order, and future subbundle roadmap.
 - [subbundles/](subbundles/) contains SB01-SB28 future implementation packages. They are prepared, not executed.
@@ -76,4 +77,5 @@ The bundle intentionally does not run product tests because no product behavior 
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.
 - v2/v3 architecture gaps were converted into new architecture files, roadmap updates, real future subbundles, story traceability, validation checks, and reviews.
 - The performance guardrail review was added using the `analyzing-dotnet-performance` skill against current Process code signals and translated into architecture constraints for future implementation.
+- Role candidate readiness was expanded so launch planning can show missing tools/rights and block launch execution until required readiness blockers are resolved or explicitly overridden by policy.
 - Product tests were not run because this task changes documentation and `.gitignore` only.

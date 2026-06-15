@@ -119,6 +119,7 @@ Live UI evidence captured from `http://localhost:5032/`:
 | US-053 | As a process manager, I can recover/resupply missing artifacts from completed or earlier steps without discarding completed step results. | Artifact status/projection/recovery tests; recovery option contract tests. | Artifact ledger, recovery policy, manager incident lifecycle. | SB08, SB09, SB24, SB25 |
 | US-054 | As a process manager, I can detect dispatcher/outbox failures, dead letters, stale leases, and retry/recovery states. | Outbox, automation dispatch, observation cache tests. | Durable outbox, claims, leases, dead-letter projection, manager incident routing. | SB07, SB08, SB24 |
 | US-055 | As a governance owner, I can enforce allowed operations, access summaries, sensitive data handling, and unauthorized mutation checks. | Operation contract tests, access summary methods, security/governance architecture. | Policy engine, restricted diagnostics, Git unauthorized mutation audit. | SB10, SB11, SB20, SB28 |
+| US-056 | As a launch planner, I can compare role candidates by both suitability score and deterministic readiness, including missing required tools, rights, capabilities, approvals, bindings, provisioning tasks, execution blockers, and user-safe resolution guidance. | `ProcessesService.Launch.CandidateDiscovery.cs`, `ProcessesService.Launch.Staffing.cs`, `ProcessWorkspaceRunsLaunchSection.razor`, `ProcessLaunchPlanningIntegrationTests.cs`; current gap recorded in `analysis/08-current-role-candidate-selection-gap.md`. | Role execution requirement set, candidate suitability score breakdown, candidate readiness assessment, typed readiness findings, provisioning/approval task planning, launch UI readiness projection. | SB21, SB24, SB27, SB28 |
 
 ## Current Template Capability Map
 
@@ -155,4 +156,4 @@ The current template manifest contains a broad process catalog that the rewrite 
 
 ## Mandatory Coverage Rule
 
-Every future implementation subbundle must name the user stories it owns, the stories it intentionally does not own, the story proof it adds, and the downstream story risks it creates. Final closure cannot pass until every US-001 through US-055 row is covered by source proof, test proof, and browser proof where browser-facing.
+Every future implementation subbundle must name the user stories it owns, the stories it intentionally does not own, the story proof it adds, and the downstream story risks it creates. Final closure cannot pass until every US-001 through US-056 row is covered by source proof, test proof, and browser proof where browser-facing.

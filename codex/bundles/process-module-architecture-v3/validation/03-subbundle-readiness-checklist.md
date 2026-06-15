@@ -20,6 +20,7 @@
 | Every README has do-not-do rules. | Pass |
 | Every README has acceptance checklist. | Pass |
 | Every README has handoff notes. | Pass |
+| SB21 owns role candidate readiness, missing tool/right blocker proof, provisioning reassessment, and launch UI evidence. | Pass |
 
 ## Readiness Judgment
 
@@ -37,3 +38,4 @@ The previous broad UI subbundle has been decomposed. Browser-facing Process work
 - Every future execution report must update user-story coverage for the story IDs it owns.
 - Browser-facing story proof must be captured in the owning UI subbundle and repeated selectively in final regression.
 - C# hot-path implementation proof must include exact performance scan counts from `validation/05-dotnet-performance-antipattern-checklist.md`.
+- Role candidate readiness proof must keep HR score separate from deterministic missing tool/right/capability findings.

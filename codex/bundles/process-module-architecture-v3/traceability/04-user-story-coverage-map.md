@@ -16,6 +16,7 @@ This file maps current implementation user stories to target architecture and fu
 | US-020, US-050 to US-051 | Agent context and process agent tool facade | Workspace agent panel, `ProcessAgentRuntimeToolProvider`, agent tool tests | `architecture/16-execution-adapters-and-integration-boundaries.md` | SB13, SB27 | Tool contract tests, API compatibility tests, UI smoke for agent panel. |
 | US-021 to US-025 | Template library, selective import, exchange, generated projections, Git UI | `ProcessTemplateLibraryDialog.razor`, template tests, manifest/seed catalogs | `architecture/09-template-git-versioning-and-migrations.md` | SB04, SB12, SB19, SB20 | Migration tests, template import tests, Git diff/conflict component tests, Playwright template proof. |
 | US-026 to US-029 | Launch planning, candidate matching, approval, provisioning, execute ready launch | `ProcessWorkspaceRunsLaunchSection.razor`, launch integration/E2E tests | `architecture/04-builder-and-instance-composition.md`, `architecture/14-manager-runtime-and-control-loop.md` | SB06, SB21 | Launch plan integration tests, approval/provisioning tests, Playwright launch proof. |
+| US-056 | Role candidate suitability and readiness, including missing tools/rights/capabilities and blockers | `ProcessesService.Launch.CandidateDiscovery.cs`, `ProcessesService.Launch.Staffing.cs`, `ProcessWorkspaceRunsLaunchSection.razor`, `analysis/08-current-role-candidate-selection-gap.md` | `architecture/20-role-candidate-selection-and-readiness.md` | SB21, SB24, SB27, SB28 | Candidate readiness evaluator tests, missing tool/right negative tests, provisioning/approval tests, Playwright candidate matrix proof. |
 | US-030 to US-035, US-054 | Run history, selected run details, active execution, runtime canvas, telemetry, outbox/dead letters | `ProcessWorkspaceRuns*`, runtime read/query/outbox tests | `architecture/05-runtime-dispatcher-and-state-machines.md`, `architecture/12-runtime-persistence-event-store-and-outbox.md` | SB07, SB08, SB22, SB23, SB24 | Runtime state tests, projection tests, Playwright run and runtime canvas proof. |
 | US-036 to US-039, US-048 | Operator control center, escalations, approvals, manager directives, rework, live incident actions | Operator console component, live escalation action tests | `architecture/14-manager-runtime-and-control-loop.md` | SB09, SB24, SB26 | Manager incident tests, operator command tests, Playwright operator/live incident proof. |
 | US-041 to US-043 | Assignment resolution, direct role messaging, manager chat | Assignment/messaging sections, direct messaging tests | `architecture/06-driver-strategy-and-manager-model.md`, `architecture/14-manager-runtime-and-control-loop.md` | SB25 | Assignment tests, messaging authorization tests, Playwright evidence/messaging proof. |
@@ -48,14 +49,14 @@ This file maps current implementation user stories to target architecture and fu
 | SB18 | US-011 to US-017 step editor/contracts/routing/artifacts/subprocess mapping. |
 | SB19 | US-021 to US-023 template library browser/preview/selective import. |
 | SB20 | US-024 to US-025 exchange/import-export/Git conflict UI. |
-| SB21 | US-026 to US-029 launch planning/candidates/approval/provisioning. |
+| SB21 | US-026 to US-029 and US-056 launch planning/candidates/readiness/approval/provisioning. |
 | SB22 | US-030 to US-032 run history/activity/selected-run controls. |
 | SB23 | US-033 to US-035 runtime execution canvas/telemetry/subprocess run actions. |
 | SB24 | US-036 to US-039, US-048 operator control/escalation/approval/rework/directives. |
 | SB25 | US-040 to US-043 evidence/assignments/direct messaging/manager chat. |
 | SB26 | US-044 to US-047 analytics/graphs/live dashboard/time filtering. |
 | SB27 | US-002, US-049 to US-051 project-scoped process and tool/API compatibility. |
-| SB28 | Full US-001 to US-055 regression and final coverage proof. |
+| SB28 | Full US-001 to US-056 regression and final coverage proof. |
 
 ## Handoff Rule
 
@@ -64,4 +65,4 @@ Each implementation subbundle report must include a story coverage table with co
 | Story ID | Implemented source | Test proof | Browser proof | Delta from current UX | Remaining risk |
 | --- | --- | --- | --- | --- | --- |
 
-Final closure must include the complete table for US-001 through US-055.
+Final closure must include the complete table for US-001 through US-056.

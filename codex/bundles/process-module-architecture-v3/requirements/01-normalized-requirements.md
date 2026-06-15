@@ -129,3 +129,7 @@ REQ-052: Split broad future implementation work, especially UI/UX reconnection a
 ## .NET Performance Guardrails
 
 REQ-053: Apply explicit .NET performance guardrails to runtime, dispatcher, manager, persistence, projections, templates, Git, drivers, adapters, and UI services so the rewrite does not introduce sync-over-async, unbounded queues, allocation-heavy hot paths, uncached serialization, per-call clients, load-all UI queries, or other common Process-scale antipatterns.
+
+## Role Candidate Readiness
+
+REQ-054: Improve process launch role candidate selection so HR scoring is advisory and every candidate receives a deterministic readiness assessment that identifies missing required tools, rights, permissions, approvals, provider/workflow bindings, project/resource access, provisioning actions, and execution blockers.

@@ -16,5 +16,6 @@ Prioritize:
 - event/projection time-window mistakes,
 - UI reads of runtime internals.
 - .NET performance antipatterns in hot paths: sync-over-async, unbounded queues, allocation-heavy LINQ/projectors, uncached JSON options, per-call clients, sync file I/O, load-all UI queries, and unsealed leaf implementation classes where sealing is appropriate.
+- role candidate readiness gaps: score-only HR selection, missing required tools/rights hidden in text summaries, launch execution allowed with unresolved blockers, provisioning completion accepted without reassessment, or sensitive right details exposed in UI.
 
 Require proof from tests, search output, architecture dependency checks, performance scan counts from `validation/05-dotnet-performance-antipattern-checklist.md`, and targeted negative cases. Build success alone is not enough.

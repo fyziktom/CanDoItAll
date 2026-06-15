@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Future Process implementation agents must use this checklist when a subbundle creates or modifies C#/.NET code in runtime, dispatcher, manager, persistence, projections, templates, Git wrapper, drivers, adapters, or UI services.
+Future Process implementation agents must use this checklist when a subbundle creates or modifies C#/.NET code in runtime, dispatcher, manager, persistence, projections, templates, Git wrapper, drivers, adapters, candidate readiness evaluation, or UI services.
 
 This checklist is based on `analysis/07-dotnet-performance-antipattern-review.md` and `architecture/19-dotnet-performance-guardrails.md`.
 
@@ -66,7 +66,7 @@ Performance scan:
 | SB11 | Adapters can create clients per call or buffer large responses. | `IHttpClientFactory`/typed client proof, streaming/cancellation proof. |
 | SB12 | Template migration can load everything into memory. | Bounded batch migration proof, source-generated JSON proof, checkpoint/resume proof. |
 | SB13-SB20 | UI authoring and template screens can load full catalogs or compute projection truth in components. | Paging/filtering proof, component dependency scan, Playwright proof with bounded data. |
-| SB21-SB25 | Launch/runtime/operator/evidence screens can recompute run truth or artifact state in UI. | Projection-only proof, no UI runtime query proof, cancellation-aware refresh. |
+| SB21-SB25 | Launch/runtime/operator/evidence screens can recompute run truth or artifact state in UI; candidate readiness can fan out into repeated directory, tool-provider, rights, workflow, provider-profile, and assignment lookups. | Projection-only proof, no UI runtime query proof, cancellation-aware refresh, shared evidence loading, and no per-candidate external/provider calls when evidence can be batched. |
 | SB26 | Live dashboard can mix windows or reload all history. | Live 1h/1d/7d/30d query-boundary tests and snapshot cache proof. |
 | SB27 | Agent/API/project integration can bypass shared contracts or create per-call clients. | Tool/API contract tests and adapter performance scan. |
 | SB28 | Final closure can miss systematic hot-path patterns. | Complete performance scan summary across all new Process projects. |
@@ -82,4 +82,5 @@ Stop and report before handoff if any of the following is found in new productio
 - template migration loading all templates into a single in-memory graph,
 - live/history UI loading all historical events and filtering in the browser,
 - generic core/runtime branch routing based on regex/free-text token parsing,
+- candidate readiness evaluation performing repeated per-candidate external/provider calls where shared evidence can be loaded once,
 - hot-path LINQ/collection allocations with no bounded data guarantee and no mitigation.

@@ -45,6 +45,7 @@
 | User-story architecture coverage model exists. | Pass | `architecture/18-user-story-coverage-model.md` |
 | User-story traceability and validation exist. | Pass | `traceability/04-user-story-coverage-map.md`, `validation/04-user-story-coverage-validation.md` |
 | .NET performance guardrails exist. | Pass | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md` |
+| Role candidate readiness architecture exists. | Pass | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md` |
 
 ## Anti-Vagueness Review
 

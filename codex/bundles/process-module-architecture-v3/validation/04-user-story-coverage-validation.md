@@ -17,7 +17,7 @@ This validation plan defines how future agents prove that the rewritten Process 
 
 ## Browser-Facing Story Proof
 
-Browser-facing stories include US-001 through US-049. A future subbundle that owns any of these stories must record:
+Browser-facing stories include US-001 through US-049 and US-056. A future subbundle that owns any of these stories must record:
 
 - Route under test.
 - Project/global scope used.
@@ -33,7 +33,7 @@ Browser proof cannot be postponed to SB28 unless the story is only a final cross
 
 ## Non-Browser Story Proof
 
-Stories US-050 through US-055 require API/tool/security proof even when they also have UI effects:
+Stories US-050 through US-056 require API/tool/security/readiness proof even when they also have UI effects:
 
 | Story | Required proof |
 | --- | --- |
@@ -43,6 +43,7 @@ Stories US-050 through US-055 require API/tool/security proof even when they als
 | US-053 | Missing artifact recovery/resupply strategy tests and artifact ledger provenance tests. |
 | US-054 | Dispatcher claim, outbox retry, stale lease, dead-letter, projection offset, and recovery tests. |
 | US-055 | Policy, access summary, redaction, and Git unauthorized mutation audit tests. |
+| US-056 | Role execution requirement compiler tests, candidate suitability scoring tests, deterministic readiness evaluator tests, missing tool/right blocker tests, provisioning reassessment tests, redaction tests, and launch UI projection proof. |
 
 ## Required Negative Tests
 
@@ -58,6 +59,9 @@ Future implementation must include negative tests for:
 - Markdown or Mermaid projection is treated as canonical source.
 - Manager exposes raw sensitive diagnostics directly to the UI.
 - Agent modifies unauthorized files and the Git audit does not detect it.
+- High-scoring HR candidate with missing required tool or missing required right is marked executable.
+- Missing tool/right readiness is hidden only in recommendation summary text instead of typed findings.
+- Provisioning task completion clears a readiness blocker without a fresh reassessment.
 
 ## Story Coverage Report Format
 
@@ -79,7 +83,7 @@ Allowed coverage decisions:
 
 SB28 must prove:
 
-- All US-001 through US-055 stories have final coverage decisions.
+- All US-001 through US-056 stories have final coverage decisions.
 - All browser-facing stories have screenshot proof from their owning subbundle or SB28 regression proof.
 - All non-browser stories have source and automated test proof.
 - All replacement/improvement decisions are documented and traceable.

@@ -57,6 +57,7 @@
 | REQ-051 | Maintain a current-implementation user-story map. | Improve v3 bundle with user stories from actual Process implementation and UI/UX. | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md` | G01, G28 | AC-039; user-story coverage validation. |
 | REQ-052 | Split complex future work into smaller story-owned subbundles with localized validation. | UI reconnection/rebuild is too complex for one subbundle and needs Playwright/screenshots per part. | `plan/01-phase-plan.md`, `plan/04-future-subbundle-roadmap.md`, `traceability/04-user-story-coverage-map.md` | G13 to G28 | AC-038, AC-040; subbundle and browser proof validation. |
 | REQ-053 | Apply .NET performance guardrails to hot paths. | Use analyzing-dotnet-performance skill to review v3 architecture for antipatterns and add Codex implementation notes. | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md` | Gate J, G28 | AC-041; exact performance scan counts and stop conditions. |
+| REQ-054 | Add deterministic role candidate readiness assessment with missing tool/right reporting. | Candidate scoring by HR agent must be improved to judge and inform about missing tools or rights necessary for a role. | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md` | G21, G28 | AC-042; SB21 candidate readiness proof. |
 
 ## Coverage Notes
 
@@ -82,3 +83,4 @@
 | Current user-story map required | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md`, `traceability/04-user-story-coverage-map.md` | AC-039 |
 | Browser proof must be localized | `validation/04-user-story-coverage-validation.md`, SB13-SB27 README files | AC-040 |
 | .NET performance antipattern guardrails required | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md`, `plan/05-review-checkpoints-and-hardening-gates.md` Gate J | AC-041 |
+| Role candidate readiness required | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, `subbundles/21-launch-planning-candidate-matching-approval-provisioning-and-execution/README.md` | AC-042 |

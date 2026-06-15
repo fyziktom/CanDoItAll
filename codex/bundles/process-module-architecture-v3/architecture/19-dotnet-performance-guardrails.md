@@ -13,6 +13,7 @@ This file complements, but does not replace:
 - `architecture/14-manager-runtime-and-control-loop.md`
 - `architecture/15-ui-ux-projection-contracts-and-reuse-plan.md`
 - `architecture/16-execution-adapters-and-integration-boundaries.md`
+- `architecture/20-role-candidate-selection-and-readiness.md`
 
 ## Hot Path Classification
 
@@ -27,6 +28,7 @@ This file complements, but does not replace:
 | Artifact ledger lookup | Indexed queries, typed references, `TryGetValue` patterns in memory, no repeated scans of all artifacts. |
 | Branch route evaluation | Typed route tables and precompiled lookup maps, no regex/string-token routing in hot path. |
 | Manager recovery loop | Bounded attempts, bounded concurrency, idempotent commands, no recursive unbounded retries. |
+| Candidate readiness evaluation | Compile requirements once per launch role, load shared evidence snapshots in batches, evaluate candidates in memory against typed evidence, no per-candidate provider fan-out when shared evidence can be queried once. |
 | Template migration | Batched async I/O, cached serializers, source-generated contexts, checkpoint/resume. |
 | Git wrapper | Async process/file I/O, bounded diff/status operations, cancellation, no full tree scans per UI refresh. |
 | UI projection queries | Server-side filtering/paging/windowing, cancellation, no load-all then client filter. |
@@ -76,6 +78,15 @@ This file complements, but does not replace:
 - Do not allocate `new JsonSerializerOptions(...)` per call. Options are static cached values or generated context options.
 - Template migration must stream or batch large reads and writes. It must not load all process/template/configuration files into one object graph.
 - Event replay and projection rebuild must process events in batches with checkpointed offsets.
+
+## Candidate Readiness Performance Rules
+
+- `RoleExecutionRequirementSet` is compiled once per launch role and reused for all candidates until the launch plan or role requirements change.
+- Candidate readiness uses an `EvidenceSnapshotHash` so repeated UI refreshes do not refetch unchanged HR, agent, workflow, provider, rights, project assignment, and tool availability evidence.
+- Candidate discovery may fan out to multiple registries, but readiness evaluation must batch shared evidence by candidate kind, project scope, provider, workflow catalog, and rights source where possible.
+- Readiness findings are built from typed requirement/evidence comparisons, not repeated text parsing of HR summaries.
+- Reassessment after provisioning loads a fresh evidence snapshot for affected candidates and requirements only.
+- Launch projections store the assessment summary needed by the UI so components do not recompute readiness from raw evidence.
 
 ## I/O And External Adapter Rules
 
@@ -139,6 +150,7 @@ Future implementation must stop and report if:
 - a UI story requires loading all history/events/runs/artifacts into the browser,
 - template migration cannot run in bounded batches,
 - a branch route requires free-text regex/string token routing in generic core/runtime,
+- candidate readiness requires repeated per-candidate external/provider calls where shared evidence can be loaded once,
 - serialization requires per-call `JsonSerializerOptions`,
 - an external adapter requires per-call `HttpClient`,
 - performance scan counts reveal broad hot-path LINQ or collection allocation and no mitigation is planned.

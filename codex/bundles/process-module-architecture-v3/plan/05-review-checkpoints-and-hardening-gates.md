@@ -108,3 +108,16 @@ Every future implementation subbundle must end with an execution report includin
 - UI projection queries are paged/windowed/server-filtered; Blazor components do not load all history/events/runs/artifacts and filter locally.
 - Leaf implementation classes are sealed unless subclassing is required.
 - Every subbundle that touches C# hot-path code records exact performance scan counts from `validation/05-dotnet-performance-antipattern-checklist.md`.
+
+## Gate K Role Candidate Readiness Review
+
+- HR candidate score is advisory and cannot mark a candidate executable.
+- Role execution requirements are compiled from roles, steps, operation contracts, artifacts, selected operating mode, driver descriptors, project scope, and manager policy.
+- Candidate readiness is stored as a deterministic assessment with requirement set hash, evidence snapshot hash, suitability score breakdown, readiness status, and typed findings.
+- Missing required tools, rights, capabilities, provider/workflow bindings, project/resource access, approvals, or direct messaging permissions are represented as typed findings.
+- Missing required tools and missing required rights block launch approval/execution by default.
+- Provisioning and approval tasks are linked to specific findings.
+- Provisioning completion triggers reassessment and does not clear blockers by task status alone.
+- Launch UI projections show score and readiness separately.
+- Sensitive right/tool evidence is redacted behind restricted evidence links.
+- Runtime assignments include readiness assessment hash, requirement set hash, evidence snapshot hash, unresolved warnings, and approved override references.

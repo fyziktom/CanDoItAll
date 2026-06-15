@@ -67,6 +67,7 @@ The final subbundle repeats critical journeys as regression proof, but it must n
 | Artifact authoring and evidence | US-017, US-040, US-053 | `ArtifactSlot`, `ArtifactExpectation`, `ArtifactInstance`, `ArtifactLedgerEntry`, `ArtifactValidationStatus`, `ArtifactRecoveryRequest`. |
 | Template/Git/Exchange | US-021 to US-025, US-051 | `TemplateCatalogProjection`, `TemplateComponentReference`, `TemplateOverrideRecord`, `TemplateConflictRecord`, `GitChangeProjection`, `ProcessExchangeEnvelope`. |
 | Launch and staffing | US-026 to US-029, US-041 | `LaunchPlan`, `RoleDemand`, `CandidateMatch`, `ProvisioningRequest`, `ApprovalRecord`, `AssignmentResolution`. |
+| Candidate readiness | US-056 | `RoleExecutionRequirementSet`, `CandidateReadinessAssessment`, `CandidateReadinessFinding`, `CandidateSuitabilityScoreBreakdown`, `CandidateProvisioningTask`, `CandidateApprovalTask`. |
 | Runtime and run history | US-030 to US-035, US-054 | `RunHistoryProjection`, `RunDetailProjection`, `StepRunProjection`, `RuntimeCanvasProjection`, `DispatcherClaim`, `OutboxMessage`, `DeadLetterRecord`. |
 | Operator and manager | US-036 to US-039, US-043, US-048 | `ManagerIncident`, `EscalationRecord`, `RecoveryAdvice`, `ManagerDirective`, `ReworkRequest`, `ApprovalDecision`, `ManagerMessageProjection`. |
 | Messaging and collaboration | US-042, US-052 | `RoleMessage`, `CollaborationThreadLink`, `ParentChildManagerMessage`, subprocess run hierarchy projection. |
@@ -88,7 +89,7 @@ The implementation may remove a story only with explicit user approval recorded 
 
 The final rewrite cannot close until:
 
-- every US-001 through US-055 story has an implementation owner,
+- every US-001 through US-056 story has an implementation owner,
 - every browser-facing story has Playwright proof,
 - every non-browser story has source and automated test proof,
 - every replacement/improvement decision is documented,

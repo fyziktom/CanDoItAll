@@ -80,3 +80,4 @@
 | AC-039 | A current-implementation user-story map exists and maps current UI/UX, templates, tests, and tool/API behavior to target architecture surfaces and future subbundle owners. |
 | AC-040 | Browser-facing user stories require Playwright MCP proof and screenshots in the owning UI subbundle, not only in final E2E closure. |
 | AC-041 | .NET performance guardrails define hot paths, forbidden antipatterns, required scan counts, stop conditions, and subbundle-specific validation for runtime, dispatcher, manager, persistence, projections, templates, Git, adapters, and UI services. |
+| AC-042 | Role candidate selection separates suitability score from deterministic readiness, records missing tools/rights/capabilities as typed findings, blocks launch approval/execution when required blockers remain, and exposes user-safe readiness details in launch UI projections. |

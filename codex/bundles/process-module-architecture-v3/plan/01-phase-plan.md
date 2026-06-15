@@ -26,7 +26,7 @@ flowchart TD
     SB18["SB18 Step Editor, Operation Contracts, Routing, Artifacts, And Subprocess Mapping"]
     SB19["SB19 Template Library Browser, Preview, And Selective Import"]
     SB20["SB20 Exchange, Import/Export, Git Status, Diff, Merge, And Conflict UI"]
-    SB21["SB21 Launch Planning, Candidate Matching, Approval, Provisioning, And Execution"]
+    SB21["SB21 Launch Planning, Candidate Readiness, Approval, Provisioning, And Execution"]
     SB22["SB22 Run History, Activity, Selected Run Details, And Basic Run Controls"]
     SB23["SB23 Runtime Execution View, Runtime Canvas, Step Operations, And Telemetry"]
     SB24["SB24 Operator Control Center, Escalations, Approvals, Rework, And Manager Directives"]
@@ -77,7 +77,7 @@ flowchart TD
 - SB10 is critical because every UI subbundle depends on projection contracts and live/history correctness.
 - SB12 is critical because template compatibility and runtime history compatibility are required before UI/final closure.
 - SB13 through SB27 are critical because each owns a concrete current user-story group and must produce localized proof before final regression.
-- SB28 is critical because it proves the rewrite works end to end, covers every US-001 through US-055 story, did not reintroduce the old architecture, and passes the .NET performance antipattern hardening gate.
+- SB28 is critical because it proves the rewrite works end to end, covers every US-001 through US-056 story, did not reintroduce the old architecture, passes the .NET performance antipattern hardening gate, and proves role candidate readiness does not regress into score-only launch decisions.
 
 ## Phase Gates
 
@@ -103,14 +103,14 @@ flowchart TD
 | G18 Step editor proof | SB19 | Step contracts, operation policy, branch routing, artifact expectations, subprocess mapping tests and Playwright proof. |
 | G19 Template library proof | SB20 | Template search/preview/selective import/migration report and Playwright proof. |
 | G20 Exchange/Git UI proof | SB21 | Import/export envelope, Git status/diff/conflict components, conflict resolution proof. |
-| G21 Launch proof | SB22 | Launch plan, candidate matching, approval, provisioning, execute-ready integration and Playwright proof. |
+| G21 Launch and candidate readiness proof | SB22 | Launch plan, candidate matching, deterministic readiness assessment, missing tool/right blocker proof, approval, provisioning, execute-ready integration, and Playwright proof. |
 | G22 Run history proof | SB23 | Run filters, selected run details, status controls, state transition command proof. |
 | G23 Runtime view proof | SB24 | Runtime canvas, step operations, subprocess open, telemetry, invariant diagnostics proof. |
 | G24 Operator proof | SB25 | Escalation, approval, manager directive, rework, recovery advice proof. |
 | G25 Evidence/coordination proof | SB26 | Artifact obligations, evidence, assignments, direct messages, manager chat proof. |
 | G26 Analytics/live proof | SB27 | Graphs, analytics, live dashboard, snapshot cache, time-window filtering proof. |
 | G27 Project/API compatibility proof | SB28 | Project-scoped routes, project structure integration, agent tools, API compatibility proof. |
-| G28 Final closure | Merge | E2E story regression, dependency/vocabulary/old-symbol scans, refactoring review, security/redaction proof, .NET performance scan summary, complete US-001 through US-055 coverage table. |
+| G28 Final closure | Merge | E2E story regression, dependency/vocabulary/old-symbol scans, refactoring review, security/redaction proof, .NET performance scan summary, role candidate readiness proof, complete US-001 through US-056 coverage table. |
 
 ## Rewrite Order
 
@@ -146,7 +146,7 @@ flowchart TD
 18. SB18 Step Editor, Operation Contracts, Routing, Artifacts, And Subprocess Mapping.
 19. SB19 Template Library Browser, Preview, And Selective Import.
 20. SB20 Exchange, Import/Export, Git Status, Diff, Merge, And Conflict UI.
-21. SB21 Launch Planning, Candidate Matching, Approval, Provisioning, And Execution.
+21. SB21 Launch Planning, Candidate Readiness, Approval, Provisioning, And Execution.
 22. SB22 Run History, Activity, Selected Run Details, And Basic Run Controls.
 23. SB23 Runtime Execution View, Runtime Canvas, Step Operations, And Telemetry.
 24. SB24 Operator Control Center, Escalations, Approvals, Rework, And Manager Directives.

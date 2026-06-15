@@ -16,6 +16,7 @@ Pass for architecture and future roadmap preparation.
 - Replaced the deferred subbundle marker with SB01-SB28 future packages after adding user-story coverage.
 - Added current implementation user-story map, architecture coverage model, user-story traceability, and user-story validation.
 - Added .NET performance antipattern review, performance guardrail architecture, and implementation validation checklist.
+- Added role candidate readiness architecture so launch candidate scoring, missing tools, missing rights, approvals, provisioning, and execution blockers are first-class and testable.
 
 ## Architectural Risks Remaining
 
@@ -25,6 +26,7 @@ Pass for architecture and future roadmap preparation.
 - The UI rebuild can regress workflows if projection contracts are incomplete.
 - User-story coverage can regress into checklist-only reporting if future agents do not attach source/test/browser proof.
 - Future agents can reintroduce slow Process behavior under a cleaner architecture by using sync-over-async, unbounded queues, LINQ-heavy projectors, uncached JSON options, per-call clients, or load-all UI queries.
+- Future launch work can regress into score-only candidate selection if readiness findings are not modeled and shown separately from HR ranking.
 
 ## Required Future Discipline
 
@@ -33,4 +35,5 @@ Pass for architecture and future roadmap preparation.
 - Record execution reports per subbundle.
 - Record story coverage per owned US-### row.
 - Record .NET performance scan counts for C# hot-path code.
+- Treat missing candidate tools/rights as deterministic launch blockers unless an explicit audited policy override allows otherwise.
 - Stop rather than patch around boundary violations.
