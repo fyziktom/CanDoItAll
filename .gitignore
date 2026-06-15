@@ -14,6 +14,9 @@ evidence
 # codex/skills/bundles is source tooling and must remain tracked.
 01-execution-report.md
 codex/bundles/**
+!codex/bundles/
+!codex/bundles/process-module-architecture*/
+!codex/bundles/process-module-architecture*/**
 codex/bundle-exports/**
 codex/**/*.zip
 !codex/skills/**
