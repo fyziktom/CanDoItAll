@@ -1,0 +1,6 @@
+Command:
+rg -n "ProcessObservationCache|ProcessObservationService|LiveProcessesDashboard" src tests tools Templates -g"*.cs" -g"*.razor" -g"*.csproj" -g"*.json" -g"*.md" -g"*.txt"
+
+ExitCode: 1
+Result:
+No matches.

@@ -229,6 +229,40 @@ internal static class ProcessPersistenceMappers
             entity.UpdatedAtUtc);
     }
 
+    public static ProcessProjectionHistoryEntity ToHistoryEntity(ProcessProjectionHistoryRecord history)
+    {
+        return new ProcessProjectionHistoryEntity
+        {
+            ProjectorName = history.ProjectorName.Value,
+            ProjectionKey = history.ProjectionKey.Value,
+            GlobalSequence = history.GlobalSequence,
+            RootRunId = history.RootRunId.Value,
+            RunId = history.RunId.Value,
+            OccurredAtUtc = history.OccurredAtUtc,
+            EventType = history.EventType,
+            SchemaVersion = history.SchemaVersion,
+            PayloadJson = history.PayloadJson,
+            PayloadHash = history.PayloadHash,
+            Sensitivity = history.Sensitivity
+        };
+    }
+
+    public static ProcessProjectionHistoryRecord ToHistoryRecord(ProcessProjectionHistoryEntity entity)
+    {
+        return new ProcessProjectionHistoryRecord(
+            new ProcessProjectorName(entity.ProjectorName),
+            new ProcessProjectionKey(entity.ProjectionKey),
+            entity.GlobalSequence,
+            new ProcessRunId(entity.RootRunId),
+            new ProcessRunId(entity.RunId),
+            entity.OccurredAtUtc,
+            entity.EventType,
+            entity.SchemaVersion,
+            entity.PayloadJson,
+            entity.PayloadHash,
+            entity.Sensitivity);
+    }
+
     public static ProcessProjectionDeadLetter ToDeadLetter(ProcessProjectionDeadLetterEntity entity)
     {
         return new ProcessProjectionDeadLetter(

@@ -24,6 +24,8 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessProjectionSnapshotEntity> ProjectionSnapshots => Set<ProcessProjectionSnapshotEntity>();
 
+    public DbSet<ProcessProjectionHistoryEntity> ProjectionHistory => Set<ProcessProjectionHistoryEntity>();
+
     public DbSet<ProcessProjectorOffsetEntity> ProjectorOffsets => Set<ProcessProjectorOffsetEntity>();
 
     public DbSet<ProcessProjectionDeadLetterEntity> ProjectionDeadLetters => Set<ProcessProjectionDeadLetterEntity>();

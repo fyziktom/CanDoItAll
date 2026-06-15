@@ -33,6 +33,18 @@ public readonly record struct ProcessProjectionKey
     public override string ToString() => Value;
 }
 
+public readonly record struct ProcessProjectionKeyPrefix
+{
+    public ProcessProjectionKeyPrefix(string value)
+    {
+        Value = ProcessProjectionIdentifierValidation.RequireToken(value, nameof(value));
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
 public readonly record struct ProcessProjectionShardKey
 {
     public ProcessProjectionShardKey(string value)
@@ -71,6 +83,19 @@ public sealed record ProcessProjectionSnapshot(
     string PayloadJson,
     string PayloadHash,
     DateTimeOffset UpdatedAtUtc);
+
+public sealed record ProcessProjectionHistoryRecord(
+    ProcessProjectorName ProjectorName,
+    ProcessProjectionKey ProjectionKey,
+    long GlobalSequence,
+    ProcessRunId RootRunId,
+    ProcessRunId RunId,
+    DateTimeOffset OccurredAtUtc,
+    string EventType,
+    string SchemaVersion,
+    string PayloadJson,
+    string PayloadHash,
+    string Sensitivity);
 
 public sealed record ProcessProjectorOffset(
     ProcessProjectorName ProjectorName,
@@ -112,6 +137,20 @@ public interface IProcessProjectionStore
     Task<ProcessProjectionSnapshot?> LoadSnapshotAsync(
         ProcessProjectorName projectorName,
         ProcessProjectionKey projectionKey,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
+        ProcessProjectorName projectorName,
+        ProcessProjectionKeyPrefix projectionKeyPrefix,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    Task AppendHistoryAsync(
+        ProcessProjectionHistoryRecord history,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessProjectionHistoryRecord>> ReadHistoryAsync(
+        ProcessProjectionHistoryQuery query,
         CancellationToken cancellationToken = default);
 
     Task SaveOffsetAsync(

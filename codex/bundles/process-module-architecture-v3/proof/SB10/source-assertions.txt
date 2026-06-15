@@ -1,0 +1,93 @@
+Source assertions captured with rg. Paths are repo-relative.
+
+Command: rg -n "ProcessLiveProcessSnapshot|ProcessTimelineEventProjection|ProcessProjectionFreshness|ProcessProjectionReplayWorker|ProcessRuntimeProjectionProjector|ProcessRuntimeProjectionQueryService|ProcessProjectionHistoryRecord|ProcessProjectionHistoryEntity|AppendHistoryAsync|ReadHistoryAsync|ReadSnapshotsAsync|ProcessProjectionJsonCodec|RestrictedDiagnosticReference|Live_last_hour|Projection_freshness|Restricted_events" src/CanDoItAll.Processes.Projections src/CanDoItAll.Processes.Application src/CanDoItAll.Processes.Persistence tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs -g"*.cs"
+
+Result:
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:26:        var projector = new ProcessRuntimeProjectionProjector(store, ProcessProjectionJsonCodec.Default, clock);
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:27:        var worker = new ProcessProjectionReplayWorker(replay, store, projector, clock);
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:30:            ProcessRuntimeProjectionProjector.ProjectorName,
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:34:        var query = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, clock);
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:38:        var offset = await store.LoadOffsetAsync(ProcessRuntimeProjectionProjector.ProjectorName, new ProcessProjectionShardKey("root-alpha"));
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:64:        var worker = new ProcessProjectionReplayWorker(
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:87:    public async Task Live_last_hour_query_excludes_old_completed_runs()
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:96:        var query = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, new FixedProcessProjectionClock(Now));
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:104:    public async Task Live_last_hour_query_includes_active_runs_outside_window()
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:113:        var query = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, new FixedProcessProjectionClock(Now));
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:124:    public async Task Projection_freshness_exposes_projector_lag()
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:133:        var query = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, new FixedProcessProjectionClock(Now));
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:144:    public async Task Restricted_events_project_diagnostic_links_without_raw_payload_detail()
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:157:        var query = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, new FixedProcessProjectionClock(Now));
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:163:        Assert.Equal($"runtime-event:{restricted.Envelope.EventId}", runtimeEvent.RestrictedDiagnosticReference);
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:174:        var projector = new ProcessRuntimeProjectionProjector(store, ProcessProjectionJsonCodec.Default, clock);
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:175:        var worker = new ProcessProjectionReplayWorker(replay, store, projector, clock);
+tests\CanDoItAll.Tests.Unit\ProcessProjectionPipelineTests.cs:177:            ProcessRuntimeProjectionProjector.ProjectorName,
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:6:public sealed class ProcessRuntimeProjectionProjector(
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:8:    ProcessProjectionJsonCodec jsonCodec,
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:29:            : jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(previousSnapshot);
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:37:        var liveSnapshot = new ProcessLiveProcessSnapshot(
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:85:            .AppendHistoryAsync(
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:90:                    new ProcessTimelineEventProjection(
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:99:                        timelineEvent.RestrictedDiagnosticReference)),
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:172:    private static ProcessProjectionFreshness CreateFreshness(
+src\CanDoItAll.Processes.Projections\ProcessRuntimeProjectionProjector.cs:177:        return new ProcessProjectionFreshness(
+src\CanDoItAll.Processes.Projections\ProcessProjectionWorker.cs:48:public sealed class ProcessProjectionReplayWorker(
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:11:public sealed record ProcessProjectionFreshness(
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:41:    string? RestrictedDiagnosticReference);
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:43:public sealed record ProcessLiveProcessSnapshot(
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:50:    ProcessProjectionFreshness Freshness,
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:60:    ProcessProjectionFreshness Freshness,
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:63:public sealed record ProcessTimelineEventProjection(
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:72:    string? RestrictedDiagnosticReference);
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:93:    string? RestrictedDiagnosticReference);
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:104:    ProcessProjectionFreshness Freshness,
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:119:    ProcessProjectionFreshness Freshness,
+src\CanDoItAll.Processes.Projections\ProcessProjectionReadModels.cs:131:    ProcessProjectionFreshness Freshness,
+src\CanDoItAll.Processes.Projections\ProcessProjectionQueries.cs:11:    IReadOnlyList<ProcessLiveProcessSnapshot> Runs,
+src\CanDoItAll.Processes.Projections\ProcessProjectionQueries.cs:12:    ProcessProjectionFreshness? Freshness);
+src\CanDoItAll.Processes.Projections\ProcessProjectionQueries.cs:21:    IReadOnlyList<ProcessTimelineEventProjection> Events,
+src\CanDoItAll.Processes.Projections\ProcessProjectionQueries.cs:22:    ProcessProjectionFreshness? Freshness);
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:10:public sealed class ProcessProjectionJsonCodec
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:12:    public static ProcessProjectionJsonCodec Default { get; } = new();
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:16:    private ProcessProjectionJsonCodec()
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:36:    public ProcessProjectionHistoryRecord CreateHistoryRecord<TProjection>(
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:43:        return new ProcessProjectionHistoryRecord(
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:63:    public TProjection ReadHistory<TProjection>(ProcessProjectionHistoryRecord record)
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:73:            ProcessLiveProcessSnapshot value => JsonSerializer.Serialize(value, JsonContext.ProcessLiveProcessSnapshot),
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:75:            ProcessTimelineEventProjection value => JsonSerializer.Serialize(value, JsonContext.ProcessTimelineEventProjection),
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:88:            typeof(TProjection) == typeof(ProcessLiveProcessSnapshot)
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:89:                ? JsonSerializer.Deserialize(payloadJson, JsonContext.ProcessLiveProcessSnapshot)
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:92:                    : typeof(TProjection) == typeof(ProcessTimelineEventProjection)
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:93:                        ? JsonSerializer.Deserialize(payloadJson, JsonContext.ProcessTimelineEventProjection)
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:166:[JsonSerializable(typeof(ProcessLiveProcessSnapshot))]
+src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:168:[JsonSerializable(typeof(ProcessTimelineEventProjection))]
+src\CanDoItAll.Processes.Projections\ProcessProjectionContracts.cs:87:public sealed record ProcessProjectionHistoryRecord(
+src\CanDoItAll.Processes.Projections\ProcessProjectionContracts.cs:142:    Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
+src\CanDoItAll.Processes.Projections\ProcessProjectionContracts.cs:148:    Task AppendHistoryAsync(
+src\CanDoItAll.Processes.Projections\ProcessProjectionContracts.cs:149:        ProcessProjectionHistoryRecord history,
+src\CanDoItAll.Processes.Projections\ProcessProjectionContracts.cs:152:    Task<IReadOnlyList<ProcessProjectionHistoryRecord>> ReadHistoryAsync(
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:5:public sealed class ProcessRuntimeProjectionQueryService(
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:7:    ProcessProjectionJsonCodec jsonCodec,
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:25:            .ReadSnapshotsAsync(ProcessRuntimeProjectionProjector.ProjectorName, ProcessRuntimeProjectionKeys.LivePrefix, LiveSnapshotReadLimit, cancellationToken)
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:27:        var runs = new List<ProcessLiveProcessSnapshot>();
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:31:            var run = jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(snapshot);
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:67:            .ReadHistoryAsync(
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:69:                    ProcessRuntimeProjectionProjector.ProjectorName,
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:76:        var events = new List<ProcessTimelineEventProjection>(records.Count);
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:80:            events.Add(jsonCodec.ReadHistory<ProcessTimelineEventProjection>(record));
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:94:                ProcessRuntimeProjectionProjector.ProjectorName,
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:112:    private static ProcessProjectionFreshness? CombineFreshness(IReadOnlyList<ProcessLiveProcessSnapshot> runs)
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:131:    private static ProcessProjectionFreshness? CombineFreshness(IReadOnlyList<ProcessTimelineEventProjection> events)
+src\CanDoItAll.Processes.Application\ProcessRuntimeProjectionQueryService.cs:139:        return new ProcessProjectionFreshness(
+src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs:56:    public async Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
+src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs:87:    public async Task AppendHistoryAsync(
+src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs:88:        ProcessProjectionHistoryRecord history,
+src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs:117:    public async Task<IReadOnlyList<ProcessProjectionHistoryRecord>> ReadHistoryAsync(
+src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs:151:        var records = new List<ProcessProjectionHistoryRecord>(rows.Count);
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceMappers.cs:232:    public static ProcessProjectionHistoryEntity ToHistoryEntity(ProcessProjectionHistoryRecord history)
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceMappers.cs:234:        return new ProcessProjectionHistoryEntity
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceMappers.cs:250:    public static ProcessProjectionHistoryRecord ToHistoryRecord(ProcessProjectionHistoryEntity entity)
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceMappers.cs:252:        return new ProcessProjectionHistoryRecord(
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceEntities.cs:205:public sealed class ProcessProjectionHistoryEntity
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceDbContext.cs:27:    public DbSet<ProcessProjectionHistoryEntity> ProjectionHistory => Set<ProcessProjectionHistoryEntity>();
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:174:internal sealed class ProcessProjectionHistoryEntityConfiguration : IEntityTypeConfiguration<ProcessProjectionHistoryEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:176:    public void Configure(EntityTypeBuilder<ProcessProjectionHistoryEntity> builder)

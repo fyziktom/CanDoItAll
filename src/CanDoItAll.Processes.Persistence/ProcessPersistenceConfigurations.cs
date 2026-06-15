@@ -171,6 +171,24 @@ internal sealed class ProcessProjectorOffsetEntityConfiguration : IEntityTypeCon
     }
 }
 
+internal sealed class ProcessProjectionHistoryEntityConfiguration : IEntityTypeConfiguration<ProcessProjectionHistoryEntity>
+{
+    public void Configure(EntityTypeBuilder<ProcessProjectionHistoryEntity> builder)
+    {
+        builder.ToTable("process_projection_history");
+        builder.HasKey(history => new { history.ProjectorName, history.ProjectionKey });
+        builder.Property(history => history.ProjectorName).HasMaxLength(256).IsRequired();
+        builder.Property(history => history.ProjectionKey).HasMaxLength(512).IsRequired();
+        builder.Property(history => history.EventType).HasMaxLength(256).IsRequired();
+        builder.Property(history => history.SchemaVersion).HasMaxLength(64).IsRequired();
+        builder.Property(history => history.PayloadJson).IsRequired();
+        builder.Property(history => history.PayloadHash).HasMaxLength(128).IsRequired();
+        builder.Property(history => history.Sensitivity).HasMaxLength(64).IsRequired();
+        builder.HasIndex(history => new { history.ProjectorName, history.RootRunId, history.OccurredAtUtc });
+        builder.HasIndex(history => new { history.ProjectorName, history.RunId, history.GlobalSequence });
+    }
+}
+
 internal sealed class ProcessProjectionDeadLetterEntityConfiguration : IEntityTypeConfiguration<ProcessProjectionDeadLetterEntity>
 {
     public void Configure(EntityTypeBuilder<ProcessProjectionDeadLetterEntity> builder)

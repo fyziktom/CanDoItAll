@@ -2,7 +2,11 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-15.
+
+## Execution Notes
+
+SB10 implemented event-first projection workers, live/history/detail projection read models, replay/dead-letter handling, projection-history persistence, source-generated projection serialization, and UI-ready projection query services. Browser validation remains deferred to SB13 because SB10 does not ship a visible UI surface.
 
 ## Objective
 
@@ -151,11 +155,11 @@ The UI must preserve current live/history direction without using query-built ru
 
 ## Acceptance Checklist
 
-- [ ] Projection contracts exist.
-- [ ] Current and historical projections exist.
-- [ ] Replay/dead-letter tests pass.
-- [ ] Live/history tests pass.
-- [ ] UI-ready query services exist.
+- [x] Projection contracts exist.
+- [x] Current and historical projections exist.
+- [x] Replay/dead-letter tests pass.
+- [x] Live/history tests pass.
+- [x] UI-ready query services exist.
 
 ## Proof Required
 
@@ -164,13 +168,24 @@ The UI must preserve current live/history direction without using query-built ru
 - Live/history proof.
 - UI projection review.
 
+## Recorded Proof
+
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/manifest.md`
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/semantic-invariants.md`
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/projection-review.md`
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/test-unit-sb10.txt`
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/test-unit-sb10-process-slice.txt`
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/build-unit-sb10.txt`
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/build-solution-sb10.txt`
+- `repo://codex/bundles/process-module-architecture-v3/proof/SB10/codeanalytics-snapshot-summary.txt`
+
 ## Browser Validation Logging
 
 - Browser validation is deferred to SB13 because this bundle has projection contracts but no final UI behavior.
 
 ## Progression Gate
 
-- SB13 cannot start until projection contracts support required UI surfaces.
+- Passed for SB13 prerequisites. Projection contracts now support the required live/history/detail/canvas/artifact/freshness UI surfaces; SB13 still owns visible UI composition and browser proof.
 
 ## Suggested Agent Prompt
 
@@ -178,4 +193,4 @@ Execute SB10 from `codex/bundles/process-module-architecture-v3/subbundles/10-mo
 
 ## Handoff Notes For Next Bundle
 
-Record projection DTOs, query services, freshness semantics, test fixtures, and gaps for SB11/SB13.
+SB11 can emit additional event/facet metadata into the runtime stream. SB13 should consume `ProcessRuntimeProjectionQueryService`, `ProcessLiveProcessSnapshot`, `ProcessRunDetailProjection`, `ProcessTimelineEventProjection`, runtime canvas models, artifact map models, and `ProcessProjectionFreshness` rather than runtime internals.

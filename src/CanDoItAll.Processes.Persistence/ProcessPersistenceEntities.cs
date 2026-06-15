@@ -202,6 +202,31 @@ public sealed class ProcessProjectionSnapshotEntity
     public DateTimeOffset UpdatedAtUtc { get; set; }
 }
 
+public sealed class ProcessProjectionHistoryEntity
+{
+    public string ProjectorName { get; set; } = string.Empty;
+
+    public string ProjectionKey { get; set; } = string.Empty;
+
+    public long GlobalSequence { get; set; }
+
+    public Guid RootRunId { get; set; }
+
+    public Guid RunId { get; set; }
+
+    public DateTimeOffset OccurredAtUtc { get; set; }
+
+    public string EventType { get; set; } = string.Empty;
+
+    public string SchemaVersion { get; set; } = string.Empty;
+
+    public string PayloadJson { get; set; } = string.Empty;
+
+    public string PayloadHash { get; set; } = string.Empty;
+
+    public string Sensitivity { get; set; } = string.Empty;
+}
+
 public sealed class ProcessProjectorOffsetEntity
 {
     public string ProjectorName { get; set; } = string.Empty;

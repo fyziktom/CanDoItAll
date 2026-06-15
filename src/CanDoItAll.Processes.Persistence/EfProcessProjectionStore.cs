@@ -53,6 +53,110 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
         return entity is null ? null : ProcessPersistenceMappers.ToProjectionSnapshot(entity);
     }
 
+    public async Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
+        ProcessProjectorName projectorName,
+        ProcessProjectionKeyPrefix projectionKeyPrefix,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        if (take <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(take), take, "Projection snapshot read size must be positive.");
+        }
+
+        var rows = await dbContext.ProjectionSnapshots
+            .AsNoTracking()
+            .Where(snapshot =>
+                snapshot.ProjectorName == projectorName.Value &&
+                snapshot.ProjectionKey.StartsWith(projectionKeyPrefix.Value))
+            .OrderByDescending(snapshot => snapshot.UpdatedAtUtc)
+            .ThenBy(snapshot => snapshot.ProjectionKey)
+            .Take(take)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var snapshots = new List<ProcessProjectionSnapshot>(rows.Count);
+        foreach (var row in rows)
+        {
+            snapshots.Add(ProcessPersistenceMappers.ToProjectionSnapshot(row));
+        }
+
+        return snapshots;
+    }
+
+    public async Task AppendHistoryAsync(
+        ProcessProjectionHistoryRecord history,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(history);
+
+        var existing = await dbContext.ProjectionHistory
+            .FindAsync(new object[] { history.ProjectorName.Value, history.ProjectionKey.Value }, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (existing is null)
+        {
+            dbContext.ProjectionHistory.Add(ProcessPersistenceMappers.ToHistoryEntity(history));
+        }
+        else if (history.GlobalSequence >= existing.GlobalSequence)
+        {
+            existing.GlobalSequence = history.GlobalSequence;
+            existing.RootRunId = history.RootRunId.Value;
+            existing.RunId = history.RunId.Value;
+            existing.OccurredAtUtc = history.OccurredAtUtc;
+            existing.EventType = history.EventType;
+            existing.SchemaVersion = history.SchemaVersion;
+            existing.PayloadJson = history.PayloadJson;
+            existing.PayloadHash = history.PayloadHash;
+            existing.Sensitivity = history.Sensitivity;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<ProcessProjectionHistoryRecord>> ReadHistoryAsync(
+        ProcessProjectionHistoryQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        if (query.Take <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(query.Take), query.Take, "Projection history read size must be positive.");
+        }
+
+        var rowsQuery = dbContext.ProjectionHistory
+            .AsNoTracking()
+            .Where(history =>
+                history.ProjectorName == query.ProjectorName.Value &&
+                history.OccurredAtUtc >= query.FromUtc &&
+                history.OccurredAtUtc < query.ToUtc);
+
+        if (query.RunId is { } runId)
+        {
+            rowsQuery = rowsQuery.Where(history => history.RunId == runId.Value);
+        }
+
+        if (query.AfterGlobalSequence is { } afterGlobalSequence)
+        {
+            rowsQuery = rowsQuery.Where(history => history.GlobalSequence > afterGlobalSequence);
+        }
+
+        var rows = await rowsQuery
+            .OrderBy(history => history.GlobalSequence)
+            .Take(query.Take)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var records = new List<ProcessProjectionHistoryRecord>(rows.Count);
+        foreach (var row in rows)
+        {
+            records.Add(ProcessPersistenceMappers.ToHistoryRecord(row));
+        }
+
+        return records;
+    }
+
     public async Task SaveOffsetAsync(
         ProcessProjectorOffset offset,
         CancellationToken cancellationToken = default)
