@@ -3,7 +3,6 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
@@ -30,9 +29,6 @@ public partial class AgentDetailsDialog
     public ProjectsService ProjectsService { get; set; } = default!;
 
     [Inject]
-    public ProcessesService ProcessesService { get; set; } = default!;
-
-    [Inject]
     public SecretService SecretService { get; set; } = default!;
 
     [Inject]
@@ -46,7 +42,6 @@ public partial class AgentDetailsDialog
     private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyList<CapabilityCatalogItem> capabilities = [];
     private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
-    private IReadOnlyList<ProcessDefinitionListItem> processDefinitions = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<string> tagValues = [];
     private string externalWorkspaceRootsText = string.Empty;
@@ -62,17 +57,12 @@ public partial class AgentDetailsDialog
     private bool areProjectStructureProjectsLoaded;
     private bool isLoadingProjectStructureProjects;
     private bool projectStructureProjectsRequested;
-    private bool areProcessDefinitionsLoaded;
-    private bool isLoadingProcessDefinitions;
-    private bool processDefinitionsRequested;
     private bool areSecretsLoaded;
     private bool isLoadingSecrets;
     private string? providerLoadErrorMessage;
     private string? projectStructureProjectsErrorMessage;
-    private string? processDefinitionsErrorMessage;
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
-    private Task? processDefinitionsLoadTask;
     private int selectedTabIndex;
 
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
@@ -192,12 +182,6 @@ public partial class AgentDetailsDialog
         return EnsureProjectStructureProjectsLoadedAsync();
     }
 
-    private Task RequestProcessDefinitionsAsync()
-    {
-        processDefinitionsRequested = true;
-        return EnsureProcessDefinitionsLoadedAsync();
-    }
-
     private Task EnsureProjectStructureProjectsLoadedAsync()
     {
         if (areProjectStructureProjectsLoaded)
@@ -234,46 +218,6 @@ public partial class AgentDetailsDialog
         {
             isLoadingProjectStructureProjects = false;
             projectStructureProjectsLoadTask = null;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private Task EnsureProcessDefinitionsLoadedAsync()
-    {
-        if (areProcessDefinitionsLoaded)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (processDefinitionsLoadTask is not null)
-        {
-            return processDefinitionsLoadTask;
-        }
-
-        processDefinitionsLoadTask = LoadProcessDefinitionsAsync();
-        return processDefinitionsLoadTask;
-    }
-
-    private async Task LoadProcessDefinitionsAsync()
-    {
-        isLoadingProcessDefinitions = true;
-        processDefinitionsErrorMessage = null;
-        await InvokeAsync(StateHasChanged);
-
-        try
-        {
-            processDefinitions = await ProcessesService.ListDefinitionsAsync(cancellationToken: default);
-            areProcessDefinitionsLoaded = true;
-        }
-        catch (Exception exception)
-        {
-            processDefinitionsErrorMessage = $"Failed to load processes. {exception.Message}";
-            NotificationService.Error("Process list failed to load", exception.Message);
-        }
-        finally
-        {
-            isLoadingProcessDefinitions = false;
-            processDefinitionsLoadTask = null;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -652,12 +596,6 @@ public partial class AgentDetailsDialog
     {
         var isEnabled = rawValue is bool value && value;
         editorModel.ProcessAccess.CanRead = isEnabled;
-        if (isEnabled)
-        {
-            processDefinitionsRequested = true;
-            _ = EnsureProcessDefinitionsLoadedAsync();
-        }
-
         if (!isEnabled)
         {
             editorModel.ProcessAccess.CanWrite = false;
@@ -672,8 +610,6 @@ public partial class AgentDetailsDialog
         if (isEnabled)
         {
             editorModel.ProcessAccess.CanRead = true;
-            processDefinitionsRequested = true;
-            _ = EnsureProcessDefinitionsLoadedAsync();
         }
     }
 
@@ -787,47 +723,6 @@ public partial class AgentDetailsDialog
     private void ClearProjectStructureProjects()
     {
         editorModel.ProjectStructureAccess.AllowedProjectIds = [];
-    }
-
-    private bool HasProcessAccess(Guid definitionId)
-    {
-        return editorModel.ProcessAccess.AllowedDefinitionIds.Contains(definitionId);
-    }
-
-    private void ToggleProcess(Guid definitionId, object? rawValue)
-    {
-        var selectedDefinitions = editorModel.ProcessAccess.AllowedDefinitionIds.ToList();
-        var isEnabled = rawValue is bool value && value;
-        if (isEnabled)
-        {
-            if (!selectedDefinitions.Contains(definitionId))
-            {
-                selectedDefinitions.Add(definitionId);
-            }
-        }
-        else
-        {
-            selectedDefinitions.RemoveAll(item => item == definitionId);
-        }
-
-        editorModel.ProcessAccess.AllowedDefinitionIds = selectedDefinitions
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-    }
-
-    private void SelectAllProcesses()
-    {
-        editorModel.ProcessAccess.AllowedDefinitionIds = processDefinitions
-            .Select(item => item.Id)
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-    }
-
-    private void ClearProcesses()
-    {
-        editorModel.ProcessAccess.AllowedDefinitionIds = [];
     }
 
     private Task HandleTagsChangedAsync(IReadOnlyList<string> value)

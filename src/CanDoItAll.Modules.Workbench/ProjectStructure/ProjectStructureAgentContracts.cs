@@ -1,6 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -746,7 +745,7 @@ public sealed record ProjectStructureProcessNodeStartResult(
     Guid? RunId,
     string Stage,
     string Route,
-    ProcessLaunchPlanDetails? LaunchPlan,
+    object? LaunchPlan,
     IReadOnlyList<string> Warnings);
 
 public enum ProjectStructureImportSourceKind

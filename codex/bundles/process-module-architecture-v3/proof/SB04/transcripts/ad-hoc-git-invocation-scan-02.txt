@@ -1,0 +1,2 @@
+tests\CanDoItAll.Tests.Unit\RepositoryTransientArtifactHygieneTests.cs:32:            FileName = "git",
+tests\CanDoItAll.Tests.Unit\RepositoryNamingHygieneTests.cs:61:            FileName = "git",

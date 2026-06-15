@@ -1,0 +1,910 @@
+src\CanDoItAll.Processes.Core\ProcessGraphKernel.cs:3:namespace CanDoItAll.Processes.Core;
+src\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj:15:    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+src\CanDoItAll.Processes.Contracts\ProcessContractVersions.cs:1:namespace CanDoItAll.Processes.Contracts;
+src\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj:11:    <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
+src\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj:13:    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+src\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj:11:    <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
+src\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj:11:    <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
+src\CanDoItAll.Processes.Drivers.Abstractions\ProcessDriverDescriptor.cs:1:namespace CanDoItAll.Processes.Drivers.Abstractions;
+src\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj:11:    <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
+src\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj:11:    <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
+src\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj:9:    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+src\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj:11:    <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
+src\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj:13:    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+src\CanDoItAll.Modules.Processes\_Imports.razor:1:@using CanDoItAll.Modules.Processes
+src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:4:namespace CanDoItAll.Modules.Processes;
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:19:using CanDoItAll.Modules.Processes;
+src\CanDoItAll.Composition\ModuleAssemblies.cs:11:using CanDoItAll.Modules.Processes;
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:21:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11227:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11296:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11380:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11428:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11495:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11589:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11686:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11744:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11806:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11874:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:11957:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12051:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12127:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12192:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12262:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12295:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12384:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12412:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12535:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12618:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12647:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12683:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12799:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12840:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:12877:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:13025:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:13030:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:13079:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16146:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16148:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16155:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16157:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16162:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16168:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16174:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16176:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16182:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16188:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16190:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16195:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16201:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16207:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16209:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16216:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16218:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16225:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16227:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16233:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16239:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16241:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16247:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16253:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16255:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16262:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16264:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16271:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16273:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16278:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16284:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16292:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16294:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16300:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16307:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16309:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16315:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16321:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16328:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16330:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16336:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16342:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16350:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16352:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16359:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16361:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16368:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16370:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16375:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16380:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16386:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16394:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16396:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16402:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16408:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16414:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16416:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16422:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16429:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16431:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16438:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16440:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16445:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16451:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16457:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16459:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16464:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16470:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16477:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16479:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16485:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16492:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16494:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16500:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16505:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16512:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16514:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16520:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16526:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16528:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16534:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.Designer.cs:16540:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11298:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11377:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11461:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11509:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11576:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11670:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11767:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11825:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11887:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:11955:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12038:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12132:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12208:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12273:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12343:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12376:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12465:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12493:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12616:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12699:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12728:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12764:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12880:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12921:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:12958:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:13106:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:13111:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessVerificationAuditEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:13177:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:13226:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16313:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16315:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16322:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16324:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16329:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16335:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16341:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16343:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16349:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16355:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16357:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16362:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16368:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16374:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16376:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16383:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16385:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16392:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16394:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16400:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16406:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16408:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16414:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16420:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16422:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16429:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16431:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16438:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16440:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16445:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16451:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16459:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16461:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16467:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16474:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16476:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16482:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16488:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16495:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16497:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16503:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16509:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16517:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16519:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16526:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16528:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16535:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16537:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16542:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16547:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16553:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16561:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16563:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16569:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16575:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16581:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16583:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16589:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16596:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16598:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16605:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16607:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16612:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16618:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16624:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16626:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16631:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16637:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16644:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16646:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16652:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16659:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16661:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16667:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16672:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16679:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16681:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16687:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16693:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16695:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16701:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:16707:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260528182412_InitialPostgreSqlBaseline.cs:10181:                name: "UX_ProcessStepRuns_RunStep",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11301:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11380:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11464:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11512:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11579:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11673:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11770:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11828:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11890:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:11958:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12041:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12135:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12211:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12276:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12346:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12379:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12468:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12496:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12619:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12702:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12731:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12767:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12883:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12924:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:12961:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:13109:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:13114:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessVerificationAuditEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:13180:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:13229:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16316:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16318:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16325:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16327:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16332:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16338:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16344:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16346:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16352:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16358:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16360:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16365:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16371:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16377:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16379:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16386:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16388:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16395:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16397:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16403:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16409:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16411:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16417:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16423:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16425:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16432:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16434:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16441:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16443:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16448:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16454:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16462:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16464:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16470:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16477:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16479:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16485:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16491:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16498:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16500:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16506:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16512:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16520:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16522:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16529:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16531:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16538:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16540:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16545:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16550:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16556:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16564:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16566:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16572:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16578:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16584:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16586:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16592:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16599:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16601:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16608:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16610:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16615:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16621:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16627:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16629:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16634:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16640:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16647:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16649:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16655:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16662:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16664:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16670:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16675:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16682:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16684:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16690:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16696:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16698:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16704:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612222259_AddWorkspaceCurrencySettings.Designer.cs:16710:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11301:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11370:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11454:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11502:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11569:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11663:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11760:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11818:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11880:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:11948:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12031:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12125:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12201:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12266:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12336:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12369:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12458:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12486:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12609:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12692:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12721:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12757:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12873:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12914:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:12951:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:13099:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:13104:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:13153:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16220:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16222:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16229:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16231:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16236:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16242:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16248:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16250:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16256:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16262:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16264:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16269:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16275:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16281:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16283:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16290:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16292:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16299:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16301:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16307:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16313:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16315:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16321:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16327:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16329:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16336:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16338:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16345:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16347:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16352:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16358:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16366:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16368:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16374:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16381:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16383:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16389:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16395:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16402:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16404:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16410:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16416:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16424:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16426:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16433:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16435:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16442:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16444:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16449:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16454:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16460:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16468:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16470:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16476:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16482:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16488:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16490:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16496:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16503:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16505:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16512:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16514:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16519:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16525:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16531:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16533:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16538:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16544:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16551:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16553:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16559:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16566:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16568:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16574:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16579:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16586:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16588:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16594:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16600:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16602:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16608:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529111314_AddWorkflowCheckpoints.Designer.cs:16614:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11301:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11380:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11464:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11512:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11579:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11673:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11770:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11828:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11890:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:11958:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12041:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12135:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12211:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12276:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12346:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12379:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12468:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12496:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12619:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12702:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12731:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12767:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12883:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12924:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:12961:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:13109:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:13114:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessVerificationAuditEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:13180:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:13229:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16304:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16306:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16313:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16315:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16320:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16326:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16332:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16334:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16340:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16346:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16348:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16353:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16359:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16365:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16367:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16374:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16376:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16383:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16385:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16391:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16397:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16399:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16405:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16411:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16413:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16420:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16422:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16429:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16431:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16436:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16442:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16450:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16452:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16458:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16465:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16467:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16473:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16479:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16486:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16488:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16494:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16500:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16508:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16510:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16517:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16519:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16526:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16528:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16533:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16538:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16544:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16552:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16554:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16560:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16566:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16572:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16574:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16580:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16587:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16589:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16596:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16598:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16603:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16609:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16615:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16617:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16622:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16628:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16635:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16637:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16643:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16650:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16652:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16658:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16663:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16670:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16672:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16678:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16684:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16686:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16692:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260612173521_PersistSubprocessChildArtifactMapping.Designer.cs:16698:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11300:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11369:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11453:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11501:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11568:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11662:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11759:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11817:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11879:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:11947:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12030:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12124:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12200:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12265:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12335:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12368:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12457:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12485:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12608:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12691:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12720:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12756:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12872:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12913:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:12950:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:13098:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:13103:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:13152:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16227:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16229:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16236:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16238:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16243:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16249:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16255:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16257:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16263:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16269:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16271:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16276:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16282:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16288:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16290:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16297:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16299:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16306:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16308:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16314:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16320:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16322:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16328:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16334:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16336:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16343:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16345:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16352:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16354:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16359:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16365:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16373:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16375:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16381:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16388:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16390:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16396:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16402:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16409:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16411:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16417:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16423:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16431:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16433:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16440:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16442:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16449:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16451:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16456:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16461:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16467:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16475:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16477:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16483:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16489:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16495:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16497:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16503:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16510:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16512:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16519:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16521:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16526:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16532:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16538:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16540:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16545:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16551:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16558:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16560:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16566:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16573:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16575:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16581:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16586:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16593:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16595:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16601:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16607:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16609:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16615:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260603113251_DisableCognitiveMemoryByDefault.Designer.cs:16621:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11300:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11369:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11453:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11501:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11568:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11662:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11759:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11817:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11879:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:11947:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12030:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12124:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12200:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12265:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12335:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12368:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12457:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12485:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12608:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12691:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12720:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12756:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12872:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12913:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:12950:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:13098:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:13103:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessVerificationAuditEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:13169:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:13218:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16293:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16295:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16302:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16304:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16309:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16315:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16321:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16323:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16329:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16335:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16337:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16342:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16348:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16354:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16356:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16363:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16365:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16372:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16374:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16380:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16386:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16388:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16394:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16400:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16402:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16409:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16411:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16418:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16420:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16425:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16431:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16439:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16441:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16447:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16454:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16456:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16462:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16468:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16475:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16477:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16483:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16489:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16497:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16499:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16506:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16508:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16515:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16517:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16522:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16527:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16533:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16541:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16543:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16549:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16555:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16561:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16563:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16569:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16576:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16578:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16585:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16587:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16592:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16598:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16604:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16606:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16611:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16617:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16624:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16626:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16632:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16639:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16641:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16647:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16652:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16659:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16661:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16667:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16673:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16675:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16681:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16687:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11301:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11370:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11454:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11502:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11569:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11663:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11760:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11818:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11880:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:11948:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12031:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12125:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12201:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12266:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessOutboxRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12336:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12369:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12458:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12486:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12609:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12692:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12721:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12757:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12873:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12914:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:12951:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:13099:                        .HasDatabaseName("UX_ProcessStepRuns_RunStep");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:13104:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:13153:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16228:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16230:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16237:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessArtifactRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16239:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16244:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16250:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16256:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessConformanceObservation", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16258:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16264:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16270:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDecisionRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16272:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16277:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16283:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16289:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16291:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16298:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16300:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16307:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessImprovementCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16309:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16315:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16321:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessJournalEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16323:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16329:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16335:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchApprovalRecord", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16337:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16344:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16346:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16353:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlan", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16355:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16360:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16366:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16374:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16376:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16382:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16389:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessLaunchProvisioningRequest", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16391:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlan", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16397:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchPlanRole", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16403:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessLaunchCandidate", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16410:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleMessagingPolicyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16412:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16418:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16424:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16432:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16434:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16441:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRoleSkillRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16443:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16450:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16452:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16457:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16462:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16468:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16476:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessRunAssignment", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16478:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16484:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16490:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16496:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16498:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessArtifactExpectation", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16504:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16511:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16513:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16520:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16522:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16527:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinitionVersion", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16533:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16539:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16541:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16546:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16552:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16559:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16561:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRoleRequirement", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16567:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16574:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRun", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16576:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16582:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16587:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepDefinition", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16594:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16596:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16602:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16608:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkflowRunLink", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16610:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRunAssignment", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16616:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessRun", null)
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260529220032_AddSchedulerRunObservability.Designer.cs:16622:                    b.HasOne("CanDoItAll.Modules.Processes.ProcessStepRun", null)

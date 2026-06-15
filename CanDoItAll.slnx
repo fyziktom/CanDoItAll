@@ -1,7 +1,6 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/src/">
     <Project Path="src/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
-    <Project Path="src/CanDoItAll.Components.WebGlSandbox/CanDoItAll.Components.WebGlSandbox.csproj" />
     <Project Path="src/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj" />
@@ -21,18 +20,19 @@
     <Project Path="src/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />
     <Project Path="src/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj" />
-    <Project Path="src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj" />
     <Project Path="src/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Abstractions/CanDoItAll.Processes.Abstractions.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj" />
     <Project Path="src/CanDoItAll.Processes.Drivers.Abstractions/CanDoItAll.Processes.Drivers.Abstractions.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.ArtifactEvidence/CanDoItAll.Processes.Drivers.ArtifactEvidence.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.BusinessAnalysis/CanDoItAll.Processes.Drivers.BusinessAnalysis.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.ObservationAggregation/CanDoItAll.Processes.Drivers.ObservationAggregation.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.OfficeEvidence/CanDoItAll.Processes.Drivers.OfficeEvidence.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.RuntimeEvidence/CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence/CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.TranscriptVerification/CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
-    <Project Path="src/CanDoItAll.Processes.Drivers.VerificationGateway/CanDoItAll.Processes.Drivers.VerificationGateway.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Projections/CanDoItAll.Processes.Projections.csproj" />
+    <Project Path="src/CanDoItAll.Git/CanDoItAll.Git.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Templates/CanDoItAll.Processes.Templates.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Builder/CanDoItAll.Processes.Builder.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Runtime/CanDoItAll.Processes.Runtime.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Application/CanDoItAll.Processes.Application.csproj" />
+    <Project Path="src/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj" />
+    <Project Path="src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
     <Project Path="src/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj" />
     <Project Path="src/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj" />
@@ -63,3 +63,4 @@
     <Project Path="tools/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj" />
   </Folder>
 </Solution>
+

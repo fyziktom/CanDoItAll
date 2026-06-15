@@ -26,7 +26,7 @@ public enum ToolCapabilityOperationRequirementKind
     WorkspaceFileMutation,
     WorkspaceScript,
     DotNetRun,
-    ProcessArtifactRecord
+    ProcessArtifactWrite
 }
 
 public enum ToolCapabilityBrowserProofRole
@@ -219,7 +219,7 @@ public static class ToolCapabilityRegistry
                 ProcessOperationContractNames.RecoverArtifactsOnly,
                 ProcessOperationContractNames.ExecuteExternalAction)),
             Mutation(AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve, ToolCapabilitySideEffectKind.ProcessMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
-            Mutation(AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord, ToolCapabilitySideEffectKind.ProcessMutation, ToolCapabilityOperationRequirementKind.ProcessArtifactRecord),
+            Mutation(AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord, ToolCapabilitySideEffectKind.ProcessMutation, ToolCapabilityOperationRequirementKind.ProcessArtifactWrite),
             Read(AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport, ToolCapabilitySideEffectKind.WorkspaceRead),
@@ -421,7 +421,7 @@ public static class ToolCapabilityRegistry
             [
                 ProcessOperationContractNames.ExternalProductTargetReadOnly
             ],
-            ToolCapabilityOperationRequirementKind.ProcessArtifactRecord =>
+            ToolCapabilityOperationRequirementKind.ProcessArtifactWrite =>
             [
                 ProcessOperationContractNames.ExternalArtifactDestination,
                 ProcessOperationContractNames.ManagedProcessArtifactsOnly
@@ -498,7 +498,7 @@ public static class ToolCapabilityRegistry
     {
         return requirementKind is ToolCapabilityOperationRequirementKind.WorkspaceFileMutation or
                    ToolCapabilityOperationRequirementKind.WorkspaceScript or
-                   ToolCapabilityOperationRequirementKind.ProcessArtifactRecord ||
+                   ToolCapabilityOperationRequirementKind.ProcessArtifactWrite ||
                HasOperationRequirement(requirements, ProcessOperationContractNames.WriteManagedProcessArtifacts);
     }
 

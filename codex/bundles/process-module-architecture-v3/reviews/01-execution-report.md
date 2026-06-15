@@ -68,7 +68,7 @@ SB01 collected no runtime analytics because it changed only archive/proof files 
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
-| Execute approved implementation bundle | Partially solved | SB01 completed with `proof/SB01/manifest.md`; SB02-SB28 remain pending dependency-ordered execution. |
+| Execute approved implementation bundle | In progress | SB01 through SB04 completed with proof under `proof/SB01/` through `proof/SB04/`; SB05-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -110,6 +110,74 @@ Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\p
 ```
 
 ## Additional Static Checks
+
+SB02 active removal and boundary proof:
+
+```text
+bundle://proof/SB02/manifest.md
+bundle://proof/SB02/transcripts/build-solution-09.txt
+bundle://proof/SB02/transcripts/test-unit-boundary-03.txt
+```
+
+Result:
+
+```text
+Solution build passed with 0 warnings and 0 errors. Boundary tests passed: 5/5.
+```
+
+SB03 core contracts and invariant proof:
+
+```text
+bundle://proof/SB03/manifest.md
+bundle://proof/SB03/transcripts/build-unit-sb03-01.txt
+bundle://proof/SB03/transcripts/test-unit-sb03-01.txt
+bundle://proof/SB03/transcripts/scan-summary.json
+```
+
+Result:
+
+```text
+Unit project build passed with 0 warnings and 0 errors. Focused core/boundary tests passed: 16/16. Domain vocabulary, forbidden dependency, and active old-symbol scans all reported 0 matches.
+```
+
+SB03 CodeAnalytics MCP validation:
+
+```text
+bundle://proof/SB03/transcripts/codeanalytics-snapshot-summary.txt
+```
+
+Result:
+
+```text
+Snapshot snap-20260615182651-091726aa loaded 10 scoped Process projects and 48 documents, found 0 dependency cycles, and had no blocking errors.
+```
+
+SB04 Git/template foundation proof:
+
+```text
+bundle://proof/SB04/manifest.md
+bundle://proof/SB04/transcripts/build-solution-sb04-02.txt
+bundle://proof/SB04/transcripts/test-unit-sb04-02.txt
+bundle://proof/SB04/transcripts/scan-summary-02.json
+```
+
+Result:
+
+```text
+Solution build passed with 0 warnings and 0 errors. Focused Git/template/core/boundary tests passed: 26/26. Git process-neutrality and template no-Git boundary scans reported 0 matches. Ad hoc Git invocation scan reported two test-only hygiene checks, accepted in proof/SB04/git-safety-review.md.
+```
+
+SB04 CodeAnalytics MCP validation:
+
+```text
+bundle://proof/SB04/transcripts/codeanalytics-snapshot-summary.txt
+```
+
+Result:
+
+```text
+Snapshot snap-20260615183713-efe198df loaded 5 scoped Git/template/core projects and 33 documents, found 0 dependency cycles, 0 diagnostics, and no blocking errors.
+```
 
 SB01 archive validation:
 

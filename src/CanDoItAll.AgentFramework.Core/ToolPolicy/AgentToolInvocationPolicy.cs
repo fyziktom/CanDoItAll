@@ -425,7 +425,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 ToolCapabilityOperationRequirementKind.WorkspaceFileMutation => [ResolveWorkspaceFileMutationRequirement(context)],
                 ToolCapabilityOperationRequirementKind.WorkspaceScript => [ResolveWorkspaceScriptRequirement(context)],
                 ToolCapabilityOperationRequirementKind.DotNetRun => [ResolveDotnetRunOperationRequirement(context)],
-                ToolCapabilityOperationRequirementKind.ProcessArtifactRecord => [ResolveProcessArtifactRecordRequirement(context)],
+                ToolCapabilityOperationRequirementKind.ProcessArtifactWrite => [ResolveProcessArtifactWriteRequirement(context)],
                 _ => []
             };
         }
@@ -562,7 +562,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 : null;
     }
 
-    private static OperationRequirement ResolveProcessArtifactRecordRequirement(ToolInvocationPolicyContext context)
+    private static OperationRequirement ResolveProcessArtifactWriteRequirement(ToolInvocationPolicyContext context)
     {
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
         if (referencedAliases.Any(IsExternalArtifactDestinationPath))

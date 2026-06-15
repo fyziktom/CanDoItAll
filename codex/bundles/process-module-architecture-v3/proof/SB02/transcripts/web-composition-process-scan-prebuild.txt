@@ -1,0 +1,17 @@
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:19:using CanDoItAll.Modules.Processes;
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:67:        services.AddProcessesModule(configuration);
+src\CanDoItAll.Composition\ModuleAssemblies.cs:11:using CanDoItAll.Modules.Processes;
+src\CanDoItAll.Composition\ModuleAssemblies.cs:36:        typeof(ProcessesModuleAssemblyMarker).Assembly,
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:21:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:20:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Web\Program.cs:21:using CanDoItAll.Modules.Processes;
+src\CanDoItAll.Web\appsettings.json:37:  "Processes": {
+src\CanDoItAll.Web\appsettings.Development.json:29:  "Processes": {
+src\CanDoItAll.Web\Properties\launchSettings.json:15:        "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
+src\CanDoItAll.Web\Properties\launchSettings.json:29:        "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
+src\CanDoItAll.Web\Properties\launchSettings.json:43:        "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
+src\CanDoItAll.Web\Properties\launchSettings.json:59:        "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
+src\CanDoItAll.Web\Components\App.razor:17:<link rel="stylesheet" href="@Assets["_content/CanDoItAll.Modules.Processes/css/live-processes.css"]" />
+src\CanDoItAll.Web\Api\CognitiveMemoryApi.ContractEndpoints.cs:169:        new("POST", "/ingestion/processes", "IngestCognitiveMemoryProcesses", "Ingestion", "Ingests process-runtime source snapshots."),
+src\CanDoItAll.Web\Api\CognitiveMemoryApi.IngestionEndpoints.cs:41:            .WithName(EndpointName("IngestCognitiveMemoryProcesses", surface));
+src\CanDoItAll.Web\Components\Layout\MainLayout.Workbench.cs:288:            var normalized when normalized.StartsWith("/processes", StringComparison.Ordinal) => "Processes",

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Git\CanDoItAll.Git.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj" />
@@ -38,17 +39,9 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.ArtifactEvidence\CanDoItAll.Processes.Drivers.ArtifactEvidence.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.BusinessAnalysis\CanDoItAll.Processes.Drivers.BusinessAnalysis.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.ObservationAggregation\CanDoItAll.Processes.Drivers.ObservationAggregation.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.OfficeEvidence\CanDoItAll.Processes.Drivers.OfficeEvidence.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence\CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.VerificationGateway\CanDoItAll.Processes.Drivers.VerificationGateway.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 
 </Project>
+

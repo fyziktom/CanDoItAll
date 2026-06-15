@@ -1,0 +1,10 @@
+CodeAnalytics MCP snapshot after SB03
+SnapshotId: snap-20260615182651-091726aa
+Scope: CanDoItAll.Processes.* plus CanDoItAll.Modules.Processes
+Projects: 10
+Documents: 48
+Cycles: 0
+Blocking errors: false
+Findings: 2 informational complexity findings (ProcessRouteTargetKind enum member count; ProcessRuntimeEventEnvelope member count)
+Diagnostics: DI0002 warning for disabled module skeleton AddSingleton in ProcessesModuleServiceCollectionExtensions.cs
+Disposition: non-blocking; scoped architecture scan confirms process boundary projects load and dependency graph is acyclic.

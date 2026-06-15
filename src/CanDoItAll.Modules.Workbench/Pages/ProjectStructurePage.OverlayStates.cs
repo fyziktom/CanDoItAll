@@ -1,5 +1,4 @@
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -265,8 +264,16 @@ public sealed record ProjectStructureProcessStartDialogState(
 
     public bool EstimateOnlyMode { get; init; }
 
-    public ProcessRunEstimateResult? Estimate { get; init; }
+    public ProjectStructureProcessEstimateSummary? Estimate { get; init; }
 }
+
+public sealed record ProjectStructureProcessEstimateSummary(
+    decimal EstimatedCostUsd,
+    int EstimatedElapsedMinutes,
+    int EstimatedTouchMinutes,
+    string ConfidenceLabel,
+    string SourceLabel,
+    string Summary);
 
 public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,

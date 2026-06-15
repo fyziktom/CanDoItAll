@@ -1,16 +1,8 @@
-@page "/processes"
+﻿@page "/processes"
 
-<ProcessWorkspace ProcessIdQuery="@ProcessIdQuery"
-                  RunIdQuery="@RunIdQuery"
-                  LaunchPlanIdQuery="@LaunchPlanIdQuery" />
+<PageTitle>Processes</PageTitle>
 
-@code {
-    [SupplyParameterFromQuery(Name = "processId")]
-    public Guid? ProcessIdQuery { get; set; }
-
-    [SupplyParameterFromQuery(Name = "runId")]
-    public Guid? RunIdQuery { get; set; }
-
-    [SupplyParameterFromQuery(Name = "launchPlanId")]
-    public Guid? LaunchPlanIdQuery { get; set; }
-}
+<section class="mx-auto max-w-3xl px-6 py-10">
+    <h1 class="text-2xl font-semibold text-slate-900">Processes</h1>
+    <p class="mt-3 text-sm leading-6 text-slate-600">The Process module is being rebuilt over the new application and projection boundaries.</p>
+</section>

@@ -1,4 +1,4 @@
-using CanDoItAll.SharedKernel;
+﻿using CanDoItAll.SharedKernel;
 using System.Globalization;
 
 namespace CanDoItAll.Web.Composition;
@@ -9,8 +9,6 @@ public static class ShellNavigation
     [
         new("Dashboard", "/", "dashboard", "Operational summary, provider health, and recent work.", PinnedByDefault: true),
         new("Projects", "/projects", "folder_open", "Project setup, phases, stack profile, and delivery context.", PinnedByDefault: false),
-        new("Processes", "/processes", "account_tree", "Role-first process definitions, runtime orchestration, evidence, and improvement signals.", PinnedByDefault: false),
-        new("Live Processes", "/processes/live", "monitor_heart", "Live projection of running processes, active agents, metrics, and tool usage.", PinnedByDefault: false),
         new("Collaboration", "/collaboration", "forum", "Human escalation, inbox, and process-scoped conversations.", PinnedByDefault: false),
         new("CRM / HR", "/crm-hr", "groups", "Unified party directory, CRM, workforce, recruiting, agents, and assignments.", PinnedByDefault: false),
         new("Agents", "/agents", "smart_toy", "Integrated AgentFramework foundation, imported tabs, and runtime governance.", PinnedByDefault: false),
@@ -137,5 +135,6 @@ public static class ShellNavigation
         return $"/{normalized.Trim('/')}";
     }
 }
+
 
 

@@ -102,7 +102,7 @@ public static class AgentFinalizerPolicies
             return configuredMode.Value;
         }
 
-        return IsProcessStepRun(run)
+        return IsProcessScopedRun(run)
             ? AgentFinalizerMode.Shadow
             : AgentFinalizerMode.Disabled;
     }
@@ -148,7 +148,7 @@ public static class AgentFinalizerPolicies
         }
     }
 
-    private static bool IsProcessStepRun(ExecutionRunRecord run)
+    private static bool IsProcessScopedRun(ExecutionRunRecord run)
     {
         return string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
                !string.IsNullOrWhiteSpace(run.ProcessRunId) ||

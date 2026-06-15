@@ -1,0 +1,10 @@
+CodeAnalytics MCP snapshot after SB04
+SnapshotId: snap-20260615183713-efe198df
+Scope: CanDoItAll.Git, CanDoItAll.Processes.Templates, Contracts, Abstractions, Core
+Projects: 5
+Documents: 33
+Cycles: 0
+Blocking errors: false
+Diagnostics: 0
+Findings: 6 informational complexity findings.
+Disposition: non-blocking. GitRepositoryClient groups the minimum Git wrapper operations required by SB04; ProcessRouteTargetKind and event envelope shapes are architecture-required; ProcessTemplateJsonContext size is source-generator metadata; template component type/document sizes reflect the canonical schema foundation.

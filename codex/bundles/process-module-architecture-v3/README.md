@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 is complete and archived the legacy Process implementation as reference evidence; active rewrite/removal work has not yet started.
+Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB04 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, and Git/template foundations are implemented and validated. SB05 is next.
 
 Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages executed in dependency order after user approval. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
 
@@ -71,8 +71,8 @@ The bundle intentionally does not run product tests because no product behavior 
 
 - Bundle preparation status: Prepared architecture bundle v3 with future subbundle roadmap.
 - Bundle readiness gate: Prepared-stage validator passed before execution.
-- Execution status: SB01 reference archive completed; SB02 active removal/skeleton work is next.
-- Subbundle gate review: SB01 closure proof is recorded in `proof/SB01/`; SB02-SB28 remain pending execution.
+- Execution status: SB01-SB04 completed in dependency order.
+- Subbundle gate review: SB01-SB04 closure proof is recorded in `proof/SB01/` through `proof/SB04/`; SB05-SB28 remain pending execution.
 - Final closure gate: Future implementation closure depends on the Phase 0 and project rebuild gates in `plan/`.
 - Browser validation analytics: Current UI was inspected for story-map evidence only; no browser-facing product surface changed.
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.
