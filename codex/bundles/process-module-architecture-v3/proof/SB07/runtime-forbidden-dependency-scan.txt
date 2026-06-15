@@ -1,0 +1,6 @@
+Runtime forbidden dependency scan
+Command: rg -n "DbContext|Microsoft\.EntityFrameworkCore|Npgsql|SqlConnection|Migration" src\CanDoItAll.Processes.Runtime
+No matches.
+
+Command: rg -n "Razor|Microsoft\.AspNetCore|CanDoItAll\.Modules|CanDoItAll\.Web|CanDoItAll\.Git|AgentFramework|Workflow|Automation" src\CanDoItAll.Processes.Runtime
+No matches.

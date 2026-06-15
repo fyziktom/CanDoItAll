@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-15.
 
 ## Objective
 
@@ -149,11 +149,11 @@ Runtime and dispatcher were the old module's core weakness. This bundle makes st
 
 ## Acceptance Checklist
 
-- [ ] Runtime state machine tests pass.
-- [ ] Claim lifecycle tests pass.
-- [ ] Idempotency tests pass.
-- [ ] Event port tests pass.
-- [ ] Dependency scans pass.
+- [x] Runtime state machine tests pass.
+- [x] Claim lifecycle tests pass.
+- [x] Idempotency tests pass.
+- [x] Event port tests pass.
+- [x] Dependency scans pass.
 
 ## Proof Required
 
@@ -162,13 +162,28 @@ Runtime and dispatcher were the old module's core weakness. This bundle makes st
 - Old-symbol scan.
 - Runtime integrity review.
 
+## Proof Recorded
+
+- `bundle://proof/SB07/manifest.md`
+- `bundle://proof/SB07/semantic-invariants.md`
+- `bundle://proof/SB07/runtime-integrity-review.md`
+- `bundle://proof/SB07/build-unit-sb07.txt`
+- `bundle://proof/SB07/test-unit-sb07.txt`
+- `bundle://proof/SB07/build-solution-sb07.txt`
+- `bundle://proof/SB07/runtime-forbidden-dependency-scan.txt`
+- `bundle://proof/SB07/dispatcher-domain-decision-scan.txt`
+- `bundle://proof/SB07/old-symbol-scan.txt`
+- `bundle://proof/SB07/performance-scan-summary.json`
+- `bundle://proof/SB07/codeanalytics-snapshot-summary.txt`
+- `bundle://proof/SB07/bundle-validator-prepared-sb07.txt`
+
 ## Browser Validation Logging
 
 - Browser validation is not required because no UI behavior is implemented.
 
 ## Progression Gate
 
-- SB08 may start after runtime ports and state machine tests pass.
+- Satisfied. SB08 may start after runtime ports and state machine tests pass.
 
 ## Suggested Agent Prompt
 

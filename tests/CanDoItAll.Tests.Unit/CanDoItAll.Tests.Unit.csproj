@@ -42,6 +42,7 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 

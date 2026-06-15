@@ -1,0 +1,59 @@
+{
+  "commandScope": [
+    "src\\CanDoItAll.Processes.Runtime",
+    "tests\\CanDoItAll.Tests.Unit\\ProcessRuntimeEngineTests.cs"
+  ],
+  "resultPropertyMatchesAreStrategyCommandProperties": true,
+  "results": [
+    {
+      "name": "sync_waits",
+      "pattern": "\\.Wait\\(|GetAwaiter\\(\\)\\.GetResult\\(|Task\\.Run\\(|async void",
+      "matchCount": 0,
+      "matches": null
+    },
+    {
+      "name": "result_property",
+      "pattern": "\\.Result\\b",
+      "matchCount": 13,
+      "matches": [
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.Results.cs:16:        var existing = FindReceipt(state, command.StepInstanceId, command.Result.StrategyId, command.IdempotencyKey);",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.Results.cs:44:        var nextStepStatus = ToStepStatus(command.Result.Outcome);",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.Results.cs:47:            command.Result.StrategyId,",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.Results.cs:49:            command.Result.Outcome,",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.Results.cs:51:            command.Result.ResultHash);",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.Results.cs:56:                Status = command.Result.Outcome == StrategyOutcome.Canceled",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.Results.cs:74:            AvailableArtifactSlots = AddProducedSlots(state.AvailableArtifactSlots, command.Result),",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.ResultHelpers.cs:31:            CreateEvent(state, context, ToStepEventType(stepStatus), command.Result.ResultHash)",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.ResultHelpers.cs:40:            events.Add(CreateEvent(state, context, ProcessRuntimeEventTypes.ProcessRunFailed, command.Result.ResultHash));",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.ResultHelpers.cs:44:            events.Add(CreateEvent(state, context, ProcessRuntimeEventTypes.ProcessRunCancelled, command.Result.ResultHash));",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.ResultHelpers.cs:66:        if (command.Result.ProducedArtifacts.Count == 0)",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.ResultHelpers.cs:71:        var ledgerEvents = new List<ProcessArtifactLedgerEvent>(command.Result.ProducedArtifacts.Count);",
+        "src\\CanDoItAll.Processes.Runtime\\ProcessRuntimeEngine.ResultHelpers.cs:72:        foreach (var artifact in command.Result.ProducedArtifacts)"
+      ]
+    },
+    {
+      "name": "per_call_http_json_regex",
+      "pattern": "new HttpClient\\(|new JsonSerializerOptions|RegexOptions\\.Compiled|new Regex\\(",
+      "matchCount": 0,
+      "matches": null
+    },
+    {
+      "name": "string_allocations",
+      "pattern": "\\.Substring\\(|\\.ToLower\\(\\)|\\.ToUpper\\(\\)",
+      "matchCount": 0,
+      "matches": null
+    },
+    {
+      "name": "contains_key",
+      "pattern": "ContainsKey\\(",
+      "matchCount": 0,
+      "matches": null
+    },
+    {
+      "name": "production_linq_materialization",
+      "pattern": "\\.(Where|Select|OrderBy|GroupBy|ToList|ToDictionary)\\(",
+      "matchCount": 0,
+      "matches": null
+    }
+  ]
+}
