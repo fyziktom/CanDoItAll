@@ -31,7 +31,7 @@
 | SB25 Evidence/Coordination | REQ-015 to REQ-019, REQ-024, REQ-025, REQ-030, REQ-051, REQ-052 | `architecture/07-artifact-error-recovery-and-subprocess-model.md`, `architecture/14-manager-runtime-and-control-loop.md` | US-040 to US-043, US-053 | AC-014 to AC-017, AC-021, AC-040 | G25, evidence/assignment/messaging proof. |
 | SB26 Analytics/Live | REQ-026 to REQ-030, REQ-051, REQ-052 | `architecture/08-monitoring-events-snapshots-and-ui-projections.md` | US-044 to US-048 | AC-018 to AC-021, AC-035, AC-040 | G26, graph/live/time-window proof. |
 | SB27 Project/API Compatibility | REQ-006 to REQ-011, REQ-030, REQ-037 to REQ-040, REQ-051, REQ-052 | `architecture/16-execution-adapters-and-integration-boundaries.md`, `architecture/10-security-governance-and-agent-change-auditing.md` | US-002, US-049 to US-051 | AC-010, AC-021, AC-026, AC-036, AC-040 | G27, project/API/tool proof. |
-| SB28 Final Closure | REQ-001 to REQ-052 | All architecture files | US-001 to US-055 final regression | AC-001 to AC-040 | G28, E2E, scans, refactoring, security, complete story proof. |
+| SB28 Final Closure | REQ-001 to REQ-053 | All architecture files | US-001 to US-055 final regression | AC-001 to AC-041 | G28, E2E, scans, refactoring, security, complete story proof, performance scan summary. |
 
 ## Context Protection
 
@@ -52,3 +52,5 @@ Every subbundle README includes:
 - handoff notes.
 
 Every browser-facing subbundle must also update the user-story coverage table required by `validation/04-user-story-coverage-validation.md`.
+
+Every subbundle that creates or modifies C# hot-path code must also include exact performance scan counts required by `validation/05-dotnet-performance-antipattern-checklist.md`.

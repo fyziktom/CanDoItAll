@@ -1,5 +1,7 @@
 # Execution Adapters And Integration Boundaries
 
+Execution adapters must also follow `architecture/19-dotnet-performance-guardrails.md`. Agent, workflow, handoff, scheduler, project/workbench, browser proof, plugin, Git, and HTTP integrations must use bounded async calls, cancellation, typed clients where applicable, and streaming for large payloads.
+
 ## Design Intent
 
 Workflow execution, single-agent execution, agent collaboration, handoff flows, scheduler-triggered starts, project/workbench integration, and plugin integration are adapters and strategies. Core/runtime see only generic execution kinds, strategy IDs, envelopes, diagnostics, and artifact references.

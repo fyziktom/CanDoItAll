@@ -16,6 +16,7 @@ Architecture bundle v3 prepared. No Process rewrite implementation was executed.
 - Added current implementation user-story map US-001 through US-055 grounded in code, tests, templates, and live UI evidence.
 - Added Playwright MCP snapshots and screenshots for current `/processes`, workspace tabs, template library, and `/processes/live`.
 - Expanded the future roadmap from SB01-SB14 to SB01-SB28 so UI/UX and story coverage are implemented and validated in smaller packages.
+- Applied `analyzing-dotnet-performance` to current Process code signals and added .NET performance guardrails for the new architecture.
 
 ## Repository Evidence
 
@@ -53,6 +54,7 @@ No runtime analytics or browser performance data were collected because this is 
 | Prepare whole roadmap and subbundles | Covered | `plan/04-future-subbundle-roadmap.md`, `subbundles/01-*` through `subbundles/28-*` |
 | Improve v3 with current user-story map | Covered | `analysis/06-current-implementation-user-story-map.md`, `traceability/04-user-story-coverage-map.md`, `validation/04-user-story-coverage-validation.md` |
 | Split complex UI rebuild into smaller subbundles | Covered | `plan/01-phase-plan.md`, `plan/04-future-subbundle-roadmap.md`, `subbundles/13-*` through `subbundles/28-*` |
+| Analyze v3 architecture with .NET performance antipattern skill | Covered | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md`, `plan/05-review-checkpoints-and-hardening-gates.md` Gate J |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
 
 ## Requirement Closure Summary
@@ -70,6 +72,7 @@ No runtime analytics or browser performance data were collected because this is 
 | Future subbundles | Covered | `subbundles/01-*` through `subbundles/28-*` |
 | Subbundle traceability | Covered | `traceability/03-subbundle-traceability.md`, `traceability/04-user-story-coverage-map.md` |
 | User-story map | Covered | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md`, `validation/04-user-story-coverage-validation.md` |
+| .NET performance guardrails | Covered | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md` |
 
 ## Validation Command
 

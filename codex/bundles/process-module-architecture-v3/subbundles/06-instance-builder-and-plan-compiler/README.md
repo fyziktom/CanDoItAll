@@ -103,6 +103,11 @@ Runtime reliability depends on explicit composition. If the builder does not pro
 - Plan is immutable after persistence.
 - Missing strategy is a build failure.
 
+## Performance Antipattern Notes
+
+- Read `architecture/19-dotnet-performance-guardrails.md` and `validation/05-dotnet-performance-antipattern-checklist.md` before creating or modifying C# hot-path code.
+- Record exact performance scan counts in the execution report when this subbundle changes runtime, dispatcher, manager, projection, template, Git, adapter, persistence, or UI service code.
+- Do not introduce sync-over-async, unbounded event/projector queues, per-call `HttpClient`, per-call `JsonSerializerOptions`, load-all UI queries, or LINQ-heavy hot paths without a recorded mitigation and proof.
 ## Implementation Steps
 
 1. Implement compile request and result models.

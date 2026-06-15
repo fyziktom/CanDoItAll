@@ -15,6 +15,7 @@
 | Every README has implementation steps. | Pass |
 | Every README has refactoring review checkpoint. | Pass |
 | Every README has tests/proof/search proof. | Pass |
+| C# hot-path subbundles are governed by performance scan checklist. | Pass |
 | Every README has stop-and-report conditions. | Pass |
 | Every README has do-not-do rules. | Pass |
 | Every README has acceptance checklist. | Pass |
@@ -35,3 +36,4 @@ The previous broad UI subbundle has been decomposed. Browser-facing Process work
 - Treat proof and review gates as deliverables, not optional notes.
 - Every future execution report must update user-story coverage for the story IDs it owns.
 - Browser-facing story proof must be captured in the owning UI subbundle and repeated selectively in final regression.
+- C# hot-path implementation proof must include exact performance scan counts from `validation/05-dotnet-performance-antipattern-checklist.md`.

@@ -125,3 +125,7 @@ REQ-050: Rebuild with tests project by project and phase by phase.
 REQ-051: Maintain an explicit user-story map derived from the current Process implementation, UI/UX, tests, templates, and live UI evidence so the rewrite preserves or intentionally improves existing user-facing capabilities.
 
 REQ-052: Split broad future implementation work, especially UI/UX reconnection and rebuild, into smaller subbundles with story ownership, validation gates, Playwright proof for browser-facing stories, and final story regression closure.
+
+## .NET Performance Guardrails
+
+REQ-053: Apply explicit .NET performance guardrails to runtime, dispatcher, manager, persistence, projections, templates, Git, drivers, adapters, and UI services so the rewrite does not introduce sync-over-async, unbounded queues, allocation-heavy hot paths, uncached serialization, per-call clients, load-all UI queries, or other common Process-scale antipatterns.

@@ -1,5 +1,7 @@
 # Template Git Versioning And Migrations
 
+Template and Git implementation must also follow `architecture/19-dotnet-performance-guardrails.md`. JSON migration, Git status/diff, and template indexing must be batched, async where I/O-bound, source-generated for known JSON shapes, and resumable.
+
 ## Design Intent
 
 Templates and process configuration are file-first, Git-versioned JSON documents with database indexing. JSON is the source of truth. Markdown, Mermaid, compatibility reports, and import envelopes are generated/exported projections with source hashes.

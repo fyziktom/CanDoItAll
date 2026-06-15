@@ -93,3 +93,18 @@ Allowed matches are reference archive, architecture bundle, migration input, com
 ## Gate I Subbundle Completion Review
 
 Every future implementation subbundle must end with an execution report including files changed, tests run, tests skipped and why, dependency scan result, domain leak scan result, old-symbol scan result, refactoring review result, known risks, and exact handoff notes for next subbundle.
+
+## Gate J .NET Performance Antipattern Review
+
+- Runtime, dispatcher, manager, projector, adapter, persistence, Git, template, and UI service code is async end-to-end and cancellation-aware.
+- No sync-over-async appears in production code: `.Result`, `.Wait()`, and `GetAwaiter().GetResult()` are absent from hot paths.
+- No library/runtime service uses `Task.Run` as a fake async wrapper.
+- Event/projector pipelines use bounded channels or equivalent bounded queues with explicit overflow/backpressure/dead-letter behavior.
+- Hot-path projectors, runtime readers, live snapshot builders, artifact ledger lookups, branch route evaluators, and canvas projection builders avoid LINQ-heavy repeated allocations unless a bounded-data proof is recorded.
+- Collections in hot paths are pre-sized when counts are known; read-heavy static lookup tables use frozen collections where appropriate.
+- JSON serialization uses source-generated contexts and cached options for templates, events, snapshots, exchange envelopes, artifact ledgers, and Git metadata.
+- External HTTP integrations use `IHttpClientFactory` or typed clients; no per-call `HttpClient` creation.
+- Template migration and Git operations use async/batched/bounded I/O and checkpoint/resume where needed.
+- UI projection queries are paged/windowed/server-filtered; Blazor components do not load all history/events/runs/artifacts and filter locally.
+- Leaf implementation classes are sealed unless subclassing is required.
+- Every subbundle that touches C# hot-path code records exact performance scan counts from `validation/05-dotnet-performance-antipattern-checklist.md`.

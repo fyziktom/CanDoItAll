@@ -56,6 +56,7 @@
 | REQ-050 | Rebuild with tests project by project and phase by phase. | Add projects from ground up with tests for each. | `plan/03-project-by-project-rebuild-plan.md` | All project gates | AC-029; per-project test proof. |
 | REQ-051 | Maintain a current-implementation user-story map. | Improve v3 bundle with user stories from actual Process implementation and UI/UX. | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md` | G01, G28 | AC-039; user-story coverage validation. |
 | REQ-052 | Split complex future work into smaller story-owned subbundles with localized validation. | UI reconnection/rebuild is too complex for one subbundle and needs Playwright/screenshots per part. | `plan/01-phase-plan.md`, `plan/04-future-subbundle-roadmap.md`, `traceability/04-user-story-coverage-map.md` | G13 to G28 | AC-038, AC-040; subbundle and browser proof validation. |
+| REQ-053 | Apply .NET performance guardrails to hot paths. | Use analyzing-dotnet-performance skill to review v3 architecture for antipatterns and add Codex implementation notes. | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md` | Gate J, G28 | AC-041; exact performance scan counts and stop conditions. |
 
 ## Coverage Notes
 
@@ -80,3 +81,4 @@
 | Review checkpoints embedded | `plan/05-review-checkpoints-and-hardening-gates.md`, every subbundle README | AC-038 |
 | Current user-story map required | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md`, `traceability/04-user-story-coverage-map.md` | AC-039 |
 | Browser proof must be localized | `validation/04-user-story-coverage-validation.md`, SB13-SB27 README files | AC-040 |
+| .NET performance antipattern guardrails required | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md`, `plan/05-review-checkpoints-and-hardening-gates.md` Gate J | AC-041 |

@@ -1,5 +1,7 @@
 # Runtime Dispatcher And State Machines
 
+Runtime, dispatcher, and claim-loop implementation must also follow `architecture/19-dotnet-performance-guardrails.md`. In particular, no runtime/dispatcher path may use sync-over-async, unbounded queues, fake async wrappers, or LINQ-heavy per-claim loops.
+
 ## Design Intent
 
 Runtime owns state transitions, scheduling, budgets, events, and terminal semantics. Dispatcher owns safe execution claims and strategy invocation. Manager owns interpretation and recovery decisions. These responsibilities must remain separate.

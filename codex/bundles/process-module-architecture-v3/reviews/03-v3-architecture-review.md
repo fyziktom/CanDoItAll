@@ -15,6 +15,7 @@ Pass for architecture and future roadmap preparation.
 - Added runtime history migration/read-only compatibility plan.
 - Replaced the deferred subbundle marker with SB01-SB28 future packages after adding user-story coverage.
 - Added current implementation user-story map, architecture coverage model, user-story traceability, and user-story validation.
+- Added .NET performance antipattern review, performance guardrail architecture, and implementation validation checklist.
 
 ## Architectural Risks Remaining
 
@@ -23,6 +24,7 @@ Pass for architecture and future roadmap preparation.
 - Template migration and runtime history compatibility still depend on real data inventory.
 - The UI rebuild can regress workflows if projection contracts are incomplete.
 - User-story coverage can regress into checklist-only reporting if future agents do not attach source/test/browser proof.
+- Future agents can reintroduce slow Process behavior under a cleaner architecture by using sync-over-async, unbounded queues, LINQ-heavy projectors, uncached JSON options, per-call clients, or load-all UI queries.
 
 ## Required Future Discipline
 
@@ -30,4 +32,5 @@ Pass for architecture and future roadmap preparation.
 - Do not skip hardening gates.
 - Record execution reports per subbundle.
 - Record story coverage per owned US-### row.
+- Record .NET performance scan counts for C# hot-path code.
 - Stop rather than patch around boundary violations.

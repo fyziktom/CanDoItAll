@@ -98,6 +98,11 @@ Runtime and dispatcher were the old module's core weakness. This bundle makes st
 - Strategies do not mutate runtime state.
 - Every accepted transition emits event/outbox records through ports.
 
+## Performance Antipattern Notes
+
+- Read `architecture/19-dotnet-performance-guardrails.md` and `validation/05-dotnet-performance-antipattern-checklist.md` before creating or modifying C# hot-path code.
+- Record exact performance scan counts in the execution report when this subbundle changes runtime, dispatcher, manager, projection, template, Git, adapter, persistence, or UI service code.
+- Do not introduce sync-over-async, unbounded event/projector queues, per-call `HttpClient`, per-call `JsonSerializerOptions`, load-all UI queries, or LINQ-heavy hot paths without a recorded mitigation and proof.
 ## Implementation Steps
 
 1. Implement state transition validators.

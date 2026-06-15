@@ -1,5 +1,7 @@
 # Monitoring Events Snapshots And UI Projections
 
+Projection and live/history implementation must also follow `architecture/19-dotnet-performance-guardrails.md`. Monitoring must be event-first, bounded, asynchronous, and snapshot-backed without blocking runtime state transitions.
+
 ## Design Intent
 
 Monitoring must not slow process execution. Runtime writes typed events and minimal state. Asynchronous projectors build snapshots and history read models. UI reads projections, not runtime internals or EF entity graphs.

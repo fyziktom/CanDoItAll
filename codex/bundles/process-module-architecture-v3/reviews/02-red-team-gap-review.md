@@ -65,3 +65,9 @@ Mitigation: every subbundle README includes context reset files, prerequisites, 
 The user-story map can be misused as a superficial checklist if future agents mark stories covered without source, test, and browser proof.
 
 Mitigation: `validation/04-user-story-coverage-validation.md` requires source proof, test proof, browser proof for browser-facing stories, explicit delta decisions, and final US-001 through US-055 closure in SB28.
+
+## Finding 12: Clean Architecture Can Still Be Slow
+
+The rewrite can satisfy dependency boundaries while still recreating slow behavior through allocation-heavy projectors, unbounded event queues, uncached serializers, load-all UI queries, or sync-over-async in worker code.
+
+Mitigation: `architecture/19-dotnet-performance-guardrails.md` and `validation/05-dotnet-performance-antipattern-checklist.md` define hot paths, forbidden antipatterns, exact scan counts, and stop conditions. Gate J in `plan/05-review-checkpoints-and-hardening-gates.md` makes this a closure requirement.

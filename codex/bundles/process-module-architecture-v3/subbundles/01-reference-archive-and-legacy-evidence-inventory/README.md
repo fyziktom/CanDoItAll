@@ -113,6 +113,11 @@ The rewrite must not wrap the old dispatcher, but it also must not throw away ha
 - No future code should reference the archive as production source.
 - `Templates/Processes` is migration input and must be preserved.
 
+## Performance Antipattern Notes
+
+- Read `architecture/19-dotnet-performance-guardrails.md` and `validation/05-dotnet-performance-antipattern-checklist.md` before creating or modifying C# hot-path code.
+- Record exact performance scan counts in the execution report when this subbundle changes runtime, dispatcher, manager, projection, template, Git, adapter, persistence, or UI service code.
+- Do not introduce sync-over-async, unbounded event/projector queues, per-call `HttpClient`, per-call `JsonSerializerOptions`, load-all UI queries, or LINQ-heavy hot paths without a recorded mitigation and proof.
 ## Implementation Steps
 
 1. Verify branch and clean working tree.

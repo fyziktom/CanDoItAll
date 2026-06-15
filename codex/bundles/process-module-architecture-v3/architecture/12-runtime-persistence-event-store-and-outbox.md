@@ -1,5 +1,7 @@
 # Runtime Persistence Event Store And Outbox
 
+Persistence, event-store, outbox, artifact ledger, and projection-store implementation must also follow `architecture/19-dotnet-performance-guardrails.md`. Durable writes must avoid sync-over-async, per-call serializer option allocation, unbounded buffers, and query-side load-all behavior.
+
 ## Design Intent
 
 Runtime owns state transitions and emits events. Persistence owns storage implementation. The boundary must be concrete enough that future implementation cannot rebuild query-first observation or put EF details into runtime.

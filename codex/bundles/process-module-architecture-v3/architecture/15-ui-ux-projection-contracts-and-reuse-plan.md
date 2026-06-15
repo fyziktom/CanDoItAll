@@ -6,6 +6,8 @@ The current Process UI/UX direction is useful and should be preserved. The backe
 
 The concrete current UI/UX story inventory is recorded in `analysis/06-current-implementation-user-story-map.md`. Future UI subbundles must use that map as a coverage checklist and must record Playwright proof for the story groups they own.
 
+UI implementation must also follow `architecture/19-dotnet-performance-guardrails.md`. Process UI must consume paged/windowed projections, avoid load-all history queries, and keep projection shaping outside component lifecycle hooks.
+
 ## UI/UX Surfaces To Preserve
 
 | Current surface | Evidence | Preserve | Target data source | Forbidden data source |

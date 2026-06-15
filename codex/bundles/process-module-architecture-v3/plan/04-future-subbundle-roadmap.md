@@ -35,7 +35,7 @@ This roadmap maps SB01-SB28 to architecture files, acceptance criteria, user-sto
 | SB25 Evidence/Coordination | SB24 | `architecture/07-artifact-error-recovery-and-subprocess-model.md`, `architecture/14-manager-runtime-and-control-loop.md` | US-040 to US-043, US-053 | AC-014 to AC-017, AC-021, AC-040 | SB24 report, artifact/manager architecture. |
 | SB26 Analytics/Live | SB25 | `architecture/08-monitoring-events-snapshots-and-ui-projections.md` | US-044 to US-047 | AC-018 to AC-021, AC-040 | SB25 report, monitoring projection architecture. |
 | SB27 Project/API Compatibility | SB26 | `architecture/16-execution-adapters-and-integration-boundaries.md`, `architecture/10-security-governance-and-agent-change-auditing.md` | US-002, US-049 to US-051 | AC-010, AC-036, AC-039, AC-040 | SB26 report, adapter/tool/API architecture. |
-| SB28 Final Closure | SB27 | All architecture files, validation plans, hardening gates | US-001 to US-055 final regression | AC-001 to AC-040 | All prior reports and proof manifests. |
+| SB28 Final Closure | SB27 | All architecture files, validation plans, hardening gates | US-001 to US-055 final regression | AC-001 to AC-041 | All prior reports, proof manifests, and performance scan summaries. |
 
 ## Dependency Notes
 
@@ -46,6 +46,7 @@ This roadmap maps SB01-SB28 to architecture files, acceptance criteria, user-sto
 - SB21 through SB26 are runtime-operation UI subbundles. They must validate one complex user journey at a time instead of bundling all run screens together.
 - SB27 closes project-scoped integration and API/tool compatibility before final E2E regression.
 - SB28 repeats critical stories but must not be the first browser proof for any major UI surface.
+- SB28 must aggregate .NET performance scan evidence from all C# hot-path subbundles and run final scans over the rebuilt Process projects.
 
 ## Required Handoff Pattern
 
@@ -61,5 +62,6 @@ Every future subbundle execution report must state:
 - domain leak scan,
 - old-symbol scan,
 - refactoring review,
+- performance scan counts and accepted tradeoffs for C# hot-path changes,
 - known risks,
 - exact next-bundle handoff.

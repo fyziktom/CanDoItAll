@@ -59,6 +59,11 @@ Rebuild active execution views, runtime canvas, runtime step operations, subproc
 - Split large components or services before handoff if they combine unrelated workflow areas.
 - Verify UI code does not reference runtime internals, EF runtime entities, or old observation services.
 
+## Performance Antipattern Notes
+
+- Read `architecture/19-dotnet-performance-guardrails.md` and `validation/05-dotnet-performance-antipattern-checklist.md` before creating or modifying C# hot-path code.
+- Record exact performance scan counts in the execution report when this subbundle changes runtime, dispatcher, manager, projection, template, Git, adapter, persistence, or UI service code.
+- Do not introduce sync-over-async, unbounded event/projector queues, per-call `HttpClient`, per-call `JsonSerializerOptions`, load-all UI queries, or LINQ-heavy hot paths without a recorded mitigation and proof.
 ## Implementation Steps
 
 1. Bind active execution and runtime canvas UI to projections.

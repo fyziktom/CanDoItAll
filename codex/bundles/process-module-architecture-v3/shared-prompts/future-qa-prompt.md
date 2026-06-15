@@ -15,5 +15,6 @@ Prioritize:
 - template migration gaps,
 - event/projection time-window mistakes,
 - UI reads of runtime internals.
+- .NET performance antipatterns in hot paths: sync-over-async, unbounded queues, allocation-heavy LINQ/projectors, uncached JSON options, per-call clients, sync file I/O, load-all UI queries, and unsealed leaf implementation classes where sealing is appropriate.
 
-Require proof from tests, search output, architecture dependency checks, and targeted negative cases. Build success alone is not enough.
+Require proof from tests, search output, architecture dependency checks, performance scan counts from `validation/05-dotnet-performance-antipattern-checklist.md`, and targeted negative cases. Build success alone is not enough.

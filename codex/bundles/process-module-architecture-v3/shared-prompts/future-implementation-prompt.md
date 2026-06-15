@@ -10,13 +10,16 @@ Required posture:
 - Read the selected subbundle README and its context reset file list.
 - Read previous subbundle execution reports.
 - Read `analysis/06-current-implementation-user-story-map.md` and `traceability/04-user-story-coverage-map.md` before changing any Process behavior.
+- Read `architecture/19-dotnet-performance-guardrails.md` and `validation/05-dotnet-performance-antipattern-checklist.md` before creating or modifying C# hot-path code.
 - Record story coverage for every US-### row owned by the selected subbundle.
 - In Phase 0, archive old Process code before deletion and produce manifest/hash proof.
 - Do not wrap `ProcessRunAutomationDispatchService`.
 - Do not delete `Templates/Processes` before migration tooling exists.
 - Do not select strategies dynamically in the dispatcher.
 - Do not let UI query runtime EF entities directly.
+- Do not introduce sync-over-async, unbounded event/projector queues, per-call `HttpClient`, per-call `JsonSerializerOptions`, load-all UI history queries, or LINQ-heavy hot-path projectors without recorded mitigation.
 - Add tests at the project boundary being implemented before moving upward.
 - For browser-facing subbundles, capture Playwright MCP proof and screenshots in the owning subbundle before moving forward.
+- For C# hot-path subbundles, record exact .NET performance scan counts in the execution report.
 
 Stop and reopen architecture if the target boundary is impossible without importing domain behavior into core/runtime.

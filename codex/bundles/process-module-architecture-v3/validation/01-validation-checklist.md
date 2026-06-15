@@ -44,6 +44,7 @@
 | Current user-story map exists. | Pass | `analysis/06-current-implementation-user-story-map.md` |
 | User-story architecture coverage model exists. | Pass | `architecture/18-user-story-coverage-model.md` |
 | User-story traceability and validation exist. | Pass | `traceability/04-user-story-coverage-map.md`, `validation/04-user-story-coverage-validation.md` |
+| .NET performance guardrails exist. | Pass | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md` |
 
 ## Anti-Vagueness Review
 

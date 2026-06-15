@@ -77,7 +77,7 @@ flowchart TD
 - SB10 is critical because every UI subbundle depends on projection contracts and live/history correctness.
 - SB12 is critical because template compatibility and runtime history compatibility are required before UI/final closure.
 - SB13 through SB27 are critical because each owns a concrete current user-story group and must produce localized proof before final regression.
-- SB28 is critical because it proves the rewrite works end to end, covers every US-001 through US-055 story, and did not reintroduce the old architecture.
+- SB28 is critical because it proves the rewrite works end to end, covers every US-001 through US-055 story, did not reintroduce the old architecture, and passes the .NET performance antipattern hardening gate.
 
 ## Phase Gates
 
@@ -110,7 +110,7 @@ flowchart TD
 | G25 Evidence/coordination proof | SB26 | Artifact obligations, evidence, assignments, direct messages, manager chat proof. |
 | G26 Analytics/live proof | SB27 | Graphs, analytics, live dashboard, snapshot cache, time-window filtering proof. |
 | G27 Project/API compatibility proof | SB28 | Project-scoped routes, project structure integration, agent tools, API compatibility proof. |
-| G28 Final closure | Merge | E2E story regression, dependency/vocabulary/old-symbol scans, refactoring review, security/redaction proof, complete US-001 through US-055 coverage table. |
+| G28 Final closure | Merge | E2E story regression, dependency/vocabulary/old-symbol scans, refactoring review, security/redaction proof, .NET performance scan summary, complete US-001 through US-055 coverage table. |
 
 ## Rewrite Order
 
