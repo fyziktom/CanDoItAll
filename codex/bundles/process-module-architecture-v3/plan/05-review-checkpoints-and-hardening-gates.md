@@ -15,6 +15,8 @@
 
 Scan generic projects for domain-specific terms such as framework names, provider names, browser-proof concepts, project-structure-specific rules, handoff implementation names, and workspace tool names. These may appear in docs, examples, concrete drivers, adapter projects, or tests specifically scoped to those drivers.
 
+Scenario terms such as `TetrisGame`, `Tetris`, `RecipePlannerPwa`, `IssueTriageDashboard`, `InvoiceApprovalPortal`, recipe, meal plan, shopping list, SLA badge, invoice approval, game loop, falling-piece, or score storage are allowed only in scenario packs, tests, evidence, validation docs, screenshots, and explicitly scoped fixtures. They are forbidden in generic Process Core, Runtime, Dispatcher, Builder, Manager, Artifact, Monitoring, Template, Projection, and shared API contracts.
+
 ## Gate C Old Symbol Leak Review
 
 Search for:
@@ -121,3 +123,12 @@ Every future implementation subbundle must end with an execution report includin
 - Launch UI projections show score and readiness separately.
 - Sensitive right/tool evidence is redacted behind restricted evidence links.
 - Runtime assignments include readiness assessment hash, requirement set hash, evidence snapshot hash, unresolved warnings, and approved override references.
+
+## Gate L Final E2E Scenario And API Skill Review
+
+- Final E2E scenarios are loaded through public typed APIs, not database edits or hidden test-only stores.
+- The Process API surface supports definitions, templates, launch plans, candidate readiness, runs, steps, assignments, artifacts, manager directives, escalations, projections, and project-scoped process links.
+- A Codex Process API skill documents route discovery, authorization, enum/ID guidance, scenario loading, run readback, artifact lineage, candidate readiness, and stop conditions.
+- `TetrisGame`, `RecipePlannerPwa`, `IssueTriageDashboard`, and `InvoiceApprovalPortal` scenario replay passes or has explicit user-approved disposition.
+- Domain leak scans prove scenario vocabulary does not appear in generic Process projects or broad software/.NET driver contracts.
+- Final E2E report records API commands or test names, process run ids, artifact status, escalation/recovery state, browser screenshots, and leak-scan output.

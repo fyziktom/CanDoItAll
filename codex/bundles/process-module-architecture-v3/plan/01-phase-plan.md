@@ -32,7 +32,7 @@ flowchart TD
     SB24["SB24 Operator Control Center, Escalations, Approvals, Rework, And Manager Directives"]
     SB25["SB25 Evidence, Artifact Obligations, Assignments, Direct Messaging, And Manager Chat"]
     SB26["SB26 Analytics, Graphs, Live Processes Dashboard, Snapshot Cache, And Time Windows"]
-    SB27["SB27 Project-Scoped Processes, Project Structure Integration, Agent Tools, And API Compatibility"]
+    SB27["SB27 Project-Scoped Processes, Project Structure Integration, Process APIs, Codex Skill, And API Compatibility"]
     SB28["SB28 E2E User Story Regression, Refactoring Hardening, Security, And Final Closure"]
 
     SB01 --> SB02 --> SB03
@@ -77,7 +77,7 @@ flowchart TD
 - SB10 is critical because every UI subbundle depends on projection contracts and live/history correctness.
 - SB12 is critical because template compatibility and runtime history compatibility are required before UI/final closure.
 - SB13 through SB27 are critical because each owns a concrete current user-story group and must produce localized proof before final regression.
-- SB28 is critical because it proves the rewrite works end to end, covers every US-001 through US-056 story, did not reintroduce the old architecture, passes the .NET performance antipattern hardening gate, and proves role candidate readiness does not regress into score-only launch decisions.
+- SB28 is critical because it proves the rewrite works end to end, covers every US-001 through US-056 story, did not reintroduce the old architecture, passes the .NET performance antipattern hardening gate, proves role candidate readiness does not regress into score-only launch decisions, and replays final E2E source scenarios without scenario-specific leaks.
 
 ## Phase Gates
 
@@ -109,8 +109,8 @@ flowchart TD
 | G24 Operator proof | SB25 | Escalation, approval, manager directive, rework, recovery advice proof. |
 | G25 Evidence/coordination proof | SB26 | Artifact obligations, evidence, assignments, direct messages, manager chat proof. |
 | G26 Analytics/live proof | SB27 | Graphs, analytics, live dashboard, snapshot cache, time-window filtering proof. |
-| G27 Project/API compatibility proof | SB28 | Project-scoped routes, project structure integration, agent tools, API compatibility proof. |
-| G28 Final closure | Merge | E2E story regression, dependency/vocabulary/old-symbol scans, refactoring review, security/redaction proof, .NET performance scan summary, role candidate readiness proof, complete US-001 through US-056 coverage table. |
+| G27 Project/API compatibility proof | SB28 | Project-scoped routes, project structure integration, agent tools, typed Process APIs, Codex Process API skill, scenario-loading workflow, and API compatibility proof. |
+| G28 Final closure | Merge | E2E story regression, final source scenario replay, dependency/vocabulary/old-symbol scans, scenario domain leak scans, refactoring review, security/redaction proof, .NET performance scan summary, role candidate readiness proof, complete US-001 through US-056 coverage table. |
 
 ## Rewrite Order
 
@@ -152,5 +152,5 @@ flowchart TD
 24. SB24 Operator Control Center, Escalations, Approvals, Rework, And Manager Directives.
 25. SB25 Evidence, Artifact Obligations, Assignments, Direct Messaging, And Manager Chat.
 26. SB26 Analytics, Graphs, Live Processes Dashboard, Snapshot Cache, And Time Windows.
-27. SB27 Project-Scoped Processes, Project Structure Integration, Agent Tools, And API Compatibility.
+27. SB27 Project-Scoped Processes, Project Structure Integration, Process APIs, Codex Skill, And API Compatibility.
 28. SB28 E2E User Story Regression, Refactoring Hardening, Security, And Final Closure.

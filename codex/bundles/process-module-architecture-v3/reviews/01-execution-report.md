@@ -18,6 +18,7 @@ Architecture bundle v3 prepared. No Process rewrite implementation was executed.
 - Expanded the future roadmap from SB01-SB14 to SB01-SB28 so UI/UX and story coverage are implemented and validated in smaller packages.
 - Applied `analyzing-dotnet-performance` to current Process code signals and added .NET performance guardrails for the new architecture.
 - Added role candidate readiness architecture so HR scoring remains advisory and missing tools, rights, capabilities, approvals, bindings, access, and provisioning blockers become typed launch findings.
+- Captured `TetrisGame` source information from the running instance on port `5032`, added final E2E scenario requirements, and required typed Process APIs plus a Codex API skill for scenario loading.
 
 ## Repository Evidence
 
@@ -57,6 +58,7 @@ No runtime analytics or browser performance data were collected because this is 
 | Split complex UI rebuild into smaller subbundles | Covered | `plan/01-phase-plan.md`, `plan/04-future-subbundle-roadmap.md`, `subbundles/13-*` through `subbundles/28-*` |
 | Analyze v3 architecture with .NET performance antipattern skill | Covered | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md`, `plan/05-review-checkpoints-and-hardening-gates.md` Gate J |
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
+| Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
 
 ## Requirement Closure Summary
@@ -76,6 +78,7 @@ No runtime analytics or browser performance data were collected because this is 
 | User-story map | Covered | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md`, `validation/04-user-story-coverage-validation.md` |
 | .NET performance guardrails | Covered | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md` |
 | Role candidate readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, `subbundles/21-launch-planning-candidate-matching-approval-provisioning-and-execution/README.md` |
+| Process APIs, Codex skill, and final E2E source scenarios | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `subbundles/27-project-scoped-processes-project-structure-integration-agent-tools-and-api-compatibility/README.md`, `subbundles/28-e2e-user-story-regression-hardening-and-final-closure/README.md` |
 
 ## Validation Command
 

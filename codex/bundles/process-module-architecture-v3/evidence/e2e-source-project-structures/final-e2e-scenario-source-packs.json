@@ -1,0 +1,501 @@
+{
+  "schemaVersion": "process-module-architecture-v3.e2e-scenario-source-pack-draft/1",
+  "status": "architecture-seed",
+  "purpose": "Source data seed for final E2E scenarios. Future implementation must load equivalent scenario data through public project-structure and Process APIs, not through direct database writes.",
+  "genericityRules": {
+    "scenarioTextIsDataOnly": true,
+    "forbiddenGenericTerms": [
+      "TetrisGame",
+      "Tetris",
+      "falling-piece",
+      "score storage",
+      "RecipePlannerPwa",
+      "recipe",
+      "meal plan",
+      "shopping list",
+      "IssueTriageDashboard",
+      "SLA badge",
+      "InvoiceApprovalPortal",
+      "invoice approval"
+    ],
+    "forbiddenGenericLocations": [
+      "Process Core contracts",
+      "Runtime state machines",
+      "Dispatcher contracts",
+      "Builder and plan compiler contracts",
+      "Manager generic control loop",
+      "Artifact ledger contracts",
+      "Monitoring event and snapshot contracts",
+      "Template and Git core contracts",
+      "UI projection contracts",
+      "Broad software-development driver contracts",
+      "Broad .NET driver contracts"
+    ],
+    "allowedLocations": [
+      "scenario packs",
+      "tests named for scenario proof",
+      "evidence files",
+      "validation reports",
+      "screenshots",
+      "project-structure source fixtures"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenarioKey": "TetrisGame",
+      "displayName": "TetrisGame",
+      "sourceKind": "captured-current-application",
+      "capturedFrom": "http://localhost:5032",
+      "capturedUsing": [
+        "GET /api/access/status",
+        "GET /api/project-structure/projects",
+        "POST /api/project-structure/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/structure/read",
+        "GET /api/processes/definitions/a9bf7ad8-a5d9-4fdc-af3d-7462c44576cd/export",
+        "GET /api/processes/runs/82ebf8f9-de88-4748-b67b-5fb46f29159d"
+      ],
+      "projectStructureSource": {
+        "project": {
+          "observedId": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+          "name": "TetrisGame",
+          "status": "Active",
+          "currentPhase": "WIP"
+        },
+        "observedCounts": {
+          "nodes": 13,
+          "links": 14
+        },
+        "nodes": [
+          {
+            "observedId": "project:3324868f-66e2-478a-bb8f-14f32a5db1e9",
+            "localRef": "project-root",
+            "parentRef": null,
+            "kind": "Project",
+            "subtype": null,
+            "title": "TetrisGame",
+            "status": "Active",
+            "contentSummary": "Project root."
+          },
+          {
+            "observedId": "custom:94212a9f6dbe4014aadb1b5ee7b3513a",
+            "localRef": "customer-request",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "research",
+            "title": "main customer request",
+            "status": "Draft",
+            "contentSummary": "Customer-intake source group."
+          },
+          {
+            "observedId": "custom:99f53b6f1f594af4a87b73949545d9d8",
+            "localRef": "source-workflow",
+            "parentRef": "customer-request",
+            "kind": "Workflow",
+            "subtype": null,
+            "title": "Example: Office365 Category Email Summary To Project",
+            "status": "Completed",
+            "contentSummary": "Workflow that produced the request summary."
+          },
+          {
+            "observedId": "custom:f7ac7bb86956464abb2bcc2b5cf749d0",
+            "localRef": "customer-request-markdown",
+            "parentRef": "source-workflow",
+            "kind": "File",
+            "subtype": "markdown",
+            "title": "Office365 category email summary",
+            "status": "Draft",
+            "contentSummary": "Build a simple browser-based Tetris game as a website. Mobile application is later scope. Keyboard controls are required. The last maximum score must be saved locally. No backend is wanted. Static web hosting is desired. Delivery target is one week.",
+            "openGaps": [
+              "scoring details",
+              "levels",
+              "pause/restart behavior",
+              "game-over behavior",
+              "visual design",
+              "brand assets",
+              "mobile scope"
+            ]
+          },
+          {
+            "observedId": "custom:f09c64048bc946f3a52d0aa51854ae25",
+            "localRef": "main-architecture",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "Main Architecture",
+            "status": "Draft",
+            "contentSummary": "Architecture source group."
+          },
+          {
+            "observedId": "custom:cfdf1309669842bea91475acb0b6ad1c",
+            "localRef": "app-shape",
+            "parentRef": "main-architecture",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "Blazor WASM PWA app shape",
+            "status": "Draft",
+            "contentSummary": "Frontend-only Blazor WebAssembly PWA, static-host friendly, offline-friendly shell."
+          },
+          {
+            "observedId": "custom:b6a01bdeb6e34281bb1f25876fd0326e",
+            "localRef": "game-loop",
+            "parentRef": "main-architecture",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "Game loop and board behavior",
+            "status": "Draft",
+            "contentSummary": "Falling-piece loop belongs in an engine/service layer, not Razor event handlers. Include spawn, move, rotate, lock, clear-line, collision, and game-over behavior.",
+            "scenarioDataOnly": true
+          },
+          {
+            "observedId": "custom:204ad6b854f449c19155e78f7656b6ac",
+            "localRef": "score-storage",
+            "parentRef": "main-architecture",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "IndexedDB score storage",
+            "status": "Draft",
+            "contentSummary": "IndexedDB is the only persistence mechanism for the last maximum score. No remote storage or API dependency.",
+            "scenarioDataOnly": true
+          },
+          {
+            "observedId": "custom:833333d5f35b4b5cbe2fbc3ac3b51f2a",
+            "localRef": "responsive-acceptance",
+            "parentRef": "main-architecture",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "Responsive game screen and acceptance",
+            "status": "Draft",
+            "contentSummary": "Board and HUD must fit within viewport without horizontal or vertical scrolling."
+          },
+          {
+            "observedId": "custom:bd8169fc3fa944dbafd13998fb167fe8",
+            "localRef": "output-folder",
+            "parentRef": "main-architecture",
+            "kind": "ProjectBlock",
+            "subtype": "delivery",
+            "title": "Output folder",
+            "status": "Draft",
+            "contentSummary": "Final app must be placed in C:\\programovani\\dotnet\\output."
+          },
+          {
+            "observedId": "custom:cfd406780f034384a70ea6b87507422a",
+            "localRef": "main-app",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "delivery",
+            "title": "Main App",
+            "status": "Draft",
+            "contentSummary": "Project-structure target node for process launch."
+          }
+        ]
+      },
+      "processSource": {
+        "existingDefinitionId": "a9bf7ad8-a5d9-4fdc-af3d-7462c44576cd",
+        "existingDefinitionName": "Multi-team software delivery and release governance",
+        "sourceFormat": "CanDoItAll.ProcessDefinition/v2",
+        "observedRoleCount": 7,
+        "observedStepCount": 20,
+        "launchTargetNodeRef": "main-app"
+      },
+      "runtimeExpectations": {
+        "existingRunId": "82ebf8f9-de88-4748-b67b-5fb46f29159d",
+        "existingRunStatus": "Blocked",
+        "completedSteps": 2,
+        "totalSteps": 20,
+        "blockedSteps": 1,
+        "missingArtifactCount": 2,
+        "completedSubprocess": ".NET architecture design and review subprocess",
+        "blockedSubprocess": ".NET implementation slice subprocess",
+        "missingArtifacts": [
+          "Implementation change set",
+          "Migration and rollout preparation checklist"
+        ],
+        "expectedBehaviors": [
+          "project-scoped process link from project-structure node",
+          "process run projection under project node",
+          "subprocess completion",
+          "subprocess blocking",
+          "missing artifact detection",
+          "manager/operator escalation",
+          "project-structure output folder projection"
+        ]
+      },
+      "browserProof": {
+        "routes": [
+          "/projects",
+          "/projects/{projectId}",
+          "/processes",
+          "/processes/runs/{runId}"
+        ],
+        "assertions": [
+          "project source nodes are visible",
+          "linked process definition is visible from Main App",
+          "blocked run status is visible",
+          "missing artifact state is visible",
+          "escalation state is visible"
+        ]
+      }
+    },
+    {
+      "scenarioKey": "RecipePlannerPwa",
+      "displayName": "Recipe Planner PWA",
+      "sourceKind": "genericity-control-scenario",
+      "projectStructureSource": {
+        "project": {
+          "name": "RecipePlannerPwa",
+          "status": "Draft",
+          "currentPhase": "Planning"
+        },
+        "nodes": [
+          {
+            "localRef": "project-root",
+            "parentRef": null,
+            "kind": "Project",
+            "subtype": null,
+            "title": "RecipePlannerPwa",
+            "status": "Draft",
+            "contentSummary": "Offline-first meal planner and recipe organizer."
+          },
+          {
+            "localRef": "customer-request",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "research",
+            "title": "Customer request",
+            "status": "Draft",
+            "contentSummary": "Build a static-hosted Blazor WASM PWA for recipes, weekly meal plans, shopping lists, and JSON import/export."
+          },
+          {
+            "localRef": "architecture",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "Architecture",
+            "status": "Draft",
+            "contentSummary": "Frontend-only Blazor WASM PWA with IndexedDB storage, no backend for first release, responsive print-friendly shopping list."
+          },
+          {
+            "localRef": "main-app",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "delivery",
+            "title": "Main App",
+            "status": "Draft",
+            "contentSummary": "Project-structure target node for process launch."
+          }
+        ]
+      },
+      "processSource": {
+        "templateKey": "software-delivery-and-release-governance",
+        "launchTargetNodeRef": "main-app",
+        "expectedCandidateReadinessCases": [
+          "frontend build tool access",
+          "browser test tool access",
+          "local storage test capability",
+          "static hosting deployment right"
+        ]
+      },
+      "runtimeExpectations": {
+        "expectedArtifacts": [
+          "scope boundary packet",
+          "architecture decision record",
+          "implementation change set",
+          "browser validation evidence",
+          "static hosting release checklist"
+        ],
+        "expectedBehaviors": [
+          "same template handles offline-first PWA source without game assumptions",
+          "artifact recovery remains generic",
+          "live/history projections show run and artifacts"
+        ]
+      },
+      "browserProof": {
+        "routes": [
+          "/projects/{projectId}",
+          "/processes/runs/{runId}"
+        ],
+        "assertions": [
+          "recipe CRUD workflow proof exists as scenario artifact",
+          "IndexedDB persistence proof exists as scenario artifact",
+          "JSON import/export proof exists as scenario artifact",
+          "print-friendly shopping list proof exists as scenario artifact"
+        ]
+      }
+    },
+    {
+      "scenarioKey": "IssueTriageDashboard",
+      "displayName": "Issue Triage Dashboard",
+      "sourceKind": "genericity-control-scenario",
+      "projectStructureSource": {
+        "project": {
+          "name": "IssueTriageDashboard",
+          "status": "Draft",
+          "currentPhase": "Planning"
+        },
+        "nodes": [
+          {
+            "localRef": "project-root",
+            "parentRef": null,
+            "kind": "Project",
+            "subtype": null,
+            "title": "IssueTriageDashboard",
+            "status": "Draft",
+            "contentSummary": "Dashboard for viewing and triaging issues by severity, owner, SLA, and release impact."
+          },
+          {
+            "localRef": "customer-request",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "research",
+            "title": "Customer request",
+            "status": "Draft",
+            "contentSummary": "Build a dashboard with role-based reviewer and maintainer views, issue filtering, owner assignment, and audit log for triage decisions."
+          },
+          {
+            "localRef": "architecture",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "Architecture",
+            "status": "Draft",
+            "contentSummary": "Blazor Web App or Blazor Server/SSR with backend API, persistence, seed/import issue data, and audited mutations."
+          },
+          {
+            "localRef": "main-app",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "delivery",
+            "title": "Main App",
+            "status": "Draft",
+            "contentSummary": "Project-structure target node for process launch."
+          }
+        ]
+      },
+      "processSource": {
+        "templateKey": "software-delivery-and-release-governance",
+        "launchTargetNodeRef": "main-app",
+        "expectedCandidateReadinessCases": [
+          "repository access",
+          "backend build tool access",
+          "database migration right",
+          "data mutation approval right",
+          "browser test tool access"
+        ]
+      },
+      "runtimeExpectations": {
+        "expectedArtifacts": [
+          "scope boundary packet",
+          "architecture decision record",
+          "database migration proof",
+          "implementation change set",
+          "browser validation evidence",
+          "audit behavior proof"
+        ],
+        "expectedBehaviors": [
+          "same runtime handles backend and persistence work",
+          "candidate readiness blocks missing data mutation rights",
+          "project-scoped projections remain generic"
+        ]
+      },
+      "browserProof": {
+        "routes": [
+          "/projects/{projectId}",
+          "/processes/runs/{runId}"
+        ],
+        "assertions": [
+          "filtering proof exists as scenario artifact",
+          "owner assignment proof exists as scenario artifact",
+          "SLA display proof exists as scenario artifact",
+          "audit entry creation proof exists as scenario artifact"
+        ]
+      }
+    },
+    {
+      "scenarioKey": "InvoiceApprovalPortal",
+      "displayName": "Invoice Approval Portal",
+      "sourceKind": "genericity-control-scenario",
+      "projectStructureSource": {
+        "project": {
+          "name": "InvoiceApprovalPortal",
+          "status": "Draft",
+          "currentPhase": "Planning"
+        },
+        "nodes": [
+          {
+            "localRef": "project-root",
+            "parentRef": null,
+            "kind": "Project",
+            "subtype": null,
+            "title": "InvoiceApprovalPortal",
+            "status": "Draft",
+            "contentSummary": "Secured portal for uploading invoice metadata, reviewing exceptions, and approving or rejecting invoices."
+          },
+          {
+            "localRef": "customer-request",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "research",
+            "title": "Customer request",
+            "status": "Draft",
+            "contentSummary": "Build a secured invoice review and approval portal with authenticated roles, approval history, and no anonymous public access."
+          },
+          {
+            "localRef": "architecture",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "architecture",
+            "title": "Architecture",
+            "status": "Draft",
+            "contentSummary": ".NET web app with authenticated roles, file metadata, approval records, security review, exportable approval history, and explicit authorization checks."
+          },
+          {
+            "localRef": "main-app",
+            "parentRef": "project-root",
+            "kind": "ProjectBlock",
+            "subtype": "delivery",
+            "title": "Main App",
+            "status": "Draft",
+            "contentSummary": "Project-structure target node for process launch."
+          }
+        ]
+      },
+      "processSource": {
+        "templateKey": "software-delivery-and-release-governance",
+        "launchTargetNodeRef": "main-app",
+        "expectedCandidateReadinessCases": [
+          "repository access",
+          "security review right",
+          "approval authority",
+          "export validation capability",
+          "browser test tool access"
+        ]
+      },
+      "runtimeExpectations": {
+        "expectedArtifacts": [
+          "scope boundary packet",
+          "architecture decision record",
+          "security review evidence",
+          "implementation change set",
+          "authorization proof",
+          "approval history export proof"
+        ],
+        "expectedBehaviors": [
+          "same process system handles security-sensitive constraints through policy",
+          "candidate readiness blocks missing approval authority",
+          "artifact lineage preserves security review and export proof"
+        ]
+      },
+      "browserProof": {
+        "routes": [
+          "/projects/{projectId}",
+          "/processes/runs/{runId}"
+        ],
+        "assertions": [
+          "authenticated access proof exists as scenario artifact",
+          "approval/rejection proof exists as scenario artifact",
+          "unauthorized access denial proof exists as scenario artifact",
+          "approval history export proof exists as scenario artifact"
+        ]
+      }
+    }
+  ]
+}

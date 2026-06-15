@@ -31,18 +31,19 @@ Prepare the architecture foundation and future implementation roadmap for a grou
 - Browser-facing story proof must be captured in the owning UI subbundle with Playwright MCP evidence and screenshots, not deferred to final closure.
 - Runtime, dispatcher, manager, projection, template, Git, adapter, and UI implementation must follow explicit .NET performance guardrails: async end-to-end, bounded queues, source-generated JSON, cached serializers, bounded UI queries, and no allocation-heavy hot paths without proof.
 - Process launch candidate selection must not be score-only. HR recommendations are advisory; deterministic readiness assessment must expose missing required tools, rights, capabilities, approvals, bindings, and provisioning blockers.
+- Final E2E source scenarios must be loaded through typed Process/project-structure APIs and documented in a Codex Process API skill. `TetrisGame` is scenario data only; generic Process layers and broad software/.NET drivers must not contain Tetris-specific or other scenario-specific rules.
 
 ## Bundle Map
 
 - [inputs/](inputs/) captures the preserved request, improvement instructions, and structured input extraction.
-- [analysis/](analysis/) describes the current Process implementation, why it is insufficient, the current user-story map, .NET performance risk signals, and current role-candidate readiness gaps.
+- [analysis/](analysis/) describes the current Process implementation, why it is insufficient, the current user-story map, .NET performance risk signals, current role-candidate readiness gaps, and final E2E project-structure source scenarios.
 - [requirements/](requirements/) normalizes every architectural requirement into stable IDs.
-- [architecture/](architecture/) contains the target architecture, state models, builders, drivers, manager, artifacts, monitoring, template/Git model, governance, persistence/event stores, branch contracts, adapters, UI projection inventory, runtime history compatibility, user-story coverage model, .NET performance guardrails, and role-candidate readiness model.
+- [architecture/](architecture/) contains the target architecture, state models, builders, drivers, manager, artifacts, monitoring, template/Git model, governance, persistence/event stores, branch contracts, adapters, UI projection inventory, runtime history compatibility, user-story coverage model, .NET performance guardrails, role-candidate readiness model, Process API/Codex skill contract, and final E2E source scenario strategy.
 - [inventories/](inventories/) lists current reusable and non-reusable repo surfaces.
 - [plan/](plan/) defines the phased rewrite plan, hardening gates, project order, and future subbundle roadmap.
 - [subbundles/](subbundles/) contains SB01-SB28 future implementation packages. They are prepared, not executed.
 - [traceability/](traceability/) maps requirements and source prompt topics to architecture files, future phases, and acceptance criteria.
-- [validation/](validation/) records the architecture checklist, test plan, subbundle readiness checklist, user-story coverage validation, and .NET performance antipattern checklist.
+- [validation/](validation/) records the architecture checklist, test plan, subbundle readiness checklist, user-story coverage validation, .NET performance antipattern checklist, role-candidate readiness validation, and final E2E source scenario validation.
 - [shared-prompts/](shared-prompts/) gives future implementation and QA agents the right posture after this architecture is accepted.
 - [reviews/](reviews/) records the preparation self-review and execution report.
 
@@ -78,4 +79,5 @@ The bundle intentionally does not run product tests because no product behavior 
 - v2/v3 architecture gaps were converted into new architecture files, roadmap updates, real future subbundles, story traceability, validation checks, and reviews.
 - The performance guardrail review was added using the `analyzing-dotnet-performance` skill against current Process code signals and translated into architecture constraints for future implementation.
 - Role candidate readiness was expanded so launch planning can show missing tools/rights and block launch execution until required readiness blockers are resolved or explicitly overridden by policy.
+- The `TetrisGame` project structure from the running instance on port `5032` was captured as final E2E source evidence, with three additional app scenarios required to prove the implementation remains generic. A draft JSON scenario-source pack is stored at `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json` for future API-loading implementation.
 - Product tests were not run because this task changes documentation and `.gitignore` only.

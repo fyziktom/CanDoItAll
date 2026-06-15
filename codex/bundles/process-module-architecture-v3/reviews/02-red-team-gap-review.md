@@ -77,3 +77,9 @@ Mitigation: `architecture/19-dotnet-performance-guardrails.md` and `validation/0
 The current launch planning model has useful HR-driven candidate scoring, but score is not the same as executable readiness. A future implementation could preserve the visible candidate matrix while still allowing a high-scoring candidate to launch without required tools, rights, provider bindings, workflow access, approvals, or project/resource permissions.
 
 Mitigation: `architecture/20-role-candidate-selection-and-readiness.md` separates advisory suitability scoring from deterministic readiness assessment. SB21 must implement typed readiness findings, missing tool/right blockers, provisioning and approval tasks linked to findings, reassessment after provisioning, redaction, and Playwright proof for blocked and ready launch states.
+
+## Finding 14: Final E2E Can Accidentally Become Tetris-Shaped
+
+The live `TetrisGame` project is valuable because it contains real project-structure source data, process link projections, subprocess behavior, missing artifacts, and escalation evidence. It is also dangerous as the only final E2E source because future implementation could accidentally hardcode game or Tetris-specific behavior into generic Process or broad software-development layers.
+
+Mitigation: `analysis/09-final-e2e-project-structure-source-scenarios.md` records `TetrisGame` as scenario data only and adds three additional app scenarios. `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md` requires typed APIs and a Codex skill for scenario loading. Gate B and Gate L require domain leak scans so scenario terms cannot appear in generic Process code.

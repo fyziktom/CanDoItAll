@@ -46,6 +46,7 @@
 | User-story traceability and validation exist. | Pass | `traceability/04-user-story-coverage-map.md`, `validation/04-user-story-coverage-validation.md` |
 | .NET performance guardrails exist. | Pass | `analysis/07-dotnet-performance-antipattern-review.md`, `architecture/19-dotnet-performance-guardrails.md`, `validation/05-dotnet-performance-antipattern-checklist.md` |
 | Role candidate readiness architecture exists. | Pass | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md` |
+| Final E2E source scenarios and Process API/Codex skill architecture exist. | Pass | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json` |
 
 ## Anti-Vagueness Review
 

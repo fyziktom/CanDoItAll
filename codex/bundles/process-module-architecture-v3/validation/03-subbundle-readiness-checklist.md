@@ -21,6 +21,8 @@
 | Every README has acceptance checklist. | Pass |
 | Every README has handoff notes. | Pass |
 | SB21 owns role candidate readiness, missing tool/right blocker proof, provisioning reassessment, and launch UI evidence. | Pass |
+| SB27 owns typed Process APIs, Codex skill parity, and final E2E scenario loading workflow. | Pass |
+| SB28 owns final E2E scenario replay and scenario domain leak scan proof. | Pass |
 
 ## Readiness Judgment
 
@@ -39,3 +41,4 @@ The previous broad UI subbundle has been decomposed. Browser-facing Process work
 - Browser-facing story proof must be captured in the owning UI subbundle and repeated selectively in final regression.
 - C# hot-path implementation proof must include exact performance scan counts from `validation/05-dotnet-performance-antipattern-checklist.md`.
 - Role candidate readiness proof must keep HR score separate from deterministic missing tool/right/capability findings.
+- Final E2E scenario proof must load scenarios through public APIs and reject scenario-specific vocabulary in generic Process code.

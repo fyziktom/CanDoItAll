@@ -34,8 +34,8 @@ This roadmap maps SB01-SB28 to architecture files, acceptance criteria, user-sto
 | SB24 Operator Control | SB23 | `architecture/14-manager-runtime-and-control-loop.md`, `architecture/07-artifact-error-recovery-and-subprocess-model.md` | US-036 to US-039, US-048, US-054 | AC-012 to AC-017, AC-021, AC-040 | SB23 report, manager/incident architecture. |
 | SB25 Evidence/Coordination | SB24 | `architecture/07-artifact-error-recovery-and-subprocess-model.md`, `architecture/14-manager-runtime-and-control-loop.md` | US-040 to US-043, US-053 | AC-014 to AC-017, AC-021, AC-040 | SB24 report, artifact/manager architecture. |
 | SB26 Analytics/Live | SB25 | `architecture/08-monitoring-events-snapshots-and-ui-projections.md` | US-044 to US-047 | AC-018 to AC-021, AC-040 | SB25 report, monitoring projection architecture. |
-| SB27 Project/API Compatibility | SB26 | `architecture/16-execution-adapters-and-integration-boundaries.md`, `architecture/10-security-governance-and-agent-change-auditing.md` | US-002, US-049 to US-051 | AC-010, AC-036, AC-039, AC-040 | SB26 report, adapter/tool/API architecture. |
-| SB28 Final Closure | SB27 | All architecture files, validation plans, hardening gates | US-001 to US-056 final regression | AC-001 to AC-042 | All prior reports, proof manifests, and performance scan summaries, including role candidate readiness proof. |
+| SB27 Project/API Compatibility | SB26 | `architecture/16-execution-adapters-and-integration-boundaries.md`, `architecture/10-security-governance-and-agent-change-auditing.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md` | US-002, US-049 to US-051 | AC-010, AC-036, AC-039, AC-040, AC-043 | SB26 report, adapter/tool/API architecture, Process API/Codex skill contract. |
+| SB28 Final Closure | SB27 | All architecture files, validation plans, hardening gates | US-001 to US-056 final regression | AC-001 to AC-043 | All prior reports, proof manifests, final E2E scenario replay, domain leak scans, and performance scan summaries, including role candidate readiness proof. |
 
 ## Dependency Notes
 

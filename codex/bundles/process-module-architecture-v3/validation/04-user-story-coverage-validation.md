@@ -91,3 +91,4 @@ SB28 must prove:
 - No story is covered by active old runtime/dispatcher fallback.
 - No story relies on query-side recomputation of runtime truth.
 - Live/history time-window behavior is correct for `Live 1h`, `1 day`, `7 days`, and `30 days`.
+- Final E2E source scenarios are replayed through public APIs and scenario-specific vocabulary does not leak into generic Process code.

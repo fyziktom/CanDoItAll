@@ -1,0 +1,90 @@
+{
+  "capturedFrom": "http://localhost:5032",
+  "capturedUsing": [
+    "GET /api/access/status",
+    "GET /api/project-structure/projects",
+    "POST /api/project-structure/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/structure/read",
+    "GET /api/processes/definitions/a9bf7ad8-a5d9-4fdc-af3d-7462c44576cd/export",
+    "GET /api/processes/runs/82ebf8f9-de88-4748-b67b-5fb46f29159d"
+  ],
+  "project": {
+    "id": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+    "name": "TetrisGame",
+    "status": "Active",
+    "currentPhase": "WIP",
+    "observedNodeCount": 13,
+    "observedLinkCount": 14
+  },
+  "sourceRequest": {
+    "summary": "Build a simple browser-based Tetris game as a website. Mobile application is later scope. Keyboard controls are required. The last maximum score must be saved locally. No backend is wanted. Static web hosting is desired. Delivery target is one week.",
+    "openGaps": [
+      "scoring details",
+      "levels",
+      "pause/restart behavior",
+      "game-over behavior",
+      "visual design",
+      "brand assets",
+      "mobile scope"
+    ]
+  },
+  "projectStructureHighlights": [
+    {
+      "nodeId": "custom:f7ac7bb86956464abb2bcc2b5cf749d0",
+      "kind": "File/markdown",
+      "title": "Office365 category email summary",
+      "purpose": "Primary customer request evidence"
+    },
+    {
+      "nodeId": "custom:cfdf1309669842bea91475acb0b6ad1c",
+      "kind": "ProjectBlock/architecture",
+      "title": "Blazor WASM PWA app shape",
+      "purpose": "Frontend-only static-hosted Blazor WASM PWA constraint"
+    },
+    {
+      "nodeId": "custom:b6a01bdeb6e34281bb1f25876fd0326e",
+      "kind": "ProjectBlock/architecture",
+      "title": "Game loop and board behavior",
+      "purpose": "Scenario-specific game behavior; forbidden as generic Process concept"
+    },
+    {
+      "nodeId": "custom:204ad6b854f449c19155e78f7656b6ac",
+      "kind": "ProjectBlock/architecture",
+      "title": "IndexedDB score storage",
+      "purpose": "Local-only persistence constraint"
+    },
+    {
+      "nodeId": "custom:833333d5f35b4b5cbe2fbc3ac3b51f2a",
+      "kind": "ProjectBlock/architecture",
+      "title": "Responsive game screen and acceptance",
+      "purpose": "Browser UI no-scroll acceptance"
+    },
+    {
+      "nodeId": "custom:bd8169fc3fa944dbafd13998fb167fe8",
+      "kind": "ProjectBlock/delivery",
+      "title": "Output folder",
+      "purpose": "External artifact destination: C:\\programovani\\dotnet\\output"
+    }
+  ],
+  "processEvidence": {
+    "definitionId": "a9bf7ad8-a5d9-4fdc-af3d-7462c44576cd",
+    "definitionName": "Multi-team software delivery and release governance",
+    "sourceFormat": "CanDoItAll.ProcessDefinition/v2",
+    "roleCount": 7,
+    "stepCount": 20,
+    "runId": "82ebf8f9-de88-4748-b67b-5fb46f29159d",
+    "runName": "Main App / Multi-team software delivery and release governance",
+    "runStatus": "Blocked",
+    "completedSteps": 2,
+    "totalSteps": 20,
+    "blockedSteps": 1,
+    "missingArtifactCount": 2,
+    "completedSubprocess": ".NET architecture design and review subprocess",
+    "blockedSubprocess": ".NET implementation slice subprocess",
+    "missingArtifacts": [
+      "Implementation change set",
+      "Migration and rollout preparation checklist"
+    ]
+  },
+  "genericityWarning": "This is scenario data only. TetrisGame, Tetris, game loop, falling-piece, and score storage terms must never appear in generic Process Core, Runtime, Dispatcher, Builder, Manager, Artifact, Monitoring, Template, Projection, or API contracts."
+}
+

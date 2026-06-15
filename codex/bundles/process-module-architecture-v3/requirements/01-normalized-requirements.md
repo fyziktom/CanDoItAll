@@ -133,3 +133,7 @@ REQ-053: Apply explicit .NET performance guardrails to runtime, dispatcher, mana
 ## Role Candidate Readiness
 
 REQ-054: Improve process launch role candidate selection so HR scoring is advisory and every candidate receives a deterministic readiness assessment that identifies missing required tools, rights, permissions, approvals, provider/workflow bindings, project/resource access, provisioning actions, and execution blockers.
+
+## Process APIs, Codex Skill, And Final E2E Sources
+
+REQ-055: Expose typed Process HTTP APIs and maintain a complementary Codex skill so agents can load final E2E project-structure scenarios, import definitions/templates, create launch plans, assess candidate readiness, execute runs, read artifacts/escalations/projections, and validate genericity without direct database edits or scenario-specific runtime shortcuts.
