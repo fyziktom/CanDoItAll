@@ -56,6 +56,12 @@ Residual risk: actual persisted production data may still reveal fields or reten
 
 ## Finding 10: Subbundle Execution Could Drift If Context Is Not Reset
 
-SB01-SB14 are detailed, but future Codex runs can still drift if they skip context reset files or previous execution reports.
+SB01-SB28 are detailed, but future Codex runs can still drift if they skip context reset files, previous execution reports, or the user-story coverage map.
 
-Mitigation: every subbundle README includes context reset files, prerequisites, proof requirements, stop conditions, and handoff notes. Future implementation must execute one approved subbundle at a time unless the user explicitly authorizes combining work.
+Mitigation: every subbundle README includes context reset files, prerequisites, proof requirements, stop conditions, and handoff notes. Future implementation must execute one approved subbundle at a time unless the user explicitly authorizes combining work. Each subbundle report must record owned US-### story coverage.
+
+## Finding 11: Story Coverage Can Become A Checkbox Exercise
+
+The user-story map can be misused as a superficial checklist if future agents mark stories covered without source, test, and browser proof.
+
+Mitigation: `validation/04-user-story-coverage-validation.md` requires source proof, test proof, browser proof for browser-facing stories, explicit delta decisions, and final US-001 through US-055 closure in SB28.

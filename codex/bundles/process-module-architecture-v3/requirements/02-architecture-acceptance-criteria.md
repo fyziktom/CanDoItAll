@@ -76,4 +76,6 @@
 | AC-035 | UI/UX preservation plan inventories current surfaces, target projection contracts, allowed/forbidden data sources, tests, and reusable visual/canvas concepts. |
 | AC-036 | Execution adapters for workflows, agents, agent groups, handoffs, scheduler starts, project/workbench integration, and plugins are modeled as strategies/adapters outside generic core/runtime. |
 | AC-037 | Runtime history compatibility has inventory, migration/archive/read-only options, compatibility report requirements, final closure gate, and rule against keeping old runtime code alive only for history. |
-| AC-038 | Future subbundles SB01-SB14 exist, follow required structure, map to architecture files, and include prerequisites, scope, proof, search proof, stop conditions, do-not-do rules, refactoring review, and handoff notes. |
+| AC-038 | Future subbundles SB01-SB28 exist, follow required structure, map to architecture files, own explicit user-story ranges, and include prerequisites, scope, proof, search proof, stop conditions, do-not-do rules, refactoring review, browser validation rules where applicable, and handoff notes. |
+| AC-039 | A current-implementation user-story map exists and maps current UI/UX, templates, tests, and tool/API behavior to target architecture surfaces and future subbundle owners. |
+| AC-040 | Browser-facing user stories require Playwright MCP proof and screenshots in the owning UI subbundle, not only in final E2E closure. |

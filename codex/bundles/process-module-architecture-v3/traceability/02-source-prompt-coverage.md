@@ -3,7 +3,7 @@
 | Source prompt topic | Preserved where | Notes |
 | --- | --- | --- |
 | Current processes unreliable but informative | `analysis/01-current-state.md`, `analysis/04-current-code-evidence-map.md` | Current code is evidence, not target architecture. |
-| UI/UX direction as anchor | `analysis/05-reuse-decision-log.md`, `architecture/08-monitoring-events-snapshots-and-ui-projections.md` | UI consumes projections and preserves live/history/canvas direction. |
+| UI/UX direction as anchor | `analysis/05-reuse-decision-log.md`, `analysis/06-current-implementation-user-story-map.md`, `architecture/08-monitoring-events-snapshots-and-ui-projections.md` | UI consumes projections and preserves live/history/canvas direction with explicit US-### coverage. |
 | Old drivers not assumed correct | `analysis/05-reuse-decision-log.md`, `architecture/06-driver-strategy-and-manager-model.md` | Existing drivers are adapted into a broader driver package model. |
 | Process module as operating system | `architecture/01-target-solution.md`, `architecture/03-core-model-and-invariants.md` | Kernel, scheduler, dispatcher, manager, drivers, artifact file system, and observability are separated. |
 | Generic core and layered drivers | `architecture/03-core-model-and-invariants.md`, `architecture/06-driver-strategy-and-manager-model.md` | Core has opaque capability tags; driver hierarchy owns domain terms. |
@@ -34,7 +34,9 @@
 | Identify reusable current parts | `analysis/05-reuse-decision-log.md` | Major surfaces have archive/adapt/drop/replace decisions. |
 | Test strategy for rebuild | `validation/02-architecture-test-plan.md`, `plan/03-project-by-project-rebuild-plan.md` | Tests are project-by-project and gate-by-gate. |
 | Bundle versioning | `README.md`, `.gitignore` evidence in `inputs/01-source-artifacts.md` | v2 exists as a versioned bundle and `.gitignore` exceptions remain. |
-| v3 request for whole roadmap and subbundles | `plan/04-future-subbundle-roadmap.md`, `subbundles/01-*` through `subbundles/14-*` | v3 prepares detailed future implementation packages but does not execute them. |
+| v3 request for whole roadmap and subbundles | `plan/04-future-subbundle-roadmap.md`, `subbundles/01-*` through `subbundles/28-*` | v3 prepares detailed future implementation packages but does not execute them. |
+| User-story map improvement request | `inputs/03-user-story-map-request.md`, `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md`, `traceability/04-user-story-coverage-map.md`, `validation/04-user-story-coverage-validation.md` | Current code, tests, templates, and live UI evidence are mapped to US-001 through US-055. |
+| Split complex UI rebuild into smaller parts | `plan/01-phase-plan.md`, `plan/04-future-subbundle-roadmap.md`, `subbundles/13-*` through `subbundles/28-*` | Browser-facing subbundles require Playwright MCP proof and screenshots at the owning subbundle gate. |
 | v3 project-order correction | `architecture/11-project-boundary-and-dependency-map.md`, `plan/03-project-by-project-rebuild-plan.md` | Driver abstractions precede Builder; projections precede UI. |
 | v3 persistence/event-store decision | `architecture/12-runtime-persistence-event-store-and-outbox.md` | Runtime uses ports; EF/PostgreSQL lives in Persistence. |
 | v3 typed branch contract | `architecture/13-branch-switch-and-loop-contract.md` | Free-text token routing is rejected. |

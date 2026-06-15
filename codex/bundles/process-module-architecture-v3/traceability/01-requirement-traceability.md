@@ -54,19 +54,22 @@
 | REQ-048 | Copy old Process implementation to reference before deletion. | Old implementation first copied into bundle reference material. | `plan/02-phase-0-reference-archive-and-removal.md` | P0-G01 | AC-027; manifest/hash proof. |
 | REQ-049 | Remove old Process projects/tests before rebuilding. | Remove original Process implementation including projects/tests. | `plan/02-phase-0-reference-archive-and-removal.md` | P0-G02, P0-G03 | AC-027; search proof. |
 | REQ-050 | Rebuild with tests project by project and phase by phase. | Add projects from ground up with tests for each. | `plan/03-project-by-project-rebuild-plan.md` | All project gates | AC-029; per-project test proof. |
+| REQ-051 | Maintain a current-implementation user-story map. | Improve v3 bundle with user stories from actual Process implementation and UI/UX. | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md` | G01, G28 | AC-039; user-story coverage validation. |
+| REQ-052 | Split complex future work into smaller story-owned subbundles with localized validation. | UI reconnection/rebuild is too complex for one subbundle and needs Playwright/screenshots per part. | `plan/01-phase-plan.md`, `plan/04-future-subbundle-roadmap.md`, `traceability/04-user-story-coverage-map.md` | G13 to G28 | AC-038, AC-040; subbundle and browser proof validation. |
 
 ## Coverage Notes
 
 - Every normalized requirement maps to at least one architecture section, plan/gate, and validation criterion.
 - v2 replaces v1's grouped traceability with requirement-level rows.
 - v3 keeps the requirement-level mapping and adds subbundle traceability in `traceability/03-subbundle-traceability.md`.
+- The story-map update adds user-story traceability in `traceability/04-user-story-coverage-map.md`.
 - Future implementation subbundles are prepared in v3 but not executed.
 
 ## v3 Gap Coverage
 
 | v3 gap | Covered by | Acceptance |
 | --- | --- | --- |
-| Real future subbundles required | `subbundles/01-*` through `subbundles/14-*`, `plan/04-future-subbundle-roadmap.md` | AC-038 |
+| Real future subbundles required | `subbundles/01-*` through `subbundles/28-*`, `plan/04-future-subbundle-roadmap.md` | AC-038 |
 | Project dependency/order ambiguity | `architecture/11-project-boundary-and-dependency-map.md`, `plan/03-project-by-project-rebuild-plan.md` | AC-031 |
 | Runtime persistence/event/outbox detail | `architecture/12-runtime-persistence-event-store-and-outbox.md` | AC-032 |
 | Branch/switch contract detail | `architecture/13-branch-switch-and-loop-contract.md` | AC-033 |
@@ -75,3 +78,5 @@
 | Execution adapter boundaries | `architecture/16-execution-adapters-and-integration-boundaries.md` | AC-036 |
 | Runtime history compatibility | `architecture/17-runtime-history-migration-and-readonly-compatibility.md` | AC-037 |
 | Review checkpoints embedded | `plan/05-review-checkpoints-and-hardening-gates.md`, every subbundle README | AC-038 |
+| Current user-story map required | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md`, `traceability/04-user-story-coverage-map.md` | AC-039 |
+| Browser proof must be localized | `validation/04-user-story-coverage-validation.md`, SB13-SB27 README files | AC-040 |

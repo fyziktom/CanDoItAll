@@ -18,7 +18,7 @@
 - Ground architecture claims in actual repository files.
 - Fill traceability with requirement-level acceptance criteria.
 - Preserve v2 as historical evidence and produce v3 as architecture plus future subbundle roadmap.
-- Prepare real future subbundles SB01-SB14 without executing them.
+- Prepare real future subbundles SB01-SB28 without executing them.
 - Fix project dependency/order ambiguity before future implementation.
 - Add explicit runtime persistence/event/outbox architecture.
 - Add explicit branch/switch/loop contract.
@@ -26,6 +26,9 @@
 - Add UI/UX projection contract inventory.
 - Add execution adapter boundaries for workflows, agents, agent groups, handoffs, scheduler starts, and project/workbench integrations.
 - Add runtime history migration/read-only compatibility plan.
+- Improve v3 with a user-story map derived from current Process implementation, UI/UX, tests, templates, and live UI evidence.
+- Split broad UI/rebuild work into smaller subbundles with validations after each complex part.
+- Require Playwright MCP and screenshot proof for browser-facing subbundles.
 
 ## Architecture Surfaces Required
 
@@ -53,3 +56,4 @@
 - Current driver verification projects are useful reference material but too narrow for the future driver system.
 - Database persistence remains useful for indexing, snapshots, run state, and historical query performance, while text configuration should live as files under Git.
 - v3 replaces the deferred subbundle marker with detailed future implementation packages.
+- The story-map update treats current UI/UX behavior as a coverage baseline, not as an endorsement of current runtime/dispatcher internals.

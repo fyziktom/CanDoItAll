@@ -4,7 +4,7 @@
 
 Prepared architecture proposal and future implementation roadmap, third iteration. This bundle is architecture/planning-only. It does not implement the new Process module, execute the rewrite, add runtime code, add migrations, or rewrite product tests.
 
-Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages prepared for later execution after user approval. They are not executed in v3.
+Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages prepared for later execution after user approval. They are not executed in v3. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
 
 ## Objective
 
@@ -27,16 +27,18 @@ Prepare the architecture foundation and future implementation roadmap for a grou
 - Manager behavior runs through a control loop and cannot become a hidden dispatcher.
 - Execution integrations for workflows, agents, agent groups, handoffs, scheduler starts, and project/workbench integrations are adapters/strategies, not core concepts.
 - Runtime history compatibility must be proven through migration/archive/read-only projection decisions; old runtime code is not kept alive only for history.
+- Current Process user stories US-001 through US-055 are explicit coverage requirements for future implementation and final regression.
+- Browser-facing story proof must be captured in the owning UI subbundle with Playwright MCP evidence and screenshots, not deferred to final closure.
 
 ## Bundle Map
 
 - [inputs/](inputs/) captures the preserved request, improvement instructions, and structured input extraction.
-- [analysis/](analysis/) describes the current Process implementation and why it is insufficient.
+- [analysis/](analysis/) describes the current Process implementation, why it is insufficient, and the current user-story map.
 - [requirements/](requirements/) normalizes every architectural requirement into stable IDs.
-- [architecture/](architecture/) contains the target architecture, state models, builders, drivers, manager, artifacts, monitoring, template/Git model, governance, persistence/event stores, branch contracts, adapters, UI projection inventory, and runtime history compatibility.
+- [architecture/](architecture/) contains the target architecture, state models, builders, drivers, manager, artifacts, monitoring, template/Git model, governance, persistence/event stores, branch contracts, adapters, UI projection inventory, runtime history compatibility, and user-story coverage model.
 - [inventories/](inventories/) lists current reusable and non-reusable repo surfaces.
 - [plan/](plan/) defines the phased rewrite plan, hardening gates, project order, and future subbundle roadmap.
-- [subbundles/](subbundles/) contains SB01-SB14 future implementation packages. They are prepared, not executed.
+- [subbundles/](subbundles/) contains SB01-SB28 future implementation packages. They are prepared, not executed.
 - [traceability/](traceability/) maps requirements and source prompt topics to architecture files, future phases, and acceptance criteria.
 - [validation/](validation/) records the architecture checklist, test plan, and subbundle readiness checklist.
 - [shared-prompts/](shared-prompts/) gives future implementation and QA agents the right posture after this architecture is accepted.
@@ -58,6 +60,7 @@ This bundle was grounded in the current repo, v2 bundle, and v3 planning instruc
 - Process-related unit, component, integration, and Playwright test surfaces
 - `codex/bundles/process_module_architecture_bundle_improvement_instructions_v1`
 - `codex/bundles/process_module_architecture_v3_subbundle_planning_instructions`
+- current running Process UI at `http://localhost:5032/processes` and `http://localhost:5032/processes/live`
 
 The bundle intentionally does not run product tests because no product behavior was changed.
 
@@ -66,9 +69,9 @@ The bundle intentionally does not run product tests because no product behavior 
 - Bundle preparation status: Prepared architecture bundle v3 with future subbundle roadmap.
 - Bundle readiness gate: Prepared-stage validator must pass before handoff.
 - Execution status: Architecture/planning only; rewrite implementation intentionally not started.
-- Subbundle gate review: SB01-SB14 are prepared for later execution after user approval; none were executed in v3.
+- Subbundle gate review: SB01-SB28 are prepared for later execution after user approval; none were executed in v3.
 - Final closure gate: Future implementation closure depends on the Phase 0 and project rebuild gates in `plan/`.
-- Browser validation analytics: Architecture-only skip; no browser-facing product surface changed.
+- Browser validation analytics: Current UI was inspected for story-map evidence only; no browser-facing product surface changed.
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.
-- v2 architecture gaps were converted into new architecture files, roadmap updates, real future subbundles, traceability, validation checks, and reviews.
+- v2/v3 architecture gaps were converted into new architecture files, roadmap updates, real future subbundles, story traceability, validation checks, and reviews.
 - Product tests were not run because this task changes documentation and `.gitignore` only.

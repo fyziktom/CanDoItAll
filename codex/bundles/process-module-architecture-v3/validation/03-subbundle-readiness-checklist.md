@@ -4,7 +4,7 @@
 
 | Check | Result |
 | --- | --- |
-| SB01-SB14 folders exist. | Pass |
+| SB01-SB28 folders exist. | Pass |
 | Every subbundle has README.md. | Pass |
 | Every README has required standard sections. | Pass |
 | Every README has context reset instructions. | Pass |
@@ -24,6 +24,8 @@
 
 The subbundles are detailed enough for later Codex implementation after user approval, assuming the future agent reads the context reset files and previous subbundle reports named in each README.
 
+The previous broad UI subbundle has been decomposed. Browser-facing Process work now has localized proof gates for workspace shell, definition list, definition editor, roles, canvas, step editor, templates, exchange/Git UI, launch, run history, runtime view, operator control, evidence/coordination, analytics/live, and project/API compatibility.
+
 ## Known Constraints For Future Agents
 
 - Do not execute multiple dependent subbundles in one pass unless the user explicitly requests it.
@@ -31,3 +33,5 @@ The subbundles are detailed enough for later Codex implementation after user app
 - Do not restore build by reviving old dispatcher/runtime semantics.
 - Do not merge active removal without skeleton restoration if repository policy requires every commit to build.
 - Treat proof and review gates as deliverables, not optional notes.
+- Every future execution report must update user-story coverage for the story IDs it owns.
+- Browser-facing story proof must be captured in the owning UI subbundle and repeated selectively in final regression.

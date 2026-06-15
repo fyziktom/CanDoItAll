@@ -4,6 +4,8 @@
 
 The current Process UI/UX direction is useful and should be preserved. The backend data source must change: UI reads application/projection services only. It does not query EF runtime entities, inspect runtime state tables, or compute process truth from raw logs.
 
+The concrete current UI/UX story inventory is recorded in `analysis/06-current-implementation-user-story-map.md`. Future UI subbundles must use that map as a coverage checklist and must record Playwright proof for the story groups they own.
+
 ## UI/UX Surfaces To Preserve
 
 | Current surface | Evidence | Preserve | Target data source | Forbidden data source |
@@ -70,6 +72,7 @@ Each projection includes:
 - Template editor tests for global/local override conflict states.
 - Git UI component tests for diff/conflict/status flows.
 - Playwright smoke tests for Live Processes, process workspace, launch, run details, template conflict, and manager incident action.
+- Story-specific Playwright proof in SB13 through SB27, including screenshots under each subbundle proof directory.
 
 ## Failure Behavior
 

@@ -8,11 +8,11 @@
 | Versioned path used. | Pass | v3 folder preserves v1/v2 as historical evidence and does not overwrite them. |
 | README states architecture-only. | Pass | `README.md#status` |
 | Required files are non-empty. | Pass | Validated by prepared-stage bundle validator. |
-| Implementation subbundles are prepared but not executed. | Pass | `subbundles/01-*` through `subbundles/14-*` |
+| Implementation subbundles are prepared but not executed. | Pass | `subbundles/01-*` through `subbundles/28-*` |
 | Traceability is complete. | Pass | `traceability/01-requirement-traceability.md` |
 | Source prompt coverage exists. | Pass | `traceability/02-source-prompt-coverage.md` |
 | Red-team review exists. | Pass | `reviews/02-red-team-gap-review.md` |
-| Future subbundle documents exist. | Pass | `subbundles/01-*` through `subbundles/14-*` |
+| Future subbundle documents exist. | Pass | `subbundles/01-*` through `subbundles/28-*` |
 
 ## Content Completeness
 
@@ -41,6 +41,9 @@
 | v3 subbundle roadmap exists. | Pass | `plan/04-future-subbundle-roadmap.md` |
 | v3 hardening gates exist. | Pass | `plan/05-review-checkpoints-and-hardening-gates.md` |
 | Runtime history compatibility plan exists. | Pass | `architecture/17-runtime-history-migration-and-readonly-compatibility.md` |
+| Current user-story map exists. | Pass | `analysis/06-current-implementation-user-story-map.md` |
+| User-story architecture coverage model exists. | Pass | `architecture/18-user-story-coverage-model.md` |
+| User-story traceability and validation exist. | Pass | `traceability/04-user-story-coverage-map.md`, `validation/04-user-story-coverage-validation.md` |
 
 ## Anti-Vagueness Review
 
@@ -67,3 +70,4 @@ The bundle explicitly records:
 - Product source code is not modified in this architecture-only pass.
 - Generated zip exports are not included.
 - v1 and v2 remain preserved; v3 is the improved architecture and future-subbundle roadmap bundle.
+- Current UI evidence captured for story mapping is stored under `codex/bundles/process-module-architecture-v3/evidence/ui-current-state/`.

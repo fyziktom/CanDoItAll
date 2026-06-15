@@ -1,0 +1,90 @@
+- generic [ref=e1]:
+  - generic [ref=e3016]:
+    - complementary [ref=e3017]:
+      - generic [ref=e3018]:
+        - generic [ref=e3019]:
+          - generic [ref=e3020]:
+            - generic [ref=e3021]: CD
+            - generic [ref=e3022]: CanDoItAll local delivery workbench
+          - button "Expand navigation" [ref=e3023]:
+            - generic [ref=e3024]: chevron_right
+        - navigation "Primary navigation" [ref=e3025]:
+          - button "Dashboard" [ref=e3027]:
+            - generic [ref=e3029]: dashboard
+          - button "Projects" [ref=e3031]:
+            - generic [ref=e3033]: folder_open
+          - button "Processes" [ref=e3035]:
+            - generic [ref=e3037]: account_tree
+          - button "Live Processes" [ref=e3039]:
+            - generic [ref=e3041]: monitor_heart
+          - button "Collaboration" [ref=e3043]:
+            - generic [ref=e3045]: forum
+            - generic [ref=e3046]: "92"
+          - button "CRM / HR" [ref=e3048]:
+            - generic [ref=e3050]: groups
+          - button "Agents" [ref=e3052]:
+            - generic [ref=e3054]: smart_toy
+          - button "Workflows" [ref=e3056]:
+            - generic [ref=e3058]: account_tree
+          - button "Cognitive Memory" [ref=e3060]:
+            - generic [ref=e3062]: psychology
+          - button "Resources" [ref=e3064]:
+            - generic [ref=e3066]: inventory_2
+          - button "Plugins" [ref=e3068]:
+            - generic [ref=e3070]: extension
+          - button "Prompt Gallery" [ref=e3072]:
+            - generic [ref=e3074]: library_books
+          - button "Prompt Factory" [ref=e3076]:
+            - generic [ref=e3078]: construction
+          - button "Validation Center" [ref=e3080]:
+            - generic [ref=e3082]: fact_check
+          - button "More pages" [ref=e3084]:
+            - generic [ref=e3086]: expand_less
+        - generic [ref=e3088]:
+          - button "Settings" [ref=e3090]:
+            - generic [ref=e3092]: settings
+            - generic [ref=e3093]: Settings
+          - button "Switch Database" [ref=e3095]:
+            - generic [ref=e3097]: storage
+            - generic [ref=e3098]: Switch Database
+    - main [ref=e3099]:
+      - generic [ref=e3100]:
+        - generic [ref=e3104]:
+          - button "Dashboard" [ref=e3106]:
+            - generic [ref=e3107]: Dashboard
+            - generic [ref=e3109]: push_pin
+          - button "Processes" [ref=e3111]:
+            - generic [ref=e3112]: Processes
+          - button "Live Processes" [ref=e3114]:
+            - generic [ref=e3115]: Live Processes
+        - generic [ref=e3117]:
+          - generic [ref=e3118]:
+            - generic [ref=e3119]: Delivery Workspace
+            - generic [ref=e3120]: Live Processes
+          - generic [ref=e3121]: Interactive Server
+          - generic [ref=e3122]: Live items 0
+          - generic [ref=e3123]: Tabs 3
+      - generic [ref=e3126]:
+        - generic [ref=e3129]:
+          - generic [ref=e3130]:
+            - paragraph [ref=e3131]: Processes
+            - heading "Live Processes" [active] [level=1] [ref=e3132]
+            - generic [ref=e3135]: 0 running
+            - generic [ref=e3138]: 0 blocked
+            - generic [ref=e3141]: 0 failed
+            - generic [ref=e3144]: not loaded
+          - generic [ref=e3145]:
+            - combobox "History window" [ref=e3146]:
+              - option "Live 1h" [selected]
+              - option "1 day"
+              - option "7 days"
+              - option "30 days"
+            - combobox "Process filter" [ref=e3147]:
+              - option "All processes" [selected]
+            - button "Refresh" [disabled] [ref=e3149]:
+              - generic [ref=e3151]: refresh
+        - generic [ref=e3154]:
+          - paragraph [ref=e3155]: Live processes
+          - heading "Loading process projection" [level=3] [ref=e3156]
+          - paragraph [ref=e3157]: Collecting current runs, active agents, metrics, and tool usage.
+  - tooltip "Refresh the live process projection."

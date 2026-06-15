@@ -120,3 +120,8 @@ REQ-049: Remove old Process projects/tests before rebuilding to avoid accidental
 
 REQ-050: Rebuild with tests project by project and phase by phase.
 
+## User Story Coverage And Subbundle Granularity
+
+REQ-051: Maintain an explicit user-story map derived from the current Process implementation, UI/UX, tests, templates, and live UI evidence so the rewrite preserves or intentionally improves existing user-facing capabilities.
+
+REQ-052: Split broad future implementation work, especially UI/UX reconnection and rebuild, into smaller subbundles with story ownership, validation gates, Playwright proof for browser-facing stories, and final story regression closure.

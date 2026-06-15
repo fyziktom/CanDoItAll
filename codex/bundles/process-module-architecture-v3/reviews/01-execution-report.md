@@ -9,10 +9,13 @@ Architecture bundle v3 prepared. No Process rewrite implementation was executed.
 - Created `codex/bundles/process-module-architecture-v3` from v2 while preserving v2 as historical evidence.
 - Added architecture files `11` through `17` for corrected project boundaries, runtime persistence/event store/outbox, branch/switch/loop contracts, manager control loop, UI projection inventory, execution adapters, and runtime history compatibility.
 - Updated existing architecture files to cross-reference v3 detail files.
-- Replaced deferred subbundle marker with SB01-SB14 future implementation packages.
+- Replaced deferred subbundle marker with SB01-SB28 future implementation packages.
 - Updated phase plan, Phase 0 plan, project rebuild plan, future subbundle roadmap, and hardening gates.
 - Updated acceptance criteria, requirement traceability, source prompt coverage, validation checklist, architecture test plan, and subbundle readiness checklist.
 - Added v3 architecture review and subbundle readiness review.
+- Added current implementation user-story map US-001 through US-055 grounded in code, tests, templates, and live UI evidence.
+- Added Playwright MCP snapshots and screenshots for current `/processes`, workspace tabs, template library, and `/processes/live`.
+- Expanded the future roadmap from SB01-SB14 to SB01-SB28 so UI/UX and story coverage are implemented and validated in smaller packages.
 
 ## Repository Evidence
 
@@ -30,13 +33,13 @@ Architecture bundle v3 prepared. No Process rewrite implementation was executed.
 
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| SB01-SB14 future packages | Architecture approval required | Not executed in v3 | Roadmap dependencies checked | Prepared | v3 prepares the subbundles; future implementation must execute them later with proof. |
+| SB01-SB28 future packages | Architecture approval required | Not executed in v3 | Roadmap dependencies checked | Prepared | v3 prepares the subbundles; future implementation must execute them later with user-story proof. |
 
 ## Browser Validation Analytics
 
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
-| Architecture task | Architecture docs only | Product UI not opened | No browser tool needed | No screenshots produced | Skipped because no UI behavior changed. |
+| Current UI story-map analysis | `/processes`, `/processes/live` | 1600x1000 | `evidence/ui-current-state/*.md` | `evidence/ui-current-state/*.png` | Captured current UI/UX evidence for architecture and user-story mapping; product behavior was not changed. |
 
 ## Analytics Review
 
@@ -47,7 +50,9 @@ No runtime analytics or browser performance data were collected because this is 
 | Raw note | Status | Proof |
 | --- | --- | --- |
 | Improve v2 architecture design | Covered | `architecture/11-project-boundary-and-dependency-map.md` through `architecture/17-runtime-history-migration-and-readonly-compatibility.md` |
-| Prepare whole roadmap and subbundles | Covered | `plan/04-future-subbundle-roadmap.md`, `subbundles/01-*` through `subbundles/14-*` |
+| Prepare whole roadmap and subbundles | Covered | `plan/04-future-subbundle-roadmap.md`, `subbundles/01-*` through `subbundles/28-*` |
+| Improve v3 with current user-story map | Covered | `analysis/06-current-implementation-user-story-map.md`, `traceability/04-user-story-coverage-map.md`, `validation/04-user-story-coverage-validation.md` |
+| Split complex UI rebuild into smaller subbundles | Covered | `plan/01-phase-plan.md`, `plan/04-future-subbundle-roadmap.md`, `subbundles/13-*` through `subbundles/28-*` |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
 
 ## Requirement Closure Summary
@@ -62,8 +67,9 @@ No runtime analytics or browser performance data were collected because this is 
 | UI projection inventory | Covered | `architecture/15-ui-ux-projection-contracts-and-reuse-plan.md` |
 | Execution adapters | Covered | `architecture/16-execution-adapters-and-integration-boundaries.md` |
 | Runtime history compatibility | Covered | `architecture/17-runtime-history-migration-and-readonly-compatibility.md` |
-| Future subbundles | Covered | `subbundles/01-*` through `subbundles/14-*` |
-| Subbundle traceability | Covered | `traceability/03-subbundle-traceability.md` |
+| Future subbundles | Covered | `subbundles/01-*` through `subbundles/28-*` |
+| Subbundle traceability | Covered | `traceability/03-subbundle-traceability.md`, `traceability/04-user-story-coverage-map.md` |
+| User-story map | Covered | `analysis/06-current-implementation-user-story-map.md`, `architecture/18-user-story-coverage-model.md`, `validation/04-user-story-coverage-validation.md` |
 
 ## Validation Command
 
