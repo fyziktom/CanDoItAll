@@ -43,6 +43,7 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 

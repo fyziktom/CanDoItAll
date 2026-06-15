@@ -1,0 +1,36 @@
+SB08 CodeAnalytics MCP summary
+
+Snapshot: snap-20260615203450-71eef9ce
+Created UTC: 2026-06-15T20:34:50Z
+Scope:
+- CanDoItAll.Processes.Application
+- CanDoItAll.Processes.Contracts
+- CanDoItAll.Processes.Core
+- CanDoItAll.Processes.Persistence
+- CanDoItAll.Processes.Projections
+- CanDoItAll.Processes.Runtime
+
+Dashboard summary:
+- Projects: 6
+- Documents: 52
+- Members: 656
+- Entity count: 12
+- Finding count: 21
+- Diagnostic count: 0
+- Dependency cycles: 0
+- Blocking errors: false
+
+Dependency facts:
+- CanDoItAll.Processes.Application references Process Runtime and Projections, not Persistence.
+- CanDoItAll.Processes.Runtime references Contracts and Core only.
+- CanDoItAll.Processes.Persistence references Contracts, Core, Runtime, and Projections.
+- No cycles were reported.
+
+Persistence facts:
+- ProcessPersistenceDbContext was discovered in CanDoItAll.Processes.Persistence.
+- 12 EF entity types were associated with ProcessPersistenceDbContext.
+- Persistence diagnostics were empty.
+
+Risk review:
+- All reported findings are informational complexity notes on existing/runtime records and new persistence row/model types.
+- There are no warning, error, diagnostic, or blocking CodeAnalytics findings in the final SB08 snapshot.

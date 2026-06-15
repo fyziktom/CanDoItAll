@@ -12,5 +12,9 @@
     <ProjectReference Include="..\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+  </ItemGroup>
 
 </Project>

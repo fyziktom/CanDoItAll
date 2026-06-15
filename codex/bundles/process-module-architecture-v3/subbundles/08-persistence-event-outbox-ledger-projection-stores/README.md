@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-15.
 
 ## Objective
 
@@ -151,11 +151,11 @@ Runtime must stay persistence-implementation-neutral, but durable reliability re
 
 ## Acceptance Checklist
 
-- [ ] Runtime ports implemented.
-- [ ] Event/outbox transaction tests pass.
-- [ ] Artifact ledger tests pass.
-- [ ] Projection store tests pass.
-- [ ] Replay/dead-letter tests pass.
+- [x] Runtime ports implemented.
+- [x] Event/outbox transaction tests pass.
+- [x] Artifact ledger tests pass.
+- [x] Projection store tests pass.
+- [x] Replay/dead-letter tests pass.
 
 ## Proof Required
 
@@ -163,13 +163,15 @@ Runtime must stay persistence-implementation-neutral, but durable reliability re
 - Persistence migration summary.
 - Dependency scan.
 
+Proof is recorded in `repo://codex/bundles/process-module-architecture-v3/proof/SB08/manifest.md` and `repo://codex/bundles/process-module-architecture-v3/proof/SB08/semantic-invariants.md`.
+
 ## Browser Validation Logging
 
 - Browser validation is not required because UI behavior is not implemented.
 
 ## Progression Gate
 
-- SB09 and SB10 may proceed after persistence tests and event/outbox integrity proof pass.
+- Satisfied. SB09 and SB10 may proceed after persistence tests and event/outbox integrity proof passed.
 
 ## Suggested Agent Prompt
 
@@ -177,4 +179,4 @@ Execute SB08 from `codex/bundles/process-module-architecture-v3/subbundles/08-pe
 
 ## Handoff Notes For Next Bundle
 
-Record entity/store names, event sequence behavior, idempotency keys, projector offset behavior, and replay instructions for SB09/SB10.
+SB08 implemented `ProcessPersistenceDbContext`, `EfProcessRuntimeUnitOfWork`, `EfProcessRuntimeEventStore`, `EfProcessOutboxStore`, `EfProcessArtifactLedgerStore`, and `EfProcessProjectionStore`. Event replay uses global sequence and root-run sequence order. Runtime command idempotency is keyed by `(RunId, CommandId)`. Projector offsets are keyed by `(ProjectorName, ShardKey)` and save monotonically. Replay consumers should use `IProcessRuntimeEventReplayStore` for global or root-run replay and use projection dead letters for failed projector events.

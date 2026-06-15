@@ -1,0 +1,2 @@
+Command: rg -n 'CanDoItAll\.Processes\.Persistence|ProcessPersistenceDbContext|ProcessRuntimeStateEntity|ProcessRuntimeEventEntity|ProcessOutboxMessageEntity|ProcessProjectionSnapshotEntity|ProcessProjectionDeadLetterEntity' src\CanDoItAll.Modules.Processes src\CanDoItAll.Processes.Application src\CanDoItAll.Web
+Result: no matches

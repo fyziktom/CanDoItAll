@@ -1,0 +1,12 @@
+Command: Get source line counts for SB08 persistence/projection files
+15	src\CanDoItAll.Processes.Persistence\EfProcessArtifactLedgerStore.cs
+121	src\CanDoItAll.Processes.Persistence\EfProcessOutboxStore.cs
+135	src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs
+101	src\CanDoItAll.Processes.Persistence\EfProcessRuntimeEventStore.cs
+246	src\CanDoItAll.Processes.Persistence\EfProcessRuntimeUnitOfWork.cs
+2	src\CanDoItAll.Processes.Persistence\ProcessPersistenceAssemblyMarker.cs
+170	src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs
+22	src\CanDoItAll.Processes.Persistence\ProcessPersistenceDbContext.cs
+143	src\CanDoItAll.Processes.Persistence\ProcessPersistenceEntities.cs
+266	src\CanDoItAll.Processes.Persistence\ProcessPersistenceMappers.cs
+127	src\CanDoItAll.Processes.Projections\ProcessProjectionContracts.cs
