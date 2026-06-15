@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB04 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, and Git/template foundations are implemented and validated. SB05 is next.
+Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB05 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, Git/template foundations, and driver abstraction contracts are implemented and validated. SB06 is next.
 
 Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages executed in dependency order after user approval. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
 
@@ -41,7 +41,7 @@ Prepare the architecture foundation and future implementation roadmap for a grou
 - [architecture/](architecture/) contains the target architecture, state models, builders, drivers, manager, artifacts, monitoring, template/Git model, governance, persistence/event stores, branch contracts, adapters, UI projection inventory, runtime history compatibility, user-story coverage model, .NET performance guardrails, role-candidate readiness model, Process API/Codex skill contract, and final E2E source scenario strategy.
 - [inventories/](inventories/) lists current reusable and non-reusable repo surfaces.
 - [plan/](plan/) defines the phased rewrite plan, hardening gates, project order, and future subbundle roadmap.
-- [subbundles/](subbundles/) contains SB01-SB28 future implementation packages. They are prepared, not executed.
+- [subbundles/](subbundles/) contains SB01-SB28 implementation packages. Execution proof is recorded under [proof/](proof/) as each package closes.
 - [traceability/](traceability/) maps requirements and source prompt topics to architecture files, future phases, and acceptance criteria.
 - [validation/](validation/) records the architecture checklist, test plan, subbundle readiness checklist, user-story coverage validation, .NET performance antipattern checklist, role-candidate readiness validation, and final E2E source scenario validation.
 - [shared-prompts/](shared-prompts/) gives future implementation and QA agents the right posture after this architecture is accepted.
@@ -65,14 +65,14 @@ This bundle was grounded in the current repo, v2 bundle, and v3 planning instruc
 - `codex/bundles/process_module_architecture_v3_subbundle_planning_instructions`
 - current running Process UI at `http://localhost:5032/processes` and `http://localhost:5032/processes/live`
 
-The bundle intentionally does not run product tests because no product behavior was changed.
+The original preparation pass intentionally did not run product tests because no product behavior was changed. Execution proof for SB01-SB05 is recorded under [proof/](proof/), including focused unit tests, solution builds, static scans, and CodeAnalytics MCP snapshots where required.
 
 ## Validation Summary
 
 - Bundle preparation status: Prepared architecture bundle v3 with future subbundle roadmap.
 - Bundle readiness gate: Prepared-stage validator passed before execution.
-- Execution status: SB01-SB04 completed in dependency order.
-- Subbundle gate review: SB01-SB04 closure proof is recorded in `proof/SB01/` through `proof/SB04/`; SB05-SB28 remain pending execution.
+- Execution status: SB01-SB05 completed in dependency order.
+- Subbundle gate review: SB01-SB05 closure proof is recorded in `proof/SB01/` through `proof/SB05/`; SB06-SB28 remain pending execution.
 - Final closure gate: Future implementation closure depends on the Phase 0 and project rebuild gates in `plan/`.
 - Browser validation analytics: Current UI was inspected for story-map evidence only; no browser-facing product surface changed.
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.

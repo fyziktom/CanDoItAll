@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Complete. Executed on 2026-06-15 with proof under `proof/SB05/`.
 
 ## Objective
 
@@ -146,11 +146,11 @@ The current driver layer is mostly verification-oriented. The new runtime needs 
 
 ## Acceptance Checklist
 
-- [ ] Driver descriptors exist.
-- [ ] Capability matching exists.
-- [ ] Strategy factories exist.
-- [ ] Result envelopes exist.
-- [ ] Contract tests pass.
+- [x] Driver descriptors exist.
+- [x] Capability matching exists.
+- [x] Strategy factories exist.
+- [x] Result envelopes exist.
+- [x] Contract tests pass.
 
 ## Proof Required
 

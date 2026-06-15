@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 reference archive is complete; no active Process rewrite behavior, active source removal, runtime code, migrations, or product tests were changed by SB01.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB05 are complete and validated. SB06 is the next dependency-ordered implementation package.
 
 ## Changes Made In This Task
 
@@ -23,6 +23,10 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 - Created `repo://codex/bundles/process-module-rewrite-reference-v1` with machine-readable and human-readable manifests, source/test/template/integration inventories, and 1593 archived entries.
 - Added `proof/SB01/manifest.md`, `proof/SB01/semantic-invariants.md`, and durable transcripts for archive generation, hash verification, search coverage, negative tracked-only proof, active-product-diff proof, anti-stub audit, and git status.
 - Updated `.gitignore` to allow the SB01 reference archive bundle to be versioned.
+- Executed SB02 active legacy removal and boundary skeleton: active legacy Process implementation was removed, disabled module shell pages were added, process boundary projects were wired into the solution, and boundary tests/build proof were recorded.
+- Executed SB03 generic core/contracts: strongly typed process identifiers, graph validation, artifact/branch/runtime-event/state-transition contracts, loop fingerprints, and focused invariant tests were added.
+- Executed SB04 Git/template foundation: typed Git wrapper, canonical template JSON documents, hashing, migrations, local/global merge conflict detection, and source-generated template serialization tests were added.
+- Executed SB05 driver abstractions: driver descriptors/packages, capability matching, conflict/dependency handling, strategy factory contracts, branch/recovery/resupply/manager/template contribution ports, result envelopes, and contract tests were added.
 
 ## Repository Evidence
 
@@ -41,7 +45,11 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 | --- | --- | --- | --- | --- | --- |
 | SB01 Reference Archive | Passed: prepared-stage bundle validator passed; clean worktree; implementation branch created; CodeAnalytics snapshot `snap-20260615171018-d225a84b` available | Passed: archive manifest, hash verification, search coverage, semantic invariant proof, active-product-diff proof, and anti-stub audit recorded | SB02 archive prerequisite checked | Completed | `proof/SB01/manifest.md`, `proof/SB01/semantic-invariants.md`, `repo://codex/bundles/process-module-rewrite-reference-v1/manifest.json` |
-| SB02-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB01. |
+| SB02 Active Removal And Skeleton | Passed: SB01 archive available and active tree ready for removal | Passed: solution build, boundary tests, active legacy scans, and skeleton invariant proof recorded | SB03 project order and namespace boundaries checked | Completed | `proof/SB02/manifest.md`, `proof/SB02/semantic-invariants.md` |
+| SB03 Core Contracts | Passed: SB02 boundary projects available | Passed: unit build, focused core/boundary tests, domain vocabulary scans, forbidden dependency scans, and CodeAnalytics snapshot `snap-20260615182651-091726aa` recorded | SB04/SB05 dependency readiness checked | Completed | `proof/SB03/manifest.md`, `proof/SB03/semantic-invariants.md` |
+| SB04 Git And Template Foundation | Passed: SB03 core contracts available | Passed: unit build, solution build, focused tests, Git safety review, boundary scans, and CodeAnalytics snapshot `snap-20260615183713-efe198df` recorded | SB05/SB06 template and Git prerequisites checked | Completed | `proof/SB04/manifest.md`, `proof/SB04/semantic-invariants.md`, `proof/SB04/git-safety-review.md` |
+| SB05 Driver Abstractions | Passed: SB03 core contracts and SB04 template/Git foundation available | Passed: unit build, solution build, 32 focused tests, domain opacity scan, dependency scan, concrete-driver-name scan, and CodeAnalytics snapshot `snap-20260615184506-be39fc7c` recorded | SB06 builder prerequisites checked | Completed | `proof/SB05/manifest.md`, `proof/SB05/semantic-invariants.md` |
+| SB06-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB05. |
 
 ## Browser Validation Analytics
 
@@ -49,6 +57,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | --- | --- | --- | --- | --- | --- |
 | Current UI story-map analysis | `/processes`, `/processes/live` | 1600x1000 | `evidence/ui-current-state/*.md` | `evidence/ui-current-state/*.png` | Captured current UI/UX evidence for architecture and user-story mapping; product behavior was not changed. |
 | SB01 Reference Archive | Not applicable | Not applicable | Not applicable | Not applicable | Archive-only subbundle; no browser-facing product behavior changed. |
+| SB02-SB05 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, and SB03-SB05 changed non-UI contracts. |
 
 ## Analytics Review
 
@@ -68,7 +77,7 @@ SB01 collected no runtime analytics because it changed only archive/proof files 
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
-| Execute approved implementation bundle | In progress | SB01 through SB04 completed with proof under `proof/SB01/` through `proof/SB04/`; SB05-SB28 remain pending dependency-ordered execution. |
+| Execute approved implementation bundle | In progress | SB01 through SB05 completed with proof under `proof/SB01/` through `proof/SB05/`; SB06-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -177,6 +186,34 @@ Result:
 
 ```text
 Snapshot snap-20260615183713-efe198df loaded 5 scoped Git/template/core projects and 33 documents, found 0 dependency cycles, 0 diagnostics, and no blocking errors.
+```
+
+SB05 driver abstraction proof:
+
+```text
+bundle://proof/SB05/manifest.md
+bundle://proof/SB05/transcripts/build-unit-sb05-02.txt
+bundle://proof/SB05/transcripts/build-solution-sb05-01.txt
+bundle://proof/SB05/transcripts/test-unit-sb05-01.txt
+bundle://proof/SB05/transcripts/scan-summary.json
+```
+
+Result:
+
+```text
+Unit project build and full solution build passed with 0 warnings and 0 errors. Focused driver/core/template/boundary tests passed: 32/32. Driver abstraction forbidden dependency, concrete driver name, and domain opacity scans all reported 0 matches.
+```
+
+SB05 CodeAnalytics MCP validation:
+
+```text
+bundle://proof/SB05/transcripts/codeanalytics-snapshot-summary.txt
+```
+
+Result:
+
+```text
+Snapshot snap-20260615184506-be39fc7c loaded 4 scoped projects and 26 documents, found 0 dependency cycles, 0 diagnostics, and no blocking errors.
 ```
 
 SB01 archive validation:
