@@ -1,0 +1,28 @@
+CodeAnalytics MCP final snapshot
+
+Snapshot id: snap-20260615232410-3bddcac6
+Solution: C:\repositories\CanDoItAll\CanDoItAll.slnx
+Scope project count: 8
+Scope document count: 88
+Blocking errors: false
+
+Scoped projects:
+- CanDoItAll.Git
+- CanDoItAll.Processes.Abstractions
+- CanDoItAll.Processes.Application
+- CanDoItAll.Processes.Contracts
+- CanDoItAll.Processes.Core
+- CanDoItAll.Processes.Projections
+- CanDoItAll.Processes.Runtime
+- CanDoItAll.Processes.Templates
+
+Architecture notes:
+- Templates references Contracts, Abstractions, Core.
+- Projections references Contracts, Abstractions, Core.
+- Application references Git, Projections, Runtime, Templates.
+- Runtime remains independent from Templates and Projections.
+
+Diagnostics:
+- MRD0001 info: runtime class diagram truncated to 80 types.
+
+Top findings are informational type-size findings in existing process/runtime types. No CodeAnalytics finding blocked SB12.

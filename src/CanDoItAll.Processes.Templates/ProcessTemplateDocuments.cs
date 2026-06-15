@@ -95,4 +95,8 @@ public enum ProcessTemplateProjectionKind
 [JsonSerializable(typeof(ProcessTemplateLocalOverridePatch))]
 [JsonSerializable(typeof(ProcessTemplateConflictRecord))]
 [JsonSerializable(typeof(ProcessTemplateProjectionMetadata))]
+[JsonSerializable(typeof(ProcessTemplateCompatibilityReport))]
+[JsonSerializable(typeof(ProcessTemplateMigrationDryRunReport))]
+[JsonSerializable(typeof(ProcessTemplateSidecarDriftReport))]
+[JsonSerializable(typeof(ProcessBranchMigrationDiagnosticReport))]
 public sealed partial class ProcessTemplateJsonContext : JsonSerializerContext;

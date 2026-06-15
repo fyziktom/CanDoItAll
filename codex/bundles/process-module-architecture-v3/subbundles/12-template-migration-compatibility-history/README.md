@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-15. Implementation, proof, validation, and compatibility reports are recorded under `proof/SB12/`.
 
 ## Objective
 
@@ -157,19 +157,19 @@ Current templates and historical runs are valuable. They must not be deleted or 
 
 ## Acceptance Checklist
 
-- [ ] Template dry-run report exists.
-- [ ] Sidecar drift report exists.
-- [ ] Branch migration diagnostics exist.
-- [ ] Runtime history inventory exists.
-- [ ] Compatibility decision exists.
-- [ ] Tests pass.
+- [x] Template dry-run report exists.
+- [x] Sidecar drift report exists.
+- [x] Branch migration diagnostics exist.
+- [x] Runtime history inventory exists.
+- [x] Compatibility decision exists.
+- [x] Tests pass.
 
 ## Proof Required
 
-- Compatibility report path.
-- Test output.
-- Migration review output.
-- Old-symbol scan.
+- Compatibility report path: `proof/SB12/compatibility-decision-report.md`.
+- Test output: `proof/SB12/test-unit-sb12.txt` and `proof/SB12/test-unit-sb12-process-slice.txt`.
+- Migration review output: `proof/SB12/template-migration-dry-run-report.md`, `proof/SB12/sidecar-drift-report.md`, and `proof/SB12/branch-migration-diagnostics.md`.
+- Old-symbol scan: `proof/SB12/old-symbol-scan-active-process-code.txt`.
 
 ## Browser Validation Logging
 
@@ -177,7 +177,7 @@ Current templates and historical runs are valuable. They must not be deleted or 
 
 ## Progression Gate
 
-- SB13 may start after template and runtime history compatibility decisions are explicit.
+- Passed. SB13 may start with explicit template compatibility status, branch manual-resolution diagnostics, sidecar drift status, and read-only legacy history projection requirements.
 
 ## Suggested Agent Prompt
 
@@ -185,4 +185,4 @@ Execute SB12 from `codex/bundles/process-module-architecture-v3/subbundles/12-te
 
 ## Handoff Notes For Next Bundle
 
-Record template compatibility status, legacy history decision, projection needs, unresolved manual conflicts, and UI labeling requirements for SB13.
+SB13 must surface template compatibility state without treating sidecars as canonical. All 45 current branch outcomes lack typed route targets and need manual-resolution UI/status. Legacy runtime history defaults to `ReadOnlyLegacyProjectionPlusArchive`; UI labels must mark legacy runs as read-only and runtime actions must remain denied unless full migration is explicitly selected.

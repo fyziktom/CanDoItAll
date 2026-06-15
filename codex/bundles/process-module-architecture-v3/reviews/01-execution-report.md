@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB11 are complete and validated. SB12 is the next dependency-ordered implementation package.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB12 are complete and validated. SB13 is the next dependency-ordered implementation package.
 
 ## Changes Made In This Task
 
@@ -34,6 +34,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 - Executed SB09 manager/incidents/recovery/branch/subprocess control: typed manager IDs and contracts, restricted diagnostic evidence references, safe incident content, manager work queue ports, policy/budget/idempotency-checked recovery, typed branch decisions and route handoffs, loop budget escalation, durable subprocess control messages, explicit manager runtime event types, application control-loop orchestration, and manager safety tests were added.
 - Executed SB10 monitoring projections/live-history contracts: projection DTOs, replay worker, offset/dead-letter behavior, live snapshots, historical timeline records, run detail/runtime canvas/artifact map projections, freshness/lag metadata, projection-history persistence, source-generated projection serialization, and UI-ready projection query services were added.
 - Executed SB11 execution adapters and first layered driver slice: strongly typed adapter contracts, restricted diagnostic classification, Standard concrete driver project, representative layered driver packages, adapter-to-strategy envelope normalization, Git-backed mutation audit, boundary scans, and adapter security review were added.
+- Executed SB12 template migration, existing process pack compatibility, and runtime history plan: template compatibility scan/report contracts, dry-run migration analysis, sidecar drift detection, branch migration diagnostics, legacy read-only history projection adapter, compatibility decision service, source-generated projection/template serialization coverage, proof reports, and compatibility tests were added.
 
 ## Repository Evidence
 
@@ -62,7 +63,8 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | SB09 Manager, Incidents, Recovery, Branch/Switch, Loop Protection, And Subprocess Control | Passed: SB08 runtime persistence/event/outbox/ledger/projection stores available and stable | Passed: unit build, solution build, 67 focused tests, manager safety review, branch token-routing scan, old-symbol scan, direct runtime mutation scan, raw diagnostic projection scan, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615211126-6cb94128` recorded | SB10 projection prerequisites checked | Completed | `proof/SB09/manifest.md`, `proof/SB09/semantic-invariants.md`, `proof/SB09/manager-safety-review.md` |
 | SB10 Monitoring Projectors, Live/History Snapshots, And Projection Contracts | Passed: SB08 projection stores and SB09 runtime/manager event inputs available and stable | Passed: unit build, solution build, 73 focused process tests, projection review, old-observation scan, projector runtime-mutation scan, process-specific UI/Application EF read scan, raw diagnostic projection scan, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615221805-8a975694` recorded | SB11 event/facet handoff and SB13 UI projection prerequisites checked | Completed | `proof/SB10/manifest.md`, `proof/SB10/semantic-invariants.md`, `proof/SB10/projection-review.md` |
 | SB11 Execution Adapters And First Layered Driver Slice | Passed: SB10 projection contracts and runtime/manager handoff surfaces available and stable | Passed: unit build, solution build, 77 focused process tests, adapter security review, dependency leak scans, runtime external API scan, ad hoc Git scan, raw diagnostic review, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615224754-e4fadc68` recorded | SB12 template compatibility and SB14 execution prerequisites checked | Completed | `proof/SB11/manifest.md`, `proof/SB11/semantic-invariants.md`, `proof/SB11/adapter-security-review.md` |
-| SB12-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB11. |
+| SB12 Template Migration, Existing Process Pack Compatibility, And Runtime History Plan | Passed: SB11 complete, SB04 template/Git foundation available, SB10 projection contracts available, and CodeAnalytics baseline reachable | Passed: unit build, solution build, 81 focused process tests, template dry-run report, sidecar drift report, branch diagnostics, runtime history inventory, compatibility decision, old-symbol scan, canonical-source scan, branch shortcut scan, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615232410-3bddcac6` recorded | SB13 UI compatibility projection prerequisites checked | Completed | `proof/SB12/manifest.md`, `proof/SB12/semantic-invariants.md`, `proof/SB12/compatibility-decision-report.md` |
+| SB13-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB12. |
 
 ## Browser Validation Analytics
 
@@ -70,11 +72,11 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | --- | --- | --- | --- | --- | --- |
 | Current UI story-map analysis | `/processes`, `/processes/live` | 1600x1000 | `evidence/ui-current-state/*.md` | `evidence/ui-current-state/*.png` | Captured current UI/UX evidence for architecture and user-story mapping; product behavior was not changed. |
 | SB01 Reference Archive | Not applicable | Not applicable | Not applicable | Not applicable | Archive-only subbundle; no browser-facing product behavior changed. |
-| SB02-SB11 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, SB03-SB11 changed non-UI contracts/runtime/application/persistence/projection/adapter surfaces, and visible projection/execution UI proof is owned by downstream UI subbundles. |
+| SB02-SB12 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, SB03-SB12 changed non-UI contracts/runtime/application/persistence/projection/adapter/template compatibility surfaces, and visible projection/execution UI proof is owned by downstream UI subbundles. |
 
 ## Analytics Review
 
-No runtime analytics or browser performance data were collected for completed implementation subbundles because SB01-SB11 did not change a browser-facing product surface.
+No runtime analytics or browser performance data were collected for completed implementation subbundles because SB01-SB12 did not change a browser-facing product surface.
 
 SB01 collected no runtime analytics because it changed only archive/proof files plus the `.gitignore` archive exception.
 
@@ -90,7 +92,7 @@ SB01 collected no runtime analytics because it changed only archive/proof files 
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
-| Execute approved implementation bundle | In progress | SB01 through SB11 completed with proof under `proof/SB01/` through `proof/SB11/`; SB12-SB28 remain pending dependency-ordered execution. |
+| Execute approved implementation bundle | In progress | SB01 through SB12 completed with proof under `proof/SB01/` through `proof/SB12/`; SB13-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -431,6 +433,45 @@ Result:
 
 ```text
 Snapshot snap-20260615224754-e4fadc68 loaded 9 scoped projects and 90 documents with no blocking errors. Standard driver references only Drivers.Abstractions; Core and Runtime do not reference the concrete Standard driver project. Dashboard diagnostics were informational Mermaid truncation notes only.
+```
+
+SB12 template compatibility/runtime history proof:
+
+```text
+bundle://proof/SB12/manifest.md
+bundle://proof/SB12/build-unit-sb12.txt
+bundle://proof/SB12/build-solution-sb12.txt
+bundle://proof/SB12/test-unit-sb12.txt
+bundle://proof/SB12/test-unit-sb12-process-slice.txt
+bundle://proof/SB12/template-migration-dry-run-report.md
+bundle://proof/SB12/sidecar-drift-report.md
+bundle://proof/SB12/branch-migration-diagnostics.md
+bundle://proof/SB12/runtime-history-inventory.md
+bundle://proof/SB12/compatibility-decision-report.md
+bundle://proof/SB12/old-symbol-scan-active-process-code.txt
+bundle://proof/SB12/markdown-mermaid-canonical-source-scan.txt
+bundle://proof/SB12/branch-routing-shortcut-scan.txt
+bundle://proof/SB12/performance-scan-counts.txt
+bundle://proof/SB12/anti-stub-scan.txt
+bundle://proof/SB12/bundle-validator-prepared-sb12.txt
+```
+
+Result:
+
+```text
+Unit project build and full solution build passed with 0 warnings and 0 errors. Focused SB12 compatibility tests passed: 4/4. Focused process tests passed: 81/81. Template pack scan found 24 manifest entries, 24 definitions without schema version, 378 generated sidecars in scanner scope, 45 projection JSON sidecars with no usable source hash proof, and 45 branch outcomes without typed route targets. Old-symbol, canonical-source, branch shortcut, and anti-stub scans passed. Performance scan reported no sync waits, Task.Run, per-call HttpClient, sync File APIs, Regex allocation, or runtime branch free-text routing; accepted counts are bounded report lists/LINQ and cached source-generation JSON options setup. Prepared-stage bundle validation passed after SB12 proof/status synchronization.
+```
+
+SB12 CodeAnalytics MCP validation:
+
+```text
+bundle://proof/SB12/codeanalytics-snapshot-summary.txt
+```
+
+Result:
+
+```text
+Snapshot snap-20260615232410-3bddcac6 loaded 8 scoped Git/process projects and 88 documents with no blocking errors. Dashboard diagnostics were informational Mermaid truncation notes only. Application references Templates/Runtime/Projections/Git; Runtime remains independent from Templates and Projections.
 ```
 
 SB01 archive validation:

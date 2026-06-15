@@ -1,0 +1,6 @@
+src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.cs:7:    public const string LegacyCurrentModuleSchemaVersion = "process-definition/current-module-legacy";
+src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.cs:54:                    LegacyCurrentModuleSchemaVersion,
+src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.cs:114:            : LegacyCurrentModuleSchemaVersion;
+src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Sidecars.cs:33:                !string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase) &&
+src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Sidecars.cs:34:                !string.Equals(extension, ".mmd", StringComparison.OrdinalIgnoreCase))
+src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Sidecars.cs:112:        if (string.Equals(Path.GetExtension(path), ".mmd", StringComparison.OrdinalIgnoreCase))

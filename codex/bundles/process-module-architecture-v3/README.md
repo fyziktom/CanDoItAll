@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB11 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, Git/template foundations, driver abstraction contracts, immutable instance builder/compiler contracts, runtime scheduler/dispatcher/event ports, persistence/event/outbox/ledger/projection stores, manager/incidents/recovery/typed branch/subprocess control, monitoring projections/live-history contracts, and execution adapter/layered driver foundations are implemented and validated. SB12 is next.
+Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB12 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, Git/template foundations, driver abstraction contracts, immutable instance builder/compiler contracts, runtime scheduler/dispatcher/event ports, persistence/event/outbox/ledger/projection stores, manager/incidents/recovery/typed branch/subprocess control, monitoring projections/live-history contracts, execution adapter/layered driver foundations, and template/runtime-history compatibility reporting are implemented and validated. SB13 is next.
 
 Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages executed in dependency order after user approval. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
 
@@ -65,14 +65,14 @@ This bundle was grounded in the current repo, v2 bundle, and v3 planning instruc
 - `codex/bundles/process_module_architecture_v3_subbundle_planning_instructions`
 - current running Process UI at `http://localhost:5032/processes` and `http://localhost:5032/processes/live`
 
-The original preparation pass intentionally did not run product tests because no product behavior was changed. Execution proof for SB01-SB11 is recorded under [proof/](proof/), including focused unit tests, solution builds, static scans, and CodeAnalytics MCP snapshots where required.
+The original preparation pass intentionally did not run product tests because no product behavior was changed. Execution proof for SB01-SB12 is recorded under [proof/](proof/), including focused unit tests, solution builds, static scans, and CodeAnalytics MCP snapshots where required.
 
 ## Validation Summary
 
 - Bundle preparation status: Prepared architecture bundle v3 with future subbundle roadmap.
 - Bundle readiness gate: Prepared-stage validator passed before execution.
-- Execution status: SB01-SB11 completed in dependency order.
-- Subbundle gate review: SB01-SB11 closure proof is recorded in `proof/SB01/` through `proof/SB11/`; SB12-SB28 remain pending execution.
+- Execution status: SB01-SB12 completed in dependency order.
+- Subbundle gate review: SB01-SB12 closure proof is recorded in `proof/SB01/` through `proof/SB12/`; SB13-SB28 remain pending execution.
 - Final closure gate: Future implementation closure depends on the Phase 0 and project rebuild gates in `plan/`.
 - Browser validation analytics: Current UI was inspected for story-map evidence only; no browser-facing product surface changed.
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.

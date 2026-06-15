@@ -78,6 +78,9 @@ public sealed class ProcessProjectionJsonCodec
             ProcessArtifactMapProjection value => JsonSerializer.Serialize(value, JsonContext.ProcessArtifactMapProjection),
             ProcessIncidentProjection value => JsonSerializer.Serialize(value, JsonContext.ProcessIncidentProjection),
             ProcessManagerMessageProjection value => JsonSerializer.Serialize(value, JsonContext.ProcessManagerMessageProjection),
+            LegacyProcessHistoryInventoryReport value => JsonSerializer.Serialize(value, JsonContext.LegacyProcessHistoryInventoryReport),
+            LegacyProcessRunProjection value => JsonSerializer.Serialize(value, JsonContext.LegacyProcessRunProjection),
+            LegacyProcessHistoryActionDenial value => JsonSerializer.Serialize(value, JsonContext.LegacyProcessHistoryActionDenial),
             _ => throw new NotSupportedException($"Projection payload type '{typeof(TProjection).FullName}' is not supported.")
         };
     }
@@ -100,8 +103,14 @@ public sealed class ProcessProjectionJsonCodec
                                     : typeof(TProjection) == typeof(ProcessIncidentProjection)
                                         ? JsonSerializer.Deserialize(payloadJson, JsonContext.ProcessIncidentProjection)
                                         : typeof(TProjection) == typeof(ProcessManagerMessageProjection)
-                                            ? JsonSerializer.Deserialize(payloadJson, JsonContext.ProcessManagerMessageProjection)
-                                            : throw new NotSupportedException($"Projection payload type '{typeof(TProjection).FullName}' is not supported.");
+                                        ? JsonSerializer.Deserialize(payloadJson, JsonContext.ProcessManagerMessageProjection)
+                                        : typeof(TProjection) == typeof(LegacyProcessHistoryInventoryReport)
+                                            ? JsonSerializer.Deserialize(payloadJson, JsonContext.LegacyProcessHistoryInventoryReport)
+                                            : typeof(TProjection) == typeof(LegacyProcessRunProjection)
+                                                ? JsonSerializer.Deserialize(payloadJson, JsonContext.LegacyProcessRunProjection)
+                                                : typeof(TProjection) == typeof(LegacyProcessHistoryActionDenial)
+                                                    ? JsonSerializer.Deserialize(payloadJson, JsonContext.LegacyProcessHistoryActionDenial)
+                                                    : throw new NotSupportedException($"Projection payload type '{typeof(TProjection).FullName}' is not supported.");
 
         return result is TProjection projection
             ? projection
@@ -120,6 +129,7 @@ public sealed class ProcessProjectionJsonCodec
         options.Converters.Add(new ProcessRunIdJsonConverter());
         options.Converters.Add(new RuntimeEventIdJsonConverter());
         options.Converters.Add(new ArtifactSlotIdJsonConverter());
+        options.Converters.Add(new LegacyProcessRunIdJsonConverter());
         return options;
     }
 }
@@ -163,6 +173,19 @@ internal sealed class ArtifactSlotIdJsonConverter : JsonConverter<ArtifactSlotId
     }
 }
 
+internal sealed class LegacyProcessRunIdJsonConverter : JsonConverter<LegacyProcessRunId>
+{
+    public override LegacyProcessRunId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return new LegacyProcessRunId(reader.GetString() ?? throw new JsonException("LegacyProcessRunId value is missing."));
+    }
+
+    public override void Write(Utf8JsonWriter writer, LegacyProcessRunId value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.ToString());
+    }
+}
+
 [JsonSerializable(typeof(ProcessLiveProcessSnapshot))]
 [JsonSerializable(typeof(ProcessRunDetailProjection))]
 [JsonSerializable(typeof(ProcessTimelineEventProjection))]
@@ -171,4 +194,7 @@ internal sealed class ArtifactSlotIdJsonConverter : JsonConverter<ArtifactSlotId
 [JsonSerializable(typeof(ProcessArtifactMapProjection))]
 [JsonSerializable(typeof(ProcessIncidentProjection))]
 [JsonSerializable(typeof(ProcessManagerMessageProjection))]
+[JsonSerializable(typeof(LegacyProcessHistoryInventoryReport))]
+[JsonSerializable(typeof(LegacyProcessRunProjection))]
+[JsonSerializable(typeof(LegacyProcessHistoryActionDenial))]
 internal sealed partial class ProcessProjectionJsonContext : JsonSerializerContext;
