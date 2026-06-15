@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-15 during approved implementation execution.
 
 ## Objective
 
@@ -162,11 +162,11 @@ Manager-driven recovery, branch routing, and subprocess coordination are central
 
 ## Acceptance Checklist
 
-- [ ] Manager loop implemented.
-- [ ] Incident lifecycle tests pass.
-- [ ] Recovery policy tests pass.
-- [ ] Branch/loop tests pass.
-- [ ] Subprocess message tests pass.
+- [x] Manager loop implemented.
+- [x] Incident lifecycle tests pass.
+- [x] Recovery policy tests pass.
+- [x] Branch/loop tests pass.
+- [x] Subprocess message tests pass.
 
 ## Proof Required
 
@@ -175,13 +175,27 @@ Manager-driven recovery, branch routing, and subprocess coordination are central
 - Branch token-routing search proof.
 - Old-symbol scan.
 
+Recorded proof:
+
+- `bundle://proof/SB09/manifest.md`
+- `bundle://proof/SB09/semantic-invariants.md`
+- `bundle://proof/SB09/failing-first-process-manager-tests.txt`
+- `bundle://proof/SB09/build-unit-sb09.txt`
+- `bundle://proof/SB09/test-unit-sb09.txt`
+- `bundle://proof/SB09/build-solution-sb09.txt`
+- `bundle://proof/SB09/manager-safety-review.md`
+- `bundle://proof/SB09/scans/branch-token-routing-production-scan.txt`
+- `bundle://proof/SB09/scans/old-symbol-scan.txt`
+- `bundle://proof/SB09/codeanalytics-snapshot-summary.txt`
+- `bundle://proof/SB09/bundle-validator-prepared-sb09.txt`
+
 ## Browser Validation Logging
 
 - Browser validation is not required because UI behavior is not implemented.
 
 ## Progression Gate
 
-- SB10 may start after manager/branch/subprocess events and projection inputs are stable.
+- Passed. SB10 may start because manager/branch/subprocess events and projection inputs are stable.
 
 ## Suggested Agent Prompt
 
@@ -189,4 +203,4 @@ Execute SB09 from `codex/bundles/process-module-architecture-v3/subbundles/09-ma
 
 ## Handoff Notes For Next Bundle
 
-Record event types, incident projection inputs, branch projection inputs, subprocess message schemas, and known UI needs for SB10.
+SB10 should consume `ManagerIncidentRaised`, `ManagerRecoveryApproved`, `ManagerRecoveryDenied`, `ManagerBranchDecisionRecorded`, `ManagerBranchDecisionRejected`, `ManagerLoopBudgetEscalated`, and `ManagerSubprocessMessageQueued`; `ProcessIncident` safe content and diagnostic references; typed `ProcessBranchDecision`; loop budget escalation signals; and `ProcessSubprocessControlMessage` artifact projection references.

@@ -1,0 +1,38 @@
+SB09 CodeAnalytics MCP summary
+==============================
+
+Snapshot: snap-20260615211126-6cb94128
+Command source: mcp__candoitall_codeanalytics.code_analytics_snapshot_build
+Result: pass
+
+Scope:
+- CanDoItAll.Processes.Application
+- CanDoItAll.Processes.Runtime
+- CanDoItAll.Processes.Core
+- CanDoItAll.Processes.Contracts
+- CanDoItAll.Processes.Projections
+- CanDoItAll.Processes.Persistence
+
+Snapshot facts:
+- Projects: 6
+- Documents: 68
+- Diagnostics: 0
+- Blocking errors: false
+- EF DbContexts discovered: 1
+- EF entities discovered: 12
+
+Architecture facts checked through MCP:
+- Application direct project references: CanDoItAll.Processes.Projections, CanDoItAll.Processes.Runtime.
+- Runtime direct project references: CanDoItAll.Processes.Contracts, CanDoItAll.Processes.Core.
+- Persistence direct project references: Contracts, Core, Projections, Runtime.
+- Persistence package references: Microsoft.EntityFrameworkCore, Npgsql.EntityFrameworkCore.PostgreSQL.
+- Dependency query for CanDoItAll.Processes.Application returned no dependency cycles.
+- Persistence query returned ProcessPersistenceDbContext with the 12 SB08 runtime/outbox/projection entities.
+
+Dashboard endpoint note:
+- code_analytics_dashboard_get timed out after the fresh snapshot was built.
+- The closure decision does not depend on the timed-out dashboard call; snapshot_build, dependencies_get, solution_inventory_get, and persistence_get all succeeded against the same snapshot.
+
+Findings:
+- No blocking diagnostics were reported.
+- Remaining risks are informational complexity findings on existing/runtime contract records and persistence entities. The earlier large-file warning for the SB09 manager implementation was addressed by splitting ProcessManagerControlLoop and ProcessManager contracts into focused files.

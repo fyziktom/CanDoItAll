@@ -37,4 +37,18 @@ public static class ProcessRuntimeEventTypes
     public static ProcessEventType DispatchClaimReclaimed { get; } = new("DispatchClaimReclaimed");
 
     public static ProcessEventType DispatchClaimCompleted { get; } = new("DispatchClaimCompleted");
+
+    public static ProcessEventType ManagerIncidentRaised { get; } = new("ManagerIncidentRaised");
+
+    public static ProcessEventType ManagerRecoveryApproved { get; } = new("ManagerRecoveryApproved");
+
+    public static ProcessEventType ManagerRecoveryDenied { get; } = new("ManagerRecoveryDenied");
+
+    public static ProcessEventType ManagerBranchDecisionRecorded { get; } = new("ManagerBranchDecisionRecorded");
+
+    public static ProcessEventType ManagerBranchDecisionRejected { get; } = new("ManagerBranchDecisionRejected");
+
+    public static ProcessEventType ManagerLoopBudgetEscalated { get; } = new("ManagerLoopBudgetEscalated");
+
+    public static ProcessEventType ManagerSubprocessMessageQueued { get; } = new("ManagerSubprocessMessageQueued");
 }

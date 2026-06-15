@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB08 are complete and validated. SB09 is the next dependency-ordered implementation package.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB09 are complete and validated. SB10 is the next dependency-ordered implementation package.
 
 ## Changes Made In This Task
 
@@ -31,6 +31,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 - Repaired future subbundle source-evidence references so removed legacy Process paths resolve through the SB01 archive while active non-Process test references remain active.
 - Executed SB07 runtime, scheduler, dispatcher claims, and event ports: runtime state/step/claim/result models, typed runtime identifiers, transition engine, ready-work scheduler, claim lease lifecycle, idempotent strategy-result application, cancellation/terminal-state handling, dispatcher strategy invocation boundary, event/outbox/artifact ledger ports, and runtime tests were added.
 - Executed SB08 persistence, event store, outbox, artifact ledger, and projection storage: EF Core runtime persistence rows/mappings, PostgreSQL provider package reference, runtime unit of work, event replay store, transactional outbox lifecycle, artifact ledger store, projection snapshots, projector offsets, projection dead letters, idempotency constraints, Application/Persistence boundary tightening, and persistence tests were added.
+- Executed SB09 manager/incidents/recovery/branch/subprocess control: typed manager IDs and contracts, restricted diagnostic evidence references, safe incident content, manager work queue ports, policy/budget/idempotency-checked recovery, typed branch decisions and route handoffs, loop budget escalation, durable subprocess control messages, explicit manager runtime event types, application control-loop orchestration, and manager safety tests were added.
 
 ## Repository Evidence
 
@@ -56,7 +57,8 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | SB06 Instance Builder And Immutable Plan Compiler | Passed: SB04 template/Git foundation and SB05 driver abstractions available | Passed: unit build, solution build, 40 focused tests, builder dependency scans, domain opacity scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615191140-946f6f71` recorded | SB07 runtime plan-input prerequisites checked | Completed | `proof/SB06/manifest.md`, `proof/SB06/semantic-invariants.md`, `proof/SB06/plan-snapshot-example.md` |
 | SB07 Runtime, Scheduler, Dispatcher Claims, And Event Ports | Passed: SB06 immutable plan/compiler contracts available | Passed: unit build, solution build, 51 focused tests, runtime forbidden dependency scan, dispatcher domain-decision scan, old-symbol scan, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615194513-574a5aa6` recorded | SB08 persistence prerequisites checked | Completed | `proof/SB07/manifest.md`, `proof/SB07/semantic-invariants.md`, `proof/SB07/runtime-integrity-review.md` |
 | SB08 Persistence, Event Store, Outbox, Artifact Ledger Stores, And Projection Storage | Passed: SB07 runtime ports available and stable | Passed: unit build, solution build, 59 focused tests, runtime forbidden persistence scan, UI/Application persistence entity scan, old-symbol scan, performance scan, anti-stub audit, migration summary, and CodeAnalytics snapshot `snap-20260615203450-71eef9ce` recorded | SB09 manager and SB10 projector prerequisites checked | Completed | `proof/SB08/manifest.md`, `proof/SB08/semantic-invariants.md`, `proof/SB08/persistence-migration-summary.md` |
-| SB09-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB08. |
+| SB09 Manager, Incidents, Recovery, Branch/Switch, Loop Protection, And Subprocess Control | Passed: SB08 runtime persistence/event/outbox/ledger/projection stores available and stable | Passed: unit build, solution build, 67 focused tests, manager safety review, branch token-routing scan, old-symbol scan, direct runtime mutation scan, raw diagnostic projection scan, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615211126-6cb94128` recorded | SB10 projection prerequisites checked | Completed | `proof/SB09/manifest.md`, `proof/SB09/semantic-invariants.md`, `proof/SB09/manager-safety-review.md` |
+| SB10-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB09. |
 
 ## Browser Validation Analytics
 
@@ -64,7 +66,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | --- | --- | --- | --- | --- | --- |
 | Current UI story-map analysis | `/processes`, `/processes/live` | 1600x1000 | `evidence/ui-current-state/*.md` | `evidence/ui-current-state/*.png` | Captured current UI/UX evidence for architecture and user-story mapping; product behavior was not changed. |
 | SB01 Reference Archive | Not applicable | Not applicable | Not applicable | Not applicable | Archive-only subbundle; no browser-facing product behavior changed. |
-| SB02-SB08 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, and SB03-SB08 changed non-UI contracts/persistence. |
+| SB02-SB09 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, and SB03-SB09 changed non-UI contracts/runtime/application/persistence surfaces. |
 
 ## Analytics Review
 
@@ -84,7 +86,7 @@ SB01 collected no runtime analytics because it changed only archive/proof files 
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
-| Execute approved implementation bundle | In progress | SB01 through SB08 completed with proof under `proof/SB01/` through `proof/SB08/`; SB09-SB28 remain pending dependency-ordered execution. |
+| Execute approved implementation bundle | In progress | SB01 through SB09 completed with proof under `proof/SB01/` through `proof/SB09/`; SB10-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -318,6 +320,40 @@ Result:
 
 ```text
 Snapshot snap-20260615203450-71eef9ce loaded 6 scoped projects and 52 documents, found 12 EF entities, 0 dependency cycles, 0 diagnostics, no Application-to-Persistence dependency, and no blocking errors. Remaining findings were informational complexity notes only.
+```
+
+SB09 manager/incidents/recovery/branch/subprocess proof:
+
+```text
+bundle://proof/SB09/manifest.md
+bundle://proof/SB09/build-unit-sb09.txt
+bundle://proof/SB09/build-solution-sb09.txt
+bundle://proof/SB09/test-unit-sb09.txt
+bundle://proof/SB09/scans/old-symbol-scan.txt
+bundle://proof/SB09/scans/branch-token-routing-production-scan.txt
+bundle://proof/SB09/scans/direct-runtime-mutation-scan.txt
+bundle://proof/SB09/scans/raw-diagnostic-projection-scan.txt
+bundle://proof/SB09/performance-scan-summary.json
+bundle://proof/SB09/manager-safety-review.md
+bundle://proof/SB09/bundle-validator-prepared-sb09.txt
+```
+
+Result:
+
+```text
+Unit project build and full solution build passed with 0 warnings and 0 errors. Focused process tests passed: 67/67. Old-symbol, branch token-routing, direct runtime mutation, raw diagnostic projection, runtime forbidden persistence, and anti-stub scans passed. Performance scan reported no sync waits, Thread.Sleep, Task.Run, per-call HTTP/JSON options, unbounded queue, or load-all query patterns; one LINQ match is an in-memory typed branch outcome selector.
+```
+
+SB09 CodeAnalytics MCP validation:
+
+```text
+bundle://proof/SB09/codeanalytics-snapshot-summary.txt
+```
+
+Result:
+
+```text
+Snapshot snap-20260615211126-6cb94128 loaded 6 scoped projects and 68 documents, found 0 diagnostics, no blocking errors, expected Persistence-only EF facts, and no Application-to-Persistence dependency. The dashboard endpoint timed out after snapshot creation, but snapshot, dependencies, solution inventory, and persistence MCP queries succeeded.
 ```
 
 SB01 archive validation:

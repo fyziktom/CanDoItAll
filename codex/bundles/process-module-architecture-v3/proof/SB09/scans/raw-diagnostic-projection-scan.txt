@@ -1,0 +1,6 @@
+Command:
+rg -n "RawDiagnostic|DiagnosticText|RestrictedDiagnosticEvidence\.Detail|\.Detail" src/CanDoItAll.Processes.Projections src/CanDoItAll.Processes.Application -g"ProcessManager*.cs" -g"*.cs"
+
+ExitCode: 1
+Result:
+No matches.

@@ -1,0 +1,6 @@
+Command:
+rg -n "Contains\(|ToLower|ToUpper|IndexOf\(|\"repair\"|\"rework\"|\"blocked\"|\"escalation\"" src/CanDoItAll.Processes.Application src/CanDoItAll.Processes.Runtime -g"ProcessManager*.cs"
+
+ExitCode: 1
+Result:
+No matches.
