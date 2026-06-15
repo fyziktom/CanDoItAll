@@ -1,0 +1,7 @@
+Command:
+rg -n "raw-transcript|raw transcript|secret|StandardOutput|StandardError" src/CanDoItAll.Processes.Drivers.Standard src/CanDoItAll.Processes.Application/ProcessAdapterMutationAudit.cs src/CanDoItAll.Processes.Drivers.Abstractions -g"*.cs"
+
+ExitCode: 0
+Result:
+src/CanDoItAll.Processes.Application/ProcessAdapterMutationAudit.cs:42:        var entries = ParseStatusEntries(status.StandardOutput);
+src/CanDoItAll.Processes.Application/ProcessAdapterMutationAudit.cs:148:        var bytes = Encoding.UTF8.GetBytes(diff.StandardOutput + "\n" + diff.StandardError);

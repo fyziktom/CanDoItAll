@@ -60,6 +60,42 @@ public readonly record struct ProcessTemplateFragmentKey
     public override string ToString() => Value;
 }
 
+public readonly record struct ProcessExecutionAdapterId
+{
+    public ProcessExecutionAdapterId(string value)
+    {
+        Value = ProcessDriverTokenValidation.Require(value, nameof(value));
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
+public readonly record struct ProcessExecutionAdapterOperationKey
+{
+    public ProcessExecutionAdapterOperationKey(string value)
+    {
+        Value = ProcessDriverTokenValidation.Require(value, nameof(value));
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
+public readonly record struct ProcessExecutionContextFacetKey
+{
+    public ProcessExecutionContextFacetKey(string value)
+    {
+        Value = ProcessDriverTokenValidation.Require(value, nameof(value));
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
 internal static class ProcessDriverTokenValidation
 {
     public static string Require(string value, string parameterName)

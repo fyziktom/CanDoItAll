@@ -62,7 +62,10 @@ public sealed record StrategyDiagnosticRef(
     StrategyDiagnosticCode Code,
     StrategyDiagnosticSensitivity Sensitivity,
     string EvidenceHash,
-    string SafeSummary);
+    string SafeSummary,
+    string? RestrictedEvidenceReference = null,
+    ProcessDiagnosticRetrySafety RetrySafety = ProcessDiagnosticRetrySafety.Unknown,
+    ProcessDiagnosticIdempotencyClassification Idempotency = ProcessDiagnosticIdempotencyClassification.Unknown);
 
 public sealed record ManagerSignal(
     ManagerSignalCode Code,
@@ -82,4 +85,18 @@ public enum StrategyDiagnosticSensitivity
 {
     Normal,
     Restricted
+}
+
+public enum ProcessDiagnosticRetrySafety
+{
+    Unknown,
+    SafeToRetry,
+    UnsafeToRetry
+}
+
+public enum ProcessDiagnosticIdempotencyClassification
+{
+    Unknown,
+    Idempotent,
+    NonIdempotent
 }

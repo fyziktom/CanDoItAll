@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-15. Implemented and validated during architecture bundle v3 execution.
 
 ## Objective
 
@@ -150,11 +150,11 @@ The architecture must support real execution without leaking adapter-specific AP
 
 ## Acceptance Checklist
 
-- [ ] Adapter strategies implemented.
-- [ ] First layered driver slice works.
-- [ ] Result envelope tests pass.
-- [ ] Diagnostic/redaction tests pass.
-- [ ] Dependency leak scans pass.
+- [x] Adapter strategies implemented.
+- [x] First layered driver slice works.
+- [x] Result envelope tests pass.
+- [x] Diagnostic/redaction tests pass.
+- [x] Dependency leak scans pass.
 
 ## Proof Required
 
@@ -163,13 +163,15 @@ The architecture must support real execution without leaking adapter-specific AP
 - Security/redaction review.
 - Driver contract proof.
 
+Proof is recorded under `repo://codex/bundles/process-module-architecture-v3/proof/SB11/`, including `manifest.md`, `semantic-invariants.md`, `adapter-security-review.md`, focused tests, process-slice tests, build transcripts, scans, performance summary, and CodeAnalytics MCP snapshot `snap-20260615224754-e4fadc68`.
+
 ## Browser Validation Logging
 
 - Browser validation is not required unless the representative adapter slice includes browser-visible behavior; if it does, record route, viewport, screenshots, and assertions.
 
 ## Progression Gate
 
-- SB12 may proceed after adapter and driver slice proof shows no generic runtime leaks.
+- Passed. SB12 may proceed because adapter and driver slice proof shows no generic runtime leaks.
 
 ## Suggested Agent Prompt
 
@@ -177,4 +179,4 @@ Execute SB11 from `codex/bundles/process-module-architecture-v3/subbundles/11-ex
 
 ## Handoff Notes For Next Bundle
 
-Record adapter APIs, driver slice boundaries, diagnostics behavior, mutation audit behavior, and gaps for SB12/SB14.
+SB12 can rely on typed adapter contracts in `CanDoItAll.Processes.Drivers.Abstractions`, the first concrete Standard driver project, strategy-envelope normalization, restricted diagnostic references with retry/idempotency metadata, and Git-backed mutation audit behavior. Real workflow, agent, scheduler, handoff, project/workbench, and plugin adapters remain downstream work behind `IProcessExecutionAdapter`.

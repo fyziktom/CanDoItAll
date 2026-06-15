@@ -1,0 +1,6 @@
+Command:
+rg -n "CanDoItAll\.Processes\.Drivers\.Standard|IProcessExecutionAdapter|ProcessExecutionAdapterRequest|ProcessExecutionAdapterKind" src/CanDoItAll.Processes.Core src/CanDoItAll.Processes.Runtime -g"*.cs" -g"*.csproj"
+
+ExitCode: 1
+Result:
+No matches.

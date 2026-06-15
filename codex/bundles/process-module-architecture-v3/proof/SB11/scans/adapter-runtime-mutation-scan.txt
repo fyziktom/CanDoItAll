@@ -1,0 +1,6 @@
+Command:
+rg -n "ProcessRuntimeState|RuntimeStates|RuntimeEvents|IProcessRuntime|ProcessPersistenceDbContext|DbContext|SaveChanges|IProcessRuntimeUnitOfWork" src/CanDoItAll.Processes.Drivers.Standard src/CanDoItAll.Processes.Application/ProcessAdapterMutationAudit.cs -g"*.cs" -g"*.csproj"
+
+ExitCode: 1
+Result:
+No matches.

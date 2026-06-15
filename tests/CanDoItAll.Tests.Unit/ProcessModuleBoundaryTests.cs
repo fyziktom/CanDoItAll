@@ -10,6 +10,7 @@ public sealed class ProcessModuleBoundaryTests
         "CanDoItAll.Processes.Abstractions",
         "CanDoItAll.Processes.Core",
         "CanDoItAll.Processes.Drivers.Abstractions",
+        "CanDoItAll.Processes.Drivers.Standard",
         "CanDoItAll.Processes.Projections",
         "CanDoItAll.Git",
         "CanDoItAll.Processes.Templates",
@@ -27,6 +28,7 @@ public sealed class ProcessModuleBoundaryTests
         ["CanDoItAll.Processes.Abstractions"] = ["CanDoItAll.Processes.Contracts"],
         ["CanDoItAll.Processes.Core"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions"],
         ["CanDoItAll.Processes.Drivers.Abstractions"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core"],
+        ["CanDoItAll.Processes.Drivers.Standard"] = ["CanDoItAll.Processes.Drivers.Abstractions"],
         ["CanDoItAll.Processes.Projections"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core"],
         ["CanDoItAll.Git"] = [],
         ["CanDoItAll.Processes.Templates"] = ["CanDoItAll.Processes.Contracts", "CanDoItAll.Processes.Abstractions", "CanDoItAll.Processes.Core"],
@@ -185,17 +187,22 @@ public sealed class ProcessModuleBoundaryTests
     }
 
     [Fact]
-    public void Concrete_process_driver_projects_are_not_active()
+    public void Only_approved_concrete_process_driver_projects_are_active()
     {
         var root = FindRepositoryRoot();
+        var allowedConcreteDriverProjects = new[]
+        {
+            "CanDoItAll.Processes.Drivers.Standard"
+        }.ToHashSet(StringComparer.Ordinal);
         var concreteDriverProjects = Directory.EnumerateDirectories(Path.Combine(root, "src"), "CanDoItAll.Processes.Drivers.*")
             .Select(Path.GetFileName)
             .Where(name => !string.Equals(name, "CanDoItAll.Processes.Drivers.Abstractions", StringComparison.Ordinal))
+            .Where(name => name is not null && !allowedConcreteDriverProjects.Contains(name))
             .ToArray();
 
         Assert.True(
             concreteDriverProjects.Length == 0,
-            "Concrete process driver projects must stay out of the active tree until their rebuild phases: " + string.Join(", ", concreteDriverProjects));
+            "Unexpected concrete process driver projects are active: " + string.Join(", ", concreteDriverProjects));
     }
 
     private static IEnumerable<string> FindTermMatches(string root, string path, IReadOnlyList<string> terms)
