@@ -1,0 +1,25 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-mitigation-options",
+  "DisplayName": "Mitigation options prompt",
+  "Scope": "local",
+  "ProcessKey": "incident-response",
+  "AudienceRoleKey": "resolver",
+  "Phase": "Diagnosis",
+  "Summary": "Generates a structured list of mitigation options with evidence, risk, and rollback framing.",
+  "RequiredInputs": [
+    "Current incident symptoms.",
+    "Telemetry or logs.",
+    "Known service architecture or dependency context."
+  ],
+  "OutputSchema": [
+    "Candidate mitigations.",
+    "Expected effect.",
+    "Risk and rollback notes."
+  ],
+  "RefusalConditions": [
+    "Do not invent root cause certainty.",
+    "Refuse when available evidence is too weak to rank mitigation options meaningfully."
+  ],
+  "DocPath": "processes/incident-response/prompts/prompt-mitigation-options.md"
+}

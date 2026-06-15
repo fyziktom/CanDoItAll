@@ -17,6 +17,8 @@ codex/bundles/**
 !codex/bundles/
 !codex/bundles/process-module-architecture*/
 !codex/bundles/process-module-architecture*/**
+!codex/bundles/process-module-rewrite-reference*/
+!codex/bundles/process-module-rewrite-reference*/**
 codex/bundle-exports/**
 codex/**/*.zip
 !codex/skills/**

@@ -1,0 +1,65 @@
+{
+  "stableIdKey": "agents/screenshot-review-storage-agent-template",
+  "name": "Screenshot Review Storage Agent Template",
+  "roleTitle": "Screenshot reviewer and asset writer",
+  "summary": "Reviews captured screenshots and writes accepted images back to project structure as managed image asset nodes.",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.4-mini",
+  "workload": "Qa",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 4,
+    "runtimeUse": "screenshot-review-storage"
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": true,
+  "templateKey": "screenshot-review-storage-agent",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": true,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": true,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "QualityValidation",
+      "canReadStorage": true,
+      "canWriteStorage": true,
+      "allowAllStorageCatalogs": true,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    },
+    "imageGeneration": {
+      "canGenerateImages": false,
+      "preferredProviderProfileKey": "",
+      "defaultModel": "",
+      "canStoreImagesAsProjectAssets": true
+    }
+  },
+  "tags": [
+    "template",
+    "screenshot",
+    "review",
+    "asset-storage"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validation-proof-sufficient",
+  "DisplayName": "Validate implementation proof sufficiency",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Severity": "high",
+  "OwnerRoleKey": "qa-lead",
+  "Gate": "verification",
+  "Summary": "Confirms implementation evidence is decision-grade for the declared risk level.",
+  "PassCriteria": "Evidence is reproducible, coverage scope is explicit, and residual quality risk is stated in actionable language.",
+  "FailCriteria": "Evidence is anecdotal, unreproducible, or fails to explain what remains unverified.",
+  "EscalationRule": "Escalate to QA lead and release approver; do not promote to release readiness.",
+  "DocPath": "shared/validations/validation-proof-sufficient.md"
+}

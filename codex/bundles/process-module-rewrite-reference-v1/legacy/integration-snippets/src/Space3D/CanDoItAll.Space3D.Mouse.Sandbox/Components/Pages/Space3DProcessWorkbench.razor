@@ -1,0 +1,824 @@
+@namespace CanDoItAll.Space3D.Mouse.Sandbox.Components.Pages
+@using CanDoItAll.Modules.Processes
+@using CanDoItAll.Space3D.Mouse.Driver.Protocol
+@using CanDoItAll.Space3D.Mouse.Driver.Scene
+@inject Space3DProcessWorkbenchSession Session
+@inject IJSRuntime JS
+
+<section class="space3d-process-workbench">
+    <div class="space3d-process-workbench__header">
+        <div>
+            <p class="visualizer-card-kicker">Process scene</p>
+            <h2>Standard WebGL process workbench</h2>
+        </div>
+        <div class="visualizer-stage-card__meta">
+            <StatusBadge Text="@MouseConnectionLabel" Tone="@MouseConnectionTone" />
+            <StatusBadge Text="@Session.CurrentTemplate.DisplayName" Tone="info" />
+            <StatusBadge Text="@ResolveCameraViewLabel(Session.CameraViewMode)" Tone="neutral" />
+            <StatusBadge Text="@($"{currentSurface.Nodes.Count} nodes")" Tone="accent" />
+        </div>
+    </div>
+
+    <SectionCard Title="Process controls"
+                 Description="Template, layout, and camera controls use the same process scene pipeline as the WebGL sandbox.">
+        <Stack Orientation="Orientation.Horizontal"
+               Wrap="FlexWrap.Wrap"
+               GapScale="LayoutGap.Medium"
+               AlignItems="AlignItems.End">
+            <FormField Text="Template" ContainerClass="webgl-control-field">
+                <DropDown TValue="string"
+                          Data="@Session.Templates"
+                          TextProperty="@nameof(ProcessWebGlTemplateDescriptor.DisplayName)"
+                          ValueProperty="@nameof(ProcessWebGlTemplateDescriptor.Key)"
+                          Value="@Session.SelectedTemplateKey"
+                          ValueChanged="HandleTemplateChangedAsync" />
+            </FormField>
+
+            <FormField Text="View preset" ContainerClass="webgl-control-field">
+                <DropDown TValue="string"
+                          Data="@ViewPresetOptions"
+                          TextProperty="@nameof(ChoiceItem.Label)"
+                          ValueProperty="@nameof(ChoiceItem.Value)"
+                          Value="@Session.ViewPreset"
+                          ValueChanged="HandleViewPresetChangedAsync" />
+            </FormField>
+
+            <FormField Text="Layout" ContainerClass="webgl-control-field">
+                <DropDown TValue="string"
+                          Data="@LayoutModeOptions"
+                          TextProperty="@nameof(ChoiceItem.Label)"
+                          ValueProperty="@nameof(ChoiceItem.Value)"
+                          Value="@Session.LayoutMode"
+                          ValueChanged="HandleLayoutModeChangedAsync" />
+            </FormField>
+
+            <FormField Text="Camera" ContainerClass="webgl-control-field">
+                <Stack Orientation="Orientation.Horizontal"
+                       Wrap="FlexWrap.Wrap"
+                       GapScale="LayoutGap.Small"
+                       AlignItems="AlignItems.Center">
+                    @foreach (var option in CameraViewOptions)
+                    {
+                        <Button Text="@option.Label"
+                                ButtonStyle="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                Variant="@(string.Equals(option.Value, Session.CameraViewMode, StringComparison.Ordinal) ? Variant.Filled : Variant.Outlined)"
+                                Click="@(() => HandleCameraViewChangedAsync(option.Value))" />
+                    }
+                </Stack>
+            </FormField>
+
+            <Button Text="Fit"
+                    Icon="center_focus_strong"
+                    Click="FitViewAsync" />
+            <Button Text="Reset"
+                    Icon="refresh"
+                    Click="ResetSceneAsync" />
+            <Button Text="Capture neutral"
+                    Icon="home"
+                    Click="CaptureSceneCalibrationAsync"
+                    Disabled="@(LatestTelemetry is null || !LatestTelemetry.PoseValid)" />
+        </Stack>
+    </SectionCard>
+
+    <div class="space3d-process-workbench__grid">
+        <section class="space3d-process-workbench__stage">
+            <div class="webgl-stage-frame" data-testid="space3d-process-stage">
+                <div class="webgl-stage-overlay-host" data-cda-overlay-frame="true" data-cda-overlay-container="true">
+                    <WebGlWorkbench @ref="workbench"
+                                    Surface="@currentSurface"
+                                    SelectionChanged="HandleSelectionChanged"
+                                    NodesMoved="HandleNodesMoved"
+                                    ConnectionChangeRequested="HandleConnectionChangeRequested"
+                                    DeleteRequested="HandleDeleteRequested"
+                                    StateChanged="HandleStateChanged" />
+                </div>
+            </div>
+        </section>
+
+        <aside class="space3d-process-workbench__rail">
+            <SectionCard Title="3D mouse"
+                         Description="@buttonModeDescription">
+                <dl class="visualizer-metrics">
+                    <div>
+                        <dt>Active button</dt>
+                        <dd>@ButtonState.ActiveButtonName</dd>
+                    </div>
+                    <div>
+                        <dt>Action</dt>
+                        <dd>@ButtonState.ActiveAction</dd>
+                    </div>
+                    <div>
+                        <dt>ADC</dt>
+                        <dd>@AdcLabel</dd>
+                    </div>
+                    <div>
+                        <dt>Raw accel</dt>
+                        <dd>@FormatVector(sceneTelemetry?.LinearAccel)</dd>
+                    </div>
+                    <div>
+                        <dt>Filtered accel</dt>
+                        <dd>@FormatVector(filteredState?.FilteredAccel)</dd>
+                    </div>
+                    <div>
+                        <dt>Accel bias</dt>
+                        <dd>@FormatVector(filteredState?.AccelBias)</dd>
+                    </div>
+                    <div>
+                        <dt>Raw gyro</dt>
+                        <dd>@FormatVector(sceneTelemetry?.Gyro)</dd>
+                    </div>
+                    <div>
+                        <dt>Filtered gyro</dt>
+                        <dd>@FormatVector(filteredState?.FilteredGyro)</dd>
+                    </div>
+                    <div>
+                        <dt>Still</dt>
+                        <dd>@(filteredState?.Still == true ? "yes" : "no")</dd>
+                    </div>
+                    <div>
+                        <dt>Source</dt>
+                        <dd>@OrientationSourceLabel</dd>
+                    </div>
+                    <div>
+                        <dt>Last command</dt>
+                        <dd>@lastNavigationCommand.DebugLabel</dd>
+                    </div>
+                    <div>
+                        <dt>Angles</dt>
+                        <dd>@PointerAnglesLabel</dd>
+                    </div>
+                    <div>
+                        <dt>Neutral</dt>
+                        <dd>@(sceneTransform.HasReference ? "captured" : "raw")</dd>
+                    </div>
+                </dl>
+                <p class="visualizer-note visualizer-note--dense">@mouseActionMessage</p>
+            </SectionCard>
+
+            <SectionCard Title="Control profile"
+                         Description="Host-side smoothing and navigation mapping.">
+                <Stack GapScale="LayoutGap.Small">
+                    <FormField Text="Profile" ContainerClass="webgl-control-field">
+                        <select class="visualizer-select"
+                                value="@controlSettings.ProfileName"
+                                @onchange="HandleControlProfileChangedAsync">
+                            @foreach (var profileName in ControlProfiles)
+                            {
+                                <option value="@profileName">@profileName</option>
+                            }
+                        </select>
+                    </FormField>
+
+                    <div class="visualizer-axis-grid">
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Pan</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="25"
+                                   value="@FormatNumber(controlSettings.PanPixelsPerSecondAtFullInput)"
+                                   @onchange="HandlePanSensitivityChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Zoom</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.1"
+                                   value="@FormatNumber(controlSettings.ZoomLogRatePerSecondAtFullInput)"
+                                   @onchange="HandleZoomSensitivityChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Orbit</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="5"
+                                   value="@FormatNumber(controlSettings.OrbitDegreesPerSecondAtFullInput)"
+                                   @onchange="HandleOrbitSensitivityChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Accel dz</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.005"
+                                   value="@FormatNumber(controlSettings.AccelDeadzoneG)"
+                                   @onchange="HandleAccelDeadzoneChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Gyro dz</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.1"
+                                   value="@FormatNumber(controlSettings.GyroDeadzoneDps)"
+                                   @onchange="HandleGyroDeadzoneChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Joy dz</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="0.1"
+                                   value="@FormatNumber(controlSettings.JoystickDeadzoneDeg)"
+                                   @onchange="HandleJoystickDeadzoneChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Joy max</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="1"
+                                   value="@FormatNumber(controlSettings.JoystickFullScaleDeg)"
+                                   @onchange="HandleJoystickFullScaleChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Accel tau</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="5"
+                                   value="@FormatNumber(controlSettings.AccelSmoothingTauMs)"
+                                   @onchange="HandleAccelTauChangedAsync" />
+                        </label>
+                        <label class="visualizer-axis-row">
+                            <span class="visualizer-axis-row__label">Gyro tau</span>
+                            <input class="visualizer-input"
+                                   type="number"
+                                   step="5"
+                                   value="@FormatNumber(controlSettings.GyroSmoothingTauMs)"
+                                   @onchange="HandleGyroTauChangedAsync" />
+                        </label>
+                    </div>
+
+                    <div class="visualizer-inline-actions">
+                        <button class="visualizer-button visualizer-button--compact"
+                                @onclick="ResetControlProfileAsync">
+                            Reset profile
+                        </button>
+                        <button class="visualizer-button visualizer-button--compact"
+                                @onclick="ExportControlSettingsAsync">
+                            Export JSON
+                        </button>
+                    </div>
+
+                    <textarea class="visualizer-debug-log"
+                              rows="5"
+                              value="@controlSettingsJson"
+                              @onchange="HandleControlSettingsJsonChangedAsync"></textarea>
+                    <button class="visualizer-button visualizer-button--compact"
+                            @onclick="ImportControlSettingsAsync">
+                        Import JSON
+                    </button>
+                </Stack>
+            </SectionCard>
+
+            <SectionCard Title="Button history"
+                         Description="Recent logical ADC events from the host-side ladder interpreter.">
+                <div class="space3d-button-history">
+                    @if (ButtonState.Events.Count == 0)
+                    {
+                        <p class="webgl-rail-copy">No interpreted button events yet.</p>
+                    }
+                    else
+                    {
+                        @foreach (var buttonEvent in ButtonState.Events.Take(5))
+                        {
+                            <div class="webgl-command-entry">
+                                <strong>@buttonEvent.DisplayText</strong>
+                                <span>@buttonEvent.Action | seq @buttonEvent.Sequence</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </SectionCard>
+
+            <SectionCard Title="Selection"
+                         Description="@SelectedNodeSummary">
+                <Stack GapScale="LayoutGap.Small">
+                    <StatusBadge Text="@SelectedNodeTitle" Tone="info" />
+                    <StatusBadge Text="@($"{SelectedNodeConnectionCount} connections")" Tone="neutral" />
+                    @if (selectedNode is not null && selectedNode.Anchors.Count > 0)
+                    {
+                        <div class="webgl-chip-cluster">
+                            @foreach (var anchor in selectedNode.Anchors.Take(6))
+                            {
+                                <span class="webgl-chip">@anchor.Label</span>
+                            }
+                        </div>
+                    }
+                </Stack>
+            </SectionCard>
+
+            <SectionCard Title="Command log"
+                         Description="Recent scene and 3D-mouse actions.">
+                <Stack GapScale="LayoutGap.Small">
+                    @foreach (var entry in Session.CommandLog.Take(6))
+                    {
+                        <div class="webgl-command-entry">
+                            <strong>@entry.Title</strong>
+                            <span>@entry.Detail</span>
+                        </div>
+                    }
+                </Stack>
+            </SectionCard>
+        </aside>
+    </div>
+</section>
+
+@code {
+    private static readonly IReadOnlyList<ChoiceItem> ViewPresetOptions =
+    [
+        new("Overview", WebGlWorkbenchViewPresets.Overview),
+        new("Roles", WebGlWorkbenchViewPresets.Roles),
+        new("Dependencies", WebGlWorkbenchViewPresets.Dependencies),
+        new("Branching", WebGlWorkbenchViewPresets.Branching),
+        new("Focus", WebGlWorkbenchViewPresets.Focus)
+    ];
+
+    private static readonly IReadOnlyList<ChoiceItem> LayoutModeOptions =
+    [
+        new("Center lane", WebGlWorkbenchLayoutModes.CenterLane),
+        new("Alternating arc", WebGlWorkbenchLayoutModes.AlternatingArc),
+        new("Layered orbit", WebGlWorkbenchLayoutModes.LayeredOrbit),
+        new("Critical path spine", WebGlWorkbenchLayoutModes.CriticalPathSpine),
+        new("Fan-out corridor", WebGlWorkbenchLayoutModes.FanoutCorridor),
+        new("Radial burst", WebGlWorkbenchLayoutModes.RadialBurst)
+    ];
+
+    private static readonly IReadOnlyList<ChoiceItem> CameraViewOptions =
+    [
+        new("Perspective", WebGlWorkbenchCameraViewModes.Perspective),
+        new("XY", WebGlWorkbenchCameraViewModes.XY),
+        new("XZ", WebGlWorkbenchCameraViewModes.XZ),
+        new("YZ", WebGlWorkbenchCameraViewModes.YZ)
+    ];
+
+    private const double NeutralCaptureGyroThresholdDps = 8d;
+    private const double NeutralCaptureAccelThresholdG = 0.05d;
+    private const string ControlSettingsStorageKey = "space3d.mouse.control.settings.v2";
+    private static readonly IReadOnlyList<string> ControlProfiles = Space3DMouseControlSettings.ProfileNames;
+
+    private readonly MouseLabPoseTransform sceneTransform = new();
+    private readonly Space3DMouseControlFilter controlFilter = new();
+    private WebGlWorkbench? workbench;
+    private WebGlWorkbenchSurface currentSurface = new();
+    private MouseSceneSnapshot? sceneTelemetry;
+    private Space3DMouseFilteredState? filteredState;
+    private Space3DNavigationCommand lastNavigationCommand = Space3DNavigationCommand.None;
+    private Space3DMouseControlSettings controlSettings = Space3DMouseControlSettings.CreateDefault();
+    private DateTimeOffset? lastTelemetryAt;
+    private DateTimeOffset lastHandledButtonEventAt = DateTimeOffset.MinValue;
+    private string mouseActionMessage = "Connect the BLE mouse in the lab tab, then use held buttons 1/2/3 for pan, rotate, and zoom.";
+    private string buttonModeDescription = "Button 1 pans from yaw/roll, button 2 rotates from gyro, button 3 zooms from yaw/roll, button 4 primary-clicks, button 5 opens the context menu, and button 6 captures neutral.";
+    private string controlSettingsJson = string.Empty;
+    private bool controlSettingsLoaded;
+
+    [Parameter]
+    public MouseTelemetrySnapshot? LatestTelemetry { get; set; }
+
+    [Parameter]
+    public Space3DMouseButtonSnapshot ButtonState { get; set; } = Space3DMouseButtonSnapshot.Empty;
+
+    protected override void OnInitialized()
+    {
+        Session.EnsureInitialized();
+        ApplyControlSettings(controlSettings, persist: false);
+        RefreshSurface();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || controlSettingsLoaded)
+        {
+            return;
+        }
+
+        controlSettingsLoaded = true;
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", ControlSettingsStorageKey);
+            if (Space3DMouseControlSettings.TryFromJson(json, out var storedSettings))
+            {
+                ApplyControlSettings(storedSettings, persist: false);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (LatestTelemetry is null || LatestTelemetry.ReceivedAt == lastTelemetryAt)
+        {
+            return;
+        }
+
+        lastTelemetryAt = LatestTelemetry.ReceivedAt;
+        sceneTelemetry = sceneTransform.Transform(LatestTelemetry);
+        if (sceneTelemetry is not null)
+        {
+            lastNavigationCommand = controlFilter.BuildNavigationCommand(sceneTelemetry, ButtonState, IsPrecisionProfile);
+            filteredState = controlFilter.LastState;
+        }
+
+        await HandleButtonEventsAsync();
+        await ApplyNavigationCommandAsync(lastNavigationCommand);
+    }
+
+    private WebGlWorkbenchNode? selectedNode
+        => currentSurface.Nodes.FirstOrDefault(node =>
+            currentSurface.UiState.SelectedNodeIds.Contains(node.Id, StringComparer.Ordinal));
+
+    private string SelectedNodeTitle => selectedNode?.Title ?? "Nothing selected";
+
+    private int SelectedNodeConnectionCount
+        => selectedNode is null
+            ? 0
+            : currentSurface.Edges.Count(edge =>
+                string.Equals(edge.SourceNodeId, selectedNode.Id, StringComparison.Ordinal) ||
+                string.Equals(edge.TargetNodeId, selectedNode.Id, StringComparison.Ordinal));
+
+    private string SelectedNodeSummary
+        => selectedNode is null
+            ? "Select a process node in the stage or trigger a left click over a node."
+            : string.IsNullOrWhiteSpace(selectedNode.Description)
+                ? selectedNode.Subtitle
+                : selectedNode.Description;
+
+    private string MouseConnectionLabel
+        => LatestTelemetry is null
+            ? "No mouse frame"
+            : ButtonState.AdcEnabled
+                ? "3D mouse active"
+                : "Motion active";
+
+    private string MouseConnectionTone
+        => LatestTelemetry is null
+            ? "neutral"
+            : ButtonState.AdcEnabled
+                ? "success"
+                : "info";
+
+    private string AdcLabel
+        => ButtonState.AdcEnabled
+            ? $"{(ButtonState.CurrentMillivolts / 1000d):0.00} V | {ButtonState.SignalState} {(ButtonState.AdcStable ? "stable" : "unstable")}"
+            : "disabled";
+
+    private string PointerAnglesLabel
+        => sceneTelemetry is null
+            ? "--"
+            : $"yaw {sceneTelemetry.ForwardAzimuthDeg:+0.0;-0.0;+0.0} deg | pitch {sceneTelemetry.ForwardElevationDeg:+0.0;-0.0;+0.0} deg | roll {sceneTelemetry.RollDeg:+0.0;-0.0;+0.0} deg";
+
+    private async Task HandleButtonEventsAsync()
+    {
+        if (ButtonState.Events.Count == 0)
+        {
+            return;
+        }
+
+        var events = ButtonState.Events
+            .Where(buttonEvent => buttonEvent.ObservedAt > lastHandledButtonEventAt)
+            .OrderBy(buttonEvent => buttonEvent.ObservedAt)
+            .ToArray();
+        foreach (var buttonEvent in events)
+        {
+            await HandleButtonEventAsync(buttonEvent);
+            if (buttonEvent.ObservedAt > lastHandledButtonEventAt)
+            {
+                lastHandledButtonEventAt = buttonEvent.ObservedAt;
+            }
+        }
+    }
+
+    private async Task HandleButtonEventAsync(Space3DMouseButtonEvent buttonEvent)
+    {
+        if (workbench is null)
+        {
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 4 && buttonEvent.Kind == MouseAdcEventKind.Click)
+        {
+            await workbench.TriggerPrimaryClickAsync();
+            RecordMouseAction("Primary click", buttonEvent.DisplayText);
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 4 && buttonEvent.Kind == MouseAdcEventKind.DoubleClick)
+        {
+            await workbench.TriggerDoubleClickAsync();
+            RecordMouseAction("Double click", buttonEvent.DisplayText);
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 5 && buttonEvent.Kind == MouseAdcEventKind.Click)
+        {
+            await workbench.TriggerContextMenuAsync();
+            RecordMouseAction("Context click", buttonEvent.DisplayText);
+            return;
+        }
+
+        if (buttonEvent.ButtonNumber == 6 &&
+            (buttonEvent.Kind == MouseAdcEventKind.Click || buttonEvent.Kind == MouseAdcEventKind.DoubleClick))
+        {
+            await CaptureSceneCalibrationAsync();
+        }
+    }
+
+    private async Task ApplyNavigationCommandAsync(Space3DNavigationCommand command)
+    {
+        if (workbench is null || sceneTelemetry is null || !sceneTelemetry.Valid)
+        {
+            return;
+        }
+
+        if (command.HasPan)
+        {
+            await workbench.PanAsync(command.PanX, command.PanY);
+            mouseActionMessage = command.DebugLabel;
+        }
+
+        if (command.HasOrbit)
+        {
+            await workbench.OrbitAsync(command.OrbitAzimuthRadians, command.OrbitPolarRadians);
+            mouseActionMessage = command.DebugLabel;
+        }
+
+        if (command.HasZoom)
+        {
+            await workbench.ZoomAsync(command.ZoomFactor);
+            mouseActionMessage = command.DebugLabel;
+        }
+    }
+
+    private async Task HandleControlProfileChangedAsync(ChangeEventArgs args)
+    {
+        ApplyControlSettings(Space3DMouseControlSettings.CreateProfile(args.Value?.ToString()), persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private async Task ResetControlProfileAsync()
+    {
+        ApplyControlSettings(Space3DMouseControlSettings.CreateProfile(controlSettings.ProfileName), persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private async Task ExportControlSettingsAsync()
+    {
+        controlSettingsJson = controlSettings.ToJson();
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", controlSettingsJson);
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task ImportControlSettingsAsync()
+    {
+        if (Space3DMouseControlSettings.TryFromJson(controlSettingsJson, out var imported))
+        {
+            ApplyControlSettings(imported, persist: true);
+            await PersistControlSettingsAsync();
+            mouseActionMessage = "Imported host control settings.";
+        }
+        else
+        {
+            mouseActionMessage = "Settings JSON could not be imported.";
+        }
+    }
+
+    private Task HandleControlSettingsJsonChangedAsync(ChangeEventArgs args)
+    {
+        controlSettingsJson = args.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePanSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.PanPixelsPerSecondAtFullInput = value);
+
+    private Task HandleZoomSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.ZoomLogRatePerSecondAtFullInput = value);
+
+    private Task HandleOrbitSensitivityChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.OrbitDegreesPerSecondAtFullInput = value);
+
+    private Task HandleAccelDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.AccelDeadzoneG = value);
+
+    private Task HandleGyroDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.GyroDeadzoneDps = value);
+
+    private Task HandleJoystickDeadzoneChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.JoystickDeadzoneDeg = value);
+
+    private Task HandleJoystickFullScaleChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.JoystickFullScaleDeg = value);
+
+    private Task HandleAccelTauChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.AccelSmoothingTauMs = value);
+
+    private Task HandleGyroTauChangedAsync(ChangeEventArgs args)
+        => ChangeControlNumberAsync(args, value => controlSettings.GyroSmoothingTauMs = value);
+
+    private async Task ChangeControlNumberAsync(ChangeEventArgs args, Action<double> assign)
+    {
+        if (!TryParseDouble(args.Value?.ToString(), out var value))
+        {
+            mouseActionMessage = "Control setting expects a numeric value.";
+            return;
+        }
+
+        assign(value);
+        ApplyControlSettings(controlSettings, persist: true);
+        await PersistControlSettingsAsync();
+    }
+
+    private void ApplyControlSettings(Space3DMouseControlSettings settings, bool persist)
+    {
+        controlSettings = settings.Clone().Normalize();
+        controlFilter.ApplySettings(controlSettings);
+        sceneTransform.ApplyControlSettings(controlSettings);
+        controlSettingsJson = controlSettings.ToJson();
+        sceneTelemetry = sceneTransform.Transform(LatestTelemetry);
+        filteredState = sceneTelemetry is null ? null : controlFilter.Update(sceneTelemetry);
+        lastNavigationCommand = Space3DNavigationCommand.None;
+        if (persist)
+        {
+            mouseActionMessage = $"Applied {controlSettings.ProfileName} control settings.";
+        }
+    }
+
+    private async Task PersistControlSettingsAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", ControlSettingsStorageKey, controlSettings.ToJson());
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private Task HandleTemplateChangedAsync(string? templateKey)
+    {
+        Session.LoadTemplate(templateKey);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleViewPresetChangedAsync(string? viewPreset)
+    {
+        Session.SetViewPreset(viewPreset);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleLayoutModeChangedAsync(string? layoutMode)
+    {
+        Session.Recompose(layoutMode);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleCameraViewChangedAsync(string? cameraViewMode)
+    {
+        Session.SetCameraView(cameraViewMode);
+        RefreshSurface();
+        return FitViewAsync();
+    }
+
+    private Task HandleSelectionChanged(WebGlSelectionChangedEventArgs args)
+    {
+        Session.SetSelectedNode(args.PrimaryNodeId);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleNodesMoved(WebGlNodeMovedEventArgs args)
+    {
+        Session.ApplyNodesMoved(args.Positions);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleConnectionChangeRequested(WebGlConnectionChangeRequest request)
+    {
+        Session.ApplyConnectionChange(request);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleDeleteRequested(WebGlDeleteRequest request)
+    {
+        Session.ApplyDeleteRequest(request);
+        return RefreshSurfaceAsync();
+    }
+
+    private Task HandleStateChanged(string stateJson)
+    {
+        Session.ApplyUiState(WebGlWorkbenchUiState.Parse(stateJson));
+        return RefreshSurfaceAsync();
+    }
+
+    private async Task FitViewAsync()
+    {
+        if (workbench is not null)
+        {
+            await workbench.FitViewToSceneAsync();
+        }
+    }
+
+    private async Task ResetSceneAsync()
+    {
+        Session.Reset();
+        RefreshSurface();
+        if (workbench is not null)
+        {
+            await workbench.FitViewToSceneAsync();
+        }
+    }
+
+    private Task CaptureSceneCalibrationAsync()
+    {
+        if (LatestTelemetry is null || !LatestTelemetry.PoseValid)
+        {
+            mouseActionMessage = "Capture a valid live pose before neutral calibration.";
+            return RefreshSurfaceAsync();
+        }
+
+        if (!IsNeutralCaptureStable(LatestTelemetry))
+        {
+            mouseActionMessage = "Hold the module still before neutral calibration.";
+            return RefreshSurfaceAsync();
+        }
+
+        if (sceneTransform.CaptureReference(LatestTelemetry))
+        {
+            sceneTelemetry = sceneTransform.Transform(LatestTelemetry);
+            RecordMouseAction("Captured neutral", "Button 6 calibration");
+        }
+        else
+        {
+            mouseActionMessage = "Neutral capture rejected this frame.";
+        }
+
+        return RefreshSurfaceAsync();
+    }
+
+    private void RefreshSurface()
+    {
+        currentSurface = Session.BuildSurface();
+    }
+
+    private Task RefreshSurfaceAsync()
+    {
+        RefreshSurface();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void RecordMouseAction(string title, string detail)
+    {
+        mouseActionMessage = $"{title}: {detail}";
+        Session.RecordMouseAction(title, detail);
+        RefreshSurface();
+    }
+
+    private static bool IsNeutralCaptureStable(MouseTelemetrySnapshot pose)
+        => pose.GyroMagnitudeDps <= NeutralCaptureGyroThresholdDps &&
+           pose.LinearAccelMagnitudeG <= NeutralCaptureAccelThresholdG;
+
+    private static string FormatVector(SceneVector? vector)
+        => vector is null
+            ? "--"
+            : $"{vector.Value.X:+0.000;-0.000;+0.000}, {vector.Value.Y:+0.000;-0.000;+0.000}, {vector.Value.Z:+0.000;-0.000;+0.000}";
+
+    private static string FormatNumber(double value)
+        => value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static bool TryParseDouble(string? valueText, out double value)
+        => double.TryParse(valueText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) ||
+           double.TryParse(valueText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out value);
+
+    private bool IsPrecisionProfile
+        => string.Equals(controlSettings.ProfileName, "Precision", StringComparison.OrdinalIgnoreCase);
+
+    private string OrientationSourceLabel
+        => LatestTelemetry?.OrientationSource switch
+        {
+            MouseOrientationSource.GameRotationVectorNoMag => "Game RV no mag",
+            MouseOrientationSource.RotationVectorMag => "Rotation RV mag",
+            MouseOrientationSource.GeomagneticNoGyro => "Geomagnetic no gyro",
+            MouseOrientationSource.ArvrStabilizedMag => "AR/VR mag",
+            MouseOrientationSource.ArvrStabilizedGameNoMag => "AR/VR game no mag",
+            MouseOrientationSource.Unknown => "Unknown",
+            _ => "--"
+        };
+
+    private static string ResolveCameraViewLabel(string cameraViewMode)
+    {
+        return WebGlWorkbenchCameraViewModes.Normalize(cameraViewMode) switch
+        {
+            WebGlWorkbenchCameraViewModes.XY => "XY view",
+            WebGlWorkbenchCameraViewModes.XZ => "XZ view",
+            WebGlWorkbenchCameraViewModes.YZ => "YZ view",
+            _ => "Perspective"
+        };
+    }
+
+    private sealed record ChoiceItem(string Label, string Value);
+}

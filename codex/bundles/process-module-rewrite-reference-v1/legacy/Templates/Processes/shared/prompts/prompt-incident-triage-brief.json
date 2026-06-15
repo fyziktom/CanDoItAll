@@ -1,0 +1,26 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-incident-triage-brief",
+  "DisplayName": "Incident triage brief prompt",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "triage-lead",
+  "Phase": "Incident triage",
+  "Summary": "Turns an incoming alert into a structured triage note without claiming certainty that does not exist.",
+  "RequiredInputs": [
+    "Alert or user report.",
+    "Initial telemetry or logs.",
+    "Known impact or tenant reports."
+  ],
+  "OutputSchema": [
+    "Severity hypothesis.",
+    "Impact framing.",
+    "Named responders.",
+    "First actions."
+  ],
+  "RefusalConditions": [
+    "Do not claim root cause without evidence.",
+    "Refuse when the source signal itself is unavailable or contradictory."
+  ],
+  "DocPath": "shared/prompts/prompt-incident-triage-brief.md"
+}

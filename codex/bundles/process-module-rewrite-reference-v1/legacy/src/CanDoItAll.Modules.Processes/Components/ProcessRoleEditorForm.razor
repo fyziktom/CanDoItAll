@@ -1,0 +1,217 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Modules.Projects
+
+<SurfaceCard data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Medium">
+        @if (ShowHeader)
+        {
+            <Split Gap="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <p class="cda-eyebrow">@Eyebrow</p>
+                    <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Model.DisplayName) ? "Unnamed role" : Model.DisplayName)</h3>
+                    <p class="text-sm leading-6 text-slate-600">@Description</p>
+                </Stack>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="@(Model.IsRequired ? "neutral" : "info")"
+                                 Text="@(Model.IsRequired ? "Required" : "Optional")" />
+                    @if (ShowRemove)
+                    {
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="Remove" />
+                    }
+                </Cluster>
+            </Split>
+        }
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <FormField Text="Key">
+                <InputText @bind-Value="Model.Key"
+                           class="cda-input"
+                           data-testid="processes-role-key-input" />
+            </FormField>
+            <FormField Text="Display name">
+                <InputText @bind-Value="Model.DisplayName"
+                           class="cda-input"
+                           data-testid="processes-role-display-name-input" />
+            </FormField>
+            <FormField Text="Preferred executor kind">
+                <select value="@ProcessRoleExecutorKindOptions.NormalizeForSelection(Model.PreferredExecutorKind)"
+                        @onchange="HandleExecutorKindChanged"
+                        class="cda-input"
+                        data-testid="processes-role-executor-kind-input">
+                    @foreach (var executorKind in ProcessRoleExecutorKindOptions.Options)
+                    {
+                        <option value="@executorKind.Value">@executorKind.Label</option>
+                    }
+                </select>
+            </FormField>
+            @if (ProcessRoleExecutorKindOptions.IsWorkflow(Model.PreferredExecutorKind))
+            {
+                <FormField Text="Preferred workflow">
+                    <select value="@SelectedWorkflowOptionKey"
+                            @onchange="HandleWorkflowChanged"
+                            class="cda-input"
+                            data-testid="processes-role-workflow-input">
+                        <option value="">Any active workflow</option>
+                        @foreach (var workflow in WorkflowOptions)
+                        {
+                            <option value="@BuildWorkflowOptionKey(workflow.DefinitionId, workflow.VersionId)">
+                                @($"{workflow.Name} / {workflow.Status} / {workflow.PreferredBackend}")
+                            </option>
+                        }
+                    </select>
+                </FormField>
+            }
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Purpose">
+                <InputTextArea @bind-Value="Model.Purpose"
+                               class="cda-input cda-input--textarea min-h-24"
+                               data-testid="processes-role-purpose-input" />
+            </FormField>
+            <FormField Text="Staffing intent">
+                <InputTextArea @bind-Value="Model.StaffingIntent"
+                               class="cda-input cda-input--textarea min-h-24"
+                               data-testid="processes-role-staffing-intent-input" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <FormField Text="Project assignment role">
+                <InputSelect @bind-Value="Model.PreferredProjectAssignmentRole"
+                             class="cda-input"
+                             data-testid="processes-role-project-assignment-role-input">
+                    <option value="">No preferred project role</option>
+                    @foreach (var assignmentRole in Enum.GetValues<ProjectPartyAssignmentRole>())
+                    {
+                        <option value="@assignmentRole">@assignmentRole</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Default allocation percent">
+                <InputNumber @bind-Value="Model.DefaultAllocationPercent"
+                             class="cda-input"
+                             data-testid="processes-role-allocation-input" />
+            </FormField>
+            <FormField Text="Role template source key">
+                <InputText @bind-Value="Model.RoleTemplateSourceKey"
+                           class="cda-input"
+                           data-testid="processes-role-template-source-input" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Template snapshot name">
+                <InputText @bind-Value="Model.RoleTemplateSnapshotName"
+                           class="cda-input"
+                           data-testid="processes-role-template-snapshot-input" />
+            </FormField>
+            <FormField Text="Snapshot summary">
+                <InputTextArea @bind-Value="Model.SnapshotSummary"
+                               class="cda-input cda-input--textarea min-h-24"
+                               data-testid="processes-role-snapshot-summary-input" />
+            </FormField>
+        </Grid>
+
+        <Cluster Gap="LayoutGap.Medium">
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.IsRequired" />
+                Role is required
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.AllowsFallback" />
+                Allow fallback binding
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.RequiresExplicitApproval" />
+                Requires explicit approval
+            </label>
+        </Cluster>
+    </Stack>
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessRoleEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Role requirement";
+
+    [Parameter]
+    public string Description { get; set; } = "The role contract stays stable even when the exact executor changes between project parties, suppliers, or agents.";
+
+    [Parameter]
+    public string TestId { get; set; } = "processes-role-card";
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+
+    [Parameter]
+    public bool ShowRemove { get; set; } = true;
+
+    [Parameter]
+    public IReadOnlyList<ProcessWorkflowDefinitionOption> WorkflowOptions { get; set; } = [];
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+
+    private string SelectedWorkflowOptionKey
+        => BuildWorkflowOptionKey(Model.PreferredWorkflowDefinitionId, Model.PreferredWorkflowVersionId);
+
+    private void HandleExecutorKindChanged(ChangeEventArgs args)
+    {
+        Model.PreferredExecutorKind = ProcessRoleExecutorKindOptions.NormalizeForSelection(args.Value?.ToString());
+        if (!ProcessRoleExecutorKindOptions.IsWorkflow(Model.PreferredExecutorKind))
+        {
+            Model.PreferredWorkflowDefinitionId = null;
+            Model.PreferredWorkflowVersionId = null;
+        }
+    }
+
+    private void HandleWorkflowChanged(ChangeEventArgs args)
+    {
+        if (TryParseWorkflowOptionKey(args.Value?.ToString(), out var definitionId, out var versionId))
+        {
+            Model.PreferredExecutorKind = ProcessExecutorKindNames.Workflow;
+            Model.PreferredWorkflowDefinitionId = definitionId;
+            Model.PreferredWorkflowVersionId = versionId;
+            return;
+        }
+
+        Model.PreferredWorkflowDefinitionId = null;
+        Model.PreferredWorkflowVersionId = null;
+    }
+
+    private static string BuildWorkflowOptionKey(Guid? definitionId, Guid? versionId)
+    {
+        return definitionId.HasValue && versionId.HasValue
+            ? $"{definitionId.Value:D}|{versionId.Value:D}"
+            : string.Empty;
+    }
+
+    private static bool TryParseWorkflowOptionKey(
+        string? optionKey,
+        out Guid definitionId,
+        out Guid versionId)
+    {
+        definitionId = Guid.Empty;
+        versionId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(optionKey))
+        {
+            return false;
+        }
+
+        var parts = optionKey.Split('|', StringSplitOptions.TrimEntries);
+        return parts.Length == 2 &&
+            Guid.TryParse(parts[0], out definitionId) &&
+            Guid.TryParse(parts[1], out versionId) &&
+            definitionId != Guid.Empty &&
+            versionId != Guid.Empty;
+    }
+}

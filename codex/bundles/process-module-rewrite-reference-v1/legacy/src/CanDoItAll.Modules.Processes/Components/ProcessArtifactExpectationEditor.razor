@@ -1,0 +1,160 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.AgentFramework.Models
+
+<PanelCard Soft="true"
+           data-testid="processes-step-artifact-card">
+    <Stack GapScale="LayoutGap.Medium">
+        <Split Gap="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Artifact expectation</p>
+                <h4 class="text-base font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Model.Title) ? "Unnamed artifact" : Model.Title)</h4>
+            </Stack>
+            <Button Text="Remove"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="Remove" />
+        </Split>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="5">
+            <FormField Text="Title">
+                <InputText @bind-Value="Model.Title"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Artifact kind">
+                <InputSelect @bind-Value="Model.ArtifactKind"
+                             class="cda-input">
+                    @foreach (var artifactKind in Enum.GetValues<ProcessArtifactKind>())
+                    {
+                        <option value="@artifactKind">@artifactKind</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Trust requirement">
+                <InputSelect @bind-Value="Model.TrustRequirement"
+                             class="cda-input">
+                    @foreach (var trustRequirement in Enum.GetValues<ProcessArtifactTrustRequirement>())
+                    {
+                        <option value="@trustRequirement">@trustRequirement</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Sensitivity level">
+                <InputSelect @bind-Value="Model.SensitivityLevel"
+                             class="cda-input">
+                    @foreach (var sensitivityLevel in Enum.GetValues<ProcessSensitivityLevel>())
+                    {
+                        <option value="@sensitivityLevel">@sensitivityLevel</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Retention days">
+                <InputNumber @bind-Value="Model.RetentionDays"
+                             class="cda-input" />
+            </FormField>
+            <FormField Text="Requirement">
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <InputCheckbox @bind-Value="Model.IsRequired" />
+                    Required
+                </label>
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="3">
+            <FormField Text="Workflow output id">
+                <InputText @bind-Value="Model.WorkflowOutputId"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Workflow output name">
+                <InputText @bind-Value="Model.WorkflowOutputName"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Workflow output kind">
+                <InputSelect @bind-Value="Model.WorkflowOutputKind"
+                             class="cda-input">
+                    <option value="">Any kind</option>
+                    @foreach (var workflowOutputKind in Enum.GetValues<WorkflowArtifactKind>())
+                    {
+                        <option value="@workflowOutputKind">@workflowOutputKind</option>
+                    }
+                </InputSelect>
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="2">
+            <FormField Text="Subprocess child artifact expectation id">
+                <InputText @bind-Value="SubprocessChildArtifactExpectationIdText"
+                           class="cda-input" />
+            </FormField>
+            @if (!string.IsNullOrWhiteSpace(SubprocessChildArtifactExpectationIdError))
+            {
+                <Stack GapScale="LayoutGap.Tiny">
+                    <StatusBadge Tone="danger"
+                                 Text="Invalid child id" />
+                    <p class="text-sm text-red-700">@SubprocessChildArtifactExpectationIdError</p>
+                </Stack>
+            }
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="2">
+            <FormField Text="Allowed future usage summary">
+                <InputTextArea @bind-Value="Model.AllowedFutureUsageSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+            <FormField Text="Validation requirement summary">
+                <InputTextArea @bind-Value="Model.ValidationRequirementSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
+    </Stack>
+</PanelCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessArtifactExpectationEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+
+    private string subprocessChildArtifactExpectationIdText = string.Empty;
+
+    private string SubprocessChildArtifactExpectationIdError { get; set; } = string.Empty;
+
+    private string SubprocessChildArtifactExpectationIdText
+    {
+        get => subprocessChildArtifactExpectationIdText;
+        set => UpdateSubprocessChildArtifactExpectationId(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(SubprocessChildArtifactExpectationIdError))
+        {
+            subprocessChildArtifactExpectationIdText = Model.SubprocessChildArtifactExpectationId?.ToString("D") ?? string.Empty;
+        }
+    }
+
+    private void UpdateSubprocessChildArtifactExpectationId(string? value)
+    {
+        var trimmed = value?.Trim() ?? string.Empty;
+        subprocessChildArtifactExpectationIdText = trimmed;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            Model.SubprocessChildArtifactExpectationId = null;
+            SubprocessChildArtifactExpectationIdError = string.Empty;
+            return;
+        }
+
+        if (Guid.TryParse(trimmed, out var parsed) && parsed != Guid.Empty)
+        {
+            Model.SubprocessChildArtifactExpectationId = parsed;
+            SubprocessChildArtifactExpectationIdError = string.Empty;
+            return;
+        }
+
+        SubprocessChildArtifactExpectationIdError = "Enter a non-empty GUID from the child process artifact expectation.";
+    }
+}

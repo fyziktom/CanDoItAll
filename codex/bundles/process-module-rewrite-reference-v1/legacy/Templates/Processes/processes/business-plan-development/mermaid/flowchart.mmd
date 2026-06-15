@@ -1,0 +1,9 @@
+flowchart LR
+    intake["Capture strategy intake"] --> product["Review product evidence"]
+    product --> plan["Draft business plan"]
+    plan --> finance["Model financial assumptions"]
+    plan --> marketing["Prepare marketing plan"]
+    finance --> review["Review integrated business plan"]
+    marketing --> review
+    review -->|Approved| approved["Publish approved plan handoff"]
+    review -->|Blocked| blocked["Capture blocked-plan corrections"]

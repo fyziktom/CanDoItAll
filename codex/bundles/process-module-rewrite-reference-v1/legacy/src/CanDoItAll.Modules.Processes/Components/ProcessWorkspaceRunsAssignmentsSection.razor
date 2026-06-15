@@ -1,0 +1,122 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SectionCard Title="Assignments and executor resolution"
+             Description=""
+             HelpText="Role-first runtime assignments can be rebound to project parties, suppliers, or future agents without changing the process definition.">
+    <Grid Gap="LayoutGap.Large"
+          ColumnTemplateLg="minmax(0,0.8fr) minmax(0,1.2fr)">
+        <div>
+            @if (Presenter.Assignments.Count == 0)
+            {
+                <EmptyState Eyebrow="No assignments"
+                            Title="No runtime assignments yet"
+                            Description="Assignments populate when the run snapshots the process role requirements." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium">
+                    @foreach (var assignment in Presenter.Assignments)
+                    {
+                        <SelectionListItem Title="@Presenter.ResolveRoleName(assignment.RoleRequirementId)"
+                                           Eyebrow="@(assignment.StepDefinitionId.HasValue ? "Step-scoped assignment" : "Run-scoped assignment")"
+                                           Meta="@assignment.ExecutorKind"
+                                           Summary="@(string.IsNullOrWhiteSpace(assignment.DisplayName) ? assignment.BindingReason : $"{assignment.DisplayName} / {assignment.BindingReason}")"
+                                           IsSelected="@(Presenter.SelectedAssignment?.Id == assignment.Id)"
+                                           OnSelect="@(() => Presenter.SelectAssignment(assignment.Id))">
+                            <Status>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@(assignment.IsCapabilityGap ? "danger" : "neutral")"
+                                                 Text="@(assignment.IsCapabilityGap ? "Gap" : "Bound")" />
+                                    <StatusBadge Tone="@(assignment.IsFallback ? "warning" : "info")"
+                                                 Text="@(assignment.IsFallback ? "Fallback" : "Primary")" />
+                                </Cluster>
+                            </Status>
+                        </SelectionListItem>
+                    }
+                </Stack>
+            }
+        </div>
+
+        <SurfaceCard>
+            @if (Presenter.SelectedAssignment is null)
+            {
+                <EmptyState Eyebrow="No assignment selected"
+                            Title="Choose an assignment to resolve"
+                            Description="The selected role binding can be matched to a project party or later executor registry without rewriting the process definition." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium">
+                    <div>
+                        <label class="cda-field-label">Project party</label>
+                        <InputSelect @bind-Value="Presenter.AssignmentPartyId"
+                                     class="cda-input"
+                                     disabled="@Presenter.IsWorkflowAssignmentSelected">
+                            <option value="">None</option>
+                            @foreach (var option in Presenter.PartyOptions)
+                            {
+                                <option value="@option.PartyId">@option.DisplayName</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Display name</label>
+                        <InputText @bind-Value="Presenter.AssignmentDisplayName"
+                                   class="cda-input" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Executor kind</label>
+                        <InputSelect @bind-Value="Presenter.AssignmentExecutorKind"
+                                     class="cda-input"
+                                     data-testid="processes-assignment-executor-kind-input">
+                            <option value="@ProcessExecutorKindNames.Human">Human</option>
+                            <option value="@ProcessExecutorKindNames.AiAgent">AI agent</option>
+                            <option value="@ProcessExecutorKindNames.Workflow">Workflow</option>
+                        </InputSelect>
+                    </div>
+                    @if (Presenter.IsWorkflowAssignmentSelected)
+                    {
+                        <div>
+                            <label class="cda-field-label">Workflow definition</label>
+                            <select value="@Presenter.AssignmentWorkflowOptionKey"
+                                    @onchange="Presenter.SetAssignmentWorkflowOption"
+                                    class="cda-input"
+                                    data-testid="processes-assignment-workflow-input">
+                                <option value="">Select workflow</option>
+                                @foreach (var workflow in Presenter.WorkflowOptions)
+                                {
+                                    <option value="@($"{workflow.DefinitionId:D}|{workflow.VersionId:D}")">
+                                        @($"{workflow.Name} / {workflow.Status} / {workflow.PreferredBackend}")
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    <div>
+                        <label class="cda-field-label">Binding reason</label>
+                        <InputTextArea @bind-Value="Presenter.AssignmentBindingReason"
+                                       class="cda-input cda-input--textarea min-h-24" />
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <InputCheckbox @bind-Value="Presenter.AssignmentIsFallback" />
+                        Treat this as fallback binding
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <InputCheckbox @bind-Value="Presenter.AssignmentAllowsDirectMessaging"
+                                       disabled="@Presenter.IsWorkflowAssignmentSelected"
+                                       data-testid="processes-assignment-direct-messaging-checkbox" />
+                        Allow direct role messaging for this assignment snapshot
+                    </label>
+                    <Button Text="Resolve assignment"
+                            Click="Presenter.ResolveSelectedAssignmentAsync"
+                            data-testid="processes-resolve-assignment-button" />
+                </Stack>
+            }
+        </SurfaceCard>
+    </Grid>
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+}

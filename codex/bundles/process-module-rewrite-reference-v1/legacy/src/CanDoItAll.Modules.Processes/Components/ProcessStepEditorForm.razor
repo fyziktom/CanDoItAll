@@ -1,0 +1,593 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SurfaceCard data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Medium">
+        @if (ShowHeader)
+        {
+            <Split Gap="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <p class="cda-eyebrow">@Eyebrow</p>
+                    <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Model.Title) ? "Untitled step" : Model.Title)</h3>
+                    <p class="text-sm leading-6 text-slate-600">@Description</p>
+                </Stack>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="neutral" Text="@Model.StepKind.ToString()" />
+                    @if (ShowRemove)
+                    {
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="Remove" />
+                    }
+                </Cluster>
+            </Split>
+        }
+
+        <Tabs SelectedIndex="@stepDetailsTabIndex"
+              SelectedIndexChanged="HandleStepDetailsTabChanged"
+              RenderMode="TabRenderMode.Server"
+              Variant="TabsVariant.WorkspaceSecondary"
+              OverflowMode="TabsOverflowMode.Scroll"
+              AriaLabel="Process step setup sections"
+              data-testid="processes-step-setup-tabs">
+            <TabsItem Text="Basic info"
+                      Icon="info"
+                      data-testid="processes-step-tab-basic">
+                <Stack GapScale="LayoutGap.Large">
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnsMd="3">
+                        <FormField Text="Key">
+                            <InputText @bind-Value="Model.Key"
+                                       class="cda-input" />
+                        </FormField>
+                        <FormField Text="Title">
+                            <InputText @bind-Value="Model.Title"
+                                       class="cda-input" />
+                        </FormField>
+                        <FormField Text="Subtitle">
+                            <InputText @bind-Value="Model.Subtitle"
+                                       class="cda-input" />
+                        </FormField>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnsMd="3">
+                        <FormField Text="Step kind">
+                            <InputSelect @bind-Value="Model.StepKind"
+                                         class="cda-input">
+                                @foreach (var stepKind in Enum.GetValues<ProcessStepKind>())
+                                {
+                                    <option value="@stepKind">@stepKind</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                        <FormField Text="Target lead hours">
+                            <InputNumber @bind-Value="Model.TargetLeadHours"
+                                         class="cda-input" />
+                        </FormField>
+                        @if (Model.StepKind == ProcessStepKind.Subprocess)
+                        {
+                            <FormField Text="Subprocess definition">
+                                @if (AvailableSubprocessDefinitions.Count == 0)
+                                {
+                                    <p class="text-sm leading-6 text-slate-600">Create or select another process definition before saving this subprocess step.</p>
+                                }
+                                else
+                                {
+                                    <select class="cda-input"
+                                            value="@SelectedSubprocessDefinitionValue"
+                                            @onchange="HandleSubprocessDefinitionChanged"
+                                            data-testid="processes-subprocess-definition-select">
+                                        <option value="">Select subprocess</option>
+                                        @foreach (var definition in AvailableSubprocessDefinitions)
+                                        {
+                                            <option value="@definition.DefinitionId">@BuildSubprocessDefinitionLabel(definition)</option>
+                                        }
+                                    </select>
+                                }
+                            </FormField>
+                        }
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnsMd="2">
+                        <FormField Text="Canvas-managed dependencies">
+                            @if (DependencySummaries.Count == 0)
+                            {
+                                <p class="text-sm leading-6 text-slate-600">No upstream inputs. Draw connections on the canvas to add one or more required inputs.</p>
+                            }
+                            else
+                            {
+                                <Cluster Gap="LayoutGap.Small">
+                                    @foreach (var dependencySummary in DependencySummaries)
+                                    {
+                                        <StatusBadge Tone="neutral" Text="@dependencySummary" />
+                                    }
+                                </Cluster>
+                            }
+                        </FormField>
+                        <FormField Text="Canvas-managed artifact inputs">
+                            @if (ArtifactInputSummaries.Count == 0)
+                            {
+                                <p class="text-sm leading-6 text-slate-600">No upstream artifact inputs. Draw artifact links on the canvas when this step consumes evidence or deliverables from earlier work.</p>
+                            }
+                            else
+                            {
+                                <Cluster Gap="LayoutGap.Small">
+                                    @foreach (var artifactInputSummary in ArtifactInputSummaries)
+                                    {
+                                        <StatusBadge Tone="info" Text="@artifactInputSummary" />
+                                    }
+                                </Cluster>
+                            }
+                        </FormField>
+                    </Grid>
+                </Stack>
+            </TabsItem>
+
+            <TabsItem Text="Execution"
+                      Icon="rule"
+                      data-testid="processes-step-tab-execution">
+                <Stack GapScale="LayoutGap.Large">
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnsMd="2">
+                        <FormField Text="Decision maker role">
+                            <InputSelect @bind-Value="Model.DecisionRoleRequirementId"
+                                         class="cda-input">
+                                <option value="">None</option>
+                                @foreach (var role in AvailableRoles)
+                                {
+                                    <option value="@role.Id">@role.DisplayName</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                        <FormField Text="Step permissions">
+                            <Cluster Gap="LayoutGap.Medium">
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="Model.AllowsManualSkip" />
+                                    Allow manual skip
+                                </label>
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="Model.AllowsSafeRefusal" />
+                                    Allow safe refusal
+                                </label>
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="Model.RequiresApproval" />
+                                    Requires approval
+                                </label>
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="Model.RequiresDecisionRecord" />
+                                    Requires decision record
+                                </label>
+                            </Cluster>
+                        </FormField>
+                    </Grid>
+
+                    <FormSection Title="Operation contract"
+                                 Description="Persist the runtime boundary as typed allowed operations and target scope. Text contract summaries are only used for older definitions without these fields.">
+                        <ChildContent>
+                            <Grid Gap="LayoutGap.Large"
+                                  ColumnsMd="2">
+                                <FormField Text="Target scope">
+                                    <select class="cda-input"
+                                            value="@SelectedOperationTargetScopeValue"
+                                            @onchange="HandleOperationTargetScopeChanged"
+                                            data-testid="processes-operation-target-scope-select">
+                                        <option value="">Infer from contracts</option>
+                                        @foreach (var targetScope in TargetScopeOptions)
+                                        {
+                                            <option value="@targetScope">@targetScope</option>
+                                        }
+                                    </select>
+                                </FormField>
+                                <FormField Text="Allowed operations">
+                                    <Cluster Gap="LayoutGap.Small">
+                                        @foreach (var operation in OperationOptions)
+                                        {
+                                            <label class="inline-flex items-center gap-2 text-sm text-slate-700"
+                                                   @key="operation">
+                                                <input type="checkbox"
+                                                       checked="@IsAllowedOperationSelected(operation)"
+                                                       @onchange="@((ChangeEventArgs args) => ToggleAllowedOperation(operation, args))"
+                                                       data-testid="@BuildOperationCheckboxTestId(operation)" />
+                                                @operation
+                                            </label>
+                                        }
+                                    </Cluster>
+                                </FormField>
+                            </Grid>
+                        </ChildContent>
+                    </FormSection>
+                </Stack>
+            </TabsItem>
+
+            <TabsItem Text="Contracts"
+                      Icon="link"
+                      data-testid="processes-step-tab-contracts">
+                <Stack GapScale="LayoutGap.Large">
+                    <FormField Text="Notes">
+                        <InputTextArea @bind-Value="Model.Notes"
+                                       class="cda-input cda-input--textarea min-h-24" />
+                    </FormField>
+
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnsMd="2">
+                        <FormField Text="Input contract summary">
+                            <InputTextArea @bind-Value="Model.InputContractSummary"
+                                           class="cda-input cda-input--textarea min-h-24" />
+                        </FormField>
+                        <FormField Text="Output contract summary">
+                            <InputTextArea @bind-Value="Model.OutputContractSummary"
+                                           class="cda-input cda-input--textarea min-h-24" />
+                        </FormField>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnsMd="2">
+                        <FormField Text="Evidence contract summary">
+                            <InputTextArea @bind-Value="Model.EvidenceContractSummary"
+                                           class="cda-input cda-input--textarea min-h-24" />
+                        </FormField>
+                        <FormField Text="Decision rights summary">
+                            <InputTextArea @bind-Value="Model.DecisionRightsSummary"
+                                           class="cda-input cda-input--textarea min-h-24" />
+                        </FormField>
+                    </Grid>
+
+                    <FormField Text="Exception policy summary">
+                        <InputTextArea @bind-Value="Model.ExceptionPolicySummary"
+                                       class="cda-input cda-input--textarea min-h-24" />
+                    </FormField>
+                </Stack>
+            </TabsItem>
+
+            <TabsItem Text="Routing"
+                      Icon="alt_route"
+                      BadgeText="@VisibleBranchOutcomes.Count.ToString()"
+                      data-testid="processes-step-tab-routing">
+                <FormSection Title="Branch outcomes"
+                             Description="Define the typed routing outcomes this step can emit when it decides which path continues next. Default and Error routes are added automatically when routing is enabled.">
+                    <Actions>
+                        <Button Text="Add branch outcome"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="AddBranchOutcome" />
+                    </Actions>
+                    <ChildContent>
+                        @if (HasSystemBranchOutcomes)
+                        {
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="neutral" Text="Default route" />
+                                <StatusBadge Tone="danger" Text="Error route" />
+                            </Cluster>
+                        }
+
+                        @if (VisibleBranchOutcomes.Count == 0)
+                        {
+                            <EmptyState Eyebrow="No branch outcomes"
+                                        Title="Add the first outcome"
+                                        Description="Use branch outcomes for switch-style routing such as UI review, DB review, or explicit human approval." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Medium">
+                                @foreach (var branchOutcome in VisibleBranchOutcomes)
+                                {
+                                    <ProcessStepBranchOutcomeEditor Model="@branchOutcome"
+                                                                    Remove="@(() => RemoveBranchOutcome.InvokeAsync(branchOutcome))" />
+                                }
+                            </Stack>
+                        }
+                    </ChildContent>
+                </FormSection>
+            </TabsItem>
+
+            <TabsItem Text="Roles"
+                      Icon="groups"
+                      BadgeText="@Model.RoleAssignments.Count.ToString()"
+                      data-testid="processes-step-tab-roles">
+                <FormSection Title="Role assignments"
+                             Description="Bind the step to explicit role requirements so executor changes do not mutate the process contract.">
+                    <Actions>
+                        <Button Text="Add role assignment"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="AddRoleAssignment" />
+                    </Actions>
+                    <ChildContent>
+                        @if (Model.RoleAssignments.Count == 0)
+                        {
+                            <EmptyState Eyebrow="No role bindings"
+                                        Title="Add the first binding"
+                                        Description="Each executable step should name who is responsible, reviewing, approving, or backing up the work." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Medium">
+                                @foreach (var assignment in Model.RoleAssignments)
+                                {
+                                    <ProcessStepRoleAssignmentEditor Model="@assignment"
+                                                                     AvailableRoles="@AvailableRoles"
+                                                                     Remove="@(() => RemoveRoleAssignment.InvokeAsync(assignment))" />
+                                }
+                            </Stack>
+                        }
+                    </ChildContent>
+                </FormSection>
+            </TabsItem>
+
+            <TabsItem Text="Artifacts"
+                      Icon="inventory_2"
+                      BadgeText="@Model.ArtifactExpectations.Count.ToString()"
+                      data-testid="processes-step-tab-artifacts">
+                <FormSection Title="Artifact expectations"
+                             Description="Define the evidence contract now so runtime proof stays durable, reviewable, and safe to reuse.">
+                    <Actions>
+                        <Button Text="Add artifact expectation"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="AddArtifact" />
+                    </Actions>
+                    <ChildContent>
+                        @if (Model.ArtifactExpectations.Count == 0)
+                        {
+                            <EmptyState Eyebrow="No artifact expectations"
+                                        Title="Add the first artifact"
+                                        Description="Use artifact expectations to capture trust, sensitivity, retention, and future-usage policy before runtime evidence appears." />
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Medium">
+                                @foreach (var artifact in Model.ArtifactExpectations)
+                                {
+                                    <ProcessArtifactExpectationEditor Model="@artifact"
+                                                                      Remove="@(() => RemoveArtifact.InvokeAsync(artifact))" />
+                                }
+                            </Stack>
+                        }
+                    </ChildContent>
+                </FormSection>
+            </TabsItem>
+        </Tabs>
+    </Stack>
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessStepEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<ProcessRoleEditorModel> AvailableRoles { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ProcessStepEditorModel> DependencyOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ProcessSubprocessDefinitionOption> AvailableSubprocessDefinitions { get; set; } = [];
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Step definition";
+
+    [Parameter]
+    public string Description { get; set; } = "Use typed contracts for inputs, outputs, evidence, decision rights, and exception policy so runtime deviations can be judged against a real baseline.";
+
+    [Parameter]
+    public string TestId { get; set; } = "processes-step-card";
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+
+    [Parameter]
+    public bool ShowRemove { get; set; } = true;
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+
+    [Parameter]
+    public EventCallback AddBranchOutcome { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessStepBranchOutcomeEditorModel> RemoveBranchOutcome { get; set; }
+
+    [Parameter]
+    public EventCallback AddRoleAssignment { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessStepRoleRequirementEditorModel> RemoveRoleAssignment { get; set; }
+
+    [Parameter]
+    public EventCallback AddArtifact { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessArtifactExpectationEditorModel> RemoveArtifact { get; set; }
+
+    private int stepDetailsTabIndex;
+
+    private IReadOnlyList<string> DependencySummaries
+        => ProcessCanvasBranching.GetOrderedDependencies(Model)
+            .Select(BuildDependencySummary)
+            .ToList();
+
+    private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> VisibleBranchOutcomes
+        => Model.BranchOutcomes
+            .Where(outcome => !ProcessCanvasBranching.IsSystemOutcome(outcome))
+            .ToList();
+
+    private IReadOnlyList<string> ArtifactInputSummaries
+        => Model.ArtifactInputs
+            .Select(BuildArtifactInputSummary)
+            .ToList();
+
+    private bool HasSystemBranchOutcomes
+        => Model.BranchOutcomes.Any(ProcessCanvasBranching.IsSystemOutcome);
+
+    private static IReadOnlyList<ProcessStepOperation> OperationOptions { get; } = Enum.GetValues<ProcessStepOperation>();
+
+    private static IReadOnlyList<ProcessStepTargetScope> TargetScopeOptions { get; } = Enum.GetValues<ProcessStepTargetScope>();
+
+    private string SelectedOperationTargetScopeValue => Model.OperationTargetScope?.ToString() ?? string.Empty;
+
+    private string SelectedSubprocessDefinitionValue => Model.SubprocessDefinitionId?.ToString("D") ?? string.Empty;
+
+    private Task HandleStepDetailsTabChanged(int index)
+    {
+        stepDetailsTabIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private static string BuildOperationCheckboxTestId(ProcessStepOperation operation)
+    {
+        return $"processes-operation-{operation}";
+    }
+
+    private bool IsAllowedOperationSelected(ProcessStepOperation operation)
+    {
+        return Model.AllowedOperations.Contains(operation);
+    }
+
+    private void ToggleAllowedOperation(ProcessStepOperation operation, ChangeEventArgs args)
+    {
+        if (ResolveCheckboxValue(args))
+        {
+            if (!Model.AllowedOperations.Contains(operation))
+            {
+                Model.AllowedOperations.Add(operation);
+            }
+        }
+        else
+        {
+            Model.AllowedOperations.RemoveAll(candidate => candidate == operation);
+            ReconcileTargetScopeAfterOperationRemoval(operation);
+        }
+
+        Model.AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+            Model.StepKind,
+            Model.AllowedOperations,
+            Model.OperationTargetScope);
+    }
+
+    private static bool ResolveCheckboxValue(ChangeEventArgs args)
+    {
+        return args.Value switch
+        {
+            bool value => value,
+            string rawValue when bool.TryParse(rawValue, out var parsed) => parsed,
+            _ => false
+        };
+    }
+
+    private void ReconcileTargetScopeAfterOperationRemoval(ProcessStepOperation removedOperation)
+    {
+        if (!Model.OperationTargetScope.HasValue ||
+            !IsOperationImpliedByTargetScope(removedOperation, Model.OperationTargetScope.Value))
+        {
+            return;
+        }
+
+        Model.OperationTargetScope = ProcessStepOperationContractState.InferTargetScope(
+            Model.StepKind,
+            Model.AllowedOperations);
+    }
+
+    private static bool IsOperationImpliedByTargetScope(
+        ProcessStepOperation operation,
+        ProcessStepTargetScope targetScope)
+    {
+        return (operation, targetScope) switch
+        {
+            (ProcessStepOperation.WriteExternalArtifactDestination, ProcessStepTargetScope.ExternalArtifactDestination) => true,
+            (ProcessStepOperation.MutateProductTarget, ProcessStepTargetScope.ManagedOutputProduct) => true,
+            (ProcessStepOperation.MutateProductTarget, ProcessStepTargetScope.ExternalProductTargetMutable) => true,
+            (ProcessStepOperation.ReadProjectStructure, ProcessStepTargetScope.ExternalProductTargetReadOnly) => true,
+            (ProcessStepOperation.ExecuteExternalAction, ProcessStepTargetScope.ExternalActionControlled) => true,
+            _ => false
+        };
+    }
+
+    private void HandleOperationTargetScopeChanged(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            Model.OperationTargetScope = null;
+            return;
+        }
+
+        if (!Enum.TryParse<ProcessStepTargetScope>(rawValue, out var targetScope))
+        {
+            throw new InvalidOperationException($"Unknown process step target scope '{rawValue}'.");
+        }
+
+        Model.OperationTargetScope = targetScope;
+        Model.AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+            Model.StepKind,
+            Model.AllowedOperations,
+            Model.OperationTargetScope);
+    }
+
+    private void HandleSubprocessDefinitionChanged(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(rawValue) ||
+            !Guid.TryParse(rawValue, out var selectedDefinitionId))
+        {
+            Model.SubprocessDefinitionId = null;
+            Model.SubprocessDefinitionSnapshotName = string.Empty;
+            return;
+        }
+
+        var definition = AvailableSubprocessDefinitions.FirstOrDefault(item => item.DefinitionId == selectedDefinitionId);
+        Model.SubprocessDefinitionId = selectedDefinitionId;
+        Model.SubprocessDefinitionSnapshotName = definition?.Name ?? string.Empty;
+    }
+
+    private static string BuildSubprocessDefinitionLabel(ProcessSubprocessDefinitionOption definition)
+    {
+        return $"{definition.Name} / {definition.ScopeLabel} / {definition.Status}";
+    }
+
+    private string BuildDependencySummary(ProcessStepDependencyEditorModel dependency)
+    {
+        var dependencyStep = DependencyOptions.FirstOrDefault(candidate => candidate.Id == dependency.DependsOnStepId);
+        var dependencyStepTitle = dependencyStep is null || string.IsNullOrWhiteSpace(dependencyStep.Title)
+            ? "Upstream step"
+            : dependencyStep.Title;
+        if (!dependency.DependsOnBranchOutcomeId.HasValue)
+        {
+            return dependencyStepTitle;
+        }
+
+        var branchOutcomeTitle = dependencyStep?.BranchOutcomes
+            .FirstOrDefault(outcome => outcome.Id == dependency.DependsOnBranchOutcomeId.Value)?
+            .Title;
+        return string.IsNullOrWhiteSpace(branchOutcomeTitle)
+            ? dependencyStepTitle
+            : $"{dependencyStepTitle} -> {branchOutcomeTitle}";
+    }
+
+    private string BuildArtifactInputSummary(ProcessStepArtifactInputEditorModel artifactInput)
+    {
+        if (!artifactInput.ArtifactExpectationId.HasValue)
+        {
+            return "Unbound artifact input";
+        }
+
+        foreach (var dependencyOption in DependencyOptions)
+        {
+            var artifact = dependencyOption.ArtifactExpectations
+                .FirstOrDefault(candidate => candidate.Id == artifactInput.ArtifactExpectationId.Value);
+            if (artifact is null)
+            {
+                continue;
+            }
+
+            var sourceStepTitle = string.IsNullOrWhiteSpace(dependencyOption.Title)
+                ? "Upstream step"
+                : dependencyOption.Title;
+            return string.IsNullOrWhiteSpace(artifact.Title)
+                ? sourceStepTitle
+                : $"{sourceStepTitle} -> {artifact.Title}";
+        }
+
+        return "Upstream artifact";
+    }
+}

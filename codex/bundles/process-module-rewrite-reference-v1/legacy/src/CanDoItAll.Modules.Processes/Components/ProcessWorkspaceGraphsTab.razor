@@ -1,0 +1,80 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.Common
+
+<Stack GapScale="LayoutGap.Medium"
+       Class="w-full"
+       data-testid="processes-process-graphs-tab">
+    @if (!Presenter.HasSelectedProcess)
+    {
+        <EmptyState Eyebrow="Graphs"
+                    Title="Select a process definition"
+                    Description="Process graphs are scoped to one durable process definition." />
+    }
+    else
+    {
+        <SectionCard Title="Process run graphs"
+                     Description=""
+                     HelpText="Load token, time, tool, and cost graphs for runs of the selected process definition.">
+            <FilterBar ResultText="@Presenter.ResolveRangeLabel(Presenter.SelectedWindow)"
+                       Class="processes-run-filter-bar">
+                <InputSelect TValue="ProcessLiveHistoryWindow"
+                             Value="@Presenter.SelectedWindow"
+                             ValueChanged="HandleRangeChangedAsync"
+                             ValueExpression="@(() => Presenter.SelectedWindow)"
+                             class="cda-input processes-run-filter-select"
+                             data-testid="processes-process-graphs-range-select">
+                    @foreach (var window in Presenter.RangeOptions)
+                    {
+                        <option value="@window">@Presenter.ResolveRangeLabel(window)</option>
+                    }
+                </InputSelect>
+                <Button Text="Show graphs of all runs of process"
+                        Icon="bar_chart"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Size="ButtonSize.Small"
+                        Disabled="@Presenter.IsLoading"
+                        IsBusy="@Presenter.IsLoading"
+                        Click="Presenter.LoadAllRunsGraphsAsync"
+                        data-testid="processes-process-graphs-load-button" />
+            </FilterBar>
+
+            @if (!string.IsNullOrWhiteSpace(Presenter.Error))
+            {
+                <EmptyState Eyebrow="Graphs unavailable"
+                            Title="Graph data could not be loaded"
+                            Description="@Presenter.Error" />
+            }
+            else if (Presenter.IsLoading)
+            {
+                <LoadingState Title="Loading process graphs"
+                              Description="Collecting process run metrics for the selected range." />
+            }
+            else if (!Presenter.HasRequestedLoad)
+            {
+                <EmptyState Eyebrow="Graphs"
+                            Title="Graphs are not loaded"
+                            Description="Use the load action when process-wide graph data is needed." />
+            }
+            else
+            {
+                <ProcessObservationGraphsPanel Snapshot="@Presenter.Snapshot"
+                                               TestId="processes-process-graphs-panel"
+                                               EmptyEyebrow="Graphs"
+                                               EmptyTitle="No process graph data"
+                                               EmptyDescription="No run metrics matched the selected process and range."
+                                               CostDescription="Runs from the selected process definition and range." />
+            }
+        </SectionCard>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceGraphsTabPresenter Presenter { get; set; } = default!;
+
+    private Task HandleRangeChangedAsync(ProcessLiveHistoryWindow window)
+    {
+        Presenter.SelectedWindow = window;
+        return Task.CompletedTask;
+    }
+}

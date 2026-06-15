@@ -1,0 +1,29 @@
+{
+  "ProcessKey": "branching-code-review",
+  "ProcessName": "Branching code review and merge governance",
+  "CurrentArchitectureStatus": "Aligned",
+  "BlockingIssues": [],
+  "Warnings": [
+    "The current module can represent explicit Dependencies, ArtifactInputs, DecisionRoleRequirementId, and branch outcomes directly.",
+    "Route-specific merge approvals are modeled explicitly because the current graph model does not support an OR-join across mutually exclusive review lanes."
+  ],
+  "ProjectedEnvelopeFacts": {
+    "RoleCount": 6,
+    "StepCount": 13,
+    "DependencyCount": 16,
+    "ArtifactExpectationCount": 13,
+    "ArtifactInputCount": 16,
+    "BranchOutcomeCount": 7
+  },
+  "SidecarOnlyFields": [
+    "Shared versus local resource folders and markdown sidecars remain outside the import envelope.",
+    "Role knowledge, experience, anti-pattern, and fitness-evidence metadata stay in resource sidecars.",
+    "Checklist, validation, and prompt narratives stay in resource sidecars rather than the current editor envelope.",
+    "Mermaid diagrams and architecture-review execution docs remain file-based exports."
+  ],
+  "RecommendedFollowUps": [
+    "Keep the template pack as the authored source of truth and treat the import envelope as a projection.",
+    "Run the corrective canvas-chrome workstream before relying on toolbox chrome extensibility.",
+    "Keep bundle validation in CI so dependency and artifact-input regressions are surfaced immediately."
+  ]
+}

@@ -1,0 +1,22 @@
+flowchart LR
+    A[Clarify .NET scope] --> B[Architecture design/review subprocess]
+    B --> C[.NET implementation slice subprocess]
+    C --> D[Peer review]
+    D --> E{QA validation}
+    E -- quality accepted --> F[Security review]
+    E -- quality accepted --> G[Run command writeback]
+    G --> H[UI screenshot writeback]
+    F --> I[Release approval]
+    H --> I
+    I --> J[Release rollout]
+    J --> K[Post-release learning]
+    E -- repair required --> L[Repair findings]
+    L --> M{QA recheck}
+    M -- quality accepted --> N[Security review after repair]
+    M -- quality accepted --> O[Run command writeback after repair]
+    O --> P[UI screenshot writeback after repair]
+    N --> Q[Release approval after repair]
+    P --> Q
+    Q --> R[Repaired rollout]
+    R --> S[Repaired learning]
+    M -- repair escalation --> T[Repair escalation]

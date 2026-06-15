@@ -1,0 +1,24 @@
+{
+  "Kind": "process-checklist-template",
+  "Key": "review-router-safety-checklist",
+  "DisplayName": "Review router safety checklist",
+  "Scope": "local",
+  "ProcessKey": "branching-code-review",
+  "OwnerRoleKey": "review-lead",
+  "Phase": "Review router",
+  "Summary": "Confirms the router chooses an explicit governed lane and preserves failure routing.",
+  "EntryCriteria": "A review packet is ready and the next lane must be chosen.",
+  "ExitCriteria": "Exactly one explicit governed lane or error route is selected with rationale.",
+  "Checks": [
+    "The route is chosen explicitly from the modeled branch outcomes.",
+    "The selected lane matches the evidence and risk posture.",
+    "Unclassified outcomes are normalized instead of left implicit.",
+    "Malformed states are sent to the error lane rather than guessed."
+  ],
+  "EvidenceExpectations": [
+    "Review routing decision record.",
+    "Normalization note when needed.",
+    "Workflow failure record for error routes."
+  ],
+  "DocPath": "processes/branching-code-review/checklists/review-router-safety-checklist.md"
+}

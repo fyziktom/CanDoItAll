@@ -1,0 +1,1310 @@
+@page "/scheduler"
+@using System.Globalization
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Modules.Automation
+@inject ISchedulerPlannerService SchedulerPlannerService
+@inject ICronDescriptionService CronDescriptionService
+@inject ISchedulerWorkflowInputSchemaService WorkflowInputSchemaService
+@inject ISchedulerWorkflowInputOptionService WorkflowInputOptionService
+
+<PageTitle>Scheduler</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Scheduler"
+                    Title="Scheduler and planner"
+                    Description="Plan automatic workflow and process runs with Quartz CRON triggers, durable recovery, and calendar-backed visibility."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="schedules" Value="@Plans.Count.ToString()" TooltipText="Saved run plans." Tone="info" />
+                <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" TooltipText="Plans currently projected into Quartz." Tone="success" />
+                <CompactStat Label="next 30 days" Value="@CalendarEventCount.ToString()" TooltipText="Projected calendar events." Tone="accent" />
+                <CompactStat Label="failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" TooltipText="Failed dispatch attempts in the current history view." Tone="warning" />
+                <CompactStat Label="no action" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.NoMessages).ToString()" TooltipText="No-message polling runs in the current history view." Tone="neutral" />
+                <CompactStat Label="waiting" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.WaitingForApproval).ToString()" TooltipText="Runs paused for explicit approval." Tone="info" />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh"
+                                        TooltipText="Refresh scheduler plans, history, and projected events."
+                                        Disabled="@isBusy"
+                                        IsBusy="@isBusy"
+                                        Click="RefreshAsync"
+                                        data-testid="scheduler-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <SurfaceCard Soft="true" data-testid="scheduler-error">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
+                <h2 class="text-base font-semibold text-rose-900">Scheduler operation failed</h2>
+                <p class="mt-2 text-sm leading-6 text-rose-700">@errorMessage</p>
+            </SurfaceCard>
+        }
+
+        @if (workspace is null)
+        {
+            <SurfaceCard data-testid="scheduler-loading">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                <h2 class="text-base font-semibold text-slate-900">Refreshing scheduler state</h2>
+            </SurfaceCard>
+        }
+        else
+        {
+            <Tabs @bind-SelectedIndex="activeTabIndex"
+                  RenderMode="TabRenderMode.Server"
+                  Variant="TabsVariant.WorkspacePrimary"
+                  OverflowMode="TabsOverflowMode.Wrap"
+                  AriaLabel="Scheduler planner tabs"
+                  data-testid="scheduler-tabs">
+                <TabsItem Text="Scheduled runs" Icon="calendar_month" BadgeText="@Plans.Count.ToString()" data-testid="scheduler-tab-scheduled">
+                    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+                        <SurfaceCard data-testid="scheduler-calendar-card">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" />
+                                    <h2 class="text-base font-semibold text-slate-900">Planned and dispatched runs</h2>
+                                </div>
+                                <StatusBadge Tone="info" Text="@($"{CalendarEventCount} event(s)")" />
+                            </Split>
+                            <div class="scheduler-planner-calendar-shell mt-4" data-testid="scheduler-calendar">
+                                <CanvasCalendar Surface="@workspace.CalendarSurface"
+                                                HostClass="scheduler-planner-calendar-host" />
+                            </div>
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="scheduler-plan-list">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run plans" />
+                                    <h2 class="text-base font-semibold text-slate-900">Actual scheduled runs</h2>
+                                </div>
+                                <Button Text="New"
+                                        Icon="add"
+                                        Size="ButtonSize.Small"
+                                        Click="OpenNewScheduleTab" />
+                            </Split>
+
+                            @if (Plans.Count == 0)
+                            {
+                                <div class="mt-4">
+                                    <EmptyState Eyebrow="No schedules"
+                                                Title="Create the first scheduled run"
+                                                Description="Saved plans will appear here after a workflow or process is assigned to a CRON schedule." />
+                                </div>
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                    @foreach (var plan in Plans)
+                                    {
+                                        <div class="cda-panel-card--soft" data-testid="scheduler-plan-item">
+                                            <Split Gap="LayoutGap.Small"
+                                                   AlignItems="AlignItems.Start"
+                                                   JustifyContent="JustifyContent.SpaceBetween"
+                                                   Wrap="FlexWrap.Wrap">
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-semibold text-slate-900">@plan.Name</p>
+                                                    <p class="mt-1 text-xs text-slate-500">@plan.TargetKind / @plan.TargetName</p>
+                                                    <p class="mt-2 text-sm leading-6 text-slate-600">@plan.CronDescription</p>
+                                                </div>
+                                                <StatusBadge Tone="@(plan.IsEnabled ? "success" : "neutral")" Text="@(plan.IsEnabled ? "Enabled" : "Paused")" />
+                                            </Split>
+                                            <Cluster Gap="LayoutGap.Small" Class="mt-3">
+                                                <StatusBadge Tone="neutral" Text="@FormatNextFire(plan.NextPlannedFireAtUtc)" />
+                                                <Button Text="@(plan.IsEnabled ? "Pause" : "Resume")"
+                                                        Icon="@(plan.IsEnabled ? "pause" : "play_arrow")"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@isBusy"
+                                                        Click="@(() => TogglePlanAsync(plan))" />
+                                            </Cluster>
+                                        </div>
+                                    }
+                                </Stack>
+                            }
+                        </SurfaceCard>
+                    </Stack>
+                </TabsItem>
+
+                <TabsItem Text="New schedule" Icon="event_repeat" data-testid="scheduler-tab-new">
+                    <Grid Gap="LayoutGap.Large" ColumnTemplateLg="minmax(0,0.9fr) minmax(0,1.1fr)">
+                        <SurfaceCard data-testid="scheduler-form">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Setup" />
+                            <h2 class="text-base font-semibold text-slate-900">Schedule a workflow or process run</h2>
+
+                            <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                <label class="block">
+                                    <span class="cda-eyebrow">Name</span>
+                                    <InputText @bind-Value="editor.Name"
+                                               class="cda-input mt-1"
+                                               data-testid="scheduler-name" />
+                                </label>
+
+                                <div>
+                                    <span class="cda-eyebrow">Target</span>
+                                    <div class="scheduler-target-summary mt-1" data-testid="scheduler-target-selected">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-slate-900">@SelectedTargetName</p>
+                                            <p class="mt-1 text-xs leading-5 text-slate-500">@SelectedTargetDescription</p>
+                                        </div>
+                                        <Button Text="Choose"
+                                                Icon="switch_account"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="OpenTargetPicker"
+                                                data-testid="scheduler-target-open" />
+                                    </div>
+                                </div>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Quartz CRON</span>
+                                    <InputText @bind-Value="editor.CronExpression"
+                                               class="cda-input mt-1 font-mono"
+                                               data-testid="scheduler-cron" />
+                                </label>
+
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap"
+                                         data-testid="scheduler-cron-presets">
+                                    <Button Text="Every 2 hours"
+                                            Icon="schedule"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPreset(SchedulerCronPreset.EveryTwoHours))"
+                                            data-testid="scheduler-cron-preset-every-two-hours" />
+                                    <Button Text="Weekdays 9 AM"
+                                            Icon="work_history"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPreset(SchedulerCronPreset.WeekdaysAtNine))" />
+                                    <Button Text="Daily 9 AM"
+                                            Icon="today"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPreset(SchedulerCronPreset.DailyAtNine))" />
+                                </Cluster>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Time zone</span>
+                                    <InputText @bind-Value="editor.TimeZoneId"
+                                               class="cda-input mt-1"
+                                               data-testid="scheduler-timezone" />
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Misfire policy</span>
+                                    <InputSelect @bind-Value="editor.MisfirePolicy"
+                                                 class="cda-input mt-1"
+                                                 data-testid="scheduler-misfire">
+                                        @foreach (var policy in Enum.GetValues<AutomationTriggerMisfirePolicy>())
+                                        {
+                                            <option value="@policy">@policy</option>
+                                        }
+                                    </InputSelect>
+                                </label>
+
+                                @if (workflowInputSchema is not null && workflowInputSchema.Parameters.Count > 0)
+                                {
+                                    <section class="scheduler-workflow-input" data-testid="scheduler-typed-inputs">
+                                        <Split Gap="LayoutGap.Small"
+                                               AlignItems="AlignItems.Start"
+                                               JustifyContent="JustifyContent.SpaceBetween"
+                                               Wrap="FlexWrap.Wrap">
+                                            <div class="min-w-0">
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow input" />
+                                                <h3 class="scheduler-workflow-input__title">@workflowInputSchema.WorkflowName</h3>
+                                            </div>
+                                            <StatusBadge Tone="info" Text="@($"{workflowInputSchema.Parameters.Count} field(s)")" />
+                                        </Split>
+
+                                        @if (!string.IsNullOrWhiteSpace(ResolveWorkflowInputIssue(string.Empty)))
+                                        {
+                                            <p class="scheduler-workflow-input__issue scheduler-workflow-input__issue--general"
+                                               data-testid="scheduler-input-general-error">@ResolveWorkflowInputIssue(string.Empty)</p>
+                                        }
+
+                                        <Grid Gap="LayoutGap.Medium"
+                                              ColumnsMd="2"
+                                              Class="scheduler-workflow-input__grid">
+                                            @foreach (var parameter in workflowInputSchema.Parameters)
+                                            {
+                                                var options = ResolveWorkflowInputOptions(parameter);
+                                                var issue = ResolveWorkflowInputIssue(parameter.Key);
+                                                var fieldClass = ResolveWorkflowInputFieldClass(parameter);
+
+                                                <label class="@fieldClass" data-testid="@BuildWorkflowInputFieldTestId(parameter)">
+                                                    <span class="cda-eyebrow">@parameter.Label</span>
+                                                    @if (ShouldRenderSelect(parameter, options))
+                                                    {
+                                                        <select value="@GetWorkflowInputValue(parameter.Key)"
+                                                                class="cda-input mt-1"
+                                                                aria-required="@parameter.IsRequired"
+                                                                @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                                data-testid="@BuildWorkflowInputTestId(parameter)">
+                                                            <option value="">@ResolveEmptyOptionText(parameter)</option>
+                                                            @foreach (var option in options)
+                                                            {
+                                                                <option value="@option.Value">@option.Label</option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    else if (parameter.Kind is WorkflowInputParameterKind.Integer or WorkflowInputParameterKind.DurationMinutes)
+                                                    {
+                                                        <input type="number"
+                                                               min="@parameter.MinimumValue"
+                                                               max="@parameter.MaximumValue"
+                                                               value="@GetWorkflowInputValue(parameter.Key)"
+                                                               class="cda-input mt-1"
+                                                               placeholder="@parameter.Placeholder"
+                                                               aria-required="@parameter.IsRequired"
+                                                               @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               data-testid="@BuildWorkflowInputTestId(parameter)" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="text"
+                                                               list="@BuildWorkflowInputDatalistId(parameter)"
+                                                               value="@GetWorkflowInputValue(parameter.Key)"
+                                                               class="cda-input mt-1"
+                                                               placeholder="@parameter.Placeholder"
+                                                               aria-required="@parameter.IsRequired"
+                                                               @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               data-testid="@BuildWorkflowInputTestId(parameter)" />
+                                                        @if (options.Count > 0)
+                                                        {
+                                                            <datalist id="@BuildWorkflowInputDatalistId(parameter)">
+                                                                @foreach (var option in options)
+                                                                {
+                                                                    <option value="@option.Value">@option.Label</option>
+                                                                }
+                                                            </datalist>
+                                                        }
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(parameter.Description))
+                                                    {
+                                                        <span class="scheduler-workflow-input__description">@parameter.Description</span>
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(issue))
+                                                    {
+                                                        <span class="scheduler-workflow-input__issue" data-testid="@BuildWorkflowInputIssueTestId(parameter)">@issue</span>
+                                                    }
+                                                </label>
+                                            }
+                                        </Grid>
+                                    </section>
+                                }
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Advanced input JSON</span>
+                                    <InputTextArea Value="@editor.InputJson"
+                                                   ValueChanged="HandleRawInputJsonChangedAsync"
+                                                   ValueExpression="@(() => editor.InputJson)"
+                                                   class="cda-input cda-input--textarea mt-1 font-mono"
+                                                   data-testid="scheduler-input-json" />
+                                </label>
+
+                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="editor.IsEnabled" />
+                                    Enabled after save
+                                </label>
+
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Save schedule"
+                                            Icon="save"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            Click="SaveScheduleAsync"
+                                            data-testid="scheduler-save" />
+                                    <Button Text="Reset"
+                                            Icon="restart_alt"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@isBusy"
+                                            Click="ResetEditorAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="scheduler-cron-preview">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="CRON description" />
+                            <h2 class="text-base font-semibold text-slate-900">@CronPreviewTitle</h2>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">@CronPreviewDescription</p>
+
+                            <div class="mt-5 cda-panel-card--soft">
+                                <p class="cda-eyebrow">Target summary</p>
+                                <p class="mt-1 text-sm font-semibold text-slate-900">@SelectedTargetName</p>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">@SelectedTargetDescription</p>
+                            </div>
+                        </SurfaceCard>
+                    </Grid>
+                </TabsItem>
+
+                <TabsItem Text="History" Icon="history" BadgeText="@History.Count.ToString()" data-testid="scheduler-tab-history">
+                    <SurfaceCard data-testid="scheduler-history">
+                        <FilterBar ResultText="@($"{History.Count} run(s)")">
+                            <InputText @bind-Value="historyQuery.Search"
+                                       class="cda-input"
+                                       placeholder="Search history"
+                                       data-testid="scheduler-history-search" />
+                            <InputSelect @bind-Value="historyQuery.Status"
+                                         class="cda-input"
+                                         data-testid="scheduler-history-status">
+                                <option value="">All statuses</option>
+                                @foreach (var status in Enum.GetValues<SchedulerPlanRunDispatchStatus>())
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="historyQuery.TargetKind"
+                                         class="cda-input"
+                                         data-testid="scheduler-history-kind">
+                                <option value="">All targets</option>
+                                @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </InputSelect>
+                            <Button Text="Search"
+                                    Icon="search"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@isBusy"
+                                    Click="RefreshAsync" />
+                        </FilterBar>
+
+                        @if (History.Count == 0)
+                        {
+                            <div class="mt-4">
+                                <EmptyState Eyebrow="No history"
+                                            Title="No scheduled run history"
+                                            Description="Triggered runs and dispatch failures appear here after Quartz fires a schedule." />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mt-4">
+                                <DataGrid TItem="SchedulerPlanRunSummary"
+                                          Data="@History"
+                                          AllowPaging="true"
+                                          PageSize="12">
+                                    <Columns>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Run">
+                                            <Template Context="run">
+                                                <div>
+                                                    <p class="font-semibold text-slate-900">@run.PlanName</p>
+                                                    <p class="text-xs text-slate-500">@run.TargetKind / @run.TargetName</p>
+                                                </div>
+                                            </Template>
+                                        </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Fired">
+                                            <Template Context="run">@run.FiredAtUtc.LocalDateTime.ToString("g")</Template>
+                                        </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Status">
+                                            <Template Context="run">
+                                                <StatusBadge Tone="@ResolveRunTone(run.Status)" Text="@run.Status.ToString()" />
+                                            </Template>
+                                        </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Route">
+                                            <Template Context="run">
+                                                <StatusBadge Tone="@ResolveRouteTone(run)" Text="@FormatRunRoute(run.Route)" />
+                                            </Template>
+                                        </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Result">
+                                            <Template Context="run">
+                                                <div class="space-y-1">
+                                                    <span class="text-sm text-slate-600">@ResolveRunResult(run)</span>
+                                                    @if (run.RetryCategory != SchedulerPlanRunRetryCategory.None)
+                                                    {
+                                                        <p class="text-xs font-medium text-slate-500">@FormatRunPolicy(run.RetryCategory)</p>
+                                                    }
+                                                </div>
+                                            </Template>
+                                        </DataGridColumn>
+                                    </Columns>
+                                </DataGrid>
+                            </div>
+                        }
+                    </SurfaceCard>
+                </TabsItem>
+            </Tabs>
+
+            <Dialog IsOpen="@isTargetPickerOpen"
+                    Eyebrow="Target"
+                    Title="Choose workflow or process"
+                    Subtitle="Select the run target for this Quartz CRON schedule."
+                    Size="ModalSize.Wide"
+                    DenseChrome="true"
+                    TestId="scheduler-target-dialog"
+                    OnClose="CloseTargetPickerAsync">
+                <Stack GapScale="LayoutGap.Medium"
+                       AlignItems="AlignItems.Stretch"
+                       Class="scheduler-target-picker">
+                    <div class="scheduler-target-picker__filters">
+                        <TextBox Value="@targetSearchText"
+                                 ValueChanged="HandleTargetSearchChangedAsync"
+                                 Placeholder="Search workflows and processes"
+                                 Immediate="true"
+                                 Class="scheduler-target-picker__search"
+                                 aria-label="Search workflows and processes"
+                                 data-testid="scheduler-target-search" />
+
+                        <TagEditor Value="@targetTagFilters"
+                                   ValueChanged="HandleTargetTagFiltersChangedAsync"
+                                   Suggestions="@AvailableTargetTags"
+                                   Placeholder="Filter tags"
+                                   MaxTags="6"
+                                   TestId="scheduler-target-tag-filter"
+                                   InputTestId="scheduler-target-tag-filter-input" />
+                    </div>
+
+                    <Split Gap="LayoutGap.Small"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="info" Text="@($"{FilteredTargetOptions.Count} of {TargetOptions.Count} targets")" />
+                            @if (targetTagFilters.Count > 0)
+                            {
+                                <StatusBadge Tone="neutral" Text="@($"{targetTagFilters.Count} tag filter(s)")" />
+                            }
+                        </Cluster>
+
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <label class="scheduler-target-picker__check">
+                                <CheckBox TValue="bool"
+                                          @bind-Value="showProcessTargets"
+                                          aria-label="Show process targets"
+                                          data-testid="scheduler-target-filter-processes" />
+                                <span>Processes</span>
+                            </label>
+                            <label class="scheduler-target-picker__check">
+                                <CheckBox TValue="bool"
+                                          @bind-Value="showWorkflowTargets"
+                                          aria-label="Show workflow targets"
+                                          data-testid="scheduler-target-filter-workflows" />
+                                <span>Workflows</span>
+                            </label>
+                        </Cluster>
+                    </Split>
+
+                    @if (FilteredTargetOptions.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No matches"
+                                    Title="No targets match the current filters"
+                                    Description="Clear the search, tags, or target type filters to show available workflows and processes." />
+                    }
+                    else
+                    {
+                        <Grid Gap="LayoutGap.Medium"
+                              ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))"
+                              Class="w-full">
+                            @foreach (var target in FilteredTargetOptions)
+                            {
+                                var isSelected = IsTargetSelected(target);
+
+                                <article class="@ResolveTargetCardClass(target)" data-testid="scheduler-target-card-shell">
+                                    <button type="button"
+                                            class="scheduler-target-card__select"
+                                            aria-label="@($"Select {target.Name}")"
+                                            @onclick="@(() => SelectTargetAsync(target))"
+                                            data-testid="scheduler-target-card">
+                                        <Stack GapScale="LayoutGap.Small"
+                                               AlignItems="AlignItems.Stretch">
+                                            <div class="scheduler-target-card__identity">
+                                                <Avatar Alt="@target.Name"
+                                                        FallbackText="@ResolveTargetInitials(target)"
+                                                        UseDefaultImageWhenMissing="false"
+                                                        Size="AvatarSize.Medium"
+                                                        Shape="AvatarShape.Rounded" />
+
+                                                <div class="scheduler-target-card__identity-copy">
+                                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                        <StatusBadge Tone="@ResolveTargetKindTone(target.Kind)" Text="@target.Kind.ToString()" />
+                                                        <StatusBadge Tone="@ResolveTargetStatusTone(target.Status)" Text="@target.Status" />
+                                                        @if (isSelected)
+                                                        {
+                                                            <StatusBadge Tone="info" Text="Selected" />
+                                                        }
+                                                    </Cluster>
+
+                                                    <p class="scheduler-target-card__name">@target.Name</p>
+                                                    <p class="scheduler-target-card__role">@ResolveTargetRole(target)</p>
+                                                </div>
+                                            </div>
+
+                                            <p class="scheduler-target-card__summary">@ResolveTargetDescription(target)</p>
+
+                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                @foreach (var tag in BuildTargetTags(target).Take(3))
+                                                {
+                                                    <StatusBadge Tone="neutral" Text="@tag" />
+                                                }
+                                            </Cluster>
+                                        </Stack>
+                                    </button>
+                                </article>
+                            }
+                        </Grid>
+                    }
+                </Stack>
+            </Dialog>
+        }
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private SchedulerPlannerWorkspace? workspace;
+    private SchedulerPlanEditorModel editor = new();
+    private SchedulerHistoryQuery historyQuery = new();
+    private bool isBusy;
+    private string errorMessage = string.Empty;
+    private int activeTabIndex;
+    private bool isTargetPickerOpen;
+    private string targetSearchText = string.Empty;
+    private IReadOnlyList<string> targetTagFilters = [];
+    private bool showProcessTargets = true;
+    private bool showWorkflowTargets = true;
+    private SchedulerWorkflowInputSchema? workflowInputSchema;
+    private Dictionary<string, string> workflowInputValues = new(StringComparer.Ordinal);
+    private Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>> workflowInputOptionsByKey = new(StringComparer.Ordinal);
+    private IReadOnlyList<SchedulerWorkflowInputValidationIssue> workflowInputIssues = [];
+
+    private static readonly JsonSerializerOptions WorkflowInputJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true
+    };
+
+    private enum SchedulerCronPreset
+    {
+        EveryTwoHours,
+        WeekdaysAtNine,
+        DailyAtNine
+    }
+
+    private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
+
+    private IReadOnlyList<SchedulerPlanRunSummary> History => workspace?.History ?? [];
+
+    private IReadOnlyList<SchedulerTargetOption> TargetOptions => workspace?.TargetOptions ?? [];
+
+    private int CalendarEventCount => workspace?.CalendarSurface.Events.Count ?? 0;
+
+    private SchedulerTargetOption? SelectedTarget => TargetOptions.FirstOrDefault(item =>
+        item.Kind == editor.TargetKind &&
+        item.Id == editor.TargetId &&
+        (item.Kind != SchedulerPlanTargetKind.Workflow || item.VersionId == editor.TargetVersionId));
+
+    private string SelectedTargetName => SelectedTarget?.Name ?? "No target selected";
+
+    private string SelectedTargetDescription => SelectedTarget?.Description ?? "Select a workflow or process target before saving the schedule.";
+
+    private string CronPreviewTitle
+    {
+        get
+        {
+            try
+            {
+                return CronDescriptionService.Describe(editor.CronExpression, editor.TimeZoneId);
+            }
+            catch
+            {
+                return "CRON expression needs attention";
+            }
+        }
+    }
+
+    private string CronPreviewDescription => "Quartz will trigger the saved plan using this expression and the selected misfire policy. The scheduler stores Quartz state in the database for recovery.";
+
+    private IReadOnlyList<string> AvailableTargetTags
+        => TargetOptions
+            .SelectMany(BuildTargetTags)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private IReadOnlyList<SchedulerTargetOption> FilteredTargetOptions
+        => TargetOptions
+            .Where(MatchesTargetTypeFilter)
+            .Where(MatchesTargetSearch)
+            .Where(MatchesTargetTagFilters)
+            .OrderBy(item => item.Kind)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+        await RunUiOperationAsync(async () =>
+        {
+            editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+            await LoadWorkflowInputEditorAsync();
+        });
+    }
+
+    private async Task RefreshAsync()
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+        });
+    }
+
+    private async Task SaveScheduleAsync()
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            SynchronizeWorkflowInputJson();
+            if (!await ValidateWorkflowInputEditorAsync())
+            {
+                return;
+            }
+
+            await SchedulerPlannerService.SavePlanAsync(editor);
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+            editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+            await LoadWorkflowInputEditorAsync();
+            activeTabIndex = 0;
+        });
+    }
+
+    private async Task ResetEditorAsync()
+    {
+        editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+        await LoadWorkflowInputEditorAsync();
+        isTargetPickerOpen = false;
+    }
+
+    private async Task TogglePlanAsync(SchedulerPlanSummary plan)
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            await SchedulerPlannerService.SetPlanEnabledAsync(plan.Id, !plan.IsEnabled);
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+        });
+    }
+
+    private void OpenNewScheduleTab()
+    {
+        activeTabIndex = 1;
+    }
+
+    private void OpenTargetPicker()
+    {
+        isTargetPickerOpen = true;
+    }
+
+    private Task CloseTargetPickerAsync()
+    {
+        isTargetPickerOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTargetSearchChangedAsync(string? value)
+    {
+        targetSearchText = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTargetTagFiltersChangedAsync(IReadOnlyList<string> value)
+    {
+        targetTagFilters = value
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task SelectTargetAsync(SchedulerTargetOption target)
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            editor.TargetKind = target.Kind;
+            editor.TargetId = target.Id;
+            editor.TargetVersionId = target.VersionId;
+
+            if (string.IsNullOrWhiteSpace(editor.Name))
+            {
+                editor.Name = $"{target.Name} schedule";
+            }
+
+            isTargetPickerOpen = false;
+            await LoadWorkflowInputEditorAsync();
+        });
+    }
+
+    private void ApplyCronPreset(SchedulerCronPreset preset)
+    {
+        editor.CronExpression = preset switch
+        {
+            SchedulerCronPreset.EveryTwoHours => "0 0 0/2 ? * *",
+            SchedulerCronPreset.WeekdaysAtNine => "0 0 9 ? * MON-FRI",
+            SchedulerCronPreset.DailyAtNine => "0 0 9 ? * *",
+            _ => editor.CronExpression
+        };
+    }
+
+    private async Task LoadWorkflowInputEditorAsync()
+    {
+        workflowInputSchema = null;
+        workflowInputValues = new Dictionary<string, string>(StringComparer.Ordinal);
+        workflowInputOptionsByKey = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
+        workflowInputIssues = [];
+
+        if (editor.TargetKind != SchedulerPlanTargetKind.Workflow || editor.TargetId == Guid.Empty)
+        {
+            return;
+        }
+
+        var selectedTarget = SelectedTarget;
+        var versionId = selectedTarget?.VersionId ?? editor.TargetVersionId;
+        workflowInputSchema = await WorkflowInputSchemaService.ResolveSchemaAsync(
+            new WorkflowId(editor.TargetId),
+            versionId.HasValue ? new WorkflowVersionId(versionId.Value) : null);
+        if (workflowInputSchema.Parameters.Count == 0)
+        {
+            return;
+        }
+
+        InitializeWorkflowInputValuesFromJson();
+        SynchronizeWorkflowInputJson();
+        await LoadWorkflowInputOptionsAsync();
+    }
+
+    private async Task LoadWorkflowInputOptionsAsync()
+    {
+        if (workflowInputSchema is null)
+        {
+            workflowInputOptionsByKey.Clear();
+            return;
+        }
+
+        var resolved = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
+        foreach (var parameter in workflowInputSchema.Parameters)
+        {
+            resolved[parameter.Key] = await WorkflowInputOptionService.ListOptionsAsync(
+                parameter,
+                workflowInputValues,
+                CancellationToken.None);
+        }
+
+        workflowInputOptionsByKey = resolved;
+    }
+
+    private void InitializeWorkflowInputValuesFromJson()
+    {
+        if (workflowInputSchema is null)
+        {
+            return;
+        }
+
+        JsonObject root;
+        try
+        {
+            root = ParseWorkflowInputJsonObject();
+        }
+        catch (JsonException exception)
+        {
+            workflowInputIssues = [new SchedulerWorkflowInputValidationIssue(string.Empty, $"Workflow input JSON is invalid: {exception.Message}")];
+            return;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var parameter in workflowInputSchema.Parameters)
+        {
+            if (TryResolveRootPropertyName(parameter, out var propertyName) &&
+                root.TryGetPropertyValue(propertyName, out var value) &&
+                value is not null &&
+                TryFormatWorkflowInputValue(value, out var text))
+            {
+                values[parameter.Key] = text;
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(parameter.DefaultValue))
+            {
+                values[parameter.Key] = parameter.DefaultValue.Trim();
+            }
+        }
+
+        workflowInputValues = values;
+    }
+
+    private async Task HandleWorkflowInputValueChangedAsync(
+        WorkflowInputParameterDescriptor parameter,
+        string value)
+    {
+        var normalizedValue = value.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedValue))
+        {
+            workflowInputValues.Remove(parameter.Key);
+        }
+        else
+        {
+            workflowInputValues[parameter.Key] = normalizedValue;
+        }
+
+        RemoveWorkflowInputIssues(parameter.Key);
+        ClearDependentWorkflowInputValues(parameter.Key);
+        SynchronizeWorkflowInputJson();
+        await LoadWorkflowInputOptionsAsync();
+    }
+
+    private async Task HandleRawInputJsonChangedAsync(string? value)
+    {
+        editor.InputJson = string.IsNullOrWhiteSpace(value) ? "{}" : value;
+        InitializeWorkflowInputValuesFromJson();
+        await LoadWorkflowInputOptionsAsync();
+    }
+
+    private async Task<bool> ValidateWorkflowInputEditorAsync()
+    {
+        if (workflowInputSchema is null || workflowInputSchema.Parameters.Count == 0 || editor.TargetKind != SchedulerPlanTargetKind.Workflow)
+        {
+            return true;
+        }
+
+        var selectedTarget = SelectedTarget;
+        var versionId = selectedTarget?.VersionId ?? editor.TargetVersionId;
+        var validation = await WorkflowInputSchemaService.ValidateInputAsync(
+            new WorkflowId(editor.TargetId),
+            versionId.HasValue ? new WorkflowVersionId(versionId.Value) : null,
+            editor.InputJson);
+        workflowInputIssues = validation.Issues;
+        if (!validation.Succeeded)
+        {
+            errorMessage = "Workflow input needs attention before the schedule can be saved.";
+            return false;
+        }
+
+        editor.InputJson = validation.NormalizedInputJson;
+        InitializeWorkflowInputValuesFromJson();
+        return true;
+    }
+
+    private void SynchronizeWorkflowInputJson()
+    {
+        if (workflowInputSchema is null || workflowInputSchema.Parameters.Count == 0)
+        {
+            return;
+        }
+
+        var root = ParseWorkflowInputJsonObjectOrNew();
+        foreach (var parameter in workflowInputSchema.Parameters)
+        {
+            if (!TryResolveRootPropertyName(parameter, out var propertyName))
+            {
+                continue;
+            }
+
+            var value = GetWorkflowInputValue(parameter.Key);
+            if (string.IsNullOrWhiteSpace(value) && !string.IsNullOrWhiteSpace(parameter.DefaultValue))
+            {
+                value = parameter.DefaultValue.Trim();
+                workflowInputValues[parameter.Key] = value;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                root.Remove(propertyName);
+                continue;
+            }
+
+            root[propertyName] = CreateWorkflowInputJsonValue(parameter, value);
+        }
+
+        editor.InputJson = root.ToJsonString(WorkflowInputJsonOptions);
+    }
+
+    private JsonObject ParseWorkflowInputJsonObject()
+    {
+        var parsed = JsonNode.Parse(string.IsNullOrWhiteSpace(editor.InputJson) ? "{}" : editor.InputJson.Trim());
+        return parsed as JsonObject
+               ?? throw new JsonException("Workflow input must be a JSON object.");
+    }
+
+    private JsonObject ParseWorkflowInputJsonObjectOrNew()
+    {
+        try
+        {
+            return ParseWorkflowInputJsonObject();
+        }
+        catch (JsonException)
+        {
+            return new JsonObject();
+        }
+    }
+
+    private static JsonNode? CreateWorkflowInputJsonValue(
+        WorkflowInputParameterDescriptor parameter,
+        string value)
+    {
+        if (parameter.Kind is WorkflowInputParameterKind.Integer or WorkflowInputParameterKind.DurationMinutes &&
+            int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integerValue))
+        {
+            return JsonValue.Create(integerValue);
+        }
+
+        return JsonValue.Create(value);
+    }
+
+    private void ClearDependentWorkflowInputValues(string parameterKey)
+    {
+        if (workflowInputSchema is null)
+        {
+            return;
+        }
+
+        foreach (var dependent in workflowInputSchema.Parameters
+                     .Where(item => string.Equals(item.OptionSource.DependsOnParameterKey, parameterKey, StringComparison.Ordinal)))
+        {
+            workflowInputValues.Remove(dependent.Key);
+            RemoveWorkflowInputIssues(dependent.Key);
+        }
+    }
+
+    private void RemoveWorkflowInputIssues(string parameterKey)
+    {
+        workflowInputIssues = workflowInputIssues
+            .Where(issue => !string.Equals(issue.ParameterKey, parameterKey, StringComparison.Ordinal))
+            .ToArray();
+    }
+
+    private IReadOnlyList<WorkflowInputParameterOption> ResolveWorkflowInputOptions(WorkflowInputParameterDescriptor parameter)
+        => workflowInputOptionsByKey.TryGetValue(parameter.Key, out var options) ? options : [];
+
+    private string GetWorkflowInputValue(string parameterKey)
+        => workflowInputValues.TryGetValue(parameterKey, out var value) ? value : string.Empty;
+
+    private string ResolveWorkflowInputIssue(string parameterKey)
+        => workflowInputIssues
+            .FirstOrDefault(issue => string.Equals(issue.ParameterKey, parameterKey, StringComparison.Ordinal))
+            ?.Message ?? string.Empty;
+
+    private static bool ShouldRenderSelect(
+        WorkflowInputParameterDescriptor parameter,
+        IReadOnlyList<WorkflowInputParameterOption> options)
+    {
+        if (options.Count == 0)
+        {
+            return false;
+        }
+
+        return parameter.OptionSource.Kind is WorkflowInputParameterOptionSourceKind.ProjectStructureProjects
+            or WorkflowInputParameterOptionSourceKind.ProjectStructureNodes
+            or WorkflowInputParameterOptionSourceKind.Office365Connections
+            or WorkflowInputParameterOptionSourceKind.Static;
+    }
+
+    private static string ResolveEmptyOptionText(WorkflowInputParameterDescriptor parameter)
+    {
+        if (!parameter.IsRequired)
+        {
+            return parameter.Kind == WorkflowInputParameterKind.ExternalConnectionId
+                ? "Use default connection"
+                : "Optional";
+        }
+
+        return $"Choose {parameter.Label.ToLowerInvariant()}";
+    }
+
+    private static string ResolveWorkflowInputFieldClass(WorkflowInputParameterDescriptor parameter)
+    {
+        var classes = new List<string>
+        {
+            "scheduler-workflow-input__field"
+        };
+
+        if (parameter.Kind is WorkflowInputParameterKind.EmailAddress or WorkflowInputParameterKind.CrmContactEmail)
+        {
+            classes.Add("scheduler-workflow-input__field--wide");
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    private static string BuildWorkflowInputFieldTestId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-field-{parameter.Key}";
+
+    private static string BuildWorkflowInputTestId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-{parameter.Key}";
+
+    private static string BuildWorkflowInputIssueTestId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-{parameter.Key}-error";
+
+    private static string BuildWorkflowInputDatalistId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-options-{parameter.Key}";
+
+    private static bool TryResolveRootPropertyName(
+        WorkflowInputParameterDescriptor parameter,
+        out string propertyName)
+    {
+        var jsonPath = string.IsNullOrWhiteSpace(parameter.JsonPath)
+            ? $"$.{parameter.Key}"
+            : parameter.JsonPath.Trim();
+        if (!jsonPath.StartsWith("$.", StringComparison.Ordinal) ||
+            jsonPath.Length <= 2 ||
+            jsonPath[2..].Contains('.', StringComparison.Ordinal) ||
+            jsonPath.Contains('[', StringComparison.Ordinal))
+        {
+            propertyName = string.Empty;
+            return false;
+        }
+
+        propertyName = jsonPath[2..];
+        return true;
+    }
+
+    private static bool TryFormatWorkflowInputValue(JsonNode value, out string text)
+    {
+        if (value is JsonValue jsonValue)
+        {
+            if (jsonValue.TryGetValue<string>(out var stringValue))
+            {
+                text = stringValue.Trim();
+                return true;
+            }
+
+            if (jsonValue.TryGetValue<int>(out var integerValue))
+            {
+                text = integerValue.ToString(CultureInfo.InvariantCulture);
+                return true;
+            }
+
+            if (jsonValue.TryGetValue<long>(out var longValue))
+            {
+                text = longValue.ToString(CultureInfo.InvariantCulture);
+                return true;
+            }
+
+            if (jsonValue.TryGetValue<bool>(out var boolValue))
+            {
+                text = boolValue.ToString(CultureInfo.InvariantCulture);
+                return true;
+            }
+        }
+
+        text = string.Empty;
+        return false;
+    }
+
+    private async Task RunUiOperationAsync(Func<Task> operation)
+    {
+        errorMessage = string.Empty;
+        isBusy = true;
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private bool IsTargetSelected(SchedulerTargetOption target)
+    {
+        return target.Kind == editor.TargetKind &&
+               target.Id == editor.TargetId &&
+               (target.Kind != SchedulerPlanTargetKind.Workflow || target.VersionId == editor.TargetVersionId);
+    }
+
+    private bool MatchesTargetTypeFilter(SchedulerTargetOption target)
+    {
+        return target.Kind switch
+        {
+            SchedulerPlanTargetKind.Process => showProcessTargets,
+            SchedulerPlanTargetKind.Workflow => showWorkflowTargets,
+            _ => false
+        };
+    }
+
+    private bool MatchesTargetSearch(SchedulerTargetOption target)
+    {
+        if (string.IsNullOrWhiteSpace(targetSearchText))
+        {
+            return true;
+        }
+
+        var query = targetSearchText.Trim();
+        return target.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               target.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               target.Status.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               target.Kind.ToString().Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesTargetTagFilters(SchedulerTargetOption target)
+    {
+        if (targetTagFilters.Count == 0)
+        {
+            return true;
+        }
+
+        var targetTags = BuildTargetTags(target);
+        return targetTagFilters.All(filter =>
+            targetTags.Any(tag => string.Equals(tag, filter, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private string ResolveTargetCardClass(SchedulerTargetOption target)
+    {
+        return string.Join(' ', new[]
+        {
+            "scheduler-target-card",
+            IsTargetSelected(target) ? "scheduler-target-card--selected" : null
+        }.Where(item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private static IReadOnlyList<string> BuildTargetTags(SchedulerTargetOption target)
+    {
+        var tags = new List<string>
+        {
+            target.Kind.ToString()
+        };
+
+        if (!string.IsNullOrWhiteSpace(target.Status))
+        {
+            tags.Add(target.Status.Trim());
+        }
+
+        if (target.VersionId.HasValue)
+        {
+            tags.Add("Versioned");
+        }
+
+        return tags
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string ResolveTargetDescription(SchedulerTargetOption target)
+    {
+        return string.IsNullOrWhiteSpace(target.Description)
+            ? "No description is configured for this target."
+            : target.Description.Trim();
+    }
+
+    private static string ResolveTargetInitials(SchedulerTargetOption target)
+    {
+        return target.Kind == SchedulerPlanTargetKind.Workflow
+            ? "WF"
+            : "PR";
+    }
+
+    private static string ResolveTargetRole(SchedulerTargetOption target)
+    {
+        return target.Kind == SchedulerPlanTargetKind.Workflow
+            ? "Workflow definition"
+            : "Process definition";
+    }
+
+    private static string ResolveTargetKindTone(SchedulerPlanTargetKind kind)
+    {
+        return kind == SchedulerPlanTargetKind.Workflow
+            ? "secondary"
+            : "info";
+    }
+
+    private static string ResolveTargetStatusTone(string status)
+    {
+        if (status.Contains("active", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("published", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("ready", StringComparison.OrdinalIgnoreCase))
+        {
+            return "success";
+        }
+
+        if (status.Contains("draft", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("paused", StringComparison.OrdinalIgnoreCase))
+        {
+            return "warning";
+        }
+
+        if (status.Contains("archived", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            return "neutral";
+        }
+
+        return "info";
+    }
+
+    private static string FormatNextFire(DateTimeOffset? nextFireAtUtc)
+    {
+        return nextFireAtUtc.HasValue
+            ? $"Next {nextFireAtUtc.Value.LocalDateTime:g}"
+            : "No next fire";
+    }
+
+    private static string ResolveRunTone(SchedulerPlanRunDispatchStatus status)
+    {
+        return status switch
+        {
+            SchedulerPlanRunDispatchStatus.Dispatched => "success",
+            SchedulerPlanRunDispatchStatus.Failed => "danger",
+            SchedulerPlanRunDispatchStatus.NoMessages => "neutral",
+            SchedulerPlanRunDispatchStatus.WaitingForApproval => "warning",
+            SchedulerPlanRunDispatchStatus.Dispatching => "info",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveRouteTone(SchedulerPlanRunSummary run)
+    {
+        return run.Status switch
+        {
+            SchedulerPlanRunDispatchStatus.Failed => "danger",
+            SchedulerPlanRunDispatchStatus.NoMessages => "neutral",
+            SchedulerPlanRunDispatchStatus.WaitingForApproval => "warning",
+            SchedulerPlanRunDispatchStatus.Dispatched => "success",
+            _ => "info"
+        };
+    }
+
+    private static string FormatRunRoute(string route)
+        => string.IsNullOrWhiteSpace(route)
+            ? SchedulerPlanRunRoutes.Processed
+            : route;
+
+    private static string FormatRunPolicy(SchedulerPlanRunRetryCategory retryCategory)
+    {
+        return retryCategory switch
+        {
+            SchedulerPlanRunRetryCategory.NoAction => "No retry: no matching message.",
+            SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval => "No retry: waiting for approval.",
+            SchedulerPlanRunRetryCategory.TransientExternalFailure => "Retry scheduled: external dependency.",
+            SchedulerPlanRunRetryCategory.ProjectWriteFailure => "Retry scheduled: project write.",
+            SchedulerPlanRunRetryCategory.WorkflowFailure => "Retry scheduled: workflow failure.",
+            SchedulerPlanRunRetryCategory.SchedulerFailure => "Retry scheduled: scheduler failure.",
+            _ => string.Empty
+        };
+    }
+
+    private static string ResolveRunResult(SchedulerPlanRunSummary run)
+    {
+        if (!string.IsNullOrWhiteSpace(run.ErrorMessage))
+        {
+            return run.ErrorMessage;
+        }
+
+        return string.IsNullOrWhiteSpace(run.Summary)
+            ? run.TargetRunId?.ToString("D") ?? "No target run id"
+            : run.Summary;
+    }
+}

@@ -1,0 +1,8 @@
+{
+  "ProcessKey": "dotnet-feature-function-implementation",
+  "Status": "Compatible",
+  "Notes": [
+    "Uses current process-template fields, shared role resources, and shared artifact resources.",
+    "No migration-only fields are required."
+  ]
+}

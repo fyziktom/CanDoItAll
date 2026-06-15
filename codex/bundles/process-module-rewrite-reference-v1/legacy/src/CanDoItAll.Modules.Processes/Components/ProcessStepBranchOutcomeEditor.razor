@@ -1,0 +1,41 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SurfaceCard Soft="true">
+    <Stack GapScale="LayoutGap.Medium">
+        <Split Gap="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Branch outcome</p>
+                <h4 class="text-base font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Model.Title) ? "Untitled outcome" : Model.Title)</h4>
+            </Stack>
+            <Button Text="Remove"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="Remove" />
+        </Split>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Key">
+                <InputText @bind-Value="Model.Key"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Title">
+                <InputText @bind-Value="Model.Title"
+                           class="cda-input" />
+            </FormField>
+        </Grid>
+
+        <FormField Text="Description">
+            <InputTextArea @bind-Value="Model.Description"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+    </Stack>
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessStepBranchOutcomeEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+}

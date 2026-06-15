@@ -1,0 +1,31 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-incident-triage",
+  "DisplayName": "Prompt / incident triage",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "incident-commander",
+  "Phase": "incident",
+  "Summary": "Prompt scaffold for rapid but factual incident triage and next-horizon decision framing.",
+  "RequiredInputs": [
+    "current symptoms",
+    "customer impact",
+    "known timeline facts",
+    "active responders",
+    "current hypotheses"
+  ],
+  "OutputSchema": [
+    "severity framing",
+    "known facts",
+    "unknowns",
+    "containment options",
+    "next 30-minute actions",
+    "communications triggers"
+  ],
+  "RefusalConditions": [
+    "Refuse to state a root cause as fact before evidence exists.",
+    "Refuse to recommend destructive action without acknowledging evidence loss risk.",
+    "Escalate if impact or ownership is unclear."
+  ],
+  "DocPath": "shared/prompts/prompt-incident-triage.md"
+}

@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. No Process rewrite implementation was executed.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 reference archive is complete; no active Process rewrite behavior, active source removal, runtime code, migrations, or product tests were changed by SB01.
 
 ## Changes Made In This Task
 
@@ -19,6 +19,10 @@ Architecture bundle v3 prepared. No Process rewrite implementation was executed.
 - Applied `analyzing-dotnet-performance` to current Process code signals and added .NET performance guardrails for the new architecture.
 - Added role candidate readiness architecture so HR scoring remains advisory and missing tools, rights, capabilities, approvals, bindings, access, and provisioning blockers become typed launch findings.
 - Captured `TetrisGame` source information from the running instance on port `5032`, added final E2E scenario requirements, and required typed Process APIs plus a Codex API skill for scenario loading.
+- Executed SB01 reference archive after the prepared-stage gate passed.
+- Created `repo://codex/bundles/process-module-rewrite-reference-v1` with machine-readable and human-readable manifests, source/test/template/integration inventories, and 1593 archived entries.
+- Added `proof/SB01/manifest.md`, `proof/SB01/semantic-invariants.md`, and durable transcripts for archive generation, hash verification, search coverage, negative tracked-only proof, active-product-diff proof, anti-stub audit, and git status.
+- Updated `.gitignore` to allow the SB01 reference archive bundle to be versioned.
 
 ## Repository Evidence
 
@@ -36,17 +40,21 @@ Architecture bundle v3 prepared. No Process rewrite implementation was executed.
 
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| SB01-SB28 future packages | Architecture approval required | Not executed in v3 | Roadmap dependencies checked | Prepared | v3 prepares the subbundles; future implementation must execute them later with user-story proof. |
+| SB01 Reference Archive | Passed: prepared-stage bundle validator passed; clean worktree; implementation branch created; CodeAnalytics snapshot `snap-20260615171018-d225a84b` available | Passed: archive manifest, hash verification, search coverage, semantic invariant proof, active-product-diff proof, and anti-stub audit recorded | SB02 archive prerequisite checked | Completed | `proof/SB01/manifest.md`, `proof/SB01/semantic-invariants.md`, `repo://codex/bundles/process-module-rewrite-reference-v1/manifest.json` |
+| SB02-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB01. |
 
 ## Browser Validation Analytics
 
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
 | Current UI story-map analysis | `/processes`, `/processes/live` | 1600x1000 | `evidence/ui-current-state/*.md` | `evidence/ui-current-state/*.png` | Captured current UI/UX evidence for architecture and user-story mapping; product behavior was not changed. |
+| SB01 Reference Archive | Not applicable | Not applicable | Not applicable | Not applicable | Archive-only subbundle; no browser-facing product behavior changed. |
 
 ## Analytics Review
 
 No runtime analytics or browser performance data were collected because this is architecture and planning documentation.
+
+SB01 collected no runtime analytics because it changed only archive/proof files plus the `.gitignore` archive exception.
 
 ## Raw Note Closure
 
@@ -60,6 +68,7 @@ No runtime analytics or browser performance data were collected because this is 
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
+| Execute approved implementation bundle | Partially solved | SB01 completed with `proof/SB01/manifest.md`; SB02-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -101,6 +110,42 @@ Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\p
 ```
 
 ## Additional Static Checks
+
+SB01 archive validation:
+
+```text
+bundle://proof/SB01/transcripts/hash-verification.txt
+```
+
+Result:
+
+```text
+ManifestEntries=1593; MissingCount=0; HashMismatchCount=0.
+```
+
+SB01 search coverage validation:
+
+```text
+bundle://proof/SB01/transcripts/search-coverage.txt
+```
+
+Result:
+
+```text
+SourceFiles=548; TemplateFiles=617; ProcessNamedTests=151; IntegrationSearchMatches=1061; all missing counts were 0.
+```
+
+SB01 active-product diff:
+
+```text
+bundle://proof/SB01/transcripts/active-product-diff.txt
+```
+
+Result:
+
+```text
+No active product/test/template/tool files were modified by SB01.
+```
 
 Anti-vagueness scan:
 

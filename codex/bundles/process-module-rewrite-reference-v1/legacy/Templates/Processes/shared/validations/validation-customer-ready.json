@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validation-customer-ready",
+  "DisplayName": "Validate customer readiness",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Severity": "medium",
+  "OwnerRoleKey": "customer-success-lead",
+  "Gate": "handoff",
+  "Summary": "Confirms the receiving customer-facing audience can act successfully on the delivered output.",
+  "PassCriteria": "Required access, training, open actions, and support path are clear to the receiving side.",
+  "FailCriteria": "Handoff depends on unstated customer actions, missing enablement, or ambiguous ownership.",
+  "EscalationRule": "Escalate to onboarding or release owner before declaring the milestone complete.",
+  "DocPath": "shared/validations/validation-customer-ready.md"
+}

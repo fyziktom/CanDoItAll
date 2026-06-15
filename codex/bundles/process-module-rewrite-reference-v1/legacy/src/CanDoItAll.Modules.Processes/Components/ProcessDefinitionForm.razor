@@ -1,0 +1,280 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.Common
+
+<Stack GapScale="LayoutGap.Large"
+       AlignItems="AlignItems.Stretch">
+    <FormSection Title="Definition"
+                 Icon="file"
+                 Description="Anchor the process, governance contract, and runtime expectations in a form that keeps long narrative fields readable.">
+        <Tabs Variant="TabsVariant.ModalCompact"
+              BorderMode="TabsBorderMode.Soft"
+              Tone="TabsTone.Info"
+              OverflowMode="TabsOverflowMode.Auto"
+              AriaLabel="Process definition form sections">
+            <TabItems>
+                <TabsItem Text="Identity" Icon="badge">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsMd="2">
+                            <FormField Text="Name">
+                                <InputText @bind-Value="Model.Name"
+                                           class="cda-input"
+                                           data-testid="processes-name-input" />
+                            </FormField>
+                            <FormField Text="Scope">
+                                <TextBox Value="@ScopeLabel"
+                                         Class="cda-input"
+                                         ReadOnly="true" />
+                            </FormField>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsMd="2">
+                            <FormField Text="Customer">
+                                <InputText @bind-Value="Model.CustomerName"
+                                           class="cda-input" />
+                            </FormField>
+                            <FormField Text="Owner">
+                                <InputText @bind-Value="Model.OwnerName"
+                                           class="cda-input" />
+                            </FormField>
+                        </Grid>
+
+                        <FormField Text="Summary">
+                            <InputTextArea @bind-Value="Model.Summary"
+                                           class="cda-input cda-input--textarea"
+                                           data-testid="processes-summary-input" />
+                        </FormField>
+
+                        <FormField Text="Value statement">
+                            <InputTextArea @bind-Value="Model.ValueStatement"
+                                           class="cda-input cda-input--textarea"
+                                           data-testid="processes-value-statement-input" />
+                        </FormField>
+                    </Stack>
+                </TabsItem>
+
+                <TabsItem Text="Governance" Icon="shield">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsLg="3">
+                            <FormField Text="Criticality">
+                                <InputSelect @bind-Value="Model.Criticality"
+                                             class="cda-input">
+                                    @foreach (var criticality in Enum.GetValues<ProcessCriticality>())
+                                    {
+                                        <option value="@criticality">@criticality</option>
+                                    }
+                                </InputSelect>
+                            </FormField>
+                            <FormField Text="Autonomy level">
+                                <InputSelect @bind-Value="Model.AutonomyLevel"
+                                             class="cda-input">
+                                    @foreach (var autonomyLevel in Enum.GetValues<ProcessAutonomyLevel>())
+                                    {
+                                        <option value="@autonomyLevel">@autonomyLevel</option>
+                                    }
+                                </InputSelect>
+                            </FormField>
+                            <FormField Text="Working status">
+                                <TextBox Value="@Model.Status.ToString()"
+                                         Class="cda-input"
+                                         ReadOnly="true" />
+                            </FormField>
+                        </Grid>
+
+                        <FormField Text="Manager agent override">
+                            @if (ManagerAgentOptions.Count == 0)
+                            {
+                                <p class="text-sm leading-6 text-slate-600">Default process manager</p>
+                            }
+                            else
+                            {
+                                <select class="cda-input"
+                                        value="@SelectedManagerAgentValue"
+                                        @onchange="HandleManagerAgentChanged"
+                                        data-testid="processes-manager-agent-select">
+                                    <option value="">Default process manager</option>
+                                    @foreach (var agent in ManagerAgentOptions)
+                                    {
+                                        <option value="@agent.PartyId">@BuildManagerAgentLabel(agent)</option>
+                                    }
+                                </select>
+                            }
+                        </FormField>
+
+                        <FormField Text="Governance notes">
+                            <InputTextArea @bind-Value="Model.GovernanceNotes"
+                                           class="cda-input cda-input--textarea" />
+                        </FormField>
+
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsLg="2">
+                            <FormField Text="Change summary">
+                                <InputTextArea @bind-Value="Model.ChangeSummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                            <FormField Text="Governance policy summary">
+                                <InputTextArea @bind-Value="Model.GovernancePolicySummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                        </Grid>
+                    </Stack>
+                </TabsItem>
+
+                <TabsItem Text="Contracts" Icon="link">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <FormField Text="Interface contract summary">
+                            <InputTextArea @bind-Value="Model.InterfaceContractSummary"
+                                           class="cda-input cda-input--textarea" />
+                        </FormField>
+
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsLg="2">
+                            <FormField Text="Constitution rule summary">
+                                <InputTextArea @bind-Value="Model.ConstitutionRuleSummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                            <FormField Text="Operating mode summary">
+                                <InputTextArea @bind-Value="Model.OperatingModeSummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                        </Grid>
+                    </Stack>
+                </TabsItem>
+
+                <TabsItem Text="Simulation" Icon="science">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <FormField Text="Simulation readiness summary">
+                            <InputTextArea @bind-Value="Model.SimulationReadinessSummary"
+                                           class="cda-input cda-input--textarea" />
+                        </FormField>
+                    </Stack>
+                </TabsItem>
+            </TabItems>
+        </Tabs>
+
+        @if (Model.LintResult.HasWarningsOrErrors)
+        {
+            <Stack GapScale="LayoutGap.Small"
+                   AlignItems="AlignItems.Stretch"
+                   data-testid="processes-definition-lint-panel">
+                <Cluster Gap="LayoutGap.Small"
+                         AlignItems="AlignItems.Center"
+                         Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="warning"
+                                 Text="@($"{Model.LintResult.Issues.Count} lint issues")" />
+                    @if (Model.LintResult.HasErrors)
+                    {
+                        <StatusBadge Tone="danger"
+                                     Text="@($"{Model.LintResult.Issues.Count(issue => issue.Severity == ProcessDefinitionLintSeverity.Error)} blocking")" />
+                    }
+                </Cluster>
+                @foreach (var issue in Model.LintResult.Issues)
+                {
+                    <Stack GapScale="LayoutGap.Tiny"
+                           AlignItems="AlignItems.Stretch"
+                           Class="rounded-md border border-slate-200 bg-slate-50 p-3">
+                        <Cluster Gap="LayoutGap.Small"
+                                 AlignItems="AlignItems.Center"
+                                 Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="@ResolveLintTone(issue.Severity)"
+                                         Text="@issue.Severity.ToString()" />
+                            <span class="text-sm font-medium text-slate-900">@issue.StepTitle</span>
+                            <span class="text-xs text-slate-500">@issue.Code</span>
+                        </Cluster>
+                        <p class="text-sm leading-6 text-slate-700">@issue.Message</p>
+                        @if (!string.IsNullOrWhiteSpace(issue.Suggestion))
+                        {
+                            <p class="text-xs leading-5 text-slate-600">@issue.Suggestion</p>
+                        }
+                    </Stack>
+                }
+            </Stack>
+        }
+
+        @if (ShowActions)
+        {
+            <Cluster Gap="LayoutGap.Small"
+                     JustifyContent="JustifyContent.End"
+                     Wrap="FlexWrap.Wrap">
+                <Button Text="Save definition"
+                        Icon="save"
+                        Click="Save" />
+                <Button Text="Publish"
+                        Icon="publish"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="Publish" />
+                <Button Text="Delete"
+                        Icon="delete"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="Delete" />
+            </Cluster>
+        }
+    </FormSection>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessDefinitionEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public string ScopeLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<ProcessManagerAgentOption> ManagerAgentOptions { get; set; } = [];
+
+    [Parameter]
+    public bool ShowActions { get; set; } = true;
+
+    [Parameter]
+    public EventCallback Save { get; set; }
+
+    [Parameter]
+    public EventCallback Publish { get; set; }
+
+    [Parameter]
+    public EventCallback Delete { get; set; }
+
+    private string SelectedManagerAgentValue => Model.ManagerAgentOverrideId?.ToString("D") ?? string.Empty;
+
+    private void HandleManagerAgentChanged(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(rawValue) ||
+            !Guid.TryParse(rawValue, out var selectedAgentId))
+        {
+            Model.ManagerAgentOverrideId = null;
+            Model.ManagerAgentOverrideName = string.Empty;
+            return;
+        }
+
+        var selectedAgent = ManagerAgentOptions.FirstOrDefault(item => item.PartyId == selectedAgentId);
+        Model.ManagerAgentOverrideId = selectedAgentId;
+        Model.ManagerAgentOverrideName = selectedAgent?.DisplayName ?? string.Empty;
+    }
+
+    private static string BuildManagerAgentLabel(ProcessManagerAgentOption agent)
+    {
+        if (string.IsNullOrWhiteSpace(agent.ProviderName) && string.IsNullOrWhiteSpace(agent.DefaultModel))
+        {
+            return agent.DisplayName;
+        }
+
+        return $"{agent.DisplayName} / {agent.ProviderName} {agent.DefaultModel}".Trim();
+    }
+
+    private static string ResolveLintTone(ProcessDefinitionLintSeverity severity)
+    {
+        return severity switch
+        {
+            ProcessDefinitionLintSeverity.Error => "danger",
+            ProcessDefinitionLintSeverity.Warning => "warning",
+            _ => "info"
+        };
+    }
+}

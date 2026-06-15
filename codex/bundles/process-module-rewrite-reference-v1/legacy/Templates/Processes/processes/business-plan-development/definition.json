@@ -1,0 +1,760 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "business-plan-development",
+  "DisplayName": "Business plan development",
+  "Summary": "Turn a project idea, existing app, or strategy request into a grounded business plan with financial assumptions, marketing plan, risks, and explicit next actions.",
+  "ValueStatement": "Support non-code planning work with the same governed artifact handoffs used by software delivery processes.",
+  "CustomerName": "Business planning",
+  "OwnerName": "Strategy governance board",
+  "InterfaceContractSummary": "Business strategy hands assumptions to finance and marketing, then consolidates a decision-ready plan.",
+  "GovernanceNotes": "Claims, forecasts, and channel plans must distinguish sourced facts from assumptions.",
+  "ChangeSummary": "Introduces a non-coding baseline process for business-plan scenarios and multi-agent handoffs.",
+  "GovernancePolicySummary": "Proceed only when strategic assumptions, financial drivers, marketing hypotheses, and open risks are explicit.",
+  "ConstitutionRuleSummary": "Do not hide missing data behind confident plans or unsupported forecasts.",
+  "OperatingModeSummary": "Assisted execution with agent-owned artifacts and review gates.",
+  "SimulationReadinessSummary": "Designed for deterministic template projection and real agent handoff validation across business, finance, and marketing specialists.",
+  "Criticality": "Standard",
+  "AutonomyLevel": "Assisted",
+  "OperatingMode": "AssistedExecution",
+  "SourceFrameworkKeys": [],
+  "SharedRoleRefs": [],
+  "SharedArtifactRefs": [],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "Metrics": [
+    "Business plans with explicit assumption inventory.",
+    "Existing app or product evidence reviewed before business-case synthesis.",
+    "Forecasts that identify drivers, formulas, and confidence.",
+    "Marketing plans tied to named customer segments and experiments.",
+    "Strategy reviews blocked because critical facts are missing.",
+    "Downstream handoffs completed without re-asking for source context."
+  ],
+  "Risks": [
+    "Market claims are treated as proven without evidence.",
+    "Financial projections use a single precise number despite uncertain inputs.",
+    "Marketing plan uses generic channels without segment fit.",
+    "Final plan blends assumptions, hypotheses, and facts without labels."
+  ],
+  "TailoringRules": [
+    "For existing apps, include a product evidence review before drafting the plan.",
+    "For internal projects, marketing work may focus on change-management messaging instead of external channels.",
+    "For early ideas, finance should produce ranges and break-even drivers instead of detailed forecasts.",
+    "If source data includes spreadsheets, the financial strategist must inspect them before modeling."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "business-strategist",
+      "RoleResourceKey": "business-strategist",
+      "DisplayName": "Business strategist",
+      "Purpose": "Own the business plan spine, operating assumptions, strategic options, and final synthesis.",
+      "StaffingIntent": "An agent or person who can convert ambiguous ideas into decision-ready planning artifacts.",
+      "PreferredExecutorKind": "AI agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 120,
+      "CanvasY": 40,
+      "Notes": "Primary owner for strategy framing and integrated plan review."
+    },
+    {
+      "Key": "financial-strategist",
+      "RoleResourceKey": "financial-strategist",
+      "DisplayName": "Financial strategist",
+      "Purpose": "Own financial assumptions, model logic, unit economics, and sensitivity ranges.",
+      "StaffingIntent": "An agent or person who can turn strategy assumptions and spreadsheet evidence into credible financial planning artifacts.",
+      "PreferredExecutorKind": "AI agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 35,
+      "CanvasX": 420,
+      "CanvasY": 40,
+      "Notes": "Financial planning owner for model, budget, and sensitivity evidence."
+    },
+    {
+      "Key": "marketing-specialist",
+      "RoleResourceKey": "marketing-specialist",
+      "DisplayName": "Marketing specialist",
+      "Purpose": "Own positioning, audience, channel mix, campaign brief, and validation experiments.",
+      "StaffingIntent": "An agent or person who can convert the business plan into practical go-to-market hypotheses and launch actions.",
+      "PreferredExecutorKind": "AI agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 35,
+      "CanvasX": 720,
+      "CanvasY": 40,
+      "Notes": "Marketing owner for positioning, messaging, and experiment design."
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "strategy-intake",
+      "Title": "Capture strategy intake",
+      "Subtitle": "Idea framing and source-material inventory",
+      "Notes": "Convert the request into a planning brief with objective, customer segment, constraints, source data, and unknowns.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Project idea, stakeholder ask, source documents, spreadsheets, emails, or existing notes.",
+      "OutputContractSummary": "Strategy brief and assumption inventory ready for finance and marketing work.",
+      "EvidenceContractSummary": "Brief identifies facts, assumptions, open questions, and artifact destination folder.",
+      "DecisionRightsSummary": "Business strategist can frame the plan but cannot invent missing source facts.",
+      "ExceptionPolicySummary": "Block when the request lacks a project objective or target audience.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "business-strategist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to another strategy owner if the original owner cannot access source materials."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "strategy-brief",
+          "TemplateKey": "strategy-brief",
+          "Title": "Business strategy intake brief",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for financial modeling, marketing planning, and final review.",
+          "ValidationRequirementSummary": "Must separate facts, assumptions, open questions, and source-material paths."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [
+        "validate-assumptions-grounded"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/business-plan-development/steps/strategy-intake.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "product-evidence-review",
+      "Title": "Review product evidence",
+      "Subtitle": "Existing app, workflow, or product-context assessment",
+      "Notes": "Inspect available product evidence such as an existing app folder, screenshots, README, demo notes, logs, user workflow notes, or generated validation output before drafting the business case.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Strategy brief, source app or product evidence path, screenshots, validation notes, and known operating constraints.",
+      "OutputContractSummary": "Product evidence assessment ready for business-plan, finance, and marketing work.",
+      "EvidenceContractSummary": "Assessment separates observed product capabilities, user value hypotheses, limitations, proof gaps, and assumptions.",
+      "DecisionRightsSummary": "Business strategist owns synthesis and must label what was directly observed versus inferred.",
+      "ExceptionPolicySummary": "Block when the source app or product evidence cannot be inspected and the plan depends on it.",
+      "TargetLeadHours": 3,
+      "DependsOnStepKey": "strategy-intake",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "strategy-intake",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "business-strategist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Strategy owner remains accountable for separating observed product facts from inferred market claims."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "product-assessment",
+          "TemplateKey": "product-assessment",
+          "Title": "Product evidence assessment",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for business-plan, financial, marketing, and future product-improvement decisions.",
+          "ValidationRequirementSummary": "Must separate observed product behavior, source paths, assumptions, limitations, and validation gaps."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "strategy-brief",
+          "SourceStepKey": "strategy-intake"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "product-evidence-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-assumptions-grounded",
+        "validate-product-evidence"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/business-plan-development/steps/product-evidence-review.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 2,
+      "Key": "business-plan-draft",
+      "Title": "Draft business plan",
+      "Subtitle": "Customer, offer, model, and risk framing",
+      "Notes": "Create a concise business plan with target segment, problem, offer, differentiation, operating model, risks, validation plan, and explicit links to source product evidence when present.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Strategy brief, assumption inventory, and product evidence assessment.",
+      "OutputContractSummary": "Business plan ready for financial and marketing specialization.",
+      "EvidenceContractSummary": "Plan contains strategy spine, observed product evidence, assumptions, risks, and open questions.",
+      "DecisionRightsSummary": "Business strategist owns plan draft but flags unsupported market claims.",
+      "ExceptionPolicySummary": "Do not fabricate customers, competitors, pricing, or market size.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "product-evidence-review",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "strategy-intake",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "product-evidence-review",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "business-strategist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Strategy owner stays accountable for assumptions even when downstream specialists refine them."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "business-plan",
+          "TemplateKey": "business-plan",
+          "Title": "Business plan",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for finance, marketing, funding, and execution planning.",
+          "ValidationRequirementSummary": "Must include customer segment, problem, offer, differentiation, channels, operating model, risks, and validation plan."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "strategy-brief",
+          "SourceStepKey": "strategy-intake"
+        },
+        {
+          "ArtifactExpectationKey": "product-assessment",
+          "SourceStepKey": "product-evidence-review"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "business-plan-completeness-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-assumptions-grounded",
+        "validate-product-evidence"
+      ],
+      "PromptRefs": [
+        "prompt-business-plan"
+      ],
+      "DocRefs": [
+        "processes/business-plan-development/steps/business-plan-draft.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 3,
+      "Key": "financial-modeling",
+      "Title": "Model financial assumptions",
+      "Subtitle": "Unit economics, budget, and sensitivity",
+      "Notes": "Create financial model evidence from the business plan, spreadsheets, and stated assumptions.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Business plan, source spreadsheets, pricing notes, and cost assumptions.",
+      "OutputContractSummary": "Financial model with drivers, ranges, and sensitivity findings.",
+      "EvidenceContractSummary": "Model identifies formulas, units, currency, confidence, and missing data.",
+      "DecisionRightsSummary": "Financial strategist owns model logic and must flag unsupported numbers.",
+      "ExceptionPolicySummary": "Do not produce precise forecasts without assumptions and sensitivity ranges.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "business-plan-draft",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "business-plan-draft",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "financial-strategist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to another finance owner when spreadsheet access or modeling skills are unavailable."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "financial-model",
+          "TemplateKey": "financial-model",
+          "Title": "Financial model and sensitivity note",
+          "ArtifactKind": "Dataset",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Confidential",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for budget planning, pricing decisions, and integrated strategy review.",
+          "ValidationRequirementSummary": "Must show drivers, formulas or calculation logic, ranges, assumptions, and data gaps."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "business-plan",
+          "SourceStepKey": "business-plan-draft"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "financial-assumption-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-financial-model"
+      ],
+      "PromptRefs": [
+        "prompt-financial-model"
+      ],
+      "DocRefs": [
+        "processes/business-plan-development/steps/financial-modeling.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 4,
+      "Key": "marketing-plan",
+      "Title": "Prepare marketing plan",
+      "Subtitle": "Positioning, channels, and experiments",
+      "Notes": "Create go-to-market plan from the business plan and finance constraints.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Business plan and financial constraints.",
+      "OutputContractSummary": "Positioning, channel plan, campaign brief, and validation experiments.",
+      "EvidenceContractSummary": "Marketing plan ties audience, promise, channels, budget dependencies, and metrics to the strategy.",
+      "DecisionRightsSummary": "Marketing specialist owns messaging and experiments while calling out unvalidated claims.",
+      "ExceptionPolicySummary": "Do not invent proof, testimonials, or customer logos.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "financial-modeling",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "business-plan-draft",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "financial-modeling",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "marketing-specialist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to another marketing owner if the plan needs channel expertise the assigned owner lacks."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "go-to-market-plan",
+          "TemplateKey": "go-to-market-plan",
+          "Title": "Go-to-market and experiment plan",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for launch planning, campaign creation, and customer validation.",
+          "ValidationRequirementSummary": "Must include audience, pain point, promise, proof needs, channels, sequence, metrics, and experiment plan."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "business-plan",
+          "SourceStepKey": "business-plan-draft"
+        },
+        {
+          "ArtifactExpectationKey": "financial-model",
+          "SourceStepKey": "financial-modeling"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "marketing-validation-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-go-to-market"
+      ],
+      "PromptRefs": [
+        "prompt-marketing-plan"
+      ],
+      "DocRefs": [
+        "processes/business-plan-development/steps/marketing-plan.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 5,
+      "Key": "integrated-review",
+      "Title": "Review integrated business plan",
+      "Subtitle": "Decision-ready synthesis and handoff",
+      "Notes": "Consolidate strategy, finance, and marketing outputs into one decision-ready package with risks and next actions.",
+      "StepKind": "Approval",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": true,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Business plan, financial model, and go-to-market plan.",
+      "OutputContractSummary": "Integrated plan approved, blocked, or returned for specific corrections.",
+      "EvidenceContractSummary": "Review note identifies decision status, assumptions, risks, and next actions.",
+      "DecisionRightsSummary": "Business strategist recommends; governance owner approves or blocks the plan.",
+      "ExceptionPolicySummary": "Block when finance and marketing assumptions conflict or critical source data is missing. Artifact recovery: block when the required integrated review decision artifact is missing or invalid before branch routing.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "marketing-plan",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "business-strategist",
+      "CanvasX": 5660,
+      "CanvasY": 0,
+      "BranchCanvasX": 5869,
+      "BranchCanvasY": 1390,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "business-plan-draft",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "financial-modeling",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "marketing-plan",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "business-strategist",
+          "ResponsibilityKind": "Approver",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Approval must remain with a strategy owner who has reviewed all upstream artifacts."
+        },
+        {
+          "RoleKey": "financial-strategist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Finance review remains required when model assumptions change."
+        },
+        {
+          "RoleKey": "marketing-specialist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 2,
+          "RebindPolicySummary": "Marketing review remains required when audience, channel, or messaging assumptions change."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "integrated-business-plan",
+          "TemplateKey": "integrated-business-plan",
+          "Title": "Integrated business plan review",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "Confidential",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for execution planning, budget review, and later portfolio decisions.",
+          "ValidationRequirementSummary": "Must reconcile strategy, finance, marketing, risks, blockers, and next actions."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "business-plan",
+          "SourceStepKey": "business-plan-draft"
+        },
+        {
+          "ArtifactExpectationKey": "financial-model",
+          "SourceStepKey": "financial-modeling"
+        },
+        {
+          "ArtifactExpectationKey": "go-to-market-plan",
+          "SourceStepKey": "marketing-plan"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "approved",
+          "Title": "Approved",
+          "Description": "Plan is decision-ready with explicit assumptions and next actions."
+        },
+        {
+          "Key": "blocked",
+          "Title": "Blocked",
+          "Description": "Plan requires source-data, finance, or marketing correction before approval."
+        }
+      ],
+      "ChecklistRefs": [
+        "integrated-readiness-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-assumptions-grounded",
+        "validate-financial-model",
+        "validate-go-to-market"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/business-plan-development/steps/integrated-review.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 6,
+      "Key": "approved-execution-handoff",
+      "Title": "Publish approved plan handoff",
+      "Subtitle": "Decision-ready package for execution",
+      "Notes": "Confirm the approved business plan package is ready for execution planning, budget review, or portfolio handoff.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Approved integrated plan review and all upstream strategy, finance, and marketing artifacts.",
+      "OutputContractSummary": "Approved package is ready for downstream execution planning.",
+      "EvidenceContractSummary": "Handoff preserves the decision status, source artifacts, open risks, and named next actions.",
+      "DecisionRightsSummary": "Business strategist owns the handoff; finance and marketing owners remain accountable for their assumptions.",
+      "ExceptionPolicySummary": "Do not hand off an approved plan when required assumptions or next actions are missing.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "integrated-review",
+      "DependsOnBranchOutcomeKey": "approved",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "integrated-review",
+          "DependsOnBranchOutcomeKey": "approved"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "business-strategist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Approved handoff remains owned by the strategy owner."
+        },
+        {
+          "RoleKey": "financial-strategist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Finance owner confirms downstream users understand financial assumptions."
+        },
+        {
+          "RoleKey": "marketing-specialist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 2,
+          "RebindPolicySummary": "Marketing owner confirms downstream users understand audience and channel assumptions."
+        }
+      ],
+      "ArtifactExpectations": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "integrated-business-plan",
+          "SourceStepKey": "integrated-review"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "integrated-readiness-checklist"
+      ],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 7,
+      "Key": "blocked-correction-plan",
+      "Title": "Capture blocked-plan corrections",
+      "Subtitle": "Specific fixes before another review",
+      "Notes": "Record why the plan was blocked and which source-data, financial, or marketing corrections are required before another review.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Blocked integrated plan review and all upstream artifacts.",
+      "OutputContractSummary": "Blocked status is durable with correction owners and revisit criteria.",
+      "EvidenceContractSummary": "Correction plan names missing evidence, conflicting assumptions, owners, and expected next review trigger.",
+      "DecisionRightsSummary": "Business strategist records the block; specialists own corrections in their domains.",
+      "ExceptionPolicySummary": "Do not block without concrete correction criteria.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "integrated-review",
+      "DependsOnBranchOutcomeKey": "blocked",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 1040,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "integrated-review",
+          "DependsOnBranchOutcomeKey": "blocked"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "business-strategist",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Blocked correction plan remains owned by the strategy owner."
+        },
+        {
+          "RoleKey": "financial-strategist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Finance owner owns correction criteria for financial assumptions."
+        },
+        {
+          "RoleKey": "marketing-specialist",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 2,
+          "RebindPolicySummary": "Marketing owner owns correction criteria for audience, channel, and messaging assumptions."
+        }
+      ],
+      "ArtifactExpectations": [],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "integrated-business-plan",
+          "SourceStepKey": "integrated-review"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    }
+  ]
+}

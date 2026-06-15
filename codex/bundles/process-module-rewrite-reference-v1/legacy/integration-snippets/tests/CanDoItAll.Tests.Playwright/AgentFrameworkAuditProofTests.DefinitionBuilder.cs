@@ -1,0 +1,416 @@
+using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Projects;
+
+namespace CanDoItAll.Tests.Playwright;
+
+public sealed partial class AgentFrameworkAuditProofTests
+{
+    private static DirectMessagingDefinitionFixture BuildDirectMessagingDefinitionEditor(Guid projectId)
+    {
+        var sourceRoleId = Guid.NewGuid();
+        var targetRoleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+
+        return new DirectMessagingDefinitionFixture(
+            new ProcessDefinitionEditorModel
+            {
+                ProjectId = projectId,
+                Name = "Playwright direct messaging proof process",
+                Summary = "Browser proof for process-owned direct role messaging.",
+                ValueStatement = "Direct role messaging must stay process-owned and auditable.",
+                CustomerName = "Playwright Customer",
+                OwnerName = "Playwright Owner",
+                GovernancePolicySummary = "Direct messaging is allowed only for explicit role links with explicit runtime permission.",
+                ChangeSummary = "Playwright browser proof definition.",
+                ConstitutionRuleSummary = "No role may bypass process-owned messaging policy or governance state.",
+                OperatingModeSummary = "Assisted execution for browser proof.",
+                SimulationReadinessSummary = "Safe for Playwright validation.",
+                Roles =
+                [
+                    new ProcessRoleEditorModel
+                    {
+                        Id = sourceRoleId,
+                        Key = "delivery-lead",
+                        DisplayName = "Delivery lead",
+                        Purpose = "Initiate delivery handoffs.",
+                        StaffingIntent = "Primary delivery authority.",
+                        PreferredExecutorKind = "person",
+                        DefaultAllocationPercent = 60
+                    },
+                    new ProcessRoleEditorModel
+                    {
+                        Id = targetRoleId,
+                        Key = "review-lead",
+                        DisplayName = "Review lead",
+                        Purpose = "Receive delivery review handoffs.",
+                        StaffingIntent = "Primary review authority.",
+                        PreferredExecutorKind = "person",
+                        DefaultAllocationPercent = 40
+                    }
+                ],
+                MessagingPolicies =
+                [
+                    new ProcessRoleMessagingPolicyEditorModel
+                    {
+                        SourceRoleRequirementId = sourceRoleId,
+                        TargetRoleRequirementId = targetRoleId
+                    }
+                ],
+                Steps =
+                [
+                    new ProcessStepEditorModel
+                    {
+                        Id = intakeStepId,
+                        Key = "capture-delivery-handoff",
+                        Title = "Capture delivery handoff",
+                        StepKind = ProcessStepKind.Start,
+                        InputContractSummary = "Delivery package ready for review.",
+                        OutputContractSummary = "Structured handoff ready for reviewer.",
+                        EvidenceContractSummary = "Visible run-scoped message evidence.",
+                        DecisionRightsSummary = "Delivery lead confirms readiness.",
+                        ExceptionPolicySummary = "Escalate when package evidence is incomplete.",
+                        TargetLeadHours = 1,
+                        CanvasX = 180,
+                        CanvasY = 180,
+                        RoleAssignments =
+                        [
+                            new ProcessStepRoleRequirementEditorModel
+                            {
+                                RoleRequirementId = sourceRoleId,
+                                ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                            }
+                        ]
+                    },
+                    new ProcessStepEditorModel
+                    {
+                        Key = "review-delivery-handoff",
+                        Title = "Review delivery handoff",
+                        StepKind = ProcessStepKind.Review,
+                        InputContractSummary = "Structured delivery handoff package.",
+                        OutputContractSummary = "Reviewed package ready for the next stage.",
+                        EvidenceContractSummary = "Review note or direct-message evidence.",
+                        DecisionRightsSummary = "Review lead confirms reviewability.",
+                        ExceptionPolicySummary = "Block the run when evidence is missing.",
+                        TargetLeadHours = 1,
+                        Dependencies =
+                        [
+                            new ProcessStepDependencyEditorModel
+                            {
+                                Id = Guid.NewGuid(),
+                                DependsOnStepId = intakeStepId
+                            }
+                        ],
+                        CanvasX = 520,
+                        CanvasY = 180,
+                        RoleAssignments =
+                        [
+                            new ProcessStepRoleRequirementEditorModel
+                            {
+                                RoleRequirementId = targetRoleId,
+                                ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                            }
+                        ]
+                    }
+                ]
+            },
+            sourceRoleId,
+            targetRoleId);
+    }
+
+    private static WorkflowDefinitionFixture BuildWorkflowDeliveryDefinitionEditor(Guid projectId)
+    {
+        var managerRoleId = Guid.NewGuid();
+        var builderRoleId = Guid.NewGuid();
+        var reviewerRoleId = Guid.NewGuid();
+        var generationStepId = Guid.NewGuid();
+        var handoffStepId = Guid.NewGuid();
+        var generationArtifactId = Guid.NewGuid();
+
+        const string builderRoleName = "Workflow builder agent";
+        const string reviewerRoleName = "Workflow reviewer agent";
+        const string generationStepTitle = "SC03 Generate Blazor workflow delivery";
+        const string handoffStepTitle = "Approve generated workflow delivery";
+        const string reviewStepTitle = "SC10 Review generated workflow delivery";
+
+        return new WorkflowDefinitionFixture(
+            new ProcessDefinitionEditorModel
+            {
+                ProjectId = projectId,
+                Name = "SC11 workflow delivery process",
+                Summary = "Launch, staff, execute, message, and close a simple Blazor workflow delivery through the integrated process runtime.",
+                ValueStatement = "Prove that CanDoItAll can define and complete a multi-agent software delivery workflow end to end.",
+                CustomerName = "Integrated proof customer",
+                OwnerName = "Playwright process owner",
+                GovernancePolicySummary = "AI delivery steps must stay bound to explicit launch approval, projected evidence, and process-owned messaging.",
+                ChangeSummary = "Full AgentFramework integration closure proof for SC11.",
+                ConstitutionRuleSummary = "All execution, messaging, approvals, and evidence must remain inside the process runtime.",
+                OperatingModeSummary = "Assisted execution with human handoff between automated workflow generation and review.",
+                SimulationReadinessSummary = "Safe for deterministic browser and service validation.",
+                Roles =
+                [
+                    new ProcessRoleEditorModel
+                    {
+                        Id = managerRoleId,
+                        Key = "delivery-manager",
+                        DisplayName = "Delivery manager",
+                        Purpose = "Approve the staffed launch and release the review handoff.",
+                        StaffingIntent = "Human owner of the integrated SC11 workflow.",
+                        PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                        PreferredExecutorKind = "person",
+                        DefaultAllocationPercent = 100
+                    },
+                    new ProcessRoleEditorModel
+                    {
+                        Id = builderRoleId,
+                        Key = "workflow-builder-ai",
+                        DisplayName = builderRoleName,
+                        Purpose = "Generate and build the workflow delivery through SC03.",
+                        StaffingIntent = "Technical AI resource for deterministic workflow generation.",
+                        PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                        PreferredExecutorKind = "AI agent",
+                        DefaultAllocationPercent = 100
+                    },
+                    new ProcessRoleEditorModel
+                    {
+                        Id = reviewerRoleId,
+                        Key = "workflow-reviewer-ai",
+                        DisplayName = reviewerRoleName,
+                        Purpose = "Inspect the generated workflow delivery through SC10.",
+                        StaffingIntent = "Technical AI resource for deterministic delivery review.",
+                        PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                        PreferredExecutorKind = "AI agent",
+                        DefaultAllocationPercent = 100
+                    }
+                ],
+                MessagingPolicies =
+                [
+                    new ProcessRoleMessagingPolicyEditorModel
+                    {
+                        SourceRoleRequirementId = builderRoleId,
+                        TargetRoleRequirementId = reviewerRoleId
+                    }
+                ],
+                Steps =
+                [
+                    new ProcessStepEditorModel
+                    {
+                        Id = generationStepId,
+                        Key = "sc03-generate-workflow",
+                        Title = generationStepTitle,
+                        StepKind = ProcessStepKind.Start,
+                        InputContractSummary = "A simple workflow specification and a ready AI builder role.",
+                        OutputContractSummary = "A generated Blazor workflow project with a successful build receipt.",
+                        EvidenceContractSummary = "SC03 must persist generation-report.md and the generated project files.",
+                        DecisionRightsSummary = "The workflow builder agent completes the deterministic generation flow.",
+                        ExceptionPolicySummary = "Fail the run when the workflow project or build receipt is missing.",
+                        TargetLeadHours = 1,
+                        CanvasX = 180,
+                        CanvasY = 180,
+                        RoleAssignments =
+                        [
+                            new ProcessStepRoleRequirementEditorModel
+                            {
+                                RoleRequirementId = builderRoleId,
+                                ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                            }
+                        ],
+                        ArtifactExpectations =
+                        [
+                            new ProcessArtifactExpectationEditorModel
+                            {
+                                Id = generationArtifactId,
+                                ArtifactKind = ProcessArtifactKind.Deliverable,
+                                Title = "generation-report.md",
+                                ValidationRequirementSummary = "SC03 must project the workflow generation evidence into the process run."
+                            }
+                        ]
+                    },
+                    new ProcessStepEditorModel
+                    {
+                        Id = handoffStepId,
+                        Key = "approve-review-handoff",
+                        Title = handoffStepTitle,
+                        StepKind = ProcessStepKind.Work,
+                        InputContractSummary = "The generated workflow delivery and builder evidence.",
+                        OutputContractSummary = "A human-approved handoff that keeps the run active for direct builder-to-reviewer messaging.",
+                        EvidenceContractSummary = "The manager confirms the delivery is ready for review and preserves the handoff trail.",
+                        DecisionRightsSummary = "The delivery manager decides when the generated workflow is ready for reviewer pickup.",
+                        ExceptionPolicySummary = "Do not release review until the generation evidence exists and messaging is captured.",
+                        TargetLeadHours = 1,
+                        Dependencies =
+                        [
+                            new ProcessStepDependencyEditorModel
+                            {
+                                Id = Guid.NewGuid(),
+                                DependsOnStepId = generationStepId
+                            }
+                        ],
+                        CanvasX = 520,
+                        CanvasY = 180,
+                        RoleAssignments =
+                        [
+                            new ProcessStepRoleRequirementEditorModel
+                            {
+                                RoleRequirementId = managerRoleId,
+                                ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                            }
+                        ]
+                    },
+                    new ProcessStepEditorModel
+                    {
+                        Key = "sc10-review-workflow",
+                        Title = reviewStepTitle,
+                        StepKind = ProcessStepKind.Review,
+                        InputContractSummary = "The approved workflow delivery plus the direct message from builder to reviewer.",
+                        OutputContractSummary = "A deterministic review report that confirms the workflow assets exist.",
+                        EvidenceContractSummary = "SC10 must persist review-report.md and close the run with durable evidence.",
+                        DecisionRightsSummary = "The workflow reviewer agent closes the delivery after the human handoff is complete.",
+                        ExceptionPolicySummary = "Fail the run when the generated workflow is missing or the review cannot verify it.",
+                        TargetLeadHours = 1,
+                        Dependencies =
+                        [
+                            new ProcessStepDependencyEditorModel
+                            {
+                                Id = Guid.NewGuid(),
+                                DependsOnStepId = generationStepId
+                            },
+                            new ProcessStepDependencyEditorModel
+                            {
+                                Id = Guid.NewGuid(),
+                                DependsOnStepId = handoffStepId
+                            }
+                        ],
+                        CanvasX = 860,
+                        CanvasY = 180,
+                        RoleAssignments =
+                        [
+                            new ProcessStepRoleRequirementEditorModel
+                            {
+                                RoleRequirementId = reviewerRoleId,
+                                ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                            }
+                        ],
+                        ArtifactExpectations =
+                        [
+                            new ProcessArtifactExpectationEditorModel
+                            {
+                                ArtifactKind = ProcessArtifactKind.Evidence,
+                                Title = "review-report.md",
+                                ValidationRequirementSummary = "SC10 must project the workflow review evidence into the process run."
+                            }
+                        ],
+                        ArtifactInputs =
+                        [
+                            new ProcessStepArtifactInputEditorModel
+                            {
+                                ArtifactExpectationId = generationArtifactId
+                            }
+                        ]
+                    }
+                ]
+            },
+            builderRoleId,
+            reviewerRoleId,
+            builderRoleName,
+            reviewerRoleName,
+            generationStepTitle,
+            handoffStepTitle,
+            reviewStepTitle);
+    }
+
+    private static AgentRecoveryDefinitionFixture BuildAgentRecoveryDefinitionEditor(Guid projectId)
+    {
+        var agentRoleId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+        const string stepTitle = "Produce implementation report";
+        const string artifactTitle = "implementation-report.md";
+
+        return new AgentRecoveryDefinitionFixture(
+            new ProcessDefinitionEditorModel
+            {
+                ProjectId = projectId,
+                Name = "Playwright agent recovery proof process",
+                Summary = "Browser proof for blocked agent-step recovery and outbox health.",
+                ValueStatement = "Operators can diagnose and rerun failed agent-backed process work.",
+                CustomerName = "Playwright Recovery Customer",
+                OwnerName = "Playwright Recovery Owner",
+                GovernancePolicySummary = "Required artifacts must remain explicit before governed completion.",
+                ChangeSummary = "Playwright browser proof for agent recovery.",
+                ConstitutionRuleSummary = "Do not complete agent work without durable required evidence.",
+                OperatingModeSummary = "Assisted execution with operator-controlled recovery.",
+                SimulationReadinessSummary = "Safe deterministic browser proof.",
+                Roles =
+                [
+                    new ProcessRoleEditorModel
+                    {
+                        Id = agentRoleId,
+                        Key = "implementation-agent",
+                        DisplayName = "Implementation agent",
+                        Purpose = "Produce and attach the implementation report.",
+                        StaffingIntent = "AI-owned implementation lane.",
+                        PreferredExecutorKind = "AI agent",
+                        DefaultAllocationPercent = 100
+                    }
+                ],
+                Steps =
+                [
+                    new ProcessStepEditorModel
+                    {
+                        Id = implementationStepId,
+                        Key = "produce-implementation-report",
+                        Title = stepTitle,
+                        StepKind = ProcessStepKind.Work,
+                        InputContractSummary = "Operator request and process context.",
+                        OutputContractSummary = "Implementation report exists and is attached.",
+                        EvidenceContractSummary = "implementation-report.md must be recorded.",
+                        DecisionRightsSummary = "The agent may complete only after producing required evidence.",
+                        ExceptionPolicySummary = "Block the step when required evidence is missing.",
+                        TargetLeadHours = 1,
+                        CanvasX = 260,
+                        CanvasY = 220,
+                        RoleAssignments =
+                        [
+                            new ProcessStepRoleRequirementEditorModel
+                            {
+                                RoleRequirementId = agentRoleId,
+                                ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                            }
+                        ],
+                        ArtifactExpectations =
+                        [
+                            new ProcessArtifactExpectationEditorModel
+                            {
+                                ArtifactKind = ProcessArtifactKind.Deliverable,
+                                Title = artifactTitle,
+                                ValidationRequirementSummary = "Agent rerun must produce and project implementation-report.md."
+                            }
+                        ]
+                    }
+                ]
+            },
+            agentRoleId,
+            stepTitle,
+            artifactTitle);
+    }
+
+    private sealed record DirectMessagingDefinitionFixture(
+        ProcessDefinitionEditorModel Editor,
+        Guid SourceRoleRequirementId,
+        Guid TargetRoleRequirementId);
+
+    private sealed record WorkflowDefinitionFixture(
+        ProcessDefinitionEditorModel Editor,
+        Guid BuilderRoleRequirementId,
+        Guid ReviewerRoleRequirementId,
+        string BuilderRoleName,
+        string ReviewerRoleName,
+        string GenerationStepTitle,
+        string HandoffStepTitle,
+        string ReviewStepTitle);
+
+    private sealed record AgentRecoveryDefinitionFixture(
+        ProcessDefinitionEditorModel Editor,
+        Guid AgentRoleRequirementId,
+        string StepTitle,
+        string ArtifactTitle);
+}

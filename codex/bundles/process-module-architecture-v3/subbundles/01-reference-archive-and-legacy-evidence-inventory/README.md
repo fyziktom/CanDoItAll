@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-15 as the first implementation subbundle.
 
 ## Objective
 
@@ -159,12 +159,12 @@ Search for Process source, test, and template paths and prove each is represente
 
 ## Acceptance Checklist
 
-- [ ] Reference archive exists.
-- [ ] Manifest JSON exists.
-- [ ] Manifest Markdown summary exists.
-- [ ] Hashes are reproducible.
-- [ ] Source, tests, templates, and integrations are inventoried.
-- [ ] SB02 handoff notes are written.
+- [x] Reference archive exists.
+- [x] Manifest JSON exists.
+- [x] Manifest Markdown summary exists.
+- [x] Hashes are reproducible.
+- [x] Source, tests, templates, and integrations are inventoried.
+- [x] SB02 handoff notes are written.
 
 ## Proof Required
 
@@ -187,4 +187,22 @@ Execute SB01 from `codex/bundles/process-module-architecture-v3/subbundles/01-re
 
 ## Handoff Notes For Next Bundle
 
-Record archive path, manifest path, skipped items, hidden dependency notes, and exact old-symbol inventory for SB02.
+Archive path: `repo://codex/bundles/process-module-rewrite-reference-v1`.
+
+Manifest path: `repo://codex/bundles/process-module-rewrite-reference-v1/manifest.json`.
+
+Proof paths:
+
+- `bundle://proof/SB01/manifest.md`
+- `bundle://proof/SB01/semantic-invariants.md`
+- `bundle://proof/SB01/transcripts/archive-generation.txt`
+- `bundle://proof/SB01/transcripts/hash-verification.txt`
+- `bundle://proof/SB01/transcripts/search-coverage.txt`
+- `bundle://proof/SB01/transcripts/negative-tracked-only-archive-gap.txt`
+- `bundle://proof/SB01/transcripts/active-product-diff.txt`
+- `bundle://proof/SB01/transcripts/anti-stub-audit.txt`
+- `bundle://proof/SB01/transcripts/git-status-after-archive.txt`
+
+No active product, test, template, tool, or solution file was changed by SB01. The only non-archive repository edit was the `.gitignore` exception that makes `codex/bundles/process-module-rewrite-reference-v1/**` versionable.
+
+Hidden dependency note for SB02: the broad `.gitignore` entry `evidence` ignores source directories named `Evidence`; five Process driver evidence files were therefore not tracked but were still archived through `rg` integration discovery. Do not rely only on `git ls-files` when removing or auditing active Process source.

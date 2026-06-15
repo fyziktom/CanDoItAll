@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant B as Business strategist
+    participant F as Financial strategist
+    participant M as Marketing specialist
+    participant G as Governance owner
+    B->>B: Capture strategy brief
+    B->>B: Review product evidence
+    B->>F: Handoff business plan and assumptions
+    F->>B: Return financial model and gaps
+    B->>M: Handoff business plan and finance constraints
+    M->>B: Return go-to-market plan
+    B->>G: Submit integrated review
+    G-->>B: Approve or block with required corrections
+    B->>B: Publish handoff or correction plan

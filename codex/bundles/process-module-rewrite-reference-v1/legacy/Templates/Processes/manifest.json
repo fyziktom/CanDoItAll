@@ -1,0 +1,122 @@
+{
+  "PackKey": "candoitall-process-template-pack",
+  "Name": "CanDoItAll process template pack (current architecture aligned)",
+  "Version": "2.1.0-live-run-governance",
+  "GeneratedAtUtc": "2026-05-28T00:00:00Z",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "nist-ssdf-ai",
+    "owasp-samm",
+    "openchain",
+    "spdx",
+    "slsa"
+  ],
+  "FrameworkSourcesPath": "framework-sources.json",
+  "Toolbox": {
+    "RoleTemplatesPath": "toolbox/role-templates.json",
+    "StepTemplatesPath": "toolbox/step-templates.json",
+    "ChromeActionsPath": "toolbox/chrome-actions.json"
+  },
+  "SeedCatalog": {
+    "BaselineScenariosPath": "seed-catalog/baseline-scenarios.json",
+    "LiveRunProfilesPath": "seed-catalog/live-run-profiles.json"
+  },
+  "Processes": [
+    {
+      "Key": "dotnet-solution-setup",
+      "RelativePath": "processes/dotnet-solution-setup"
+    },
+    {
+      "Key": "dotnet-feature-function-implementation",
+      "RelativePath": "processes/dotnet-feature-function-implementation"
+    },
+    {
+      "Key": "dotnet-development-slice",
+      "RelativePath": "processes/dotnet-development-slice"
+    },
+    {
+      "Key": "dotnet-architecture-design-review",
+      "RelativePath": "processes/dotnet-architecture-design-review"
+    },
+    {
+      "Key": "dotnet-runtime-command-writeback",
+      "RelativePath": "processes/dotnet-runtime-command-writeback"
+    },
+    {
+      "Key": "dotnet-ui-screenshot-writeback",
+      "RelativePath": "processes/dotnet-ui-screenshot-writeback"
+    },
+    {
+      "Key": "app-page-screenshot",
+      "RelativePath": "processes/app-page-screenshot"
+    },
+    {
+      "Key": "app-pages-screenshot-set",
+      "RelativePath": "processes/app-pages-screenshot-set"
+    },
+    {
+      "Key": "app-layout-image-generation",
+      "RelativePath": "processes/app-layout-image-generation"
+    },
+    {
+      "Key": "software-delivery",
+      "RelativePath": "processes/software-delivery"
+    },
+    {
+      "Key": "blazor-app-delivery",
+      "RelativePath": "processes/blazor-app-delivery"
+    },
+    {
+      "Key": "blazor-app-repair-fix",
+      "RelativePath": "processes/blazor-app-repair-fix"
+    },
+    {
+      "Key": "blazor-backend-feature",
+      "RelativePath": "processes/blazor-backend-feature"
+    },
+    {
+      "Key": "blazor-frontend-feature",
+      "RelativePath": "processes/blazor-frontend-feature"
+    },
+    {
+      "Key": "blazor-fullstack-feature",
+      "RelativePath": "processes/blazor-fullstack-feature"
+    },
+    {
+      "Key": "branching-code-review",
+      "RelativePath": "processes/branching-code-review"
+    },
+    {
+      "Key": "hotfix-rollout",
+      "RelativePath": "processes/hotfix-rollout"
+    },
+    {
+      "Key": "customer-onboarding",
+      "RelativePath": "processes/customer-onboarding"
+    },
+    {
+      "Key": "business-plan-development",
+      "RelativePath": "processes/business-plan-development"
+    },
+    {
+      "Key": "incident-response",
+      "RelativePath": "processes/incident-response"
+    },
+    {
+      "Key": "architecture-decision-governance",
+      "RelativePath": "processes/architecture-decision-governance"
+    },
+    {
+      "Key": "release-readiness-and-deployment",
+      "RelativePath": "processes/release-readiness-and-deployment"
+    },
+    {
+      "Key": "oss-intake-supply-chain-governance",
+      "RelativePath": "processes/oss-intake-supply-chain-governance"
+    },
+    {
+      "Key": "ai-assisted-change-delivery",
+      "RelativePath": "processes/ai-assisted-change-delivery"
+    }
+  ]
+}

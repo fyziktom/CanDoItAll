@@ -1,0 +1,31 @@
+flowchart LR
+%% process-key: oss-intake-supply-chain-governance
+%% definition-doc: processes/oss-intake-supply-chain-governance/definition.md
+    step_component_request(["Register component intake request<br/><sub>component-request</sub><br/><i>Make the request explicit before evaluation</i>"])
+    step_identity_and_maintenance["Verify component identity and maintenance posture<br/><sub>identity-and-maintenance</sub><br/><i>Know exactly what you are evaluating</i>"]
+    step_license_and_obligations["Analyze license obligations and redistribution constraints<br/><sub>license-and-obligations</sub><br/><i>Adoption must preserve downstream compliance</i>"]
+    step_security_and_provenance["Review security posture and provenance trust<br/><sub>security-and-provenance</sub><br/><i>Supply-chain trust must match deployment risk</i>"]
+    step_approval_and_registration{"Approve, reject, or constrain adoption<br/><sub>approval-and-registration</sub><br/><i>Approval carries obligations forward</i>"}
+    step_handoff_and_watch(["Hand off obligations and establish re-review triggers<br/><sub>handoff-and-watch</sub><br/><i>Approval must become operational practice</i>"])
+    step_component_request --> step_identity_and_maintenance
+    step_identity_and_maintenance --> step_license_and_obligations
+    step_license_and_obligations --> step_security_and_provenance
+    step_security_and_provenance --> step_approval_and_registration
+    step_approval_and_registration --> step_handoff_and_watch
+%% step-doc: component-request => processes/oss-intake-supply-chain-governance/steps/component-request.md
+%% step-artifact: component-request => intake-brief
+%% step-doc: identity-and-maintenance => processes/oss-intake-supply-chain-governance/steps/identity-and-maintenance.md
+%% step-artifact: identity-and-maintenance => sbom-manifest
+%% step-artifact: identity-and-maintenance => provenance-report
+%% step-doc: license-and-obligations => processes/oss-intake-supply-chain-governance/steps/license-and-obligations.md
+%% step-artifact: license-and-obligations => license-obligation-matrix
+%% step-artifact: license-and-obligations => sbom-manifest
+%% step-doc: security-and-provenance => processes/oss-intake-supply-chain-governance/steps/security-and-provenance.md
+%% step-artifact: security-and-provenance => security-review-note
+%% step-artifact: security-and-provenance => provenance-report
+%% step-doc: approval-and-registration => processes/oss-intake-supply-chain-governance/steps/approval-and-registration.md
+%% step-artifact: approval-and-registration => sbom-manifest
+%% step-artifact: approval-and-registration => release-readiness-report
+%% step-doc: handoff-and-watch => processes/oss-intake-supply-chain-governance/steps/handoff-and-watch.md
+%% step-artifact: handoff-and-watch => license-obligation-matrix
+%% step-artifact: handoff-and-watch => retrospective-improvement-log

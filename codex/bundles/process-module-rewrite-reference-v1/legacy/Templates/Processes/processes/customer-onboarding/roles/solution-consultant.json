@@ -1,0 +1,72 @@
+{
+  "Kind": "role-resource",
+  "Key": "solution-consultant",
+  "DisplayName": "Solution consultant",
+  "Scope": "local",
+  "ProcessKey": "customer-onboarding",
+  "Summary": "Configuration and fit-gap specialist for mapping customer needs to the delivered product capability.",
+  "Purpose": "Translate customer operating reality into a safe, supportable configuration and adoption path.",
+  "StaffingIntent": "A solution specialist who understands both the product’s capabilities and the customer’s working model.",
+  "PreferredExecutorKind": "person",
+  "PreferredProjectAssignmentRole": "TechnicalContact",
+  "IsRequired": true,
+  "AllowsFallback": true,
+  "RequiresExplicitApproval": false,
+  "DefaultAllocationPercent": 60,
+  "RoleTemplateSourceKey": "process-role-template/customer-onboarding/solution-consultant",
+  "RoleTemplateSnapshotName": "Solution consultant / template-pack v1",
+  "SnapshotSummary": "Configuration and fit-gap specialist for mapping customer needs to the delivered product capability.",
+  "SeniorityBand": "Senior solution consulting",
+  "MinimumYearsInPrimaryDiscipline": 5,
+  "MinimumYearsInSoftwareDelivery": 7,
+  "DomainTags": [
+    "configuration",
+    "fit-gap",
+    "customer-solutioning"
+  ],
+  "KnowledgeRequirements": [
+    "Knowledge of the product’s configuration model, constraints, extension points, and known limits.",
+    "Ability to identify fit-gap issues before they become late-stage surprises.",
+    "Understanding of customer process variation and what can or cannot be supported without custom delivery.",
+    "Ability to explain solution trade-offs in operational rather than purely technical language.",
+    "Knowledge of data, access, and environment prerequisites for onboarding success.",
+    "Ability to document configuration decisions so support and customer teams can reuse them."
+  ],
+  "ExperienceRequirements": [
+    "Has led customer workshops or configuration design for software onboarding.",
+    "Has identified unsupported customer assumptions early enough to change the plan.",
+    "Has produced fit-gap or configuration artifacts used in real implementation work.",
+    "Has collaborated with product and engineering on customer-specific constraints.",
+    "Has supported early-life use after onboarding to confirm the design held up."
+  ],
+  "DecisionRights": [
+    "Approve configuration baseline for the onboarding scope.",
+    "Escalate fit-gap issues that require product or custom-delivery decisions.",
+    "Reject customer requests that create unsupportable or unsafe configuration debt.",
+    "Define configuration evidence needed for go-live readiness."
+  ],
+  "OwnedArtifacts": [
+    "Configuration baseline",
+    "Fit-gap log",
+    "Environment prerequisite checklist"
+  ],
+  "CollaborationExpectations": [
+    "Collaborate with onboarding manager, product owner, and customer stakeholders.",
+    "Translate technical limits without hiding consequences.",
+    "Ensure support and success teams understand configured behavior and caveats.",
+    "Capture reusable patterns from repeated onboarding scenarios."
+  ],
+  "AntiPatterns": [
+    "Promising configurability the product does not truly have.",
+    "Keeping fit-gap issues informal until the cutover is near.",
+    "Producing configuration notes that only the consultant can understand.",
+    "Treating workarounds as equivalent to supported design."
+  ],
+  "FitnessEvidence": [
+    "Configuration artifacts reused successfully by delivery or support teams.",
+    "Fit-gap decisions documented with clear consequences.",
+    "Evidence of avoided rework because unsupported assumptions were surfaced early.",
+    "Customer or internal feedback that the consultant reduced ambiguity."
+  ],
+  "DocPath": "processes/customer-onboarding/roles/solution-consultant.md"
+}

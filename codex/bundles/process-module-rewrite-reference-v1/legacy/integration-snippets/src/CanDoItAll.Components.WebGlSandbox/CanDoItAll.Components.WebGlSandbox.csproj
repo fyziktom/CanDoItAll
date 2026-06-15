@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CanDoItAll.Components.WebGlSandbox</AssemblyName>
+    <RootNamespace>CanDoItAll.Components.WebGlSandbox</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+  </ItemGroup>
+
+</Project>

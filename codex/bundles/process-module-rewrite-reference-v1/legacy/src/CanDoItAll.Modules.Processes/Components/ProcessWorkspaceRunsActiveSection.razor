@@ -1,0 +1,125 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SectionCard Title="Live process execution"
+             Description="See which process runs are active right now and which agents are currently attached to them.">
+    @if (!Presenter.HasSelectedProcess)
+    {
+        <EmptyState Eyebrow="No process selected"
+                    Title="Select a process definition first"
+                    Description="The live execution panel activates once the workspace is focused on a specific process definition." />
+    }
+    else if (Presenter.ActiveRunSummaries.Count == 0)
+    {
+        @if (Presenter.Runs.Any(run => run.Status == ProcessRunStatus.Active))
+        {
+            <EmptyState Eyebrow="Execution starting"
+                        Title="The process run is active and waiting for live execution telemetry"
+                        Description="The launch completed and runtime steps are advancing, but no active AgentFramework execution is attached right now or the run is between step handoffs." />
+        }
+        else
+        {
+            <EmptyState Eyebrow="No active runs"
+                        Title="No process runs are executing right now"
+                        Description="The selected process has no active AgentFramework execution at the moment." />
+        }
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium">
+            @foreach (var summary in Presenter.ActiveRunSummaries)
+            {
+                <SurfaceCard @key="summary.RunId"
+                             Soft="true">
+                    <Split Gap="LayoutGap.Medium">
+                        <div>
+                            <p class="cda-eyebrow">Process run</p>
+                            <h3 class="mt-1 text-base font-semibold text-slate-950">@summary.RunName</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Updated @summary.UpdatedAtUtc.ToLocalTime().ToString("g")
+                            </p>
+                            @if (!string.IsNullOrWhiteSpace(summary.HealthSummary))
+                            {
+                                <p class="mt-2 text-sm leading-6 text-slate-600">@summary.HealthSummary</p>
+                            }
+                        </div>
+                        <Cluster Gap="LayoutGap.Small">
+                            <StatusBadge Tone="@ResolveRunTone(summary.RunStatus)"
+                                         Text="@summary.RunStatus.ToString()" />
+                            <StatusBadge Tone="info"
+                                         Text="@($"{summary.ActiveExecutionCount} active agents")" />
+                            @if (summary.PendingApprovalCount > 0)
+                            {
+                                <StatusBadge Tone="warning"
+                                             Text="@($"{summary.PendingApprovalCount} approvals waiting")" />
+                            }
+                            @if (summary.PendingOutboxCount > 0)
+                            {
+                                <StatusBadge Tone="warning"
+                                             Text="@($"{summary.PendingOutboxCount} automation pending")" />
+                            }
+                            @if (summary.DeadLetteredOutboxCount > 0)
+                            {
+                                <StatusBadge Tone="danger"
+                                             Text="@($"{summary.DeadLetteredOutboxCount} dead-lettered")" />
+                            }
+                            @if (summary.BlockedOrFailedStepCount > 0)
+                            {
+                                <StatusBadge Tone="danger"
+                                             Text="@($"{summary.BlockedOrFailedStepCount} blocked or failed")" />
+                            }
+                        </Cluster>
+                    </Split>
+
+                    @if (summary.Agents.Count > 0)
+                    {
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="mt-4">
+                            @foreach (var agent in summary.Agents)
+                            {
+                                <SurfaceCard @key="agent.ExecutionRunId"
+                                             Soft="true">
+                                    <Split Gap="LayoutGap.Small">
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-950">@agent.AgentName</p>
+                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                                                @agent.StepTitle
+                                                @if (!string.IsNullOrWhiteSpace(agent.AgentRoleTitle))
+                                                {
+                                                    <span> / @agent.AgentRoleTitle</span>
+                                                }
+                                            </p>
+                                        </div>
+                                        <Cluster Gap="LayoutGap.Small">
+                                            <StatusBadge Tone="@agent.StatusTone"
+                                                         Text="@agent.StatusBadgeText" />
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@($"updated {agent.UpdatedAtUtc.ToLocalTime():g}")" />
+                                        </Cluster>
+                                    </Split>
+                                </SurfaceCard>
+                            }
+                        </Stack>
+                    }
+                </SurfaceCard>
+            }
+        </Stack>
+    }
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+
+    private static string ResolveRunTone(ProcessRunStatus status)
+    {
+        return status switch
+        {
+            ProcessRunStatus.Active => "info",
+            ProcessRunStatus.Blocked => "warning",
+            ProcessRunStatus.Completed => "mint",
+            ProcessRunStatus.Cancelled => "neutral",
+            ProcessRunStatus.Failed => "danger",
+            _ => "neutral"
+        };
+    }
+}

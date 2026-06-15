@@ -1,0 +1,74 @@
+{
+  "Kind": "role-resource",
+  "Key": "lead-engineer",
+  "DisplayName": "Lead engineer",
+  "Scope": "local",
+  "ProcessKey": "software-delivery",
+  "Summary": "Implementation owner for code, tests, migration notes, and reviewable delivery proof.",
+  "Purpose": "Own the change set and keep implementation evidence aligned with the approved architecture and release boundary.",
+  "StaffingIntent": "Build-capable engineering owner for the working change set and adjacent test evidence.",
+  "PreferredExecutorKind": "person-or-agent",
+  "PreferredProjectAssignmentRole": "TeamMember",
+  "IsRequired": true,
+  "AllowsFallback": true,
+  "RequiresExplicitApproval": false,
+  "DefaultAllocationPercent": 100,
+  "RoleTemplateSourceKey": "process-role-template/software-engineer",
+  "RoleTemplateSnapshotName": "Software engineer / template-pack v1",
+  "SnapshotSummary": "Implementation owner for code, tests, migration notes, and executable delivery proof.",
+  "SeniorityBand": "Senior software engineer or technical lead",
+  "MinimumYearsInPrimaryDiscipline": 6,
+  "MinimumYearsInSoftwareDelivery": 8,
+  "DomainTags": [
+    "software-delivery",
+    "implementation",
+    "migrations",
+    "reviewability"
+  ],
+  "KnowledgeRequirements": [
+    "Solid command of the target codebase language, architecture conventions, and test approach.",
+    "Understanding of version control, code review, CI pipelines, and release hygiene.",
+    "Ability to interpret architecture guidance and convert it into implementable tasks without scope drift.",
+    "Knowledge of defect prevention techniques, observability basics, and safe rollback-friendly change packaging.",
+    "Ability to produce evidence that links what changed to why it is safe enough to proceed.",
+    "Understanding of secure coding and dependency hygiene expectations for the stack in use."
+  ],
+  "ExperienceRequirements": [
+    "Has delivered production code with automated test coverage and peer review evidence.",
+    "Has decomposed medium-complexity work into implementable slices with clear review boundaries.",
+    "Has debugged at least one production issue or high-severity defect linked to code they worked on.",
+    "Has participated in release or deployment readiness discussions and adjusted code accordingly.",
+    "Has collaborated with QA and architecture reviewers to repair inadequate evidence or design drift."
+  ],
+  "DecisionRights": [
+    "Choose implementation approach within approved architectural guardrails.",
+    "Stop and escalate when required inputs, access, or environment assumptions are missing.",
+    "Recommend technical debt acceptance or rejection when delivery pressure appears.",
+    "Refuse AI-generated output that cannot be validated to the required standard."
+  ],
+  "OwnedArtifacts": [
+    "Code change set",
+    "Implementation notes",
+    "Test evidence pack",
+    "Rollback-aware deployment notes"
+  ],
+  "CollaborationExpectations": [
+    "Clarify ambiguity with product and architecture roles before making silent assumptions.",
+    "Provide QA and reviewers with concrete evidence, not only assertions of completion.",
+    "Document trade-offs when delivery timing forces constrained implementation choices.",
+    "Support incident and hotfix response for changes the engineer helped deliver."
+  ],
+  "AntiPatterns": [
+    "Treating passing local tests as sufficient release evidence.",
+    "Shipping code that depends on tacit environment knowledge no one else has.",
+    "Hiding uncertainty to appear fast.",
+    "Accepting AI-generated code without line-level comprehension and verification."
+  ],
+  "FitnessEvidence": [
+    "Merged changes with traceable test and review evidence.",
+    "Examples of defect analysis or incident participation showing engineering accountability.",
+    "Consistent adherence to repository conventions and delivery guardrails.",
+    "Code reviews from peers indicating clarity, maintainability, and risk awareness."
+  ],
+  "DocPath": "processes/software-delivery/roles/lead-engineer.md"
+}

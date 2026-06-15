@@ -2,9 +2,9 @@
 
 ## Status
 
-Prepared architecture proposal and future implementation roadmap, third iteration. This bundle is architecture/planning-only. It does not implement the new Process module, execute the rewrite, add runtime code, add migrations, or rewrite product tests.
+Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 is complete and archived the legacy Process implementation as reference evidence; active rewrite/removal work has not yet started.
 
-Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages prepared for later execution after user approval. They are not executed in v3. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
+Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages executed in dependency order after user approval. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
 
 ## Objective
 
@@ -70,9 +70,9 @@ The bundle intentionally does not run product tests because no product behavior 
 ## Validation Summary
 
 - Bundle preparation status: Prepared architecture bundle v3 with future subbundle roadmap.
-- Bundle readiness gate: Prepared-stage validator must pass before handoff.
-- Execution status: Architecture/planning only; rewrite implementation intentionally not started.
-- Subbundle gate review: SB01-SB28 are prepared for later execution after user approval; none were executed in v3.
+- Bundle readiness gate: Prepared-stage validator passed before execution.
+- Execution status: SB01 reference archive completed; SB02 active removal/skeleton work is next.
+- Subbundle gate review: SB01 closure proof is recorded in `proof/SB01/`; SB02-SB28 remain pending execution.
 - Final closure gate: Future implementation closure depends on the Phase 0 and project rebuild gates in `plan/`.
 - Browser validation analytics: Current UI was inspected for story-map evidence only; no browser-facing product surface changed.
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.

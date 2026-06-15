@@ -1,0 +1,69 @@
+@namespace CanDoItAll.Modules.Processes
+
+<PanelCard Soft="true"
+           data-testid="processes-step-role-assignment-card">
+    <Stack GapScale="LayoutGap.Medium">
+        <Split Gap="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Role binding</p>
+                <h4 class="text-base font-semibold text-slate-950">@SelectedRoleName</h4>
+            </Stack>
+            <Button Text="Remove"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="Remove" />
+        </Split>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="4">
+            <FormField Text="Role">
+                <InputSelect @bind-Value="Model.RoleRequirementId"
+                             class="cda-input">
+                    <option value="">Select role</option>
+                    @foreach (var role in AvailableRoles.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <option value="@role.Id">@role.DisplayName</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Responsibility">
+                <InputSelect @bind-Value="Model.ResponsibilityKind"
+                             class="cda-input">
+                    @foreach (var responsibilityKind in Enum.GetValues<ProcessResponsibilityKind>())
+                    {
+                        <option value="@responsibilityKind">@responsibilityKind</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Fallback order">
+                <InputNumber @bind-Value="Model.FallbackOrder"
+                             class="cda-input" />
+            </FormField>
+            <FormField Text="Requirement">
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <InputCheckbox @bind-Value="Model.IsRequired" />
+                    Required
+                </label>
+            </FormField>
+        </Grid>
+
+        <FormField Text="Rebind policy summary">
+            <InputTextArea @bind-Value="Model.RebindPolicySummary"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+    </Stack>
+</PanelCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessStepRoleRequirementEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<ProcessRoleEditorModel> AvailableRoles { get; set; } = [];
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+
+    private string SelectedRoleName
+        => AvailableRoles.FirstOrDefault(item => item.Id == Model.RoleRequirementId)?.DisplayName ?? "Unbound role";
+}

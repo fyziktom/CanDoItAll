@@ -1,0 +1,92 @@
+@namespace CanDoItAll.Modules.Processes
+
+<CanvasWorkbenchStage Eyebrow="Runtime canvas"
+                      Title="@(Presenter.SelectedRun?.Name ?? "Runtime map")"
+                      Description=""
+                      HelpText="Inspect the live runtime path, keep the selection detail window in sync, and drive explicit runtime actions from the same canvas rhythm used in structure workbench flows.">
+    <Canvas>
+        @if (Presenter.SelectedRun is null)
+        {
+            <SurfaceCard Soft="true">
+                <p class="text-sm text-slate-600">Select a run to inspect the runtime canvas before updating status, branch outcomes, or runtime evidence.</p>
+            </SurfaceCard>
+        }
+        else if (Presenter.CanvasSurface is null)
+        {
+            <SurfaceCard Soft="true">
+                <p class="text-sm text-slate-600">Runtime canvas data is loading.</p>
+            </SurfaceCard>
+        }
+        else
+        {
+            <CanvasWorkbench Surface="Presenter.CanvasSurface"
+                             @ref="workbenchRef"
+                             StateChanged="Presenter.HandleCanvasStateChangedAsync"
+                             SelectionChanged="Presenter.HandleCanvasSelectionChangedAsync"
+                             ContextActionRequested="Presenter.HandleCanvasContextActionAsync"
+                             NodeOpened="Presenter.HandleCanvasNodeOpenedAsync">
+                <ToolbarLeftContent>
+                    <ProcessCanvasToolbarActions SelectionWindowVisible="@Presenter.CanvasSelectionWindowState.IsVisible"
+                                                 ShowAuthoringTools="false"
+                                                 ShowToolbox="false"
+                                                 SelectionTestId="processes-runtime-toggle-selection"
+                                                 ToggleSelectionWindow="Presenter.ToggleCanvasSelectionWindowAsync" />
+                </ToolbarLeftContent>
+                <OverlayContent>
+                    @if (Presenter.CanvasSelectionWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@Presenter.CanvasSelectionWindowId"
+                                              TestId="processes-runtime-selection-window"
+                                              AriaLabel="Process runtime selection"
+                                              Kicker="Runtime selection"
+                                              Title="@Presenter.CanvasSelectionWindowTitle"
+                                              Summary="@Presenter.CanvasSelectionWindowSummary"
+                                              DefaultPlacement="top-right"
+                                              DefaultWidth="360"
+                                              DefaultHeight="360"
+                                              MinWidth="320"
+                                              MinHeight="220"
+                                              MaxWidth="520"
+                                              State="@Presenter.CanvasSelectionWindowState"
+                                              StateChanged="Presenter.HandleCanvasSelectionWindowStateChangedAsync">
+                            <ProcessCanvasSelectionPanel IsRuntime="true"
+                                                         RuntimeStep="@Presenter.SelectedCanvasRuntimeStep"
+                                                         SelectedRuntimeBranchOutcomeId="@Presenter.SelectedCanvasRuntimeBranchOutcomeId"
+                                                         SelectedRuntimeBranchOutcomeIdChanged="Presenter.UpdateSelectedCanvasRuntimeBranchOutcomeAsync"
+                                                         ClearSelection="Presenter.ClearCanvasSelectionAsync"
+                                                         OpenActionDialog="Presenter.OpenCanvasActionDialogAsync"
+                                                         StartRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.InProgress))"
+                                                         CompleteRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Completed))"
+                                                         BlockRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Blocked))"
+                                                         RequestRuntimeApproval="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.WaitingApproval))"
+                                                         RefuseRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Refused))"
+                                                         FailRuntimeStep="@(() => Presenter.ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Failed))"
+                                                         RecordRuntimeArtifact="Presenter.PrepareSelectedRuntimeArtifactCaptureAsync"
+                                                         RerunRuntimeStep="@(() => Presenter.SelectedCanvasRuntimeStep is null ? Task.CompletedTask : Presenter.RerunAgentStepAsync(Presenter.SelectedCanvasRuntimeStep.Id))" />
+                        </CanvasFloatingWindow>
+                    }
+                </OverlayContent>
+            </CanvasWorkbench>
+        }
+    </Canvas>
+</CanvasWorkbenchStage>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+
+    private CanvasWorkbench? workbenchRef;
+
+    private CanvasWorkbench? reportedWorkbenchRef;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (ReferenceEquals(workbenchRef, reportedWorkbenchRef))
+        {
+            return;
+        }
+
+        reportedWorkbenchRef = workbenchRef;
+        Presenter.CaptureWorkbench(workbenchRef);
+    }
+}
