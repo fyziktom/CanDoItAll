@@ -21,9 +21,9 @@ Rebuild the Process definition catalog area: counters, global/project scope tree
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor`
 - `repo://Templates/Processes/manifest.json`
-- `repo://tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/ui-current-state/processes-page-workspace-1600x1000.png`
 
 ## Target Projects / Files

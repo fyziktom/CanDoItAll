@@ -21,8 +21,8 @@ Close project-scoped Process integration, project-structure process actions, typ
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor`
-- `repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
 - `repo://Templates/Processes/seed-catalog/baseline-scenarios.json`
 - `repo://Templates/Processes/seed-catalog/live-run-profiles.json`
 - `repo://codex/bundles/process-module-architecture-v3/analysis/09-final-e2e-project-structure-source-scenarios.md`
@@ -30,8 +30,8 @@ Close project-scoped Process integration, project-structure process actions, typ
 - `repo://codex/bundles/process-module-architecture-v3/validation/07-final-e2e-source-scenario-validation.md`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`
-- `repo://tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectScopedProcessLaunch.cs`
-- `repo://tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectScopedProcessLaunch.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs`
 
 ## Target Projects / Files
 

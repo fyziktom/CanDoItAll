@@ -31,16 +31,16 @@ Manager-driven recovery, branch routing, and subprocess coordination are central
 - `repo://codex/bundles/process-module-architecture-v3/architecture/07-artifact-error-recovery-and-subprocess-model.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/13-branch-switch-and-loop-contract.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/14-manager-runtime-and-control-loop.md`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessBranchOutcomeRouting.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Canvas/ProcessCanvasBranching.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessBranchOutcomeRouting.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Canvas/ProcessCanvasBranching.cs`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessBranchOutcomeRouting.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Canvas/ProcessCanvasBranching.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Automation/Recovery/AgentRecoveryModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessBranchOutcomeRouting.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Canvas/ProcessCanvasBranching.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Automation/Recovery/AgentRecoveryModels.cs`
 - SB01 recovery/branch/subprocess archive.
 
 ## Prerequisites

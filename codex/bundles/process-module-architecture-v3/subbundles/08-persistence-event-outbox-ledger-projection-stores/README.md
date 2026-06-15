@@ -28,15 +28,15 @@ Runtime must stay persistence-implementation-neutral, but durable reliability re
 
 - `repo://codex/bundles/process-module-architecture-v3/architecture/12-runtime-persistence-event-store-and-outbox.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/08-monitoring-events-snapshots-and-ui-projections.md`
-- `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
 - SB01 persistence/archive inventory.
 
 ## Prerequisites

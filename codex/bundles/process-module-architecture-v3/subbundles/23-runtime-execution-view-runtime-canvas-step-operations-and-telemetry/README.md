@@ -21,10 +21,10 @@ Rebuild active execution views, runtime canvas, runtime step operations, subproc
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsCanvasSection.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessRuntimeOperatorReadModelTests.cs`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsCanvasSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessRuntimeOperatorReadModelTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs`
 
 ## Target Projects / Files
 

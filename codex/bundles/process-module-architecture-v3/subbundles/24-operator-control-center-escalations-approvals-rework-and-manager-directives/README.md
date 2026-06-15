@@ -22,10 +22,10 @@ Rebuild the operator control center: escalations, approvals, dead letters, timel
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsOperatorConsoleSection.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/Observation`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessLiveEscalationActionPolicyTests.cs`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsOperatorConsoleSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/Observation`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessLiveEscalationActionPolicyTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs`
 
 ## Target Projects / Files
 

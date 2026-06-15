@@ -28,15 +28,15 @@ The UI must preserve current live/history direction without using query-built ru
 
 - `repo://codex/bundles/process-module-architecture-v3/architecture/08-monitoring-events-snapshots-and-ui-projections.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/15-ui-ux-projection-contracts-and-reuse-plan.md`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationService.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationService.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationService.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationCache.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationService.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor`
 - SB01 observation/UI archive.
 
 ## Prerequisites

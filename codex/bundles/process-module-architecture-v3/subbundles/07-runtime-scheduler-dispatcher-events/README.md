@@ -28,13 +28,13 @@ Runtime and dispatcher were the old module's core weakness. This bundle makes st
 
 - `repo://codex/bundles/process-module-architecture-v3/architecture/05-runtime-dispatcher-and-state-machines.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/12-runtime-persistence-event-store-and-outbox.md`
-- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunTransitions.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunTransitions.cs`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunTransitions.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunTransitions.cs`
 - SB01 dispatch/runtime archive.
 
 ## Prerequisites

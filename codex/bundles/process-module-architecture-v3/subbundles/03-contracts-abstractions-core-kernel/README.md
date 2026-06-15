@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Executed on 2026-06-15. Closure proof is recorded under `proof/SB03`.
 
 ## Objective
 
@@ -31,13 +31,13 @@ Everything later depends on generic contracts staying clean. This bundle prevent
 - `repo://codex/bundles/process-module-architecture-v3/architecture/03-core-model-and-invariants.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/11-project-boundary-and-dependency-map.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/13-branch-switch-and-loop-contract.md`
-- `repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessCoreArtifactModels.cs`
-- `repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactExpectationMatcher.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Core/Artifacts/ProcessCoreArtifactModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactExpectationMatcher.cs`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessCoreArtifactModels.cs`
-- `repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactExpectationMatcher.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Core/Artifacts/ProcessCoreArtifactModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactExpectationMatcher.cs`
 - SB01 reference archive for old core/routing/subprocess rules.
 
 ## Prerequisites
@@ -145,11 +145,11 @@ Everything later depends on generic contracts staying clean. This bundle prevent
 
 ## Acceptance Checklist
 
-- [ ] Contracts compile.
-- [ ] Core compiles.
-- [ ] Pure tests pass.
-- [ ] Dependency tests pass.
-- [ ] Domain leak tests pass.
+- [x] Contracts compile.
+- [x] Core compiles.
+- [x] Pure tests pass.
+- [x] Dependency tests pass.
+- [x] Domain leak tests pass.
 
 ## Proof Required
 

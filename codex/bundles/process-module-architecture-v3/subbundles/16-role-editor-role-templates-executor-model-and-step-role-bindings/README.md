@@ -21,9 +21,9 @@ Rebuild role authoring, role template application, executor preferences, fallbac
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessRoleEditorForm.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepRoleAssignmentEditor.razor`
-- `repo://tests/CanDoItAll.Tests.Components/ProcessRoleEditorFormTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessRoleEditorForm.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessStepRoleAssignmentEditor.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Components/ProcessRoleEditorFormTests.cs`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/09-template-git-versioning-and-migrations.md`
 
 ## Target Projects / Files

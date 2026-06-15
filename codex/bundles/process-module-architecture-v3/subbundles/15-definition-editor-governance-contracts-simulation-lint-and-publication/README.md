@@ -21,9 +21,9 @@ Rebuild the definition editor for identity, governance, contracts, simulation re
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessDefinitionForm.razor`
-- `repo://tests/CanDoItAll.Tests.Components/ProcessDefinitionFormTests.cs`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessDefinitionForm.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Components/ProcessDefinitionFormTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/03-core-model-and-invariants.md`
 
 ## Target Projects / Files

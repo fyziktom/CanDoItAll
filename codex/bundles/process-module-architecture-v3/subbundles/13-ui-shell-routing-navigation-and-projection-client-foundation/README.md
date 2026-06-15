@@ -22,9 +22,9 @@ Rebuild the Process UI shell over projection/application services, preserving th
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor`
 - `repo://codex/bundles/process-module-architecture-v3/analysis/06-current-implementation-user-story-map.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/15-ui-ux-projection-contracts-and-reuse-plan.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/18-user-story-coverage-model.md`

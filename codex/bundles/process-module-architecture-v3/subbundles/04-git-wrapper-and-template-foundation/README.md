@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Executed on 2026-06-15. Closure proof is recorded under `proof/SB04`.
 
 ## Objective
 
@@ -29,12 +29,12 @@ Templates, instructions, skills, workflows, and process definitions need version
 - `repo://codex/bundles/process-module-architecture-v3/architecture/09-template-git-versioning-and-migrations.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/11-project-boundary-and-dependency-map.md`
 - `repo://Templates/Processes`
-- `repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
 
 ## Source Evidence To Use
 
 - `repo://Templates/Processes`
-- `repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
 - SB01 template inventory.
 
 ## Prerequisites
@@ -146,11 +146,11 @@ Templates, instructions, skills, workflows, and process definitions need version
 
 ## Acceptance Checklist
 
-- [ ] Git wrapper tests pass.
-- [ ] Template schema tests pass.
-- [ ] Migration chain tests pass.
-- [ ] Conflict model exists.
-- [ ] Projection hash metadata exists.
+- [x] Git wrapper tests pass.
+- [x] Template schema tests pass.
+- [x] Migration chain tests pass.
+- [x] Conflict model exists.
+- [x] Projection hash metadata exists.
 
 ## Proof Required
 

@@ -30,12 +30,12 @@ The current driver layer is mostly verification-oriented. The new runtime needs 
 - `repo://codex/bundles/process-module-architecture-v3/architecture/11-project-boundary-and-dependency-map.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/16-execution-adapters-and-integration-boundaries.md`
 - `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
-- `repo://src/CanDoItAll.Processes.Drivers.VerificationGateway`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Drivers.VerificationGateway`
 
 ## Source Evidence To Use
 
 - `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
-- `repo://src/CanDoItAll.Processes.Drivers.VerificationGateway`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Drivers.VerificationGateway`
 - `repo://src/CanDoItAll.Processes.Drivers.*`
 - SB01 driver archive inventory.
 

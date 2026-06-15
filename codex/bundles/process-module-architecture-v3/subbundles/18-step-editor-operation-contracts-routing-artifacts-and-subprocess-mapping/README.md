@@ -21,11 +21,11 @@ Rebuild step authoring for basic info, execution strategy inputs, operation cont
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepEditorForm.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessArtifactExpectationEditor.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepBranchOutcomeEditor.razor`
-- `repo://tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessOperationContract.cs`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessStepEditorForm.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessArtifactExpectationEditor.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessStepBranchOutcomeEditor.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessOperationContract.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs`
 
 ## Target Projects / Files
 

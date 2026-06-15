@@ -21,9 +21,9 @@ Rebuild the template library dialog for process, role, and artifact templates wi
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryDialog.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryDialog.razor`
 - `repo://Templates/Processes/manifest.json`
-- `repo://tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessManagementBundle.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessManagementBundle.cs`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/ui-current-state/processes-template-library-dialog-1600x1000.png`
 
 ## Target Projects / Files

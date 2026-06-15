@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Executed on 2026-06-15. Closure proof is recorded under `proof/SB02`.
 
 ## Objective
 
@@ -32,14 +32,14 @@ This bundle prevents Codex from building a new architecture on top of old runtim
 - `repo://codex/bundles/process-module-architecture-v3/plan/02-phase-0-reference-archive-and-removal.md`
 - `repo://codex/bundles/process-module-architecture-v3/plan/03-project-by-project-rebuild-plan.md`
 - `repo://CanDoItAll.slnx`
-- `repo://src/CanDoItAll.Modules.Processes`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes`
 - `repo://tests`
 
 ## Source Evidence To Use
 
 - `repo://CanDoItAll.slnx`
-- `repo://src/CanDoItAll.Modules.Processes`
-- `repo://src/CanDoItAll.Processes.Core`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Core`
 - `repo://src/CanDoItAll.Processes.Contracts`
 - `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
 - `repo://tests`
@@ -161,11 +161,11 @@ Search for old dispatcher/runtime symbols listed in `plan/05-review-checkpoints-
 
 ## Acceptance Checklist
 
-- [ ] Old active Process source removed/quarantined.
-- [ ] Old tests removed/quarantined or explicitly marked legacy reference.
-- [ ] Skeleton projects created.
-- [ ] Build restored through skeleton boundaries.
-- [ ] Boundary, vocabulary, and old-symbol tests exist.
+- [x] Old active Process source removed/quarantined.
+- [x] Old tests removed/quarantined or explicitly marked legacy reference.
+- [x] Skeleton projects created.
+- [x] Build restored through skeleton boundaries.
+- [x] Boundary, vocabulary, and old-symbol tests exist.
 
 ## Proof Required
 

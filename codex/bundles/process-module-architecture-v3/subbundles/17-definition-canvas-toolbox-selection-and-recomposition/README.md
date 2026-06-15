@@ -21,10 +21,10 @@ Rebuild the definition canvas, toolbox, node/port rendering, selection model, la
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Canvas`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceStepsTab.razor`
-- `repo://tests/CanDoItAll.Tests.Components/ProcessCanvasCatalogTests.cs`
-- `repo://tests/CanDoItAll.Tests.Components/ProcessCanvasRecompositionServiceTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Canvas`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceStepsTab.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Components/ProcessCanvasCatalogTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Components/ProcessCanvasRecompositionServiceTests.cs`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/ui-current-state/processes-steps-tab-1600x1000.png`
 
 ## Target Projects / Files

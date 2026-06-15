@@ -21,12 +21,12 @@ Rebuild evidence and coordination views: artifact obligation ledger, artifact re
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsArtifactsSection.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsAssignmentsSection.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsMessagingSection.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessArtifactStatusProjectionServiceTests.cs`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessTranscriptVerificationReadOnlyAdapterTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsArtifactsSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsAssignmentsSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsMessagingSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessArtifactStatusProjectionServiceTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessTranscriptVerificationReadOnlyAdapterTests.cs`
 
 ## Target Projects / Files
 

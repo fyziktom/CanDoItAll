@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB05 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, Git/template foundations, and driver abstraction contracts are implemented and validated. SB06 is next.
+Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB06 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, Git/template foundations, driver abstraction contracts, and immutable instance builder/compiler contracts are implemented and validated. SB07 is next.
 
 Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages executed in dependency order after user approval. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
 
@@ -65,14 +65,14 @@ This bundle was grounded in the current repo, v2 bundle, and v3 planning instruc
 - `codex/bundles/process_module_architecture_v3_subbundle_planning_instructions`
 - current running Process UI at `http://localhost:5032/processes` and `http://localhost:5032/processes/live`
 
-The original preparation pass intentionally did not run product tests because no product behavior was changed. Execution proof for SB01-SB05 is recorded under [proof/](proof/), including focused unit tests, solution builds, static scans, and CodeAnalytics MCP snapshots where required.
+The original preparation pass intentionally did not run product tests because no product behavior was changed. Execution proof for SB01-SB06 is recorded under [proof/](proof/), including focused unit tests, solution builds, static scans, and CodeAnalytics MCP snapshots where required.
 
 ## Validation Summary
 
 - Bundle preparation status: Prepared architecture bundle v3 with future subbundle roadmap.
 - Bundle readiness gate: Prepared-stage validator passed before execution.
-- Execution status: SB01-SB05 completed in dependency order.
-- Subbundle gate review: SB01-SB05 closure proof is recorded in `proof/SB01/` through `proof/SB05/`; SB06-SB28 remain pending execution.
+- Execution status: SB01-SB06 completed in dependency order.
+- Subbundle gate review: SB01-SB06 closure proof is recorded in `proof/SB01/` through `proof/SB06/`; SB07-SB28 remain pending execution.
 - Final closure gate: Future implementation closure depends on the Phase 0 and project rebuild gates in `plan/`.
 - Browser validation analytics: Current UI was inspected for story-map evidence only; no browser-facing product surface changed.
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.
@@ -80,4 +80,4 @@ The original preparation pass intentionally did not run product tests because no
 - The performance guardrail review was added using the `analyzing-dotnet-performance` skill against current Process code signals and translated into architecture constraints for future implementation.
 - Role candidate readiness was expanded so launch planning can show missing tools/rights and block launch execution until required readiness blockers are resolved or explicitly overridden by policy.
 - The `TetrisGame` project structure from the running instance on port `5032` was captured as final E2E source evidence, with three additional app scenarios required to prove the implementation remains generic. A draft JSON scenario-source pack is stored at `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json` for future API-loading implementation.
-- Product tests were not run because this task changes documentation and `.gitignore` only.
+- Prepared-stage product tests were not run because that pass changed documentation and `.gitignore` only; execution proof now records product builds and tests per completed subbundle.

@@ -31,14 +31,14 @@ Current templates and historical runs are valuable. They must not be deleted or 
 - `repo://codex/bundles/process-module-architecture-v3/architecture/09-template-git-versioning-and-migrations.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/17-runtime-history-migration-and-readonly-compatibility.md`
 - `repo://Templates/Processes`
-- `repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
 
 ## Source Evidence To Use
 
 - `repo://Templates/Processes`
-- `repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
 - SB01 template/runtime archive inventory.
 
 ## Prerequisites

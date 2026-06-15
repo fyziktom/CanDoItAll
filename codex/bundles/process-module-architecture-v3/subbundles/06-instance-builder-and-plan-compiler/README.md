@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Executed on 2026-06-15. Closure proof is recorded under `proof/SB06`.
 
 ## Objective
 
@@ -31,13 +31,13 @@ Runtime reliability depends on explicit composition. If the builder does not pro
 - `repo://codex/bundles/process-module-architecture-v3/architecture/04-builder-and-instance-composition.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/11-project-boundary-and-dependency-map.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/13-branch-switch-and-loop-contract.md`
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessDefinitionEntities.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessDefinitionEntities.cs`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessDefinitionEntities.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessDefinitionEntities.cs`
 - SB01 archive for run start/subprocess validation concepts.
 
 ## Prerequisites
@@ -153,10 +153,10 @@ Runtime reliability depends on explicit composition. If the builder does not pro
 
 ## Acceptance Checklist
 
-- [ ] Builder pipeline implemented.
-- [ ] Strategy bindings persisted in plan.
-- [ ] Artifact, branch, subprocess, manager, monitoring, and security plan sections exist.
-- [ ] Golden and negative tests pass.
+- [x] Builder pipeline implemented.
+- [x] Strategy bindings persisted in plan.
+- [x] Artifact, branch, subprocess, manager, monitoring, and security plan sections exist.
+- [x] Golden and negative tests pass.
 
 ## Proof Required
 

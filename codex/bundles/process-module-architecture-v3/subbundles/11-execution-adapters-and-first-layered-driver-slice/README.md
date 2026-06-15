@@ -29,15 +29,15 @@ The architecture must support real execution without leaking adapter-specific AP
 
 - `repo://codex/bundles/process-module-architecture-v3/architecture/16-execution-adapters-and-integration-boundaries.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/06-driver-strategy-and-manager-model.md`
-- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationExecutionClient.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs`
-- `repo://src/CanDoItAll.Modules.Processes/ProjectStructure/ProcessProjectStructureContext.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationExecutionClient.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/ProjectStructure/ProcessProjectStructureContext.cs`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationExecutionClient.cs`
-- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs`
-- `repo://src/CanDoItAll.Modules.Processes/ProjectStructure/ProcessProjectStructureContext.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationExecutionClient.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/ProjectStructure/ProcessProjectStructureContext.cs`
 - SB01 adapter/dispatch archive.
 
 ## Prerequisites

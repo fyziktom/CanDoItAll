@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB05 are complete and validated. SB06 is the next dependency-ordered implementation package.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB06 are complete and validated. SB07 is the next dependency-ordered implementation package.
 
 ## Changes Made In This Task
 
@@ -27,6 +27,8 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 - Executed SB03 generic core/contracts: strongly typed process identifiers, graph validation, artifact/branch/runtime-event/state-transition contracts, loop fingerprints, and focused invariant tests were added.
 - Executed SB04 Git/template foundation: typed Git wrapper, canonical template JSON documents, hashing, migrations, local/global merge conflict detection, and source-generated template serialization tests were added.
 - Executed SB05 driver abstractions: driver descriptors/packages, capability matching, conflict/dependency handling, strategy factory contracts, branch/recovery/resupply/manager/template contribution ports, result envelopes, and contract tests were added.
+- Executed SB06 instance builder/compiler: immutable compile requests, plan model, pipeline validation, recursive subprocess planning, strategy binding snapshots, artifact/branch/manager/monitoring/security sections, semantic hashing, persistence handoff port, and golden/negative tests were added.
+- Repaired future subbundle source-evidence references so removed legacy Process paths resolve through the SB01 archive while active non-Process test references remain active.
 
 ## Repository Evidence
 
@@ -49,7 +51,8 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | SB03 Core Contracts | Passed: SB02 boundary projects available | Passed: unit build, focused core/boundary tests, domain vocabulary scans, forbidden dependency scans, and CodeAnalytics snapshot `snap-20260615182651-091726aa` recorded | SB04/SB05 dependency readiness checked | Completed | `proof/SB03/manifest.md`, `proof/SB03/semantic-invariants.md` |
 | SB04 Git And Template Foundation | Passed: SB03 core contracts available | Passed: unit build, solution build, focused tests, Git safety review, boundary scans, and CodeAnalytics snapshot `snap-20260615183713-efe198df` recorded | SB05/SB06 template and Git prerequisites checked | Completed | `proof/SB04/manifest.md`, `proof/SB04/semantic-invariants.md`, `proof/SB04/git-safety-review.md` |
 | SB05 Driver Abstractions | Passed: SB03 core contracts and SB04 template/Git foundation available | Passed: unit build, solution build, 32 focused tests, domain opacity scan, dependency scan, concrete-driver-name scan, and CodeAnalytics snapshot `snap-20260615184506-be39fc7c` recorded | SB06 builder prerequisites checked | Completed | `proof/SB05/manifest.md`, `proof/SB05/semantic-invariants.md` |
-| SB06-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB05. |
+| SB06 Instance Builder And Immutable Plan Compiler | Passed: SB04 template/Git foundation and SB05 driver abstractions available | Passed: unit build, solution build, 40 focused tests, builder dependency scans, domain opacity scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615191140-946f6f71` recorded | SB07 runtime plan-input prerequisites checked | Completed | `proof/SB06/manifest.md`, `proof/SB06/semantic-invariants.md`, `proof/SB06/plan-snapshot-example.md` |
+| SB07-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB06. |
 
 ## Browser Validation Analytics
 
@@ -57,7 +60,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | --- | --- | --- | --- | --- | --- |
 | Current UI story-map analysis | `/processes`, `/processes/live` | 1600x1000 | `evidence/ui-current-state/*.md` | `evidence/ui-current-state/*.png` | Captured current UI/UX evidence for architecture and user-story mapping; product behavior was not changed. |
 | SB01 Reference Archive | Not applicable | Not applicable | Not applicable | Not applicable | Archive-only subbundle; no browser-facing product behavior changed. |
-| SB02-SB05 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, and SB03-SB05 changed non-UI contracts. |
+| SB02-SB06 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, and SB03-SB06 changed non-UI contracts. |
 
 ## Analytics Review
 
@@ -77,7 +80,7 @@ SB01 collected no runtime analytics because it changed only archive/proof files 
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
-| Execute approved implementation bundle | In progress | SB01 through SB05 completed with proof under `proof/SB01/` through `proof/SB05/`; SB06-SB28 remain pending dependency-ordered execution. |
+| Execute approved implementation bundle | In progress | SB01 through SB06 completed with proof under `proof/SB01/` through `proof/SB06/`; SB07-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -214,6 +217,36 @@ Result:
 
 ```text
 Snapshot snap-20260615184506-be39fc7c loaded 4 scoped projects and 26 documents, found 0 dependency cycles, 0 diagnostics, and no blocking errors.
+```
+
+SB06 instance builder/compiler proof:
+
+```text
+bundle://proof/SB06/manifest.md
+bundle://proof/SB06/transcripts/build-unit-sb06-05.txt
+bundle://proof/SB06/transcripts/build-solution-sb06-04.txt
+bundle://proof/SB06/transcripts/test-unit-sb06-04.txt
+bundle://proof/SB06/transcripts/scan-summary.json
+bundle://proof/SB06/transcripts/bundle-validator-prepared-sb06-01.txt
+bundle://proof/SB06/plan-snapshot-example.md
+```
+
+Result:
+
+```text
+Unit project build and full solution build passed with 0 warnings and 0 errors. Focused builder/driver/template/core/boundary tests passed: 40/40. Builder forbidden dependency, concrete driver name, runtime composition logic, domain opacity, and anti-stub scans all reported 0 matches. Prepared-stage bundle validation passed after archive source-reference repair.
+```
+
+SB06 CodeAnalytics MCP validation:
+
+```text
+bundle://proof/SB06/transcripts/codeanalytics-snapshot-summary.txt
+```
+
+Result:
+
+```text
+Snapshot snap-20260615191140-946f6f71 loaded 5 scoped projects and 41 documents, found 0 dependency cycles, 0 diagnostics, and no blocking errors. Remaining findings were informational complexity notes only.
 ```
 
 SB01 archive validation:

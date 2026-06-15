@@ -21,9 +21,9 @@ Rebuild workspace graphs/analytics and the Live Processes dashboard over snapsho
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessObservationGraphsPanel.razor`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessObservationCacheTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessObservationGraphsPanel.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessObservationCacheTests.cs`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/ui-current-state/live-processes-page-loaded-1600x1000.png`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/ui-current-state/live-processes-page-loaded-snapshot.md`
 

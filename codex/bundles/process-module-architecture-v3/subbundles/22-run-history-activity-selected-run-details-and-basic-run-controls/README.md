@@ -21,9 +21,9 @@ Rebuild run history, activity view, selected run summary, filters, tags, updated
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsLifecycleSection.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsActiveSection.razor`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessRuntimeReadQueryServiceTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsLifecycleSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsActiveSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessRuntimeReadQueryServiceTests.cs`
 - `repo://codex/bundles/process-module-architecture-v3/evidence/ui-current-state/processes-runs-tab-1600x1000.png`
 
 ## Target Projects / Files

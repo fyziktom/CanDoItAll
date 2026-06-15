@@ -33,14 +33,14 @@ The rewrite must not wrap the old dispatcher, but it also must not throw away ha
 - `repo://codex/bundles/process-module-architecture-v3/analysis/04-current-code-evidence-map.md`
 - `repo://codex/bundles/process-module-architecture-v3/analysis/05-reuse-decision-log.md`
 - `repo://codex/bundles/process-module-architecture-v3/plan/02-phase-0-reference-archive-and-removal.md`
-- `repo://src/CanDoItAll.Modules.Processes`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes`
 - `repo://Templates/Processes`
 - `repo://tests`
 
 ## Source Evidence To Use
 
-- `repo://src/CanDoItAll.Modules.Processes`
-- `repo://src/CanDoItAll.Processes.Core`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Core`
 - `repo://src/CanDoItAll.Processes.Contracts`
 - `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
 - `repo://src/CanDoItAll.Processes.Drivers.ArtifactEvidence`
@@ -50,7 +50,7 @@ The rewrite must not wrap the old dispatcher, but it also must not throw away ha
 - `repo://src/CanDoItAll.Processes.Drivers.RuntimeEvidence`
 - `repo://src/CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence`
 - `repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification`
-- `repo://src/CanDoItAll.Processes.Drivers.VerificationGateway`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Processes.Drivers.VerificationGateway`
 - `repo://Templates/Processes`
 - `repo://tests`
 - `repo://CanDoItAll.slnx`

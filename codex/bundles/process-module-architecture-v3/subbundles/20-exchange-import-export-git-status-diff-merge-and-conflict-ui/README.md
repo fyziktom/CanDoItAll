@@ -21,8 +21,8 @@ Implement process exchange import/export UI and generic Git UI components for st
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessImportMetadataIntegrationTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessImportMetadataIntegrationTests.cs`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/09-template-git-versioning-and-migrations.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/10-security-governance-and-agent-change-auditing.md`
 

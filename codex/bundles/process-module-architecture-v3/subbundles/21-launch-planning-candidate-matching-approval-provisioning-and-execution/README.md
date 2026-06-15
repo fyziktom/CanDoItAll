@@ -37,12 +37,12 @@ The current implementation already has useful HR-driven scoring and a candidate 
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsLaunchSection.razor`
-- `repo://src/CanDoItAll.Modules.Processes/Launch`
-- `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
-- `repo://tests/CanDoItAll.Tests.Integration/ProcessLaunchPlanningIntegrationTests.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsLaunchSection.razor`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Launch`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Integration/ProcessLaunchPlanningIntegrationTests.cs`
 - `repo://tests/CanDoItAll.Tests.Integration/AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs`
-- `repo://tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessStartSmoke.cs`
+- `repo://codex/bundles/process-module-rewrite-reference-v1/legacy/tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessStartSmoke.cs`
 - `repo://codex/bundles/process-module-architecture-v3/analysis/08-current-role-candidate-selection-gap.md`
 - `repo://codex/bundles/process-module-architecture-v3/architecture/20-role-candidate-selection-and-readiness.md`
 - `repo://codex/bundles/process-module-architecture-v3/validation/06-role-candidate-readiness-validation.md`
