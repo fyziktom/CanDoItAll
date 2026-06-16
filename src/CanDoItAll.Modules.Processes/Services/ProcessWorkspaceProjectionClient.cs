@@ -12,6 +12,10 @@ public interface IProcessWorkspaceProjectionClient
     Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
         ProcessDefinitionFeedDefaultsCommand command,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
+        ProcessDefinitionEditorCommand command,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ProcessWorkspaceProjectionClient(
@@ -26,4 +30,9 @@ public sealed class ProcessWorkspaceProjectionClient(
         ProcessDefinitionFeedDefaultsCommand command,
         CancellationToken cancellationToken = default)
         => shellProjectionService.FeedDefaultDefinitionsAsync(command, cancellationToken);
+
+    public Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
+        ProcessDefinitionEditorCommand command,
+        CancellationToken cancellationToken = default)
+        => shellProjectionService.ExecuteDefinitionEditorCommandAsync(command, cancellationToken);
 }

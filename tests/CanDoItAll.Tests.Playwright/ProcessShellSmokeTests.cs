@@ -20,7 +20,7 @@ public sealed class ProcessShellSmokeTests
             PlaywrightTestHostPaths.RepositoryRoot,
             "output",
             "playwright",
-            "process-shell-sb14");
+            "process-shell-sb15");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -44,6 +44,19 @@ public sealed class ProcessShellSmokeTests
         await page.GetByTestId("processes-definition-search-submit").ClickAsync();
         await page.GetByTestId("processes-definition-architecture-decision-governance").WaitForAsync();
         await page.GetByTestId("processes-definition-architecture-decision-governance").ClickAsync();
+        await page.GetByTestId("processes-definition-editor").WaitForAsync();
+        await page.GetByTestId("processes-definition-editor-name").FillAsync("Architecture decision governance SB15");
+        await page.GetByTestId("processes-definition-editor-owner").FillAsync("Architecture board");
+        await page.GetByTestId("processes-definition-editor-manager-override").FillAsync("Use the architecture board manager.");
+        await page.GetByTestId("processes-definition-save").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "Draft saved");
+        await page.GetByTestId("processes-definition-publish").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "published");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(artifactDirectory, "processes-definition-editor-published.png"),
+            FullPage = true
+        });
         await page.GetByTestId("processes-feed-defaults").ClickAsync();
         await page.GetByTestId("processes-feed-defaults-receipt").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
@@ -119,5 +132,23 @@ public sealed class ProcessShellSmokeTests
         {
             return false;
         }
+    }
+
+    private static async Task ExpectTextContainsAsync(ILocator locator, string expectedText)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
+        string? renderedText = null;
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            renderedText = await locator.TextContentAsync();
+            if (renderedText?.Contains(expectedText, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return;
+            }
+
+            await Task.Delay(100);
+        }
+
+        Assert.Fail($"Expected locator text to contain '{expectedText}', but saw '{renderedText}'.");
     }
 }

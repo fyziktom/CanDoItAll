@@ -65,6 +65,69 @@ public enum ProcessDefinitionCatalogCommandStatus
     NoDefinitionsAvailable
 }
 
+public enum ProcessDefinitionAuthoringStatus
+{
+    TemplateDefault,
+    Draft,
+    Published,
+    Archived
+}
+
+public enum ProcessDefinitionCriticalityLevel
+{
+    Unspecified,
+    Low,
+    Standard,
+    High,
+    MissionCritical
+}
+
+public enum ProcessDefinitionAutonomyLevel
+{
+    Unspecified,
+    Manual,
+    Assisted,
+    Guarded,
+    Delegated
+}
+
+public enum ProcessDefinitionOperatingModeKind
+{
+    Unspecified,
+    Manual,
+    AssistedExecution,
+    GovernedLive
+}
+
+public enum ProcessDefinitionEditorCommandKind
+{
+    SaveDraft,
+    Publish,
+    Archive,
+    Delete
+}
+
+public enum ProcessDefinitionEditorCommandStatus
+{
+    Accepted,
+    Rejected
+}
+
+public enum ProcessDefinitionEditorLintSeverity
+{
+    Info,
+    Warning,
+    Error
+}
+
+public enum ProcessDefinitionEditorLintSection
+{
+    Identity,
+    Governance,
+    Contracts,
+    Simulation
+}
+
 public readonly record struct ProcessDefinitionCatalogItemKey
 {
     public ProcessDefinitionCatalogItemKey(string value)
@@ -89,6 +152,23 @@ public readonly record struct ProcessDefinitionCatalogRefreshToken
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new ArgumentException("Definition catalog refresh token is required.", nameof(value));
+        }
+
+        Value = value.Trim();
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
+public readonly record struct ProcessDefinitionEditorVersionToken
+{
+    public ProcessDefinitionEditorVersionToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("Definition editor version token is required.", nameof(value));
         }
 
         Value = value.Trim();
@@ -189,6 +269,97 @@ public sealed record ProcessDefinitionCatalogCommandReceipt(
     DateTimeOffset AcceptedAtUtc,
     string Summary);
 
+public sealed record ProcessDefinitionEditorIdentityProjection(
+    string Name,
+    string ScopeLabel,
+    string CustomerName,
+    string OwnerName,
+    string Summary,
+    string ValueStatement);
+
+public sealed record ProcessDefinitionEditorGovernanceProjection(
+    ProcessDefinitionCriticalityLevel Criticality,
+    ProcessDefinitionAutonomyLevel AutonomyLevel,
+    ProcessDefinitionOperatingModeKind OperatingMode,
+    ProcessDefinitionAuthoringStatus WorkingStatus,
+    string ManagerOverrideSummary,
+    string GovernanceNotes,
+    string ChangeSummary,
+    string GovernancePolicySummary);
+
+public sealed record ProcessDefinitionEditorContractProjection(
+    string InterfaceContractSummary,
+    string ConstitutionRuleSummary,
+    string OperatingModeSummary);
+
+public sealed record ProcessDefinitionEditorSimulationProjection(
+    string SimulationReadinessSummary,
+    int StepCount,
+    int RequiredRoleCount,
+    int RequiredArtifactExpectationCount,
+    bool IsReadyForSimulation);
+
+public sealed record ProcessDefinitionEditorDraftProjection(
+    ProcessDefinitionCatalogItemKey DefinitionKey,
+    ProcessDefinitionEditorIdentityProjection Identity,
+    ProcessDefinitionEditorGovernanceProjection Governance,
+    ProcessDefinitionEditorContractProjection Contracts,
+    ProcessDefinitionEditorSimulationProjection Simulation);
+
+public sealed record ProcessDefinitionEditorLintIssueProjection(
+    string Code,
+    ProcessDefinitionEditorLintSeverity Severity,
+    ProcessDefinitionEditorLintSection Section,
+    string Message,
+    string Suggestion);
+
+public sealed record ProcessDefinitionEditorLintProjection(
+    IReadOnlyList<ProcessDefinitionEditorLintIssueProjection> Issues)
+{
+    public bool HasWarningsOrErrors => Issues.Any(issue => issue.Severity is ProcessDefinitionEditorLintSeverity.Warning or ProcessDefinitionEditorLintSeverity.Error);
+
+    public bool HasBlockingIssues => Issues.Any(issue => issue.Severity == ProcessDefinitionEditorLintSeverity.Error);
+}
+
+public sealed record ProcessDefinitionEditorCommandProjection(
+    ProcessDefinitionEditorCommandKind Kind,
+    string Text,
+    string Icon,
+    bool IsEnabled,
+    string? DisabledReason);
+
+public sealed record ProcessDefinitionEditorCommandReceipt(
+    Guid ReceiptId,
+    ProcessDefinitionEditorCommandKind CommandKind,
+    ProcessDefinitionEditorCommandStatus Status,
+    ProcessDefinitionEditorVersionToken VersionToken,
+    DateTimeOffset ObservedAtUtc,
+    string Summary,
+    IReadOnlyList<ProcessDefinitionEditorLintIssueProjection> LintIssues);
+
+public sealed record ProcessDefinitionEditorCommand(
+    ProcessWorkspaceShellScope Scope,
+    ProcessDefinitionCatalogItemKey DefinitionKey,
+    ProcessDefinitionEditorCommandKind CommandKind,
+    ProcessDefinitionEditorVersionToken? ExpectedVersionToken,
+    ProcessDefinitionEditorDraftProjection Draft);
+
+public sealed record ProcessDefinitionEditorCommandResult(
+    ProcessDefinitionEditorCommandReceipt Receipt,
+    ProcessDefinitionEditorProjection Projection);
+
+public sealed record ProcessDefinitionEditorProjection(
+    ProcessDefinitionCatalogItemKey DefinitionKey,
+    ProcessDefinitionEditorVersionToken VersionToken,
+    ProcessDefinitionAuthoringStatus Status,
+    ProcessDefinitionEditorIdentityProjection Identity,
+    ProcessDefinitionEditorGovernanceProjection Governance,
+    ProcessDefinitionEditorContractProjection Contracts,
+    ProcessDefinitionEditorSimulationProjection Simulation,
+    ProcessDefinitionEditorLintProjection Lint,
+    IReadOnlyList<ProcessDefinitionEditorCommandProjection> Commands,
+    ProcessDefinitionEditorCommandReceipt? LastCommandReceipt);
+
 public sealed record ProcessDefinitionCatalogProjection(
     int PublishedDefinitionCount,
     int DraftDefinitionCount,
@@ -199,6 +370,7 @@ public sealed record ProcessDefinitionCatalogProjection(
     IReadOnlyList<ProcessDefinitionScopeGroupProjection> ScopeGroups,
     IReadOnlyList<ProcessDefinitionCatalogItemProjection> Items,
     ProcessDefinitionCatalogItemProjection? SelectedItem,
+    ProcessDefinitionEditorProjection? SelectedEditor,
     ProcessDefinitionCatalogCommandReceipt? LastCommandReceipt);
 
 public sealed record ProcessLiveRunSummaryProjection(

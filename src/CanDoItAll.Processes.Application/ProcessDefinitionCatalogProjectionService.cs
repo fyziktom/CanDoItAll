@@ -63,6 +63,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
             CreateScopeGroups(scope, allItems.Length, normalizedQuery.ScopeFilter),
             filteredItems,
             selectedItem,
+            SelectedEditor: null,
             lastCommandReceipt));
     }
 

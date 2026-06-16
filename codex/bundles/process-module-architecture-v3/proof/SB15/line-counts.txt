@@ -1,0 +1,12 @@
+506  src\CanDoItAll.Processes.Application\ProcessDefinitionEditorProjectionService.cs
+204  src\CanDoItAll.Processes.Application\ProcessDefinitionCatalogProjectionService.cs
+240  src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs
+342  src\CanDoItAll.Processes.Projections\ProcessWorkspaceShellProjectionContracts.cs
+224  src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs
+978  src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor
+31  src\CanDoItAll.Modules.Processes\Services\ProcessWorkspaceProjectionClient.cs
+30  src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs
+3417  src\CanDoItAll.Web\wwwroot\css\output.css
+262  tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs
+444  tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs
+137  tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs

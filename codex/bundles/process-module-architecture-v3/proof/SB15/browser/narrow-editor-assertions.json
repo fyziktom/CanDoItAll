@@ -1,0 +1,16 @@
+{
+  "url": "http://127.0.0.1:5500/processes",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "editorVisible": true,
+  "editorBox": {
+    "left": 46,
+    "right": 329,
+    "width": 283
+  },
+  "overflowCount": 0,
+  "overflowingControls": [],
+  "blazorErrorVisible": false
+}

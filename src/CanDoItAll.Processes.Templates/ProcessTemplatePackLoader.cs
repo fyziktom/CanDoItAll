@@ -49,7 +49,22 @@ public sealed class ProcessTemplatePackLoader
                 NormalizeOptional(definition.Criticality, "Unspecified"),
                 NormalizeOptional(definition.OperatingMode, "Unspecified"),
                 NormalizeOptional(definition.AutonomyLevel, "Unspecified"),
-                File.GetLastWriteTimeUtc(definitionPath)));
+                File.GetLastWriteTimeUtc(definitionPath),
+                new ProcessTemplateDefinitionAuthoringDefaults(
+                    NormalizeOptional(definition.ValueStatement, string.Empty),
+                    NormalizeOptional(definition.CustomerName, string.Empty),
+                    NormalizeOptional(definition.OwnerName, string.Empty),
+                    NormalizeOptional(definition.InterfaceContractSummary, string.Empty),
+                    NormalizeOptional(definition.ManagerOverrideSummary, string.Empty),
+                    NormalizeOptional(definition.GovernanceNotes, string.Empty),
+                    NormalizeOptional(definition.ChangeSummary, string.Empty),
+                    NormalizeOptional(definition.GovernancePolicySummary, string.Empty),
+                    NormalizeOptional(definition.ConstitutionRuleSummary, string.Empty),
+                    NormalizeOptional(definition.OperatingModeSummary, string.Empty),
+                    NormalizeOptional(definition.SimulationReadinessSummary, string.Empty),
+                    definition.Steps.Count,
+                    definition.RoleUsages.Count(role => role.IsRequired),
+                    definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired)))));
         }
 
         return new ProcessTemplatePack(root, manifest, definitions);
@@ -168,7 +183,24 @@ public sealed record ProcessTemplateDefinitionSummary(
     string Criticality,
     string OperatingMode,
     string AutonomyLevel,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    ProcessTemplateDefinitionAuthoringDefaults AuthoringDefaults);
+
+public sealed record ProcessTemplateDefinitionAuthoringDefaults(
+    string ValueStatement,
+    string CustomerName,
+    string OwnerName,
+    string InterfaceContractSummary,
+    string ManagerOverrideSummary,
+    string GovernanceNotes,
+    string ChangeSummary,
+    string GovernancePolicySummary,
+    string ConstitutionRuleSummary,
+    string OperatingModeSummary,
+    string SimulationReadinessSummary,
+    int StepCount,
+    int RequiredRoleCount,
+    int RequiredArtifactExpectationCount);
 
 public sealed class ProcessTemplatePackManifest
 {
@@ -203,4 +235,45 @@ public sealed class ProcessTemplateDefinitionDocument
     public string OperatingMode { get; set; } = string.Empty;
 
     public string AutonomyLevel { get; set; } = string.Empty;
+
+    public string ValueStatement { get; set; } = string.Empty;
+
+    public string CustomerName { get; set; } = string.Empty;
+
+    public string OwnerName { get; set; } = string.Empty;
+
+    public string InterfaceContractSummary { get; set; } = string.Empty;
+
+    public string ManagerOverrideSummary { get; set; } = string.Empty;
+
+    public string GovernanceNotes { get; set; } = string.Empty;
+
+    public string ChangeSummary { get; set; } = string.Empty;
+
+    public string GovernancePolicySummary { get; set; } = string.Empty;
+
+    public string ConstitutionRuleSummary { get; set; } = string.Empty;
+
+    public string OperatingModeSummary { get; set; } = string.Empty;
+
+    public string SimulationReadinessSummary { get; set; } = string.Empty;
+
+    public List<ProcessTemplateDefinitionRoleUsageDocument> RoleUsages { get; set; } = [];
+
+    public List<ProcessTemplateDefinitionStepDocument> Steps { get; set; } = [];
+}
+
+public sealed class ProcessTemplateDefinitionRoleUsageDocument
+{
+    public bool IsRequired { get; set; }
+}
+
+public sealed class ProcessTemplateDefinitionStepDocument
+{
+    public List<ProcessTemplateDefinitionArtifactExpectationDocument> ArtifactExpectations { get; set; } = [];
+}
+
+public sealed class ProcessTemplateDefinitionArtifactExpectationDocument
+{
+    public bool IsRequired { get; set; }
 }

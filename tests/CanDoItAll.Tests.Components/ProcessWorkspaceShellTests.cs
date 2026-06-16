@@ -111,7 +111,8 @@ public sealed class ProcessWorkspaceShellTests
         var clock = new FixedProcessProjectionClock(Now);
         var service = new ProcessWorkspaceShellProjectionService(
             clock,
-            new ProcessDefinitionCatalogProjectionService(clock));
+            new ProcessDefinitionCatalogProjectionService(clock),
+            new ProcessDefinitionEditorProjectionService(clock));
         var selection = new ProcessWorkspaceSelectionProjection(
             ProcessId: null,
             RunId: null,
@@ -147,6 +148,54 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Definition_editor_renders_authoring_sections_from_projection()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-editor']")));
+        Assert.Contains("Identity", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Governance", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Contracts", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Simulation", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Blazor app delivery", cut.Find("[data-testid='processes-definition-editor-name']").GetAttribute("value"));
+        Assert.NotNull(cut.Find("[data-testid='processes-definition-editor-manager-override']"));
+    }
+
+    [Fact]
+    public void Definition_save_uses_typed_editor_command_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-save']")));
+        cut.Find("[data-testid='processes-definition-editor-owner']").Input("Architecture owner");
+        cut.Find("[data-testid='processes-definition-editor-manager-override']").Input("Use the architecture board manager.");
+        cut.Find("[data-testid='processes-definition-save']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionEditorCommandKind.SaveDraft, client.LastEditorCommand?.CommandKind));
+        Assert.Contains("Draft saved", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Architecture owner", client.LastEditorCommand?.Draft.Identity.OwnerName);
+        Assert.Equal("Use the architecture board manager.", client.LastEditorCommand?.Draft.Governance.ManagerOverrideSummary);
+    }
+
+    [Fact]
+    public void Definition_publish_shows_blocking_lint_errors()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-publish']")));
+        cut.Find("[data-testid='processes-definition-editor-name']").Input(string.Empty);
+        cut.Find("[data-testid='processes-definition-publish']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionEditorCommandKind.Publish, client.LastEditorCommand?.CommandKind));
+        Assert.Contains("Definition name is required", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Rejected", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Processes_navigation_contributor_adds_processes_to_shell_navigation()
     {
         var items = ShellNavigation.GetItems(0, [new ProcessesShellNavigationContributor()]);
@@ -173,6 +222,8 @@ public sealed class ProcessWorkspaceShellTests
 
         public int FeedDefaultsCommandCount { get; private set; }
 
+        public ProcessDefinitionEditorCommand? LastEditorCommand { get; private set; }
+
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
             CancellationToken cancellationToken = default)
@@ -195,6 +246,35 @@ public sealed class ProcessWorkspaceShellTests
                 AffectedDefinitionCount: 2,
                 Now,
                 "2 default process definition(s) are available from template pack test."));
+        }
+
+        public Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
+            ProcessDefinitionEditorCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            LastEditorCommand = command;
+            var lint = CreateEditorLint(command);
+            var status = lint.HasBlockingIssues
+                ? ProcessDefinitionEditorCommandStatus.Rejected
+                : ProcessDefinitionEditorCommandStatus.Accepted;
+            var authoringStatus = command.CommandKind == ProcessDefinitionEditorCommandKind.Publish && status == ProcessDefinitionEditorCommandStatus.Accepted
+                ? ProcessDefinitionAuthoringStatus.Published
+                : ProcessDefinitionAuthoringStatus.Draft;
+            var versionToken = new ProcessDefinitionEditorVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
+            var receipt = new ProcessDefinitionEditorCommandReceipt(
+                Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                command.CommandKind,
+                status,
+                versionToken,
+                Now,
+                status == ProcessDefinitionEditorCommandStatus.Accepted
+                    ? command.CommandKind == ProcessDefinitionEditorCommandKind.Publish
+                        ? "Definition published."
+                        : "Draft saved."
+                    : "Definition was not published because blocking lint issues remain.",
+                lint.Issues);
+            var projection = CreateEditor(command.Draft.DefinitionKey, command.Draft, authoringStatus, versionToken, lint, receipt);
+            return Task.FromResult(new ProcessDefinitionEditorCommandResult(receipt, projection));
         }
 
         private static ProcessWorkspaceShellProjection CreateShell(
@@ -288,7 +368,91 @@ public sealed class ProcessWorkspaceShellTests
                 ],
                 filtered,
                 selected,
+                selected is null ? null : CreateEditor(selected.Key),
                 lastReceipt);
+        }
+
+        private static ProcessDefinitionEditorProjection CreateEditor(ProcessDefinitionCatalogItemKey key)
+        {
+            var draft = new ProcessDefinitionEditorDraftProjection(
+                key,
+                new ProcessDefinitionEditorIdentityProjection(
+                    key.Value == "blazor-app-delivery" ? "Blazor app delivery" : "Architecture decision governance",
+                    "Global",
+                    "Delivery requester",
+                    "Delivery owner",
+                    "Build and prove the process.",
+                    "Deliver a useful process."),
+                new ProcessDefinitionEditorGovernanceProjection(
+                    ProcessDefinitionCriticalityLevel.High,
+                    ProcessDefinitionAutonomyLevel.Guarded,
+                    ProcessDefinitionOperatingModeKind.GovernedLive,
+                    ProcessDefinitionAuthoringStatus.TemplateDefault,
+                    "Manager override.",
+                    "Governance notes.",
+                    "Change summary.",
+                    "Governance policy."),
+                new ProcessDefinitionEditorContractProjection(
+                    "Interface contract.",
+                    "Constitution rule.",
+                    "Operating mode summary."),
+                new ProcessDefinitionEditorSimulationProjection(
+                    "Safe deterministic simulation.",
+                    StepCount: 5,
+                    RequiredRoleCount: 2,
+                    RequiredArtifactExpectationCount: 3,
+                    IsReadyForSimulation: true));
+
+            return CreateEditor(
+                key,
+                draft,
+                ProcessDefinitionAuthoringStatus.TemplateDefault,
+                new ProcessDefinitionEditorVersionToken($"template:{key.Value}"),
+                new ProcessDefinitionEditorLintProjection([]),
+                lastReceipt: null);
+        }
+
+        private static ProcessDefinitionEditorProjection CreateEditor(
+            ProcessDefinitionCatalogItemKey key,
+            ProcessDefinitionEditorDraftProjection draft,
+            ProcessDefinitionAuthoringStatus status,
+            ProcessDefinitionEditorVersionToken versionToken,
+            ProcessDefinitionEditorLintProjection lint,
+            ProcessDefinitionEditorCommandReceipt? lastReceipt)
+            => new(
+                key,
+                versionToken,
+                status,
+                draft.Identity,
+                draft.Governance with { WorkingStatus = status },
+                draft.Contracts,
+                draft.Simulation,
+                lint,
+                [
+                    new(ProcessDefinitionEditorCommandKind.SaveDraft, "Save draft", "save", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionEditorCommandKind.Publish, "Publish", "publish", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionEditorCommandKind.Archive, "Archive", "archive", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionEditorCommandKind.Delete, "Delete", "delete", IsEnabled: true, DisabledReason: null)
+                ],
+                lastReceipt);
+
+        private static ProcessDefinitionEditorLintProjection CreateEditorLint(
+            ProcessDefinitionEditorCommand command)
+        {
+            if (!string.IsNullOrWhiteSpace(command.Draft.Identity.Name))
+            {
+                return new ProcessDefinitionEditorLintProjection([]);
+            }
+
+            return new ProcessDefinitionEditorLintProjection(
+            [
+                new ProcessDefinitionEditorLintIssueProjection(
+                    "processes.definition.identity.name-required",
+                    ProcessDefinitionEditorLintSeverity.Error,
+                    ProcessDefinitionEditorLintSection.Identity,
+                    "Definition name is required.",
+                    "Enter a stable, user-facing definition name.")
+            ]);
         }
 
         private static IReadOnlyList<ProcessWorkspaceTabProjection> CreateTabs()

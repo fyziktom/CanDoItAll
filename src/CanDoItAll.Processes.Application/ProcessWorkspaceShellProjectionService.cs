@@ -5,7 +5,8 @@ namespace CanDoItAll.Processes.Application;
 
 public sealed class ProcessWorkspaceShellProjectionService(
     IProcessProjectionClock clock,
-    ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService)
+    ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService,
+    ProcessDefinitionEditorProjectionService definitionEditorProjectionService)
 {
     private const string WorkspaceContextPrefix = "processes:workspace";
     private const string ProjectContextPrefix = "processes:project";
@@ -30,6 +31,15 @@ public sealed class ProcessWorkspaceShellProjectionService(
         var definitionCatalog = await definitionCatalogProjectionService
             .GetCatalogAsync(request.Scope, request.DefinitionCatalogQuery, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
+        var selectedEditor = definitionCatalog.SelectedItem is null
+            ? null
+            : await definitionEditorProjectionService
+                .GetEditorAsync(request.Scope, definitionCatalog.SelectedItem.Key, cancellationToken)
+                .ConfigureAwait(false);
+        definitionCatalog = definitionCatalog with
+        {
+            SelectedEditor = selectedEditor
+        };
 
         return new ProcessWorkspaceShellProjection(
             request.Scope,
@@ -49,6 +59,11 @@ public sealed class ProcessWorkspaceShellProjectionService(
         ProcessDefinitionFeedDefaultsCommand command,
         CancellationToken cancellationToken = default)
         => definitionCatalogProjectionService.FeedDefaultDefinitionsAsync(command, cancellationToken);
+
+    public Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
+        ProcessDefinitionEditorCommand command,
+        CancellationToken cancellationToken = default)
+        => definitionEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
 
     private static void ValidateRequest(ProcessWorkspaceShellRequest request)
     {

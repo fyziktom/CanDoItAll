@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Complete. Executed during process module architecture v3 implementation.
 
 ## Objective
 
@@ -87,10 +87,10 @@ Rebuild the definition editor for identity, governance, contracts, simulation re
 
 ## Acceptance Checklist
 
-- [ ] Identity, governance, contracts, and simulation sections render from projections.
-- [ ] Save/publish/archive/delete use typed commands.
-- [ ] Lint warnings/errors are visible and actionable.
-- [ ] Component and Playwright proof exists.
+- [x] Identity, governance, contracts, and simulation sections render from projections.
+- [x] Save/publish/archive/delete use typed commands.
+- [x] Lint warnings/errors are visible and actionable.
+- [x] Component and Playwright proof exists.
 
 ## Proof Required
 
@@ -112,4 +112,6 @@ Execute SB15 from `codex/bundles/process-module-architecture-v3/subbundles/15-de
 
 ## Handoff Notes For Next Bundle
 
-Record role editor projection fields still missing and any governance policy fields SB21/SB24 must consume.
+- Role editor projection fields remain missing and are owned by SB16.
+- Governance fields now available for downstream SB21/SB24 consumption: criticality, autonomy, operating mode, working status, manager override summary, governance notes, change summary, and governance policy summary.
+- Authored definition state is scoped authoring projection/session state in SB15. Durable project-specific definition persistence remains downstream.
