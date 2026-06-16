@@ -16,6 +16,8 @@ User review found the first SB19 UI implementation reshaped the process module t
 
 - Replaced the custom process SVG/card canvas with the shared `CanvasWorkbench`, `CanvasWorkbenchStage`, `CanvasFloatingWindow`, and `OverlayComponentToolbox` integration.
 - Restored the process workspace toward the original dense `Toolbar` plus `ListDetailShell` model with a definition list pane and tabbed detail pane.
+- Follow-up repair restored the original detail tab set: Definition, Roles, Steps, Runs, Graphs, Analytics, Exchange, and Manager chat.
+- Follow-up repair restored the definition list as a shared TreeView and fixed Live Processes navigation ordering under Processes.
 - Preserved the original canvas UX model: toolbox, selection, and editor live in floating canvas windows over the canvas surface.
 - Added CanvasLib and OverlayLib references to the process module instead of rendering a bespoke canvas.
 - Added a dedicated `LiveProcessesDashboard` component and kept `/processes/live` as an owned process-module page, with its own main-menu child item.
@@ -40,8 +42,8 @@ Result: passed, 1/1.
 
 ```text
 CanDoItAll CodeAnalytics MCP snapshot:
-Snapshot: snap-20260616103327-798bce28
-Scope: CanDoItAll.Modules.Processes, CanDoItAll.Processes.Application, CanDoItAll.Processes.Projections, CanDoItAll.Processes.Templates, CanDoItAll.Tests.Components, CanDoItAll.Tests.Playwright.
+Snapshot: snap-20260616120824-b9b86e2f
+Scope: CanDoItAll.Modules.Processes, CanDoItAll.Web, CanDoItAll.AppComponents, CanDoItAll.SharedKernel, CanDoItAll.Tests.Components, CanDoItAll.Tests.Playwright.
 Result: no blocking errors.
 ```
 
@@ -52,7 +54,10 @@ Result: no blocking errors.
 - bundle://proof/SB19/browser/processes-global-definition-catalog.png
 - bundle://proof/SB19/browser/processes-project-shell.png
 - bundle://proof/SB19/browser/browser-validation-summary.txt
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-tabs-tree-definition.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-steps-canvas-floating-windows.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-live-processes-menu-order.png
 
 ## Result
 
-Repair passed. The process module now uses the shared CanvasLib/OverlayLib canvas system and retains the original list/detail workspace shape much more closely while keeping the new projection/versioning contracts from the process architecture bundle.
+Repair passed. The process module now uses the shared CanvasLib/OverlayLib canvas system and retains the original tree/list, tabbed detail workspace, and live navigation shape much more closely while keeping the new projection/versioning contracts from the process architecture bundle.

@@ -3,46 +3,62 @@
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject NavigationManager Navigation
 
-<PageScaffold MaxWidthClass="max-w-full">
+<PageScaffold FillHeight="true"
+              MaxWidthClass="max-w-full"
+              Class="processes-page-scaffold"
+              data-testid="processes-page-scaffold">
     <Header>
-        <PageHeader Eyebrow="@ScopeEyebrow"
-                    Title="@HeaderTitle"
-                    Description="@HeaderDescription"
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="definitions"
-                             Value="@DefinitionTotalText"
-                             TooltipText="@DefinitionTooltip"
-                             Tone="info" />
-                <CompactStat Label="active runs"
-                             Value="@LiveRunActiveText"
-                             TooltipText="@LiveRunTooltip"
-                             Tone="success" />
-                <CompactStat Label="attention"
-                             Value="@LiveRunAttentionText"
-                             TooltipText="Runs projected as needing operator attention."
-                             Tone="warning" />
-                <CompactStat Label="projection"
-                             Value="@ProjectionStatusText"
-                             TooltipText="@ProjectionTooltip"
-                             Tone="@ProjectionTone" />
-            </Stats>
-            <Actions>
-                <PageHeaderActionButton Icon="refresh"
-                                        Label="Refresh"
-                                        TooltipText="Refresh process shell projections."
-                                        Disabled="@isBusy"
-                                        IsBusy="@isBusy"
-                                        Click="RefreshAsync"
-                                        data-testid="processes-refresh" />
-                <PageHeaderActionButton Icon="smart_toy"
-                                        Label="Agent context"
-                                        TooltipText="@AgentContextTooltip"
-                                        Disabled="@AgentContextDisabled"
-                                        Click="OpenAgentContext"
-                                        data-testid="processes-agent-context" />
-            </Actions>
-        </PageHeader>
+        <Toolbar Class="processes-command-strip"
+                 data-testid="processes-command-strip">
+            <ToolbarRow Class="processes-command-strip__row">
+                <CompactStatStrip Class="min-w-0">
+                    <p class="cda-eyebrow whitespace-nowrap">@ScopeEyebrow</p>
+                    <CompactStat Tone="info"
+                                 Text="@($"{DefinitionTotalText} definition(s)")"
+                                 TooltipText="@DefinitionTooltip" />
+                    <CompactStat Tone="success"
+                                 Text="@($"{LiveRunActiveText} active")"
+                                 TooltipText="@LiveRunTooltip" />
+                    <CompactStat Tone="warning"
+                                 Text="@($"{LiveRunAttentionText} attention")"
+                                 TooltipText="Runs projected as needing operator attention." />
+                    <CompactStat Tone="@ProjectionTone"
+                                 Text="@ProjectionStatusText"
+                                 TooltipText="@ProjectionTooltip" />
+                </CompactStatStrip>
+
+                <ToolbarActions Class="processes-command-strip__actions">
+                    @if (shell is null)
+                    {
+                        <PageHeaderActionButton Icon="refresh"
+                                                Label="Refresh"
+                                                TooltipText="Refresh process shell projections."
+                                                Disabled="@isBusy"
+                                                IsBusy="@isBusy"
+                                                Click="RefreshAsync"
+                                                data-testid="processes-refresh" />
+                        <PageHeaderActionButton Icon="smart_toy"
+                                                Label="Agent context"
+                                                TooltipText="@AgentContextTooltip"
+                                                Disabled="@AgentContextDisabled"
+                                                Click="OpenAgentContext"
+                                                data-testid="processes-agent-context" />
+                    }
+                    else
+                    {
+                        @foreach (var command in shell.Commands)
+                        {
+                            <PageHeaderActionButton Icon="@command.Icon"
+                                                    Label="@command.Text"
+                                                    TooltipText="@(command.DisabledReason ?? command.Text)"
+                                                    Disabled="@(!command.IsEnabled)"
+                                                    Click="@(() => ExecuteCommandAsync(command))"
+                                                    data-testid="@BuildCommandTestId(command.Kind)" />
+                        }
+                    }
+                </ToolbarActions>
+            </ToolbarRow>
+        </Toolbar>
     </Header>
 
     <ChildContent>
@@ -65,41 +81,8 @@
         else
         {
             <Stack GapScale="LayoutGap.Medium"
-                   Class="processes-workspace-root min-h-0"
+                   Class="processes-workspace-root min-h-0 flex-1"
                    data-testid="processes-shell">
-                <Toolbar Class="processes-command-strip"
-                         data-testid="processes-command-strip">
-                    <ToolbarRow Class="processes-command-strip__row">
-                        <CompactStatStrip Class="min-w-0">
-                            <p class="cda-eyebrow whitespace-nowrap">@ScopeEyebrow</p>
-                            <CompactStat Tone="info"
-                                         Text="@($"{DefinitionTotalText} definition(s)")"
-                                         TooltipText="@DefinitionTooltip" />
-                            <CompactStat Tone="success"
-                                         Text="@($"{LiveRunActiveText} active")"
-                                         TooltipText="@LiveRunTooltip" />
-                            <CompactStat Tone="warning"
-                                         Text="@($"{LiveRunAttentionText} attention")"
-                                         TooltipText="Runs projected as needing operator attention." />
-                            <CompactStat Tone="@ProjectionTone"
-                                         Text="@ProjectionStatusText"
-                                         TooltipText="@ProjectionTooltip" />
-                        </CompactStatStrip>
-
-                        <ToolbarActions Class="processes-command-strip__actions">
-                            @foreach (var command in shell.Commands)
-                            {
-                                <PageHeaderActionButton Icon="@command.Icon"
-                                                        Label="@command.Text"
-                                                        TooltipText="@(command.DisabledReason ?? command.Text)"
-                                                        Disabled="@(!command.IsEnabled)"
-                                                        Click="@(() => ExecuteCommandAsync(command))"
-                                                        data-testid="@BuildCommandTestId(command.Kind)" />
-                            }
-                        </ToolbarActions>
-                    </ToolbarRow>
-                </Toolbar>
-
                 @if (!string.IsNullOrWhiteSpace(agentContextNotice))
                 {
                     <p class="text-xs font-semibold text-slate-500" data-testid="processes-agent-context-notice">@agentContextNotice</p>
@@ -156,7 +139,8 @@
                     </DetailHeader>
 
                     <DetailContent>
-                        <Tabs @bind-SelectedIndex="activeTabIndex"
+                        <Tabs SelectedIndex="@activeDetailTabIndex"
+                              SelectedIndexChanged="HandleDetailTabChangedAsync"
                               RenderMode="TabRenderMode.Server"
                               Variant="TabsVariant.WorkspaceSecondary"
                               BorderMode="TabsBorderMode.Soft"
@@ -165,15 +149,14 @@
                               FillHeight="true"
                               Class="h-full min-h-0 w-full min-w-0"
                               AriaLabel="Process workspace detail panels"
-                              data-testid="processes-tabs">
-                            @foreach (var tab in shell.Tabs)
+                              data-testid="processes-detail-tabs">
+                            @foreach (var tab in DetailTabs)
                             {
                                 <TabsItem Text="@tab.Text"
                                           Icon="@tab.Icon"
-                                          BadgeText="@tab.CountText"
-                                          Disabled="@(!tab.IsEnabled)"
-                                          data-testid="@BuildTabTestId(tab.Key)">
-                                    @RenderTab(tab)
+                                          BadgeText="@tab.BadgeText"
+                                          data-testid="@BuildDetailTabTestId(tab.Key)">
+                                    @RenderDetailTab(tab)
                                 </TabsItem>
                             }
                         </Tabs>
@@ -206,8 +189,14 @@
     [Parameter]
     public bool LiveRoute { get; set; }
 
+    private const string AllDefinitionsTreeNodeId = "processes:scope:all";
+    private const string ScopeTreeNodePrefix = "processes:scope:";
+    private const string DefinitionTreeNodePrefix = "processes:definition:";
+
     private ProcessWorkspaceShellProjection? shell;
-    private int activeTabIndex;
+    private int activeDetailTabIndex;
+    private int selectedRunViewIndex = 1;
+    private bool activeDetailTabInitialized;
     private bool isBusy;
     private string? errorMessage;
     private string? agentContextNotice;
@@ -243,6 +232,11 @@
     private ProcessTemplateCatalogCategoryKind selectedTemplateCategory = ProcessTemplateCatalogCategoryKind.All;
     private ProcessTemplateCatalogItemKey? selectedTemplateItemKey;
     private ProcessTemplateCatalogPreviewTabKind selectedTemplatePreviewTab = ProcessTemplateCatalogPreviewTabKind.Overview;
+    private readonly HashSet<string> expandedDefinitionTreeNodeIds =
+    [
+        BuildScopeTreeNodeId(ProcessDefinitionCatalogScopeKind.Global),
+        BuildScopeTreeNodeId(ProcessDefinitionCatalogScopeKind.Project)
+    ];
 
     private static readonly ProcessDefinitionCriticalityLevel[] CriticalityOptions =
     [
@@ -265,6 +259,58 @@
         ProcessDefinitionOperatingModeKind.Manual,
         ProcessDefinitionOperatingModeKind.AssistedExecution,
         ProcessDefinitionOperatingModeKind.GovernedLive
+    ];
+
+    private IReadOnlyList<ProcessWorkspaceDetailTabDescriptor> DetailTabs =>
+    [
+        new(
+            ProcessWorkspaceDetailTabKey.Definition,
+            "Definition",
+            "edit_note",
+            "Basic process information, governance, contracts, and simulation readiness.",
+            null),
+        new(
+            ProcessWorkspaceDetailTabKey.Roles,
+            "Roles",
+            "groups",
+            "Role requirements and bindings.",
+            DefinitionCatalog.SelectedEditor?.RoleEditor?.Roles.Count.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Steps,
+            "Steps",
+            "account_tree",
+            "Canvas-first process topology and step contract editing.",
+            DefinitionCatalog.SelectedEditor?.StepEditor?.Steps.Count.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Runs,
+            "Runs",
+            "rocket_launch",
+            "Launch planning, activity, operator control, execution, coordination, and evidence.",
+            LiveRunActiveText),
+        new(
+            ProcessWorkspaceDetailTabKey.Graphs,
+            "Graphs",
+            "bar_chart",
+            "Run history metrics for cost, token, and time projections.",
+            shell?.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Analytics,
+            "Analytics",
+            "analytics",
+            "Readiness and improvement signals.",
+            DefinitionCatalog.TemplateCompatibilityIssueCount.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Exchange,
+            "Exchange",
+            "sync_alt",
+            "Templates, import, export, and compatibility preview.",
+            DefinitionCatalog.SelectedEditor?.TemplateCatalog?.Items.Count.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.ManagerChat,
+            "Manager chat",
+            "forum",
+            "Manager agent context and run-scoped chat entry point.",
+            shell?.AgentEntry.IsAvailable == true ? "ready" : null)
     ];
 
     private string ScopeEyebrow => ProjectId.HasValue ? "Project processes" : "Processes";
@@ -321,6 +367,9 @@
     private ProcessDefinitionCatalogProjection DefinitionCatalog
         => shell?.DefinitionCatalog ?? throw new InvalidOperationException("Definition catalog is not loaded.");
 
+    private ProcessWorkspaceShellProjection CurrentShell
+        => shell ?? throw new InvalidOperationException("Process workspace shell is not loaded.");
+
     protected override async Task OnParametersSetAsync()
     {
         searchText = DefinitionSearchText?.Trim() ?? string.Empty;
@@ -362,7 +411,12 @@
                 forceRefresh);
 
             shell = await ProjectionClient.GetShellAsync(request);
-            activeTabIndex = ResolveActiveTabIndex(shell);
+            if (!activeDetailTabInitialized)
+            {
+                activeDetailTabIndex = ResolveDetailTabIndex(ResolvePreferredDetailTab());
+                activeDetailTabInitialized = true;
+            }
+
             SyncDefinitionEditor(shell.DefinitionCatalog.SelectedEditor);
             SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
         }
@@ -382,18 +436,30 @@
             ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
             : ProcessWorkspaceShellScope.Global;
 
-    private int ResolveActiveTabIndex(ProcessWorkspaceShellProjection projection)
+    private ProcessWorkspaceDetailTabKey ResolvePreferredDetailTab()
+        => LiveRoute || RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue
+            ? ProcessWorkspaceDetailTabKey.Runs
+            : ProcessWorkspaceDetailTabKey.Definition;
+
+    private int ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey key)
     {
-        var preferredTab = LiveRoute || RunIdQuery.HasValue
-            ? ProcessWorkspaceTabKey.LiveRuns
-            : LaunchPlanIdQuery.HasValue
-                ? ProcessWorkspaceTabKey.LaunchPlans
-                : ProcessWorkspaceTabKey.Definitions;
-        var index = projection.Tabs
+        var index = DetailTabs
             .Select((tab, tabIndex) => new { tab.Key, Index = tabIndex })
-            .FirstOrDefault(item => item.Key == preferredTab)?.Index;
+            .FirstOrDefault(item => item.Key == key)?.Index;
 
         return index ?? 0;
+    }
+
+    private Task HandleDetailTabChangedAsync(int index)
+    {
+        activeDetailTabIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSelectedRunViewChangedAsync(int index)
+    {
+        selectedRunViewIndex = index;
+        return Task.CompletedTask;
     }
 
     private async Task ExecuteCommandAsync(ProcessWorkspaceCommandProjection command)
@@ -492,94 +558,59 @@
         }
     }
 
-    private RenderFragment RenderTab(ProcessWorkspaceTabProjection tab) => @<SurfaceCard Soft="true" data-testid="@BuildTabPanelTestId(tab.Key)">
-        <Split Gap="LayoutGap.Small">
-            <Stack GapScale="LayoutGap.Tiny">
-                <TextBlock TextStyle="TextStyle.Eyebrow" Value="@ResolveTabEyebrow(tab.Key)" />
-                <h2 class="text-base font-semibold text-slate-900">@tab.Text</h2>
-                <p class="text-sm leading-6 text-slate-600">@tab.Description</p>
-            </Stack>
-            <StatusBadge Tone="@ResolveTabTone(tab.Key)" Text="@ResolveTabStatus(tab.Key)" />
-        </Split>
-
-        <div class="mt-5">
-            @switch (tab.Key)
-            {
-                case ProcessWorkspaceTabKey.Definitions:
-                    @RenderDefinitionCatalog()
-                    break;
-                case ProcessWorkspaceTabKey.LaunchPlans:
-                    <EmptyState Eyebrow="Launch projection"
-                                Title="Launch planning status"
-                                Description="Launch-plan projections are exposed through the shell; runtime launch commands are disabled until the command surface is connected." />
-                    break;
-                case ProcessWorkspaceTabKey.LiveRuns:
-                    <EmptyState Eyebrow="Runtime projection"
-                                Title="Live run status"
-                                Description="@shell!.LiveRuns.Summary" />
-                    break;
-                case ProcessWorkspaceTabKey.History:
-                    <EmptyState Eyebrow="Read-only projection"
-                                Title="Runtime history status"
-                                Description="Runtime history and legacy archive labels flow through projection contracts before detailed history views are enabled." />
-                    break;
-            }
-        </div>
-    </SurfaceCard>;
+    private RenderFragment RenderDetailTab(ProcessWorkspaceDetailTabDescriptor tab) => @<div class="processes-detail-tab-panel"
+                                                                                         data-testid="@BuildDetailPanelTestId(tab.Key)">
+        @switch (tab.Key)
+        {
+            case ProcessWorkspaceDetailTabKey.Definition:
+                @RenderDefinitionBasicsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Roles:
+                @RenderRolesTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Steps:
+                @RenderStepsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Runs:
+                @RenderRunsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Graphs:
+                @RenderGraphsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Analytics:
+                @RenderAnalyticsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Exchange:
+                @RenderExchangeTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.ManagerChat:
+                @RenderManagerChatTab()
+                break;
+        }
+    </div>;
 
     private RenderFragment RenderDefinitionListPane() => @<Stack GapScale="LayoutGap.Medium"
                                                                  Class="h-full min-h-0 overflow-y-auto pr-1"
                                                                  data-testid="processes-definition-list-scroll">
-        <Stack GapScale="LayoutGap.Small"
-               data-testid="processes-definition-scopes">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Scope" />
-            <Cluster Gap="LayoutGap.XSmall"
-                     Class="flex-wrap">
-                @foreach (var scope in DefinitionCatalog.ScopeGroups)
-                {
-                    <Button Text="@($"{scope.Label} ({scope.Count})")"
-                            Icon="@ResolveScopeIcon(scope.ScopeKind)"
-                            Size="ButtonSize.Small"
-                            ButtonStyle="@(scope.IsSelected ? ButtonStyle.Primary : ButtonStyle.Light)"
-                            Click="@(() => SelectDefinitionScopeAsync(scope.ScopeKind))"
-                            title="@scope.Description"
-                            data-testid="@BuildScopeTestId(scope.ScopeKind)" />
-                }
-            </Cluster>
-        </Stack>
-
         @if (!string.IsNullOrWhiteSpace(catalogCommandNotice))
         {
             <p class="text-xs font-semibold text-slate-500" data-testid="processes-feed-defaults-receipt">@catalogCommandNotice</p>
         }
 
-        <Stack GapScale="LayoutGap.Small"
-               data-testid="processes-definition-results">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definitions" />
-            @if (DefinitionCatalog.Items.Count == 0)
-            {
-                <EmptyState Eyebrow="No matches"
-                            Title="No definitions match the current search"
-                            Description="Clear the search or use a broader definition term." />
-            }
-            else
-            {
-                @foreach (var item in DefinitionCatalog.Items)
-                {
-                    <button type="button"
-                            class="processes-definition-list-item @(item.Key == DefinitionCatalog.SelectedDefinitionKey ? "processes-definition-list-item--selected" : string.Empty)"
-                            @onclick="@(() => SelectDefinitionAsync(item.Key))"
-                            data-testid="@BuildDefinitionItemTestId(item.Key)">
-                        <span class="processes-definition-list-item__title">@item.Name</span>
-                        <span class="processes-definition-list-item__summary">@item.Summary</span>
-                        <span class="processes-definition-list-item__badges">
-                            <StatusBadge Tone="@ResolveDefinitionTone(item.Status)" Text="@item.Status.ToString()" />
-                            <StatusBadge Tone="neutral" Text="@item.Criticality" />
-                        </span>
-                    </button>
-                }
-            }
-        </Stack>
+        <TreeView Items="@ProcessDefinitionTreeNodes"
+                  Style="TreeViewStyle.Workbench"
+                  AriaLabel="Process definitions by scope"
+                  EmptyText="No process definitions match the current filters."
+                  OnSelect="HandleDefinitionTreeSelectAsync"
+                  OnToggle="HandleDefinitionTreeToggleAsync"
+                  data-testid="processes-definition-tree" />
+
+        @if (DefinitionCatalog.Items.Count == 0)
+        {
+            <EmptyState Eyebrow="No matches"
+                        Title="No definitions match the current search"
+                        Description="Clear the search or use a broader definition term." />
+        }
     </Stack>;
 
     private RenderFragment RenderDefinitionIdentityHeader() => @<SurfaceCard Class="processes-workspace-identity">
@@ -622,18 +653,148 @@
         </Split>
     </SurfaceCard>;
 
-    private RenderFragment RenderDefinitionCatalog() => @<div data-testid="processes-definition-catalog">
-        @if (DefinitionCatalog.SelectedEditor is not null)
+    private IReadOnlyList<TreeViewNode> ProcessDefinitionTreeNodes
+    {
+        get
+        {
+            var globalItems = DefinitionCatalog.Items
+                .Where(item => item.ScopeKind == ProcessDefinitionCatalogScopeKind.Global)
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(BuildDefinitionTreeNode)
+                .ToList();
+            var projectItems = DefinitionCatalog.Items
+                .Where(item => item.ScopeKind == ProcessDefinitionCatalogScopeKind.Project)
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(BuildDefinitionTreeNode)
+                .ToList();
+
+            return
+            [
+                new TreeViewNode
+                {
+                    Id = AllDefinitionsTreeNodeId,
+                    Text = "All definitions",
+                    Icon = ResolveScopeIcon(ProcessDefinitionCatalogScopeKind.All),
+                    Tooltip = "Show all visible process definitions.",
+                    BadgeText = DefinitionCatalog.ScopeGroups.FirstOrDefault(group => group.ScopeKind == ProcessDefinitionCatalogScopeKind.All)?.Count.ToString(CultureInfo.InvariantCulture) ?? DefinitionCatalog.Items.Count.ToString(CultureInfo.InvariantCulture),
+                    IsSelected = selectedDefinitionScope == ProcessDefinitionCatalogScopeKind.All && DefinitionCatalog.SelectedDefinitionKey is null,
+                    DataTestId = BuildScopeTestId(ProcessDefinitionCatalogScopeKind.All)
+                },
+                BuildScopeTreeNode(ProcessDefinitionCatalogScopeKind.Global, "Global defaults", globalItems),
+                BuildScopeTreeNode(ProcessDefinitionCatalogScopeKind.Project, "Project definitions", projectItems)
+            ];
+        }
+    }
+
+    private TreeViewNode BuildScopeTreeNode(
+        ProcessDefinitionCatalogScopeKind scopeKind,
+        string fallbackLabel,
+        IReadOnlyList<TreeViewNode> children)
+    {
+        var group = DefinitionCatalog.ScopeGroups.FirstOrDefault(item => item.ScopeKind == scopeKind);
+        var nodeId = BuildScopeTreeNodeId(scopeKind);
+        return new TreeViewNode
+        {
+            Id = nodeId,
+            Text = group?.Label ?? fallbackLabel,
+            Icon = ResolveScopeIcon(scopeKind),
+            Tooltip = group?.Description ?? fallbackLabel,
+            BadgeText = (group?.Count ?? children.Count).ToString(CultureInfo.InvariantCulture),
+            IsExpanded = expandedDefinitionTreeNodeIds.Contains(nodeId),
+            IsSelected = selectedDefinitionScope == scopeKind && DefinitionCatalog.SelectedDefinitionKey is null,
+            DataTestId = BuildScopeTestId(scopeKind),
+            ChildrenDataTestId = $"{BuildScopeTestId(scopeKind)}-children",
+            Children = children
+        };
+    }
+
+    private TreeViewNode BuildDefinitionTreeNode(ProcessDefinitionCatalogItemProjection item)
+        => new()
+        {
+            Id = BuildDefinitionTreeNodeId(item.Key),
+            Text = item.Name,
+            Icon = ResolveDefinitionIcon(item.Status),
+            Tooltip = item.Summary,
+            BadgeText = item.Status.ToString(),
+            IsSelected = item.Key == DefinitionCatalog.SelectedDefinitionKey,
+            DataTestId = BuildDefinitionItemTestId(item.Key)
+        };
+
+    private async Task HandleDefinitionTreeSelectAsync(string nodeId)
+    {
+        if (string.Equals(nodeId, AllDefinitionsTreeNodeId, StringComparison.Ordinal))
+        {
+            await SelectDefinitionScopeAsync(ProcessDefinitionCatalogScopeKind.All);
+            return;
+        }
+
+        if (nodeId.StartsWith(ScopeTreeNodePrefix, StringComparison.Ordinal))
+        {
+            var scopeValue = nodeId[ScopeTreeNodePrefix.Length..];
+            if (Enum.TryParse<ProcessDefinitionCatalogScopeKind>(scopeValue, ignoreCase: false, out var scopeKind))
+            {
+                await SelectDefinitionScopeAsync(scopeKind);
+            }
+
+            return;
+        }
+
+        if (nodeId.StartsWith(DefinitionTreeNodePrefix, StringComparison.Ordinal))
+        {
+            await SelectDefinitionAsync(new ProcessDefinitionCatalogItemKey(nodeId[DefinitionTreeNodePrefix.Length..]));
+        }
+    }
+
+    private Task HandleDefinitionTreeToggleAsync(string nodeId)
+    {
+        if (!expandedDefinitionTreeNodeIds.Add(nodeId))
+        {
+            expandedDefinitionTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private RenderFragment RenderDefinitionBasicsTab() => @<div data-testid="processes-definition-basics-tab">
+        @if (DefinitionCatalog.SelectedEditor is null)
+        {
+            <EmptyState Eyebrow="No definition selected"
+                        Title="Select a process definition"
+                        Description="The definition editor opens after a process is selected from the tree." />
+        }
+        else
         {
             @RenderDefinitionEditor(DefinitionCatalog.SelectedEditor)
-            @if (DefinitionCatalog.SelectedEditor.TemplateCatalog is not null)
-            {
-                <ProcessTemplateLibraryPanel TemplateCatalog="DefinitionCatalog.SelectedEditor.TemplateCatalog"
-                                             Scope="ResolveScope()"
-                                             Disabled="@isBusy"
-                                             QueryChanged="ApplyTemplateCatalogQueryAsync"
-                                             ExecuteImport="ExecuteTemplateImportCommandAsync" />
-            }
+        }
+    </div>;
+
+    private RenderFragment RenderRolesTab() => @<div data-testid="processes-definition-roles-tab">
+        @if (DefinitionCatalog.SelectedEditor?.RoleEditor is null)
+        {
+            <EmptyState Eyebrow="Roles"
+                        Title="No role projection is available"
+                        Description="Select a definition with role projections before editing role requirements." />
+        }
+        else
+        {
+            <ProcessDefinitionRoleEditorPanel RoleEditor="DefinitionCatalog.SelectedEditor.RoleEditor"
+                                              Scope="ResolveScope()"
+                                              Disabled="@isBusy"
+                                              ExecuteCommand="ExecuteDefinitionRoleEditorCommandAsync" />
+        }
+    </div>;
+
+    private RenderFragment RenderStepsTab() => @<Stack GapScale="LayoutGap.Large"
+                                                       data-testid="processes-definition-steps-tab">
+        @if (DefinitionCatalog.SelectedEditor?.Canvas is null &&
+             DefinitionCatalog.SelectedEditor?.StepEditor is null)
+        {
+            <EmptyState Eyebrow="Steps"
+                        Title="No step projection is available"
+                        Description="Select a definition with canvas and step projections before editing the workflow graph." />
+        }
+        else
+        {
             @if (DefinitionCatalog.SelectedEditor.Canvas is not null)
             {
                 <ProcessDefinitionCanvasPanel Canvas="DefinitionCatalog.SelectedEditor.Canvas"
@@ -641,6 +802,7 @@
                                               Disabled="@isBusy"
                                               ExecuteCommand="ExecuteDefinitionCanvasCommandAsync" />
             }
+
             @if (DefinitionCatalog.SelectedEditor.StepEditor is not null)
             {
                 <ProcessDefinitionStepEditorPanel StepEditor="DefinitionCatalog.SelectedEditor.StepEditor"
@@ -648,15 +810,192 @@
                                                   Disabled="@isBusy"
                                                   ExecuteCommand="ExecuteDefinitionStepEditorCommandAsync" />
             }
-            @if (DefinitionCatalog.SelectedEditor.RoleEditor is not null)
-            {
-                <ProcessDefinitionRoleEditorPanel RoleEditor="DefinitionCatalog.SelectedEditor.RoleEditor"
-                                                  Scope="ResolveScope()"
-                                                  Disabled="@isBusy"
-                                                  ExecuteCommand="ExecuteDefinitionRoleEditorCommandAsync" />
-            }
+        }
+    </Stack>;
+
+    private RenderFragment RenderExchangeTab() => @<div data-testid="processes-definition-exchange-tab">
+        @if (DefinitionCatalog.SelectedEditor?.TemplateCatalog is null)
+        {
+            <EmptyState Eyebrow="Exchange"
+                        Title="No template projection is available"
+                        Description="Template compatibility, import, and version preview open after a definition is selected." />
+        }
+        else
+        {
+            <ProcessTemplateLibraryPanel TemplateCatalog="DefinitionCatalog.SelectedEditor.TemplateCatalog"
+                                         Scope="ResolveScope()"
+                                         Disabled="@isBusy"
+                                         QueryChanged="ApplyTemplateCatalogQueryAsync"
+                                         ExecuteImport="ExecuteTemplateImportCommandAsync" />
         }
     </div>;
+
+    private RenderFragment RenderRunsTab() => @<Stack GapScale="LayoutGap.Large"
+                                                      Class="processes-runs-tab-shell"
+                                                      data-testid="processes-runs-tab-shell">
+        <SurfaceCard Soft="true"
+                     data-testid="processes-selected-run-summary">
+            <Split Gap="LayoutGap.Medium"
+                   Wrap="FlexWrap.Wrap">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run focus" />
+                    <h3 class="text-base font-semibold text-slate-900">Runtime workspace</h3>
+                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.LiveRuns.Summary</p>
+                </Stack>
+                <Cluster Gap="LayoutGap.XSmall"
+                         Class="flex-wrap">
+                    <StatusBadge Tone="success" Text="@($"{CurrentShell.LiveRuns.ActiveRunCount} active")" />
+                    <StatusBadge Tone="warning" Text="@($"{CurrentShell.LiveRuns.AttentionRunCount} attention")" />
+                    <StatusBadge Tone="danger" Text="@($"{CurrentShell.LiveRuns.FailedRunCount} failed")" />
+                    <StatusBadge Tone="@ProjectionTone" Text="@ProjectionStatusText" />
+                </Cluster>
+            </Split>
+        </SurfaceCard>
+
+        <Tabs SelectedIndex="@selectedRunViewIndex"
+              SelectedIndexChanged="HandleSelectedRunViewChangedAsync"
+              Variant="TabsVariant.WorkspaceSecondary"
+              BorderMode="TabsBorderMode.Soft"
+              OverflowMode="TabsOverflowMode.Auto"
+              PanelOverflowMode="TabsPanelOverflowMode.Auto"
+              Class="w-full min-w-0"
+              AriaLabel="Process runs workspace sections"
+              data-testid="processes-runs-tabs">
+            <TabsItem Text="Launch" Icon="rocket_launch">
+                <EmptyState Eyebrow="Launch"
+                            Title="Launch planning"
+                            Description="Launch planning is kept with runtime runs, matching the original process workspace shape." />
+            </TabsItem>
+            <TabsItem Text="Activity" Icon="monitoring">
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="3"
+                      data-testid="processes-run-activity">
+                    @RenderMetricCard("Active runs", CurrentShell.LiveRuns.ActiveRunCount.ToString(CultureInfo.InvariantCulture), "success", CurrentShell.LiveRuns.Summary)
+                    @RenderMetricCard("Attention", CurrentShell.LiveRuns.AttentionRunCount.ToString(CultureInfo.InvariantCulture), "warning", "Runs that need operator review.")
+                    @RenderMetricCard("Failed", CurrentShell.LiveRuns.FailedRunCount.ToString(CultureInfo.InvariantCulture), "danger", "Failed process runs in the current projection.")
+                </Grid>
+            </TabsItem>
+            <TabsItem Text="Control" Icon="rule">
+                <SurfaceCard Soft="true" data-testid="processes-operator-control-section">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operator control" />
+                    <h3 class="text-base font-semibold text-slate-900">Manager Resolution</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">Escalations, approvals, rework, dispatch receipts, and attempt timeline controls remain grouped under run control.</p>
+                </SurfaceCard>
+            </TabsItem>
+            <TabsItem Text="Execution" Icon="terminal">
+                <SurfaceCard Soft="true" data-testid="processes-runtime-host-readback">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution" />
+                    <h3 class="text-base font-semibold text-slate-900">Runtime execution readback</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">Runtime canvas and technical execution telemetry are intentionally separated from definition authoring.</p>
+                </SurfaceCard>
+            </TabsItem>
+            <TabsItem Text="Graphs" Icon="bar_chart">
+                <div data-testid="processes-selected-run-graphs-tab">
+                    @RenderGraphMetricGrid("Selected run graph projection")
+                </div>
+            </TabsItem>
+            <TabsItem Text="Coordination" Icon="hub">
+                <SurfaceCard Soft="true" data-testid="processes-run-coordination">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Coordination" />
+                    <h3 class="text-base font-semibold text-slate-900">Assignments and direct role messaging</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">Run-scoped staffing and direct messaging remain in the runtime workspace rather than the definition form.</p>
+                </SurfaceCard>
+            </TabsItem>
+            <TabsItem Text="Evidence" Icon="inventory_2">
+                <SurfaceCard Soft="true" data-testid="processes-run-evidence">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Evidence" />
+                    <h3 class="text-base font-semibold text-slate-900">Artifacts and decisions</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">Evidence, artifact satisfaction, decisions, work briefs, and conformance observations stay attached to the selected run.</p>
+                </SurfaceCard>
+            </TabsItem>
+        </Tabs>
+    </Stack>;
+
+    private RenderFragment RenderGraphsTab() => @<Stack GapScale="LayoutGap.Medium"
+                                                        data-testid="processes-process-graphs-tab">
+        <Cluster Gap="LayoutGap.Small"
+                 JustifyContent="JustifyContent.End">
+            <Button Text="Refresh"
+                    Icon="refresh"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@isBusy"
+                    IsBusy="@isBusy"
+                    Click="RefreshAsync"
+                    data-testid="processes-process-graphs-load-button" />
+        </Cluster>
+        @RenderGraphMetricGrid("Process run history graph projection")
+    </Stack>;
+
+    private RenderFragment RenderAnalyticsTab() => @<Grid Gap="LayoutGap.Medium"
+                                                          ColumnsLg="3"
+                                                          data-testid="processes-analytics-tab">
+        @RenderMetricCard("Readiness", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "Ready" : "Review", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "success" : "warning", "Simulation readiness from the selected definition projection.")
+        @RenderMetricCard("Compatibility", DefinitionCatalog.TemplateCompatibilityIssueCount.ToString(CultureInfo.InvariantCulture), DefinitionCatalog.TemplateCompatibilityIssueCount > 0 ? "warning" : "success", "Template compatibility issues for the current catalog.")
+        @RenderMetricCard("Projection backlog", CurrentShell.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture), ProjectionTone, CurrentShell.Refresh.Summary)
+    </Grid>;
+
+    private RenderFragment RenderManagerChatTab() => @<Grid Gap="LayoutGap.Medium"
+                                                            ColumnTemplateXl="minmax(14rem,0.35fr) minmax(0,1.65fr)"
+                                                            Class="h-full min-h-0 w-full"
+                                                            data-testid="processes-manager-chat-tab">
+        <SurfaceCard Soft="true"
+                     Class="h-full min-h-0"
+                     data-testid="processes-manager-chat-context">
+            <Stack GapScale="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Process manager" />
+                    <h3 class="text-base font-semibold text-slate-900">@CurrentShell.AgentEntry.Label</h3>
+                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.AgentEntry.ContextKey</p>
+                </Stack>
+                <Cluster Gap="LayoutGap.XSmall"
+                         Class="flex-wrap">
+                    <StatusBadge Tone="@(CurrentShell.AgentEntry.IsAvailable ? "success" : "warning")"
+                                 Text="@(CurrentShell.AgentEntry.IsAvailable ? "Available" : "Unavailable")" />
+                    <StatusBadge Tone="neutral" Text="@CurrentShell.AgentEntry.Kind.ToString()" />
+                </Cluster>
+                <Button Text="Open agent context"
+                        Icon="smart_toy"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="w-full justify-start"
+                        Disabled="@AgentContextDisabled"
+                        Click="OpenAgentContext"
+                        data-testid="processes-manager-chat-open-agent-context" />
+            </Stack>
+        </SurfaceCard>
+
+        <SurfaceCard Soft="true"
+                     Class="h-full min-h-0"
+                     data-testid="processes-manager-chat-workspace">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager chat" />
+            <h3 class="text-base font-semibold text-slate-900">Run-scoped manager conversation</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Manager chat stays available as a dedicated process tab. The projection shell opens the scoped agent workspace by context key instead of embedding runtime persistence directly in the UI.</p>
+            @if (!string.IsNullOrWhiteSpace(CurrentShell.AgentEntry.DisabledReason))
+            {
+                <p class="mt-3 text-sm font-semibold text-amber-700">@CurrentShell.AgentEntry.DisabledReason</p>
+            }
+        </SurfaceCard>
+    </Grid>;
+
+    private RenderFragment RenderGraphMetricGrid(string title) => @<Grid Gap="LayoutGap.Medium"
+                                                                          ColumnsLg="3"
+                                                                          data-testid="processes-graph-metric-grid">
+        @RenderMetricCard("Cost", "Projection pending", "warning", $"{title}: detailed cost rows require runtime metric projection rows.")
+        @RenderMetricCard("Tokens", "Projection pending", "warning", $"{title}: input, cached, output, and reasoning token rows are not exposed by the current shell contract.")
+        @RenderMetricCard("Time", CurrentShell.LiveRuns.LastEventAtUtc is null ? "No events" : CurrentShell.LiveRuns.LastEventAtUtc.Value.LocalDateTime.ToString("g", CultureInfo.CurrentCulture), "info", "Latest runtime event time from the live-run projection.")
+    </Grid>;
+
+    private RenderFragment RenderMetricCard(
+        string label,
+        string value,
+        string tone,
+        string summary) => @<SurfaceCard Soft="true">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="@label" />
+        <h3 class="text-base font-semibold text-slate-900">@value</h3>
+        <p class="mt-2 text-sm leading-6 text-slate-600">@summary</p>
+        <StatusBadge Tone="@tone" Text="@label" />
+    </SurfaceCard>;
 
     private RenderFragment RenderDefinitionEditor(ProcessDefinitionEditorProjection editor) => @<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-editor">
         <Split Gap="LayoutGap.Small">
@@ -1263,6 +1602,16 @@
             _ => "account_tree"
         };
 
+    private static string ResolveDefinitionIcon(ProcessDefinitionCatalogItemStatus status)
+        => status switch
+        {
+            ProcessDefinitionCatalogItemStatus.Published => "verified",
+            ProcessDefinitionCatalogItemStatus.Draft => "edit_note",
+            ProcessDefinitionCatalogItemStatus.RequiresReview => "report",
+            ProcessDefinitionCatalogItemStatus.TemplateDefault => "account_tree",
+            _ => "account_tree"
+        };
+
     private static string ResolveDefinitionTone(ProcessDefinitionCatalogItemStatus status)
         => status switch
         {
@@ -1325,6 +1674,12 @@
     private static string BuildScopeTestId(ProcessDefinitionCatalogScopeKind kind)
         => $"processes-definition-scope-{kind.ToString().ToLowerInvariant()}";
 
+    private static string BuildScopeTreeNodeId(ProcessDefinitionCatalogScopeKind kind)
+        => $"{ScopeTreeNodePrefix}{kind}";
+
+    private static string BuildDefinitionTreeNodeId(ProcessDefinitionCatalogItemKey key)
+        => $"{DefinitionTreeNodePrefix}{key.Value}";
+
     private static string BuildDefinitionItemTestId(ProcessDefinitionCatalogItemKey key)
     {
         var normalized = new string(key.Value
@@ -1353,12 +1708,38 @@
             _ => $"processes-definition-command-{kind.ToString().ToLowerInvariant()}"
         };
 
-    private static string BuildTabTestId(ProcessWorkspaceTabKey key)
-        => $"processes-tab-{key.ToString().ToLowerInvariant()}";
+    private static string BuildDetailTabTestId(ProcessWorkspaceDetailTabKey key)
+        => key == ProcessWorkspaceDetailTabKey.Definition
+            ? "processes-tab-definitions"
+            : $"processes-detail-tab-{NormalizeDetailTabKey(key)}";
 
-    private static string BuildTabPanelTestId(ProcessWorkspaceTabKey key)
-        => $"processes-tab-panel-{key.ToString().ToLowerInvariant()}";
+    private static string BuildDetailPanelTestId(ProcessWorkspaceDetailTabKey key)
+        => key == ProcessWorkspaceDetailTabKey.Definition
+            ? "processes-tab-panel-definitions"
+            : $"processes-detail-panel-{NormalizeDetailTabKey(key)}";
+
+    private static string NormalizeDetailTabKey(ProcessWorkspaceDetailTabKey key)
+        => key.ToString().ToLowerInvariant().Replace("managerchat", "manager-chat", StringComparison.Ordinal);
 
     private static string FormatObservedAt(DateTimeOffset observedAtUtc)
         => observedAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+
+    private enum ProcessWorkspaceDetailTabKey
+    {
+        Definition,
+        Roles,
+        Steps,
+        Runs,
+        Graphs,
+        Analytics,
+        Exchange,
+        ManagerChat
+    }
+
+    private sealed record ProcessWorkspaceDetailTabDescriptor(
+        ProcessWorkspaceDetailTabKey Key,
+        string Text,
+        string Icon,
+        string Description,
+        string? BadgeText);
 }

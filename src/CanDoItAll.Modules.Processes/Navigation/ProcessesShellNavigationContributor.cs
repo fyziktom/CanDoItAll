@@ -28,7 +28,7 @@ public sealed class ProcessesShellNavigationContributor : IShellNavigationContri
             PinnedByDefault: false),
         IsSubItem: true,
         Order: 21,
-        DesignNote: "Rendered as a flat main menu item for now; the subitem marker matches the Agent Workflows navigation treatment.");
+        DesignNote: "Rendered directly after the process module entry, matching the Agent Workflows navigation treatment.");
 
     public IEnumerable<ShellNavigationContribution> GetShellNavigationContributions()
         => [ProcessesContribution, LiveProcessesContribution];

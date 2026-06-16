@@ -1,0 +1,129 @@
+- generic [ref=e514] [box=0,0,1600,1000]:
+  - complementary [ref=e515] [box=16,8,76,984]:
+    - generic [ref=e516] [box=27,19,54,962]:
+      - generic [ref=e517] [box=27,19,54,40]:
+        - generic [ref=e518] [box=27,19,10,40]:
+          - generic [ref=e519] [box=12,19,40,40]: CD
+          - generic [ref=e520] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e521] [box=45,21,36,36]:
+          - generic [ref=e522] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e523] [box=27,67,54,803]:
+        - button "Dashboard" [ref=e525] [box=27,71,44,44]:
+          - generic [ref=e527] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e529] [box=27,121,44,44]:
+          - generic [ref=e531] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e533] [box=27,171,44,44]:
+          - generic [ref=e535] [box=39,183,20,20]: forum
+        - button "CRM / HR" [ref=e537] [box=27,221,44,44]:
+          - generic [ref=e539] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e541] [box=27,271,44,44]:
+          - generic [ref=e543] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e545] [box=27,321,44,44]:
+          - generic [ref=e547] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e549] [box=27,371,44,44]:
+          - generic [ref=e551] [box=39,383,20,20]: account_tree
+        - button "Cognitive Memory" [ref=e553] [box=27,421,44,44]:
+          - generic [ref=e555] [box=39,433,20,20]: psychology
+        - button "Resources" [ref=e557] [box=27,471,44,44]:
+          - generic [ref=e559] [box=39,483,20,20]: inventory_2
+        - button "Plugins" [ref=e561] [box=27,521,44,44]:
+          - generic [ref=e563] [box=39,533,20,20]: extension
+        - button "Prompt Gallery" [ref=e565] [box=27,571,44,44]:
+          - generic [ref=e567] [box=39,583,20,20]: library_books
+        - button "Prompt Factory" [ref=e569] [box=27,621,44,44]:
+          - generic [ref=e571] [box=39,633,20,20]: construction
+        - button "Validation Center" [ref=e573] [box=27,671,44,44]:
+          - generic [ref=e575] [box=39,683,20,20]: fact_check
+        - button "Test Lab" [ref=e577] [box=27,721,44,44]:
+          - generic [ref=e579] [box=39,733,20,20]: science
+        - button "More pages" [ref=e581] [box=32,771,44,44]:
+          - generic [ref=e583] [box=44,783,20,20]: expand_less
+      - generic [ref=e585] [box=27,887,54,94]:
+        - button "Settings" [ref=e587] [box=27,887,54,44]:
+          - generic [ref=e589] [box=44,899,20,20]: settings
+          - generic [ref=e590] [box=54,909,1,1]: Settings
+        - button "Switch Database" [ref=e592] [box=27,937,54,44]:
+          - generic [ref=e594] [box=44,949,20,20]: storage
+          - generic [ref=e595] [box=54,959,1,1]: Switch Database
+  - main [ref=e596] [box=100,8,1484,984]:
+    - generic [ref=e597] [box=100,8,1484,30]:
+      - generic [ref=e601] [box=104,8,960,30]:
+        - button "Dashboard" [ref=e603] [box=113,13,85,20]:
+          - generic [ref=e604] [box=113,15,59,16]: Dashboard
+          - generic [ref=e606] [box=178,13,20,20]: push_pin
+        - button "Processes" [ref=e608] [box=222,15,53,16]:
+          - generic [ref=e609] [box=222,15,53,16]: Processes
+      - generic [ref=e611] [box=1084,10,500,26]:
+        - generic [ref=e612] [box=1084,10,216,26]:
+          - generic [ref=e613] [box=1095,16,136,13]: Delivery Workspace
+          - generic [ref=e614] [box=1237,15,53,16]: Processes
+        - generic [ref=e615] [box=1309,10,117,26]: Interactive Server
+        - generic [ref=e616] [box=1434,10,86,26]: Live items 0
+        - generic [ref=e617] [box=1528,10,56,26]: Tabs 2
+    - generic [ref=e695] [box=100,46,1484,946]:
+      - generic [ref=e698] [box=117,63,1450,36]:
+        - generic [ref=e699] [box=117,70,1182,22]:
+          - paragraph [ref=e700] [box=117,73,85,16]: Processes
+          - generic [ref=e703] [box=210,70,105,22]: 24 definition(s)
+          - generic [ref=e706] [box=322,70,64,22]: 0 active
+          - generic [ref=e709] [box=394,70,82,22]: 0 attention
+          - generic [ref=e712] [box=484,70,99,22]: Store pending
+        - generic [ref=e713] [box=1311,63,256,36]:
+          - button "Refresh" [ref=e715] [box=1311,63,36,36]:
+            - generic [ref=e716] [box=1319,71,20,20]: refresh
+            - generic [ref=e717] [box=1329,81,1,1]: refresh
+          - button "Agent context" [ref=e719] [box=1355,63,36,36]:
+            - generic [ref=e720] [box=1363,71,20,20]: smart_toy
+            - generic [ref=e721] [box=1373,81,1,1]: smart toy
+          - button "New definition" [disabled] [ref=e723] [box=1399,63,36,36]:
+            - generic [ref=e724] [box=1407,71,20,20]: add
+            - generic [ref=e725] [box=1417,81,1,1]: add
+          - button "Feed defaults" [ref=e727] [box=1443,63,36,36]:
+            - generic [ref=e728] [box=1451,71,20,20]: download
+            - generic [ref=e729] [box=1461,81,1,1]: download
+          - button "Launch" [disabled] [ref=e731] [box=1487,63,36,36]:
+            - generic [ref=e732] [box=1495,71,20,20]: rocket_launch
+            - generic [ref=e733] [box=1505,81,1,1]: rocket launch
+          - button "Live dashboard" [ref=e735] [box=1531,63,36,36]:
+            - generic [ref=e736] [box=1539,71,20,20]: open_in_new
+            - generic [ref=e737] [box=1549,81,1,1]: open in new
+      - generic [ref=e740] [box=100,132,1484,860]:
+        - generic [ref=e741] [box=100,132,448,860]:
+          - generic [ref=e743] [box=113,143,422,110]:
+            - generic [ref=e746] [box=113,143,370,38]:
+              - generic [ref=e747] [box=113,150,161,24]
+              - generic [ref=e753] [box=295,150,175,24]: 24 definition(s)
+            - generic [ref=e757] [box=128,200,344,42]:
+              - textbox "Search process definitions" [ref=e758] [box=128,200,256,42]:
+                - /placeholder: Search definitions
+              - button "Search definitions" [ref=e759] [box=392,203,36,36]
+              - button "Clear search" [ref=e762] [box=436,203,36,36]
+          - tree "Process definitions by scope" [ref=e768] [box=113,274,403,1234]:
+            - treeitem "All definitions 24" [ref=e769] [box=113,274,403,42]:
+              - button "All definitions 24" [ref=e772] [box=149,274,367,42]
+            - treeitem "Collapse Global defaults Global defaults 24" [expanded] [ref=e777] [box=113,320,403,1142]:
+              - generic [ref=e778] [box=113,320,403,42]
+              - group [ref=e786] [box=113,362,403,1100]
+            - treeitem "Project 0" [ref=e979] [box=113,1466,403,42]:
+              - button "Project 0" [ref=e982] [box=149,1466,367,42]
+        - generic [ref=e987] [box=560,132,1024,860]:
+          - generic [ref=e990] [box=594,164,956,22]:
+            - generic [ref=e991] [box=594,165,433,20]:
+              - paragraph [ref=e992] [box=594,167,67,16]: Process
+              - heading ".NET architecture design and review subprocess" [level=2] [ref=e993] [box=669,165,358,20]
+            - generic [ref=e994] [box=1278,164,272,22]:
+              - generic [ref=e997] [box=1278,164,112,22]: TemplateDefault
+              - generic [ref=e1000] [box=1397,164,48,22]: High
+              - generic [ref=e1003] [box=1453,164,97,22]: GovernedLive
+          - generic [ref=e1005] [box=573,228,998,753]:
+            - tablist "Process workspace detail panels" [ref=e1006] [box=573,228,998,95]:
+              - tab "Definition" [selected] [ref=e1007] [box=577,229,128,43]
+              - tab "Roles 5" [ref=e1010] [box=713,228,128,43]
+              - tab "Steps 4" [ref=e1014] [box=849,228,129,43]
+              - tab "Runs 0" [ref=e1018] [box=986,228,125,43]
+              - tab "Graphs 0" [ref=e1022] [box=1119,228,141,43]
+              - tab "Analytics 0" [ref=e1026] [box=1268,228,153,43]
+              - tab "Exchange 50" [ref=e1030] [box=577,279,164,43]
+              - tab "Manager chat ready" [ref=e1034] [box=749,279,220,43]
+            - tabpanel "Definition" [ref=e1039] [box=573,322,998,659]:
+              - generic [ref=e1042] [box=588,361,952,1034]

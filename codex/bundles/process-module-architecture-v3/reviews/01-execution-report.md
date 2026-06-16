@@ -789,13 +789,18 @@ SB19 UI parity repair proof:
 
 ```text
 bundle://proof/SB19/ui-parity-repair.md
+bundle://proof/SB19/ui-parity-tabs-repair.md
 bundle://proof/SB19/browser/processes-definition-canvas.png
 bundle://proof/SB19/browser/processes-live-dashboard.png
 bundle://proof/SB19/browser/browser-validation-summary.txt
+bundle://proof/SB19/ui-parity-tabs-repair/browser/after-tabs-tree-definition.png
+bundle://proof/SB19/ui-parity-tabs-repair/browser/after-steps-canvas-floating-windows.png
+bundle://proof/SB19/ui-parity-tabs-repair/browser/after-live-processes-menu-order.png
+bundle://proof/SB19/ui-parity-tabs-repair/browser/after-live-processes-subpage.png
 ```
 
 Result:
 
 ```text
-Post-review repair restored the process module UI toward the original maf-processes-refactor layout and canvas UX. The process workspace now uses a dense toolbar/list-detail layout, the definition canvas uses the shared CanvasLib workbench plus CanvasFloatingWindow/OverlayComponentToolbox windows, and Live Processes is a dedicated process-module page at /processes/live with its own navigation item. Focused module build passed with 0 warnings and 0 errors, ProcessWorkspaceShell component tests passed 24/24, ProcessShell Playwright smoke passed 1/1, and CodeAnalytics MCP snapshot snap-20260616103327-798bce28 completed with no blocking errors.
+Post-review repair restored the process module UI toward the original maf-processes-refactor layout and canvas UX. The process workspace now uses a dense toolbar/list-detail layout, a TreeView definition list, original-style detail tabs (Definition, Roles, Steps, Runs, Graphs, Analytics, Exchange, Manager chat), nested run tabs, and the shared CanvasLib workbench plus CanvasFloatingWindow/OverlayComponentToolbox windows. Live Processes is a dedicated process-module page at /processes/live and now renders immediately after Processes in the main navigation rather than being orphaned into overflow. Web build passed with 0 warnings and 0 errors, focused component/navigation tests passed 33/33, ProcessShell Playwright smoke passed 1/1, Playwright MCP screenshots captured tabs/tree/canvas windows/graphs/manager chat/live navigation, and CodeAnalytics MCP snapshot snap-20260616120824-b9b86e2f completed with no blocking errors.
 ```

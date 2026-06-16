@@ -96,27 +96,41 @@ public static class ShellNavigation
             .GroupBy(contribution => NormalizeRouteKey(contribution.ParentRoute), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
 
-        var parentRoutes = Items
-            .Select(item => NormalizeRouteKey(item.Route))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var merged = new List<ShellNavigationItem>(Items.Count + contributions.Length);
+        var visitedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in Items)
         {
-            merged.Add(item);
-
-            if (contributionsByParent.TryGetValue(NormalizeRouteKey(item.Route), out var children))
-            {
-                merged.AddRange(children.Select(contribution => contribution.Item));
-            }
+            AddItemWithChildren(item);
         }
 
-        var orphanedContributions = contributions
-            .Where(contribution => !parentRoutes.Contains(NormalizeRouteKey(contribution.ParentRoute)))
-            .Select(contribution => contribution.Item);
-        merged.AddRange(orphanedContributions);
+        foreach (var contribution in contributions)
+        {
+            AddItemWithChildren(contribution.Item);
+        }
 
         return merged;
+
+        void AddItemWithChildren(ShellNavigationItem item)
+        {
+            var routeKey = NormalizeRouteKey(item.Route);
+            if (!visitedRoutes.Add(routeKey))
+            {
+                return;
+            }
+
+            merged.Add(item);
+
+            if (!contributionsByParent.TryGetValue(routeKey, out var children))
+            {
+                return;
+            }
+
+            foreach (var child in children)
+            {
+                AddItemWithChildren(child.Item);
+            }
+        }
     }
 
     private static string NormalizeRouteKey(string route)

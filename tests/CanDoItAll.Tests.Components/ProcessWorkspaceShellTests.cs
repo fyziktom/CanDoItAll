@@ -23,13 +23,19 @@ public sealed class ProcessWorkspaceShellTests
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-shell']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
-        Assert.Contains("Definitions", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Launch plans", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Live runs", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("History", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Definition", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Roles", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Steps", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Runs", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Graphs", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Analytics", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Exchange", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Manager chat", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Blazor app delivery", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Store pending", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='processes-command-strip']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-detail-tabs']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-definition-tree']"));
     }
 
     [Fact]
@@ -45,7 +51,7 @@ public sealed class ProcessWorkspaceShellTests
             .Add(component => component.ProcessIdQuery, processId)
             .Add(component => component.RunIdQuery, runId));
 
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-tab-panel-liveruns']")));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-detail-panel-runs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Project, client.LastRequest?.Scope.Kind);
         Assert.Equal(projectId, client.LastRequest?.Scope.ProjectId);
         Assert.Equal(processId, client.LastRequest?.Selection.ProcessId);
@@ -85,7 +91,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
 
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-scope-project']")));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-tree']")));
         cut.Find("[data-testid='processes-definition-scope-project']").Click();
 
         cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCatalogScopeKind.Project, client.Requests.Last().DefinitionCatalogQuery.ScopeFilter));
@@ -185,7 +191,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Contains("Draft saved", cut.Markup, StringComparison.Ordinal);
         Assert.Equal("Architecture owner", client.LastEditorCommand?.Draft.Identity.OwnerName);
         Assert.Equal("Use the architecture board manager.", client.LastEditorCommand?.Draft.Governance.ManagerOverrideSummary);
-        Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-definition-editor']"));
     }
 
     [Fact]
@@ -209,6 +215,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
 
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']")));
         Assert.Equal("Solution architect", cut.Find("[data-testid='processes-role-display-name']").GetAttribute("value"));
@@ -223,6 +230,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-save']")));
         cut.Find("[data-testid='processes-role-display-name']").Input("Principal architecture steward");
@@ -244,6 +252,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-apply-template']")));
         cut.Find("[data-testid='processes-role-template-action']").Change("role-template.solution-architect");
@@ -261,6 +270,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
 
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
         var workbench = cut.FindComponent<CanvasWorkbench>();
@@ -291,6 +301,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox-process-step-implementation']")));
         cut.Find("[data-testid='processes-canvas-node-step-architecture-decision']").Click();
@@ -307,6 +318,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-recompose']")));
         cut.Find("[data-testid='processes-canvas-recompose']").Click();
@@ -314,7 +326,7 @@ public sealed class ProcessWorkspaceShellTests
         cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.Recompose, client.LastCanvasCommand?.CommandKind));
         Assert.Equal(ProcessDefinitionCanvasRecompositionMode.BalancedFlow, client.LastCanvasCommand?.RecompositionMode);
         Assert.Contains("Canvas recomposed", cut.Markup, StringComparison.Ordinal);
-        Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']"));
     }
 
     [Fact]
@@ -323,6 +335,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
 
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-step-editor']")));
         Assert.Equal("Architecture decision", cut.Find("[data-testid='processes-step-title']").GetAttribute("value"));
@@ -338,6 +351,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-step-save']")));
         cut.Find("[data-testid='processes-step-title']").Input("Architecture decision checkpoint");
@@ -358,6 +372,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-step-add-branch-outcome']")));
         cut.Find("[data-testid='processes-step-add-branch-outcome']").Click();
@@ -381,6 +396,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-exchange", "processes-detail-panel-exchange");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library']")));
         Assert.Contains("Template catalog is projected from canonical JSON", cut.Markup, StringComparison.Ordinal);
@@ -406,6 +422,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-exchange", "processes-detail-panel-exchange");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-import-process']")));
         cut.Find("[data-testid='processes-template-library-import-process']").Click();
@@ -425,16 +442,51 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Original_process_workspace_tabs_render_runs_graphs_analytics_and_manager_chat()
+    {
+        using var context = CreateContext(out _);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-runs", "processes-detail-panel-runs");
+        Assert.NotNull(cut.Find("[data-testid='processes-runs-tab-shell']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-runs-tabs']"));
+        Assert.Contains("Launch", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Activity", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Control", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Execution", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Coordination", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Evidence", cut.Markup, StringComparison.Ordinal);
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-graphs", "processes-detail-panel-graphs");
+        Assert.NotNull(cut.Find("[data-testid='processes-process-graphs-tab']"));
+        Assert.Contains("Cost", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Tokens", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Time", cut.Markup, StringComparison.Ordinal);
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-analytics", "processes-detail-panel-analytics");
+        Assert.NotNull(cut.Find("[data-testid='processes-analytics-tab']"));
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        Assert.NotNull(cut.Find("[data-testid='processes-manager-chat-tab']"));
+        Assert.Contains("processes:workspace", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Processes_navigation_contributor_adds_processes_to_shell_navigation()
     {
         var items = ShellNavigation.GetItems(0, [new ProcessesShellNavigationContributor()]);
         var processes = Assert.Single(items, item => item.Route == "/processes");
         var liveProcesses = Assert.Single(items, item => item.Route == "/processes/live");
+        var contribution = new ProcessesShellNavigationContributor()
+            .GetShellNavigationContributions()
+            .Single(item => item.Item.Route == "/processes/live");
 
         Assert.Equal("Processes", processes.Title);
         Assert.Equal("account_tree", processes.Icon);
         Assert.Equal("Live Processes", liveProcesses.Title);
         Assert.Equal("monitor_heart", liveProcesses.Icon);
+        Assert.True(contribution.IsSubItem);
+        Assert.Equal("/processes", contribution.ParentRoute);
     }
 
     [Fact]
@@ -459,6 +511,16 @@ public sealed class ProcessWorkspaceShellTests
         client = new RecordingProcessWorkspaceProjectionClient();
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);
         return context;
+    }
+
+    private static void ActivateProcessDetailTab(
+        IRenderedComponent<ProcessWorkspaceShell> cut,
+        string tabTestId,
+        string panelTestId)
+    {
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{tabTestId}']")));
+        cut.Find($"[data-testid='{tabTestId}']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{panelTestId}']")));
     }
 
     private sealed class RecordingProcessWorkspaceProjectionClient : IProcessWorkspaceProjectionClient

@@ -1,0 +1,93 @@
+- generic [ref=e514] [box=0,0,1440,920]:
+  - complementary [ref=e515] [box=16,8,288,904]:
+    - generic [ref=e516] [box=27,19,266,882]:
+      - generic [ref=e517] [box=27,19,266,40]:
+        - generic [ref=e518] [box=27,19,200,40]:
+          - generic [ref=e519] [box=27,19,40,40]: CD
+          - generic [ref=e520] [box=75,21,152,36]
+        - button "Collapse navigation" [active] [ref=e523] [box=257,21,36,36]:
+          - generic [ref=e524] [box=265,29,20,20]: chevron_left
+      - navigation "Primary navigation" [ref=e525] [box=27,67,266,723]:
+        - button "Dashboard" [ref=e527] [box=27,71,266,44]:
+          - generic [ref=e529] [box=43,83,20,20]: dashboard
+          - generic [ref=e531] [box=77,83,69,20]: Dashboard
+        - button "Projects" [ref=e533] [box=27,121,266,44]:
+          - generic [ref=e535] [box=43,133,20,20]: folder_open
+          - generic [ref=e537] [box=77,133,50,20]: Projects
+        - button "Collaboration" [ref=e539] [box=27,171,266,44]:
+          - generic [ref=e541] [box=43,183,20,20]: forum
+          - generic [ref=e543] [box=77,183,86,20]: Collaboration
+        - button "CRM / HR" [ref=e545] [box=27,221,266,44]:
+          - generic [ref=e547] [box=43,233,20,20]: groups
+          - generic [ref=e549] [box=77,233,63,20]: CRM / HR
+        - button "Agents" [ref=e551] [box=27,271,266,44]:
+          - generic [ref=e553] [box=43,283,20,20]: smart_toy
+          - generic [ref=e555] [box=77,283,45,20]: Agents
+        - button "Workflows" [ref=e557] [box=27,321,266,44]:
+          - generic [ref=e559] [box=43,333,20,20]: account_tree
+          - generic [ref=e561] [box=77,333,67,20]: Workflows
+        - button "Processes" [ref=e563] [box=27,371,266,44]:
+          - generic [ref=e565] [box=43,383,20,20]: account_tree
+          - generic [ref=e567] [box=77,383,61,20]: Processes
+        - button "Live Processes" [ref=e569] [box=27,421,266,44]:
+          - generic [ref=e571] [box=43,433,20,20]: monitor_heart
+          - generic [ref=e573] [box=77,433,90,20]: Live Processes
+        - button "Cognitive Memory" [ref=e575] [box=27,471,266,44]:
+          - generic [ref=e577] [box=43,483,20,20]: psychology
+          - generic [ref=e579] [box=77,483,118,20]: Cognitive Memory
+        - button "Resources" [ref=e581] [box=27,521,266,44]:
+          - generic [ref=e583] [box=43,533,20,20]: inventory_2
+          - generic [ref=e585] [box=77,533,64,20]: Resources
+        - button "Plugins" [ref=e587] [box=27,571,266,44]:
+          - generic [ref=e589] [box=43,583,20,20]: extension
+          - generic [ref=e591] [box=77,583,46,20]: Plugins
+        - button "Prompt Gallery" [ref=e593] [box=27,621,266,44]:
+          - generic [ref=e595] [box=43,633,20,20]: library_books
+          - generic [ref=e597] [box=77,633,96,20]: Prompt Gallery
+        - button "More pages" [ref=e599] [box=27,671,266,44]:
+          - generic [ref=e601] [box=43,683,20,20]: expand_less
+          - generic [ref=e603] [box=77,683,34,20]: More
+      - generic [ref=e605] [box=27,807,266,94]:
+        - button "Settings" [ref=e607] [box=27,807,266,44]:
+          - generic [ref=e609] [box=47,819,20,20]: settings
+          - generic [ref=e610] [box=83,819,51,20]: Settings
+        - button "Switch Database" [ref=e612] [box=27,857,266,44]:
+          - generic [ref=e614] [box=47,869,20,20]: storage
+          - generic [ref=e615] [box=83,869,104,20]: Switch Database
+  - main [ref=e616] [box=312,8,1112,904]:
+    - generic [ref=e617] [box=312,8,1112,30]:
+      - generic [ref=e621] [box=316,8,588,30]:
+        - button "Dashboard" [ref=e623] [box=325,13,85,20]:
+          - generic [ref=e624] [box=325,15,59,16]: Dashboard
+          - generic [ref=e626] [box=390,13,20,20]: push_pin
+        - button "Processes" [ref=e628] [box=434,15,53,16]:
+          - generic [ref=e629] [box=434,15,53,16]: Processes
+      - generic [ref=e631] [box=924,10,500,26]:
+        - generic [ref=e632] [box=924,10,216,26]:
+          - generic [ref=e633] [box=935,16,136,13]: Delivery Workspace
+          - generic [ref=e634] [box=1077,15,53,16]: Processes
+        - generic [ref=e635] [box=1149,10,117,26]: Interactive Server
+        - generic [ref=e636] [box=1274,10,86,26]: Live items 0
+        - generic [ref=e637] [box=1368,10,56,26]: Tabs 2
+    - generic [ref=e640] [box=312,46,1112,866]:
+      - generic [ref=e643] [box=329,63,1078,36]:
+        - generic [ref=e644] [box=329,70,810,22]:
+          - paragraph [ref=e645] [box=329,73,85,16]: Processes
+          - generic [ref=e648] [box=422,70,105,22]: 24 definition(s)
+          - generic [ref=e651] [box=534,70,64,22]: 0 active
+          - generic [ref=e654] [box=606,70,82,22]: 0 attention
+          - generic [ref=e657] [box=696,70,99,22]: Store pending
+        - generic [ref=e658] [box=1151,63,256,36]:
+          - button "Refresh" [ref=e660] [box=1151,63,36,36]
+          - button "Agent context" [ref=e664] [box=1195,63,36,36]
+          - button "New definition" [disabled] [ref=e668] [box=1239,63,36,36]
+          - button "Feed defaults" [ref=e672] [box=1283,63,36,36]
+          - button "Launch" [disabled] [ref=e676] [box=1327,63,36,36]
+          - button "Live dashboard" [ref=e680] [box=1371,63,36,36]
+      - generic [ref=e685] [box=312,132,1112,780]:
+        - generic [ref=e686] [box=312,132,448,780]:
+          - generic [ref=e688] [box=325,143,422,110]
+          - tree "Process definitions by scope" [ref=e713] [box=325,274,403,1234]
+        - generic [ref=e932] [box=772,132,652,780]:
+          - generic [ref=e935] [box=806,164,584,50]
+          - generic [ref=e950] [box=785,256,626,645]

@@ -57,6 +57,7 @@ public sealed class ProcessShellSmokeTests
         await page.GetByTestId("processes-shell").WaitForAsync();
         await page.GetByTestId("processes-command-strip").WaitForAsync();
         await page.GetByTestId("processes-tab-definitions").WaitForAsync();
+        await page.GetByTestId("processes-definition-tree").WaitForAsync();
         await page.GetByTestId("processes-definition-search").FillAsync("architecture");
         await page.GetByTestId("processes-definition-search-submit").ClickAsync();
         await page.GetByTestId("processes-definition-architecture-decision-governance").WaitForAsync();
@@ -69,6 +70,8 @@ public sealed class ProcessShellSmokeTests
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "Draft saved");
         await page.GetByTestId("processes-definition-publish").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "published");
+        await page.GetByTestId("processes-detail-tab-steps").ClickAsync();
+        await page.GetByTestId("processes-detail-panel-steps").WaitForAsync();
         await page.GetByTestId("processes-definition-canvas").WaitForAsync();
         await page.Locator(".cw-workbench").WaitForAsync();
         await page.Locator(".cw-workbench__canvas--nodes").WaitForAsync();
@@ -107,6 +110,8 @@ public sealed class ProcessShellSmokeTests
             Path = Path.Combine(artifactDirectory, "processes-definition-step-editor.png"),
             FullPage = true
         });
+        await page.GetByTestId("processes-detail-tab-exchange").ClickAsync();
+        await page.GetByTestId("processes-detail-panel-exchange").WaitForAsync();
         await page.GetByTestId("processes-template-library").WaitForAsync();
         await page.GetByTestId("processes-template-library-search").FillAsync("AI-assisted");
         await page.GetByTestId("processes-template-library-search-submit").ClickAsync();
@@ -161,6 +166,8 @@ public sealed class ProcessShellSmokeTests
             Path = Path.Combine(artifactDirectory, "processes-template-library-imports.png"),
             FullPage = true
         });
+        await page.GetByTestId("processes-detail-tab-roles").ClickAsync();
+        await page.GetByTestId("processes-detail-panel-roles").WaitForAsync();
         await page.GetByTestId("processes-definition-role-editor").WaitForAsync();
         await page.GetByTestId("processes-role-solution-architect").ClickAsync();
         await page.GetByTestId("processes-role-display-name").FillAsync("Principal architecture steward SB18");
@@ -178,6 +185,10 @@ public sealed class ProcessShellSmokeTests
         });
         await page.GetByTestId("processes-feed-defaults").ClickAsync();
         await page.GetByTestId("processes-feed-defaults-receipt").WaitForAsync();
+        await page.GetByTestId("processes-detail-tab-graphs").ClickAsync();
+        await page.GetByTestId("processes-process-graphs-tab").WaitForAsync();
+        await page.GetByTestId("processes-detail-tab-manager-chat").ClickAsync();
+        await page.GetByTestId("processes-manager-chat-tab").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "processes-global-definition-catalog.png"),
@@ -204,7 +215,7 @@ public sealed class ProcessShellSmokeTests
         Assert.NotNull(projectResponse);
         Assert.True(projectResponse!.Ok, $"Expected project-scoped processes route to return 2xx, got {(int)projectResponse.Status}.");
         await page.GetByTestId("processes-shell").WaitForAsync();
-        await page.GetByTestId("processes-tab-panel-liveruns").WaitForAsync();
+        await page.GetByTestId("processes-detail-panel-runs").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "processes-project-shell.png"),

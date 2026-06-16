@@ -51,3 +51,43 @@
 - bundle://proof/SB19/browser/browser-validation-summary.txt
 
 Result: passed through Playwright; no Blazor error UI, page error, unexpected failed request, or assertion failure interrupted the owned flow.
+
+## Post-Review Tab/Tree/Live Navigation Repair
+
+Route and viewport:
+
+- Route: `/processes`, then `/processes/live`.
+- Harness: Playwright MCP against local app `http://127.0.0.1:56172` with in-memory database override.
+- Viewport: 1440x920.
+
+Actions:
+
+1. Opened `/processes` and captured the pre-repair stacked/current state as a comparison artifact.
+2. Verified the repaired workspace renders a definition tree and original-style detail tabs: `Definition`, `Roles`, `Steps`, `Runs`, `Graphs`, `Analytics`, `Exchange`, and `Manager chat`.
+3. Opened the `Steps` tab, selected a canvas node, and opened floating canvas toolbox/selection/editor windows.
+4. Opened the `Graphs` tab and captured cost/token/time projection cards.
+5. Opened the `Manager chat` tab and captured the process agent context entry point.
+6. Expanded the main navigation and verified `Live Processes` appears immediately after `Processes` with no overflow duplicate.
+7. Clicked the `Live Processes` menu item and verified the route changed to `/processes/live` and rendered `live-processes-dashboard`.
+
+Assertions:
+
+- Definition list uses the shared TreeView contract (`processes-definition-tree`) instead of a flat vertical card stack.
+- Process detail panels are tab-selected and not simultaneously stacked.
+- Steps tab uses the shared canvas workbench and floating windows; browser probe found canvas, toolbox, selection, and editor surfaces.
+- Graphs tab includes cost, token, and time metric cards through the process graph projection shell.
+- Manager chat has a dedicated tab and opens process agent context through the projection shell.
+- `shell-nav-processes-live` is visible directly after `shell-nav-processes`; `shell-nav-overflow-processes-live` count is 0.
+- `/processes/live` renders `live-processes-dashboard`.
+
+Screenshots:
+
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/before-current-stacked-processes.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-tabs-tree-definition.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-steps-canvas-floating-windows.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-graphs-cost-token-time.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-manager-chat.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-live-processes-menu-order.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-live-processes-subpage.png
+
+Result: passed through Playwright MCP. The only original-branch validation gap is that `maf-processes-refactor` could not launch because that branch currently fails to compile on missing process driver evidence abstractions; source and test analysis supplied the original UI baseline.

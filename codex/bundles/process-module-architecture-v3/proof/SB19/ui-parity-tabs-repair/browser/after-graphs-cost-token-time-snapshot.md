@@ -1,0 +1,188 @@
+- generic [ref=e514] [box=0,0,1440,920]:
+  - complementary [ref=e515] [box=16,8,76,904]:
+    - generic [ref=e516] [box=27,19,54,882]:
+      - generic [ref=e517] [box=27,19,54,40]:
+        - generic [ref=e518] [box=27,19,10,40]:
+          - generic [ref=e519] [box=12,19,40,40]: CD
+          - generic [ref=e520] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e521] [box=45,21,36,36]:
+          - generic [ref=e522] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e523] [box=27,67,54,723]:
+        - button "Dashboard" [ref=e525] [box=27,71,44,44]:
+          - generic [ref=e527] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e529] [box=27,121,44,44]:
+          - generic [ref=e531] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e533] [box=27,171,44,44]:
+          - generic [ref=e535] [box=39,183,20,20]: forum
+        - button "CRM / HR" [ref=e537] [box=27,221,44,44]:
+          - generic [ref=e539] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e541] [box=27,271,44,44]:
+          - generic [ref=e543] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e545] [box=27,321,44,44]:
+          - generic [ref=e547] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e549] [box=27,371,44,44]:
+          - generic [ref=e551] [box=39,383,20,20]: account_tree
+        - button "Cognitive Memory" [ref=e553] [box=27,421,44,44]:
+          - generic [ref=e555] [box=39,433,20,20]: psychology
+        - button "Resources" [ref=e557] [box=27,471,44,44]:
+          - generic [ref=e559] [box=39,483,20,20]: inventory_2
+        - button "Plugins" [ref=e561] [box=27,521,44,44]:
+          - generic [ref=e563] [box=39,533,20,20]: extension
+        - button "Prompt Gallery" [ref=e565] [box=27,571,44,44]:
+          - generic [ref=e567] [box=39,583,20,20]: library_books
+        - button "Prompt Factory" [ref=e569] [box=27,621,44,44]:
+          - generic [ref=e571] [box=39,633,20,20]: construction
+        - button "More pages" [ref=e581] [box=32,671,44,44]:
+          - generic [ref=e583] [box=44,683,20,20]: expand_less
+      - generic [ref=e585] [box=27,807,54,94]:
+        - button "Settings" [ref=e587] [box=27,807,54,44]:
+          - generic [ref=e589] [box=44,819,20,20]: settings
+          - generic [ref=e590] [box=54,829,1,1]: Settings
+        - button "Switch Database" [ref=e592] [box=27,857,54,44]:
+          - generic [ref=e594] [box=44,869,20,20]: storage
+          - generic [ref=e595] [box=54,879,1,1]: Switch Database
+  - main [ref=e596] [box=100,8,1324,904]:
+    - generic [ref=e597] [box=100,8,1324,30]:
+      - generic [ref=e601] [box=104,8,800,30]:
+        - button "Dashboard" [ref=e603] [box=113,13,85,20]:
+          - generic [ref=e604] [box=113,15,59,16]: Dashboard
+          - generic [ref=e606] [box=178,13,20,20]: push_pin
+        - button "Processes" [ref=e608] [box=222,15,53,16]:
+          - generic [ref=e609] [box=222,15,53,16]: Processes
+      - generic [ref=e611] [box=924,10,500,26]:
+        - generic [ref=e612] [box=924,10,216,26]:
+          - generic [ref=e613] [box=935,16,136,13]: Delivery Workspace
+          - generic [ref=e614] [box=1077,15,53,16]: Processes
+        - generic [ref=e615] [box=1149,10,117,26]: Interactive Server
+        - generic [ref=e616] [box=1274,10,86,26]: Live items 0
+        - generic [ref=e617] [box=1368,10,56,26]: Tabs 2
+    - generic [ref=e695] [box=100,46,1324,866]:
+      - generic [ref=e698] [box=117,63,1290,36]:
+        - generic [ref=e699] [box=117,70,1022,22]:
+          - paragraph [ref=e700] [box=117,73,85,16]: Processes
+          - generic [ref=e703] [box=210,70,105,22]: 24 definition(s)
+          - generic [ref=e706] [box=322,70,64,22]: 0 active
+          - generic [ref=e709] [box=394,70,82,22]: 0 attention
+          - generic [ref=e712] [box=484,70,99,22]: Store pending
+        - generic [ref=e713] [box=1151,63,256,36]:
+          - button "Refresh" [ref=e715] [box=1151,63,36,36]:
+            - generic [ref=e716] [box=1159,71,20,20]: refresh
+            - generic [ref=e717] [box=1169,81,1,1]: refresh
+          - button "Agent context" [ref=e719] [box=1195,63,36,36]:
+            - generic [ref=e720] [box=1203,71,20,20]: smart_toy
+            - generic [ref=e721] [box=1213,81,1,1]: smart toy
+          - button "New definition" [disabled] [ref=e723] [box=1239,63,36,36]:
+            - generic [ref=e724] [box=1247,71,20,20]: add
+            - generic [ref=e725] [box=1257,81,1,1]: add
+          - button "Feed defaults" [ref=e727] [box=1283,63,36,36]:
+            - generic [ref=e728] [box=1291,71,20,20]: download
+            - generic [ref=e729] [box=1301,81,1,1]: download
+          - button "Launch" [disabled] [ref=e731] [box=1327,63,36,36]:
+            - generic [ref=e732] [box=1335,71,20,20]: rocket_launch
+            - generic [ref=e733] [box=1345,81,1,1]: rocket launch
+          - button "Live dashboard" [ref=e735] [box=1371,63,36,36]:
+            - generic [ref=e736] [box=1379,71,20,20]: open_in_new
+            - generic [ref=e737] [box=1389,81,1,1]: open in new
+      - generic [ref=e740] [box=100,132,1324,780]:
+        - generic [ref=e741] [box=100,132,448,780]:
+          - generic [ref=e743] [box=113,143,422,110]:
+            - generic [ref=e746] [box=113,143,370,38]:
+              - generic [ref=e747] [box=113,150,161,24]:
+                - heading "Process definitions" [level=2] [ref=e748] [box=113,150,136,24]
+                - button "Show help for Process definitions" [ref=e750] [cursor=pointer] [box=257,154,17,17]
+              - generic [ref=e753] [box=295,150,175,24]: 24 definition(s)
+            - generic [ref=e757] [box=128,200,344,42]:
+              - textbox "Search process definitions" [ref=e758] [box=128,200,256,42]:
+                - /placeholder: Search definitions
+              - button "Search definitions" [ref=e759] [box=392,203,36,36]:
+                - generic [ref=e760] [box=400,211,20,20]: search
+                - generic [ref=e761] [box=410,221,1,1]: search
+              - button "Clear search" [ref=e762] [box=436,203,36,36]:
+                - generic [ref=e763] [box=444,211,20,20]: close
+                - generic [ref=e764] [box=454,221,1,1]: close
+          - tree "Process definitions by scope" [ref=e768] [box=113,274,403,1234]:
+            - treeitem "All definitions 24" [ref=e769] [box=113,274,403,42]:
+              - button "All definitions 24" [ref=e772] [box=149,274,367,42]:
+                - generic [ref=e774] [box=160,285,20,20]: select_all
+                - generic [ref=e775] [box=188,283,278,24]: All definitions
+                - generic [ref=e776] [box=474,286,31,19]: "24"
+            - treeitem "Collapse Global defaults Global defaults 24" [expanded] [ref=e777] [box=113,320,403,1142]:
+              - generic [ref=e778] [box=113,320,403,42]:
+                - button "Collapse Global defaults" [ref=e779] [box=113,325,32,32]
+                - button "Global defaults 24" [ref=e781] [box=149,320,367,42]
+              - group [ref=e786] [box=113,362,403,1100]:
+                - treeitem ".NET architecture design and review subprocess TemplateDefault" [selected] [ref=e787] [box=113,362,403,42]
+                - treeitem ".NET feature/function implementation subprocess TemplateDefault" [ref=e795] [box=113,408,403,42]
+                - treeitem ".NET implementation slice with atomic validation TemplateDefault" [ref=e803] [box=113,454,403,42]
+                - treeitem ".NET runtime command project-structure writeback TemplateDefault" [ref=e811] [box=113,500,403,42]
+                - treeitem ".NET solution setup subprocess TemplateDefault" [ref=e819] [box=113,546,403,42]
+                - treeitem ".NET UI screenshot project-structure writeback TemplateDefault" [ref=e827] [box=113,592,403,42]
+                - treeitem "AI-assisted change delivery with guarded delegation TemplateDefault" [ref=e835] [box=113,638,403,42]
+                - treeitem "App layout image generation TemplateDefault" [ref=e843] [box=113,684,403,42]
+                - treeitem "App page screenshot capture TemplateDefault" [ref=e851] [box=113,730,403,42]
+                - treeitem "App pages screenshot set capture TemplateDefault" [ref=e859] [box=113,776,403,42]
+                - treeitem "Architecture decision governance and ADR stewardship TemplateDefault" [ref=e867] [box=113,822,403,42]
+                - treeitem "Blazor app delivery TemplateDefault" [ref=e875] [box=113,868,403,42]
+                - treeitem "Blazor app repair and fix TemplateDefault" [ref=e883] [box=113,914,403,42]
+                - treeitem "Blazor backend and frontend feature addition TemplateDefault" [ref=e891] [box=113,960,403,42]
+                - treeitem "Blazor backend feature addition TemplateDefault" [ref=e899] [box=113,1006,403,42]
+                - treeitem "Blazor frontend feature addition TemplateDefault" [ref=e907] [box=113,1052,403,42]
+                - treeitem "Branching code review and merge governance TemplateDefault" [ref=e915] [box=113,1098,403,42]
+                - treeitem "Business plan development TemplateDefault" [ref=e923] [box=113,1144,403,42]
+                - treeitem "Customer onboarding orchestration TemplateDefault" [ref=e931] [box=113,1190,403,42]
+                - treeitem "Emergency hotfix rollout with shard-risk governance TemplateDefault" [ref=e939] [box=113,1236,403,42]
+                - treeitem "Incident response and escalation TemplateDefault" [ref=e947] [box=113,1282,403,42]
+                - treeitem "Multi-team software delivery and release governance TemplateDefault" [ref=e955] [box=113,1328,403,42]
+                - treeitem "Open-source intake and supply-chain governance TemplateDefault" [ref=e963] [box=113,1374,403,42]
+                - treeitem "Release readiness and deployment control TemplateDefault" [ref=e971] [box=113,1420,403,42]
+            - treeitem "Project 0" [ref=e979] [box=113,1466,403,42]:
+              - button "Project 0" [ref=e982] [box=149,1466,367,42]:
+                - generic [ref=e984] [box=160,1477,20,20]: folder
+                - generic [ref=e985] [box=188,1475,286,24]: Project
+                - generic [ref=e986] [box=482,1478,23,19]: "0"
+        - generic [ref=e987] [box=560,132,864,780]:
+          - generic [ref=e990] [box=594,164,796,22]:
+            - generic [ref=e991] [box=594,165,433,20]:
+              - paragraph [ref=e992] [box=594,167,67,16]: Process
+              - heading ".NET architecture design and review subprocess" [level=2] [ref=e993] [box=669,165,358,20]
+            - generic [ref=e994] [box=1118,164,272,22]:
+              - generic [ref=e997] [box=1118,164,112,22]: TemplateDefault
+              - generic [ref=e1000] [box=1237,164,48,22]: High
+              - generic [ref=e1003] [box=1293,164,97,22]: GovernedLive
+          - generic [ref=e1005] [box=573,228,838,673]:
+            - tablist "Process workspace detail panels" [ref=e1006] [box=573,228,838,95]:
+              - tab "Definition" [ref=e1007] [box=577,228,128,43]:
+                - generic [ref=e1008] [box=592,240,20,20]: edit_note
+                - generic [ref=e1009] [box=620,238,69,24]: Definition
+              - tab "Roles 5" [ref=e1010] [box=713,228,128,43]:
+                - generic [ref=e1011] [box=728,240,20,20]: groups
+                - generic [ref=e1012] [box=756,238,38,24]: Roles
+                - generic [ref=e1013] [box=802,240,24,19]: "5"
+              - tab "Steps 4" [ref=e1014] [box=849,228,129,43]:
+                - generic [ref=e1015] [box=865,240,20,20]: account_tree
+                - generic [ref=e1016] [box=893,238,38,24]: Steps
+                - generic [ref=e1017] [box=939,240,24,19]: "4"
+              - tab "Runs 0" [ref=e1018] [box=986,228,125,43]:
+                - generic [ref=e1019] [box=1001,240,20,20]: rocket_launch
+                - generic [ref=e1020] [box=1029,238,34,24]: Runs
+                - generic [ref=e1021] [box=1072,240,24,19]: "0"
+              - tab "Graphs 0" [active] [selected] [ref=e1022] [box=1119,229,141,43]:
+                - generic [ref=e1023] [box=1135,241,20,20]: bar_chart
+                - generic [ref=e1024] [box=1163,239,50,24]: Graphs
+                - generic [ref=e1025] [box=1221,241,24,19]: "0"
+              - tab "Analytics 0" [ref=e1026] [box=577,279,153,43]:
+                - generic [ref=e1027] [box=592,291,20,20]: analytics
+                - generic [ref=e1028] [box=620,289,63,24]: Analytics
+                - generic [ref=e1029] [box=691,292,24,19]: "0"
+              - tab "Exchange 50" [ref=e1030] [box=738,279,164,43]:
+                - generic [ref=e1031] [box=754,291,20,20]: sync_alt
+                - generic [ref=e1032] [box=782,289,67,24]: Exchange
+                - generic [ref=e1033] [box=857,292,31,19]: "50"
+              - tab "Manager chat ready" [ref=e1034] [box=911,279,220,43]:
+                - generic [ref=e1035] [box=926,291,20,20]: forum
+                - generic [ref=e1036] [box=954,289,97,24]: Manager chat
+                - generic [ref=e1037] [box=1060,292,56,19]: ready
+            - tabpanel "Graphs 0" [ref=e1518] [box=573,322,838,579]:
+              - generic [ref=e1520] [box=588,337,792,290]:
+                - button "Refresh" [ref=e1522] [box=588,337,106,42]
+                - generic [ref=e1525] [box=588,391,792,236]

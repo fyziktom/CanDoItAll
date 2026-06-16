@@ -41,6 +41,22 @@
     margin-left: auto;
 }
 
+.processes-detail-tab-panel {
+    min-height: 0;
+    width: 100%;
+}
+
+.processes-runs-tab-shell {
+    min-height: 0;
+    width: 100%;
+}
+
+.processes-definition-roles-tab,
+.processes-definition-steps-tab,
+.processes-definition-exchange-tab {
+    min-height: 0;
+}
+
 .processes-definition-list-item {
     align-items: stretch;
     background: rgba(255, 255, 255, 0.92);

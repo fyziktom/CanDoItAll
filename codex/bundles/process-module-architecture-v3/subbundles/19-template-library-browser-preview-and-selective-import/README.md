@@ -107,6 +107,7 @@ Rebuild the template library dialog for process, role, and artifact templates wi
 - `bundle://proof/SB19/browser-validation.md`
 - `bundle://proof/SB19/codeanalytics-snapshot-summary.txt`
 - `bundle://proof/SB19/subbundle-closure-gate-sb19.md`
+- `bundle://proof/SB19/ui-parity-tabs-repair.md`
 
 ## Browser Validation Logging
 
@@ -122,4 +123,4 @@ Execute SB19 from `codex/bundles/process-module-architecture-v3/subbundles/19-te
 
 ## Handoff Notes For Next Bundle
 
-SB20 can consume typed template catalog item identity, imported component source definition/component keys, canonical source hashes, target-step artifact import metadata, and stale-version rejection proof. SB20 still owns Git exchange, diff, merge, and conflict UI.
+SB20 can consume typed template catalog item identity, imported component source definition/component keys, canonical source hashes, target-step artifact import metadata, stale-version rejection proof, and the restored tree/tab/canvas/live-navigation UX shell. SB20 still owns Git exchange, diff, merge, and conflict UI.

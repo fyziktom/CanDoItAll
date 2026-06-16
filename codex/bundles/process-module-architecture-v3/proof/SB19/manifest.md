@@ -16,9 +16,14 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 - repo://src/CanDoItAll.Modules.Processes/Components/ProcessDefinitionCanvasPanel.razor
 - repo://src/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryPanel.razor
 - repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor
+- repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor.css
 - repo://src/CanDoItAll.Modules.Processes/Navigation/ProcessesShellNavigationContributor.cs
 - repo://src/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs
 - repo://src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs
+- repo://src/CanDoItAll.Web/Composition/ShellNavigation.cs
+- repo://tests/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs
+- repo://tests/CanDoItAll.Tests.Components/ShellNavigationContributionTests.cs
+- repo://tests/CanDoItAll.Tests.Playwright/ProcessShellSmokeTests.cs
 - repo://src/CanDoItAll.Web/wwwroot/css/output.css
 
 ## Test And Validation Artifacts
@@ -26,9 +31,12 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 - bundle://proof/SB19/build-process-module-sb19.txt
 - bundle://proof/SB19/build-solution-sb19.txt
 - bundle://proof/SB19/build-playwright-project-sb19.txt
+- bundle://proof/SB19/build-web-ui-parity-tabs-repair.txt
 - bundle://proof/SB19/test-unit-template-catalog-sb19.txt
 - bundle://proof/SB19/test-components-process-shell-sb19.txt
+- bundle://proof/SB19/test-components-process-shell-tabs-repair.txt
 - bundle://proof/SB19/test-playwright-process-shell-sb19.txt
+- bundle://proof/SB19/test-playwright-process-shell-tabs-repair.txt
 - bundle://proof/SB19/tailwind-build-sb19.txt
 - bundle://proof/SB19/source-assertions.txt
 - bundle://proof/SB19/semantic-invariants.md
@@ -36,6 +44,7 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 - bundle://proof/SB19/story-coverage.md
 - bundle://proof/SB19/browser-validation.md
 - bundle://proof/SB19/ui-parity-repair.md
+- bundle://proof/SB19/ui-parity-tabs-repair.md
 - bundle://proof/SB19/codeanalytics-snapshot-summary.txt
 - bundle://proof/SB19/bundle-validator-prepared-sb19.txt
 - bundle://proof/SB19/git-diff-check-sb19.txt
@@ -58,6 +67,12 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 - bundle://proof/SB19/browser/processes-definition-role-editor.png
 - bundle://proof/SB19/browser/processes-global-definition-catalog.png
 - bundle://proof/SB19/browser/processes-project-shell.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-tabs-tree-definition.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-steps-canvas-floating-windows.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-graphs-cost-token-time.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-manager-chat.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-live-processes-menu-order.png
+- bundle://proof/SB19/ui-parity-tabs-repair/browser/after-live-processes-subpage.png
 
 ## Production Behavior Artifact Matrix
 
@@ -68,7 +83,9 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 | Template import command | `ProcessTemplateLibraryPanel.razor` | Projection client and application catalog service | Process, role, and artifact imports use typed command kind, item key, expected catalog version token, query state, target definition key, and artifact target step when required. | Unit test `Template_catalog_rejects_stale_import_version_tokens` and component tests prove stale/version and typed command boundaries. |
 | Imported component projection | `ProcessTemplateCatalogProjectionService.ExecuteCommandAsync` | Template library panel and SB20 exchange/Git UI handoff | Accepted imports record item key, kind, title, source definition key, source component key, canonical source hash, target step, and observed time. | Unit test `Template_catalog_imports_process_role_and_artifact_with_target_validation` rejects missing target steps and asserts source identity/hash on artifact import. |
 | Shell template query state | `ProcessWorkspaceShell.razor` | `ProcessWorkspaceShellProjectionService` through `ProcessWorkspaceShellRequest.TemplateCatalogQuery` | Search/category/selected item/preview tab state is carried through refresh without bypassing the projection service. | Component test `Template_library_renders_search_categories_and_preview_tabs` asserts query updates and preview tab rendering. |
+| Process workspace tab state | `ProcessWorkspaceShell.razor` | Detail tab renderers for definition, roles, steps, runs, graphs, analytics, exchange, and manager chat | Selected definition data is split into original-style process detail tabs instead of vertically stacking unrelated panels. | Component test `Original_process_workspace_tabs_render_runs_graphs_analytics_and_manager_chat` and Playwright artifacts under `ui-parity-tabs-repair/browser`. |
+| Live process navigation child | `ProcessesShellNavigationContributor` and `ShellNavigation.BuildItems` | App shell navigation and `/processes/live` page | Contributed child routes can attach to contributed parents, so Live Processes renders immediately after Processes and opens the live dashboard. | Component test `Process_contribution_inserts_live_processes_after_contributed_process_parent` and browser artifact `after-live-processes-menu-order.png`. |
 
 ## Result
 
-SB19 closure passes after the UI parity repair. Builds, focused tests, Playwright browser proof, refreshed screenshots, and CodeAnalytics MCP all passed. The repair replaces the reshaped custom canvas with the shared CanvasLib/OverlayLib workbench and restores the original dense list/detail process workspace shape while retaining the new projection/versioning contracts.
+SB19 closure passes after the UI parity tab/tree/live-navigation repair. Builds, focused tests, Playwright browser proof, refreshed screenshots, and CodeAnalytics MCP all passed. The repair keeps the shared CanvasLib/OverlayLib workbench, restores the original dense tree/list plus tabbed process detail shape, and keeps the new projection/versioning contracts.
