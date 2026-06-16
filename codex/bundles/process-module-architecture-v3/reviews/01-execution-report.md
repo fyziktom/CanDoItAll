@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB15 are complete and validated. SB16 is the next dependency-ordered implementation package.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB18 are complete and validated. SB19 is the next dependency-ordered implementation package.
 
 ## Changes Made In This Task
 
@@ -38,6 +38,9 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 - Executed SB13 UI shell, routing, navigation, and projection client foundation: projection-first shell DTOs, application shell projection service, module projection client, BaseLib shell component, `/processes`, project-scoped, and live route pages, shell navigation contribution, workbench tab routing, AgentFramework explicit unavailable process evidence provider, AppDbContext migration snapshot cleanup, focused component tests, Playwright route proof, Browser MCP desktop/narrow screenshots, and CodeAnalytics dependency proof were added.
 - Executed SB14 definition catalog, scope tree, search, selection, and Feed Defaults: catalog projection DTOs, strongly typed catalog item/refresh keys, canonical template pack loader over source-generated JSON metadata, application catalog projection service, typed Feed Defaults command receipt, shell tab counters, query parameter handoff, search/scope/selection/empty-state UI, focused unit/component tests, Playwright proof, Browser MCP desktop/narrow screenshots, static boundary scans, and CodeAnalytics dependency proof were added.
 - Executed SB15 definition editor, governance, contracts, simulation, lint, and publication: editor projection DTOs, typed version tokens, scoped authoring session command service, save/publish/archive/delete receipts, strict publish lint rejection, governance manager override authoring field, template authoring metadata, Process shell editor UI, projection client command boundary, focused unit/component tests, Playwright edit/publish proof, Browser MCP desktop/narrow screenshots, static boundary scans, and CodeAnalytics dependency proof were added.
+- Executed SB16 role editor, role templates, executor model, and step-role bindings: role editor projection DTOs, typed role command receipts, role template apply/customize commands, executor/staffing/fallback/approval fields, step-role binding visibility, focused unit/component tests, Playwright proof, static scans, and CodeAnalytics dependency proof were added.
+- Executed SB17 definition canvas, toolbox, selection, and recomposition: canvas projection DTOs, explicit selected-node/edge state, typed toolbox/recompose commands, command receipts, deterministic recomposition, canvas panel UI, focused unit/component tests, Playwright proof, static scans, and CodeAnalytics dependency proof were added.
+- Executed SB18 step editor, operation contracts, routing, artifacts, and subprocess mapping: typed step editor projections, operation target scopes and allowed operation kinds, branch route targets and loop budgets, artifact expectation metadata, subprocess mapping commands, step editor panel UI, focused unit/component tests, Playwright proof with console/network summary, static scans, and CodeAnalytics dependency proof were added.
 
 ## Repository Evidence
 
@@ -70,7 +73,10 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | SB13 UI Shell, Routing, Navigation, And Projection Client Foundation | Passed: SB10 projection contracts complete, SB12 compatibility decisions complete, and CodeAnalytics MCP reachable | Passed: module build, solution build, 6 component tests, 1 Playwright route test, 73 focused process unit tests, EF pending-model check, Browser MCP desktop/narrow proof, UI forbidden dependency scan, anti-stub scan, and CodeAnalytics snapshot `snap-20260616003325-e1504595` recorded | SB14 definition UI prerequisites checked | Completed | `proof/SB13/manifest.md`, `proof/SB13/semantic-invariants.md`, `proof/SB13/browser-validation.md` |
 | SB14 Definition List, Scope Tree, Search, And Feed Defaults | Passed: SB13 shell/projection client foundation complete, SB12 template compatibility source available, and CodeAnalytics MCP reachable | Passed: module build, solution build, 8 unit tests, 9 component tests, 1 Playwright route/catalog test, Browser MCP desktop/narrow proof, UI forbidden dependency scan, UI no-template/file scan, anti-stub scan, and CodeAnalytics snapshot `snap-20260616012049-a00137f4` recorded | SB15 definition editor prerequisites checked | Completed | `proof/SB14/manifest.md`, `proof/SB14/semantic-invariants.md`, `proof/SB14/browser-validation.md` |
 | SB15 Definition Editor, Governance, Contracts, Simulation, Lint, And Publication | Passed: SB14 catalog/search/selection complete, template metadata available, and CodeAnalytics MCP reachable | Passed: module build, solution build, 12 unit tests, 12 component tests, 1 Playwright route/editor test, Browser MCP desktop/narrow proof, UI forbidden runtime/persistence scan, UI no-template/file scan, anti-stub scan, performance scan, and CodeAnalytics snapshot `snap-20260616024016-fd2d7113` recorded | SB16 role editor prerequisites checked | Completed | `proof/SB15/manifest.md`, `proof/SB15/semantic-invariants.md`, `proof/SB15/browser-validation.md` |
-| SB16-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB15. |
+| SB16 Role Editor, Role Templates, Executor Model, And Step-Role Bindings | Passed: SB15 definition editor complete, template role metadata available, and CodeAnalytics MCP reachable | Passed: module build, solution build, 11 unit tests, 15 component tests, 1 Playwright shell test, role authoring browser proof, UI forbidden dependency scan, anti-stub scan, performance scan, and CodeAnalytics snapshot `snap-20260616032916-4d1a8d1f` recorded | SB17 canvas and SB18 step editor prerequisites checked | Completed | `proof/SB16/manifest.md`, `proof/SB16/semantic-invariants.md`, `proof/SB16/browser-validation.md` |
+| SB17 Definition Canvas, Toolbox, Selection, And Recomposition | Passed: SB16 role editor complete, source references existed, and CodeAnalytics MCP reachable | Passed: module build, solution build, 14 unit tests, 18 component tests, 1 Playwright shell test, canvas browser proof, projection-boundary and old-symbol scans, anti-stub scan, performance scan, and CodeAnalytics snapshot `snap-20260616041402-0e85c90f` recorded | SB18 step editor prerequisites checked | Completed | `proof/SB17/manifest.md`, `proof/SB17/semantic-invariants.md`, `proof/SB17/browser-validation.md` |
+| SB18 Step Editor, Operation Contracts, Routing, Artifacts, And Subprocess Mapping | Passed: SB17 canvas selection/command routing complete, SB09 branch/subprocess contracts available, source references existed, and CodeAnalytics MCP reachable | Passed: module build, solution build, 18 unit tests, 21 component tests, 1 Playwright shell test, step editor browser proof with console/network summary, projection-boundary and old-symbol scans, anti-stub scan, performance scan, and CodeAnalytics snapshot `snap-20260616050840-4f01d6a5` recorded | SB19 template library and SB21 launch-planning prerequisites checked | Completed | `proof/SB18/manifest.md`, `proof/SB18/semantic-invariants.md`, `proof/SB18/browser-validation.md` |
+| SB19-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB18. |
 
 ## Browser Validation Analytics
 
@@ -82,6 +88,9 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | SB13 UI Shell | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1440x900; 390x844 | `proof/SB13/browser/processes-global-mcp-snapshot.md`, `proof/SB13/browser/processes-global-mcp-narrow-snapshot.md`, `proof/SB13/test-playwright-process-shell.txt` | `proof/SB13/browser/processes-global-shell.png`, `proof/SB13/browser/processes-project-shell.png`, `proof/SB13/browser/processes-global-mcp-browser.png`, `proof/SB13/browser/processes-global-mcp-narrow.png` | Passed: route shell rendered, project-scoped live tab selected from `runId`, no Blazor error UI, narrow command strip wrapped without overlap after startup modal confirmation. |
 | SB14 Definition Catalog | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1440x900; 390x844 | `proof/SB14/browser/processes-global-definition-catalog-mcp-snapshot.md`, `proof/SB14/browser/processes-global-definition-catalog-narrow-mcp-snapshot.md`, `proof/SB14/test-playwright-process-shell-sb14.txt` | `proof/SB14/browser/processes-global-definition-catalog-mcp.png`, `proof/SB14/browser/processes-global-definition-catalog-narrow-mcp.png`, `proof/SB14/browser/processes-global-definition-catalog-playwright.png`, `proof/SB14/browser/processes-project-shell-playwright.png` | Passed: route catalog rendered, search found architecture definitions, selected definition metadata rendered, Feed Defaults receipt displayed, narrow project scope showed empty state, and no Blazor error UI was visible. |
 | SB15 Definition Editor | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1440x900; 390x844 | `proof/SB15/browser/desktop-editor-snapshot.md`, `proof/SB15/browser/narrow-editor-snapshot.md`, `proof/SB15/test-playwright-process-shell-sb15.txt` | `proof/SB15/browser/processes-definition-editor-desktop-mcp.png`, `proof/SB15/browser/processes-definition-editor-narrow-mcp.png`, `proof/SB15/browser/processes-definition-editor-narrow-lint-actions-mcp.png`, `proof/SB15/browser/processes-definition-editor-published-playwright.png`, `proof/SB15/browser/processes-project-shell-playwright.png` | Passed: route rendered, architecture definition selected, identity and manager override fields edited, save/publish receipts displayed, lint clear, narrow overflow count 0, console warning count 0, and no Blazor error UI was visible. |
+| SB16 Role Editor | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1440x900 | `proof/SB16/test-playwright-process-shell-sb16.txt` | `proof/SB16/browser/processes-definition-role-editor.png`, `proof/SB16/browser/processes-global-definition-catalog.png`, `proof/SB16/browser/processes-project-shell.png` | Passed: role editor rendered, role field edit/save and role template apply receipts displayed, step binding visible, and no Blazor error UI was visible. |
+| SB17 Definition Canvas | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1600x1000 | `proof/SB17/test-playwright-process-shell-sb17.txt` | `proof/SB17/browser/processes-definition-canvas.png`, `proof/SB17/browser/processes-definition-role-editor.png`, `proof/SB17/browser/processes-global-definition-catalog.png`, `proof/SB17/browser/processes-project-shell.png` | Passed: canvas rendered, decision node selected, toolbox add command accepted, recompose receipt displayed, screenshots captured, and no Blazor error UI was visible. |
+| SB18 Step Editor | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1440x900 | `proof/SB18/test-playwright-process-shell-sb18.txt`, `proof/SB18/browser/browser-validation-summary.txt` | `proof/SB18/browser/processes-definition-step-editor.png`, `proof/SB18/browser/processes-definition-canvas.png`, `proof/SB18/browser/processes-definition-role-editor.png`, `proof/SB18/browser/processes-global-definition-catalog.png`, `proof/SB18/browser/processes-project-shell.png` | Passed: operation save, add branch, route loop-budget save, add artifact, subprocess map receipts displayed; browser summary recorded 0 page errors and 0 unexpected failed requests. |
 
 ## Analytics Review
 
@@ -95,6 +104,12 @@ SB14 collected browser route/catalog validation rather than runtime analytics be
 
 SB15 collected browser definition-editor validation rather than runtime analytics because it changed definition authoring UI and projection command behavior only. Browser proof is recorded in `proof/SB15/browser-validation.md`.
 
+SB16 collected browser role-editor validation rather than runtime analytics because it changed role authoring UI and projection command behavior only. Browser proof is recorded in `proof/SB16/browser-validation.md`.
+
+SB17 collected browser definition-canvas validation rather than runtime analytics because it changed canvas authoring UI and projection command behavior only. Browser proof is recorded in `proof/SB17/browser-validation.md`.
+
+SB18 collected browser step-editor validation rather than runtime analytics because it changed step authoring UI and projection command behavior only. Browser proof is recorded in `proof/SB18/browser-validation.md`.
+
 ## Raw Note Closure
 
 | Raw note | Status | Proof |
@@ -107,7 +122,7 @@ SB15 collected browser definition-editor validation rather than runtime analytic
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
-| Execute approved implementation bundle | In progress | SB01 through SB15 completed with proof under `proof/SB01/` through `proof/SB15/`; SB16-SB28 remain pending dependency-ordered execution. |
+| Execute approved implementation bundle | In progress | SB01 through SB18 completed with proof under `proof/SB01/` through `proof/SB18/`; SB19-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -669,4 +684,51 @@ Subbundle Gate Results for SB17:
 Entry gate: Pass. SB16 prerequisite was complete, source references existed, and CodeAnalytics MCP was reachable before implementation.
 Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, component/unit/Playwright proof passed, projection-only and old-symbol scans were clean, and performance scan counts were reviewed.
 Progression: SB18 may start and should consume ProcessDefinitionCanvasSelectionProjection plus ProcessDefinitionCanvasCommandReceipt/Result for step editor forms.
+```
+
+SB18 step editor, operation contracts, routing, artifacts, and subprocess mapping proof:
+
+```text
+bundle://proof/SB18/manifest.md
+bundle://proof/SB18/semantic-invariants.md
+bundle://proof/SB18/red-team-semantic-proof.md
+bundle://proof/SB18/build-process-module.txt
+bundle://proof/SB18/build-solution-sb18.txt
+bundle://proof/SB18/build-playwright-project-sb18.txt
+bundle://proof/SB18/test-unit-step-editor-sb18.txt
+bundle://proof/SB18/test-components-process-shell-sb18.txt
+bundle://proof/SB18/test-playwright-process-shell-sb18.txt
+bundle://proof/SB18/browser-validation.md
+bundle://proof/SB18/codeanalytics-snapshot-summary.txt
+bundle://proof/SB18/subbundle-closure-gate-sb18.md
+bundle://proof/SB18/performance-scan-summary.json
+bundle://proof/SB18/scans/projection-boundary-scan.txt
+bundle://proof/SB18/scans/old-symbol-scan.txt
+bundle://proof/SB18/scans/anti-stub-scan.txt
+bundle://proof/SB18/scans/performance-antipattern-scan.txt
+```
+
+Result:
+
+```text
+Process module build and full solution build passed with 0 warnings and 0 errors. Focused SB18 unit tests passed 18/18, focused ProcessWorkspaceShell component tests passed 21/21, and focused ProcessShell Playwright smoke passed 1/1. Step authoring now uses typed step editor projections, explicit operation target scopes, typed allowed operations, branch route targets with loop budgets, artifact expectation metadata, role binding projections, subprocess definition options, typed commands with expected version tokens, accepted/rejected command receipts, and stale-version rejection. Browser proof captured operation save, branch add, backward route loop-budget save, artifact add, subprocess map, Playwright screenshots, 0 page errors, and 0 unexpected failed requests. CodeAnalytics final snapshot snap-20260616050840-4f01d6a5 completed with no blocking errors and no process module dependency cycles; remaining diagnostics are existing generated-program naming and component-test DI collector ambiguity, plus complexity warnings for large projection/editor services.
+```
+
+Browser Validation Analytics for SB18:
+
+```text
+Route/state: Process shell with selected definition editor, canvas, and step editor.
+Viewport: Playwright harness, 1440x900 evidence screenshots.
+Actions: select architecture definition, save/publish definition, select decision-intake canvas step, save operation target scope and operation, add branch, set previous-step route target and loop budget, save, add artifact expectation, change step kind to subprocess, select dotnet-development-slice, map subprocess, capture step editor screenshot.
+Screenshots: bundle://proof/SB18/browser/processes-definition-step-editor.png, bundle://proof/SB18/browser/processes-definition-canvas.png, bundle://proof/SB18/browser/processes-definition-role-editor.png, bundle://proof/SB18/browser/processes-global-definition-catalog.png, bundle://proof/SB18/browser/processes-project-shell.png.
+Console/network: bundle://proof/SB18/browser/browser-validation-summary.txt recorded 6 informational Blazor console messages, 0 page errors, 0 unexpected failed requests, and 2 ignored expected Blazor disconnect cleanup posts.
+Result: passed through Playwright; no Blazor error UI, page error, unexpected failed request, or assertion failure interrupted the owned flow.
+```
+
+Subbundle Gate Results for SB18:
+
+```text
+Entry gate: Pass. SB17 prerequisite was complete, SB09 branch/subprocess contracts were available, source references existed, and CodeAnalytics MCP was reachable before implementation.
+Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, component/unit/Playwright proof passed, browser console/network summary recorded, projection-only and old-symbol scans were clean, anti-stub scan was clean, and performance scan counts were reviewed.
+Progression: SB19 and SB21 may start and can consume typed step authoring contracts, operation target scopes, route loop budgets, artifact expectation metadata, role bindings, subprocess mapping, command receipts, and stale-version rejection.
 ```

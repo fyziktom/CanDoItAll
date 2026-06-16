@@ -1,0 +1,198 @@
+SB18 performance antipattern scan over modified production/test files.
+
+## sync_result_wait: 0
+
+## thread_sleep: 0
+
+## task_run: 0
+
+## fire_and_forget: 0
+
+## async_void: 0
+
+## value_task: 0
+
+## substring: 0
+
+## string_contains_family: 68
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:152:                                       checked="@selectedOperations.Contains(operation)"
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:25:        Assert.Contains("Definitions", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:26:        Assert.Contains("Launch plans", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:27:        Assert.Contains("Live runs", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:28:        Assert.Contains("History", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:29:        Assert.Contains("Blazor app delivery", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:30:        Assert.Contains("Store pending", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:64:        Assert.Contains("Refresh requested", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:78:        Assert.Contains("Architecture decision governance", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:91:        Assert.Contains("No definitions match the current search", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:104:        Assert.Contains("default process definition", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:105:        Assert.Contains("Refresh token", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:149:        Assert.Contains("/agents?processContext=", navigation.Uri, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:150:        Assert.Contains(Uri.EscapeDataString($"processes:workspace:run:{runId:N}"), navigation.Uri, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:161:        Assert.Contains("Identity", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:162:        Assert.Contains("Governance", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:163:        Assert.Contains("Contracts", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:164:        Assert.Contains("Simulation", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:181:        Assert.Contains("Draft saved", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:198:        Assert.Contains("Definition name is required", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:199:        Assert.Contains("Rejected", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:212:        Assert.Contains("Solution architect template", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:213:        Assert.Contains("Architecture decision", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:214:        Assert.Contains("Approver", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:235:        Assert.Contains("Role saved", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:251:        Assert.Contains("Role template applied", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:271:        cut.WaitForAssertion(() => Assert.Contains("Architecture decision record", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:272:        Assert.Contains("Artifact", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:288:        Assert.Contains("Canvas command accepted", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:302:        Assert.Contains("Canvas recomposed", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:319:        Assert.Contains("Delivery default", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:338:        Assert.Contains(ProcessDefinitionStepOperationKind.ReadProjectStructure, command.Draft.OperationContract.AllowedOperations);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:339:        Assert.Contains("Step saved", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:351:        Assert.Contains("Route added", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:355:        Assert.Contains("Artifact added", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:596:                    .Where(item => item.Name.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:597:                                   item.Key.Value.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase))
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:681:        for (var index = 1; used.Contains(candidate); index++)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:697:        for (var index = 1; used.Contains(candidate); index++)
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:29:        Assert.Contains(catalog.ScopeGroups, group => group.ScopeKind == ProcessDefinitionCatalogScopeKind.Global && group.Count == 2);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:46:        Assert.StartsWith("feed-defaults:test-pack:", receipt.RefreshToken.Value, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:57:        Assert.Contains("does not match manifest key", exception.Message, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:143:        Assert.Contains(result.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.execution.executor-required");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:144:        Assert.Contains(result.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.execution.allocation-out-of-range");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:231:        Assert.Contains(staleAdd.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.version-conflict");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:232:        Assert.Contains(staleSave.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.version-conflict");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:247:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Step && node.StepKey == new ProcessDefinitionStepKey("architecture-decision"));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:248:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.BranchRouter);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:249:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey == new ProcessDefinitionRoleKey("solution-architect"));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:250:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact && node.ArtifactKey == "architecture-decision-record");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:251:        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:252:        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:253:        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.ArtifactExpectation);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:254:        Assert.Contains(canvas.ToolboxActions, action => action.ActionKey == new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:256:        Assert.Contains(canvas.Commands, command => command.Kind == ProcessDefinitionCanvasCommandKind.Recompose && command.IsEnabled);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:290:        Assert.Contains(addedStep.Projection.Nodes, node => node.Title == "Implementation");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:294:        Assert.Contains("recomposed", recomposed.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:325:        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:346:        Assert.Contains(ProcessDefinitionStepOperationKind.WriteExternalArtifactDestination, step.OperationContract.AllowedOperations);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:356:        Assert.Contains(editor.SubprocessOptions, option => option.DefinitionKey == new ProcessDefinitionCatalogItemKey("delivery-default"));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:455:        Assert.Contains(result.Projection.Lint.Issues, issue =>
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:483:        Assert.Contains(stale.Projection.Lint.Issues, issue => issue.Code == "processes.definition.step.version-conflict");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:511:        Assert.Contains(result.Projection.Lint.Issues, issue =>
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:538:        Assert.Contains("template default remains available", deleted.Receipt.Summary, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:571:        Assert.Contains(archived.Projection.Lint.Issues, issue => issue.Code == "processes.definition.version-conflict");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:572:        Assert.Contains(deleted.Projection.Lint.Issues, issue => issue.Code == "processes.definition.version-conflict");
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:43:            if (request.Url.Contains("/_blazor/disconnect", StringComparison.OrdinalIgnoreCase))
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:209:            if (renderedText?.Contains(expectedText, StringComparison.OrdinalIgnoreCase) == true)
+
+## case_conversion_empty_overload: 0
+
+## regex_usage: 0
+
+## new_list: 7
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:33:        var definitions = new List<ProcessTemplateDefinitionSummary>(manifest.Processes.Count);
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:529:        var issues = new List<ProcessDefinitionStepLintIssueProjection>();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:35:        var consoleMessages = new List<string>();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:36:        var failedRequests = new List<string>();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:37:        var ignoredFailedRequests = new List<string>();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:38:        var pageErrors = new List<string>();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:227:        var lines = new List<string>
+
+## new_dictionary: 0
+
+## linq_chain_candidates: 77
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:512:        branchOutcomes = draft.BranchOutcomes.ToList();
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:513:        roleBindings = draft.RoleBindings.ToList();
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:514:        artifactExpectations = draft.ArtifactExpectations.ToList();
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:558:                selectedOperations.OrderBy(operation => operation.ToString(), StringComparer.Ordinal).ToArray()),
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:572:                    .Where(artifact => !string.IsNullOrWhiteSpace(artifact.SubprocessChildStepKey) ||
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:575:                    .ToArray()));
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:768:            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor:769:            .ToArray());
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:661:                .Select(definition => $$"""
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:667:                .ToArray();
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:596:                    .Where(item => item.Name.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:598:                    .ToArray();
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:9:                .Select(CreateStepSummary)
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:10:                .OrderBy(step => step.Order)
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:11:                .ThenBy(step => step.Key, StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:12:                .ToArray());
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:37:                .Select(operation => NormalizeOptional(operation, string.Empty))
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:38:                .Where(operation => !string.IsNullOrWhiteSpace(operation))
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:40:                .ToArray(),
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:45:                .Select((outcome, index) => CreateBranchOutcomeSummary(stepKey, outcome, index))
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:46:                .ToArray(),
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:48:                .Select(assignment => CreateRoleBindingSummary(step, assignment))
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:49:                .ToArray(),
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:51:                .Select((artifact, index) => CreateArtifactExpectationSummary(stepKey, artifact, index))
+src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs:52:                .ToArray());
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:36:        foreach (var entry in manifest.Processes.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:90:            .Select(document => new ProcessTemplateRoleTemplateActionSummary(
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:99:            .ToArray();
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:109:            .Select((role, index) => CreateRoleSummary(root, definitionRelativePath, role, index))
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:110:            .ToArray();
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:111:        var roleNames = roles.ToDictionary(role => role.Key, role => role.DisplayName, StringComparer.OrdinalIgnoreCase);
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:113:            .SelectMany(step => step.RoleAssignments.Select(assignment => CreateStepRoleBinding(step, assignment, roleNames)))
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:114:            .ToArray();
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:256:                     .Where(path => !string.IsNullOrWhiteSpace(path))
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:257:                     .Select(path => Path.GetFullPath(path!))
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:232:                    .Where(artifact => !string.IsNullOrWhiteSpace(artifact.SubprocessChildStepKey) ||
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:235:                    .ToArray()
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:266:            .Where(step => step.Basic.StepKey != draft.Basic.StepKey)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:268:            .OrderBy(step => ResolveStepOrder(baseline.Steps, step.Basic.StepKey))
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:269:            .ThenBy(step => step.Basic.StepKey.Value, StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:270:            .ToArray();
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:296:                .Select((step, index) => new ProcessDefinitionStepListItemProjection(
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:303:                .ToArray(),
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:318:            .ToDictionary(role => role.Key, role => role.DisplayName, StringComparer.OrdinalIgnoreCase);
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:320:            .Select(step => CreateStepDraft(step, roleNames))
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:321:            .ToArray();
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:330:                .Where(definition => !string.Equals(definition.Key, template.Key, StringComparison.OrdinalIgnoreCase))
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:331:                .Select(definition => new ProcessDefinitionSubprocessOptionProjection(
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:335:                .OrderBy(definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:336:                .ToArray(),
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:348:            .Select(CreateArtifactExpectation)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:349:            .ToArray();
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:366:                    .Select(ParseOperationKind)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:367:                    .Where(operation => operation != ProcessDefinitionStepOperationKind.Unspecified)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:369:                    .ToArray()),
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:377:                .Select(CreateBranchOutcome)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:378:                .ToArray(),
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:380:                .Where(binding => !string.IsNullOrWhiteSpace(binding.RoleKey))
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:381:                .Select(binding => CreateRoleBinding(binding, roleNames))
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:382:                .ToArray(),
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:388:                    .Where(artifact => !string.IsNullOrWhiteSpace(artifact.SubprocessChildStepKey) ||
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:391:                    .ToArray()));
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:467:                    .Where(operation => operation != ProcessDefinitionStepOperationKind.Unspecified)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:469:                    .ToArray()
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:480:                .Select(NormalizeBranchOutcome)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:481:                .ToArray(),
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:483:                .Select(NormalizeArtifactExpectation)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:484:                .ToArray(),
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:677:            .Select(outcome => outcome.OutcomeKey.Value)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:693:            .Select(artifact => artifact.ArtifactKey.Value)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:710:            .Select((step, stepIndex) => new { step.Basic.StepKey, Index = stepIndex })
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:794:            .Where(char.IsLetterOrDigit)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:795:            .Select(char.ToLowerInvariant)
+src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs:796:            .ToArray());
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:348:            .Select((tab, tabIndex) => new { tab.Key, Index = tabIndex })
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:1211:            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:1212:            .ToArray());
+
+## contains_key_indexer: 0
+
+## static_dictionary: 0
+
+## new_http_client: 0
+
+## new_json_serializer_options: 0
+
+## json_serializer_known_type: 1
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:206:            return JsonSerializer.Deserialize(stream, jsonTypeInfo)
+
+## sync_file_all: 6
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:249:        return File.WriteAllLinesAsync(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:668:            File.WriteAllText(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:686:                File.WriteAllText(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:807:            File.WriteAllText(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:824:            File.WriteAllText(
+src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:205:            using var stream = File.OpenRead(path);

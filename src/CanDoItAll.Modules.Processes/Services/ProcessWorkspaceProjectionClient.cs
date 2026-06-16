@@ -24,6 +24,10 @@ public interface IProcessWorkspaceProjectionClient
     Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
         ProcessDefinitionCanvasCommand command,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+        ProcessDefinitionStepEditorCommand command,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ProcessWorkspaceProjectionClient(
@@ -53,4 +57,9 @@ public sealed class ProcessWorkspaceProjectionClient(
         ProcessDefinitionCanvasCommand command,
         CancellationToken cancellationToken = default)
         => shellProjectionService.ExecuteDefinitionCanvasCommandAsync(command, cancellationToken);
+
+    public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+        ProcessDefinitionStepEditorCommand command,
+        CancellationToken cancellationToken = default)
+        => shellProjectionService.ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken);
 }

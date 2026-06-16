@@ -114,7 +114,8 @@ public sealed class ProcessWorkspaceShellTests
             new ProcessDefinitionCatalogProjectionService(clock),
             new ProcessDefinitionEditorProjectionService(clock),
             new ProcessDefinitionRoleEditorProjectionService(clock),
-            new ProcessDefinitionCanvasEditorProjectionService(clock));
+            new ProcessDefinitionCanvasEditorProjectionService(clock),
+            new ProcessDefinitionStepEditorProjectionService(clock));
         var selection = new ProcessWorkspaceSelectionProjection(
             ProcessId: null,
             RunId: null,
@@ -303,6 +304,65 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Step_editor_renders_operation_routes_artifacts_and_subprocess_mapping()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-step-editor']")));
+        Assert.Equal("Architecture decision", cut.Find("[data-testid='processes-step-title']").GetAttribute("value"));
+        Assert.Equal(ProcessDefinitionStepTargetScopeKind.ExternalArtifactDestination.ToString(), cut.Find("[data-testid='processes-step-operation-target-scope']").GetAttribute("value"));
+        Assert.NotNull(cut.Find("[data-testid='processes-step-operation-writeexternalartifactdestination']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-step-branch-approved']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-step-artifact-architecture-decision-record']"));
+        Assert.Contains("Delivery default", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Step_save_uses_typed_step_command_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-step-save']")));
+        cut.Find("[data-testid='processes-step-title']").Input("Architecture decision checkpoint");
+        cut.Find("[data-testid='processes-step-operation-target-scope']").Change(ProcessDefinitionStepTargetScopeKind.ExternalProductTargetReadOnly.ToString());
+        cut.Find("[data-testid='processes-step-operation-readprojectstructure']").Change(true);
+        cut.Find("[data-testid='processes-step-save']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionStepCommandKind.SaveStep, client.LastStepCommand?.CommandKind));
+        var command = Assert.IsType<ProcessDefinitionStepEditorCommand>(client.LastStepCommand);
+        Assert.Equal("Architecture decision checkpoint", command.Draft.Basic.Title);
+        Assert.Equal(ProcessDefinitionStepTargetScopeKind.ExternalProductTargetReadOnly, command.Draft.OperationContract.TargetScope);
+        Assert.Contains(ProcessDefinitionStepOperationKind.ReadProjectStructure, command.Draft.OperationContract.AllowedOperations);
+        Assert.Contains("Step saved", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Step_route_artifact_and_subprocess_commands_use_typed_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-step-add-branch-outcome']")));
+        cut.Find("[data-testid='processes-step-add-branch-outcome']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionStepCommandKind.AddBranchOutcome, client.LastStepCommand?.CommandKind));
+        Assert.Contains("Route added", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='processes-step-add-artifact-expectation']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionStepCommandKind.AddArtifactExpectation, client.LastStepCommand?.CommandKind));
+        Assert.Contains("Artifact added", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='processes-step-kind']").Change(ProcessDefinitionStepKind.Subprocess.ToString());
+        cut.Find("[data-testid='processes-step-subprocess-definition']").Change("delivery-default");
+        cut.Find("[data-testid='processes-step-map-subprocess']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionStepCommandKind.MapSubprocess, client.LastStepCommand?.CommandKind));
+        Assert.Equal(ProcessDefinitionStepKind.Subprocess, client.LastStepCommand?.Draft.Basic.StepKind);
+        Assert.Equal("delivery-default", client.LastStepCommand?.Draft.SubprocessMapping.ProcessKey);
+    }
+
+    [Fact]
     public void Processes_navigation_contributor_adds_processes_to_shell_navigation()
     {
         var items = ShellNavigation.GetItems(0, [new ProcessesShellNavigationContributor()]);
@@ -334,6 +394,8 @@ public sealed class ProcessWorkspaceShellTests
         public ProcessDefinitionRoleEditorCommand? LastRoleCommand { get; private set; }
 
         public ProcessDefinitionCanvasCommand? LastCanvasCommand { get; private set; }
+
+        public ProcessDefinitionStepEditorCommand? LastStepCommand { get; private set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
@@ -431,6 +493,36 @@ public sealed class ProcessWorkspaceShellTests
                     : "Canvas command accepted.");
             var projection = CreateCanvas(command.DefinitionKey, versionToken, receipt, command.CommandKind);
             return Task.FromResult(new ProcessDefinitionCanvasCommandResult(receipt, projection));
+        }
+
+        public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+            ProcessDefinitionStepEditorCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            LastStepCommand = command;
+            var lint = CreateStepLint(command);
+            var status = lint.HasBlockingIssues
+                ? ProcessDefinitionStepCommandStatus.Rejected
+                : ProcessDefinitionStepCommandStatus.Accepted;
+            var versionToken = new ProcessDefinitionStepEditorVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
+            var receipt = new ProcessDefinitionStepCommandReceipt(
+                Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                command.CommandKind,
+                status,
+                versionToken,
+                Now,
+                status == ProcessDefinitionStepCommandStatus.Accepted
+                    ? command.CommandKind switch
+                    {
+                        ProcessDefinitionStepCommandKind.AddBranchOutcome => "Route added.",
+                        ProcessDefinitionStepCommandKind.AddArtifactExpectation => "Artifact added.",
+                        ProcessDefinitionStepCommandKind.MapSubprocess => "Subprocess mapped.",
+                        _ => "Step saved."
+                    }
+                    : "Step command rejected.",
+                lint.Issues);
+            var projection = CreateStepEditor(command.DefinitionKey, command.Draft, versionToken, lint, receipt, command.CommandKind);
+            return Task.FromResult(new ProcessDefinitionStepEditorCommandResult(receipt, projection));
         }
 
         private static ProcessWorkspaceShellProjection CreateShell(
@@ -593,7 +685,8 @@ public sealed class ProcessWorkspaceShellTests
                 lastReceipt)
             {
                 RoleEditor = CreateRoleEditor(key),
-                Canvas = CreateCanvas(key)
+                Canvas = CreateCanvas(key),
+                StepEditor = CreateStepEditor(key)
             };
 
         private static ProcessDefinitionRoleEditorProjection CreateRoleEditor(ProcessDefinitionCatalogItemKey key)
@@ -680,6 +773,183 @@ public sealed class ProcessWorkspaceShellTests
                 "Architecture role template snapshot.",
                 ProcessDefinitionRoleTemplateOverrideStatus.AppliedFromTemplate,
                 "Resolved from process-role-template/solution-architect.");
+
+        private static ProcessDefinitionStepEditorProjection CreateStepEditor(ProcessDefinitionCatalogItemKey key)
+            => CreateStepEditor(
+                key,
+                CreateStepDraft(),
+                new ProcessDefinitionStepEditorVersionToken($"template:{key.Value}:steps"),
+                new ProcessDefinitionStepLintProjection([]),
+                lastReceipt: null,
+                commandKind: null);
+
+        private static ProcessDefinitionStepEditorProjection CreateStepEditor(
+            ProcessDefinitionCatalogItemKey key,
+            ProcessDefinitionStepDraftProjection draft,
+            ProcessDefinitionStepEditorVersionToken versionToken,
+            ProcessDefinitionStepLintProjection lint,
+            ProcessDefinitionStepCommandReceipt? lastReceipt,
+            ProcessDefinitionStepCommandKind? commandKind)
+        {
+            var projectedDraft = commandKind switch
+            {
+                ProcessDefinitionStepCommandKind.AddBranchOutcome => draft with
+                {
+                    BranchOutcomes =
+                    [
+                        .. draft.BranchOutcomes,
+                        new ProcessDefinitionBranchOutcomeProjection(
+                            new ProcessDefinitionBranchOutcomeKey("architecture-decision-route-2"),
+                            "Route 2",
+                            "Second typed route.",
+                            new ProcessDefinitionRouteTargetProjection(
+                                ProcessDefinitionRouteTargetKind.NextStep,
+                                StepKey: null,
+                                ArtifactExpectationKey: null,
+                                "Next step"),
+                            IsBackwardRoute: false,
+                            new ProcessDefinitionLoopBudgetProjection(
+                                IsRequired: false,
+                                MaximumRepeats: 0,
+                                FingerprintPolicyKey: string.Empty,
+                                ProcessDefinitionRouteTargetKind.Escalate))
+                    ]
+                },
+                ProcessDefinitionStepCommandKind.AddArtifactExpectation => draft with
+                {
+                    ArtifactExpectations =
+                    [
+                        .. draft.ArtifactExpectations,
+                        new ProcessDefinitionArtifactExpectationProjection(
+                            new ProcessDefinitionArtifactExpectationKey("architecture-decision-evidence"),
+                            "architecture-decision-evidence",
+                            "Architecture decision evidence",
+                            ProcessDefinitionArtifactKind.Evidence,
+                            IsRequired: true,
+                            ProcessDefinitionArtifactTrustRequirement.ReviewRequired,
+                            ProcessDefinitionArtifactSensitivityLevel.Internal,
+                            RetentionDays: 365,
+                            WorkflowOutputId: string.Empty,
+                            WorkflowOutputName: string.Empty,
+                            ProcessDefinitionWorkflowOutputKind.Unspecified,
+                            SubprocessChildArtifactExpectationId: null,
+                            SubprocessChildStepKey: string.Empty,
+                            SubprocessChildArtifactTitle: string.Empty,
+                            AllowedFutureUsageSummary: "Reusable for route replay.",
+                            ValidationRequirementSummary: "Must identify evidence source.")
+                    ]
+                },
+                _ => draft
+            };
+
+            return new ProcessDefinitionStepEditorProjection(
+                key,
+                versionToken,
+                projectedDraft.Basic.StepKey,
+                [
+                    new ProcessDefinitionStepListItemProjection(
+                        projectedDraft.Basic.StepKey,
+                        projectedDraft.Basic.Title,
+                        projectedDraft.Basic.Subtitle,
+                        projectedDraft.Basic.StepKind,
+                        Order: 0,
+                        IsSelected: true)
+                ],
+                [projectedDraft],
+                projectedDraft,
+                [
+                    new ProcessDefinitionSubprocessOptionProjection(
+                        new ProcessDefinitionCatalogItemKey("delivery-default"),
+                        "Delivery default",
+                        "Default delivery subprocess.")
+                ],
+                [
+                    new(ProcessDefinitionStepCommandKind.SaveStep, "Save step", "save", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionStepCommandKind.AddBranchOutcome, "Add route", "alt_route", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionStepCommandKind.AddArtifactExpectation, "Add artifact", "inventory_2", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionStepCommandKind.MapSubprocess, "Map subprocess", "account_tree", IsEnabled: true, DisabledReason: null)
+                ],
+                lint,
+                lastReceipt);
+        }
+
+        private static ProcessDefinitionStepDraftProjection CreateStepDraft()
+            => new(
+                new ProcessDefinitionStepBasicDraftProjection(
+                    new ProcessDefinitionStepKey("architecture-decision"),
+                    "Architecture decision",
+                    "Governed review step",
+                    "Choose an architecture route from typed outcomes.",
+                    ProcessDefinitionStepKind.Decision,
+                    TargetLeadHours: 12,
+                    AllowsManualSkip: false,
+                    AllowsSafeRefusal: true,
+                    RequiresApproval: true,
+                    RequiresDecisionRecord: true,
+                    new ProcessDefinitionRoleKey("solution-architect")),
+                new ProcessDefinitionStepOperationContractProjection(
+                    ProcessDefinitionStepTargetScopeKind.ExternalArtifactDestination,
+                    [
+                        ProcessDefinitionStepOperationKind.ReadProcessContext,
+                        ProcessDefinitionStepOperationKind.WriteExternalArtifactDestination
+                    ]),
+                new ProcessDefinitionStepContractsProjection(
+                    "Architecture concern and project context.",
+                    "Architecture decision record.",
+                    "Decision evidence and route rationale.",
+                    "Solution architect decides the route.",
+                    "Escalate when evidence is contradictory."),
+                [
+                    new ProcessDefinitionBranchOutcomeProjection(
+                        new ProcessDefinitionBranchOutcomeKey("approved"),
+                        "Approved",
+                        "Route to the approved implementation lane.",
+                        new ProcessDefinitionRouteTargetProjection(
+                            ProcessDefinitionRouteTargetKind.NextStep,
+                            StepKey: null,
+                            ArtifactExpectationKey: null,
+                            "Next step"),
+                        IsBackwardRoute: false,
+                        new ProcessDefinitionLoopBudgetProjection(
+                            IsRequired: false,
+                            MaximumRepeats: 0,
+                            FingerprintPolicyKey: string.Empty,
+                            ProcessDefinitionRouteTargetKind.Escalate))
+                ],
+                [
+                    new ProcessDefinitionStepRoleBindingProjection(
+                        new ProcessDefinitionStepKey("architecture-decision"),
+                        "Architecture decision",
+                        new ProcessDefinitionRoleKey("solution-architect"),
+                        "Solution architect",
+                        ProcessStepRoleResponsibilityKind.Approver,
+                        IsRequired: true,
+                        FallbackOrder: 1,
+                        "Rebind to the architecture board when unavailable.")
+                ],
+                [
+                    new ProcessDefinitionArtifactExpectationProjection(
+                        new ProcessDefinitionArtifactExpectationKey("architecture-decision-record"),
+                        "architecture-decision-record",
+                        "Architecture decision record",
+                        ProcessDefinitionArtifactKind.Deliverable,
+                        IsRequired: true,
+                        ProcessDefinitionArtifactTrustRequirement.ReviewRequired,
+                        ProcessDefinitionArtifactSensitivityLevel.Internal,
+                        RetentionDays: 365,
+                        WorkflowOutputId: "adr-output",
+                        WorkflowOutputName: "Architecture decision record",
+                        ProcessDefinitionWorkflowOutputKind.Artifact,
+                        SubprocessChildArtifactExpectationId: null,
+                        SubprocessChildStepKey: string.Empty,
+                        SubprocessChildArtifactTitle: string.Empty,
+                        AllowedFutureUsageSummary: "Reusable for implementation planning.",
+                        ValidationRequirementSummary: "Must include selected option and rationale.")
+                ],
+                new ProcessDefinitionSubprocessMappingProjection(
+                    ProcessKey: string.Empty,
+                    DefinitionSnapshotName: string.Empty,
+                    ChildArtifactMappings: []));
 
         private static ProcessDefinitionCanvasEditorProjection CreateCanvas(
             ProcessDefinitionCatalogItemKey key,
@@ -901,8 +1171,28 @@ public sealed class ProcessWorkspaceShellTests
                     "processes.definition.role.execution.invalid",
                     ProcessDefinitionRoleLintSeverity.Error,
                     ProcessDefinitionRoleLintSection.Execution,
-                    "Role execution fields are invalid.",
-                    "Choose a typed executor kind and bounded allocation.")
+                "Role execution fields are invalid.",
+                "Choose a typed executor kind and bounded allocation.")
+            ]);
+        }
+
+        private static ProcessDefinitionStepLintProjection CreateStepLint(
+            ProcessDefinitionStepEditorCommand command)
+        {
+            if (!string.IsNullOrWhiteSpace(command.Draft.Basic.Title) &&
+                command.Draft.OperationContract.TargetScope != ProcessDefinitionStepTargetScopeKind.Unspecified)
+            {
+                return new ProcessDefinitionStepLintProjection([]);
+            }
+
+            return new ProcessDefinitionStepLintProjection(
+            [
+                new ProcessDefinitionStepLintIssueProjection(
+                    "processes.definition.step.invalid",
+                    ProcessDefinitionStepLintSeverity.Error,
+                    ProcessDefinitionStepLintSection.Basic,
+                    "Step fields are invalid.",
+                    "Enter a title and choose an explicit operation target scope.")
             ]);
         }
 

@@ -70,6 +70,7 @@ public sealed class ProcessTemplatePackLoader
                     definition.RoleUsages.Count(role => role.IsRequired),
                     definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired))),
                 BuildRoleAuthoringDefaults(root, relativePath, definition, roleTemplateActions),
+                ProcessTemplateStepSummaryBuilder.Build(definition),
                 ProcessTemplateCanvasSummaryBuilder.Build(root, definition)));
         }
 
@@ -310,6 +311,7 @@ public sealed record ProcessTemplateDefinitionSummary(
     DateTimeOffset UpdatedAtUtc,
     ProcessTemplateDefinitionAuthoringDefaults AuthoringDefaults,
     ProcessTemplateDefinitionRoleAuthoringDefaults RoleAuthoringDefaults,
+    ProcessTemplateDefinitionStepAuthoringDefaults StepAuthoringDefaults,
     ProcessTemplateDefinitionCanvasAuthoringDefaults CanvasAuthoringDefaults);
 
 public sealed record ProcessTemplateDefinitionAuthoringDefaults(
@@ -372,6 +374,65 @@ public sealed record ProcessTemplateDefinitionStepRoleBindingSummary(
     bool IsRequired,
     int FallbackOrder,
     string RebindPolicySummary);
+
+public sealed record ProcessTemplateDefinitionStepAuthoringDefaults(
+    IReadOnlyList<ProcessTemplateDefinitionStepAuthoringSummary> Steps);
+
+public sealed record ProcessTemplateDefinitionStepAuthoringSummary(
+    int Order,
+    string Key,
+    string Title,
+    string Subtitle,
+    string Notes,
+    string StepKind,
+    int TargetLeadHours,
+    bool AllowsManualSkip,
+    bool AllowsSafeRefusal,
+    bool RequiresApproval,
+    bool RequiresDecisionRecord,
+    string DecisionRoleKey,
+    string InputContractSummary,
+    string OutputContractSummary,
+    string EvidenceContractSummary,
+    string DecisionRightsSummary,
+    string ExceptionPolicySummary,
+    IReadOnlyList<string> AllowedOperations,
+    string OperationTargetScope,
+    string SubprocessProcessKey,
+    string SubprocessDefinitionSnapshotName,
+    IReadOnlyList<ProcessTemplateDefinitionStepBranchOutcomeSummary> BranchOutcomes,
+    IReadOnlyList<ProcessTemplateDefinitionStepRoleBindingSummary> RoleBindings,
+    IReadOnlyList<ProcessTemplateDefinitionStepArtifactExpectationSummary> ArtifactExpectations);
+
+public sealed record ProcessTemplateDefinitionStepBranchOutcomeSummary(
+    string Key,
+    string Title,
+    string Description,
+    string RouteTargetKind,
+    string RouteTargetStepKey,
+    string RouteTargetArtifactExpectationKey,
+    bool IsBackwardRoute,
+    int LoopBudgetMaximumRepeats,
+    string LoopFingerprintPolicyKey,
+    string LoopEscalationTargetKind);
+
+public sealed record ProcessTemplateDefinitionStepArtifactExpectationSummary(
+    string Key,
+    string TemplateKey,
+    string Title,
+    string ArtifactKind,
+    bool IsRequired,
+    string TrustRequirement,
+    string SensitivityLevel,
+    int RetentionDays,
+    string WorkflowOutputId,
+    string WorkflowOutputName,
+    string WorkflowOutputKind,
+    Guid? SubprocessChildArtifactExpectationId,
+    string SubprocessChildStepKey,
+    string SubprocessChildArtifactTitle,
+    string AllowedFutureUsageSummary,
+    string ValidationRequirementSummary);
 
 public sealed class ProcessTemplatePackManifest
 {
@@ -485,6 +546,30 @@ public sealed class ProcessTemplateDefinitionStepDocument
 
     public string StepKind { get; set; } = string.Empty;
 
+    public int TargetLeadHours { get; set; }
+
+    public bool AllowsManualSkip { get; set; }
+
+    public bool AllowsSafeRefusal { get; set; }
+
+    public bool RequiresApproval { get; set; }
+
+    public bool RequiresDecisionRecord { get; set; }
+
+    public string InputContractSummary { get; set; } = string.Empty;
+
+    public string OutputContractSummary { get; set; } = string.Empty;
+
+    public string EvidenceContractSummary { get; set; } = string.Empty;
+
+    public string DecisionRightsSummary { get; set; } = string.Empty;
+
+    public string ExceptionPolicySummary { get; set; } = string.Empty;
+
+    public List<string> AllowedOperations { get; set; } = [];
+
+    public string OperationTargetScope { get; set; } = string.Empty;
+
     public string DependsOnStepKey { get; set; } = string.Empty;
 
     public string DependsOnBranchOutcomeKey { get; set; } = string.Empty;
@@ -526,6 +611,20 @@ public sealed class ProcessTemplateDefinitionStepBranchOutcomeDocument
     public string Title { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
+
+    public string RouteTargetKind { get; set; } = string.Empty;
+
+    public string RouteTargetStepKey { get; set; } = string.Empty;
+
+    public string RouteTargetArtifactExpectationKey { get; set; } = string.Empty;
+
+    public bool IsBackwardRoute { get; set; }
+
+    public int LoopBudgetMaximumRepeats { get; set; }
+
+    public string LoopFingerprintPolicyKey { get; set; } = string.Empty;
+
+    public string LoopEscalationTargetKind { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateDefinitionStepRoleAssignmentDocument
@@ -552,6 +651,28 @@ public sealed class ProcessTemplateDefinitionArtifactExpectationDocument
     public string ArtifactKind { get; set; } = string.Empty;
 
     public bool IsRequired { get; set; }
+
+    public string TrustRequirement { get; set; } = string.Empty;
+
+    public string SensitivityLevel { get; set; } = string.Empty;
+
+    public int RetentionDays { get; set; }
+
+    public string WorkflowOutputId { get; set; } = string.Empty;
+
+    public string WorkflowOutputName { get; set; } = string.Empty;
+
+    public string WorkflowOutputKind { get; set; } = string.Empty;
+
+    public Guid? SubprocessChildArtifactExpectationId { get; set; }
+
+    public string SubprocessChildStepKey { get; set; } = string.Empty;
+
+    public string SubprocessChildArtifactTitle { get; set; } = string.Empty;
+
+    public string AllowedFutureUsageSummary { get; set; } = string.Empty;
+
+    public string ValidationRequirementSummary { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateRoleResourceDocument

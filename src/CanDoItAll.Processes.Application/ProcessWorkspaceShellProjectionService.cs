@@ -8,7 +8,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
     ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService,
     ProcessDefinitionEditorProjectionService definitionEditorProjectionService,
     ProcessDefinitionRoleEditorProjectionService definitionRoleEditorProjectionService,
-    ProcessDefinitionCanvasEditorProjectionService definitionCanvasEditorProjectionService)
+    ProcessDefinitionCanvasEditorProjectionService definitionCanvasEditorProjectionService,
+    ProcessDefinitionStepEditorProjectionService definitionStepEditorProjectionService)
 {
     private const string WorkspaceContextPrefix = "processes:workspace";
     private const string ProjectContextPrefix = "processes:project";
@@ -48,6 +49,9 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 RoleEditor = selectedRoleEditor,
                 Canvas = await definitionCanvasEditorProjectionService
                     .GetCanvasAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+                    .ConfigureAwait(false),
+                StepEditor = await definitionStepEditorProjectionService
+                    .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
                     .ConfigureAwait(false)
             };
         }
@@ -90,6 +94,11 @@ public sealed class ProcessWorkspaceShellProjectionService(
         ProcessDefinitionCanvasCommand command,
         CancellationToken cancellationToken = default)
         => definitionCanvasEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+
+    public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+        ProcessDefinitionStepEditorCommand command,
+        CancellationToken cancellationToken = default)
+        => definitionStepEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
 
     private static void ValidateRequest(ProcessWorkspaceShellRequest request)
     {

@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed in the approved implementation pass. Proof is recorded under `bundle://proof/SB18/`.
 
 ## Objective
 
@@ -90,11 +90,31 @@ Rebuild step authoring for basic info, execution strategy inputs, operation cont
 
 ## Acceptance Checklist
 
-- [ ] Step editor covers basic, execution, contracts, routing, roles, and artifacts.
-- [ ] Branch outcomes are typed and loop-aware.
-- [ ] Artifact expectations include trust/sensitivity/retention/provenance fields.
-- [ ] Subprocess mapping is builder-compatible.
-- [ ] Component and Playwright proof exists.
+- [x] Step editor covers basic, execution, contracts, routing, roles, and artifacts.
+- [x] Branch outcomes are typed and loop-aware.
+- [x] Artifact expectations include trust/sensitivity/retention/provenance fields.
+- [x] Subprocess mapping is builder-compatible.
+- [x] Component and Playwright proof exists.
+
+## Implementation Result
+
+- Added `ProcessDefinitionStepEditorProjection` contracts, typed step command DTOs, operation/route/artifact/subprocess enums, command receipts, and lint projections.
+- Added `ProcessDefinitionStepEditorProjectionService` to build template-backed step drafts, execute save/add-branch/add-artifact/map-subprocess commands, reject stale versions, require explicit operation target scope, require loop budgets for backward routes, and preserve subprocess mapping metadata.
+- Added `ProcessDefinitionStepEditorPanel.razor` and shell/client/DI wiring so the UI remains projection-first and emits typed commands.
+- Extended template loading to expose step authoring defaults for operations, branch routing, artifacts, roles, and subprocess options.
+- Added focused unit, component, and Playwright proof for US-011 through US-017.
+
+## Proof
+
+- `bundle://proof/SB18/manifest.md`
+- `bundle://proof/SB18/semantic-invariants.md`
+- `bundle://proof/SB18/red-team-semantic-proof.md`
+- `bundle://proof/SB18/story-coverage.md`
+- `bundle://proof/SB18/browser-validation.md`
+- `bundle://proof/SB18/test-unit-step-editor-sb18.txt`
+- `bundle://proof/SB18/test-components-process-shell-sb18.txt`
+- `bundle://proof/SB18/test-playwright-process-shell-sb18.txt`
+- `bundle://proof/SB18/browser/processes-definition-step-editor.png`
 
 ## Proof Required
 

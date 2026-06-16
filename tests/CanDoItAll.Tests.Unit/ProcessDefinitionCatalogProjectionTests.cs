@@ -326,6 +326,164 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Step_editor_projection_reads_operation_routes_artifacts_roles_and_subprocess_options()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionStepEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+
+        var step = editor.SelectedStep;
+        Assert.NotNull(step);
+        Assert.Equal(new ProcessDefinitionStepKey("architecture-decision"), step.Basic.StepKey);
+        Assert.Equal(ProcessDefinitionStepKind.Decision, step.Basic.StepKind);
+        Assert.Equal(12, step.Basic.TargetLeadHours);
+        Assert.Equal(ProcessDefinitionStepTargetScopeKind.ExternalArtifactDestination, step.OperationContract.TargetScope);
+        Assert.Contains(ProcessDefinitionStepOperationKind.WriteExternalArtifactDestination, step.OperationContract.AllowedOperations);
+        var route = Assert.Single(step.BranchOutcomes);
+        Assert.Equal(ProcessDefinitionRouteTargetKind.NextStep, route.RouteTarget.Kind);
+        var artifact = Assert.Single(step.ArtifactExpectations);
+        Assert.Equal(ProcessDefinitionArtifactKind.Deliverable, artifact.ArtifactKind);
+        Assert.Equal(ProcessDefinitionArtifactTrustRequirement.ReviewRequired, artifact.TrustRequirement);
+        Assert.Equal(ProcessDefinitionArtifactSensitivityLevel.Internal, artifact.SensitivityLevel);
+        Assert.Equal(365, artifact.RetentionDays);
+        Assert.Equal("adr-output", artifact.WorkflowOutputId);
+        Assert.Single(step.RoleBindings);
+        Assert.Contains(editor.SubprocessOptions, option => option.DefinitionKey == new ProcessDefinitionCatalogItemKey("delivery-default"));
+        Assert.False(editor.Lint.HasBlockingIssues);
+    }
+
+    [Fact]
+    public async Task Step_editor_commands_save_add_branch_artifact_and_map_subprocess()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionStepEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var savedDraft = editor.SelectedStep! with
+        {
+            Basic = editor.SelectedStep.Basic with
+            {
+                Title = "Architecture decision checkpoint"
+            }
+        };
+
+        var saved = await ExecuteStepCommandAsync(
+            service,
+            editor,
+            ProcessDefinitionStepCommandKind.SaveStep,
+            savedDraft);
+        var addedRoute = await ExecuteStepCommandAsync(
+            service,
+            saved.Projection,
+            ProcessDefinitionStepCommandKind.AddBranchOutcome,
+            saved.Projection.SelectedStep!);
+        var addedArtifact = await ExecuteStepCommandAsync(
+            service,
+            addedRoute.Projection,
+            ProcessDefinitionStepCommandKind.AddArtifactExpectation,
+            addedRoute.Projection.SelectedStep!);
+        var subprocessDraft = addedArtifact.Projection.SelectedStep! with
+        {
+            Basic = addedArtifact.Projection.SelectedStep.Basic with
+            {
+                StepKind = ProcessDefinitionStepKind.Subprocess
+            },
+            SubprocessMapping = addedArtifact.Projection.SelectedStep.SubprocessMapping with
+            {
+                ProcessKey = "delivery-default",
+                DefinitionSnapshotName = "Delivery default"
+            }
+        };
+        var mapped = await ExecuteStepCommandAsync(
+            service,
+            addedArtifact.Projection,
+            ProcessDefinitionStepCommandKind.MapSubprocess,
+            subprocessDraft);
+
+        Assert.Equal(ProcessDefinitionStepCommandStatus.Accepted, saved.Receipt.Status);
+        Assert.Equal("Architecture decision checkpoint", saved.Projection.SelectedStep?.Basic.Title);
+        Assert.Equal(ProcessDefinitionStepCommandStatus.Accepted, addedRoute.Receipt.Status);
+        Assert.Equal(2, addedRoute.Projection.SelectedStep?.BranchOutcomes.Count);
+        Assert.Equal(ProcessDefinitionStepCommandStatus.Accepted, addedArtifact.Receipt.Status);
+        Assert.Equal(2, addedArtifact.Projection.SelectedStep?.ArtifactExpectations.Count);
+        Assert.Equal(ProcessDefinitionStepCommandStatus.Accepted, mapped.Receipt.Status);
+        Assert.Equal("delivery-default", mapped.Projection.SelectedStep?.SubprocessMapping.ProcessKey);
+    }
+
+    [Fact]
+    public async Task Step_editor_rejects_backward_route_without_loop_budget()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionStepEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var route = editor.SelectedStep!.BranchOutcomes.Single() with
+        {
+            RouteTarget = editor.SelectedStep.BranchOutcomes.Single().RouteTarget with
+            {
+                Kind = ProcessDefinitionRouteTargetKind.PreviousStep
+            },
+            IsBackwardRoute = true,
+            LoopBudget = editor.SelectedStep.BranchOutcomes.Single().LoopBudget with
+            {
+                MaximumRepeats = 0
+            }
+        };
+        var invalidDraft = editor.SelectedStep with
+        {
+            BranchOutcomes = [route]
+        };
+
+        var result = await ExecuteStepCommandAsync(
+            service,
+            editor,
+            ProcessDefinitionStepCommandKind.SaveStep,
+            invalidDraft);
+
+        Assert.Equal(ProcessDefinitionStepCommandStatus.Rejected, result.Receipt.Status);
+        Assert.Contains(result.Projection.Lint.Issues, issue =>
+            issue.Code == "processes.definition.step.routing.backward-loop-budget-required");
+    }
+
+    [Fact]
+    public async Task Step_editor_rejects_stale_version_tokens()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionStepEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var saved = await ExecuteStepCommandAsync(
+            service,
+            editor,
+            ProcessDefinitionStepCommandKind.SaveStep,
+            editor.SelectedStep!);
+
+        var stale = await service.ExecuteCommandAsync(new ProcessDefinitionStepEditorCommand(
+            ProcessWorkspaceShellScope.Global,
+            saved.Projection.DefinitionKey,
+            ProcessDefinitionStepCommandKind.SaveStep,
+            editor.VersionToken,
+            saved.Projection.SelectedStep!));
+
+        Assert.Equal(ProcessDefinitionStepCommandStatus.Rejected, stale.Receipt.Status);
+        Assert.Contains(stale.Projection.Lint.Issues, issue => issue.Code == "processes.definition.step.version-conflict");
+    }
+
+    [Fact]
     public async Task Publish_rejects_blocking_lint_and_returns_actionable_projection()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();
@@ -455,6 +613,18 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             SelectedEdgeKey: null,
             ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
 
+    private static Task<ProcessDefinitionStepEditorCommandResult> ExecuteStepCommandAsync(
+        ProcessDefinitionStepEditorProjectionService service,
+        ProcessDefinitionStepEditorProjection editor,
+        ProcessDefinitionStepCommandKind commandKind,
+        ProcessDefinitionStepDraftProjection draft)
+        => service.ExecuteCommandAsync(new ProcessDefinitionStepEditorCommand(
+            ProcessWorkspaceShellScope.Global,
+            editor.DefinitionKey,
+            commandKind,
+            editor.VersionToken,
+            draft));
+
     private static ProcessDefinitionEditorDraftProjection CreateDraft(
         ProcessDefinitionEditorProjection editor)
         => new(
@@ -564,6 +734,16 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                           "Subtitle": "Governed decision",
                           "Notes": "Choose an architecture route from typed outcomes.",
                           "StepKind": "Decision",
+                          "AllowsManualSkip": false,
+                          "AllowsSafeRefusal": true,
+                          "RequiresApproval": true,
+                          "RequiresDecisionRecord": true,
+                          "InputContractSummary": "Architecture concern, project context, and decision trigger.",
+                          "OutputContractSummary": "Architecture decision record and approved implementation lane.",
+                          "EvidenceContractSummary": "Decision evidence with source constraints and route rationale.",
+                          "DecisionRightsSummary": "Solution architect can approve or route back for redesign.",
+                          "ExceptionPolicySummary": "Escalate when route evidence is missing or contradictory.",
+                          "TargetLeadHours": 12,
                           "CanvasX": 160,
                           "CanvasY": 220,
                           "BranchCanvasX": 420,
@@ -584,16 +764,39 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                               "TemplateKey": "architecture-decision-record",
                               "Title": "Architecture decision record",
                               "ArtifactKind": "Deliverable",
-                              "IsRequired": true
+                              "IsRequired": true,
+                              "TrustRequirement": "ReviewRequired",
+                              "SensitivityLevel": "Internal",
+                              "RetentionDays": 365,
+                              "WorkflowOutputId": "adr-output",
+                              "WorkflowOutputName": "Architecture decision record",
+                              "WorkflowOutputKind": "Artifact",
+                              "AllowedFutureUsageSummary": "Reusable for implementation planning and route replay.",
+                              "ValidationRequirementSummary": "Must include selected option, rejected options, rationale, and follow-up route."
                             }
                           ],
                           "BranchOutcomes": [
                             {
                               "Key": "approved",
                               "Title": "Approved",
-                              "Description": "Route to the approved implementation lane."
+                              "Description": "Route to the approved implementation lane.",
+                              "RouteTargetKind": "NextStep",
+                              "RouteTargetStepKey": "",
+                              "RouteTargetArtifactExpectationKey": "",
+                              "IsBackwardRoute": false,
+                              "LoopBudgetMaximumRepeats": 0,
+                              "LoopFingerprintPolicyKey": "",
+                              "LoopEscalationTargetKind": "Escalate"
                             }
-                          ]
+                          ],
+                          "AllowedOperations": [
+                            "ReadProcessContext",
+                            "ReadProjectStructure",
+                            "ReadUpstreamArtifacts",
+                            "WriteExternalArtifactDestination",
+                            "EscalateOrDecide"
+                          ],
+                          "OperationTargetScope": "ExternalArtifactDestination"
                         }
                       ]
                     }

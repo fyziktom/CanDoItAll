@@ -593,6 +593,13 @@
                                               Disabled="@isBusy"
                                               ExecuteCommand="ExecuteDefinitionCanvasCommandAsync" />
             }
+            @if (DefinitionCatalog.SelectedEditor.StepEditor is not null)
+            {
+                <ProcessDefinitionStepEditorPanel StepEditor="DefinitionCatalog.SelectedEditor.StepEditor"
+                                                  Scope="ResolveScope()"
+                                                  Disabled="@isBusy"
+                                                  ExecuteCommand="ExecuteDefinitionStepEditorCommandAsync" />
+            }
             @if (DefinitionCatalog.SelectedEditor.RoleEditor is not null)
             {
                 <ProcessDefinitionRoleEditorPanel RoleEditor="DefinitionCatalog.SelectedEditor.RoleEditor"
@@ -897,6 +904,11 @@
                 selectedEditor = selectedEditor with { Canvas = canvas };
             }
 
+            if (selectedEditor.StepEditor is null && shell.DefinitionCatalog.SelectedEditor?.StepEditor is { } stepEditor)
+            {
+                selectedEditor = selectedEditor with { StepEditor = stepEditor };
+            }
+
             shell = shell with
             {
                 DefinitionCatalog = shell.DefinitionCatalog with
@@ -982,6 +994,46 @@
         var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
         {
             Canvas = projection
+        };
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor
+            }
+        };
+    }
+
+    private async Task ExecuteDefinitionStepEditorCommandAsync(ProcessDefinitionStepEditorCommand command)
+    {
+        isBusy = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteDefinitionStepEditorCommandAsync(command);
+            ApplyDefinitionStepEditorProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void ApplyDefinitionStepEditorProjection(ProcessDefinitionStepEditorProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is null)
+        {
+            return;
+        }
+
+        var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
+        {
+            StepEditor = projection
         };
         shell = shell with
         {

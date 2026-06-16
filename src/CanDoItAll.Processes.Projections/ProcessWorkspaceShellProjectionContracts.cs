@@ -363,6 +363,8 @@ public sealed record ProcessDefinitionEditorProjection(
     public ProcessDefinitionRoleEditorProjection? RoleEditor { get; init; }
 
     public ProcessDefinitionCanvasEditorProjection? Canvas { get; init; }
+
+    public ProcessDefinitionStepEditorProjection? StepEditor { get; init; }
 }
 
 public sealed record ProcessDefinitionCatalogProjection(

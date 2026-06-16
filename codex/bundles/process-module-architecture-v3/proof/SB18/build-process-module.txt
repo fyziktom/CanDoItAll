@@ -1,0 +1,19 @@
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Contracts\bin\Debug\net10.0\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Processes.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Abstractions\bin\Debug\net10.0\CanDoItAll.Processes.Abstractions.dll
+  CanDoItAll.Components.Git -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Git\bin\Debug\net10.0\CanDoItAll.Components.Git.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Core\bin\Debug\net10.0\CanDoItAll.Processes.Core.dll
+  CanDoItAll.Processes.Projections -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Projections\bin\Debug\net10.0\CanDoItAll.Processes.Projections.dll
+  CanDoItAll.Processes.Templates -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Templates\bin\Debug\net10.0\CanDoItAll.Processes.Templates.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.Processes.Builder -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Builder\bin\Debug\net10.0\CanDoItAll.Processes.Builder.dll
+  CanDoItAll.Processes.Runtime -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Runtime\bin\Debug\net10.0\CanDoItAll.Processes.Runtime.dll
+  CanDoItAll.Processes.Application -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Application\bin\Debug\net10.0\CanDoItAll.Processes.Application.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\bin\Debug\net10.0\CanDoItAll.Modules.Processes.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:02.43

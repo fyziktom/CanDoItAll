@@ -20,7 +20,7 @@ public sealed class ProcessShellSmokeTests
             PlaywrightTestHostPaths.RepositoryRoot,
             "output",
             "playwright",
-            "process-shell-sb17");
+            "process-shell-sb18");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -32,6 +32,23 @@ public sealed class ProcessShellSmokeTests
             }
         });
         var page = await context.NewPageAsync();
+        var consoleMessages = new List<string>();
+        var failedRequests = new List<string>();
+        var ignoredFailedRequests = new List<string>();
+        var pageErrors = new List<string>();
+        page.Console += (_, message) => consoleMessages.Add($"{message.Type}: {message.Text}");
+        page.RequestFailed += (_, request) =>
+        {
+            var failure = $"{request.Method} {request.Url} {request.Failure}";
+            if (request.Url.Contains("/_blazor/disconnect", StringComparison.OrdinalIgnoreCase))
+            {
+                ignoredFailedRequests.Add(failure);
+                return;
+            }
+
+            failedRequests.Add(failure);
+        };
+        page.PageError += (_, message) => pageErrors.Add(message);
 
         var globalResponse = await page.GotoAsync($"{fixture.BaseUrl}/processes");
         Assert.NotNull(globalResponse);
@@ -64,9 +81,32 @@ public sealed class ProcessShellSmokeTests
             Path = Path.Combine(artifactDirectory, "processes-definition-canvas.png"),
             FullPage = true
         });
+        await page.GetByTestId("processes-definition-step-editor").WaitForAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-definition-step-editor"), "Capture architecture decision demand");
+        await page.GetByTestId("processes-step-operation-target-scope").SelectOptionAsync(new[] { "ExternalArtifactDestination" });
+        await page.GetByTestId("processes-step-operation-writeexternalartifactdestination").CheckAsync();
+        await page.GetByTestId("processes-step-save").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "saved");
+        await page.GetByTestId("processes-step-add-branch-outcome").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "added");
+        await page.GetByTestId("processes-step-branch-route-target-decision-intake-route").SelectOptionAsync(new[] { "PreviousStep" });
+        await page.GetByTestId("processes-step-branch-loop-budget-decision-intake-route").FillAsync("2");
+        await page.GetByTestId("processes-step-save").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "saved");
+        await page.GetByTestId("processes-step-add-artifact-expectation").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "added");
+        await page.GetByTestId("processes-step-kind").SelectOptionAsync(new[] { "Subprocess" });
+        await page.GetByTestId("processes-step-subprocess-definition").SelectOptionAsync(new[] { "dotnet-development-slice" });
+        await page.GetByTestId("processes-step-map-subprocess").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "mapped");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(artifactDirectory, "processes-definition-step-editor.png"),
+            FullPage = true
+        });
         await page.GetByTestId("processes-definition-role-editor").WaitForAsync();
         await page.GetByTestId("processes-role-solution-architect").ClickAsync();
-        await page.GetByTestId("processes-role-display-name").FillAsync("Principal architecture steward SB17");
+        await page.GetByTestId("processes-role-display-name").FillAsync("Principal architecture steward SB18");
         await page.GetByTestId("processes-role-project-assignment").SelectOptionAsync(new[] { "Manager" });
         await page.GetByTestId("processes-role-allocation").FillAsync("45");
         await page.GetByTestId("processes-role-save").ClickAsync();
@@ -101,6 +141,9 @@ public sealed class ProcessShellSmokeTests
             FullPage = true
         });
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+        await WriteBrowserValidationSummaryAsync(artifactDirectory, consoleMessages, failedRequests, ignoredFailedRequests, pageErrors);
+        Assert.Empty(pageErrors);
+        Assert.Empty(failedRequests);
     }
 
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
@@ -172,5 +215,39 @@ public sealed class ProcessShellSmokeTests
         }
 
         Assert.Fail($"Expected locator text to contain '{expectedText}', but saw '{renderedText}'.");
+    }
+
+    private static Task WriteBrowserValidationSummaryAsync(
+        string artifactDirectory,
+        IReadOnlyCollection<string> consoleMessages,
+        IReadOnlyCollection<string> failedRequests,
+        IReadOnlyCollection<string> ignoredFailedRequests,
+        IReadOnlyCollection<string> pageErrors)
+    {
+        var lines = new List<string>
+        {
+            "# Process Shell Browser Validation Summary",
+            string.Empty,
+            $"ConsoleMessages={consoleMessages.Count}",
+            $"FailedRequests={failedRequests.Count}",
+            $"IgnoredFailedRequests={ignoredFailedRequests.Count}",
+            $"PageErrors={pageErrors.Count}",
+            string.Empty,
+            "## Console",
+        };
+        lines.AddRange(consoleMessages.Count == 0 ? ["None."] : consoleMessages);
+        lines.Add(string.Empty);
+        lines.Add("## Failed Requests");
+        lines.AddRange(failedRequests.Count == 0 ? ["None."] : failedRequests);
+        lines.Add(string.Empty);
+        lines.Add("## Ignored Failed Requests");
+        lines.AddRange(ignoredFailedRequests.Count == 0 ? ["None."] : ignoredFailedRequests);
+        lines.Add(string.Empty);
+        lines.Add("## Page Errors");
+        lines.AddRange(pageErrors.Count == 0 ? ["None."] : pageErrors);
+
+        return File.WriteAllLinesAsync(
+            Path.Combine(artifactDirectory, "browser-validation-summary.txt"),
+            lines);
     }
 }

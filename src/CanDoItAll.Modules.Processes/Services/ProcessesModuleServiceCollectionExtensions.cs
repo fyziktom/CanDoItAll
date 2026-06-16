@@ -20,6 +20,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessDefinitionEditorProjectionService>();
         services.TryAddScoped<ProcessDefinitionRoleEditorProjectionService>();
         services.TryAddScoped<ProcessDefinitionCanvasEditorProjectionService>();
+        services.TryAddScoped<ProcessDefinitionStepEditorProjectionService>();
         services.TryAddScoped<ProcessWorkspaceShellProjectionService>();
         services.TryAddScoped<IProcessWorkspaceProjectionClient, ProcessWorkspaceProjectionClient>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());
