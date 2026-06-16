@@ -176,6 +176,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         ToolContractCatalog.WorkspaceDotNetBuild,
         ToolContractCatalog.WorkspaceDotNetTest,
         ToolContractCatalog.WorkspaceDotNetRun,
+        ToolContractCatalog.WorkspaceDotNetStop,
         ToolContractCatalog.WorkspacePowerShellRunScript,
         ToolContractCatalog.WorkspacePythonRunFile,
         ToolContractCatalog.WorkspaceInspectImage
@@ -227,6 +228,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "data",
         "integration-map",
         "output",
+        "process-artifacts",
         "process-runs"
     ];
     private static readonly string[] DeniedExternalRunManagedRoots =
@@ -516,6 +518,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        if (IsProductMutationStep(context) &&
+            referencedAliases.Any(alias => IsAllowedExternalTargetAlias(alias, allowedAliases)))
+        {
+            return OperationRequirement.Any(OperationMutateProductTarget);
+        }
+
         if (referencedAliases.Any(alias => !IsExternalArtifactDestinationPath(alias)))
         {
             return OperationRequirement.Any(OperationMutateProductTarget);
@@ -584,10 +593,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         if (string.Equals(context.ToolName, "browser_snapshot", StringComparison.OrdinalIgnoreCase))
         {
-            var depthAllowed = context.RedactedArguments.TryGetValue("depth", out var depthValue) &&
-                               int.TryParse(depthValue, out var depth) &&
-                               depth <= 4;
-            if (!depthAllowed)
+            if (!context.RedactedArguments.TryGetValue("depth", out var depthValue) ||
+                !int.TryParse(depthValue, out var depth) ||
+                depth > 4)
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
@@ -596,11 +604,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
             if (context.RedactedArguments.TryGetValue("boxes", out var boxesValue) &&
                 bool.TryParse(boxesValue, out var boxes) &&
-                boxes)
+                boxes &&
+                depth > 2)
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
-                    "Governed process browser snapshots must not request element boxes because they can produce oversized tool output. Retry once with boxes=false and do not repeat this blocked call.");
+                    "Governed process browser snapshots with element boxes must set depth to 2 or less because deeper boxed snapshots can produce oversized tool output. Retry once with depth=2 or boxes=false and do not repeat this blocked call.");
             }
 
             return null;

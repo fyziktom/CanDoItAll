@@ -450,6 +450,13 @@ internal static class SandboxWorkspaceSeedNormalizer
                        !existingCapability.Description.Contains("managed src/tests/tools roots", StringComparison.OrdinalIgnoreCase));
         }
 
+        if (string.Equals(seededCapability.Key, "workspace-dotnet-stop", StringComparison.OrdinalIgnoreCase))
+        {
+            return !existingCapability.Description.Contains("startup.json receipt", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("cleanup.json proof", StringComparison.OrdinalIgnoreCase)
+                   || !existingCapability.Description.Contains("workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase);
+        }
+
         if (string.Equals(seededCapability.Key, "workspace-search", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.Description.Contains("external-target paths require explicit current-run grounding", StringComparison.OrdinalIgnoreCase)

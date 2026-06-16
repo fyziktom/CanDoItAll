@@ -3,6 +3,22 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Processes.Persistence;
 
+internal sealed class ProcessInstancePlanEntityConfiguration : IEntityTypeConfiguration<ProcessInstancePlanEntity>
+{
+    public void Configure(EntityTypeBuilder<ProcessInstancePlanEntity> builder)
+    {
+        builder.ToTable("process_instance_plans");
+        builder.HasKey(plan => plan.PlanId);
+        builder.Property(plan => plan.PlanHash).HasMaxLength(128).IsRequired();
+        builder.Property(plan => plan.PlanSchemaVersion).HasMaxLength(64).IsRequired();
+        builder.Property(plan => plan.DefinitionContentHash).HasMaxLength(128).IsRequired();
+        builder.Property(plan => plan.PayloadJson).IsRequired();
+        builder.HasIndex(plan => plan.RootPlanId);
+        builder.HasIndex(plan => new { plan.DefinitionId, plan.DefinitionVersionId });
+        builder.HasIndex(plan => plan.CreatedAtUtc);
+    }
+}
+
 internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeStateEntity>
 {
     public void Configure(EntityTypeBuilder<ProcessRuntimeStateEntity> builder)
@@ -34,6 +50,33 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
             .WithOne(slot => slot.RuntimeState)
             .HasForeignKey(slot => slot.RunId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeStepAssignmentEntity>
+{
+    public void Configure(EntityTypeBuilder<ProcessRuntimeStepAssignmentEntity> builder)
+    {
+        builder.ToTable("process_runtime_step_assignments");
+        builder.HasKey(assignment => new { assignment.RunId, assignment.StepInstanceId });
+        builder.Property(assignment => assignment.StepKey).HasMaxLength(256).IsRequired();
+        builder.Property(assignment => assignment.RoleKey).HasMaxLength(256).IsRequired();
+        builder.Property(assignment => assignment.ExecutorKind).HasMaxLength(128).IsRequired();
+        builder.Property(assignment => assignment.ExecutorId).HasMaxLength(256).IsRequired();
+        builder.Property(assignment => assignment.ExecutorDisplayName).HasMaxLength(512).IsRequired();
+        builder.Property(assignment => assignment.Prompt).IsRequired();
+        builder.Property(assignment => assignment.ReadinessHash).HasMaxLength(128).IsRequired();
+        builder.Property(assignment => assignment.AssignmentReason).HasMaxLength(2048).IsRequired();
+        builder.Property(assignment => assignment.ProducedArtifactSlotIds).IsRequired();
+        builder.Property(assignment => assignment.RequiredArtifactSlotIds).IsRequired();
+        builder.Property(assignment => assignment.AllowedOperations).IsRequired();
+        builder.Property(assignment => assignment.OperationTargetScope).HasMaxLength(128).IsRequired();
+        builder.Property(assignment => assignment.LaunchVariablesJson).IsRequired();
+        builder.Property(assignment => assignment.BranchGateSourceStepKey).HasMaxLength(256);
+        builder.Property(assignment => assignment.BranchGateRequiredOutcomeKey).HasMaxLength(256);
+        builder.HasIndex(assignment => assignment.PlanId);
+        builder.HasIndex(assignment => new { assignment.RunId, assignment.StepKey }).IsUnique();
+        builder.HasIndex(assignment => new { assignment.ExecutorKind, assignment.ExecutorId });
     }
 }
 
@@ -176,7 +219,7 @@ internal sealed class ProcessProjectionHistoryEntityConfiguration : IEntityTypeC
     public void Configure(EntityTypeBuilder<ProcessProjectionHistoryEntity> builder)
     {
         builder.ToTable("process_projection_history");
-        builder.HasKey(history => new { history.ProjectorName, history.ProjectionKey });
+        builder.HasKey(history => new { history.ProjectorName, history.ProjectionKey, history.GlobalSequence });
         builder.Property(history => history.ProjectorName).HasMaxLength(256).IsRequired();
         builder.Property(history => history.ProjectionKey).HasMaxLength(512).IsRequired();
         builder.Property(history => history.EventType).HasMaxLength(256).IsRequired();

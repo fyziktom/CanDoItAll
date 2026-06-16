@@ -77,6 +77,14 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: false);
 
+    public Task<WorkspaceCommandExecutionResult> DotnetStop(string startupReceiptPath, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildDotnetStop(startupReceiptPath, timeoutSeconds),
+            "workspace_dotnet_stop",
+            "dotnet_stop",
+            "LocalExecution",
+            approvalRequired: false);
+
     public Task<WorkspaceCommandExecutionResult> DotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
         => ExecutePlanAsync(
             () => planBuilder.BuildDotnetNew(template, name, parentDirectory, force, timeoutSeconds),

@@ -2,6 +2,8 @@
 
 ## Status
 
+- Completed
+
 Completed in architecture bundle v3 execution. Proof is recorded under `proof/SB16/`.
 
 ## Objective

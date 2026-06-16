@@ -44,6 +44,7 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapProjectsApi();
         group.MapAgentsApi();
         group.MapWorkflowsApi();
+        group.MapProcessesApi();
         group.MapCognitiveMemoryApi();
         group.MapPluginsApi();
 

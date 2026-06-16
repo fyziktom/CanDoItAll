@@ -435,6 +435,7 @@ public static class AgentWorkspaceToolAccessMetadata
             case "workspace_dotnet_build":
             case "workspace_dotnet_test":
             case "workspace_dotnet_run":
+            case "workspace_dotnet_stop":
                 permission = AgentWorkspaceToolPermissionKind.RunValidationCommands;
                 return true;
             case "workspace_dotnet_new":

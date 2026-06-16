@@ -44,7 +44,7 @@ Run a browser-facing app or HTTP API after build:
 - waitForHttp: true
 - noBuild: true
 - startupTimeoutSeconds: 45
-- keepAlive: false unless the same step immediately needs browser tools; if true, stop the app with the recorded `startup.json` `stopCommand` before finalizing
+- keepAlive: false unless the same step immediately needs browser tools; if true, stop the app by calling `workspace_dotnet_stop` with the recorded `startup.json` receipt before finalizing
 - use the returned URL, process id, stdout log, stderr log, and receipt paths for Playwright/browser proof
 
 Run a console or worker-style app when runtime smoke is required:

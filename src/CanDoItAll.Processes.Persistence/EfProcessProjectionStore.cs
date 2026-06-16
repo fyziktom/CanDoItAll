@@ -91,24 +91,12 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
         ArgumentNullException.ThrowIfNull(history);
 
         var existing = await dbContext.ProjectionHistory
-            .FindAsync(new object[] { history.ProjectorName.Value, history.ProjectionKey.Value }, cancellationToken)
+            .FindAsync(new object[] { history.ProjectorName.Value, history.ProjectionKey.Value, history.GlobalSequence }, cancellationToken)
             .ConfigureAwait(false);
 
         if (existing is null)
         {
             dbContext.ProjectionHistory.Add(ProcessPersistenceMappers.ToHistoryEntity(history));
-        }
-        else if (history.GlobalSequence >= existing.GlobalSequence)
-        {
-            existing.GlobalSequence = history.GlobalSequence;
-            existing.RootRunId = history.RootRunId.Value;
-            existing.RunId = history.RunId.Value;
-            existing.OccurredAtUtc = history.OccurredAtUtc;
-            existing.EventType = history.EventType;
-            existing.SchemaVersion = history.SchemaVersion;
-            existing.PayloadJson = history.PayloadJson;
-            existing.PayloadHash = history.PayloadHash;
-            existing.Sensitivity = history.Sensitivity;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

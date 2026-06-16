@@ -30,6 +30,7 @@
     "workspace-dotnet-build",
     "workspace-dotnet-test",
     "workspace-dotnet-run",
+    "workspace-dotnet-stop",
     "workspace-dotnet-new",
     "workspace-python-run-file",
     "workspace-pwsh-run-script",

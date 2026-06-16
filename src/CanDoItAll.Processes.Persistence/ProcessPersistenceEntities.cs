@@ -2,6 +2,31 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Persistence;
 
+public sealed class ProcessInstancePlanEntity
+{
+    public Guid PlanId { get; set; }
+
+    public Guid RootPlanId { get; set; }
+
+    public Guid? ParentPlanId { get; set; }
+
+    public Guid? ParentStepId { get; set; }
+
+    public Guid DefinitionId { get; set; }
+
+    public Guid DefinitionVersionId { get; set; }
+
+    public string PlanHash { get; set; } = string.Empty;
+
+    public string PlanSchemaVersion { get; set; } = string.Empty;
+
+    public string DefinitionContentHash { get; set; } = string.Empty;
+
+    public string PayloadJson { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
 public sealed class ProcessRuntimeStateEntity
 {
     public Guid RunId { get; set; }
@@ -25,6 +50,47 @@ public sealed class ProcessRuntimeStateEntity
     public List<ProcessStrategyResultReceiptEntity> ResultReceipts { get; } = [];
 
     public List<ProcessRuntimeAvailableArtifactSlotEntity> AvailableArtifactSlots { get; } = [];
+}
+
+public sealed class ProcessRuntimeStepAssignmentEntity
+{
+    public Guid RunId { get; set; }
+
+    public Guid StepInstanceId { get; set; }
+
+    public Guid PlanId { get; set; }
+
+    public string StepKey { get; set; } = string.Empty;
+
+    public string RoleKey { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public string ExecutorId { get; set; } = string.Empty;
+
+    public string ExecutorDisplayName { get; set; } = string.Empty;
+
+    public string Prompt { get; set; } = string.Empty;
+
+    public string ReadinessHash { get; set; } = string.Empty;
+
+    public string AssignmentReason { get; set; } = string.Empty;
+
+    public string ProducedArtifactSlotIds { get; set; } = string.Empty;
+
+    public string RequiredArtifactSlotIds { get; set; } = string.Empty;
+
+    public string AllowedOperations { get; set; } = string.Empty;
+
+    public string OperationTargetScope { get; set; } = string.Empty;
+
+    public string LaunchVariablesJson { get; set; } = string.Empty;
+
+    public string? BranchGateSourceStepKey { get; set; }
+
+    public string? BranchGateRequiredOutcomeKey { get; set; }
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
 }
 
 public sealed class ProcessRuntimeStepEntity

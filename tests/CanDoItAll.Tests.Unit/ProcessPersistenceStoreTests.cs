@@ -1,10 +1,13 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.AgentFramework.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit;
@@ -216,6 +219,106 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
+    public async Task Instance_plan_store_round_trips_strategy_binding_for_dispatch()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessInstancePlanStore(dbContext);
+        var stepId = ProcessStepInstanceId.New();
+        var stepDefinitionId = ProcessStepDefinitionId.New();
+        var binding = new ProcessStrategyBindingSnapshot(
+            new DriverId("driver.persistence-test"),
+            new StrategyId("strategy.persistence-test.execute"),
+            "1.0.0",
+            "factory.1.0.0",
+            RuntimeSchemaVersion,
+            RuntimeSchemaVersion,
+            "sha256:binding",
+            [new StrategyBindingInput(new StrategyBindingInputKey("operation"), "sha256:operation")]);
+        var plan = NewDispatchablePlan(stepId, stepDefinitionId, binding);
+
+        await store.PersistAsync(plan);
+        var loaded = await store.LoadAsync(plan.Header.PlanId);
+
+        Assert.NotNull(loaded);
+        var loadedStep = Assert.Single(loaded.Steps);
+        Assert.Equal(stepId, loadedStep.StepInstanceId);
+        Assert.NotNull(loadedStep.ExecutionStrategyBinding);
+        Assert.Equal(binding.StrategyId, loadedStep.ExecutionStrategyBinding.StrategyId);
+        var state = new ProcessRuntimeStateSnapshot(
+            ProcessRunId.New(),
+            ProcessRunId.New(),
+            loaded.Header.PlanId,
+            loaded.PlanHash,
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    stepId,
+                    stepDefinitionId,
+                    ProcessRuntimeStepStatus.Ready,
+                    true,
+                    0,
+                    new HashSet<ProcessStepInstanceId>(),
+                    new HashSet<ArtifactSlotId>(),
+                    null,
+                    null)
+            ],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+
+        var readyWork = new ProcessRuntimeScheduler().CalculateReadyWork(state, loaded, Now);
+
+        var workItem = Assert.Single(readyWork);
+        Assert.Equal(stepId, workItem.StepInstanceId);
+        Assert.Equal(binding.StrategyId, workItem.StrategyBinding.StrategyId);
+    }
+
+    [Fact]
+    public async Task Runtime_step_assignment_store_round_trips_launch_variables_for_execution_metadata()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessRuntimeStepAssignmentStore(dbContext);
+        var runId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var producedSlotId = ArtifactSlotId.New();
+        var requiredSlotId = ArtifactSlotId.New();
+        var assignment = new ProcessRuntimeStepAssignment(
+            runId,
+            ProcessInstancePlanId.New(),
+            stepId,
+            "implement-blazor-change",
+            "blazor-engineer",
+            ProcessLaunchExecutorKinds.Agent,
+            Guid.NewGuid().ToString("D"),
+            "Blazor engineer",
+            "Execute the step.",
+            "sha256:readiness",
+            "Resolved from test.",
+            [producedSlotId],
+            [requiredSlotId],
+            [ProcessOperationContractNames.MutateProductTarget, ProcessOperationContractNames.ReadProjectStructure],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProjectId"] = Guid.NewGuid().ToString("D"),
+                ["RepositoryRoot"] = @"C:\programovani\dotnet\output"
+            },
+            new ProcessRuntimeBranchGate("validate-blazor-runtime", "repair-required"),
+            Now);
+
+        await store.SaveAsync([assignment]);
+        var loaded = await store.LoadAsync(runId, stepId);
+
+        Assert.NotNull(loaded);
+        Assert.Equal(ProcessOperationContractNames.ExternalProductTargetMutable, loaded.OperationTargetScope);
+        Assert.Contains(ProcessOperationContractNames.MutateProductTarget, loaded.AllowedOperations);
+        Assert.True(loaded.LaunchVariables.TryGetValue("RepositoryRoot", out var repositoryRoot));
+        Assert.Equal(@"C:\programovani\dotnet\output", repositoryRoot);
+        Assert.Equal("repair-required", loaded.BranchGate?.RequiredOutcomeKey);
+    }
+
+    [Fact]
     public void Persistence_model_declares_required_unique_constraints()
     {
         using var dbContext = CreateDbContext();
@@ -383,5 +486,54 @@ public sealed class ProcessPersistenceStoreTests
             "hash:event");
     }
 
+    private static ProcessInstancePlan NewDispatchablePlan(
+        ProcessStepInstanceId stepId,
+        ProcessStepDefinitionId stepDefinitionId,
+        ProcessStrategyBindingSnapshot binding)
+    {
+        var planId = ProcessInstancePlanId.New();
+        return new ProcessInstancePlan(
+            new ProcessInstancePlanHeader(planId, planId, null, null, "processes.instance-plan.v1", Now, 0),
+            new ResolvedProcessDefinitionSnapshot(
+                ProcessDefinitionId.New(),
+                ProcessDefinitionVersionId.New(),
+                "sha256:definition",
+                RuntimeSchemaVersion,
+                RuntimeSchemaVersion,
+                [],
+                [],
+                []),
+            new DriverStackSnapshot(
+                [
+                    new ResolvedDriverSnapshot(
+                        binding.DriverId,
+                        "1.0.0",
+                        ProcessDriverLayer.Scenario,
+                        RuntimeSchemaVersion,
+                        RuntimeSchemaVersion,
+                        new HashSet<CapabilityTag> { new("test") })
+                ]),
+            new StrategyBindingSet([binding], [], [], []),
+            [
+                new StepInstancePlan(
+                    stepId,
+                    stepDefinitionId,
+                    "execute-test",
+                    ProcessStepKind.Activity,
+                    true,
+                    false,
+                    binding)
+            ],
+            new ArtifactPlan([], []),
+            new BranchRouteTable([]),
+            [],
+            new ManagerPlan("sha256:manager", null, [], []),
+            new BudgetPlan([]),
+            new MonitoringPlan(false, "sha256:projection"),
+            new SecurityPlan("sha256:governance", []),
+            "sha256:plan");
+    }
+
+    private const string RuntimeSchemaVersion = "runtime/1.0";
     private static readonly ArtifactSlotId RequiredArtifactSlotId = ArtifactSlotId.New();
 }

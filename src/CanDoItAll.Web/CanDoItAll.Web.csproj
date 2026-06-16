@@ -26,6 +26,9 @@
     <ProjectReference Include="..\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

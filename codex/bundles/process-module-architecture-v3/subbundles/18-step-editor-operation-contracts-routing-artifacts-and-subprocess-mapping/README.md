@@ -2,6 +2,8 @@
 
 ## Status
 
+- Completed
+
 Completed in the approved implementation pass. Proof is recorded under `bundle://proof/SB18/`.
 
 ## Objective

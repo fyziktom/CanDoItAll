@@ -12993,6 +12993,675 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Workspace_Settings", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessArtifactLedgerEventEntity", b =>
+                {
+                    b.Property<Guid>("LedgerEventId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("LedgerEventId");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("SlotId", "LedgerEventId")
+                        .IsUnique();
+
+                    b.ToTable("process_artifact_ledger_events", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClaimToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("RenewedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResultIdempotencyKey")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RunId", "ClaimToken");
+
+                    b.HasIndex("StepInstanceId", "ClaimToken")
+                        .IsUnique();
+
+                    b.HasIndex("RunId", "Status", "ExpiresAtUtc");
+
+                    b.ToTable("process_dispatch_claims", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessInstancePlanEntity", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DefinitionContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("DefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DefinitionVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ParentPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ParentStepId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlanHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("PlanSchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("RootPlanId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PlanId");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("RootPlanId");
+
+                    b.HasIndex("DefinitionId", "DefinitionVersionId");
+
+                    b.ToTable("process_instance_plans", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessOutboxMessageEntity", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("AvailableAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DeliveredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastErrorClass")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("LockId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("LockedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SubscriberKind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("EventId", "SubscriberKind")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "AvailableAtUtc", "LockedAtUtc");
+
+                    b.ToTable("process_outbox_messages", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionDeadLetterEntity", b =>
+                {
+                    b.Property<Guid>("DeadLetterId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeadLetteredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DiagnosticReference")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("ErrorClass")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("GlobalSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProjectorName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("RetryPolicy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ShardKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("DeadLetterId");
+
+                    b.HasIndex("ProjectorName", "ShardKey", "GlobalSequence");
+
+                    b.ToTable("process_projection_dead_letters", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionHistoryEntity", b =>
+                {
+                    b.Property<string>("ProjectorName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ProjectionKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<long>("GlobalSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Sensitivity")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("ProjectorName", "ProjectionKey", "GlobalSequence");
+
+                    b.HasIndex("ProjectorName", "RootRunId", "OccurredAtUtc");
+
+                    b.HasIndex("ProjectorName", "RunId", "GlobalSequence");
+
+                    b.ToTable("process_projection_history", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionSnapshotEntity", b =>
+                {
+                    b.Property<string>("ProjectorName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ProjectionKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ProjectorName", "ProjectionKey");
+
+                    b.HasIndex("UpdatedAtUtc");
+
+                    b.ToTable("process_projection_snapshots", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectorOffsetEntity", b =>
+                {
+                    b.Property<string>("ProjectorName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ShardKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<long>("GlobalSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ProjectorName", "ShardKey");
+
+                    b.HasIndex("GlobalSequence");
+
+                    b.ToTable("process_projector_offsets", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeAvailableArtifactSlotEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RunId", "SlotId");
+
+                    b.ToTable("process_runtime_available_artifact_slots", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeEventEntity", b =>
+                {
+                    b.Property<long>("GlobalSequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("GlobalSequence"));
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ActorKind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("RootSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Sensitivity")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("GlobalSequence");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.HasIndex("RootRunId", "RootSequence")
+                        .IsUnique();
+
+                    b.HasIndex("RunId", "OccurredAtUtc");
+
+                    b.ToTable("process_runtime_events", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("RunId", "CommandId");
+
+                    b.ToTable("process_runtime_idempotency_keys", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PlanHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RunId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("process_runtime_states", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AllowedOperations")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AssignmentReason")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("BranchGateRequiredOutcomeKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("BranchGateSourceStepKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExecutorDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("ExecutorId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ExecutorKind")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("LaunchVariablesJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OperationTargetScope")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProducedArtifactSlotIds")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReadinessHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("RequiredArtifactSlotIds")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("StepKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("RunId", "StepInstanceId");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("ExecutorKind", "ExecutorId");
+
+                    b.HasIndex("RunId", "StepKey")
+                        .IsUnique();
+
+                    b.ToTable("process_runtime_step_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActiveClaimToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("CompletedResultKey")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DependencyStepIds")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsExecutable")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("RequiredArtifactSlotIds")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("StepDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RunId", "StepInstanceId");
+
+                    b.HasIndex("RunId", "ActiveClaimToken");
+
+                    b.HasIndex("RunId", "Status");
+
+                    b.ToTable("process_runtime_steps", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessStrategyResultReceiptEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StrategyId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AppliedStepStatus")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ResultHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("RunId", "StepInstanceId", "StrategyId", "IdempotencyKey");
+
+                    b.HasIndex("StepInstanceId", "StrategyId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("process_strategy_result_receipts", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationEnvelopeDeliveryRecord", b =>
                 {
                     b.HasOne("CanDoItAll.Modules.Automation.AutomationEnvelopeRecord", null)
@@ -14362,6 +15031,61 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasForeignKey("ConnectorCommandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
+                        .WithMany("Claims")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RuntimeState");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeAvailableArtifactSlotEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
+                        .WithMany("AvailableArtifactSlots")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RuntimeState");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
+                        .WithMany("Steps")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RuntimeState");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessStrategyResultReceiptEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
+                        .WithMany("ResultReceipts")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RuntimeState");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", b =>
+                {
+                    b.Navigation("AvailableArtifactSlots");
+
+                    b.Navigation("Claims");
+
+                    b.Navigation("ResultReceipts");
+
+                    b.Navigation("Steps");
                 });
 #pragma warning restore 612, 618
         }

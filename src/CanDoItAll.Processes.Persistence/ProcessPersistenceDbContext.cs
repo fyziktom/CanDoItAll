@@ -4,7 +4,11 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersistenceDbContext> options) : DbContext(options)
 {
+    public DbSet<ProcessInstancePlanEntity> InstancePlans => Set<ProcessInstancePlanEntity>();
+
     public DbSet<ProcessRuntimeStateEntity> RuntimeStates => Set<ProcessRuntimeStateEntity>();
+
+    public DbSet<ProcessRuntimeStepAssignmentEntity> RuntimeStepAssignments => Set<ProcessRuntimeStepAssignmentEntity>();
 
     public DbSet<ProcessRuntimeStepEntity> RuntimeSteps => Set<ProcessRuntimeStepEntity>();
 

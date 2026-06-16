@@ -2,6 +2,9 @@
 
 ## Status
 
+- Blocked
+- Separate roadmap package was not independently executed in this closure; the requested project-scoped launch/runtime path is covered by bundle://proof/SB20-SB28-runtime-completion/manifest.md.
+
 Future implementation package; prepared by architecture bundle v3; not executed in v3.
 
 ## Objective

@@ -4,6 +4,8 @@ namespace CanDoItAll.Processes.Runtime;
 
 public static class ProcessRuntimeEventTypes
 {
+    public static ProcessEventType ProcessRunCreated { get; } = new("ProcessRunCreated");
+
     public static ProcessEventType ProcessRunActivated { get; } = new("ProcessRunActivated");
 
     public static ProcessEventType ProcessRunCancelRequested { get; } = new("ProcessRunCancelRequested");
@@ -27,6 +29,8 @@ public static class ProcessRuntimeEventTypes
     public static ProcessEventType StepBlocked { get; } = new("StepBlocked");
 
     public static ProcessEventType StepCancelled { get; } = new("StepCancelled");
+
+    public static ProcessEventType StepSkipped { get; } = new("StepSkipped");
 
     public static ProcessEventType DispatchClaimCreated { get; } = new("DispatchClaimCreated");
 

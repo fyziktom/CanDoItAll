@@ -2,6 +2,8 @@
 
 ## Status
 
+- Completed
+
 Completed on 2026-06-15. Implementation, proof, validation, and compatibility reports are recorded under `proof/SB12/`.
 
 ## Objective

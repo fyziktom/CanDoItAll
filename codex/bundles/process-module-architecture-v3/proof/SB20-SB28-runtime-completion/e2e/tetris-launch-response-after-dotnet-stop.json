@@ -1,0 +1,17 @@
+{
+  "projectId": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+  "nodeId": "custom:bd8169fc3fa944dbafd13998fb167fe8",
+  "processDefinitionId": "2134aedd-f674-e4d5-a702-609e55482f11",
+  "launchPlanId": "94f2510e-ba42-4630-8784-fd51c070cbd1",
+  "runId": "06f0c5bd-f425-44b9-9985-0a11e0a72a6f",
+  "stage": "Completed",
+  "route": "/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/processes/live?runId=06f0c5bd-f425-44b9-9985-0a11e0a72a6f",
+  "definitionKey": "blazor-app-delivery",
+  "definitionName": "Blazor app delivery",
+  "validatedAtUtc": "2026-06-16T19:18:00Z",
+  "notes": [
+    "API call was POST /api/project-structure/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/nodes/custom:bd8169fc3fa944dbafd13998fb167fe8/process/start with execute=true.",
+    "Runtime status query in ../transcripts/tetris-runtime-status-after-dotnet-stop.txt shows the run completed after initial QA, repair, revalidation, and result-recording steps.",
+    "Cleanup receipts validate workspace_dotnet_stop stopped the kept-alive dotnet run process trees with empty stillRunningProcessIds."
+  ]
+}

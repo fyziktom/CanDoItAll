@@ -100,6 +100,7 @@ public enum ProcessTemplateProjectionKind
 [JsonSerializable(typeof(ProcessTemplateSidecarDriftReport))]
 [JsonSerializable(typeof(ProcessBranchMigrationDiagnosticReport))]
 [JsonSerializable(typeof(ProcessTemplatePackManifest))]
+[JsonSerializable(typeof(ProcessTemplateLiveRunProfileDocument[]))]
 [JsonSerializable(typeof(ProcessTemplateDefinitionDocument))]
 [JsonSerializable(typeof(ProcessTemplateRoleResourceDocument))]
 [JsonSerializable(typeof(ProcessTemplateRoleTemplateActionDocument[]))]

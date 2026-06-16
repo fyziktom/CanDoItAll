@@ -151,6 +151,12 @@ public sealed partial class MafAgentRuntime
             return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope);
         }
 
+        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceStop(string startupReceiptPath, int timeoutSeconds = 30)
+        {
+            var allowedStartupReceiptPath = PrepareValidationCommandPath(startupReceiptPath) ?? startupReceiptPath;
+            return commandExecutionService.DotnetStop(allowedStartupReceiptPath, timeoutSeconds);
+        }
+
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
         {
             var allowedParentDirectory = PrepareScaffoldPath(parentDirectory, name);

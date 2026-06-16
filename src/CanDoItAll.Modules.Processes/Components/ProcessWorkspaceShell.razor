@@ -1,6 +1,9 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
+@using CanDoItAll.Processes.Application
+@using Microsoft.Extensions.DependencyInjection
 @inject IProcessWorkspaceProjectionClient ProjectionClient
+@inject IServiceProvider Services
 @inject NavigationManager Navigation
 
 <PageScaffold FillHeight="true"
@@ -485,6 +488,69 @@
                     ? $"/projects/{ProjectId.Value:D}/processes/live"
                     : "/processes/live");
                 break;
+            case ProcessWorkspaceCommandKind.LaunchRun:
+                await LaunchSelectedDefinitionAsync();
+                break;
+        }
+    }
+
+    private async Task LaunchSelectedDefinitionAsync()
+    {
+        var selectedDefinition = shell?.DefinitionCatalog.SelectedItem;
+        if (selectedDefinition is null)
+        {
+            catalogCommandNotice = "Select a process definition before launching.";
+            return;
+        }
+
+        var launchService = Services.GetService<ProcessLaunchApplicationService>();
+        if (launchService is null)
+        {
+            errorMessage = "Process launch services are not registered.";
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = null;
+        try
+        {
+            var variables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["LaunchSource"] = ProjectId.HasValue ? "project-processes-ui" : "processes-ui"
+            };
+            if (ProjectId.HasValue)
+            {
+                variables["ProjectId"] = ProjectId.Value.ToString("D");
+            }
+
+            var result = await launchService.LaunchAsync(
+                new ProcessLaunchRequest(
+                    selectedDefinition.Key.Value,
+                    ProcessDefinitionId: null,
+                    LiveRunProfileKey: null,
+                    ProjectId,
+                    ProjectNodeId: null,
+                    RequestedBy: "processes-ui",
+                    variables,
+                    RunReadiness: true,
+                    Execute: true));
+
+            catalogCommandNotice = result.Warnings.Count == 0
+                ? $"Launch {result.Stage}."
+                : string.Join(" ", result.Warnings);
+            await LoadAsync(forceRefresh: true);
+            if (result.RunId is not null && !string.IsNullOrWhiteSpace(result.Route))
+            {
+                Navigation.NavigateTo(result.Route);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
         }
     }
 

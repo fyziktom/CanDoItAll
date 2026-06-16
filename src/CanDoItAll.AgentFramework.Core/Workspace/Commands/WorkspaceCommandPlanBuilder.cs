@@ -134,6 +134,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         var target = BuildDotnetTarget(targetPath, workingDirectory);
         var arguments = new List<string> { "restore" };
         arguments.AddRange(target.TargetArguments);
+        arguments.Add("--disable-build-servers");
         return CreatePlan(
             toolName: "workspace_dotnet_restore",
             recipeId: "dotnet_restore",
@@ -163,6 +164,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             arguments.Add("--no-restore");
         }
 
+        arguments.Add("--disable-build-servers");
         return CreatePlan(
             toolName: "workspace_dotnet_build",
             recipeId: "dotnet_build",
@@ -320,6 +322,52 @@ internal sealed class WorkspaceCommandPlanBuilder
             timeoutSeconds: planTimeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 128 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildDotnetStop(string startupReceiptPath, int timeoutSeconds = 30)
+    {
+        if (string.IsNullOrWhiteSpace(startupReceiptPath))
+        {
+            throw new InvalidOperationException("workspace_dotnet_stop requires the startup.json path returned by workspace_dotnet_run.");
+        }
+
+        var startupReceipt = ResolveExistingWorkspacePath(startupReceiptPath, allowFiles: true, allowDirectories: false);
+        if (!string.Equals(Path.GetFileName(startupReceipt.FullPath), "startup.json", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"workspace_dotnet_stop requires a startup.json receipt produced by workspace_dotnet_run. Received '{startupReceipt.RelativePath}'.");
+        }
+
+        var boundedTimeoutSeconds = Math.Clamp(timeoutSeconds, 1, 120);
+        var artifactPaths = BuildDotnetStopArtifactPaths(startupReceipt);
+        var script = BuildDotnetStopPowerShellScript(
+            startupReceipt.FullPath,
+            artifactPaths.CleanupReceiptFullPath);
+        WriteDotnetRunScript(artifactPaths.ScriptFullPath, script);
+
+        return CreatePlan(
+            toolName: "workspace_dotnet_stop",
+            recipeId: "dotnet_stop",
+            riskClass: "LocalExecution",
+            approvalRequired: false,
+            networkAllowed: false,
+            mutatesWorkspace: true,
+            targetPaths: new[] { startupReceipt.RelativePath }.Concat(artifactPaths.TargetPaths).ToArray(),
+            workingDirectory: artifactPaths.WorkingDirectoryRelative,
+            workingDirectoryPath: artifactPaths.WorkingDirectoryPath,
+            executableCandidates: ["pwsh", "powershell"],
+            arguments:
+            [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                artifactPaths.ScriptFullPath
+            ],
+            timeoutSeconds: boundedTimeoutSeconds,
+            stdoutLimitCharacters: 64 * 1024,
+            stderrLimitCharacters: 64 * 1024);
     }
 
     public WorkspaceCommandPlan BuildDotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
@@ -844,6 +892,29 @@ internal sealed class WorkspaceCommandPlanBuilder
             ]);
     }
 
+    private DotnetStopArtifactPaths BuildDotnetStopArtifactPaths(WorkspacePathResolution startupReceipt)
+    {
+        var directoryFullPath = Path.GetDirectoryName(startupReceipt.FullPath)
+            ?? throw new InvalidOperationException($"Could not resolve the startup receipt directory for '{startupReceipt.RelativePath}'.");
+        var slashIndex = startupReceipt.RelativePath.LastIndexOf('/');
+        var directoryRelativePath = slashIndex < 0
+            ? "."
+            : startupReceipt.RelativePath[..slashIndex];
+        var scriptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(directoryRelativePath, "stop.ps1"));
+        var cleanupRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(directoryRelativePath, "cleanup.json"));
+
+        return new DotnetStopArtifactPaths(
+            WorkingDirectoryPath: directoryFullPath,
+            WorkingDirectoryRelative: pathPolicy.ToDisplayPath(directoryFullPath),
+            ScriptFullPath: Path.Combine(directoryFullPath, "stop.ps1"),
+            CleanupReceiptFullPath: Path.Combine(directoryFullPath, "cleanup.json"),
+            TargetPaths:
+            [
+                scriptRelativePath,
+                cleanupRelativePath
+            ]);
+    }
+
     private static void WriteDotnetRunScript(string scriptPath, string script)
     {
         var scriptDirectory = Path.GetDirectoryName(scriptPath)
@@ -946,6 +1017,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("$stdoutLog = " + ToPowerShellSingleQuotedString(stdoutLogPath));
         builder.AppendLine("$stderrLog = " + ToPowerShellSingleQuotedString(stderrLogPath));
         builder.AppendLine("$startupReceipt = " + ToPowerShellSingleQuotedString(startupReceiptPath));
+        builder.AppendLine("$cleanupReceipt = Join-Path (Split-Path -Parent $startupReceipt) 'cleanup.json'");
         builder.AppendLine("$startupTimeoutSeconds = " + startupTimeoutSeconds.ToString());
         builder.AppendLine("$noBuild = " + (noBuild ? "$true" : "$false"));
         builder.AppendLine("$keepAlive = " + (keepAlive ? "$true" : "$false"));
@@ -1073,15 +1145,6 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        try { & subst $mapping.drive /d 2>$null | Out-Null } catch { }");
         builder.AppendLine("    }");
         builder.AppendLine("}");
-        builder.AppendLine("function Build-StopCommand {");
-        builder.AppendLine("    param([int[]]$ProcessTreeIds)");
-        builder.AppendLine("    $commands = [System.Collections.Generic.List[string]]::new()");
-        builder.AppendLine("    if ($ProcessTreeIds.Count -gt 0) { [void]$commands.Add('Stop-Process -Id ' + ($ProcessTreeIds -join ',') + ' -Force') }");
-        builder.AppendLine("    foreach ($mapping in @($staticWebAssetsAliasMappings | Where-Object { $_.mounted })) {");
-        builder.AppendLine("        [void]$commands.Add('subst ' + $mapping.drive + ' /d')");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return ($commands -join '; ')");
-        builder.AppendLine("}");
         builder.AppendLine("function Write-StartupReceipt {");
         builder.AppendLine("    param([bool]$Succeeded, [string]$Message, [bool]$CleanupAttempted = $false, [int[]]$CleanupProcessIds = @())");
         builder.AppendLine("    $processTreeIds = if ($CleanupProcessIds.Count -gt 0) { @($CleanupProcessIds) } elseif ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
@@ -1105,14 +1168,15 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        dotnetEnvironment = $env:DOTNET_ENVIRONMENT");
         builder.AppendLine("        cleanupAttempted = $CleanupAttempted");
         builder.AppendLine("        cleanupProcessIds = @($CleanupProcessIds)");
-        builder.AppendLine("        cleanupReceiptPath = $startupReceipt");
+        builder.AppendLine("        cleanupReceiptPath = $cleanupReceipt");
+        builder.AppendLine("        stopTool = 'workspace_dotnet_stop'");
+        builder.AppendLine("        stopToolStartupReceiptPath = $startupReceipt");
         builder.AppendLine("        staticWebAssetsAliasMappings = @($staticWebAssetsAliasMappings)");
         builder.AppendLine("        stdoutLog = $stdoutLog");
         builder.AppendLine("        stderrLog = $stderrLog");
         builder.AppendLine("        stdoutTail = Read-LogTail $stdoutLog");
         builder.AppendLine("        stderrTail = Read-LogTail $stderrLog");
         builder.AppendLine("        capturedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')");
-        builder.AppendLine("        stopCommand = Build-StopCommand $processTreeIds");
         builder.AppendLine("    }");
         builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $startupReceipt) | Out-Null");
         builder.AppendLine("    $json = $payload | ConvertTo-Json -Depth 6");
@@ -1170,7 +1234,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    }");
         builder.AppendLine("    if (-not $ready) { throw \"Timed out after $startupTimeoutSeconds second(s) waiting for $probeUrl. Last error: $lastError. stderr tail: $(Read-LogTail $stderrLog)\" }");
         builder.AppendLine("    if ($keepAlive) {");
-        builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. The process tree is still running for follow-up browser proof; use stopCommand from startup.json when proof is complete.\"");
+        builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. The process tree is still running for follow-up browser proof; call workspace_dotnet_stop with startup.json when proof is complete.\"");
         builder.AppendLine("    } else {");
         builder.AppendLine("        $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
         builder.AppendLine("        Stop-AppProcessTree $processTreeIds");
@@ -1185,6 +1249,169 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    Dismount-StaticWebAssetsAliasMappings $staticWebAssetsAliasMappings");
         builder.AppendLine("    $failureJson = Write-StartupReceipt $false $message ($processTreeIds.Count -gt 0) $processTreeIds");
         builder.AppendLine("    Write-Error $failureJson");
+        builder.AppendLine("    exit 1");
+        builder.AppendLine("}");
+        return builder.ToString();
+    }
+
+    private static string BuildDotnetStopPowerShellScript(
+        string startupReceiptPath,
+        string cleanupReceiptPath)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("$ErrorActionPreference = 'Stop'");
+        builder.AppendLine("$ProgressPreference = 'SilentlyContinue'");
+        builder.AppendLine("$startupReceipt = " + ToPowerShellSingleQuotedString(startupReceiptPath));
+        builder.AppendLine("$cleanupReceipt = " + ToPowerShellSingleQuotedString(cleanupReceiptPath));
+        builder.AppendLine("$startedAtUtc = [DateTimeOffset]::UtcNow");
+        builder.AppendLine("function Test-JsonProperty {");
+        builder.AppendLine("    param([object]$Value, [string]$Name)");
+        builder.AppendLine("    return $null -ne $Value -and $Value.PSObject.Properties.Name -contains $Name");
+        builder.AppendLine("}");
+        builder.AppendLine("function Add-ProcessId {");
+        builder.AppendLine("    param([System.Collections.Generic.List[int]]$Ids, [object]$Value)");
+        builder.AppendLine("    if ($null -eq $Value) { return }");
+        builder.AppendLine("    try {");
+        builder.AppendLine("        $id = [int]$Value");
+        builder.AppendLine("        if ($id -gt 0 -and -not $Ids.Contains($id)) { [void]$Ids.Add($id) }");
+        builder.AppendLine("    } catch { }");
+        builder.AppendLine("}");
+        builder.AppendLine("function Resolve-StartupProcessIds {");
+        builder.AppendLine("    param([object]$Startup)");
+        builder.AppendLine("    $ids = [System.Collections.Generic.List[int]]::new()");
+        builder.AppendLine("    if (Test-JsonProperty $Startup 'appProcessTreeIds') {");
+        builder.AppendLine("        foreach ($processId in @($Startup.appProcessTreeIds)) { Add-ProcessId $ids $processId }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    if (Test-JsonProperty $Startup 'appProcessId') { Add-ProcessId $ids $Startup.appProcessId }");
+        builder.AppendLine("    return @($ids)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Resolve-ProcessTreeIds {");
+        builder.AppendLine("    param([int]$RootProcessId)");
+        builder.AppendLine("    $orderedIds = [System.Collections.Generic.List[int]]::new()");
+        builder.AppendLine("    function Add-DescendantProcessIds {");
+        builder.AppendLine("        param([int]$ParentProcessId)");
+        builder.AppendLine("        $children = @()");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            $children = Get-CimInstance Win32_Process -Filter \"ParentProcessId = $ParentProcessId\" -ErrorAction Stop");
+        builder.AppendLine("        } catch {");
+        builder.AppendLine("            $children = @()");
+        builder.AppendLine("        }");
+        builder.AppendLine("        foreach ($childProcess in $children) {");
+        builder.AppendLine("            $childProcessId = [int]$childProcess.ProcessId");
+        builder.AppendLine("            Add-DescendantProcessIds $childProcessId");
+        builder.AppendLine("            if (-not $orderedIds.Contains($childProcessId)) { [void]$orderedIds.Add($childProcessId) }");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    try {");
+        builder.AppendLine("        if ($null -eq (Get-Process -Id $RootProcessId -ErrorAction SilentlyContinue)) { return @() }");
+        builder.AppendLine("        Add-DescendantProcessIds $RootProcessId");
+        builder.AppendLine("        if (-not $orderedIds.Contains($RootProcessId)) { [void]$orderedIds.Add($RootProcessId) }");
+        builder.AppendLine("    } catch { }");
+        builder.AppendLine("    return @($orderedIds)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Resolve-ExpandedProcessTreeIds {");
+        builder.AppendLine("    param([int[]]$RootProcessIds)");
+        builder.AppendLine("    $ids = [System.Collections.Generic.List[int]]::new()");
+        builder.AppendLine("    foreach ($processId in @($RootProcessIds)) {");
+        builder.AppendLine("        foreach ($treeProcessId in @(Resolve-ProcessTreeIds $processId)) {");
+        builder.AppendLine("            if ($treeProcessId -gt 0 -and -not $ids.Contains($treeProcessId)) { [void]$ids.Add($treeProcessId) }");
+        builder.AppendLine("        }");
+        builder.AppendLine("        if ($processId -gt 0 -and -not $ids.Contains($processId)) { [void]$ids.Add($processId) }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    return @($ids)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Stop-AppProcessTree {");
+        builder.AppendLine("    param([int[]]$ProcessIds)");
+        builder.AppendLine("    $stopped = [System.Collections.Generic.List[int]]::new()");
+        builder.AppendLine("    foreach ($processIdToStop in @($ProcessIds)) {");
+        builder.AppendLine("        if ($processIdToStop -eq $PID) { continue }");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            $process = Get-Process -Id $processIdToStop -ErrorAction SilentlyContinue");
+        builder.AppendLine("            if ($null -eq $process) { continue }");
+        builder.AppendLine("            Stop-Process -Id $processIdToStop -Force -ErrorAction SilentlyContinue");
+        builder.AppendLine("            Wait-Process -Id $processIdToStop -Timeout 5 -ErrorAction SilentlyContinue");
+        builder.AppendLine("            [void]$stopped.Add($processIdToStop)");
+        builder.AppendLine("        } catch { }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    return @($stopped)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Resolve-StillRunningProcessIds {");
+        builder.AppendLine("    param([int[]]$ProcessIds)");
+        builder.AppendLine("    $running = [System.Collections.Generic.List[int]]::new()");
+        builder.AppendLine("    foreach ($processId in @($ProcessIds)) {");
+        builder.AppendLine("        if ($processId -eq $PID) { continue }");
+        builder.AppendLine("        if ($null -ne (Get-Process -Id $processId -ErrorAction SilentlyContinue)) { [void]$running.Add($processId) }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    return @($running)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Dismount-StaticWebAssetsAliasMappings {");
+        builder.AppendLine("    param([object[]]$Mappings)");
+        builder.AppendLine("    $dismounted = [System.Collections.Generic.List[string]]::new()");
+        builder.AppendLine("    if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return @($dismounted) }");
+        builder.AppendLine("    foreach ($mapping in @($Mappings)) {");
+        builder.AppendLine("        if ($null -eq $mapping) { continue }");
+        builder.AppendLine("        if (Test-JsonProperty $mapping 'mounted' -and -not ([bool]$mapping.mounted)) { continue }");
+        builder.AppendLine("        $drive = if (Test-JsonProperty $mapping 'drive') { [string]$mapping.drive } else { '' }");
+        builder.AppendLine("        if ([string]::IsNullOrWhiteSpace($drive)) { continue }");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            & subst $drive /d 2>$null | Out-Null");
+        builder.AppendLine("            if ($LASTEXITCODE -eq 0) { [void]$dismounted.Add($drive) }");
+        builder.AppendLine("        } catch { }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    return @($dismounted)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Write-CleanupReceipt {");
+        builder.AppendLine("    param([bool]$Succeeded, [string]$Message, [int[]]$RequestedProcessIds, [int[]]$ResolvedProcessTreeIds, [int[]]$StoppedProcessIds, [int[]]$StillRunningProcessIds, [string[]]$DismountedDrives)");
+        builder.AppendLine("    $completedAtUtc = [DateTimeOffset]::UtcNow");
+        builder.AppendLine("    $payload = [ordered]@{");
+        builder.AppendLine("        succeeded = $Succeeded");
+        builder.AppendLine("        message = $Message");
+        builder.AppendLine("        startupReceiptPath = $startupReceipt");
+        builder.AppendLine("        cleanupReceiptPath = $cleanupReceipt");
+        builder.AppendLine("        requestedProcessIds = @($RequestedProcessIds)");
+        builder.AppendLine("        resolvedProcessTreeIds = @($ResolvedProcessTreeIds)");
+        builder.AppendLine("        stoppedProcessIds = @($StoppedProcessIds)");
+        builder.AppendLine("        stillRunningProcessIds = @($StillRunningProcessIds)");
+        builder.AppendLine("        dismountedStaticWebAssetDrives = @($DismountedDrives)");
+        builder.AppendLine("        startedAtUtc = $startedAtUtc.ToString('O')");
+        builder.AppendLine("        completedAtUtc = $completedAtUtc.ToString('O')");
+        builder.AppendLine("    }");
+        builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $cleanupReceipt) | Out-Null");
+        builder.AppendLine("    $json = $payload | ConvertTo-Json -Depth 8");
+        builder.AppendLine("    Set-Content -LiteralPath $cleanupReceipt -Value $json -Encoding UTF8");
+        builder.AppendLine("    return $json");
+        builder.AppendLine("}");
+        builder.AppendLine("function Update-StartupReceiptCleanupState {");
+        builder.AppendLine("    param([object]$Startup, [bool]$Succeeded, [int[]]$StoppedProcessIds, [int[]]$StillRunningProcessIds)");
+        builder.AppendLine("    try {");
+        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupAttempted -NotePropertyValue $true -Force");
+        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupReceiptPath -NotePropertyValue $cleanupReceipt -Force");
+        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupSucceeded -NotePropertyValue $Succeeded -Force");
+        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupStoppedProcessIds -NotePropertyValue @($StoppedProcessIds) -Force");
+        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupStillRunningProcessIds -NotePropertyValue @($StillRunningProcessIds) -Force");
+        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupCompletedAtUtc -NotePropertyValue ([DateTimeOffset]::UtcNow.ToString('O')) -Force");
+        builder.AppendLine("        Set-Content -LiteralPath $startupReceipt -Value ($Startup | ConvertTo-Json -Depth 8) -Encoding UTF8");
+        builder.AppendLine("    } catch { }");
+        builder.AppendLine("}");
+        builder.AppendLine("try {");
+        builder.AppendLine("    if (-not (Test-Path -LiteralPath $startupReceipt -PathType Leaf)) { throw \"Startup receipt not found: $startupReceipt\" }");
+        builder.AppendLine("    $startup = Get-Content -LiteralPath $startupReceipt -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop");
+        builder.AppendLine("    $requestedProcessIds = @(Resolve-StartupProcessIds $startup)");
+        builder.AppendLine("    $resolvedProcessTreeIds = @(Resolve-ExpandedProcessTreeIds $requestedProcessIds)");
+        builder.AppendLine("    $stoppedProcessIds = @(Stop-AppProcessTree $resolvedProcessTreeIds)");
+        builder.AppendLine("    $stillRunningProcessIds = @(Resolve-StillRunningProcessIds $resolvedProcessTreeIds)");
+        builder.AppendLine("    $mappings = if (Test-JsonProperty $startup 'staticWebAssetsAliasMappings') { @($startup.staticWebAssetsAliasMappings) } else { @() }");
+        builder.AppendLine("    $dismountedDrives = @(Dismount-StaticWebAssetsAliasMappings $mappings)");
+        builder.AppendLine("    $succeeded = $stillRunningProcessIds.Count -eq 0");
+        builder.AppendLine("    $message = if ($succeeded) { \"Stopped recorded workspace_dotnet_run process tree and static web assets aliases.\" } else { \"Failed to stop every recorded workspace_dotnet_run process. Still running process ids: $($stillRunningProcessIds -join ',').\" }");
+        builder.AppendLine("    Update-StartupReceiptCleanupState $startup $succeeded $stoppedProcessIds $stillRunningProcessIds");
+        builder.AppendLine("    $json = Write-CleanupReceipt $succeeded $message $requestedProcessIds $resolvedProcessTreeIds $stoppedProcessIds $stillRunningProcessIds $dismountedDrives");
+        builder.AppendLine("    Write-Output $json");
+        builder.AppendLine("    if (-not $succeeded) { exit 1 }");
+        builder.AppendLine("} catch {");
+        builder.AppendLine("    $message = $_.Exception.Message");
+        builder.AppendLine("    $json = Write-CleanupReceipt $false $message @() @() @() @() @()");
+        builder.AppendLine("    Write-Error $json");
         builder.AppendLine("    exit 1");
         builder.AppendLine("}");
         return builder.ToString();
@@ -1348,6 +1575,13 @@ internal sealed class WorkspaceCommandPlanBuilder
         string StdoutLogFullPath,
         string StderrLogFullPath,
         string StartupReceiptFullPath,
+        IReadOnlyList<string> TargetPaths);
+
+    private sealed record DotnetStopArtifactPaths(
+        string WorkingDirectoryPath,
+        string WorkingDirectoryRelative,
+        string ScriptFullPath,
+        string CleanupReceiptFullPath,
         IReadOnlyList<string> TargetPaths);
 
     private sealed record DotnetNewTemplateSpec(

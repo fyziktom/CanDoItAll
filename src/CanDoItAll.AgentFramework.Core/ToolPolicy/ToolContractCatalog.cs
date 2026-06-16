@@ -18,6 +18,7 @@ public static class ToolContractCatalog
     public const string WorkspaceDotNetBuild = "workspace_dotnet_build";
     public const string WorkspaceDotNetTest = "workspace_dotnet_test";
     public const string WorkspaceDotNetRun = "workspace_dotnet_run";
+    public const string WorkspaceDotNetStop = "workspace_dotnet_stop";
     public const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";
     public const string WorkspacePythonRunFile = "workspace_python_run_file";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
@@ -61,6 +62,7 @@ public static class ToolContractCatalog
         WorkspaceDotNetBuild,
         WorkspaceDotNetTest,
         WorkspaceDotNetRun,
+        WorkspaceDotNetStop,
         WorkspacePowerShellRunScript,
         WorkspacePythonRunFile,
         WorkspaceInspectImage,

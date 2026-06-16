@@ -2,6 +2,8 @@
 
 ## Status
 
+- Completed
+
 Completed on 2026-06-16. Implemented and validated in dependency order after SB13.
 
 ## Objective

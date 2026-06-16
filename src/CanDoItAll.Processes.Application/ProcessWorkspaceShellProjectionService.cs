@@ -10,7 +10,9 @@ public sealed class ProcessWorkspaceShellProjectionService(
     ProcessDefinitionRoleEditorProjectionService definitionRoleEditorProjectionService,
     ProcessDefinitionCanvasEditorProjectionService definitionCanvasEditorProjectionService,
     ProcessDefinitionStepEditorProjectionService definitionStepEditorProjectionService,
-    ProcessTemplateCatalogProjectionService templateCatalogProjectionService)
+    ProcessTemplateCatalogProjectionService templateCatalogProjectionService,
+    ProcessRuntimeProjectionQueryService? runtimeProjectionQueryService = null,
+    ProcessRuntimeProjectionCatchupService? projectionCatchupService = null)
 {
     private const string WorkspaceContextPrefix = "processes:workspace";
     private const string ProjectContextPrefix = "processes:project";
@@ -30,7 +32,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
             CanRefreshProjections: true,
             CanOpenAgentContext: true,
             CanEditDefinitions: false,
-            CanLaunchRuns: false);
+            CanLaunchRuns: true);
+        var liveProcesses = await LoadLiveProcessesAsync(request, observedAtUtc, cancellationToken).ConfigureAwait(false);
 
         var definitionCatalog = await definitionCatalogProjectionService
             .GetCatalogAsync(request.Scope, request.DefinitionCatalogQuery, cancellationToken: cancellationToken)
@@ -72,10 +75,10 @@ public sealed class ProcessWorkspaceShellProjectionService(
             ResolveTitle(request.Scope),
             ResolveSubtitle(request.Scope),
             definitionCatalog,
-            CreateLiveRunSummary(),
-            CreateRefreshProjection(request.ForceRefresh, observedAtUtc),
+            CreateLiveRunSummary(liveProcesses),
+            CreateRefreshProjection(request.ForceRefresh, observedAtUtc, liveProcesses?.Freshness),
             authorization,
-            CreateTabs(definitionCatalog),
+            CreateTabs(definitionCatalog, liveProcesses),
             CreateCommands(authorization),
             CreateAgentEntry(request.Scope, request.Selection, authorization));
     }
@@ -151,33 +154,85 @@ public sealed class ProcessWorkspaceShellProjectionService(
             ? $"Projection-first project workspace for {scope.ProjectId:D}."
             : "Projection-first workspace for definitions, launches, live runs, and history.";
 
-    private static ProcessLiveRunSummaryProjection CreateLiveRunSummary()
-        => new(
-            ActiveRunCount: 0,
-            AttentionRunCount: 0,
-            FailedRunCount: 0,
-            LastEventAtUtc: null,
-            Summary: "Runtime projection snapshots are not available in this workspace shell.");
+    private async Task<ProcessLiveProcessesResult?> LoadLiveProcessesAsync(
+        ProcessWorkspaceShellRequest request,
+        DateTimeOffset observedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (runtimeProjectionQueryService is null)
+        {
+            return null;
+        }
+
+        if (request.ForceRefresh && projectionCatchupService is not null)
+        {
+            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return await runtimeProjectionQueryService
+            .GetLiveProcessesAsync(
+                new ProcessLiveProcessesQuery(
+                    observedAtUtc,
+                    TimeSpan.FromDays(30),
+                    Take: 100),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static ProcessLiveRunSummaryProjection CreateLiveRunSummary(ProcessLiveProcessesResult? liveProcesses)
+    {
+        if (liveProcesses is null)
+        {
+            return new ProcessLiveRunSummaryProjection(
+                ActiveRunCount: 0,
+                AttentionRunCount: 0,
+                FailedRunCount: 0,
+                LastEventAtUtc: null,
+                Summary: "Runtime projection store is not registered for this workspace shell.");
+        }
+
+        var active = liveProcesses.Runs.Count(run => run.IsActive);
+        var attention = liveProcesses.Runs.Count(run => run.Status == ProcessProjectedRunStatus.NeedsAttention);
+        var failed = liveProcesses.Runs.Count(run => run.Status == ProcessProjectedRunStatus.Failed);
+        var lastEventAtUtc = liveProcesses.Runs.Count == 0
+            ? (DateTimeOffset?)null
+            : liveProcesses.Runs.Max(run => run.LastEventAtUtc);
+
+        return new ProcessLiveRunSummaryProjection(
+            active,
+            attention,
+            failed,
+            lastEventAtUtc,
+            liveProcesses.Runs.Count == 0
+                ? "No runtime runs are present in the current projection window."
+                : $"{active.ToString(CultureInfo.InvariantCulture)} active run(s), {attention.ToString(CultureInfo.InvariantCulture)} needing attention, {failed.ToString(CultureInfo.InvariantCulture)} failed.");
+    }
 
     private static ProcessWorkspaceProjectionRefreshProjection CreateRefreshProjection(
         bool forceRefresh,
-        DateTimeOffset observedAtUtc)
+        DateTimeOffset observedAtUtc,
+        ProcessProjectionFreshness? freshness)
         => new(
-            forceRefresh
+            freshness is null && forceRefresh
                 ? ProcessWorkspaceProjectionStatus.RefreshRequested
-                : ProcessWorkspaceProjectionStatus.ProjectionStoreUnavailable,
+                : freshness is null
+                    ? ProcessWorkspaceProjectionStatus.Ready
+                    : ProcessWorkspaceProjectionStatus.Ready,
             observedAtUtc,
-            SourceGlobalSequence: 0,
-            BacklogEventCount: 0,
-            forceRefresh
-                ? "Projection refresh was requested through the application boundary."
-                : "Projection store integration is pending; runtime data is intentionally not read by the UI shell.");
+            freshness?.SourceGlobalSequence ?? 0,
+            freshness?.Lag.BacklogEventCount ?? 0,
+            freshness is null
+                ? "Runtime projection has no events in the current window."
+                : $"Runtime projection processed sequence {freshness.SourceGlobalSequence.ToString(CultureInfo.InvariantCulture)} with {freshness.Lag.BacklogEventCount.ToString(CultureInfo.InvariantCulture)} backlog event(s).");
 
     private static IReadOnlyList<ProcessWorkspaceTabProjection> CreateTabs(
-        ProcessDefinitionCatalogProjection definitionCatalog)
+        ProcessDefinitionCatalogProjection definitionCatalog,
+        ProcessLiveProcessesResult? liveProcesses)
     {
         var definitionCount = definitionCatalog.PublishedDefinitionCount + definitionCatalog.DraftDefinitionCount;
         var definitionCountText = definitionCount.ToString(CultureInfo.InvariantCulture);
+        var activeRunCountText = (liveProcesses?.Runs.Count(run => run.IsActive) ?? 0).ToString(CultureInfo.InvariantCulture);
+        var historyCountText = (liveProcesses?.Runs.Count ?? 0).ToString(CultureInfo.InvariantCulture);
 
         return
         [
@@ -200,14 +255,14 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 "Live runs",
                 "monitor_heart",
                 "Live runtime projection surface.",
-                "0",
+                activeRunCountText,
                 IsEnabled: true),
             new(
                 ProcessWorkspaceTabKey.History,
                 "History",
                 "history",
                 "Read-only runtime history and legacy archive context.",
-                "0",
+                historyCountText,
                 IsEnabled: true)
         ];
     }
@@ -245,7 +300,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 "Launch",
                 "rocket_launch",
                 authorization.CanLaunchRuns,
-                "Runtime launch commands are not available in this workspace shell."),
+                authorization.CanLaunchRuns ? null : "Runtime launch commands are not available in this workspace shell."),
             new(
                 ProcessWorkspaceCommandKind.OpenLiveDashboard,
                 "Live dashboard",

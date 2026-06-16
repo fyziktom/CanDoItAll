@@ -2,6 +2,8 @@
 
 ## Status
 
+- Completed
+
 Executed on 2026-06-15. Closure proof is recorded under `proof/SB02`.
 
 ## Objective

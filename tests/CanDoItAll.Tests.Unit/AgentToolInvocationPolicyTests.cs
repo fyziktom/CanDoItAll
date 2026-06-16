@@ -749,6 +749,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("workspace_write_file", "MutateProductTarget")]
     [InlineData("workspace_dotnet_test", "RunValidation")]
     [InlineData("workspace_dotnet_run", "LaunchRuntime")]
+    [InlineData("workspace_dotnet_stop", "LaunchRuntime")]
     [InlineData(ToolContractCatalog.BrowserClick, "CaptureRuntimeProof")]
     [InlineData("processes_step_transition", "ExecuteExternalAction")]
     public void ProcessToolOperationAuthorizer_denies_governed_step_with_missing_operation_contract(
@@ -1703,6 +1704,7 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserClick));
 
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserTakeScreenshot));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetStop));
         Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary));
     }
 
@@ -1762,6 +1764,12 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolCapabilityOperationRequirementKind.Static, browserClick.OperationRequirementKind);
         Assert.Contains(browserClick.OperationRequirements, requirement =>
             requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceDotNetStop, out var dotnetStop));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, dotnetStop.OperationRequirementKind);
+        Assert.Contains(dotnetStop.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("LaunchRuntime", StringComparer.Ordinal) &&
+            requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
     }
 
     [Fact]
@@ -1787,6 +1795,11 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserTakeScreenshot, out var screenshot));
         Assert.Equal(ToolCapabilityBrowserProofRole.EvidenceCapture, screenshot.BrowserProofRole);
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceDotNetStop, out var dotnetStop));
+        Assert.Equal(ToolCapabilitySideEffectKind.RuntimeLaunch, dotnetStop.SideEffectKind);
+        Assert.False(dotnetStop.CanMutateProduct);
+        Assert.Contains(ProcessOperationContractNames.ExternalProductTargetReadOnly, dotnetStop.TargetScopeRequirements);
     }
 
     [Fact]
@@ -1995,6 +2008,33 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_allows_bounded_boxed_governed_browser_snapshot()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "browser_snapshot",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["depth"] = "2",
+                ["boxes"] = "True"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "CaptureRuntimeProof"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_validation_without_run_validation_operation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2099,6 +2139,33 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Contains("LaunchRuntime", decision.Reason, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task EvaluateAsync_allows_dotnet_stop_with_runtime_proof_operation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_dotnet_stop",
+            ToolInvocationClassification.Validation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["startupReceiptPath"] = "artifacts/process-runs/dotnet-run/20260616/startup.json"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "CaptureRuntimeProof"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
     [Theory]
     [InlineData(ToolContractCatalog.BrowserNavigate)]
     [InlineData(ToolContractCatalog.BrowserClick)]
@@ -2182,6 +2249,33 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_allows_artifact_only_write_under_process_artifacts()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "process-artifacts/process-run-001/evidence/report.md"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "WriteManagedProcessArtifacts"
+            ],
+            processStepTargetScope: "ManagedProcessArtifactsOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_allows_product_write_when_external_product_root_is_named_output()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2206,6 +2300,40 @@ public sealed class AgentToolInvocationPolicyTests
                 "WriteManagedProcessArtifacts"
             ],
             processStepTargetScope: "ExternalProductTargetMutable");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_product_root_named_output_script_for_mutation_step()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string productRoot = "external-target/C/programovani/dotnet-demo/output";
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: true,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"{productRoot}/build.ps1",
+                ["workingDirectory"] = productRoot,
+                ["timeoutSeconds"] = "1200"
+            },
+            allowedExternalTargetAliases: [productRoot],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "MutateProductTarget",
+                "RunValidation"
+            ],
+            processStepTargetScope: "ExternalProductTargetMutable",
+            inspectedScriptContent:
+                "Set-Location -LiteralPath $PSScriptRoot\n& dotnet restore TetrisGame.csproj\n& dotnet build TetrisGame.csproj --no-restore");
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 

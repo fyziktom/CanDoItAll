@@ -2,6 +2,8 @@
 
 ## Status
 
+- Completed
+
 Complete. Executed on 2026-06-15 with proof under `proof/SB05/`.
 
 ## Objective

@@ -23,6 +23,40 @@ public sealed class ProcessTemplatePackLoader
 
     public ProcessTemplatePack Load() => pack.Value;
 
+    public ProcessTemplateDefinitionDocument LoadDefinition(string processKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(processKey);
+
+        var loadedPack = Load();
+        var entry = loadedPack.Manifest.Processes.FirstOrDefault(item =>
+            string.Equals(item.Key, processKey.Trim(), StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Process template '{processKey}' is not available in the template pack.");
+        var definitionPath = Path.GetFullPath(Path.Combine(
+            loadedPack.RootPath,
+            Require(entry.RelativePath, "process relative path", loadedPack.RootPath),
+            DefinitionFileName));
+
+        return ReadJson(definitionPath, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
+    }
+
+    public IReadOnlyList<ProcessTemplateLiveRunProfileDocument> LoadLiveRunProfiles()
+    {
+        var loadedPack = Load();
+        var relativePath = loadedPack.Manifest.SeedCatalog.LiveRunProfilesPath;
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return [];
+        }
+
+        var path = Path.GetFullPath(Path.Combine(loadedPack.RootPath, relativePath));
+        if (!File.Exists(path))
+        {
+            return [];
+        }
+
+        return ReadJson(path, ProcessTemplateJsonContext.Default.ProcessTemplateLiveRunProfileDocumentArray);
+    }
+
     public static string FindPackRoot(string? packRoot = null) => ResolvePackRoot(packRoot);
 
     private ProcessTemplatePack LoadCore()
@@ -446,7 +480,16 @@ public sealed class ProcessTemplatePackManifest
 
     public DateTimeOffset GeneratedAtUtc { get; set; }
 
+    public ProcessTemplateSeedCatalogDocument SeedCatalog { get; set; } = new();
+
     public List<ProcessTemplateManifestProcessEntry> Processes { get; set; } = [];
+}
+
+public sealed class ProcessTemplateSeedCatalogDocument
+{
+    public string BaselineScenariosPath { get; set; } = string.Empty;
+
+    public string LiveRunProfilesPath { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateManifestProcessEntry
@@ -454,6 +497,49 @@ public sealed class ProcessTemplateManifestProcessEntry
     public string Key { get; set; } = string.Empty;
 
     public string RelativePath { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateLiveRunProfileDocument
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string ProcessTemplateKey { get; set; } = string.Empty;
+
+    public string RunNameTemplate { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string OperatingMode { get; set; } = string.Empty;
+
+    public string TriggerReasonTemplate { get; set; } = string.Empty;
+
+    public List<ProcessTemplateLiveRunAssignmentDocument> Assignments { get; set; } = [];
+
+    public List<ProcessTemplateLiveRunAcceptanceCriterionDocument> AcceptanceCriteria { get; set; } = [];
+
+    public List<string> RequiredProofKinds { get; set; } = [];
+}
+
+public sealed class ProcessTemplateLiveRunAssignmentDocument
+{
+    public string StepKey { get; set; } = string.Empty;
+
+    public string RoleKey { get; set; } = string.Empty;
+
+    public string DisplayNameTemplate { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public string BindingReason { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateLiveRunAcceptanceCriterionDocument
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateDefinitionDocument
@@ -596,7 +682,16 @@ public sealed class ProcessTemplateDefinitionStepDocument
 
     public List<ProcessTemplateDefinitionArtifactExpectationDocument> ArtifactExpectations { get; set; } = [];
 
+    public List<ProcessTemplateDefinitionArtifactInputDocument> ArtifactInputs { get; set; } = [];
+
     public List<ProcessTemplateDefinitionStepBranchOutcomeDocument> BranchOutcomes { get; set; } = [];
+}
+
+public sealed class ProcessTemplateDefinitionArtifactInputDocument
+{
+    public string SourceStepKey { get; set; } = string.Empty;
+
+    public string ArtifactExpectationKey { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateDefinitionStepDependencyDocument

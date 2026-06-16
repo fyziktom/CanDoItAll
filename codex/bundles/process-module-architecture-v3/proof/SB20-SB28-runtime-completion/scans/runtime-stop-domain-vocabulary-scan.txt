@@ -1,0 +1,2 @@
+src\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:366:            return !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Use this skill only for Blazor app delivery")
+src\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedBuilder.cs:300:                        "Concrete workspace_dotnet_new, workspace_dotnet_build, workspace_dotnet_test, and workspace_dotnet_run examples for generic .NET and Blazor app delivery.")

@@ -135,7 +135,7 @@
       "Key": "resolve-blazor-contract",
       "Title": "Resolve Blazor delivery contract",
       "Subtitle": "Project structure and output root",
-      "Notes": "Read project structure and run prompt. Resolve Blazor mode (SSR, WASM, or WASM PWA), product root, requested external output root or current-run managed output root, run folder, acceptance criteria, routes/screens, backend/API expectations, exclusions, and required evidence writeback targets. Keep the app description generic and do not add sample-specific assumptions.",
+      "Notes": "Read project structure and run prompt. Resolve Blazor mode (SSR, WASM, or WASM PWA), product root, requested external output root, managed process artifact root, process run id, acceptance criteria, routes/screens, backend/API expectations, exclusions, and required evidence writeback targets. Keep product files and evidence separate: write contract/handoff proof under the managed process artifact root shown in the run context (`artifacts/process-runs/<run-id>` or a child path), not under `output/` unless `output/` is the approved product root and this step is authorized to mutate product files. Keep the app description generic and do not add sample-specific assumptions.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -182,7 +182,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-          "ValidationRequirementSummary": "Must name Blazor mode SSR/WASM/WASM PWA, project id, source/project-structure node ids, product root, output root, run folder, acceptance criteria, routes or API surfaces, exclusions, and evidence writeback targets."
+          "ValidationRequirementSummary": "Must name Blazor mode SSR/WASM/WASM PWA, project id, source/project-structure node ids, product root, requested external output root, managed process artifact root, process run id, acceptance criteria, routes or API surfaces, exclusions, and evidence writeback targets."
         }
       ],
       "ArtifactInputs": [],
@@ -292,6 +292,7 @@
         "MutateProductTarget",
         "RunValidation",
         "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable"
@@ -301,7 +302,7 @@
       "Key": "validate-blazor-runtime",
       "Title": "Validate Blazor runtime and browser evidence",
       "Subtitle": "Build/test/browser proof",
-      "Notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. For backend/API validation, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
+      "Notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Before running restore/build, stop any prior workspace_dotnet_run process for the same product root by calling workspace_dotnet_stop with the recorded startup.json receipt when available; do not run build while the product executable is still locked by a previous validation runtime. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. After browser proof, call workspace_dotnet_stop with the startup receipt path and record cleanup.json evidence before returning any branch outcome, including repair-required or Blocked. For backend/API validation, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -483,6 +484,7 @@
         "MutateProductTarget",
         "RunValidation",
         "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable"
@@ -492,7 +494,7 @@
       "Key": "revalidate-blazor-repair",
       "Title": "Revalidate Blazor repair",
       "Subtitle": "Post-repair proof",
-      "Notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. For backend/API validation, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
+      "Notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Before running restore/build, stop any prior workspace_dotnet_run process for the same product root by calling workspace_dotnet_stop with the recorded startup.json receipt when available; do not run build while the product executable is still locked by a previous validation runtime. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. After browser proof, call workspace_dotnet_stop with the startup receipt path and record cleanup.json evidence before returning any branch outcome, including repair-required or Blocked. For backend/API validation, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,

@@ -1,0 +1,374 @@
+Bundle validation failed:
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB01 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB02 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB03 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB04 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB05 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB06 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB07 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB08 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB09 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB10 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB12 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\reviews\01-execution-report.md: completed critical subbundle SB13 is missing semantic adequacy evidence
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\manifest.md:50: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: //
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\archive-generation.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\archive-generation.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\hash-verification.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\hash-verification.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\search-coverage.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\search-coverage.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\negative-tracked-only-archive-gap.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\negative-tracked-only-archive-gap.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\active-product-diff.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\active-product-diff.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\anti-stub-audit.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\anti-stub-audit.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\git-status-after-archive.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\git-status-after-archive.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\prepared-validator-after-sb01.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\prepared-validator-after-sb01.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\proof-path-audit.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\proof-path-audit.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\negative-tracked-only-archive-gap.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\negative-tracked-only-archive-gap.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\search-coverage.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\search-coverage.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\hash-verification.txt: transcript must include 'Command:'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB01\transcripts\hash-verification.txt: transcript must include an ExitCode or Exit code field
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md:24: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /SB02-product-touchpoints-preflight.txt
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md:25: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /SB02-test-touchpoints-preflight.txt
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: proof manifest must include at least one portable repo:// or bundle:// reference
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: proof manifest or subbundle README must cite proof/SB02/semantic-invariants.*
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: referenced artifact path does not exist: /SB02-product-touchpoints-preflight.txt
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: referenced artifact path does not exist: /SB02-test-touchpoints-preflight.txt
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB02\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\manifest.md: proof manifest must include at least one portable repo:// or bundle:// reference
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\manifest.md: proof manifest or subbundle README must cite proof/SB03/semantic-invariants.*
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB03\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\manifest.md: proof manifest must include at least one portable repo:// or bundle:// reference
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\manifest.md: proof manifest or subbundle README must cite proof/SB04/semantic-invariants.*
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB04\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\manifest.md: proof manifest must include at least one portable repo:// or bundle:// reference
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\manifest.md: proof manifest or subbundle README must cite proof/SB05/semantic-invariants.*
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB05\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\manifest.md: proof manifest must include at least one portable repo:// or bundle:// reference
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\manifest.md: proof manifest or subbundle README must cite proof/SB06/semantic-invariants.*
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB06\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\semantic-invariants.md: ## Production Behavior Artifact Matrix is missing columns: negative
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: ## Production Behavior Artifact Matrix is missing columns: negative
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs:13
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.Commit.cs:9
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeState.cs:54
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimePorts.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeScheduler.cs:8
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessStrategyDispatcher.cs:9
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.ResultHelpers.cs:22
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEventTypes.cs:5
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:35
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs:33
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:94
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeState.cs:88
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:172
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.Commit.cs:75
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:131
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimePorts.cs:48
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.ResultHelpers.cs:62
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeScheduler.cs:34
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:68
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs:89
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:203
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:53
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:237
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:255
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:287
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessRuntimeEngineTests.cs:326
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB07\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimePorts.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/ProcessPersistenceDbContext.cs:5
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/ProcessPersistenceConfigurations.cs:10
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs:8
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs:237
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessRuntimeEventStore.cs:9
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessOutboxStore.cs:7
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessProjectionStore.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionContracts.cs:67
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Contracts/ProcessContractVersions.cs:9
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs:141
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:17
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:80
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessOutboxStore.cs:22
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:105
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessArtifactLedgerStore.cs:5
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs:60
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:64
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessProjectionStore.cs:8
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:131
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessProjectionStore.cs:62
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessProjectionStore.cs:116
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: proof/status
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:40
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:117
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:144
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:170
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessPersistenceStoreTests.cs:219
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessModuleBoundaryTests.cs:73
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB08\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.cs:7
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Recovery.cs:7
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Branching.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerRuntimeDependencies.cs:5
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerPorts.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerIncidentContracts.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerIncidentContracts.cs:11
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerIncidentContracts.cs:17
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerRecoveryContracts.cs:21
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerRecoveryContracts.cs:26
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Recovery.cs:9
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerBranchContracts.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerBranchContracts.cs:27
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerBranchContracts.cs:43
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Branching.cs:8
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Branching.Results.cs:123
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Branching.Results.cs:181
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerSubprocessContracts.cs:13
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerSubprocessContracts.cs:29
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Subprocess.cs:8
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessRuntimeEventTypes.cs:41
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Recovery.cs:93
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Branching.Results.cs:21
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:158
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessManagerControlLoop.Incidents.cs:7
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:21
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerIncidentContracts.cs:57
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:173
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Runtime/ProcessManagerRecoveryContracts.cs:49
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:92
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:63
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:118
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: proof/status
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:44
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs:189
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB09\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionReadModels.cs:11
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionReadModels.cs:43
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionReadModels.cs:63
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionContracts.cs:87
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionContracts.cs:131
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionJsonCodec.cs:10
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionJsonCodec.cs:166
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionWorker.cs:48
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs:52
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessRuntimeProjectionProjector.cs:6
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessRuntimeProjectionProjector.cs:85
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs:5
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs:25
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs:67
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/ProcessPersistenceEntities.cs:205
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/ProcessPersistenceConfigurations.cs:174
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Persistence/EfProcessProjectionStore.cs:87
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs:87
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs:104
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs:124
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs:144
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessRuntimeProjectionProjector.cs:37
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs:21
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessRuntimeProjectionProjector.cs:76
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs:92
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessRuntimeProjectionProjector.cs:79
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessRuntimeProjectionProjector.cs:82
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessRuntimeProjectionProjector.cs:172
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs:112
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: repo://src/CanDoItAll.Processes.Projections/ProcessProjectionWorker.cs:88
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: referenced artifact path does not exist: proof/status
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB10\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\manifest.md: proof manifest must include at least one portable repo:// or bundle:// reference
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\manifest.md: proof manifest or subbundle README must cite proof/SB12/semantic-invariants.*
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB12\manifest.md: proof manifest must cite an anti-stub audit transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md:43: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md:44: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /projects/{ProjectId}/processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md:45: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md:53: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md:54: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /projects/{ProjectId}/processes?runId=
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: proof manifest must include at least one SHA-256 changed-file hash
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: proof manifest must include at least one portable repo:// or bundle:// reference
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: proof manifest or subbundle README must cite proof/SB13/semantic-invariants.*
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md:5: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md:5: artifact proof uses machine-specific absolute path instead of repo:// or bundle://: /projects/{ProjectId}/processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Invariant ID'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Source raw note'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Expected behavior'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Disallowed shallow implementation'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Failing-first test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Passing test'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Changed source files'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Production assertions'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Red-team negative case'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract is missing 'Downstream dependency check'
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\semantic-invariants.md: semantic invariant contract must include at least one invariant id
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: referenced artifact path does not exist: /processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: referenced artifact path does not exist: /projects/{ProjectId}/processes
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: referenced artifact path does not exist: /projects/{ProjectId}/processes?runId=
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: proof manifest must cite at least one command transcript path
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: proof manifest must cite a passing transcript
+- C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3\proof\SB13\manifest.md: proof manifest must cite an anti-stub audit transcript
