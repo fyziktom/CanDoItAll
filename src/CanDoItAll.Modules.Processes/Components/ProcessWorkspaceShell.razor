@@ -586,6 +586,13 @@
         @if (DefinitionCatalog.SelectedEditor is not null)
         {
             @RenderDefinitionEditor(DefinitionCatalog.SelectedEditor)
+            @if (DefinitionCatalog.SelectedEditor.Canvas is not null)
+            {
+                <ProcessDefinitionCanvasPanel Canvas="DefinitionCatalog.SelectedEditor.Canvas"
+                                              Scope="ResolveScope()"
+                                              Disabled="@isBusy"
+                                              ExecuteCommand="ExecuteDefinitionCanvasCommandAsync" />
+            }
             @if (DefinitionCatalog.SelectedEditor.RoleEditor is not null)
             {
                 <ProcessDefinitionRoleEditorPanel RoleEditor="DefinitionCatalog.SelectedEditor.RoleEditor"
@@ -879,9 +886,17 @@
     {
         if (shell is not null)
         {
-            var selectedEditor = projection.RoleEditor is null && shell.DefinitionCatalog.SelectedEditor?.RoleEditor is { } roleEditor
-                ? projection with { RoleEditor = roleEditor }
-                : projection;
+            var selectedEditor = projection;
+            if (selectedEditor.RoleEditor is null && shell.DefinitionCatalog.SelectedEditor?.RoleEditor is { } roleEditor)
+            {
+                selectedEditor = selectedEditor with { RoleEditor = roleEditor };
+            }
+
+            if (selectedEditor.Canvas is null && shell.DefinitionCatalog.SelectedEditor?.Canvas is { } canvas)
+            {
+                selectedEditor = selectedEditor with { Canvas = canvas };
+            }
+
             shell = shell with
             {
                 DefinitionCatalog = shell.DefinitionCatalog with
@@ -927,6 +942,46 @@
         var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
         {
             RoleEditor = projection
+        };
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor
+            }
+        };
+    }
+
+    private async Task ExecuteDefinitionCanvasCommandAsync(ProcessDefinitionCanvasCommand command)
+    {
+        isBusy = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteDefinitionCanvasCommandAsync(command);
+            ApplyDefinitionCanvasProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void ApplyDefinitionCanvasProjection(ProcessDefinitionCanvasEditorProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is null)
+        {
+            return;
+        }
+
+        var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
+        {
+            Canvas = projection
         };
         shell = shell with
         {

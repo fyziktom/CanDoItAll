@@ -20,7 +20,7 @@ public sealed class ProcessShellSmokeTests
             PlaywrightTestHostPaths.RepositoryRoot,
             "output",
             "playwright",
-            "process-shell-sb16");
+            "process-shell-sb17");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -52,9 +52,21 @@ public sealed class ProcessShellSmokeTests
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "Draft saved");
         await page.GetByTestId("processes-definition-publish").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "published");
+        await page.GetByTestId("processes-definition-canvas").WaitForAsync();
+        await page.GetByTestId("processes-canvas-node-step-decision-intake").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Capture architecture decision demand");
+        await page.GetByTestId("processes-canvas-toolbox-process-step-implementation").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "accepted");
+        await page.GetByTestId("processes-canvas-recompose").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "recomposed");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(artifactDirectory, "processes-definition-canvas.png"),
+            FullPage = true
+        });
         await page.GetByTestId("processes-definition-role-editor").WaitForAsync();
         await page.GetByTestId("processes-role-solution-architect").ClickAsync();
-        await page.GetByTestId("processes-role-display-name").FillAsync("Principal architecture steward SB16");
+        await page.GetByTestId("processes-role-display-name").FillAsync("Principal architecture steward SB17");
         await page.GetByTestId("processes-role-project-assignment").SelectOptionAsync(new[] { "Manager" });
         await page.GetByTestId("processes-role-allocation").FillAsync("45");
         await page.GetByTestId("processes-role-save").ClickAsync();

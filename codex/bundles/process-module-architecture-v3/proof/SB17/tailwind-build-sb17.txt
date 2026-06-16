@@ -1,0 +1,11 @@
+
+> candoitall@1.0.0 tailwind:build
+> npm --prefix Tailwind run build
+
+
+> build
+> tailwindcss -i ./input.css -o ../src/CanDoItAll.Web/wwwroot/css/output.css
+
+≈ tailwindcss v4.2.1
+
+Done in 288ms

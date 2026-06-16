@@ -1,0 +1,468 @@
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:56:        await page.GetByTestId("processes-canvas-node-step-decision-intake").ClickAsync();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:57:        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Capture architecture decision demand");
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:58:        await page.GetByTestId("processes-canvas-toolbox-process-step-implementation").ClickAsync();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:59:        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "accepted");
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:60:        await page.GetByTestId("processes-canvas-recompose").ClickAsync();
+tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs:61:        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "recomposed");
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:50:        Assert.Equal(processId, client.LastRequest?.Selection.ProcessId);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:51:        Assert.Equal(runId, client.LastRequest?.Selection.RunId);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:117:            new ProcessDefinitionCanvasEditorProjectionService(clock));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:118:        var selection = new ProcessWorkspaceSelectionProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:261:        Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox']"));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:262:        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-step-architecture-decision']"));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:263:        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-branch-architecture-decision']"));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:264:        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-role-solution-architect']"));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:265:        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-artifact-architecture-decision-adr']"));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:266:        Assert.NotNull(cut.Find("[data-testid='processes-canvas-edge-branch-route-architecture-decision-router']"));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:268:        cut.Find("[data-testid='processes-canvas-node-artifact-architecture-decision-adr']").Click();
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:270:        cut.WaitForAssertion(() => Assert.Contains("Architecture decision record", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:271:        Assert.Contains("Artifact", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:275:    public void Canvas_toolbox_action_uses_typed_canvas_command_boundary()
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:280:        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox-process-step-implementation']")));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:281:        cut.Find("[data-testid='processes-canvas-node-step-architecture-decision']").Click();
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:282:        cut.Find("[data-testid='processes-canvas-toolbox-process-step-implementation']").Click();
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:284:        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.AddStep, client.LastCanvasCommand?.CommandKind));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:285:        Assert.Equal(new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"), client.LastCanvasCommand?.ToolboxActionKey);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:286:        Assert.Equal(new ProcessDefinitionCanvasNodeKey("step:architecture-decision"), client.LastCanvasCommand?.SelectedNodeKey);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:291:    public void Canvas_recompose_uses_typed_canvas_command_boundary()
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:296:        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-recompose']")));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:297:        cut.Find("[data-testid='processes-canvas-recompose']").Click();
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:299:        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.Recompose, client.LastCanvasCommand?.CommandKind));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:300:        Assert.Equal(ProcessDefinitionCanvasRecompositionMode.BalancedFlow, client.LastCanvasCommand?.RecompositionMode);
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:336:        public ProcessDefinitionCanvasCommand? LastCanvasCommand { get; private set; }
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:417:        public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:418:            ProcessDefinitionCanvasCommand command,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:422:            var versionToken = new ProcessDefinitionCanvasVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:423:            var receipt = new ProcessDefinitionCanvasCommandReceipt(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:426:                ProcessDefinitionCanvasCommandStatus.Accepted,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:429:                command.CommandKind == ProcessDefinitionCanvasCommandKind.Recompose
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:433:            return Task.FromResult(new ProcessDefinitionCanvasCommandResult(receipt, projection));
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:450:                request.Selection,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:684:        private static ProcessDefinitionCanvasEditorProjection CreateCanvas(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:686:            ProcessDefinitionCanvasVersionToken? versionToken = null,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:687:            ProcessDefinitionCanvasCommandReceipt? receipt = null,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:688:            ProcessDefinitionCanvasCommandKind? commandKind = null)
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:690:            var stepKey = new ProcessDefinitionCanvasNodeKey("step:architecture-decision");
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:691:            var branchKey = new ProcessDefinitionCanvasNodeKey("branch:architecture-decision");
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:692:            var roleKey = new ProcessDefinitionCanvasNodeKey("role:solution-architect");
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:693:            var artifactKey = new ProcessDefinitionCanvasNodeKey("artifact:architecture-decision:adr");
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:698:                    ProcessDefinitionCanvasNodeKind.Step,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:699:                    commandKind == ProcessDefinitionCanvasCommandKind.AddStep ? "Implementation" : "Architecture decision",
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:711:                    ProcessDefinitionCanvasNodeKind.BranchRouter,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:724:                    ProcessDefinitionCanvasNodeKind.Role,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:737:                    ProcessDefinitionCanvasNodeKind.Artifact,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:751:                new ProcessDefinitionCanvasEdgeProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:752:                    new ProcessDefinitionCanvasEdgeKey("branch-route:architecture-decision:router"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:753:                    ProcessDefinitionCanvasEdgeKind.BranchRoute,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:760:                new ProcessDefinitionCanvasEdgeProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:761:                    new ProcessDefinitionCanvasEdgeKey("role-binding:solution-architect:architecture-decision"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:762:                    ProcessDefinitionCanvasEdgeKind.RoleBinding,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:769:                new ProcessDefinitionCanvasEdgeProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:770:                    new ProcessDefinitionCanvasEdgeKey("artifact:architecture-decision:adr"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:771:                    ProcessDefinitionCanvasEdgeKind.ArtifactExpectation,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:780:            return new ProcessDefinitionCanvasEditorProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:782:                versionToken ?? new ProcessDefinitionCanvasVersionToken($"template:{key.Value}:canvas"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:783:                new ProcessDefinitionCanvasViewportProjection(960, 560, "Test canvas bounds."),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:787:                    new ProcessDefinitionCanvasToolboxActionProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:788:                        new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:789:                        ProcessDefinitionCanvasToolboxActionKind.Step,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:795:                    new ProcessDefinitionCanvasToolboxActionProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:796:                        new ProcessDefinitionCanvasToolboxActionKey("process-step.decision"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:797:                        ProcessDefinitionCanvasToolboxActionKind.BranchRouter,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:803:                    new ProcessDefinitionCanvasToolboxActionProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:804:                        new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-role-binding"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:805:                        ProcessDefinitionCanvasToolboxActionKind.RoleBinding,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:811:                    new ProcessDefinitionCanvasToolboxActionProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:812:                        new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-artifact-expectation"),
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:813:                        ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:820:                new ProcessDefinitionCanvasSelectionProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:821:                    ProcessDefinitionCanvasSelectionKind.Step,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:829:                    new ProcessDefinitionCanvasCommandProjection(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:830:                        ProcessDefinitionCanvasCommandKind.Recompose,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:831:                        "Recompose",
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:839:        private static ProcessDefinitionCanvasEditorNodeProjection CreateCanvasNode(
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:840:            ProcessDefinitionCanvasNodeKey nodeKey,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:841:            ProcessDefinitionCanvasNodeKind kind,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:860:                Width: kind == ProcessDefinitionCanvasNodeKind.BranchRouter ? 168 : 220,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:861:                Height: kind == ProcessDefinitionCanvasNodeKind.Artifact ? 72 : 92,
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:931:            if (request.Selection.RunId is { } runId)
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:3:public enum ProcessDefinitionCanvasNodeKind
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:12:public enum ProcessDefinitionCanvasEdgeKind
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:21:public enum ProcessDefinitionCanvasSelectionKind
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:31:public enum ProcessDefinitionCanvasToolboxActionKind
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:40:public enum ProcessDefinitionCanvasCommandKind
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:47:    Recompose
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:50:public enum ProcessDefinitionCanvasCommandStatus
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:56:public enum ProcessDefinitionCanvasRecompositionMode
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:62:public enum ProcessDefinitionCanvasPortKind
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:72:public readonly record struct ProcessDefinitionCanvasVersionToken
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:74:    public ProcessDefinitionCanvasVersionToken(string value)
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:89:public readonly record struct ProcessDefinitionCanvasNodeKey
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:91:    public ProcessDefinitionCanvasNodeKey(string value)
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:106:public readonly record struct ProcessDefinitionCanvasEdgeKey
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:108:    public ProcessDefinitionCanvasEdgeKey(string value)
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:123:public readonly record struct ProcessDefinitionCanvasToolboxActionKey
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:125:    public ProcessDefinitionCanvasToolboxActionKey(string value)
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:140:public sealed record ProcessDefinitionCanvasViewportProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:145:public sealed record ProcessDefinitionCanvasPortProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:147:    ProcessDefinitionCanvasPortKind Kind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:152:public sealed record ProcessDefinitionCanvasEditorNodeProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:153:    ProcessDefinitionCanvasNodeKey NodeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:154:    ProcessDefinitionCanvasNodeKind Kind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:167:    IReadOnlyList<ProcessDefinitionCanvasPortProjection> Ports);
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:169:public sealed record ProcessDefinitionCanvasEdgeProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:170:    ProcessDefinitionCanvasEdgeKey EdgeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:171:    ProcessDefinitionCanvasEdgeKind Kind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:172:    ProcessDefinitionCanvasNodeKey FromNodeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:173:    ProcessDefinitionCanvasNodeKey ToNodeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:179:public sealed record ProcessDefinitionCanvasSelectionProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:180:    ProcessDefinitionCanvasSelectionKind Kind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:181:    ProcessDefinitionCanvasNodeKey? NodeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:182:    ProcessDefinitionCanvasEdgeKey? EdgeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:188:    public static ProcessDefinitionCanvasSelectionProjection None { get; } = new(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:189:        ProcessDefinitionCanvasSelectionKind.None,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:198:public sealed record ProcessDefinitionCanvasToolboxActionProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:199:    ProcessDefinitionCanvasToolboxActionKey ActionKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:200:    ProcessDefinitionCanvasToolboxActionKind Kind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:207:public sealed record ProcessDefinitionCanvasCommandProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:208:    ProcessDefinitionCanvasCommandKind Kind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:214:public sealed record ProcessDefinitionCanvasCommandReceipt(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:216:    ProcessDefinitionCanvasCommandKind CommandKind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:217:    ProcessDefinitionCanvasCommandStatus Status,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:218:    ProcessDefinitionCanvasVersionToken VersionToken,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:222:public sealed record ProcessDefinitionCanvasCommand(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:225:    ProcessDefinitionCanvasCommandKind CommandKind,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:226:    ProcessDefinitionCanvasVersionToken? ExpectedVersionToken,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:227:    ProcessDefinitionCanvasToolboxActionKey? ToolboxActionKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:228:    ProcessDefinitionCanvasNodeKey? SelectedNodeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:229:    ProcessDefinitionCanvasEdgeKey? SelectedEdgeKey,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:230:    ProcessDefinitionCanvasRecompositionMode RecompositionMode);
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:232:public sealed record ProcessDefinitionCanvasCommandResult(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:233:    ProcessDefinitionCanvasCommandReceipt Receipt,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:234:    ProcessDefinitionCanvasEditorProjection Projection);
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:236:public sealed record ProcessDefinitionCanvasEditorProjection(
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:238:    ProcessDefinitionCanvasVersionToken VersionToken,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:239:    ProcessDefinitionCanvasViewportProjection Viewport,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:240:    IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> Nodes,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:241:    IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> Edges,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:242:    IReadOnlyList<ProcessDefinitionCanvasToolboxActionProjection> ToolboxActions,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:243:    ProcessDefinitionCanvasSelectionProjection Selection,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:244:    IReadOnlyList<ProcessDefinitionCanvasCommandProjection> Commands,
+src\CanDoItAll.Processes.Projections\ProcessDefinitionCanvasProjectionContracts.cs:245:    ProcessDefinitionCanvasCommandReceipt? LastCommandReceipt);
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:310:                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:567:                    <EmptyState Eyebrow="Selection"
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:591:                <ProcessDefinitionCanvasPanel Canvas="DefinitionCatalog.SelectedEditor.Canvas"
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:594:                                              ExecuteCommand="ExecuteDefinitionCanvasCommandAsync" />
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:955:    private async Task ExecuteDefinitionCanvasCommandAsync(ProcessDefinitionCanvasCommand command)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:962:            var result = await ProjectionClient.ExecuteDefinitionCanvasCommandAsync(command);
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:975:    private void ApplyDefinitionCanvasProjection(ProcessDefinitionCanvasEditorProjection projection)
+src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs:11:    ProcessDefinitionCanvasEditorProjectionService definitionCanvasEditorProjectionService)
+src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs:62:            request.Selection,
+src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs:71:            CreateAgentEntry(request.Scope, request.Selection, authorization));
+src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs:89:    public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs:90:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs:98:        ArgumentNullException.ThrowIfNull(request.Selection);
+src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs:229:        ProcessWorkspaceSelectionProjection selection,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:15:            <StatusBadge Tone="success" Text="@Canvas.Selection.Kind.ToString()" />
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:21:        <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-canvas-command-receipt">
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:26:    <Grid Gap="LayoutGap.Large" ColumnsLg="4" Class="mt-5" data-testid="processes-canvas-layout">
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:27:        <Stack GapScale="LayoutGap.Small" data-testid="processes-canvas-toolbox">
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:29:            @foreach (var action in Canvas.ToolboxActions)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:37:                        Click="@(() => ExecuteToolboxActionAsync(action))"
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:39:                        data-testid="@BuildToolboxActionTestId(action.ActionKey)" />
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:57:        <div class="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 lg:col-span-2" data-testid="processes-canvas-surface-frame">
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:58:            <div class="relative rounded-md bg-white shadow-sm" style="@BuildSurfaceStyle(Canvas.Viewport)" data-testid="processes-canvas-surface">
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:115:        <Stack GapScale="LayoutGap.Small" data-testid="processes-canvas-selection">
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:116:            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selection" />
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:121:                <p class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500" data-testid="processes-canvas-selection-key">@selection.KeyText</p>
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:137:    public ProcessDefinitionCanvasEditorProjection Canvas { get; set; } = default!;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:146:    public EventCallback<ProcessDefinitionCanvasCommand> ExecuteCommand { get; set; }
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:148:    private ProcessDefinitionCanvasVersionToken? syncedVersionToken;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:149:    private ProcessDefinitionCanvasNodeKey? selectedNodeKey;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:150:    private ProcessDefinitionCanvasEdgeKey? selectedEdgeKey;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:151:    private ProcessDefinitionCanvasSelectionProjection selection = ProcessDefinitionCanvasSelectionProjection.None;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:162:        selectedNodeKey = Canvas.Selection.NodeKey;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:163:        selectedEdgeKey = Canvas.Selection.EdgeKey;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:164:        selection = Canvas.Selection;
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:168:    private void SelectNode(ProcessDefinitionCanvasEditorNodeProjection node)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:172:        selection = new ProcessDefinitionCanvasSelectionProjection(
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:173:            ResolveSelectionKind(node.Kind),
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:182:    private void SelectEdge(ProcessDefinitionCanvasEdgeProjection edge)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:186:        selection = new ProcessDefinitionCanvasSelectionProjection(
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:187:            edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:188:                ? ProcessDefinitionCanvasSelectionKind.Route
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:189:                : ProcessDefinitionCanvasSelectionKind.Step,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:198:    private Task ExecuteToolboxActionAsync(ProcessDefinitionCanvasToolboxActionProjection action)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:202:        ProcessDefinitionCanvasCommandKind commandKind,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:203:        ProcessDefinitionCanvasToolboxActionKey? toolboxActionKey)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:205:        var command = new ProcessDefinitionCanvasCommand(
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:213:            ProcessDefinitionCanvasRecompositionMode.BalancedFlow);
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:217:    private static ProcessDefinitionCanvasCommandKind ResolveCommandKind(ProcessDefinitionCanvasToolboxActionKind kind)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:220:            ProcessDefinitionCanvasToolboxActionKind.BranchRouter => ProcessDefinitionCanvasCommandKind.AddBranchRouter,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:221:            ProcessDefinitionCanvasToolboxActionKind.RoleBinding => ProcessDefinitionCanvasCommandKind.AddRoleBinding,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:222:            ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation => ProcessDefinitionCanvasCommandKind.AddArtifactExpectation,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:223:            ProcessDefinitionCanvasToolboxActionKind.SubprocessBoundary => ProcessDefinitionCanvasCommandKind.AddSubprocessBoundary,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:224:            _ => ProcessDefinitionCanvasCommandKind.AddStep
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:227:    private static ProcessDefinitionCanvasSelectionKind ResolveSelectionKind(ProcessDefinitionCanvasNodeKind kind)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:230:            ProcessDefinitionCanvasNodeKind.Step => ProcessDefinitionCanvasSelectionKind.Step,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:231:            ProcessDefinitionCanvasNodeKind.BranchRouter => ProcessDefinitionCanvasSelectionKind.Route,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:232:            ProcessDefinitionCanvasNodeKind.Role => ProcessDefinitionCanvasSelectionKind.Role,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:233:            ProcessDefinitionCanvasNodeKind.Artifact => ProcessDefinitionCanvasSelectionKind.Artifact,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:234:            ProcessDefinitionCanvasNodeKind.SubprocessBoundary => ProcessDefinitionCanvasSelectionKind.SubprocessBoundary,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:235:            _ => ProcessDefinitionCanvasSelectionKind.None
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:238:    private static ButtonStyle ResolveToolboxButtonStyle(ProcessDefinitionCanvasToolboxActionKind kind)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:241:            ProcessDefinitionCanvasToolboxActionKind.BranchRouter => ButtonStyle.Light,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:242:            ProcessDefinitionCanvasToolboxActionKind.RoleBinding => ButtonStyle.Success,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:243:            ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation => ButtonStyle.Info,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:244:            ProcessDefinitionCanvasToolboxActionKind.SubprocessBoundary => ButtonStyle.Light,
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:248:    private static string BuildSurfaceStyle(ProcessDefinitionCanvasViewportProjection viewport)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:253:    private static string BuildViewBox(ProcessDefinitionCanvasViewportProjection viewport)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:256:    private static string BuildNodeStyle(ProcessDefinitionCanvasEditorNodeProjection node)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:266:    private string BuildNodeClass(ProcessDefinitionCanvasEditorNodeProjection node)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:280:    private string BuildEdgeClass(ProcessDefinitionCanvasEdgeProjection edge)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:286:    private CanvasEdgeLine ResolveEdgeLine(ProcessDefinitionCanvasEdgeProjection edge)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:297:            ProcessDefinitionCanvasEdgeKind.RoleBinding => new CanvasEdgeLine(
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:303:            ProcessDefinitionCanvasEdgeKind.ArtifactExpectation or ProcessDefinitionCanvasEdgeKind.SubprocessBoundary => new CanvasEdgeLine(
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:327:    private static string ResolveEdgeDash(ProcessDefinitionCanvasEdgeKind kind)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:330:            ProcessDefinitionCanvasEdgeKind.RoleBinding => "5 4",
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:331:            ProcessDefinitionCanvasEdgeKind.ArtifactExpectation => "3 4",
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:332:            ProcessDefinitionCanvasEdgeKind.SubprocessBoundary => "8 5",
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:336:    private static string ResolveNodeKeyText(ProcessDefinitionCanvasEditorNodeProjection node)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:339:    private static string BuildCanvasCommandTestId(ProcessDefinitionCanvasCommandKind kind)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:340:        => kind == ProcessDefinitionCanvasCommandKind.Recompose
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:341:            ? "processes-canvas-recompose"
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:342:            : $"processes-canvas-command-{kind.ToString().ToLowerInvariant()}";
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:344:    private static string BuildToolboxActionTestId(ProcessDefinitionCanvasToolboxActionKey key)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:345:        => $"processes-canvas-toolbox-{NormalizeTestId(key.Value)}";
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:347:    private static string BuildNodeTestId(ProcessDefinitionCanvasNodeKey key)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:348:        => $"processes-canvas-node-{NormalizeTestId(key.Value)}";
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:350:    private static string BuildEdgeTestId(ProcessDefinitionCanvasEdgeKey key)
+src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionCanvasPanel.razor:351:        => $"processes-canvas-edge-{NormalizeTestId(key.Value)}";
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:7:public sealed partial class ProcessDefinitionCanvasEditorProjectionService
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:9:    private ProcessDefinitionCanvasEditorProjection CreateProjection(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:10:        ProcessDefinitionCanvasSnapshot snapshot,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:11:        ProcessDefinitionCanvasCommandReceipt? lastReceipt)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:18:            snapshot.ToolboxActions,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:19:            snapshot.Selection,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:23:    private ProcessDefinitionCanvasSnapshot CreateTemplateSnapshot(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:27:        var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>();
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:28:        var edges = new List<ProcessDefinitionCanvasEdgeProjection>();
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:29:        var stepNodes = new Dictionary<string, ProcessDefinitionCanvasEditorNodeProjection>(StringComparer.OrdinalIgnoreCase);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:30:        var roleNodes = new Dictionary<string, ProcessDefinitionCanvasEditorNodeProjection>(StringComparer.OrdinalIgnoreCase);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:35:                new ProcessDefinitionCanvasNodeKey($"role:{role.Role.Key}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:36:                ProcessDefinitionCanvasNodeKind.Role,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:56:                new ProcessDefinitionCanvasNodeKey($"step:{step.Step.Key}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:57:                ProcessDefinitionCanvasNodeKind.Step,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:84:                    new ProcessDefinitionCanvasNodeKey($"branch:{step.Key}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:85:                    ProcessDefinitionCanvasNodeKind.BranchRouter,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:100:                    new ProcessDefinitionCanvasEdgeKey($"branch-route:{step.Key}:router"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:101:                    ProcessDefinitionCanvasEdgeKind.BranchRoute,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:113:                    new ProcessDefinitionCanvasNodeKey($"artifact:{step.Key}:{artifact.Key}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:114:                    ProcessDefinitionCanvasNodeKind.Artifact,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:129:                    new ProcessDefinitionCanvasEdgeKey($"artifact:{step.Key}:{artifact.Key}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:130:                    ProcessDefinitionCanvasEdgeKind.ArtifactExpectation,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:142:                    new ProcessDefinitionCanvasNodeKey($"subprocess:{step.Key}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:143:                    ProcessDefinitionCanvasNodeKind.SubprocessBoundary,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:160:                    new ProcessDefinitionCanvasEdgeKey($"subprocess:{step.Key}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:161:                    ProcessDefinitionCanvasEdgeKind.SubprocessBoundary,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:179:                    new ProcessDefinitionCanvasEdgeKey($"role-binding:{binding.RoleKey}:{step.Key}:{binding.ResponsibilityKind}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:180:                    ProcessDefinitionCanvasEdgeKind.RoleBinding,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:208:                    ? ProcessDefinitionCanvasEdgeKind.Dependency
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:209:                    : ProcessDefinitionCanvasEdgeKind.BranchRoute;
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:211:                    new ProcessDefinitionCanvasEdgeKey($"dependency:{dependency.DependsOnStepKey}:{step.Key}:{dependency.DependsOnBranchOutcomeKey}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:217:                    kind == ProcessDefinitionCanvasEdgeKind.BranchRoute ? "warning" : "info",
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:222:        var recomposedNodes = RecomposeNodes(nodes, edges);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:223:        var selection = recomposedNodes.FirstOrDefault(node => node.Kind == ProcessDefinitionCanvasNodeKind.Step) is { } firstStep
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:224:            ? CreateSelection(firstStep)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:225:            : ProcessDefinitionCanvasSelectionProjection.None;
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:226:        return new ProcessDefinitionCanvasSnapshot(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:229:            new ProcessDefinitionCanvasVersionToken($"template:{template.Key}:canvas:{template.UpdatedAtUtc.UtcTicks}"),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:232:            template.CanvasAuthoringDefaults.ToolboxActions.Select(CreateToolboxAction).ToArray(),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:236:    private static IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> RecomposeNodes(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:237:        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:238:        IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> edges)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:240:        var recomposed = new List<ProcessDefinitionCanvasEditorNodeProjection>(nodes.Count);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:242:            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Step)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:247:            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:252:        var positions = new Dictionary<ProcessDefinitionCanvasNodeKey, (double X, double Y)>();
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:276:                    ProcessDefinitionCanvasNodeKind.BranchRouter => (X: 250d, Y: -112d),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:277:                    ProcessDefinitionCanvasNodeKind.Artifact => (X: 0d, Y: 148d),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:278:                    ProcessDefinitionCanvasNodeKind.SubprocessBoundary => (X: 0d, Y: 232d),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:293:    private static ProcessDefinitionCanvasViewportProjection CreateViewport(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:294:        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:298:            return new ProcessDefinitionCanvasViewportProjection(960, 480, "Empty definition canvas.");
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:305:        return new ProcessDefinitionCanvasViewportProjection(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:311:    private static ProcessDefinitionCanvasEditorNodeProjection CreateNode(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:312:        ProcessDefinitionCanvasNodeKey nodeKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:313:        ProcessDefinitionCanvasNodeKind kind,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:343:    private static IReadOnlyList<ProcessDefinitionCanvasPortProjection> CreatePorts(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:344:        ProcessDefinitionCanvasNodeKind kind,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:349:            ProcessDefinitionCanvasNodeKind.Step =>
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:351:                new("in", ProcessDefinitionCanvasPortKind.StructuralInput, "Input", 0, height / 2),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:352:                new("out", ProcessDefinitionCanvasPortKind.StructuralOutput, "Output", width, height / 2),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:353:                new("role", ProcessDefinitionCanvasPortKind.RoleBinding, "Role", width / 2, 0),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:354:                new("artifact", ProcessDefinitionCanvasPortKind.ArtifactExpectation, "Artifact", width / 2, height)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:356:            ProcessDefinitionCanvasNodeKind.BranchRouter =>
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:358:                new("in", ProcessDefinitionCanvasPortKind.StructuralInput, "Decision input", 0, height / 2),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:359:                new("out", ProcessDefinitionCanvasPortKind.BranchOutcome, "Outcome", width, height / 2)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:361:            ProcessDefinitionCanvasNodeKind.Role =>
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:363:                new("role-out", ProcessDefinitionCanvasPortKind.RoleBinding, "Responsibility", width, height / 2)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:365:            ProcessDefinitionCanvasNodeKind.Artifact =>
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:367:                new("artifact-in", ProcessDefinitionCanvasPortKind.ArtifactExpectation, "Expectation", 0, height / 2)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:369:            ProcessDefinitionCanvasNodeKind.SubprocessBoundary =>
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:371:                new("subprocess-in", ProcessDefinitionCanvasPortKind.SubprocessBoundary, "Child process", 0, height / 2)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:376:    private static ProcessDefinitionCanvasEdgeProjection CreateEdge(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:377:        ProcessDefinitionCanvasEdgeKey edgeKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:378:        ProcessDefinitionCanvasEdgeKind kind,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:379:        ProcessDefinitionCanvasNodeKey fromNodeKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:380:        ProcessDefinitionCanvasNodeKey toNodeKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:387:    private static ProcessDefinitionCanvasEditorNodeProjection CreateBranchNodeForStep(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:388:        ProcessDefinitionCanvasEditorNodeProjection step,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:389:        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Projection.cs:392:            ProcessDefinitionCanvasNodeKind.BranchRouter,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:6:public sealed partial class ProcessDefinitionCanvasEditorProjectionService
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:23:    private readonly Dictionary<ProcessDefinitionCanvasStateKey, ProcessDefinitionCanvasSnapshot> snapshots = [];
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:25:    public ProcessDefinitionCanvasEditorProjectionService(IProcessProjectionClock clock)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:30:    public ProcessDefinitionCanvasEditorProjectionService(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:38:    public Task<ProcessDefinitionCanvasEditorProjection> GetCanvasAsync(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:46:        var stateKey = ProcessDefinitionCanvasStateKey.From(scope, definitionKey);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:56:    public Task<ProcessDefinitionCanvasCommandResult> ExecuteCommandAsync(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:57:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:65:        var stateKey = ProcessDefinitionCanvasStateKey.From(command.Scope, command.DefinitionKey);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:71:        if (command.ExpectedVersionToken is { } expected && expected != baseline.VersionToken)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:82:            ProcessDefinitionCanvasCommandKind.AddStep => ExecuteAddStep(stateKey, baseline, command, observedAtUtc),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:83:            ProcessDefinitionCanvasCommandKind.AddBranchRouter => ExecuteAddBranchRouter(stateKey, baseline, command, observedAtUtc),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:84:            ProcessDefinitionCanvasCommandKind.AddRoleBinding => ExecuteAddRoleBinding(stateKey, baseline, command, observedAtUtc),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:85:            ProcessDefinitionCanvasCommandKind.AddArtifactExpectation => ExecuteAddArtifactExpectation(stateKey, baseline, command, observedAtUtc),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:86:            ProcessDefinitionCanvasCommandKind.AddSubprocessBoundary => ExecuteAddSubprocessBoundary(stateKey, baseline, command, observedAtUtc),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.cs:87:            ProcessDefinitionCanvasCommandKind.Recompose => ExecuteRecompose(stateKey, baseline, command, observedAtUtc),
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:236:    public async Task Canvas_projection_reads_steps_routes_roles_artifacts_and_toolbox()
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:239:        var service = new ProcessDefinitionCanvasEditorProjectionService(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:247:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Step && node.StepKey == new ProcessDefinitionStepKey("architecture-decision"));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:248:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.BranchRouter);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:249:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey == new ProcessDefinitionRoleKey("solution-architect"));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:250:        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact && node.ArtifactKey == "architecture-decision-record");
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:251:        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:252:        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:253:        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.ArtifactExpectation);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:254:        Assert.Contains(canvas.ToolboxActions, action => action.ActionKey == new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:255:        Assert.Equal(ProcessDefinitionCanvasSelectionKind.Step, canvas.Selection.Kind);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:256:        Assert.Contains(canvas.Commands, command => command.Kind == ProcessDefinitionCanvasCommandKind.Recompose && command.IsEnabled);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:260:    public async Task Canvas_toolbox_commands_add_elements_and_recompose()
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:263:        var service = new ProcessDefinitionCanvasEditorProjectionService(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:273:            ProcessDefinitionCanvasCommandKind.AddStep,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:274:            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:275:            canvas.Selection.NodeKey);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:279:            ProcessDefinitionCanvasCommandKind.AddArtifactExpectation,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:280:            new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-artifact-expectation"),
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:281:            addedStep.Projection.Selection.NodeKey);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:285:            ProcessDefinitionCanvasCommandKind.Recompose,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:286:            ToolboxActionKey: null,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:287:            addedArtifact.Projection.Selection.NodeKey);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:289:        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, addedStep.Receipt.Status);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:291:        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, addedArtifact.Receipt.Status);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:292:        Assert.True(addedArtifact.Projection.Nodes.Count(node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact) >= 2);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:293:        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, recomposed.Receipt.Status);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:301:        var service = new ProcessDefinitionCanvasEditorProjectionService(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:310:            ProcessDefinitionCanvasCommandKind.AddStep,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:311:            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:312:            canvas.Selection.NodeKey);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:314:        var stale = await service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:317:            ProcessDefinitionCanvasCommandKind.Recompose,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:319:            ToolboxActionKey: null,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:320:            added.Projection.Selection.NodeKey,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:322:            ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:324:        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, stale.Receipt.Status);
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:442:    private static Task<ProcessDefinitionCanvasCommandResult> ExecuteCanvasCommandAsync(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:443:        ProcessDefinitionCanvasEditorProjectionService service,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:444:        ProcessDefinitionCanvasEditorProjection canvas,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:445:        ProcessDefinitionCanvasCommandKind commandKind,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:446:        ProcessDefinitionCanvasToolboxActionKey? ToolboxActionKey,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:447:        ProcessDefinitionCanvasNodeKey? selectedNodeKey)
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:448:        => service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:453:            ToolboxActionKey,
+tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs:456:            ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:7:public sealed partial class ProcessDefinitionCanvasEditorProjectionService
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:9:    private ProcessDefinitionCanvasCommandResult ExecuteAddStep(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:10:        ProcessDefinitionCanvasStateKey stateKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:11:        ProcessDefinitionCanvasSnapshot baseline,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:12:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:15:        var action = ResolveToolboxAction(baseline, command.ToolboxActionKey);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:22:        var stepIndex = baseline.Nodes.Count(node => node.Kind == ProcessDefinitionCanvasNodeKind.Step) + 1;
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:28:            ProcessDefinitionCanvasNodeKind.Step,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:30:            action.Kind == ProcessDefinitionCanvasToolboxActionKind.BranchRouter ? "Decision step" : "Authoring step",
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:36:            action.Kind == ProcessDefinitionCanvasToolboxActionKind.BranchRouter ? "warning" : "info",
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:40:            action.Kind == ProcessDefinitionCanvasToolboxActionKind.BranchRouter ? ["Decision"] : ["Step"]);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:42:        var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>(baseline.Nodes.Count + 2);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:45:        var edges = new List<ProcessDefinitionCanvasEdgeProjection>(baseline.Edges.Count + 2);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:51:                ProcessDefinitionCanvasEdgeKind.Dependency,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:60:        if (action.Kind == ProcessDefinitionCanvasToolboxActionKind.BranchRouter)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:66:                ProcessDefinitionCanvasEdgeKind.BranchRoute,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:82:            CreateSelection(step),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:86:    private ProcessDefinitionCanvasCommandResult ExecuteAddBranchRouter(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:87:        ProcessDefinitionCanvasStateKey stateKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:88:        ProcessDefinitionCanvasSnapshot baseline,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:89:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:93:        if (step is null || step.Kind != ProcessDefinitionCanvasNodeKind.Step)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:99:            node.Kind == ProcessDefinitionCanvasNodeKind.BranchRouter &&
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:105:        var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>(baseline.Nodes.Count + 1);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:109:        var edges = new List<ProcessDefinitionCanvasEdgeProjection>(baseline.Edges.Count + 1);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:113:            ProcessDefinitionCanvasEdgeKind.BranchRoute,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:128:            CreateSelection(branch),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:132:    private ProcessDefinitionCanvasCommandResult ExecuteAddRoleBinding(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:133:        ProcessDefinitionCanvasStateKey stateKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:134:        ProcessDefinitionCanvasSnapshot baseline,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:135:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:139:        var role = baseline.Nodes.FirstOrDefault(node => node.Kind == ProcessDefinitionCanvasNodeKind.Role);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:140:        if (step is null || step.Kind != ProcessDefinitionCanvasNodeKind.Step)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:151:            edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding &&
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:158:        var edges = new List<ProcessDefinitionCanvasEdgeProjection>(baseline.Edges.Count + 1);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:162:            ProcessDefinitionCanvasEdgeKind.RoleBinding,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:177:            CreateSelection(edges[^1]),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:181:    private ProcessDefinitionCanvasCommandResult ExecuteAddArtifactExpectation(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:182:        ProcessDefinitionCanvasStateKey stateKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:183:        ProcessDefinitionCanvasSnapshot baseline,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:184:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:188:        if (step is null || step.Kind != ProcessDefinitionCanvasNodeKind.Step)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:193:        var artifactIndex = baseline.Nodes.Count(node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact) + 1;
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:197:            ProcessDefinitionCanvasNodeKind.Artifact,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:210:        var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>(baseline.Nodes.Count + 1);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:213:        var edges = new List<ProcessDefinitionCanvasEdgeProjection>(baseline.Edges.Count + 1);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:217:            ProcessDefinitionCanvasEdgeKind.ArtifactExpectation,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:232:            CreateSelection(artifact),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:236:    private ProcessDefinitionCanvasCommandResult ExecuteAddSubprocessBoundary(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:237:        ProcessDefinitionCanvasStateKey stateKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:238:        ProcessDefinitionCanvasSnapshot baseline,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:239:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:243:        if (step is null || step.Kind != ProcessDefinitionCanvasNodeKind.Step)
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:249:            node.Kind == ProcessDefinitionCanvasNodeKind.SubprocessBoundary &&
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:257:            ProcessDefinitionCanvasNodeKind.SubprocessBoundary,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:270:        var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>(baseline.Nodes.Count + 1);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:273:        var edges = new List<ProcessDefinitionCanvasEdgeProjection>(baseline.Edges.Count + 1);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:277:            ProcessDefinitionCanvasEdgeKind.SubprocessBoundary,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:292:            CreateSelection(subprocess),
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:296:    private ProcessDefinitionCanvasCommandResult ExecuteRecompose(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:297:        ProcessDefinitionCanvasStateKey stateKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:298:        ProcessDefinitionCanvasSnapshot baseline,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:299:        ProcessDefinitionCanvasCommand command,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:302:        var nodes = RecomposeNodes(baseline.Nodes, baseline.Edges);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:303:        var selectedNode = baseline.Selection.NodeKey is { } nodeKey
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:307:            ? baseline.Selection
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:308:            : CreateSelection(selectedNode);
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:321:    private ProcessDefinitionCanvasCommandResult StoreAccepted(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:322:        ProcessDefinitionCanvasStateKey stateKey,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:323:        ProcessDefinitionCanvasSnapshot baseline,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:324:        ProcessDefinitionCanvasCommandKind commandKind,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:326:        IReadOnlyList<ProcessDefinitionCanvasEditorNodeProjection> nodes,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:327:        IReadOnlyList<ProcessDefinitionCanvasEdgeProjection> edges,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:328:        ProcessDefinitionCanvasSelectionProjection selection,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:336:            Selection = selection
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:339:        var receipt = new ProcessDefinitionCanvasCommandReceipt(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:342:            ProcessDefinitionCanvasCommandStatus.Accepted,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:346:        return new ProcessDefinitionCanvasCommandResult(receipt, CreateProjection(stored, receipt));
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:349:    private ProcessDefinitionCanvasCommandResult CreateRejectedResult(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:350:        ProcessDefinitionCanvasSnapshot snapshot,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:351:        ProcessDefinitionCanvasCommandKind commandKind,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:355:        var receipt = new ProcessDefinitionCanvasCommandReceipt(
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:358:            ProcessDefinitionCanvasCommandStatus.Rejected,
+src\CanDoItAll.Processes.Application\ProcessDefinitionCanvasEditorProjectionService.Commands.cs:362:        return new ProcessDefinitionCanvasCommandResult(receipt, CreateProjection(snapshot, receipt));

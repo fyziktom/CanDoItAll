@@ -361,6 +361,8 @@ public sealed record ProcessDefinitionEditorProjection(
     ProcessDefinitionEditorCommandReceipt? LastCommandReceipt)
 {
     public ProcessDefinitionRoleEditorProjection? RoleEditor { get; init; }
+
+    public ProcessDefinitionCanvasEditorProjection? Canvas { get; init; }
 }
 
 public sealed record ProcessDefinitionCatalogProjection(

@@ -233,6 +233,99 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Canvas_projection_reads_steps_routes_roles_artifacts_and_toolbox()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+
+        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Step && node.StepKey == new ProcessDefinitionStepKey("architecture-decision"));
+        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.BranchRouter);
+        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey == new ProcessDefinitionRoleKey("solution-architect"));
+        Assert.Contains(canvas.Nodes, node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact && node.ArtifactKey == "architecture-decision-record");
+        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute);
+        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.RoleBinding);
+        Assert.Contains(canvas.Edges, edge => edge.Kind == ProcessDefinitionCanvasEdgeKind.ArtifactExpectation);
+        Assert.Contains(canvas.ToolboxActions, action => action.ActionKey == new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"));
+        Assert.Equal(ProcessDefinitionCanvasSelectionKind.Step, canvas.Selection.Kind);
+        Assert.Contains(canvas.Commands, command => command.Kind == ProcessDefinitionCanvasCommandKind.Recompose && command.IsEnabled);
+    }
+
+    [Fact]
+    public async Task Canvas_toolbox_commands_add_elements_and_recompose()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+
+        var addedStep = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            canvas.Selection.NodeKey);
+        var addedArtifact = await ExecuteCanvasCommandAsync(
+            service,
+            addedStep.Projection,
+            ProcessDefinitionCanvasCommandKind.AddArtifactExpectation,
+            new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-artifact-expectation"),
+            addedStep.Projection.Selection.NodeKey);
+        var recomposed = await ExecuteCanvasCommandAsync(
+            service,
+            addedArtifact.Projection,
+            ProcessDefinitionCanvasCommandKind.Recompose,
+            ToolboxActionKey: null,
+            addedArtifact.Projection.Selection.NodeKey);
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, addedStep.Receipt.Status);
+        Assert.Contains(addedStep.Projection.Nodes, node => node.Title == "Implementation");
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, addedArtifact.Receipt.Status);
+        Assert.True(addedArtifact.Projection.Nodes.Count(node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact) >= 2);
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, recomposed.Receipt.Status);
+        Assert.Contains("recomposed", recomposed.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Canvas_rejects_stale_version_tokens()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var added = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            canvas.Selection.NodeKey);
+
+        var stale = await service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+            ProcessWorkspaceShellScope.Global,
+            added.Projection.DefinitionKey,
+            ProcessDefinitionCanvasCommandKind.Recompose,
+            canvas.VersionToken,
+            ToolboxActionKey: null,
+            added.Projection.Selection.NodeKey,
+            SelectedEdgeKey: null,
+            ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, stale.Receipt.Status);
+        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Publish_rejects_blocking_lint_and_returns_actionable_projection()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();
@@ -346,6 +439,22 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             draft,
             templateActionKey));
 
+    private static Task<ProcessDefinitionCanvasCommandResult> ExecuteCanvasCommandAsync(
+        ProcessDefinitionCanvasEditorProjectionService service,
+        ProcessDefinitionCanvasEditorProjection canvas,
+        ProcessDefinitionCanvasCommandKind commandKind,
+        ProcessDefinitionCanvasToolboxActionKey? ToolboxActionKey,
+        ProcessDefinitionCanvasNodeKey? selectedNodeKey)
+        => service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+            ProcessWorkspaceShellScope.Global,
+            canvas.DefinitionKey,
+            commandKind,
+            canvas.VersionToken,
+            ToolboxActionKey,
+            selectedNodeKey,
+            SelectedEdgeKey: null,
+            ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
+
     private static ProcessDefinitionEditorDraftProjection CreateDraft(
         ProcessDefinitionEditorProjection editor)
         => new(
@@ -442,13 +551,24 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                           "RoleTemplateSourceKey": "process-role-template/solution-architect",
                           "RoleTemplateSnapshotName": "Solution architect v1",
                           "SnapshotSummary": "Architecture role template snapshot.",
+                          "CanvasX": 160,
+                          "CanvasY": 40,
                           "Notes": "Coordinates architecture choices."
                         }
                       ],
                       "Steps": [
                         {
+                          "Order": 0,
                           "Key": "architecture-decision",
                           "Title": "Architecture decision",
+                          "Subtitle": "Governed decision",
+                          "Notes": "Choose an architecture route from typed outcomes.",
+                          "StepKind": "Decision",
+                          "CanvasX": 160,
+                          "CanvasY": 220,
+                          "BranchCanvasX": 420,
+                          "BranchCanvasY": 120,
+                          "DecisionRoleKey": "solution-architect",
                           "RoleAssignments": [
                             {
                               "RoleKey": "solution-architect",
@@ -460,7 +580,18 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                           ],
                           "ArtifactExpectations": [
                             {
+                              "Key": "architecture-decision-record",
+                              "TemplateKey": "architecture-decision-record",
+                              "Title": "Architecture decision record",
+                              "ArtifactKind": "Deliverable",
                               "IsRequired": true
+                            }
+                          ],
+                          "BranchOutcomes": [
+                            {
+                              "Key": "approved",
+                              "Title": "Approved",
+                              "Description": "Route to the approved implementation lane."
                             }
                           ]
                         }
@@ -483,6 +614,43 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                     "DisplayNameTemplate": "Solution architect {ordinal}",
                     "PreferredExecutorKind": "person-or-agent",
                     "DefaultAllocationPercent": 60
+                  }
+                ]
+                """);
+
+            File.WriteAllText(
+                Path.Combine(root, "toolbox", "step-templates.json"),
+                """
+                [
+                  {
+                    "ActionId": "process-step.implementation",
+                    "Label": "Implementation",
+                    "Summary": "Perform implementation and produce reviewable evidence.",
+                    "Template": {
+                      "Key": "implementation",
+                      "Title": "Implementation",
+                      "StepKind": "Work"
+                    }
+                  },
+                  {
+                    "ActionId": "process-step.decision",
+                    "Label": "Decision router",
+                    "Summary": "Route work explicitly through governed follow-up lanes.",
+                    "Template": {
+                      "Key": "review-disposition",
+                      "Title": "Route review disposition",
+                      "StepKind": "Decision"
+                    }
+                  },
+                  {
+                    "ActionId": "process-step.subprocess",
+                    "Label": "Subprocess",
+                    "Summary": "Run another process definition as an observed child run.",
+                    "Template": {
+                      "Key": "subprocess",
+                      "Title": "Run subprocess",
+                      "StepKind": "Subprocess"
+                    }
                   }
                 ]
                 """);

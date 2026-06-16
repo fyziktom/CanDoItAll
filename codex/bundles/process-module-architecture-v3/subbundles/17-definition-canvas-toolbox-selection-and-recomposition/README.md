@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-16 during architecture bundle v3 execution.
 
 ## Objective
 
@@ -89,10 +89,10 @@ Rebuild the definition canvas, toolbox, node/port rendering, selection model, la
 
 ## Acceptance Checklist
 
-- [ ] Canvas renders from projection DTOs.
-- [ ] Selection and toolbox actions are explicit and testable.
-- [ ] Layout remains stable after recomposition.
-- [ ] Playwright screenshot proof exists.
+- [x] Canvas renders from projection DTOs.
+- [x] Selection and toolbox actions are explicit and testable.
+- [x] Layout remains stable after recomposition.
+- [x] Playwright screenshot proof exists.
 
 ## Proof Required
 
@@ -107,7 +107,7 @@ Rebuild the definition canvas, toolbox, node/port rendering, selection model, la
 
 ## Progression Gate
 
-- SB18 may start after selection and canvas command routing are proven.
+- SB18 may start after selection and canvas command routing are proven. SB17 proof is recorded under `bundle://proof/SB17/`.
 
 ## Suggested Agent Prompt
 
@@ -115,4 +115,4 @@ Execute SB17 from `codex/bundles/process-module-architecture-v3/subbundles/17-de
 
 ## Handoff Notes For Next Bundle
 
-Record selected element DTO shape and command receipts that step editor forms will consume.
+Selected element DTO shape and command receipts are available through `ProcessDefinitionCanvasSelectionProjection`, `ProcessDefinitionCanvasCommand`, `ProcessDefinitionCanvasCommandReceipt`, and `ProcessDefinitionCanvasCommandResult`. SB18 should consume those projections for step editor forms instead of querying runtime or persistence state from the UI.

@@ -113,7 +113,8 @@ public sealed class ProcessWorkspaceShellTests
             clock,
             new ProcessDefinitionCatalogProjectionService(clock),
             new ProcessDefinitionEditorProjectionService(clock),
-            new ProcessDefinitionRoleEditorProjectionService(clock));
+            new ProcessDefinitionRoleEditorProjectionService(clock),
+            new ProcessDefinitionCanvasEditorProjectionService(clock));
         var selection = new ProcessWorkspaceSelectionProjection(
             ProcessId: null,
             RunId: null,
@@ -250,6 +251,58 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Canvas_renders_nodes_toolbox_selection_and_route_edges()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
+        Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-step-architecture-decision']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-branch-architecture-decision']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-role-solution-architect']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-artifact-architecture-decision-adr']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-canvas-edge-branch-route-architecture-decision-router']"));
+
+        cut.Find("[data-testid='processes-canvas-node-artifact-architecture-decision-adr']").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Architecture decision record", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal));
+        Assert.Contains("Artifact", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Canvas_toolbox_action_uses_typed_canvas_command_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox-process-step-implementation']")));
+        cut.Find("[data-testid='processes-canvas-node-step-architecture-decision']").Click();
+        cut.Find("[data-testid='processes-canvas-toolbox-process-step-implementation']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.AddStep, client.LastCanvasCommand?.CommandKind));
+        Assert.Equal(new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"), client.LastCanvasCommand?.ToolboxActionKey);
+        Assert.Equal(new ProcessDefinitionCanvasNodeKey("step:architecture-decision"), client.LastCanvasCommand?.SelectedNodeKey);
+        Assert.Contains("Canvas command accepted", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Canvas_recompose_uses_typed_canvas_command_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-recompose']")));
+        cut.Find("[data-testid='processes-canvas-recompose']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.Recompose, client.LastCanvasCommand?.CommandKind));
+        Assert.Equal(ProcessDefinitionCanvasRecompositionMode.BalancedFlow, client.LastCanvasCommand?.RecompositionMode);
+        Assert.Contains("Canvas recomposed", cut.Markup, StringComparison.Ordinal);
+        Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']"));
+    }
+
+    [Fact]
     public void Processes_navigation_contributor_adds_processes_to_shell_navigation()
     {
         var items = ShellNavigation.GetItems(0, [new ProcessesShellNavigationContributor()]);
@@ -279,6 +332,8 @@ public sealed class ProcessWorkspaceShellTests
         public ProcessDefinitionEditorCommand? LastEditorCommand { get; private set; }
 
         public ProcessDefinitionRoleEditorCommand? LastRoleCommand { get; private set; }
+
+        public ProcessDefinitionCanvasCommand? LastCanvasCommand { get; private set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
@@ -357,6 +412,25 @@ public sealed class ProcessWorkspaceShellTests
                 lint.Issues);
             var projection = CreateRoleEditor(command.DefinitionKey, command.Draft, versionToken, lint, receipt);
             return Task.FromResult(new ProcessDefinitionRoleEditorCommandResult(receipt, projection));
+        }
+
+        public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+            ProcessDefinitionCanvasCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            LastCanvasCommand = command;
+            var versionToken = new ProcessDefinitionCanvasVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
+            var receipt = new ProcessDefinitionCanvasCommandReceipt(
+                Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+                command.CommandKind,
+                ProcessDefinitionCanvasCommandStatus.Accepted,
+                versionToken,
+                Now,
+                command.CommandKind == ProcessDefinitionCanvasCommandKind.Recompose
+                    ? "Canvas recomposed."
+                    : "Canvas command accepted.");
+            var projection = CreateCanvas(command.DefinitionKey, versionToken, receipt, command.CommandKind);
+            return Task.FromResult(new ProcessDefinitionCanvasCommandResult(receipt, projection));
         }
 
         private static ProcessWorkspaceShellProjection CreateShell(
@@ -518,7 +592,8 @@ public sealed class ProcessWorkspaceShellTests
                 ],
                 lastReceipt)
             {
-                RoleEditor = CreateRoleEditor(key)
+                RoleEditor = CreateRoleEditor(key),
+                Canvas = CreateCanvas(key)
             };
 
         private static ProcessDefinitionRoleEditorProjection CreateRoleEditor(ProcessDefinitionCatalogItemKey key)
@@ -605,6 +680,191 @@ public sealed class ProcessWorkspaceShellTests
                 "Architecture role template snapshot.",
                 ProcessDefinitionRoleTemplateOverrideStatus.AppliedFromTemplate,
                 "Resolved from process-role-template/solution-architect.");
+
+        private static ProcessDefinitionCanvasEditorProjection CreateCanvas(
+            ProcessDefinitionCatalogItemKey key,
+            ProcessDefinitionCanvasVersionToken? versionToken = null,
+            ProcessDefinitionCanvasCommandReceipt? receipt = null,
+            ProcessDefinitionCanvasCommandKind? commandKind = null)
+        {
+            var stepKey = new ProcessDefinitionCanvasNodeKey("step:architecture-decision");
+            var branchKey = new ProcessDefinitionCanvasNodeKey("branch:architecture-decision");
+            var roleKey = new ProcessDefinitionCanvasNodeKey("role:solution-architect");
+            var artifactKey = new ProcessDefinitionCanvasNodeKey("artifact:architecture-decision:adr");
+            var nodes = new[]
+            {
+                CreateCanvasNode(
+                    stepKey,
+                    ProcessDefinitionCanvasNodeKind.Step,
+                    commandKind == ProcessDefinitionCanvasCommandKind.AddStep ? "Implementation" : "Architecture decision",
+                    "Governed review step",
+                    "Select the architecture decision step without losing editor context.",
+                    160,
+                    220,
+                    "info",
+                    new ProcessDefinitionStepKey("architecture-decision"),
+                    RoleKey: null,
+                    ArtifactKey: null,
+                    ["Step"]),
+                CreateCanvasNode(
+                    branchKey,
+                    ProcessDefinitionCanvasNodeKind.BranchRouter,
+                    "Architecture decision routes",
+                    "Typed branch router",
+                    "Route labels are display text; the route target stays typed.",
+                    420,
+                    110,
+                    "warning",
+                    new ProcessDefinitionStepKey("architecture-decision"),
+                    RoleKey: null,
+                    ArtifactKey: null,
+                    ["Branch"]),
+                CreateCanvasNode(
+                    roleKey,
+                    ProcessDefinitionCanvasNodeKind.Role,
+                    "Solution architect",
+                    "person-or-agent",
+                    "Architecture authority for the selected step.",
+                    160,
+                    40,
+                    "success",
+                    StepKey: null,
+                    RoleKey: new ProcessDefinitionRoleKey("solution-architect"),
+                    ArtifactKey: null,
+                    ["Required"]),
+                CreateCanvasNode(
+                    artifactKey,
+                    ProcessDefinitionCanvasNodeKind.Artifact,
+                    "Architecture decision record",
+                    "Deliverable",
+                    "Required evidence for the selected step.",
+                    160,
+                    370,
+                    "accent",
+                    new ProcessDefinitionStepKey("architecture-decision"),
+                    RoleKey: null,
+                    ArtifactKey: "architecture-decision-record",
+                    ["Artifact"])
+            };
+            var edges = new[]
+            {
+                new ProcessDefinitionCanvasEdgeProjection(
+                    new ProcessDefinitionCanvasEdgeKey("branch-route:architecture-decision:router"),
+                    ProcessDefinitionCanvasEdgeKind.BranchRoute,
+                    stepKey,
+                    branchKey,
+                    "approved",
+                    "Typed route from architecture decision to the approved lane.",
+                    "warning",
+                    IsBackwardRoute: false),
+                new ProcessDefinitionCanvasEdgeProjection(
+                    new ProcessDefinitionCanvasEdgeKey("role-binding:solution-architect:architecture-decision"),
+                    ProcessDefinitionCanvasEdgeKind.RoleBinding,
+                    roleKey,
+                    stepKey,
+                    "Approver",
+                    "Solution architect approves the architecture decision.",
+                    "success",
+                    IsBackwardRoute: false),
+                new ProcessDefinitionCanvasEdgeProjection(
+                    new ProcessDefinitionCanvasEdgeKey("artifact:architecture-decision:adr"),
+                    ProcessDefinitionCanvasEdgeKind.ArtifactExpectation,
+                    stepKey,
+                    artifactKey,
+                    "evidence",
+                    "Architecture decision record is required evidence.",
+                    "accent",
+                    IsBackwardRoute: false)
+            };
+
+            return new ProcessDefinitionCanvasEditorProjection(
+                key,
+                versionToken ?? new ProcessDefinitionCanvasVersionToken($"template:{key.Value}:canvas"),
+                new ProcessDefinitionCanvasViewportProjection(960, 560, "Test canvas bounds."),
+                nodes,
+                edges,
+                [
+                    new ProcessDefinitionCanvasToolboxActionProjection(
+                        new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+                        ProcessDefinitionCanvasToolboxActionKind.Step,
+                        "Implementation",
+                        "Add an implementation step.",
+                        "add",
+                        IsEnabled: true,
+                        DisabledReason: null),
+                    new ProcessDefinitionCanvasToolboxActionProjection(
+                        new ProcessDefinitionCanvasToolboxActionKey("process-step.decision"),
+                        ProcessDefinitionCanvasToolboxActionKind.BranchRouter,
+                        "Decision router",
+                        "Add a typed branch router to the selected step.",
+                        "alt_route",
+                        IsEnabled: true,
+                        DisabledReason: null),
+                    new ProcessDefinitionCanvasToolboxActionProjection(
+                        new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-role-binding"),
+                        ProcessDefinitionCanvasToolboxActionKind.RoleBinding,
+                        "Role binding",
+                        "Connect the selected step to a role.",
+                        "badge",
+                        IsEnabled: true,
+                        DisabledReason: null),
+                    new ProcessDefinitionCanvasToolboxActionProjection(
+                        new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-artifact-expectation"),
+                        ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation,
+                        "Artifact expectation",
+                        "Attach required evidence to the selected step.",
+                        "inventory_2",
+                        IsEnabled: true,
+                        DisabledReason: null)
+                ],
+                new ProcessDefinitionCanvasSelectionProjection(
+                    ProcessDefinitionCanvasSelectionKind.Step,
+                    stepKey,
+                    EdgeKey: null,
+                    "Architecture decision",
+                    "Select the architecture decision step without losing editor context.",
+                    "architecture-decision",
+                    ["Step"]),
+                [
+                    new ProcessDefinitionCanvasCommandProjection(
+                        ProcessDefinitionCanvasCommandKind.Recompose,
+                        "Recompose",
+                        "auto_fix_high",
+                        IsEnabled: true,
+                        DisabledReason: null)
+                ],
+                receipt);
+        }
+
+        private static ProcessDefinitionCanvasEditorNodeProjection CreateCanvasNode(
+            ProcessDefinitionCanvasNodeKey nodeKey,
+            ProcessDefinitionCanvasNodeKind kind,
+            string title,
+            string subtitle,
+            string summary,
+            double x,
+            double y,
+            string tone,
+            ProcessDefinitionStepKey? StepKey,
+            ProcessDefinitionRoleKey? RoleKey,
+            string? ArtifactKey,
+            IReadOnlyList<string> badges)
+            => new(
+                nodeKey,
+                kind,
+                title,
+                subtitle,
+                summary,
+                x,
+                y,
+                Width: kind == ProcessDefinitionCanvasNodeKind.BranchRouter ? 168 : 220,
+                Height: kind == ProcessDefinitionCanvasNodeKind.Artifact ? 72 : 92,
+                tone,
+                StepKey,
+                RoleKey,
+                ArtifactKey,
+                badges,
+                []);
 
         private static ProcessDefinitionEditorLintProjection CreateEditorLint(
             ProcessDefinitionEditorCommand command)

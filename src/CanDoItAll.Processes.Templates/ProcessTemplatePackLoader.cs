@@ -69,7 +69,8 @@ public sealed class ProcessTemplatePackLoader
                     definition.Steps.Count,
                     definition.RoleUsages.Count(role => role.IsRequired),
                     definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired))),
-                BuildRoleAuthoringDefaults(root, relativePath, definition, roleTemplateActions)));
+                BuildRoleAuthoringDefaults(root, relativePath, definition, roleTemplateActions),
+                ProcessTemplateCanvasSummaryBuilder.Build(root, definition)));
         }
 
         return new ProcessTemplatePack(root, manifest, definitions);
@@ -153,7 +154,9 @@ public sealed class ProcessTemplatePackLoader
             NormalizeOptional(usage.SnapshotSummary, NormalizeOptional(resource?.SnapshotSummary, summary)),
             string.IsNullOrWhiteSpace(roleTemplateSourceKey)
                 ? "Local role without template source."
-                : $"Resolved from {roleTemplateSourceKey}.");
+                : $"Resolved from {roleTemplateSourceKey}.",
+            usage.CanvasX,
+            usage.CanvasY);
     }
 
     private static ProcessTemplateRoleResourceDocument? TryLoadRoleResource(
@@ -306,7 +309,8 @@ public sealed record ProcessTemplateDefinitionSummary(
     string AutonomyLevel,
     DateTimeOffset UpdatedAtUtc,
     ProcessTemplateDefinitionAuthoringDefaults AuthoringDefaults,
-    ProcessTemplateDefinitionRoleAuthoringDefaults RoleAuthoringDefaults);
+    ProcessTemplateDefinitionRoleAuthoringDefaults RoleAuthoringDefaults,
+    ProcessTemplateDefinitionCanvasAuthoringDefaults CanvasAuthoringDefaults);
 
 public sealed record ProcessTemplateDefinitionAuthoringDefaults(
     string ValueStatement,
@@ -345,7 +349,9 @@ public sealed record ProcessTemplateDefinitionRoleSummary(
     string RoleTemplateSourceKey,
     string RoleTemplateSnapshotName,
     string SnapshotSummary,
-    string OverrideSummary);
+    string OverrideSummary,
+    double CanvasX,
+    double CanvasY);
 
 public sealed record ProcessTemplateRoleTemplateActionSummary(
     string ActionId,
@@ -458,18 +464,68 @@ public sealed class ProcessTemplateDefinitionRoleUsageDocument
 
     public string SnapshotSummary { get; set; } = string.Empty;
 
+    public double CanvasX { get; set; }
+
+    public double CanvasY { get; set; }
+
     public string Notes { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateDefinitionStepDocument
 {
+    public int Order { get; set; }
+
     public string Key { get; set; } = string.Empty;
 
     public string Title { get; set; } = string.Empty;
 
+    public string Subtitle { get; set; } = string.Empty;
+
+    public string Notes { get; set; } = string.Empty;
+
+    public string StepKind { get; set; } = string.Empty;
+
+    public string DependsOnStepKey { get; set; } = string.Empty;
+
+    public string DependsOnBranchOutcomeKey { get; set; } = string.Empty;
+
+    public string DecisionRoleKey { get; set; } = string.Empty;
+
+    public string SubprocessProcessKey { get; set; } = string.Empty;
+
+    public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
+
+    public double CanvasX { get; set; }
+
+    public double CanvasY { get; set; }
+
+    public double BranchCanvasX { get; set; }
+
+    public double BranchCanvasY { get; set; }
+
+    public List<ProcessTemplateDefinitionStepDependencyDocument> Dependencies { get; set; } = [];
+
     public List<ProcessTemplateDefinitionStepRoleAssignmentDocument> RoleAssignments { get; set; } = [];
 
     public List<ProcessTemplateDefinitionArtifactExpectationDocument> ArtifactExpectations { get; set; } = [];
+
+    public List<ProcessTemplateDefinitionStepBranchOutcomeDocument> BranchOutcomes { get; set; } = [];
+}
+
+public sealed class ProcessTemplateDefinitionStepDependencyDocument
+{
+    public string DependsOnStepKey { get; set; } = string.Empty;
+
+    public string DependsOnBranchOutcomeKey { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateDefinitionStepBranchOutcomeDocument
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateDefinitionStepRoleAssignmentDocument
@@ -487,6 +543,14 @@ public sealed class ProcessTemplateDefinitionStepRoleAssignmentDocument
 
 public sealed class ProcessTemplateDefinitionArtifactExpectationDocument
 {
+    public string Key { get; set; } = string.Empty;
+
+    public string TemplateKey { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string ArtifactKind { get; set; } = string.Empty;
+
     public bool IsRequired { get; set; }
 }
 
@@ -530,4 +594,15 @@ public sealed class ProcessTemplateRoleTemplateActionDocument
     public string PreferredExecutorKind { get; set; } = string.Empty;
 
     public int DefaultAllocationPercent { get; set; }
+}
+
+public sealed class ProcessTemplateStepTemplateActionDocument
+{
+    public string ActionId { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public ProcessTemplateDefinitionStepDocument Template { get; set; } = new();
 }

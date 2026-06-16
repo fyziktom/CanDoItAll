@@ -103,4 +103,5 @@ public enum ProcessTemplateProjectionKind
 [JsonSerializable(typeof(ProcessTemplateDefinitionDocument))]
 [JsonSerializable(typeof(ProcessTemplateRoleResourceDocument))]
 [JsonSerializable(typeof(ProcessTemplateRoleTemplateActionDocument[]))]
+[JsonSerializable(typeof(ProcessTemplateStepTemplateActionDocument[]))]
 public sealed partial class ProcessTemplateJsonContext : JsonSerializerContext;

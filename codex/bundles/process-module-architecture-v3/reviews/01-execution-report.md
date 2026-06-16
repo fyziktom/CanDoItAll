@@ -625,3 +625,48 @@ Result:
 ```text
 Process module build and full solution build passed with 0 warnings and 0 errors. Focused SB16 unit tests passed 11/11, focused ProcessWorkspaceShell component tests passed 15/15, and focused ProcessShell Playwright smoke passed 1/1. Role authoring now uses typed role/executor/template/step-binding projections, role template apply/customize commands preserve override metadata, stale role editor version tokens are rejected, and the UI role panel remains projection-only. Browser proof captured role editor presence, role command receipt, step binding visibility, no Blazor error UI, and Playwright screenshots. CodeAnalytics final snapshot snap-20260616032916-4d1a8d1f completed with no blocking errors; remaining diagnostics are existing generated-program naming and component-test DI collector ambiguity.
 ```
+
+SB17 definition canvas/toolbox/selection/recomposition proof:
+
+```text
+bundle://proof/SB17/manifest.md
+bundle://proof/SB17/semantic-invariants.md
+bundle://proof/SB17/red-team-semantic-proof.md
+bundle://proof/SB17/build-process-module.txt
+bundle://proof/SB17/build-solution-sb17.txt
+bundle://proof/SB17/test-unit-canvas-sb17.txt
+bundle://proof/SB17/test-components-process-shell-sb17.txt
+bundle://proof/SB17/test-playwright-process-shell-sb17.txt
+bundle://proof/SB17/browser-validation.md
+bundle://proof/SB17/codeanalytics-snapshot-summary.txt
+bundle://proof/SB17/subbundle-closure-gate-sb17.md
+bundle://proof/SB17/performance-scan-summary.json
+bundle://proof/SB17/scans/projection-boundary-scan.txt
+bundle://proof/SB17/scans/old-symbol-scan.txt
+bundle://proof/SB17/scans/anti-stub-scan.txt
+bundle://proof/SB17/scans/performance-antipattern-scan.txt
+```
+
+Result:
+
+```text
+Process module build and full solution build passed with 0 warnings and 0 errors. Focused SB17 canvas/unit tests passed 14/14, focused ProcessWorkspaceShell component tests passed 18/18, and focused ProcessShell Playwright smoke passed 1/1. Definition canvas authoring now uses typed canvas editor projections, explicit selection state, toolbox actions, typed commands with expected version tokens, accepted/rejected command receipts, deterministic recomposition, route/role/artifact/subprocess node projections, and template-backed toolbox actions. Browser proof captured canvas load, decision node selection, toolbox add action, recomposition receipt, and Playwright screenshots. CodeAnalytics final snapshot snap-20260616041402-0e85c90f completed with no blocking errors and no process module dependency cycles; remaining diagnostics are existing generated-program naming and component-test DI collector ambiguity. CodeAnalytics still flags large command/projection partials after the monolithic canvas service split; this is tracked as an SB18/SB28 refactoring watch item rather than hidden residual risk.
+```
+
+Browser Validation Analytics for SB17:
+
+```text
+Route/state: Process shell with selected definition editor and definition canvas.
+Viewport: desktop-sized Playwright harness, 1600x1000 evidence screenshots.
+Actions: wait for processes-definition-canvas, select processes-canvas-node-step-decision-intake, assert selection text, click processes-canvas-toolbox-process-step-implementation, assert accepted receipt, click processes-canvas-recompose, assert recomposed receipt, capture canvas screenshot.
+Screenshots: bundle://proof/SB17/browser/processes-definition-canvas.png, bundle://proof/SB17/browser/processes-definition-role-editor.png, bundle://proof/SB17/browser/processes-global-definition-catalog.png, bundle://proof/SB17/browser/processes-project-shell.png.
+Result: passed through Playwright; no Blazor error UI or assertion failure interrupted the owned flow.
+```
+
+Subbundle Gate Results for SB17:
+
+```text
+Entry gate: Pass. SB16 prerequisite was complete, source references existed, and CodeAnalytics MCP was reachable before implementation.
+Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, component/unit/Playwright proof passed, projection-only and old-symbol scans were clean, and performance scan counts were reviewed.
+Progression: SB18 may start and should consume ProcessDefinitionCanvasSelectionProjection plus ProcessDefinitionCanvasCommandReceipt/Result for step editor forms.
+```

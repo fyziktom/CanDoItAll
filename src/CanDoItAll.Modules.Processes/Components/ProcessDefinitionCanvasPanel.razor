@@ -1,0 +1,370 @@
+@namespace CanDoItAll.Modules.Processes
+@using System.Globalization
+@using CanDoItAll.Processes.Projections
+
+<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-canvas">
+    <Split Gap="LayoutGap.Small">
+        <Stack GapScale="LayoutGap.Tiny">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Canvas" />
+            <h3 class="text-sm font-semibold text-slate-900">Definition canvas</h3>
+            <p class="text-sm leading-6 text-slate-600">Current definition topology, ownership, evidence, and subprocess boundaries.</p>
+        </Stack>
+        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+            <StatusBadge Tone="info" Text="@($"{Canvas.Nodes.Count} node(s)")" />
+            <StatusBadge Tone="neutral" Text="@($"{Canvas.Edges.Count} edge(s)")" />
+            <StatusBadge Tone="success" Text="@selection.Kind.ToString()" />
+        </Cluster>
+    </Split>
+
+    @if (!string.IsNullOrWhiteSpace(commandNotice) || Canvas.LastCommandReceipt is not null)
+    {
+        <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-canvas-command-receipt">
+            @(Canvas.LastCommandReceipt is null ? commandNotice : $"{Canvas.LastCommandReceipt.Status}: {Canvas.LastCommandReceipt.Summary}")
+        </p>
+    }
+
+    <Grid Gap="LayoutGap.Large" ColumnsLg="4" Class="mt-5" data-testid="processes-canvas-layout">
+        <Stack GapScale="LayoutGap.Small" data-testid="processes-canvas-toolbox">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Toolbox" />
+            @foreach (var action in Canvas.ToolboxActions)
+            {
+                <Button Text="@action.Label"
+                        Icon="@action.Icon"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="@ResolveToolboxButtonStyle(action.Kind)"
+                        Disabled="@(!action.IsEnabled || Disabled)"
+                        IsBusy="@Disabled"
+                        Click="@(() => ExecuteToolboxActionAsync(action))"
+                        title="@action.DisabledReason"
+                        data-testid="@BuildToolboxActionTestId(action.ActionKey)" />
+                <p class="text-xs leading-5 text-slate-500">@action.Summary</p>
+            }
+
+            @foreach (var command in Canvas.Commands)
+            {
+                <Button Text="@command.Text"
+                        Icon="@command.Icon"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(!command.IsEnabled || Disabled)"
+                        IsBusy="@Disabled"
+                        Click="@(() => ExecuteCanvasCommandAsync(command.Kind, toolboxActionKey: null))"
+                        title="@command.DisabledReason"
+                        data-testid="@BuildCanvasCommandTestId(command.Kind)" />
+            }
+        </Stack>
+
+        <div class="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 lg:col-span-2" data-testid="processes-canvas-surface-frame">
+            <div class="relative rounded-md bg-white shadow-sm" style="@BuildSurfaceStyle(Canvas.Viewport)" data-testid="processes-canvas-surface">
+                <svg class="absolute inset-0 h-full w-full" viewBox="@BuildViewBox(Canvas.Viewport)" aria-hidden="true">
+                    @foreach (var edge in Canvas.Edges)
+                    {
+                        var line = ResolveEdgeLine(edge);
+                        if (line.IsVisible)
+                        {
+                            <line x1="@line.X1"
+                                  y1="@line.Y1"
+                                  x2="@line.X2"
+                                  y2="@line.Y2"
+                                  stroke="@ResolveEdgeStroke(edge.Tone)"
+                                  stroke-width="2"
+                                  stroke-linecap="round"
+                                  stroke-dasharray="@ResolveEdgeDash(edge.Kind)" />
+                        }
+                    }
+                </svg>
+
+                @foreach (var edge in Canvas.Edges)
+                {
+                    var line = ResolveEdgeLine(edge);
+                    if (line.IsVisible)
+                    {
+                        <button type="button"
+                                class="@BuildEdgeClass(edge)"
+                                style="@BuildEdgeLabelStyle(line)"
+                                disabled="@Disabled"
+                                @onclick="@(() => SelectEdge(edge))"
+                                data-testid="@BuildEdgeTestId(edge.EdgeKey)">
+                            @edge.Label
+                        </button>
+                    }
+                }
+
+                @foreach (var node in Canvas.Nodes)
+                {
+                    <button type="button"
+                            class="@BuildNodeClass(node)"
+                            style="@BuildNodeStyle(node)"
+                            disabled="@Disabled"
+                            @onclick="@(() => SelectNode(node))"
+                            data-testid="@BuildNodeTestId(node.NodeKey)">
+                        <span class="block truncate text-xs font-semibold uppercase text-slate-500">@node.Kind.ToString()</span>
+                        <span class="mt-1 block truncate text-sm font-semibold text-slate-900">@node.Title</span>
+                        <span class="mt-1 block line-clamp-2 text-xs leading-5 text-slate-600">@node.Subtitle</span>
+                        <span class="mt-2 flex flex-wrap gap-1">
+                            @foreach (var badge in node.Badges.Take(2))
+                            {
+                                <span class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-slate-500">@badge</span>
+                            }
+                        </span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <Stack GapScale="LayoutGap.Small" data-testid="processes-canvas-selection">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selection" />
+            <h4 class="text-sm font-semibold text-slate-900">@selection.Title</h4>
+            <p class="text-sm leading-6 text-slate-600">@selection.Summary</p>
+            @if (!string.IsNullOrWhiteSpace(selection.KeyText))
+            {
+                <p class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500" data-testid="processes-canvas-selection-key">@selection.KeyText</p>
+            }
+            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                @foreach (var fact in selection.Facts)
+                {
+                    <StatusBadge Tone="neutral" Text="@fact" />
+                }
+            </Cluster>
+        </Stack>
+    </Grid>
+</div>
+
+@code {
+    private const double SurfaceMargin = 48;
+
+    [Parameter, EditorRequired]
+    public ProcessDefinitionCanvasEditorProjection Canvas { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ProcessWorkspaceShellScope Scope { get; set; } = default!;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessDefinitionCanvasCommand> ExecuteCommand { get; set; }
+
+    private ProcessDefinitionCanvasVersionToken? syncedVersionToken;
+    private ProcessDefinitionCanvasNodeKey? selectedNodeKey;
+    private ProcessDefinitionCanvasEdgeKey? selectedEdgeKey;
+    private ProcessDefinitionCanvasSelectionProjection selection = ProcessDefinitionCanvasSelectionProjection.None;
+    private string? commandNotice;
+
+    protected override void OnParametersSet()
+    {
+        if (syncedVersionToken == Canvas.VersionToken)
+        {
+            return;
+        }
+
+        syncedVersionToken = Canvas.VersionToken;
+        selectedNodeKey = Canvas.Selection.NodeKey;
+        selectedEdgeKey = Canvas.Selection.EdgeKey;
+        selection = Canvas.Selection;
+        commandNotice = Canvas.LastCommandReceipt?.Summary;
+    }
+
+    private void SelectNode(ProcessDefinitionCanvasEditorNodeProjection node)
+    {
+        selectedNodeKey = node.NodeKey;
+        selectedEdgeKey = null;
+        selection = new ProcessDefinitionCanvasSelectionProjection(
+            ResolveSelectionKind(node.Kind),
+            node.NodeKey,
+            EdgeKey: null,
+            node.Title,
+            node.Summary,
+            ResolveNodeKeyText(node),
+            [node.Kind.ToString(), .. node.Badges]);
+    }
+
+    private void SelectEdge(ProcessDefinitionCanvasEdgeProjection edge)
+    {
+        selectedNodeKey = null;
+        selectedEdgeKey = edge.EdgeKey;
+        selection = new ProcessDefinitionCanvasSelectionProjection(
+            edge.Kind == ProcessDefinitionCanvasEdgeKind.BranchRoute
+                ? ProcessDefinitionCanvasSelectionKind.Route
+                : ProcessDefinitionCanvasSelectionKind.Step,
+            NodeKey: null,
+            edge.EdgeKey,
+            edge.Label,
+            edge.Summary,
+            edge.EdgeKey.Value,
+            [edge.Kind.ToString(), edge.Tone]);
+    }
+
+    private Task ExecuteToolboxActionAsync(ProcessDefinitionCanvasToolboxActionProjection action)
+        => ExecuteCanvasCommandAsync(ResolveCommandKind(action.Kind), action.ActionKey);
+
+    private async Task ExecuteCanvasCommandAsync(
+        ProcessDefinitionCanvasCommandKind commandKind,
+        ProcessDefinitionCanvasToolboxActionKey? toolboxActionKey)
+    {
+        var command = new ProcessDefinitionCanvasCommand(
+            Scope,
+            Canvas.DefinitionKey,
+            commandKind,
+            Canvas.VersionToken,
+            toolboxActionKey,
+            selectedNodeKey,
+            selectedEdgeKey,
+            ProcessDefinitionCanvasRecompositionMode.BalancedFlow);
+        await ExecuteCommand.InvokeAsync(command);
+    }
+
+    private static ProcessDefinitionCanvasCommandKind ResolveCommandKind(ProcessDefinitionCanvasToolboxActionKind kind)
+        => kind switch
+        {
+            ProcessDefinitionCanvasToolboxActionKind.BranchRouter => ProcessDefinitionCanvasCommandKind.AddBranchRouter,
+            ProcessDefinitionCanvasToolboxActionKind.RoleBinding => ProcessDefinitionCanvasCommandKind.AddRoleBinding,
+            ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation => ProcessDefinitionCanvasCommandKind.AddArtifactExpectation,
+            ProcessDefinitionCanvasToolboxActionKind.SubprocessBoundary => ProcessDefinitionCanvasCommandKind.AddSubprocessBoundary,
+            _ => ProcessDefinitionCanvasCommandKind.AddStep
+        };
+
+    private static ProcessDefinitionCanvasSelectionKind ResolveSelectionKind(ProcessDefinitionCanvasNodeKind kind)
+        => kind switch
+        {
+            ProcessDefinitionCanvasNodeKind.Step => ProcessDefinitionCanvasSelectionKind.Step,
+            ProcessDefinitionCanvasNodeKind.BranchRouter => ProcessDefinitionCanvasSelectionKind.Route,
+            ProcessDefinitionCanvasNodeKind.Role => ProcessDefinitionCanvasSelectionKind.Role,
+            ProcessDefinitionCanvasNodeKind.Artifact => ProcessDefinitionCanvasSelectionKind.Artifact,
+            ProcessDefinitionCanvasNodeKind.SubprocessBoundary => ProcessDefinitionCanvasSelectionKind.SubprocessBoundary,
+            _ => ProcessDefinitionCanvasSelectionKind.None
+        };
+
+    private static ButtonStyle ResolveToolboxButtonStyle(ProcessDefinitionCanvasToolboxActionKind kind)
+        => kind switch
+        {
+            ProcessDefinitionCanvasToolboxActionKind.BranchRouter => ButtonStyle.Light,
+            ProcessDefinitionCanvasToolboxActionKind.RoleBinding => ButtonStyle.Success,
+            ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation => ButtonStyle.Info,
+            ProcessDefinitionCanvasToolboxActionKind.SubprocessBoundary => ButtonStyle.Light,
+            _ => ButtonStyle.Primary
+        };
+
+    private static string BuildSurfaceStyle(ProcessDefinitionCanvasViewportProjection viewport)
+        => string.Create(
+            CultureInfo.InvariantCulture,
+            $"width:{viewport.Width}px;height:{viewport.Height}px;min-width:960px;min-height:520px;");
+
+    private static string BuildViewBox(ProcessDefinitionCanvasViewportProjection viewport)
+        => string.Create(CultureInfo.InvariantCulture, $"0 0 {viewport.Width} {viewport.Height}");
+
+    private static string BuildNodeStyle(ProcessDefinitionCanvasEditorNodeProjection node)
+        => string.Create(
+            CultureInfo.InvariantCulture,
+            $"left:{node.X + SurfaceMargin}px;top:{node.Y + SurfaceMargin}px;width:{node.Width}px;height:{node.Height}px;");
+
+    private static string BuildEdgeLabelStyle(CanvasEdgeLine line)
+        => string.Create(
+            CultureInfo.InvariantCulture,
+            $"left:{((line.X1 + line.X2) / 2) - 42}px;top:{((line.Y1 + line.Y2) / 2) - 14}px;");
+
+    private string BuildNodeClass(ProcessDefinitionCanvasEditorNodeProjection node)
+    {
+        var toneClass = node.Tone switch
+        {
+            "success" => "border-emerald-300 bg-emerald-50",
+            "warning" => "border-amber-300 bg-amber-50",
+            "accent" => "border-pink-300 bg-pink-50",
+            "neutral" => "border-slate-300 bg-slate-50",
+            _ => "border-sky-300 bg-sky-50"
+        };
+        var selectedClass = selectedNodeKey == node.NodeKey ? "ring-2 ring-sky-500" : string.Empty;
+        return $"absolute overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition hover:shadow-md {toneClass} {selectedClass}";
+    }
+
+    private string BuildEdgeClass(ProcessDefinitionCanvasEdgeProjection edge)
+    {
+        var selectedClass = selectedEdgeKey == edge.EdgeKey ? "ring-2 ring-sky-500" : string.Empty;
+        return $"absolute rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-sm {selectedClass}";
+    }
+
+    private CanvasEdgeLine ResolveEdgeLine(ProcessDefinitionCanvasEdgeProjection edge)
+    {
+        var from = Canvas.Nodes.FirstOrDefault(node => node.NodeKey == edge.FromNodeKey);
+        var to = Canvas.Nodes.FirstOrDefault(node => node.NodeKey == edge.ToNodeKey);
+        if (from is null || to is null)
+        {
+            return CanvasEdgeLine.Hidden;
+        }
+
+        return edge.Kind switch
+        {
+            ProcessDefinitionCanvasEdgeKind.RoleBinding => new CanvasEdgeLine(
+                from.X + from.Width + SurfaceMargin,
+                from.Y + (from.Height / 2) + SurfaceMargin,
+                to.X + (to.Width / 2) + SurfaceMargin,
+                to.Y + SurfaceMargin,
+                IsVisible: true),
+            ProcessDefinitionCanvasEdgeKind.ArtifactExpectation or ProcessDefinitionCanvasEdgeKind.SubprocessBoundary => new CanvasEdgeLine(
+                from.X + (from.Width / 2) + SurfaceMargin,
+                from.Y + from.Height + SurfaceMargin,
+                to.X + (to.Width / 2) + SurfaceMargin,
+                to.Y + SurfaceMargin,
+                IsVisible: true),
+            _ => new CanvasEdgeLine(
+                from.X + from.Width + SurfaceMargin,
+                from.Y + (from.Height / 2) + SurfaceMargin,
+                to.X + SurfaceMargin,
+                to.Y + (to.Height / 2) + SurfaceMargin,
+                IsVisible: true)
+        };
+    }
+
+    private static string ResolveEdgeStroke(string tone)
+        => tone switch
+        {
+            "success" => "#059669",
+            "warning" => "#d97706",
+            "accent" => "#db2777",
+            _ => "#2563eb"
+        };
+
+    private static string ResolveEdgeDash(ProcessDefinitionCanvasEdgeKind kind)
+        => kind switch
+        {
+            ProcessDefinitionCanvasEdgeKind.RoleBinding => "5 4",
+            ProcessDefinitionCanvasEdgeKind.ArtifactExpectation => "3 4",
+            ProcessDefinitionCanvasEdgeKind.SubprocessBoundary => "8 5",
+            _ => string.Empty
+        };
+
+    private static string ResolveNodeKeyText(ProcessDefinitionCanvasEditorNodeProjection node)
+        => node.StepKey?.Value ?? node.RoleKey?.Value ?? node.ArtifactKey ?? node.NodeKey.Value;
+
+    private static string BuildCanvasCommandTestId(ProcessDefinitionCanvasCommandKind kind)
+        => kind == ProcessDefinitionCanvasCommandKind.Recompose
+            ? "processes-canvas-recompose"
+            : $"processes-canvas-command-{kind.ToString().ToLowerInvariant()}";
+
+    private static string BuildToolboxActionTestId(ProcessDefinitionCanvasToolboxActionKey key)
+        => $"processes-canvas-toolbox-{NormalizeTestId(key.Value)}";
+
+    private static string BuildNodeTestId(ProcessDefinitionCanvasNodeKey key)
+        => $"processes-canvas-node-{NormalizeTestId(key.Value)}";
+
+    private static string BuildEdgeTestId(ProcessDefinitionCanvasEdgeKey key)
+        => $"processes-canvas-edge-{NormalizeTestId(key.Value)}";
+
+    private static string NormalizeTestId(string value)
+    {
+        var normalized = new string(value
+            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+            .ToArray());
+        return normalized.Trim('-');
+    }
+
+    private readonly record struct CanvasEdgeLine(
+        double X1,
+        double Y1,
+        double X2,
+        double Y2,
+        bool IsVisible)
+    {
+        public static CanvasEdgeLine Hidden { get; } = new(0, 0, 0, 0, IsVisible: false);
+    }
+}

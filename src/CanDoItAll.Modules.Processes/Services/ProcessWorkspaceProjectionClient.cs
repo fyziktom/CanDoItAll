@@ -20,6 +20,10 @@ public interface IProcessWorkspaceProjectionClient
     Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
         ProcessDefinitionRoleEditorCommand command,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+        ProcessDefinitionCanvasCommand command,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ProcessWorkspaceProjectionClient(
@@ -44,4 +48,9 @@ public sealed class ProcessWorkspaceProjectionClient(
         ProcessDefinitionRoleEditorCommand command,
         CancellationToken cancellationToken = default)
         => shellProjectionService.ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken);
+
+    public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+        ProcessDefinitionCanvasCommand command,
+        CancellationToken cancellationToken = default)
+        => shellProjectionService.ExecuteDefinitionCanvasCommandAsync(command, cancellationToken);
 }
