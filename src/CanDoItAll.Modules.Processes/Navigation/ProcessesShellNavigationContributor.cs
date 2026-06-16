@@ -17,6 +17,19 @@ public sealed class ProcessesShellNavigationContributor : IShellNavigationContri
         Order: 20,
         DesignNote: "Processes are shown beside Agents until nested module navigation is introduced.");
 
+    private static readonly ShellNavigationContribution LiveProcessesContribution = new(
+        ModuleId: "processes",
+        ParentRoute: "/processes",
+        Item: new ShellNavigationItem(
+            "Live Processes",
+            "/processes/live",
+            "monitor_heart",
+            "Runtime process runs, attention queues, projection freshness, and manager context.",
+            PinnedByDefault: false),
+        IsSubItem: true,
+        Order: 21,
+        DesignNote: "Rendered as a flat main menu item for now; the subitem marker matches the Agent Workflows navigation treatment.");
+
     public IEnumerable<ShellNavigationContribution> GetShellNavigationContributions()
-        => [ProcessesContribution];
+        => [ProcessesContribution, LiveProcessesContribution];
 }

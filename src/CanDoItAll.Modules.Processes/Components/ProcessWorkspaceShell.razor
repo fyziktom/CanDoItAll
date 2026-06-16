@@ -64,87 +64,121 @@
         }
         else
         {
-            <Stack GapScale="LayoutGap.Large" data-testid="processes-shell">
-                <SurfaceCard data-testid="processes-command-strip">
-                    <Split Gap="LayoutGap.Medium">
-                        <Stack GapScale="LayoutGap.Tiny">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Projection shell" />
-                            <h2 class="text-base font-semibold text-slate-900">@shell.Title</h2>
-                            <p class="text-sm leading-6 text-slate-600">@shell.Subtitle</p>
-                            @if (!string.IsNullOrWhiteSpace(agentContextNotice))
-                            {
-                                <p class="text-xs font-semibold text-slate-500" data-testid="processes-agent-context-notice">@agentContextNotice</p>
-                            }
-                        </Stack>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="processes-workspace-root min-h-0"
+                   data-testid="processes-shell">
+                <Toolbar Class="processes-command-strip"
+                         data-testid="processes-command-strip">
+                    <ToolbarRow Class="processes-command-strip__row">
+                        <CompactStatStrip Class="min-w-0">
+                            <p class="cda-eyebrow whitespace-nowrap">@ScopeEyebrow</p>
+                            <CompactStat Tone="info"
+                                         Text="@($"{DefinitionTotalText} definition(s)")"
+                                         TooltipText="@DefinitionTooltip" />
+                            <CompactStat Tone="success"
+                                         Text="@($"{LiveRunActiveText} active")"
+                                         TooltipText="@LiveRunTooltip" />
+                            <CompactStat Tone="warning"
+                                         Text="@($"{LiveRunAttentionText} attention")"
+                                         TooltipText="Runs projected as needing operator attention." />
+                            <CompactStat Tone="@ProjectionTone"
+                                         Text="@ProjectionStatusText"
+                                         TooltipText="@ProjectionTooltip" />
+                        </CompactStatStrip>
 
-                        <Cluster Gap="LayoutGap.Small" Class="flex-wrap">
+                        <ToolbarActions Class="processes-command-strip__actions">
                             @foreach (var command in shell.Commands)
                             {
-                                <Button Text="@command.Text"
-                                        Icon="@command.Icon"
-                                        ButtonStyle="@ResolveCommandButtonStyle(command)"
-                                        Size="ButtonSize.Small"
-                                        Disabled="@(!command.IsEnabled)"
-                                        Click="@(() => ExecuteCommandAsync(command))"
-                                        title="@command.DisabledReason"
-                                        data-testid="@BuildCommandTestId(command.Kind)" />
+                                <PageHeaderActionButton Icon="@command.Icon"
+                                                        Label="@command.Text"
+                                                        TooltipText="@(command.DisabledReason ?? command.Text)"
+                                                        Disabled="@(!command.IsEnabled)"
+                                                        Click="@(() => ExecuteCommandAsync(command))"
+                                                        data-testid="@BuildCommandTestId(command.Kind)" />
                             }
-                        </Cluster>
-                    </Split>
-                </SurfaceCard>
+                        </ToolbarActions>
+                    </ToolbarRow>
+                </Toolbar>
 
-                <Grid Gap="LayoutGap.Large" ColumnsLg="3" data-testid="processes-projection-cards">
-                    <SurfaceCard Soft="true" data-testid="processes-definition-summary">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition catalog" />
-                        <h2 class="text-base font-semibold text-slate-900">@DefinitionTotalText definition(s)</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">@shell.DefinitionCatalog.Summary</p>
-                        <Cluster Gap="LayoutGap.XSmall" Class="mt-3 flex-wrap">
-                            <StatusBadge Tone="success" Text="@($"{shell.DefinitionCatalog.PublishedDefinitionCount} published")" />
-                            <StatusBadge Tone="neutral" Text="@($"{shell.DefinitionCatalog.DraftDefinitionCount} draft")" />
-                            <StatusBadge Tone="warning" Text="@($"{shell.DefinitionCatalog.TemplateCompatibilityIssueCount} review")" />
-                        </Cluster>
-                    </SurfaceCard>
+                @if (!string.IsNullOrWhiteSpace(agentContextNotice))
+                {
+                    <p class="text-xs font-semibold text-slate-500" data-testid="processes-agent-context-notice">@agentContextNotice</p>
+                }
 
-                    <SurfaceCard Soft="true" data-testid="processes-live-summary">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Live runs" />
-                        <h2 class="text-base font-semibold text-slate-900">@shell.LiveRuns.ActiveRunCount active run(s)</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">@shell.LiveRuns.Summary</p>
-                        <Cluster Gap="LayoutGap.XSmall" Class="mt-3 flex-wrap">
-                            <StatusBadge Tone="success" Text="@($"{shell.LiveRuns.ActiveRunCount} active")" />
-                            <StatusBadge Tone="warning" Text="@($"{shell.LiveRuns.AttentionRunCount} attention")" />
-                            <StatusBadge Tone="danger" Text="@($"{shell.LiveRuns.FailedRunCount} failed")" />
-                        </Cluster>
-                    </SurfaceCard>
+                <ListDetailShell ListPaneWidth="28rem"
+                                 Dense="true"
+                                 ListPaneClass="h-full min-h-0"
+                                 DetailPaneClass="h-full min-h-0"
+                                 data-testid="processes-workspace-list-detail">
+                    <ListHeader>
+                        <ListPanelHeader Title="Process definitions"
+                                         Description=""
+                                         Dense="true"
+                                         HelpText="Browse process contracts, filter the library, and keep selection synchronized with the detail workspace."
+                                         Count="@($"{DefinitionCatalog.Items.Count} definition(s)")">
+                            <Filters>
+                                <FilterBar>
+                                    <input class="cda-input min-w-[16rem] flex-1"
+                                           value="@pendingSearchText"
+                                           @oninput="UpdateDefinitionSearchText"
+                                           placeholder="Search definitions"
+                                           aria-label="Search process definitions"
+                                           data-testid="processes-definition-search" />
+                                    <Button Icon="search"
+                                            Class="cda-button--quick"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            title="Search definitions"
+                                            aria-label="Search definitions"
+                                            Disabled="@isBusy"
+                                            Click="ApplyDefinitionSearchAsync"
+                                            data-testid="processes-definition-search-submit" />
+                                    <Button Icon="close"
+                                            Class="cda-button--quick"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            title="Clear search"
+                                            aria-label="Clear search"
+                                            Disabled="@isBusy"
+                                            Click="ClearDefinitionSearchAsync"
+                                            data-testid="processes-definition-search-clear" />
+                                </FilterBar>
+                            </Filters>
+                        </ListPanelHeader>
+                    </ListHeader>
 
-                    <SurfaceCard Soft="true" data-testid="processes-refresh-summary">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Freshness" />
-                        <h2 class="text-base font-semibold text-slate-900">@ProjectionStatusText</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">@shell.Refresh.Summary</p>
-                        <Cluster Gap="LayoutGap.XSmall" Class="mt-3 flex-wrap">
-                            <StatusBadge Tone="@ProjectionTone" Text="@FormatObservedAt(shell.Refresh.ObservedAtUtc)" />
-                            <StatusBadge Tone="neutral" Text="@($"seq {shell.Refresh.SourceGlobalSequence.ToString(CultureInfo.InvariantCulture)}")" />
-                            <StatusBadge Tone="neutral" Text="@($"{shell.Refresh.BacklogEventCount} backlog")" />
-                        </Cluster>
-                    </SurfaceCard>
-                </Grid>
+                    <ListContent>
+                        @RenderDefinitionListPane()
+                    </ListContent>
 
-                <Tabs @bind-SelectedIndex="activeTabIndex"
-                      RenderMode="TabRenderMode.Server"
-                      Variant="TabsVariant.WorkspacePrimary"
-                      OverflowMode="TabsOverflowMode.Wrap"
-                      AriaLabel="Process workspace tabs"
-                      data-testid="processes-tabs">
-                    @foreach (var tab in shell.Tabs)
-                    {
-                        <TabsItem Text="@tab.Text"
-                                  Icon="@tab.Icon"
-                                  BadgeText="@tab.CountText"
-                                  Disabled="@(!tab.IsEnabled)"
-                                  data-testid="@BuildTabTestId(tab.Key)">
-                            @RenderTab(tab)
-                        </TabsItem>
-                    }
-                </Tabs>
+                    <DetailHeader>
+                        @RenderDefinitionIdentityHeader()
+                    </DetailHeader>
+
+                    <DetailContent>
+                        <Tabs @bind-SelectedIndex="activeTabIndex"
+                              RenderMode="TabRenderMode.Server"
+                              Variant="TabsVariant.WorkspaceSecondary"
+                              BorderMode="TabsBorderMode.Soft"
+                              OverflowMode="TabsOverflowMode.Auto"
+                              PanelOverflowMode="TabsPanelOverflowMode.Auto"
+                              FillHeight="true"
+                              Class="h-full min-h-0 w-full min-w-0"
+                              AriaLabel="Process workspace detail panels"
+                              data-testid="processes-tabs">
+                            @foreach (var tab in shell.Tabs)
+                            {
+                                <TabsItem Text="@tab.Text"
+                                          Icon="@tab.Icon"
+                                          BadgeText="@tab.CountText"
+                                          Disabled="@(!tab.IsEnabled)"
+                                          data-testid="@BuildTabTestId(tab.Key)">
+                                    @RenderTab(tab)
+                                </TabsItem>
+                            }
+                        </Tabs>
+                    </DetailContent>
+                </ListDetailShell>
             </Stack>
         }
     </ChildContent>
@@ -493,53 +527,14 @@
         </div>
     </SurfaceCard>;
 
-    private RenderFragment RenderDefinitionCatalog() => @<div data-testid="processes-definition-catalog">
-        <Split Gap="LayoutGap.Medium">
-            <Stack GapScale="LayoutGap.Tiny">
-                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Catalog" />
-                <h3 class="text-sm font-semibold text-slate-900">Definition catalog</h3>
-                <p class="text-sm leading-6 text-slate-600">@DefinitionCatalog.Summary</p>
-            </Stack>
-            <Cluster Gap="LayoutGap.Small" Class="flex-wrap">
-                <input class="min-h-9 rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
-                       value="@pendingSearchText"
-                       @oninput="UpdateDefinitionSearchText"
-                       placeholder="Search definitions"
-                       aria-label="Search process definitions"
-                       data-testid="processes-definition-search" />
-                <Button Text="Search"
-                        Icon="search"
-                        Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Primary"
-                        Disabled="@isBusy"
-                        Click="ApplyDefinitionSearchAsync"
-                        data-testid="processes-definition-search-submit" />
-                <Button Text="Clear"
-                        Icon="close"
-                        Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Light"
-                        Disabled="@isBusy"
-                        Click="ClearDefinitionSearchAsync"
-                        data-testid="processes-definition-search-clear" />
-                <Button Text="Feed defaults"
-                        Icon="download"
-                        Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Info"
-                        Disabled="@isBusy"
-                        IsBusy="@isBusy"
-                        Click="FeedDefaultsAsync"
-                        data-testid="processes-feed-defaults" />
-            </Cluster>
-        </Split>
-
-        @if (!string.IsNullOrWhiteSpace(catalogCommandNotice))
-        {
-            <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-feed-defaults-receipt">@catalogCommandNotice</p>
-        }
-
-        <Grid Gap="LayoutGap.Large" ColumnsLg="3" Class="mt-5">
-            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-scopes">
-                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Scope" />
+    private RenderFragment RenderDefinitionListPane() => @<Stack GapScale="LayoutGap.Medium"
+                                                                 Class="h-full min-h-0 overflow-y-auto pr-1"
+                                                                 data-testid="processes-definition-list-scroll">
+        <Stack GapScale="LayoutGap.Small"
+               data-testid="processes-definition-scopes">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Scope" />
+            <Cluster Gap="LayoutGap.XSmall"
+                     Class="flex-wrap">
                 @foreach (var scope in DefinitionCatalog.ScopeGroups)
                 {
                     <Button Text="@($"{scope.Label} ({scope.Count})")"
@@ -550,54 +545,84 @@
                             title="@scope.Description"
                             data-testid="@BuildScopeTestId(scope.ScopeKind)" />
                 }
-            </Stack>
+            </Cluster>
+        </Stack>
 
-            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-results">
-                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definitions" />
-                @if (DefinitionCatalog.Items.Count == 0)
+        @if (!string.IsNullOrWhiteSpace(catalogCommandNotice))
+        {
+            <p class="text-xs font-semibold text-slate-500" data-testid="processes-feed-defaults-receipt">@catalogCommandNotice</p>
+        }
+
+        <Stack GapScale="LayoutGap.Small"
+               data-testid="processes-definition-results">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definitions" />
+            @if (DefinitionCatalog.Items.Count == 0)
+            {
+                <EmptyState Eyebrow="No matches"
+                            Title="No definitions match the current search"
+                            Description="Clear the search or use a broader definition term." />
+            }
+            else
+            {
+                @foreach (var item in DefinitionCatalog.Items)
                 {
-                    <EmptyState Eyebrow="No matches"
-                                Title="No definitions match the current search"
-                                Description="Clear the search or use a broader definition term." />
+                    <button type="button"
+                            class="processes-definition-list-item @(item.Key == DefinitionCatalog.SelectedDefinitionKey ? "processes-definition-list-item--selected" : string.Empty)"
+                            @onclick="@(() => SelectDefinitionAsync(item.Key))"
+                            data-testid="@BuildDefinitionItemTestId(item.Key)">
+                        <span class="processes-definition-list-item__title">@item.Name</span>
+                        <span class="processes-definition-list-item__summary">@item.Summary</span>
+                        <span class="processes-definition-list-item__badges">
+                            <StatusBadge Tone="@ResolveDefinitionTone(item.Status)" Text="@item.Status.ToString()" />
+                            <StatusBadge Tone="neutral" Text="@item.Criticality" />
+                        </span>
+                    </button>
                 }
-                else
+            }
+        </Stack>
+    </Stack>;
+
+    private RenderFragment RenderDefinitionIdentityHeader() => @<SurfaceCard Class="processes-workspace-identity">
+        <Split Breakpoint="LayoutBreakpoint.None"
+               AlignItems="AlignItems.Center"
+               Gap="LayoutGap.Small"
+               Wrap="FlexWrap.Wrap">
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.NoWrap"
+                     Class="processes-workspace-identity__copy">
+                <p class="cda-eyebrow">Process</p>
+                <h2 class="processes-workspace-identity__title">@(DefinitionCatalog.SelectedItem?.Name ?? HeaderTitle)</h2>
+            </Cluster>
+            <CompactStatStrip Class="processes-workspace-identity__badges">
+                @if (DefinitionCatalog.SelectedItem is { } selected)
                 {
-                    @foreach (var item in DefinitionCatalog.Items)
+                    <CompactStat Tone="@ResolveDefinitionTone(selected.Status)"
+                                 Text="@selected.Status.ToString()"
+                                 TooltipText="@($"Definition status: {selected.Status}.")" />
+                    <CompactStat Tone="neutral"
+                                 Text="@selected.Criticality"
+                                 TooltipText="Definition criticality." />
+                    <CompactStat Tone="info"
+                                 Text="@selected.OperatingMode"
+                                 TooltipText="Definition operating mode." />
+                    @if (selected.CompatibilityIssueCount > 0)
                     {
-                        <Button Text="@item.Name"
-                                Icon="account_tree"
-                                Size="ButtonSize.Small"
-                                ButtonStyle="@(item.Key == DefinitionCatalog.SelectedDefinitionKey ? ButtonStyle.Primary : ButtonStyle.Light)"
-                                Click="@(() => SelectDefinitionAsync(item.Key))"
-                                data-testid="@BuildDefinitionItemTestId(item.Key)" />
-                        <p class="text-xs leading-5 text-slate-500">@item.Summary</p>
+                        <CompactStat Tone="warning"
+                                     Text="@($"{selected.CompatibilityIssueCount} review")"
+                                     TooltipText="Template compatibility issues for the selected definition." />
                     }
                 }
-            </Stack>
-
-            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-selected">
-                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected" />
-                @if (DefinitionCatalog.SelectedItem is null)
-                {
-                    <EmptyState Eyebrow="Selection"
-                                Title="No definition selected"
-                                Description="Select a visible definition to inspect its projected catalog metadata." />
-                }
                 else
                 {
-                    var selected = DefinitionCatalog.SelectedItem;
-                    <h3 class="text-sm font-semibold text-slate-900">@selected.Name</h3>
-                    <p class="text-sm leading-6 text-slate-600">@selected.Summary</p>
-                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
-                        <StatusBadge Tone="@ResolveDefinitionTone(selected.Status)" Text="@selected.Status.ToString()" />
-                        <StatusBadge Tone="neutral" Text="@selected.Criticality" />
-                        <StatusBadge Tone="info" Text="@selected.OperatingMode" />
-                    </Cluster>
-                    <p class="text-xs leading-5 text-slate-500">Key: @selected.Key.Value</p>
+                    <CompactStat Tone="neutral"
+                                 Text="No selection"
+                                 TooltipText="Select a process definition from the list." />
                 }
-            </Stack>
-        </Grid>
+            </CompactStatStrip>
+        </Split>
+    </SurfaceCard>;
 
+    private RenderFragment RenderDefinitionCatalog() => @<div data-testid="processes-definition-catalog">
         @if (DefinitionCatalog.SelectedEditor is not null)
         {
             @RenderDefinitionEditor(DefinitionCatalog.SelectedEditor)
@@ -1309,7 +1334,14 @@
     }
 
     private static string BuildCommandTestId(ProcessWorkspaceCommandKind kind)
-        => $"processes-command-{kind.ToString().ToLowerInvariant()}";
+        => kind switch
+        {
+            ProcessWorkspaceCommandKind.RefreshProjections => "processes-refresh",
+            ProcessWorkspaceCommandKind.OpenAgentContext => "processes-agent-context",
+            ProcessWorkspaceCommandKind.FeedDefaults => "processes-feed-defaults",
+            ProcessWorkspaceCommandKind.OpenLiveDashboard => "processes-open-live-dashboard",
+            _ => $"processes-command-{kind.ToString().ToLowerInvariant()}"
+        };
 
     private static string BuildDefinitionEditorCommandTestId(ProcessDefinitionEditorCommandKind kind)
         => kind switch

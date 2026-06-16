@@ -1,24 +1,27 @@
 # Process Shell Browser Validation Summary
 
-ConsoleMessages=6
+ConsoleMessages=8
 FailedRequests=0
-IgnoredFailedRequests=2
+IgnoredFailedRequests=3
 PageErrors=0
 
 ## Console
-info: [2026-06-16T06:07:34.016Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:53354/_blazor'.
-info: [2026-06-16T06:07:34.044Z] Information: WebSocket connected to ws://127.0.0.1:53354/_blazor?id=S9-wGWloTpH0l3uKHmcOyA.
-info: [2026-06-16T06:07:39.090Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:53354/_blazor'.
-info: [2026-06-16T06:07:39.098Z] Information: WebSocket connected to ws://127.0.0.1:53354/_blazor?id=peRoXg_uoaW_MoBsZBIAXA.
-info: [2026-06-16T06:07:54.994Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:53354/_blazor'.
-info: [2026-06-16T06:07:55.002Z] Information: WebSocket connected to ws://127.0.0.1:53354/_blazor?id=9zBzQ2N_jahGe8NmIxZ5Mw.
+info: [2026-06-16T10:31:41.746Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:56334/_blazor'.
+info: [2026-06-16T10:31:41.771Z] Information: WebSocket connected to ws://127.0.0.1:56334/_blazor?id=lMHvhWrc4rWM8tzCNK1FVA.
+info: [2026-06-16T10:31:49.091Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:56334/_blazor'.
+info: [2026-06-16T10:31:49.098Z] Information: WebSocket connected to ws://127.0.0.1:56334/_blazor?id=wAARJbItFl3ii0spoRTfWw.
+info: [2026-06-16T10:31:49.515Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:56334/_blazor'.
+info: [2026-06-16T10:31:49.521Z] Information: WebSocket connected to ws://127.0.0.1:56334/_blazor?id=dqha4Vbdg0EUqE2rZYGuuQ.
+info: [2026-06-16T10:32:05.226Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:56334/_blazor'.
+info: [2026-06-16T10:32:05.232Z] Information: WebSocket connected to ws://127.0.0.1:56334/_blazor?id=HesGi2XL-jZlDxRS1mHahw.
 
 ## Failed Requests
 None.
 
 ## Ignored Failed Requests
-POST http://127.0.0.1:53354/_blazor/disconnect net::ERR_ABORTED
-POST http://127.0.0.1:53354/_blazor/disconnect net::ERR_ABORTED
+POST http://127.0.0.1:56334/_blazor/disconnect net::ERR_ABORTED
+POST http://127.0.0.1:56334/_blazor/disconnect net::ERR_ABORTED
+POST http://127.0.0.1:56334/_blazor/disconnect net::ERR_ABORTED
 
 ## Page Errors
 None.

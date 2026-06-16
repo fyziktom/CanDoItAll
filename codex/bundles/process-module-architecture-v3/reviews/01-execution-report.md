@@ -784,3 +784,18 @@ Entry gate: Pass. SB12 template migration/indexing and SB18 target-step projecti
 Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, component/unit/Playwright proof passed, browser console/network summary recorded, projection-boundary and old-symbol scans were reviewed, anti-stub scan was clean, and performance scan counts were reviewed.
 Progression: SB20 may start and can consume typed template catalog item identity, canonical source hash metadata, imported component source metadata, artifact target-step import metadata, and stale-version rejection proof.
 ```
+
+SB19 UI parity repair proof:
+
+```text
+bundle://proof/SB19/ui-parity-repair.md
+bundle://proof/SB19/browser/processes-definition-canvas.png
+bundle://proof/SB19/browser/processes-live-dashboard.png
+bundle://proof/SB19/browser/browser-validation-summary.txt
+```
+
+Result:
+
+```text
+Post-review repair restored the process module UI toward the original maf-processes-refactor layout and canvas UX. The process workspace now uses a dense toolbar/list-detail layout, the definition canvas uses the shared CanvasLib workbench plus CanvasFloatingWindow/OverlayComponentToolbox windows, and Live Processes is a dedicated process-module page at /processes/live with its own navigation item. Focused module build passed with 0 warnings and 0 errors, ProcessWorkspaceShell component tests passed 24/24, ProcessShell Playwright smoke passed 1/1, and CodeAnalytics MCP snapshot snap-20260616103327-798bce28 completed with no blocking errors.
+```

@@ -1,0 +1,55 @@
+.live-processes-page {
+    min-height: 0;
+}
+
+.live-processes-command-strip {
+    width: 100%;
+}
+
+.live-processes-command-strip__row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.live-processes-command-strip__actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.live-processes-title {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 750;
+    line-height: 1.25;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.live-processes-dashboard {
+    min-height: 0;
+}
+
+.live-processes-summary {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.88);
+    padding: 0.75rem;
+}
+
+.live-processes-alert {
+    align-items: center;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    border-radius: 0.5rem;
+    color: #9f1239;
+    display: flex;
+    font-size: 0.875rem;
+    font-weight: 650;
+    gap: 0.5rem;
+    padding: 0.7rem 0.85rem;
+}
+
+.live-processes-tabs {
+    min-height: 0;
+}

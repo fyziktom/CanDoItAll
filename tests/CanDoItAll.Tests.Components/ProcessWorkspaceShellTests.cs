@@ -1,5 +1,6 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
@@ -255,13 +256,23 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
-    public void Canvas_renders_nodes_toolbox_selection_and_route_edges()
+    public async Task Canvas_renders_shared_workbench_nodes_toolbox_selection_and_route_edges()
     {
         using var context = CreateContext(out _);
 
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
+        var workbench = cut.FindComponent<CanvasWorkbench>();
+        Assert.Contains(workbench.Instance.Surface.Nodes, node => node.Id == "step:architecture-decision");
+        Assert.Contains(workbench.Instance.Surface.Nodes, node => node.Id == "branch:architecture-decision");
+        Assert.Contains(workbench.Instance.Surface.Nodes, node => node.Id == "role:solution-architect");
+        Assert.Contains(workbench.Instance.Surface.Nodes, node => node.Id == "artifact:architecture-decision:adr");
+        Assert.Contains(workbench.Instance.Surface.Links, link =>
+            string.Equals(link.Kind, ProcessDefinitionCanvasEdgeKind.BranchRoute.ToString(), StringComparison.Ordinal) &&
+            link.SourceId == "step:architecture-decision" &&
+            link.TargetId == "branch:architecture-decision");
+        Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox-window']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-step-architecture-decision']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-branch-architecture-decision']"));
@@ -269,7 +280,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-node-artifact-architecture-decision-adr']"));
         Assert.NotNull(cut.Find("[data-testid='processes-canvas-edge-branch-route-architecture-decision-router']"));
 
-        cut.Find("[data-testid='processes-canvas-node-artifact-architecture-decision-adr']").Click();
+        await cut.InvokeAsync(() => workbench.Instance.OnSelectionChanged("artifact:architecture-decision:adr", "[\"artifact:architecture-decision:adr\"]", 1));
 
         cut.WaitForAssertion(() => Assert.Contains("Architecture decision record", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal));
         Assert.Contains("Artifact", cut.Find("[data-testid='processes-canvas-selection']").TextContent, StringComparison.Ordinal);
@@ -418,14 +429,32 @@ public sealed class ProcessWorkspaceShellTests
     {
         var items = ShellNavigation.GetItems(0, [new ProcessesShellNavigationContributor()]);
         var processes = Assert.Single(items, item => item.Route == "/processes");
+        var liveProcesses = Assert.Single(items, item => item.Route == "/processes/live");
 
         Assert.Equal("Processes", processes.Title);
         Assert.Equal("account_tree", processes.Icon);
+        Assert.Equal("Live Processes", liveProcesses.Title);
+        Assert.Equal("monitor_heart", liveProcesses.Icon);
+    }
+
+    [Fact]
+    public void Live_processes_dashboard_uses_own_projection_page()
+    {
+        using var context = CreateContext(out var client);
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']")));
+        Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
+        Assert.NotNull(cut.Find("[data-testid='live-processes-page']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-command-strip']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']"));
     }
 
     private static TestContext CreateContext(out RecordingProcessWorkspaceProjectionClient client)
     {
         var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         client = new RecordingProcessWorkspaceProjectionClient();
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);

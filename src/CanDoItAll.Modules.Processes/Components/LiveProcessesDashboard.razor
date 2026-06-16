@@ -1,0 +1,305 @@
+@namespace CanDoItAll.Modules.Processes
+@using System.Globalization
+@using CanDoItAll.Processes.Projections
+@inject IProcessWorkspaceProjectionClient ProjectionClient
+@inject NavigationManager Navigation
+
+<PageTitle>@PageTitleText</PageTitle>
+
+<PageScaffold FillHeight="true"
+              MaxWidthClass="max-w-full"
+              Class="live-processes-page"
+              data-testid="live-processes-page">
+    <Header>
+        <Toolbar Class="live-processes-command-strip"
+                 data-testid="live-processes-command-strip">
+            <ToolbarRow Class="live-processes-command-strip__row">
+                <CompactStatStrip Class="min-w-0">
+                    <p class="cda-eyebrow whitespace-nowrap">Processes</p>
+                    <h1 class="live-processes-title">@PageTitleText</h1>
+                    <CompactStat Tone="info"
+                                 Text="@FormatCount(shell?.LiveRuns.ActiveRunCount ?? 0, "active", "active")"
+                                 TooltipText="Process runs currently active in the live projection." />
+                    <CompactStat Tone="warning"
+                                 Text="@FormatCount(shell?.LiveRuns.AttentionRunCount ?? 0, "attention", "attention")"
+                                 TooltipText="Process runs currently needing operator attention." />
+                    <CompactStat Tone="danger"
+                                 Text="@FormatCount(shell?.LiveRuns.FailedRunCount ?? 0, "failed", "failed")"
+                                 TooltipText="Process runs currently failed in the live projection." />
+                    <CompactStat Tone="@ProjectionTone"
+                                 Text="@ProjectionStatusText"
+                                 TooltipText="@ProjectionTooltip" />
+                </CompactStatStrip>
+
+                <ToolbarActions Class="live-processes-command-strip__actions">
+                    <PageHeaderActionButton Icon="refresh"
+                                            Label="Refresh"
+                                            TooltipText="Refresh the live process projection."
+                                            Disabled="@isLoading"
+                                            IsBusy="@isLoading"
+                                            Click="ForceRefreshAsync"
+                                            data-testid="live-processes-refresh-button" />
+                    <PageHeaderActionButton Icon="account_tree"
+                                            Label="Definitions"
+                                            TooltipText="Open the process definitions workspace."
+                                            Disabled="@isLoading"
+                                            Click="OpenDefinitionsAsync"
+                                            data-testid="live-processes-open-definitions" />
+                </ToolbarActions>
+            </ToolbarRow>
+        </Toolbar>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium"
+               Class="live-processes-dashboard min-h-0 flex-1"
+               data-testid="live-processes-dashboard">
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="live-processes-alert"
+                     role="alert"
+                     data-testid="live-processes-error">
+                    <Icon Name="error" />
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            @if (isLoading && shell is null)
+            {
+                <LoadingState Eyebrow="Live processes"
+                              Title="Loading process projection"
+                              Description="Collecting the current live run projection through the process application boundary." />
+            }
+            else if (shell is not null)
+            {
+                <div class="live-processes-summary"
+                     data-testid="live-processes-summary">
+                    <CompactStatStrip>
+                        <CompactStat Label="definitions"
+                                     Value="@DefinitionCountText"
+                                     TooltipText="@shell.DefinitionCatalog.Summary"
+                                     Tone="info" />
+                        <CompactStat Label="active"
+                                     Value="@shell.LiveRuns.ActiveRunCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     TooltipText="Active process runs in this scope."
+                                     Tone="success" />
+                        <CompactStat Label="attention"
+                                     Value="@shell.LiveRuns.AttentionRunCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     TooltipText="Runs that need operator attention."
+                                     Tone="warning" />
+                        <CompactStat Label="failed"
+                                     Value="@shell.LiveRuns.FailedRunCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     TooltipText="Failed runs in this scope."
+                                     Tone="danger" />
+                        <CompactStat Label="last event"
+                                     Value="@LastEventText"
+                                     TooltipText="Most recent live-run event observed by the projection." />
+                        <CompactStat Label="backlog"
+                                     Value="@shell.Refresh.BacklogEventCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     TooltipText="@shell.Refresh.Summary"
+                                     Tone="@ProjectionTone" />
+                    </CompactStatStrip>
+                </div>
+
+                <Tabs SelectedIndex="@selectedTabIndex"
+                      SelectedIndexChanged="HandleTabChangedAsync"
+                      Variant="TabsVariant.WorkspacePrimary"
+                      RenderMode="TabRenderMode.Client"
+                      OverflowMode="TabsOverflowMode.Auto"
+                      PanelOverflowMode="TabsPanelOverflowMode.Auto"
+                      FillHeight="true"
+                      Class="live-processes-tabs"
+                      data-testid="live-processes-tabs">
+                    <TabsItem Text="Activity"
+                              Icon="monitoring"
+                              BadgeText="@shell.LiveRuns.ActiveRunCount.ToString(CultureInfo.InvariantCulture)">
+                        @RenderActivityTab()
+                    </TabsItem>
+
+                    <TabsItem Text="Agents"
+                              Icon="smart_toy"
+                              BadgeText="@shell.AgentEntry.Label">
+                        @RenderAgentsTab()
+                    </TabsItem>
+
+                    <TabsItem Text="Graphs"
+                              Icon="bar_chart">
+                        @RenderGraphsTab()
+                    </TabsItem>
+
+                    <TabsItem Text="Tool analytics"
+                              Icon="analytics"
+                              BadgeText="@shell.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture)">
+                        @RenderToolAnalyticsTab()
+                    </TabsItem>
+                </Tabs>
+            }
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [Parameter]
+    public Guid? ProjectId { get; set; }
+
+    [Parameter]
+    public Guid? ProcessIdQuery { get; set; }
+
+    [Parameter]
+    public Guid? RunIdQuery { get; set; }
+
+    [Parameter]
+    public Guid? LaunchPlanIdQuery { get; set; }
+
+    private ProcessWorkspaceShellProjection? shell;
+    private bool isLoading;
+    private string? errorMessage;
+    private int selectedTabIndex;
+
+    private string PageTitleText => ProjectId.HasValue ? "Project live processes" : "Live processes";
+
+    private string DefinitionCountText
+        => shell is null
+            ? "0"
+            : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount).ToString("N0", CultureInfo.CurrentCulture);
+
+    private string LastEventText
+        => shell?.LiveRuns.LastEventAtUtc is { } lastEvent
+            ? lastEvent.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)
+            : "No events";
+
+    private string ProjectionStatusText
+        => shell?.Refresh.Status switch
+        {
+            ProcessWorkspaceProjectionStatus.Ready => "Ready",
+            ProcessWorkspaceProjectionStatus.RefreshRequested => "Refresh requested",
+            ProcessWorkspaceProjectionStatus.ProjectionStoreUnavailable => "Store pending",
+            _ => "Loading"
+        };
+
+    private string ProjectionTooltip
+        => shell?.Refresh.Summary ?? "Live process projection is loading.";
+
+    private string ProjectionTone
+        => shell?.Refresh.Status switch
+        {
+            ProcessWorkspaceProjectionStatus.Ready => "success",
+            ProcessWorkspaceProjectionStatus.RefreshRequested => "info",
+            ProcessWorkspaceProjectionStatus.ProjectionStoreUnavailable => "warning",
+            _ => "neutral"
+        };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private Task ForceRefreshAsync()
+        => LoadAsync(forceRefresh: true);
+
+    private Task OpenDefinitionsAsync()
+    {
+        Navigation.NavigateTo(ProjectId.HasValue ? $"/projects/{ProjectId.Value:D}/processes" : "/processes");
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadAsync(bool forceRefresh)
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            shell = await ProjectionClient.GetShellAsync(new ProcessWorkspaceShellRequest(
+                ResolveScope(),
+                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
+                new ProcessDefinitionCatalogQueryProjection(
+                    SearchText: null,
+                    SelectedDefinitionKey: null,
+                    ProcessDefinitionCatalogScopeKind.All,
+                    Take: 25),
+                new ProcessTemplateCatalogQueryProjection(
+                    SearchText: null,
+                    ProcessTemplateCatalogCategoryKind.All,
+                    SelectedItemKey: null,
+                    ProcessTemplateCatalogPreviewTabKind.Overview,
+                    Take: 25),
+                forceRefresh));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+            shell = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private ProcessWorkspaceShellScope ResolveScope()
+        => ProjectId.HasValue
+            ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
+            : ProcessWorkspaceShellScope.Global;
+
+    private Task HandleTabChangedAsync(int index)
+    {
+        selectedTabIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private RenderFragment RenderActivityTab() => @<Grid Gap="LayoutGap.Medium"
+                                                         ColumnsLg="3"
+                                                         data-testid="live-processes-activity">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Active runs" />
+            <h2 class="text-base font-semibold text-slate-900">@shell!.LiveRuns.ActiveRunCount active run(s)</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">@shell.LiveRuns.Summary</p>
+        </SurfaceCard>
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Attention" />
+            <h2 class="text-base font-semibold text-slate-900">@shell!.LiveRuns.AttentionRunCount run(s)</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Projected runs requiring operator review stay separated from definition authoring.</p>
+        </SurfaceCard>
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Failures" />
+            <h2 class="text-base font-semibold text-slate-900">@shell!.LiveRuns.FailedRunCount failed run(s)</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Failure counts come from the process runtime projection rather than the definition catalog.</p>
+        </SurfaceCard>
+    </Grid>;
+
+    private RenderFragment RenderAgentsTab() => @<SurfaceCard Soft="true"
+                                                              data-testid="live-processes-agents">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager context" />
+        <h2 class="text-base font-semibold text-slate-900">@shell!.AgentEntry.Label</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600">@shell.AgentEntry.ContextKey</p>
+        <Cluster Gap="LayoutGap.Small"
+                 Class="mt-4 flex-wrap">
+            <StatusBadge Tone="@(shell.AgentEntry.IsAvailable ? "success" : "warning")"
+                         Text="@(shell.AgentEntry.IsAvailable ? "Available" : "Unavailable")" />
+            @if (!string.IsNullOrWhiteSpace(shell.AgentEntry.DisabledReason))
+            {
+                <StatusBadge Tone="warning" Text="@shell.AgentEntry.DisabledReason" />
+            }
+        </Cluster>
+    </SurfaceCard>;
+
+    private RenderFragment RenderGraphsTab() => @<SurfaceCard Soft="true"
+                                                              data-testid="live-processes-graphs">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Runtime graph" />
+        <h2 class="text-base font-semibold text-slate-900">Projection graph pending runtime detail rows</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600">This page intentionally stays runtime-focused while the current projection contract exposes live-run totals only.</p>
+    </SurfaceCard>;
+
+    private RenderFragment RenderToolAnalyticsTab() => @<SurfaceCard Soft="true"
+                                                                    data-testid="live-processes-tool-analytics">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool analytics" />
+        <h2 class="text-base font-semibold text-slate-900">@shell!.Refresh.BacklogEventCount backlog event(s)</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600">@shell.Refresh.Summary</p>
+    </SurfaceCard>;
+
+    private static string FormatCount(int count, string singular, string plural)
+        => count == 1
+            ? $"1 {singular}"
+            : $"{count.ToString("N0", CultureInfo.CurrentCulture)} {plural}";
+}

@@ -12,8 +12,11 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 - repo://src/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs
 - repo://src/CanDoItAll.Processes.Application/ProcessTemplateCatalogProjectionService.cs
 - repo://src/CanDoItAll.Processes.Application/ProcessWorkspaceShellProjectionService.cs
+- repo://src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor
+- repo://src/CanDoItAll.Modules.Processes/Components/ProcessDefinitionCanvasPanel.razor
 - repo://src/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryPanel.razor
 - repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor
+- repo://src/CanDoItAll.Modules.Processes/Navigation/ProcessesShellNavigationContributor.cs
 - repo://src/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs
 - repo://src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs
 - repo://src/CanDoItAll.Web/wwwroot/css/output.css
@@ -32,6 +35,7 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 - bundle://proof/SB19/red-team-semantic-proof.md
 - bundle://proof/SB19/story-coverage.md
 - bundle://proof/SB19/browser-validation.md
+- bundle://proof/SB19/ui-parity-repair.md
 - bundle://proof/SB19/codeanalytics-snapshot-summary.txt
 - bundle://proof/SB19/bundle-validator-prepared-sb19.txt
 - bundle://proof/SB19/git-diff-check-sb19.txt
@@ -50,6 +54,7 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 - bundle://proof/SB19/browser/processes-template-library-imports.png
 - bundle://proof/SB19/browser/processes-definition-step-editor.png
 - bundle://proof/SB19/browser/processes-definition-canvas.png
+- bundle://proof/SB19/browser/processes-live-dashboard.png
 - bundle://proof/SB19/browser/processes-definition-role-editor.png
 - bundle://proof/SB19/browser/processes-global-definition-catalog.png
 - bundle://proof/SB19/browser/processes-project-shell.png
@@ -66,4 +71,4 @@ SB19 rebuilds the Process template library browser over JSON-backed template cat
 
 ## Result
 
-SB19 closure passes. Builds, focused tests, Tailwind, Playwright browser proof, static scans, and CodeAnalytics MCP all passed. Remaining CodeAnalytics items are non-blocking: existing generated-program and component-test DI diagnostics, existing large editor/projection service warnings, and the new cohesive template catalog service as an SB28 hardening watch item.
+SB19 closure passes after the UI parity repair. Builds, focused tests, Playwright browser proof, refreshed screenshots, and CodeAnalytics MCP all passed. The repair replaces the reshaped custom canvas with the shared CanvasLib/OverlayLib workbench and restores the original dense list/detail process workspace shape while retaining the new projection/versioning contracts.

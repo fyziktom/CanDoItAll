@@ -3,13 +3,10 @@
 
 <PageTitle>Live Processes</PageTitle>
 
-<ProcessWorkspaceShell ProjectId="@ProjectId"
-                       ProcessIdQuery="@ProcessIdQuery"
-                       RunIdQuery="@RunIdQuery"
-                       LaunchPlanIdQuery="@LaunchPlanIdQuery"
-                       DefinitionSearchText="@DefinitionSearchText"
-                       SelectedDefinitionKey="@SelectedDefinitionKey"
-                       LiveRoute="true" />
+<LiveProcessesDashboard ProjectId="@ProjectId"
+                        ProcessIdQuery="@ProcessIdQuery"
+                        RunIdQuery="@RunIdQuery"
+                        LaunchPlanIdQuery="@LaunchPlanIdQuery" />
 
 @code {
     [Parameter]
@@ -24,9 +21,4 @@
     [SupplyParameterFromQuery(Name = "launchPlanId")]
     public Guid? LaunchPlanIdQuery { get; set; }
 
-    [SupplyParameterFromQuery(Name = "q")]
-    public string? DefinitionSearchText { get; set; }
-
-    [SupplyParameterFromQuery(Name = "definitionKey")]
-    public string? SelectedDefinitionKey { get; set; }
 }

@@ -1,0 +1,59 @@
+.processes-canvas-stage {
+    display: block;
+    min-height: 42rem;
+}
+
+.processes-canvas-stage ::deep .cw-stage {
+    min-height: 42rem;
+}
+
+.processes-canvas-stage ::deep .cw-workbench {
+    min-height: 36rem;
+}
+
+.processes-canvas-overlay-safe-top {
+    display: block;
+    height: 0.25rem;
+    pointer-events: none;
+}
+
+.processes-canvas-floating-window__body {
+    max-height: 100%;
+    overflow: auto;
+}
+
+.processes-canvas-selection-key {
+    border: 1px solid rgba(148, 163, 184, 0.38);
+    border-radius: 0.375rem;
+    background: rgba(248, 250, 252, 0.92);
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1.35;
+    padding: 0.55rem 0.7rem;
+}
+
+.processes-canvas-selection-summary {
+    color: #475569;
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.processes-canvas-selection-title {
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 750;
+    line-height: 1.3;
+    margin: 0.15rem 0 0;
+}
+
+.processes-canvas-command-receipt {
+    margin-top: 0.75rem;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
+.processes-canvas-test-mirrors {
+    display: none;
+}

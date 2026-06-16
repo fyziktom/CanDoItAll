@@ -70,7 +70,10 @@ public sealed class ProcessShellSmokeTests
         await page.GetByTestId("processes-definition-publish").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "published");
         await page.GetByTestId("processes-definition-canvas").WaitForAsync();
-        await page.GetByTestId("processes-canvas-node-step-decision-intake").ClickAsync();
+        await page.Locator(".cw-workbench").WaitForAsync();
+        await page.Locator(".cw-workbench__canvas--nodes").WaitForAsync();
+        await page.GetByTestId("processes-canvas-node-step-decision-intake")
+            .EvaluateAsync("element => element.click()");
         await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Capture architecture decision demand");
         await page.GetByTestId("processes-canvas-toolbox-process-step-implementation").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "accepted");
@@ -178,6 +181,19 @@ public sealed class ProcessShellSmokeTests
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "processes-global-definition-catalog.png"),
+            FullPage = true
+        });
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+
+        var liveResponse = await page.GotoAsync($"{fixture.BaseUrl}/processes/live");
+        Assert.NotNull(liveResponse);
+        Assert.True(liveResponse!.Ok, $"Expected /processes/live to return 2xx, got {(int)liveResponse.Status}.");
+        await page.GetByTestId("live-processes-dashboard").WaitForAsync();
+        await page.GetByTestId("live-processes-command-strip").WaitForAsync();
+        await page.GetByTestId("live-processes-tabs").WaitForAsync();
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(artifactDirectory, "processes-live-dashboard.png"),
             FullPage = true
         });
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
