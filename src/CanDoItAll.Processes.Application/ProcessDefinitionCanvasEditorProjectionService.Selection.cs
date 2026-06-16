@@ -42,7 +42,9 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         };
 
     private static string ResolveNodeKeyText(ProcessDefinitionCanvasEditorNodeProjection node)
-        => node.StepKey?.Value ?? node.RoleKey?.Value ?? node.ArtifactKey ?? node.NodeKey.Value;
+        => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact && !string.IsNullOrWhiteSpace(node.ArtifactKey)
+            ? node.ArtifactKey
+            : node.StepKey?.Value ?? node.RoleKey?.Value ?? node.NodeKey.Value;
 
     private static ProcessDefinitionCanvasToolboxActionProjection CreateToolboxAction(
         ProcessTemplateDefinitionCanvasToolboxActionSummary action)

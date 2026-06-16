@@ -44,6 +44,7 @@ public enum ProcessDefinitionCanvasCommandKind
     AddRoleBinding,
     AddArtifactExpectation,
     AddSubprocessBoundary,
+    CloneArtifactReference,
     Recompose
 }
 

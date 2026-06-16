@@ -1,0 +1,11 @@
+{
+  "statusCode": 410,
+  "statusDescription": "Gone",
+  "content": {
+    "error": {
+      "errorCode": "ProcessModuleRewriteInProgress",
+      "message": "Project-structure process launching is unavailable until the rebuilt Process application layer is introduced.",
+      "details": null
+    }
+  }
+}

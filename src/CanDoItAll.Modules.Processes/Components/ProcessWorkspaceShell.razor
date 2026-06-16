@@ -785,6 +785,7 @@
     </div>;
 
     private RenderFragment RenderStepsTab() => @<Stack GapScale="LayoutGap.Large"
+                                                       Class="processes-definition-steps-tab"
                                                        data-testid="processes-definition-steps-tab">
         @if (DefinitionCatalog.SelectedEditor?.Canvas is null &&
              DefinitionCatalog.SelectedEditor?.StepEditor is null)

@@ -1,14 +1,20 @@
 .processes-canvas-stage {
     display: block;
     min-height: 42rem;
+    min-width: 0;
+    width: 100%;
 }
 
 .processes-canvas-stage ::deep .cw-stage {
     min-height: 42rem;
+    min-width: 0;
+    width: 100%;
 }
 
 .processes-canvas-stage ::deep .cw-workbench {
     min-height: 36rem;
+    min-width: 0;
+    width: 100%;
 }
 
 .processes-canvas-overlay-safe-top {

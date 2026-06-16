@@ -804,3 +804,23 @@ Result:
 ```text
 Post-review repair restored the process module UI toward the original maf-processes-refactor layout and canvas UX. The process workspace now uses a dense toolbar/list-detail layout, a TreeView definition list, original-style detail tabs (Definition, Roles, Steps, Runs, Graphs, Analytics, Exchange, Manager chat), nested run tabs, and the shared CanvasLib workbench plus CanvasFloatingWindow/OverlayComponentToolbox windows. Live Processes is a dedicated process-module page at /processes/live and now renders immediately after Processes in the main navigation rather than being orphaned into overflow. Web build passed with 0 warnings and 0 errors, focused component/navigation tests passed 33/33, ProcessShell Playwright smoke passed 1/1, Playwright MCP screenshots captured tabs/tree/canvas windows/graphs/manager chat/live navigation, and CodeAnalytics MCP snapshot snap-20260616120824-b9b86e2f completed with no blocking errors.
 ```
+
+SB17 canvas artifact-reference repair proof:
+
+```text
+bundle://proof/SB17/canvas-artifact-reference-repair/manifest.md
+bundle://proof/SB17/canvas-artifact-reference-repair/changed-file-hashes.txt
+bundle://proof/SB17/canvas-artifact-reference-repair/browser/steps-canvas-desktop-no-overlays.png
+bundle://proof/SB17/canvas-artifact-reference-repair/browser/artifact-context-menu-clone-highlight.png
+bundle://proof/SB17/canvas-artifact-reference-repair/browser/artifact-highlight-result.png
+bundle://proof/SB17/canvas-artifact-reference-repair/api/tetris-structure.json
+bundle://proof/SB17/canvas-artifact-reference-repair/api/tetris-process-start-410-full.json
+```
+
+Result:
+
+```text
+Follow-up repair widened the desktop Steps canvas to the available tab area and added artifact node context actions for Clone and Highlight. Clone routes through ProcessDefinitionCanvasCommandKind.CloneArtifactReference and creates a second canvas node that shares the original ArtifactKey without adding another edge. Highlight is local canvas UI state for visible references with the same ArtifactKey. Process module build, focused unit/component tests, and full solution build passed. Playwright MCP proof captured the full-width canvas, right-click artifact context menu with Clone and Highlight, clone receipt, and highlight result. CodeAnalytics MCP post-change snapshot snap-20260616131702-4d969354 completed with no blocking errors.
+
+The TetrisGame project structure was found in the dev DB on http://localhost:5032/, but POST /api/project-structure/projects/{projectId}/nodes/{nodeId}/process/start returned HTTP 410 ProcessModuleRewriteInProgress. The blocker is real: ProjectStructureProcessNodeService currently throws that 410 and the rebuilt Process shell still sets CanLaunchRuns = false. This remains owned by later launch/runtime/project-scoped Process subbundles rather than the SB17 canvas UI repair.
+```

@@ -55,6 +55,8 @@
 .processes-definition-steps-tab,
 .processes-definition-exchange-tab {
     min-height: 0;
+    min-width: 0;
+    width: 100%;
 }
 
 .processes-definition-list-item {

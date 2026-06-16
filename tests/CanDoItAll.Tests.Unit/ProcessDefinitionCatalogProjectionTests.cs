@@ -295,6 +295,39 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Canvas_clone_artifact_reference_adds_same_artifact_key_without_extra_edge()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var artifact = canvas.Nodes.First(node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Artifact &&
+            node.ArtifactKey == "architecture-decision-record");
+
+        var cloned = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.CloneArtifactReference,
+            ToolboxActionKey: null,
+            artifact.NodeKey);
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, cloned.Receipt.Status);
+        Assert.Equal(canvas.Edges.Count, cloned.Projection.Edges.Count);
+        var references = cloned.Projection.Nodes
+            .Where(node => node.Kind == ProcessDefinitionCanvasNodeKind.Artifact &&
+                           node.ArtifactKey == artifact.ArtifactKey)
+            .ToArray();
+        Assert.Equal(2, references.Length);
+        Assert.Contains(references, node => node.NodeKey != artifact.NodeKey && node.StepKey is null);
+        Assert.Equal(ProcessDefinitionCanvasSelectionKind.Artifact, cloned.Projection.Selection.Kind);
+        Assert.Contains("shared key", cloned.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Canvas_rejects_stale_version_tokens()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();

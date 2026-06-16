@@ -314,6 +314,45 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public async Task Canvas_artifact_context_actions_clone_and_highlight_references()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
+        var workbench = cut.FindComponent<CanvasWorkbench>();
+        var artifactNode = workbench.Instance.Surface.Nodes.Single(node => node.Id == "artifact:architecture-decision:adr");
+        var cloneAction = artifactNode.ContextActions.Single(action =>
+            string.Equals(action.Label, "Clone", StringComparison.Ordinal) &&
+            action.ActionId.StartsWith("process-canvas:artifact-reference:clone:", StringComparison.Ordinal));
+        var highlightAction = artifactNode.ContextActions.Single(action =>
+            string.Equals(action.Label, "Highlight", StringComparison.Ordinal) &&
+            action.ActionId.StartsWith("process-canvas:artifact-reference:highlight:", StringComparison.Ordinal));
+
+        await cut.InvokeAsync(() => workbench.Instance.OnContextAction(artifactNode.Id, cloneAction.ActionId, 0, 0));
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCanvasCommandKind.CloneArtifactReference, client.LastCanvasCommand?.CommandKind));
+        Assert.Equal(new ProcessDefinitionCanvasNodeKey("artifact:architecture-decision:adr"), client.LastCanvasCommand?.SelectedNodeKey);
+        Assert.Null(client.LastCanvasCommand?.ToolboxActionKey);
+
+        workbench = cut.FindComponent<CanvasWorkbench>();
+        artifactNode = workbench.Instance.Surface.Nodes.Single(node => node.Id == "artifact:architecture-decision:adr");
+        highlightAction = artifactNode.ContextActions.Single(action =>
+            string.Equals(action.Label, "Highlight", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => workbench.Instance.OnContextAction(artifactNode.Id, highlightAction.ActionId, 0, 0));
+
+        cut.WaitForAssertion(() =>
+        {
+            var highlighted = cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes.Single(node => node.Id == "artifact:architecture-decision:adr");
+            Assert.Equal("Highlighted artifact", highlighted.StatusPill);
+            Assert.Contains(highlighted.Chips, chip => string.Equals(chip.Text, "Highlighted", StringComparison.Ordinal));
+        });
+        Assert.Contains("Highlighted 1 canvas reference(s)", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(ProcessDefinitionCanvasCommandKind.CloneArtifactReference, client.LastCanvasCommand?.CommandKind);
+    }
+
+    [Fact]
     public void Canvas_recompose_uses_typed_canvas_command_boundary()
     {
         using var context = CreateContext(out var client);

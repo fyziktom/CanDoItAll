@@ -293,6 +293,53 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             $"Subprocess boundary added for '{step.Title}'.");
     }
 
+    private ProcessDefinitionCanvasCommandResult ExecuteCloneArtifactReference(
+        ProcessDefinitionCanvasStateKey stateKey,
+        ProcessDefinitionCanvasSnapshot baseline,
+        ProcessDefinitionCanvasCommand command,
+        DateTimeOffset observedAtUtc)
+    {
+        var artifact = ResolveSelectedNode(baseline, command.SelectedNodeKey);
+        if (artifact is null ||
+            artifact.Kind != ProcessDefinitionCanvasNodeKind.Artifact ||
+            string.IsNullOrWhiteSpace(artifact.ArtifactKey))
+        {
+            return CreateRejectedResult(baseline, command.CommandKind, observedAtUtc, "Select an artifact reference before cloning it.");
+        }
+
+        var referenceIndex = baseline.Nodes.Count(node =>
+            node.Kind == ProcessDefinitionCanvasNodeKind.Artifact &&
+            string.Equals(node.ArtifactKey, artifact.ArtifactKey, StringComparison.OrdinalIgnoreCase)) + 1;
+        var clone = CreateNode(
+            BuildUniqueNodeKey($"artifact-ref:{Slugify(artifact.ArtifactKey)}", baseline.Nodes),
+            ProcessDefinitionCanvasNodeKind.Artifact,
+            artifact.Title,
+            "Artifact reference",
+            $"Reference clone for the shared artifact key '{artifact.ArtifactKey}'. Place it near another step without duplicating the artifact.",
+            artifact.X + 230,
+            artifact.Y + 96 + (((referenceIndex - 2) % 4) * 28),
+            artifact.Width,
+            artifact.Height,
+            artifact.Tone,
+            StepKey: null,
+            RoleKey: null,
+            artifact.ArtifactKey,
+            BuildArtifactReferenceBadges(artifact.Badges));
+        var nodes = new List<ProcessDefinitionCanvasEditorNodeProjection>(baseline.Nodes.Count + 1);
+        nodes.AddRange(baseline.Nodes);
+        nodes.Add(clone);
+
+        return StoreAccepted(
+            stateKey,
+            baseline,
+            command.CommandKind,
+            observedAtUtc,
+            nodes,
+            baseline.Edges,
+            CreateSelection(clone),
+            $"Artifact reference cloned for '{artifact.Title}' using shared key '{artifact.ArtifactKey}'.");
+    }
+
     private ProcessDefinitionCanvasCommandResult ExecuteRecompose(
         ProcessDefinitionCanvasStateKey stateKey,
         ProcessDefinitionCanvasSnapshot baseline,
@@ -360,5 +407,15 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             observedAtUtc,
             summary);
         return new ProcessDefinitionCanvasCommandResult(receipt, CreateProjection(snapshot, receipt));
+    }
+
+    private static IReadOnlyList<string> BuildArtifactReferenceBadges(IReadOnlyList<string> badges)
+    {
+        var result = badges
+            .Where(badge => !string.Equals(badge, "Reference", StringComparison.OrdinalIgnoreCase))
+            .Take(3)
+            .ToList();
+        result.Add("Reference");
+        return result;
     }
 }
