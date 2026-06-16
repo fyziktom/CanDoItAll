@@ -90,7 +90,7 @@ public enum ProcessTemplateProjectionKind
     ImportEnvelope
 }
 
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = false)]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = false)]
 [JsonSerializable(typeof(ProcessTemplateComponentDocument))]
 [JsonSerializable(typeof(ProcessTemplateLocalOverridePatch))]
 [JsonSerializable(typeof(ProcessTemplateConflictRecord))]
@@ -99,4 +99,6 @@ public enum ProcessTemplateProjectionKind
 [JsonSerializable(typeof(ProcessTemplateMigrationDryRunReport))]
 [JsonSerializable(typeof(ProcessTemplateSidecarDriftReport))]
 [JsonSerializable(typeof(ProcessBranchMigrationDiagnosticReport))]
+[JsonSerializable(typeof(ProcessTemplatePackManifest))]
+[JsonSerializable(typeof(ProcessTemplateDefinitionDocument))]
 public sealed partial class ProcessTemplateJsonContext : JsonSerializerContext;

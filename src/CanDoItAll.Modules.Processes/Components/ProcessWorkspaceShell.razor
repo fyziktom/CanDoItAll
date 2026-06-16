@@ -164,6 +164,12 @@
     public Guid? LaunchPlanIdQuery { get; set; }
 
     [Parameter]
+    public string? DefinitionSearchText { get; set; }
+
+    [Parameter]
+    public string? SelectedDefinitionKey { get; set; }
+
+    [Parameter]
     public bool LiveRoute { get; set; }
 
     private ProcessWorkspaceShellProjection? shell;
@@ -171,6 +177,11 @@
     private bool isBusy;
     private string? errorMessage;
     private string? agentContextNotice;
+    private string searchText = string.Empty;
+    private string pendingSearchText = string.Empty;
+    private string? selectedDefinitionKey;
+    private ProcessDefinitionCatalogScopeKind selectedDefinitionScope = ProcessDefinitionCatalogScopeKind.All;
+    private string? catalogCommandNotice;
 
     private string ScopeEyebrow => ProjectId.HasValue ? "Project processes" : "Processes";
 
@@ -223,8 +234,16 @@
     private string AgentContextTooltip
         => shell?.AgentEntry.DisabledReason ?? shell?.AgentEntry.ContextKey ?? "Process agent context is loading.";
 
+    private ProcessDefinitionCatalogProjection DefinitionCatalog
+        => shell?.DefinitionCatalog ?? throw new InvalidOperationException("Definition catalog is not loaded.");
+
     protected override async Task OnParametersSetAsync()
     {
+        searchText = DefinitionSearchText?.Trim() ?? string.Empty;
+        pendingSearchText = searchText;
+        selectedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
+            ? null
+            : SelectedDefinitionKey.Trim();
         await LoadAsync(forceRefresh: false);
     }
 
@@ -241,8 +260,15 @@
         try
         {
             var request = new ProcessWorkspaceShellRequest(
-                ProjectId.HasValue ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value) : ProcessWorkspaceShellScope.Global,
+                ResolveScope(),
                 new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
+                new ProcessDefinitionCatalogQueryProjection(
+                    searchText,
+                    string.IsNullOrWhiteSpace(selectedDefinitionKey)
+                        ? null
+                        : new ProcessDefinitionCatalogItemKey(selectedDefinitionKey),
+                    selectedDefinitionScope,
+                    Take: 50),
                 forceRefresh);
 
             shell = await ProjectionClient.GetShellAsync(request);
@@ -258,6 +284,11 @@
             isBusy = false;
         }
     }
+
+    private ProcessWorkspaceShellScope ResolveScope()
+        => ProjectId.HasValue
+            ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
+            : ProcessWorkspaceShellScope.Global;
 
     private int ResolveActiveTabIndex(ProcessWorkspaceShellProjection projection)
     {
@@ -288,6 +319,9 @@
             case ProcessWorkspaceCommandKind.OpenAgentContext:
                 OpenAgentContext();
                 break;
+            case ProcessWorkspaceCommandKind.FeedDefaults:
+                await FeedDefaultsAsync();
+                break;
             case ProcessWorkspaceCommandKind.OpenLiveDashboard:
                 Navigation.NavigateTo(ProjectId.HasValue
                     ? $"/projects/{ProjectId.Value:D}/processes/live"
@@ -307,6 +341,61 @@
         Navigation.NavigateTo($"/agents?processContext={Uri.EscapeDataString(shell.AgentEntry.ContextKey)}");
     }
 
+    private void UpdateDefinitionSearchText(ChangeEventArgs args)
+    {
+        pendingSearchText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task ApplyDefinitionSearchAsync()
+    {
+        searchText = pendingSearchText.Trim();
+        selectedDefinitionKey = null;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task ClearDefinitionSearchAsync()
+    {
+        pendingSearchText = string.Empty;
+        searchText = string.Empty;
+        selectedDefinitionKey = null;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectDefinitionAsync(ProcessDefinitionCatalogItemKey key)
+    {
+        selectedDefinitionKey = key.Value;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectDefinitionScopeAsync(ProcessDefinitionCatalogScopeKind scopeKind)
+    {
+        selectedDefinitionScope = scopeKind;
+        selectedDefinitionKey = null;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task FeedDefaultsAsync()
+    {
+        isBusy = true;
+        errorMessage = null;
+
+        try
+        {
+            var receipt = await ProjectionClient.FeedDefaultDefinitionsAsync(
+                new ProcessDefinitionFeedDefaultsCommand(ResolveScope()));
+            catalogCommandNotice = $"{receipt.Summary} Refresh token: {receipt.RefreshToken.Value}.";
+            await LoadAsync(forceRefresh: true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
     private RenderFragment RenderTab(ProcessWorkspaceTabProjection tab) => @<SurfaceCard Soft="true" data-testid="@BuildTabPanelTestId(tab.Key)">
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
@@ -321,9 +410,7 @@
             @switch (tab.Key)
             {
                 case ProcessWorkspaceTabKey.Definitions:
-                    <EmptyState Eyebrow="Catalog projection"
-                                Title="Definition catalog status"
-                                Description="@shell!.DefinitionCatalog.Summary" />
+                    @RenderDefinitionCatalog()
                     break;
                 case ProcessWorkspaceTabKey.LaunchPlans:
                     <EmptyState Eyebrow="Launch projection"
@@ -343,6 +430,112 @@
             }
         </div>
     </SurfaceCard>;
+
+    private RenderFragment RenderDefinitionCatalog() => @<div data-testid="processes-definition-catalog">
+        <Split Gap="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Catalog" />
+                <h3 class="text-sm font-semibold text-slate-900">Definition catalog</h3>
+                <p class="text-sm leading-6 text-slate-600">@DefinitionCatalog.Summary</p>
+            </Stack>
+            <Cluster Gap="LayoutGap.Small" Class="flex-wrap">
+                <input class="min-h-9 rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       value="@pendingSearchText"
+                       @oninput="UpdateDefinitionSearchText"
+                       placeholder="Search definitions"
+                       aria-label="Search process definitions"
+                       data-testid="processes-definition-search" />
+                <Button Text="Search"
+                        Icon="search"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Disabled="@isBusy"
+                        Click="ApplyDefinitionSearchAsync"
+                        data-testid="processes-definition-search-submit" />
+                <Button Text="Clear"
+                        Icon="close"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@isBusy"
+                        Click="ClearDefinitionSearchAsync"
+                        data-testid="processes-definition-search-clear" />
+                <Button Text="Feed defaults"
+                        Icon="download"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        Click="FeedDefaultsAsync"
+                        data-testid="processes-feed-defaults" />
+            </Cluster>
+        </Split>
+
+        @if (!string.IsNullOrWhiteSpace(catalogCommandNotice))
+        {
+            <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-feed-defaults-receipt">@catalogCommandNotice</p>
+        }
+
+        <Grid Gap="LayoutGap.Large" ColumnsLg="3" Class="mt-5">
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-scopes">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Scope" />
+                @foreach (var scope in DefinitionCatalog.ScopeGroups)
+                {
+                    <Button Text="@($"{scope.Label} ({scope.Count})")"
+                            Icon="@ResolveScopeIcon(scope.ScopeKind)"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="@(scope.IsSelected ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Click="@(() => SelectDefinitionScopeAsync(scope.ScopeKind))"
+                            title="@scope.Description"
+                            data-testid="@BuildScopeTestId(scope.ScopeKind)" />
+                }
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-results">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definitions" />
+                @if (DefinitionCatalog.Items.Count == 0)
+                {
+                    <EmptyState Eyebrow="No matches"
+                                Title="No definitions match the current search"
+                                Description="Clear the search or use a broader definition term." />
+                }
+                else
+                {
+                    @foreach (var item in DefinitionCatalog.Items)
+                    {
+                        <Button Text="@item.Name"
+                                Icon="account_tree"
+                                Size="ButtonSize.Small"
+                                ButtonStyle="@(item.Key == DefinitionCatalog.SelectedDefinitionKey ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                Click="@(() => SelectDefinitionAsync(item.Key))"
+                                data-testid="@BuildDefinitionItemTestId(item.Key)" />
+                        <p class="text-xs leading-5 text-slate-500">@item.Summary</p>
+                    }
+                }
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-selected">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected" />
+                @if (DefinitionCatalog.SelectedItem is null)
+                {
+                    <EmptyState Eyebrow="Selection"
+                                Title="No definition selected"
+                                Description="Select a visible definition to inspect its projected catalog metadata." />
+                }
+                else
+                {
+                    var selected = DefinitionCatalog.SelectedItem;
+                    <h3 class="text-sm font-semibold text-slate-900">@selected.Name</h3>
+                    <p class="text-sm leading-6 text-slate-600">@selected.Summary</p>
+                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                        <StatusBadge Tone="@ResolveDefinitionTone(selected.Status)" Text="@selected.Status.ToString()" />
+                        <StatusBadge Tone="neutral" Text="@selected.Criticality" />
+                        <StatusBadge Tone="info" Text="@selected.OperatingMode" />
+                    </Cluster>
+                    <p class="text-xs leading-5 text-slate-500">Key: @selected.Key.Value</p>
+                }
+            </Stack>
+        </Grid>
+    </div>;
 
     private static string ResolveTabEyebrow(ProcessWorkspaceTabKey key)
         => key switch
@@ -380,10 +573,41 @@
             ProcessWorkspaceCommandKind.RefreshProjections => ButtonStyle.Light,
             ProcessWorkspaceCommandKind.OpenAgentContext => ButtonStyle.Info,
             ProcessWorkspaceCommandKind.OpenLiveDashboard => ButtonStyle.Light,
+            ProcessWorkspaceCommandKind.FeedDefaults => ButtonStyle.Info,
             ProcessWorkspaceCommandKind.LaunchRun => ButtonStyle.Success,
             ProcessWorkspaceCommandKind.CreateDefinition => ButtonStyle.Primary,
             _ => ButtonStyle.Light
         };
+
+    private static string ResolveScopeIcon(ProcessDefinitionCatalogScopeKind scopeKind)
+        => scopeKind switch
+        {
+            ProcessDefinitionCatalogScopeKind.All => "select_all",
+            ProcessDefinitionCatalogScopeKind.Global => "public",
+            ProcessDefinitionCatalogScopeKind.Project => "folder",
+            _ => "account_tree"
+        };
+
+    private static string ResolveDefinitionTone(ProcessDefinitionCatalogItemStatus status)
+        => status switch
+        {
+            ProcessDefinitionCatalogItemStatus.TemplateDefault => "info",
+            ProcessDefinitionCatalogItemStatus.Published => "success",
+            ProcessDefinitionCatalogItemStatus.Draft => "neutral",
+            ProcessDefinitionCatalogItemStatus.RequiresReview => "warning",
+            _ => "neutral"
+        };
+
+    private static string BuildScopeTestId(ProcessDefinitionCatalogScopeKind kind)
+        => $"processes-definition-scope-{kind.ToString().ToLowerInvariant()}";
+
+    private static string BuildDefinitionItemTestId(ProcessDefinitionCatalogItemKey key)
+    {
+        var normalized = new string(key.Value
+            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+            .ToArray());
+        return $"processes-definition-{normalized}";
+    }
 
     private static string BuildCommandTestId(ProcessWorkspaceCommandKind kind)
         => $"processes-command-{kind.ToString().ToLowerInvariant()}";

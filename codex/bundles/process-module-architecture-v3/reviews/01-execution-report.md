@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB13 are complete and validated. SB14 is the next dependency-ordered implementation package.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB14 are complete and validated. SB15 is the next dependency-ordered implementation package.
 
 ## Changes Made In This Task
 
@@ -36,6 +36,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 - Executed SB11 execution adapters and first layered driver slice: strongly typed adapter contracts, restricted diagnostic classification, Standard concrete driver project, representative layered driver packages, adapter-to-strategy envelope normalization, Git-backed mutation audit, boundary scans, and adapter security review were added.
 - Executed SB12 template migration, existing process pack compatibility, and runtime history plan: template compatibility scan/report contracts, dry-run migration analysis, sidecar drift detection, branch migration diagnostics, legacy read-only history projection adapter, compatibility decision service, source-generated projection/template serialization coverage, proof reports, and compatibility tests were added.
 - Executed SB13 UI shell, routing, navigation, and projection client foundation: projection-first shell DTOs, application shell projection service, module projection client, BaseLib shell component, `/processes`, project-scoped, and live route pages, shell navigation contribution, workbench tab routing, AgentFramework explicit unavailable process evidence provider, AppDbContext migration snapshot cleanup, focused component tests, Playwright route proof, Browser MCP desktop/narrow screenshots, and CodeAnalytics dependency proof were added.
+- Executed SB14 definition catalog, scope tree, search, selection, and Feed Defaults: catalog projection DTOs, strongly typed catalog item/refresh keys, canonical template pack loader over source-generated JSON metadata, application catalog projection service, typed Feed Defaults command receipt, shell tab counters, query parameter handoff, search/scope/selection/empty-state UI, focused unit/component tests, Playwright proof, Browser MCP desktop/narrow screenshots, static boundary scans, and CodeAnalytics dependency proof were added.
 
 ## Repository Evidence
 
@@ -66,7 +67,8 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | SB11 Execution Adapters And First Layered Driver Slice | Passed: SB10 projection contracts and runtime/manager handoff surfaces available and stable | Passed: unit build, solution build, 77 focused process tests, adapter security review, dependency leak scans, runtime external API scan, ad hoc Git scan, raw diagnostic review, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615224754-e4fadc68` recorded | SB12 template compatibility and SB14 execution prerequisites checked | Completed | `proof/SB11/manifest.md`, `proof/SB11/semantic-invariants.md`, `proof/SB11/adapter-security-review.md` |
 | SB12 Template Migration, Existing Process Pack Compatibility, And Runtime History Plan | Passed: SB11 complete, SB04 template/Git foundation available, SB10 projection contracts available, and CodeAnalytics baseline reachable | Passed: unit build, solution build, 81 focused process tests, template dry-run report, sidecar drift report, branch diagnostics, runtime history inventory, compatibility decision, old-symbol scan, canonical-source scan, branch shortcut scan, performance scan, anti-stub audit, and CodeAnalytics snapshot `snap-20260615232410-3bddcac6` recorded | SB13 UI compatibility projection prerequisites checked | Completed | `proof/SB12/manifest.md`, `proof/SB12/semantic-invariants.md`, `proof/SB12/compatibility-decision-report.md` |
 | SB13 UI Shell, Routing, Navigation, And Projection Client Foundation | Passed: SB10 projection contracts complete, SB12 compatibility decisions complete, and CodeAnalytics MCP reachable | Passed: module build, solution build, 6 component tests, 1 Playwright route test, 73 focused process unit tests, EF pending-model check, Browser MCP desktop/narrow proof, UI forbidden dependency scan, anti-stub scan, and CodeAnalytics snapshot `snap-20260616003325-e1504595` recorded | SB14 definition UI prerequisites checked | Completed | `proof/SB13/manifest.md`, `proof/SB13/semantic-invariants.md`, `proof/SB13/browser-validation.md` |
-| SB14-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB13. |
+| SB14 Definition List, Scope Tree, Search, And Feed Defaults | Passed: SB13 shell/projection client foundation complete, SB12 template compatibility source available, and CodeAnalytics MCP reachable | Passed: module build, solution build, 8 unit tests, 9 component tests, 1 Playwright route/catalog test, Browser MCP desktop/narrow proof, UI forbidden dependency scan, UI no-template/file scan, anti-stub scan, and CodeAnalytics snapshot `snap-20260616012049-a00137f4` recorded | SB15 definition editor prerequisites checked | Completed | `proof/SB14/manifest.md`, `proof/SB14/semantic-invariants.md`, `proof/SB14/browser-validation.md` |
+| SB15-SB28 remaining packages | Pending | Pending | Roadmap dependencies checked | Pending | Execute in dependency order after SB14. |
 
 ## Browser Validation Analytics
 
@@ -76,6 +78,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 | SB01 Reference Archive | Not applicable | Not applicable | Not applicable | Not applicable | Archive-only subbundle; no browser-facing product behavior changed. |
 | SB02-SB12 | Not applicable | Not applicable | Not applicable | Not applicable | No browser validation required by these subbundles; SB02 created disabled skeleton routes only, SB03-SB12 changed non-UI contracts/runtime/application/persistence/projection/adapter/template compatibility surfaces, and visible projection/execution UI proof is owned by downstream UI subbundles. |
 | SB13 UI Shell | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1440x900; 390x844 | `proof/SB13/browser/processes-global-mcp-snapshot.md`, `proof/SB13/browser/processes-global-mcp-narrow-snapshot.md`, `proof/SB13/test-playwright-process-shell.txt` | `proof/SB13/browser/processes-global-shell.png`, `proof/SB13/browser/processes-project-shell.png`, `proof/SB13/browser/processes-global-mcp-browser.png`, `proof/SB13/browser/processes-global-mcp-narrow.png` | Passed: route shell rendered, project-scoped live tab selected from `runId`, no Blazor error UI, narrow command strip wrapped without overlap after startup modal confirmation. |
+| SB14 Definition Catalog | `/processes`; `/projects/{ProjectId}/processes?runId=...` | 1440x900; 390x844 | `proof/SB14/browser/processes-global-definition-catalog-mcp-snapshot.md`, `proof/SB14/browser/processes-global-definition-catalog-narrow-mcp-snapshot.md`, `proof/SB14/test-playwright-process-shell-sb14.txt` | `proof/SB14/browser/processes-global-definition-catalog-mcp.png`, `proof/SB14/browser/processes-global-definition-catalog-narrow-mcp.png`, `proof/SB14/browser/processes-global-definition-catalog-playwright.png`, `proof/SB14/browser/processes-project-shell-playwright.png` | Passed: route catalog rendered, search found architecture definitions, selected definition metadata rendered, Feed Defaults receipt displayed, narrow project scope showed empty state, and no Blazor error UI was visible. |
 
 ## Analytics Review
 
@@ -84,6 +87,8 @@ No runtime analytics or browser performance data were collected for SB01-SB12 be
 SB01 collected no runtime analytics because it changed only archive/proof files plus the `.gitignore` archive exception.
 
 SB13 collected browser route validation rather than runtime analytics because it changed the Process shell surface only. Browser proof is recorded in `proof/SB13/browser-validation.md`.
+
+SB14 collected browser route/catalog validation rather than runtime analytics because it changed the Process definition catalog surface only. Browser proof is recorded in `proof/SB14/browser-validation.md`.
 
 ## Raw Note Closure
 
@@ -97,7 +102,7 @@ SB13 collected browser route validation rather than runtime analytics because it
 | Improve role candidate selection with missing tool/right readiness | Covered | `analysis/08-current-role-candidate-selection-gap.md`, `architecture/20-role-candidate-selection-and-readiness.md`, `validation/06-role-candidate-readiness-validation.md`, SB21 |
 | Add project-structure E2E source info, Process APIs, Codex skill, and generic scenario checks | Covered | `analysis/09-final-e2e-project-structure-source-scenarios.md`, `architecture/21-process-api-codex-skill-and-e2e-source-scenarios.md`, `validation/07-final-e2e-source-scenario-validation.md`, `evidence/e2e-source-project-structures/tetrisgame-live-5032-summary.json`, `evidence/e2e-source-project-structures/final-e2e-scenario-source-packs.json`, SB27, SB28 |
 | Do not implement rewrite now | Covered | `README.md`, every subbundle status, this execution report |
-| Execute approved implementation bundle | In progress | SB01 through SB13 completed with proof under `proof/SB01/` through `proof/SB13/`; SB14-SB28 remain pending dependency-ordered execution. |
+| Execute approved implementation bundle | In progress | SB01 through SB14 completed with proof under `proof/SB01/` through `proof/SB14/`; SB15-SB28 remain pending dependency-ordered execution. |
 
 ## Requirement Closure Summary
 
@@ -155,6 +160,25 @@ Result:
 
 ```text
 Solution build passed with 0 warnings and 0 errors. Component shell tests passed: 6/6. Playwright route test passed: 1/1. Focused process unit slice passed: 73/73. EF pending-model check reports no changes since the latest migration. UI forbidden runtime/persistence scan reported 0 matches. CodeAnalytics snapshot snap-20260616003325-e1504595 completed with no blocking errors and shows the Process UI module depending only on Processes.Application and Processes.Projections in the scoped graph.
+```
+
+SB14 definition catalog/search/scope/Feed Defaults proof:
+
+```text
+bundle://proof/SB14/manifest.md
+bundle://proof/SB14/build-solution-sb14.txt
+bundle://proof/SB14/test-unit-definition-catalog-sb14.txt
+bundle://proof/SB14/test-components-process-shell-sb14.txt
+bundle://proof/SB14/test-playwright-process-shell-sb14.txt
+bundle://proof/SB14/scans/ui-forbidden-runtime-persistence-scan.txt
+bundle://proof/SB14/scans/ui-no-template-or-file-dependency-scan.txt
+bundle://proof/SB14/browser-validation.md
+```
+
+Result:
+
+```text
+Module build and solution build passed with 0 warnings and 0 errors. Focused unit tests passed: 8/8. Component shell tests passed: 9/9. Playwright route/catalog test passed: 1/1. UI forbidden runtime/persistence scan reported 0 matches. UI direct template/json/file dependency scan reported 0 matches. Anti-stub scan reported 0 matches. CodeAnalytics snapshot snap-20260616012049-a00137f4 completed with no blocking errors and shows the Process UI module depending only on Processes.Application and Processes.Projections in the scoped graph.
 ```
 
 SB02 active removal and boundary proof:

@@ -7,6 +7,8 @@
                        ProcessIdQuery="@ProcessIdQuery"
                        RunIdQuery="@RunIdQuery"
                        LaunchPlanIdQuery="@LaunchPlanIdQuery"
+                       DefinitionSearchText="@DefinitionSearchText"
+                       SelectedDefinitionKey="@SelectedDefinitionKey"
                        LiveRoute="true" />
 
 @code {
@@ -21,4 +23,10 @@
 
     [SupplyParameterFromQuery(Name = "launchPlanId")]
     public Guid? LaunchPlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? DefinitionSearchText { get; set; }
+
+    [SupplyParameterFromQuery(Name = "definitionKey")]
+    public string? SelectedDefinitionKey { get; set; }
 }

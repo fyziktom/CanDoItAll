@@ -26,6 +26,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Contains("Launch plans", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Live runs", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("History", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Blazor app delivery", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Store pending", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='processes-command-strip']"));
     }
@@ -64,9 +65,53 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Definition_search_passes_query_to_projection_client()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-search']")));
+        cut.Find("[data-testid='processes-definition-search']").Input("architecture");
+        cut.Find("[data-testid='processes-definition-search-submit']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("architecture", client.Requests.Last().DefinitionCatalogQuery.SearchText));
+        Assert.Contains("Architecture decision governance", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Definition_scope_filter_passes_scope_to_projection_client()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-scope-project']")));
+        cut.Find("[data-testid='processes-definition-scope-project']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionCatalogScopeKind.Project, client.Requests.Last().DefinitionCatalogQuery.ScopeFilter));
+        Assert.Contains("No definitions match the current search", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Feed_defaults_button_uses_application_command_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-feed-defaults']")));
+        cut.Find("[data-testid='processes-feed-defaults']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(1, client.FeedDefaultsCommandCount));
+        Assert.Contains("default process definition", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Refresh token", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Projection_service_rejects_mismatched_scope_state()
     {
-        var service = new ProcessWorkspaceShellProjectionService(new FixedProcessProjectionClock(Now));
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(clock));
         var selection = new ProcessWorkspaceSelectionProjection(
             ProcessId: null,
             RunId: null,
@@ -75,11 +120,13 @@ public sealed class ProcessWorkspaceShellTests
         await Assert.ThrowsAsync<ArgumentException>(() => service.GetShellAsync(new ProcessWorkspaceShellRequest(
             new ProcessWorkspaceShellScope(ProcessWorkspaceScopeKind.Project, ProjectId: null),
             selection,
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ScopeFilter: ProcessDefinitionCatalogScopeKind.All, Take: 50),
             ForceRefresh: false)));
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.GetShellAsync(new ProcessWorkspaceShellRequest(
             new ProcessWorkspaceShellScope(ProcessWorkspaceScopeKind.Global, Guid.Parse("55555555-5555-5555-5555-555555555555")),
             selection,
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ScopeFilter: ProcessDefinitionCatalogScopeKind.All, Take: 50),
             ForceRefresh: false)));
     }
 
@@ -120,18 +167,168 @@ public sealed class ProcessWorkspaceShellTests
 
     private sealed class RecordingProcessWorkspaceProjectionClient : IProcessWorkspaceProjectionClient
     {
-        private readonly ProcessWorkspaceShellProjectionService service = new(new FixedProcessProjectionClock(Now));
-
         public List<ProcessWorkspaceShellRequest> Requests { get; } = [];
 
         public ProcessWorkspaceShellRequest? LastRequest => Requests.LastOrDefault();
+
+        public int FeedDefaultsCommandCount { get; private set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
             CancellationToken cancellationToken = default)
         {
             Requests.Add(request);
-            return await service.GetShellAsync(request, cancellationToken);
+            await Task.Yield();
+            return CreateShell(request, lastReceipt: null);
+        }
+
+        public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
+            ProcessDefinitionFeedDefaultsCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            FeedDefaultsCommandCount++;
+            return Task.FromResult(new ProcessDefinitionCatalogCommandReceipt(
+                Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                ProcessDefinitionCatalogCommandKind.FeedDefaults,
+                ProcessDefinitionCatalogCommandStatus.Accepted,
+                new ProcessDefinitionCatalogRefreshToken("feed-defaults:test"),
+                AffectedDefinitionCount: 2,
+                Now,
+                "2 default process definition(s) are available from template pack test."));
+        }
+
+        private static ProcessWorkspaceShellProjection CreateShell(
+            ProcessWorkspaceShellRequest request,
+            ProcessDefinitionCatalogCommandReceipt? lastReceipt)
+        {
+            var catalog = CreateDefinitionCatalog(request.DefinitionCatalogQuery, lastReceipt);
+            var authorization = new ProcessWorkspaceAuthorizationProjection(
+                CanReadDefinitions: true,
+                CanRefreshProjections: true,
+                CanOpenAgentContext: true,
+                CanEditDefinitions: false,
+                CanLaunchRuns: false);
+
+            return new ProcessWorkspaceShellProjection(
+                request.Scope,
+                request.Selection,
+                request.Scope.Kind == ProcessWorkspaceScopeKind.Project ? "Project processes" : "Processes",
+                "Projection-first process workspace.",
+                catalog,
+                new ProcessLiveRunSummaryProjection(0, 0, 0, null, "Runtime projection snapshots are not available in this workspace shell."),
+                new ProcessWorkspaceProjectionRefreshProjection(
+                    request.ForceRefresh
+                        ? ProcessWorkspaceProjectionStatus.RefreshRequested
+                        : ProcessWorkspaceProjectionStatus.ProjectionStoreUnavailable,
+                    Now,
+                    SourceGlobalSequence: 0,
+                    BacklogEventCount: 0,
+                    request.ForceRefresh
+                        ? "Projection refresh was requested through the application boundary."
+                        : "Projection store integration is pending; runtime data is intentionally not read by the UI shell."),
+                authorization,
+                CreateTabs(),
+                CreateCommands(),
+                CreateAgentEntry(request));
+        }
+
+        private static ProcessDefinitionCatalogProjection CreateDefinitionCatalog(
+            ProcessDefinitionCatalogQueryProjection query,
+            ProcessDefinitionCatalogCommandReceipt? lastReceipt)
+        {
+            var items = new[]
+            {
+                new ProcessDefinitionCatalogItemProjection(
+                    new ProcessDefinitionCatalogItemKey("blazor-app-delivery"),
+                    ProcessDefinitionCatalogScopeKind.Global,
+                    "Blazor app delivery",
+                    "Build and prove a Blazor application.",
+                    ProcessDefinitionCatalogItemStatus.TemplateDefault,
+                    "High",
+                    "GovernedLive",
+                    Now,
+                    CompatibilityIssueCount: 0),
+                new ProcessDefinitionCatalogItemProjection(
+                    new ProcessDefinitionCatalogItemKey("architecture-decision-governance"),
+                    ProcessDefinitionCatalogScopeKind.Global,
+                    "Architecture decision governance",
+                    "Review and approve architecture decisions.",
+                    ProcessDefinitionCatalogItemStatus.TemplateDefault,
+                    "Medium",
+                    "Assisted",
+                    Now,
+                    CompatibilityIssueCount: 0)
+            };
+            ProcessDefinitionCatalogItemProjection[] scopeFiltered = query.ScopeFilter == ProcessDefinitionCatalogScopeKind.Project
+                ? []
+                : items;
+            var filtered = string.IsNullOrWhiteSpace(query.SearchText)
+                ? scopeFiltered
+                : scopeFiltered
+                    .Where(item => item.Name.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                   item.Key.Value.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+            var selected = query.SelectedDefinitionKey is { } selectedKey
+                ? filtered.FirstOrDefault(item => item.Key == selectedKey)
+                : filtered.FirstOrDefault();
+
+            return new ProcessDefinitionCatalogProjection(
+                PublishedDefinitionCount: items.Length,
+                DraftDefinitionCount: 0,
+                TemplateCompatibilityIssueCount: 0,
+                string.IsNullOrWhiteSpace(query.SearchText)
+                    ? "2 default definition(s) loaded from template pack test."
+                    : $"{filtered.Length} definition(s) match '{query.SearchText}'.",
+                query.SearchText ?? string.Empty,
+                selected?.Key,
+                [
+                    new(ProcessDefinitionCatalogScopeKind.All, "All definitions", "All visible definitions.", items.Length, query.ScopeFilter == ProcessDefinitionCatalogScopeKind.All),
+                    new(ProcessDefinitionCatalogScopeKind.Global, "Global defaults", "Template-backed defaults.", items.Length, query.ScopeFilter == ProcessDefinitionCatalogScopeKind.Global),
+                    new(ProcessDefinitionCatalogScopeKind.Project, "Project", "Project-specific definitions.", Count: 0, IsSelected: query.ScopeFilter == ProcessDefinitionCatalogScopeKind.Project)
+                ],
+                filtered,
+                selected,
+                lastReceipt);
+        }
+
+        private static IReadOnlyList<ProcessWorkspaceTabProjection> CreateTabs()
+            =>
+            [
+                new(ProcessWorkspaceTabKey.Definitions, "Definitions", "account_tree", "Definition catalog.", "2", IsEnabled: true),
+                new(ProcessWorkspaceTabKey.LaunchPlans, "Launch plans", "rocket_launch", "Launch plans.", "0", IsEnabled: true),
+                new(ProcessWorkspaceTabKey.LiveRuns, "Live runs", "monitor_heart", "Live runs.", "0", IsEnabled: true),
+                new(ProcessWorkspaceTabKey.History, "History", "history", "History.", "0", IsEnabled: true)
+            ];
+
+        private static IReadOnlyList<ProcessWorkspaceCommandProjection> CreateCommands()
+            =>
+            [
+                new(ProcessWorkspaceCommandKind.RefreshProjections, "Refresh", "refresh", IsEnabled: true, DisabledReason: null),
+                new(ProcessWorkspaceCommandKind.OpenAgentContext, "Agent context", "smart_toy", IsEnabled: true, DisabledReason: null),
+                new(ProcessWorkspaceCommandKind.CreateDefinition, "New definition", "add", IsEnabled: false, "Definition editing is not available in this workspace shell."),
+                new(ProcessWorkspaceCommandKind.FeedDefaults, "Feed defaults", "download", IsEnabled: true, DisabledReason: null),
+                new(ProcessWorkspaceCommandKind.LaunchRun, "Launch", "rocket_launch", IsEnabled: false, "Runtime launch commands are not available in this workspace shell."),
+                new(ProcessWorkspaceCommandKind.OpenLiveDashboard, "Live dashboard", "open_in_new", IsEnabled: true, DisabledReason: null)
+            ];
+
+        private static ProcessWorkspaceAgentEntryProjection CreateAgentEntry(ProcessWorkspaceShellRequest request)
+        {
+            if (request.Selection.RunId is { } runId)
+            {
+                return new ProcessWorkspaceAgentEntryProjection(
+                    ProcessWorkspaceAgentEntryKind.RunContext,
+                    IsAvailable: true,
+                    "Open run agent context",
+                    $"processes:workspace:run:{runId:N}",
+                    DisabledReason: null);
+            }
+
+            return new ProcessWorkspaceAgentEntryProjection(
+                ProcessWorkspaceAgentEntryKind.WorkspaceContext,
+                IsAvailable: true,
+                "Open process agent context",
+                "processes:workspace",
+                DisabledReason: null);
         }
     }
 

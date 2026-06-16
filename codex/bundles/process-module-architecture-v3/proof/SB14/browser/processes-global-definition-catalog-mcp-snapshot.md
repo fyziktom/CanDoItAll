@@ -1,0 +1,177 @@
+- complementary:
+  - generic: CD
+  - generic: CanDoItAll local delivery workbench
+  - button "Expand navigation":
+    - generic: chevron_right
+  - navigation "Primary navigation":
+    - button "Dashboard":
+      - generic: dashboard
+    - button "Projects":
+      - generic: folder_open
+    - button "Collaboration":
+      - generic: forum
+      - generic: "92"
+    - button "CRM / HR":
+      - generic: groups
+    - button "Agents":
+      - generic: smart_toy
+    - button "Workflows":
+      - generic: account_tree
+    - button "Processes":
+      - generic: account_tree
+    - button "Cognitive Memory":
+      - generic: psychology
+    - button "Resources":
+      - generic: inventory_2
+    - button "Plugins":
+      - generic: extension
+    - button "Prompt Gallery":
+      - generic: library_books
+    - button "Prompt Factory":
+      - generic: construction
+    - button "More pages":
+      - generic: expand_less
+  - button "Settings":
+    - generic: settings
+    - generic: Settings
+  - button "Switch Database":
+    - generic: storage
+    - generic: Switch Database
+- main:
+  - button "Dashboard":
+    - generic: Dashboard
+    - generic: push_pin
+  - button "Processes":
+    - generic: Processes
+  - generic: Delivery Workspace
+  - generic: Processes
+  - generic: Interactive Server
+  - generic: Live items 0
+  - generic: Tabs 2
+  - paragraph: Processes
+  - heading "Processes" [level=1]
+  - generic: 24 definitions
+  - generic: 0 active runs
+  - generic: 0 attention
+  - generic: Refresh requested projection
+  - button "Refresh":
+    - generic: refresh
+    - generic: refresh
+  - button "Agent context":
+    - generic: smart_toy
+    - generic: smart toy
+  - paragraph: Projection shell
+  - heading "Processes" [level=2]
+  - paragraph: Projection-first workspace for definitions, launches, live runs, and history.
+  - button "Refresh":
+    - generic: refresh
+    - generic: Refresh
+  - button "Agent context":
+    - generic: smart_toy
+    - generic: Agent context
+  - button "New definition" [disabled]:
+    - generic: add
+    - generic: New definition
+  - button "Feed defaults":
+    - generic: download
+    - generic: Feed defaults
+  - button "Launch" [disabled]:
+    - generic: rocket_launch
+    - generic: Launch
+  - button "Live dashboard":
+    - generic: open_in_new
+    - generic: Live dashboard
+  - paragraph: Definition catalog
+  - heading "24 definition(s)" [level=2]
+  - paragraph: 5 definition(s) match 'architecture' in template pack 2.1.0-live-run-governance.
+  - generic: 24 published
+  - generic: 0 draft
+  - generic: 0 review
+  - paragraph: Live runs
+  - heading "0 active run(s)" [level=2]
+  - paragraph: Runtime projection snapshots are not available in this workspace shell.
+  - generic: 0 active
+  - generic: 0 attention
+  - generic: 0 failed
+  - paragraph: Freshness
+  - heading "Refresh requested" [level=2]
+  - paragraph: Projection refresh was requested through the application boundary.
+  - generic: 15.06.2026 21:23
+  - generic: seq 0
+  - generic: 0 backlog
+  - tablist "Process workspace tabs":
+    - tab "Definitions 24" [selected]:
+      - generic: account_tree
+      - generic: Definitions
+      - generic: "24"
+    - tab "Launch plans 0":
+      - generic: rocket_launch
+      - generic: Launch plans
+      - generic: "0"
+    - tab "Live runs 0":
+      - generic: monitor_heart
+      - generic: Live runs
+      - generic: "0"
+    - tab "History 0":
+      - generic: history
+      - generic: History
+      - generic: "0"
+  - tabpanel "Definitions 24":
+    - paragraph: Definitions
+    - heading "Definitions" [level=2]
+    - paragraph: Definition catalog, template compatibility, and selected definition context.
+    - generic: 24 definition(s)
+    - paragraph: Catalog
+    - heading "Definition catalog" [level=3]
+    - paragraph: 5 definition(s) match 'architecture' in template pack 2.1.0-live-run-governance.
+    - textbox "Search process definitions":
+      - /placeholder: Search definitions
+      - text: architecture
+    - button "Search":
+      - generic: search
+      - generic: Search
+    - button "Clear":
+      - generic: close
+      - generic: Clear
+    - button "Feed defaults" [active]:
+      - generic: download
+      - generic: Feed defaults
+    - paragraph: "24 default process definition(s) are available from template pack 2.1.0-live-run-governance. Refresh token: feed-defaults:2.1.0-live-run-governance:20260616012314."
+    - paragraph: Scope
+    - button "All definitions (24)":
+      - generic: select_all
+      - generic: All definitions (24)
+    - button "Global defaults (24)":
+      - generic: public
+      - generic: Global defaults (24)
+    - button "Project (0)":
+      - generic: folder
+      - generic: Project (0)
+    - paragraph: Definitions
+    - button ".NET architecture design and review subprocess":
+      - generic: account_tree
+      - generic: .NET architecture design and review subprocess
+    - paragraph: Splits .NET architecture design from independent architecture review before implementation starts.
+    - button ".NET implementation slice with atomic validation":
+      - generic: account_tree
+      - generic: .NET implementation slice with atomic validation
+    - paragraph: Reusable software-development child process that breaks implementation into intake, architecture, optional solution setup, feature/function implementation, unit tests, and evidence handoff.
+    - button "Architecture decision governance and ADR stewardship":
+      - generic: account_tree
+      - generic: Architecture decision governance and ADR stewardship
+    - paragraph: Guide architecture decisions from intake through option analysis, governance review, approval, and downstream rollout guidance without losing domain accountability or reusable evidence.
+    - button "Emergency hotfix rollout with shard-risk governance":
+      - generic: account_tree
+      - generic: Emergency hotfix rollout with shard-risk governance
+    - paragraph: Emergency delivery template for time-critical production remediation with explicit containment, rollback, customer communication, artifact-input, and approval discipline aligned to the current process architecture.
+    - button "Multi-team software delivery and release governance":
+      - generic: account_tree
+      - generic: Multi-team software delivery and release governance
+    - paragraph: .NET-focused multi-team delivery template for planned software change with explicit app-type classification, architecture design and review, subprocess-backed implementation, QA, runtime command writeback, UI screenshot writeback, security, release, deployment, and retrospective governance.
+    - paragraph: Selected
+    - heading "Architecture decision governance and ADR stewardship" [level=3]
+    - paragraph: Guide architecture decisions from intake through option analysis, governance review, approval, and downstream rollout guidance without losing domain accountability or reusable evidence.
+    - generic: TemplateDefault
+    - generic: High
+    - generic: AssistedExecution
+    - paragraph: "Key: architecture-decision-governance"

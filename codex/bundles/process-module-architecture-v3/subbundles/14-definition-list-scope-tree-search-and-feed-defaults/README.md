@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-16. Implemented and validated in dependency order after SB13.
 
 ## Objective
 
@@ -87,10 +87,10 @@ Rebuild the Process definition catalog area: counters, global/project scope tree
 
 ## Acceptance Checklist
 
-- [ ] Definition catalog uses projection DTOs.
-- [ ] Search and scope filtering work predictably.
-- [ ] Feed Defaults produces a command receipt and projection refresh.
-- [ ] Current workspace behavior is covered by tests and screenshots.
+- [x] Definition catalog uses projection DTOs.
+- [x] Search and scope filtering work predictably.
+- [x] Feed Defaults produces a command receipt and projection refresh.
+- [x] Current workspace behavior is covered by tests and screenshots.
 
 ## Proof Required
 
@@ -104,7 +104,7 @@ Rebuild the Process definition catalog area: counters, global/project scope tree
 
 ## Progression Gate
 
-- SB15 may start when definition selection and refresh behavior are stable.
+- SB15 may start. Definition selection and refresh behavior are stable.
 
 ## Suggested Agent Prompt
 
@@ -112,4 +112,19 @@ Execute SB14 from `codex/bundles/process-module-architecture-v3/subbundles/14-de
 
 ## Handoff Notes For Next Bundle
 
-Record selected definition projection shape, lint summary availability, and fields SB15 needs.
+- Selection key: `ProcessDefinitionCatalogItemKey`.
+- Query state: `ProcessDefinitionCatalogQueryProjection(SearchText, SelectedDefinitionKey, ScopeFilter, Take)`.
+- Selected metadata available to SB15: key, name, summary, scope kind, status, criticality, operating mode, updated timestamp, and compatibility issue count.
+- Feed Defaults returns `ProcessDefinitionCatalogCommandReceipt` with receipt id, command kind, status, refresh token, affected definition count, accepted timestamp, and summary.
+- Template defaults load from canonical JSON through `ProcessTemplatePackLoader` using `ProcessTemplateJsonContext` source-generated metadata.
+- Project-specific definitions are represented explicitly by the project scope group but currently have count 0 until the SB15/SB19 persistence/editing path exists.
+
+## Completion Proof
+
+- `bundle://proof/SB14/manifest.md`
+- `bundle://proof/SB14/build-solution-sb14.txt`
+- `bundle://proof/SB14/test-unit-definition-catalog-sb14.txt`
+- `bundle://proof/SB14/test-components-process-shell-sb14.txt`
+- `bundle://proof/SB14/test-playwright-process-shell-sb14.txt`
+- `bundle://proof/SB14/browser-validation.md`
+- `bundle://proof/SB14/codeanalytics-snapshot-summary.txt`

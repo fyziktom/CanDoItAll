@@ -20,7 +20,7 @@ public sealed class ProcessShellSmokeTests
             PlaywrightTestHostPaths.RepositoryRoot,
             "output",
             "playwright",
-            "process-shell-sb13");
+            "process-shell-sb14");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -40,9 +40,15 @@ public sealed class ProcessShellSmokeTests
         await page.GetByTestId("processes-shell").WaitForAsync();
         await page.GetByTestId("processes-command-strip").WaitForAsync();
         await page.GetByTestId("processes-tab-definitions").WaitForAsync();
+        await page.GetByTestId("processes-definition-search").FillAsync("architecture");
+        await page.GetByTestId("processes-definition-search-submit").ClickAsync();
+        await page.GetByTestId("processes-definition-architecture-decision-governance").WaitForAsync();
+        await page.GetByTestId("processes-definition-architecture-decision-governance").ClickAsync();
+        await page.GetByTestId("processes-feed-defaults").ClickAsync();
+        await page.GetByTestId("processes-feed-defaults-receipt").WaitForAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
-            Path = Path.Combine(artifactDirectory, "processes-global-shell.png"),
+            Path = Path.Combine(artifactDirectory, "processes-global-definition-catalog.png"),
             FullPage = true
         });
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());

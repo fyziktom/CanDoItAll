@@ -19,6 +19,7 @@ public enum ProcessWorkspaceCommandKind
     RefreshProjections,
     OpenAgentContext,
     CreateDefinition,
+    FeedDefaults,
     LaunchRun,
     OpenLiveDashboard
 }
@@ -36,6 +37,66 @@ public enum ProcessWorkspaceAgentEntryKind
     ProjectContext,
     RunContext,
     LaunchPlanContext
+}
+
+public enum ProcessDefinitionCatalogScopeKind
+{
+    All,
+    Global,
+    Project
+}
+
+public enum ProcessDefinitionCatalogItemStatus
+{
+    TemplateDefault,
+    Draft,
+    Published,
+    RequiresReview
+}
+
+public enum ProcessDefinitionCatalogCommandKind
+{
+    FeedDefaults
+}
+
+public enum ProcessDefinitionCatalogCommandStatus
+{
+    Accepted,
+    NoDefinitionsAvailable
+}
+
+public readonly record struct ProcessDefinitionCatalogItemKey
+{
+    public ProcessDefinitionCatalogItemKey(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("Definition catalog item key is required.", nameof(value));
+        }
+
+        Value = value.Trim();
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
+public readonly record struct ProcessDefinitionCatalogRefreshToken
+{
+    public ProcessDefinitionCatalogRefreshToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("Definition catalog refresh token is required.", nameof(value));
+        }
+
+        Value = value.Trim();
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
 }
 
 public sealed record ProcessWorkspaceShellScope(
@@ -60,9 +121,16 @@ public sealed record ProcessWorkspaceSelectionProjection(
     Guid? RunId,
     Guid? LaunchPlanId);
 
+public sealed record ProcessDefinitionCatalogQueryProjection(
+    string? SearchText,
+    ProcessDefinitionCatalogItemKey? SelectedDefinitionKey,
+    ProcessDefinitionCatalogScopeKind ScopeFilter,
+    int Take);
+
 public sealed record ProcessWorkspaceShellRequest(
     ProcessWorkspaceShellScope Scope,
     ProcessWorkspaceSelectionProjection Selection,
+    ProcessDefinitionCatalogQueryProjection DefinitionCatalogQuery,
     bool ForceRefresh);
 
 public sealed record ProcessWorkspaceTabProjection(
@@ -94,11 +162,44 @@ public sealed record ProcessWorkspaceProjectionRefreshProjection(
     int BacklogEventCount,
     string Summary);
 
-public sealed record ProcessDefinitionCatalogSummaryProjection(
+public sealed record ProcessDefinitionScopeGroupProjection(
+    ProcessDefinitionCatalogScopeKind ScopeKind,
+    string Label,
+    string Description,
+    int Count,
+    bool IsSelected);
+
+public sealed record ProcessDefinitionCatalogItemProjection(
+    ProcessDefinitionCatalogItemKey Key,
+    ProcessDefinitionCatalogScopeKind ScopeKind,
+    string Name,
+    string Summary,
+    ProcessDefinitionCatalogItemStatus Status,
+    string Criticality,
+    string OperatingMode,
+    DateTimeOffset UpdatedAtUtc,
+    int CompatibilityIssueCount);
+
+public sealed record ProcessDefinitionCatalogCommandReceipt(
+    Guid ReceiptId,
+    ProcessDefinitionCatalogCommandKind CommandKind,
+    ProcessDefinitionCatalogCommandStatus Status,
+    ProcessDefinitionCatalogRefreshToken RefreshToken,
+    int AffectedDefinitionCount,
+    DateTimeOffset AcceptedAtUtc,
+    string Summary);
+
+public sealed record ProcessDefinitionCatalogProjection(
     int PublishedDefinitionCount,
     int DraftDefinitionCount,
     int TemplateCompatibilityIssueCount,
-    string Summary);
+    string Summary,
+    string SearchText,
+    ProcessDefinitionCatalogItemKey? SelectedDefinitionKey,
+    IReadOnlyList<ProcessDefinitionScopeGroupProjection> ScopeGroups,
+    IReadOnlyList<ProcessDefinitionCatalogItemProjection> Items,
+    ProcessDefinitionCatalogItemProjection? SelectedItem,
+    ProcessDefinitionCatalogCommandReceipt? LastCommandReceipt);
 
 public sealed record ProcessLiveRunSummaryProjection(
     int ActiveRunCount,
@@ -119,7 +220,7 @@ public sealed record ProcessWorkspaceShellProjection(
     ProcessWorkspaceSelectionProjection Selection,
     string Title,
     string Subtitle,
-    ProcessDefinitionCatalogSummaryProjection DefinitionCatalog,
+    ProcessDefinitionCatalogProjection DefinitionCatalog,
     ProcessLiveRunSummaryProjection LiveRuns,
     ProcessWorkspaceProjectionRefreshProjection Refresh,
     ProcessWorkspaceAuthorizationProjection Authorization,

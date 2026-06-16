@@ -4,7 +4,9 @@
 
 <ProcessWorkspaceShell ProcessIdQuery="@ProcessIdQuery"
                        RunIdQuery="@RunIdQuery"
-                       LaunchPlanIdQuery="@LaunchPlanIdQuery" />
+                       LaunchPlanIdQuery="@LaunchPlanIdQuery"
+                       DefinitionSearchText="@DefinitionSearchText"
+                       SelectedDefinitionKey="@SelectedDefinitionKey" />
 
 @code {
     [SupplyParameterFromQuery(Name = "processId")]
@@ -15,4 +17,10 @@
 
     [SupplyParameterFromQuery(Name = "launchPlanId")]
     public Guid? LaunchPlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? DefinitionSearchText { get; set; }
+
+    [SupplyParameterFromQuery(Name = "definitionKey")]
+    public string? SelectedDefinitionKey { get; set; }
 }

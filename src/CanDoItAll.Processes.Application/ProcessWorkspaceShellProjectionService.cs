@@ -1,15 +1,18 @@
+using System.Globalization;
 using CanDoItAll.Processes.Projections;
 
 namespace CanDoItAll.Processes.Application;
 
-public sealed class ProcessWorkspaceShellProjectionService(IProcessProjectionClock clock)
+public sealed class ProcessWorkspaceShellProjectionService(
+    IProcessProjectionClock clock,
+    ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService)
 {
     private const string WorkspaceContextPrefix = "processes:workspace";
     private const string ProjectContextPrefix = "processes:project";
     private const string RunContextSegment = "run";
     private const string LaunchPlanContextSegment = "launch-plan";
 
-    public Task<ProcessWorkspaceShellProjection> GetShellAsync(
+    public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
         ProcessWorkspaceShellRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -24,25 +27,35 @@ public sealed class ProcessWorkspaceShellProjectionService(IProcessProjectionClo
             CanEditDefinitions: false,
             CanLaunchRuns: false);
 
-        return Task.FromResult(new ProcessWorkspaceShellProjection(
+        var definitionCatalog = await definitionCatalogProjectionService
+            .GetCatalogAsync(request.Scope, request.DefinitionCatalogQuery, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        return new ProcessWorkspaceShellProjection(
             request.Scope,
             request.Selection,
             ResolveTitle(request.Scope),
             ResolveSubtitle(request.Scope),
-            CreateDefinitionCatalogSummary(),
+            definitionCatalog,
             CreateLiveRunSummary(),
             CreateRefreshProjection(request.ForceRefresh, observedAtUtc),
             authorization,
-            CreateTabs(),
+            CreateTabs(definitionCatalog),
             CreateCommands(authorization),
-            CreateAgentEntry(request.Scope, request.Selection, authorization)));
+            CreateAgentEntry(request.Scope, request.Selection, authorization));
     }
+
+    public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
+        ProcessDefinitionFeedDefaultsCommand command,
+        CancellationToken cancellationToken = default)
+        => definitionCatalogProjectionService.FeedDefaultDefinitionsAsync(command, cancellationToken);
 
     private static void ValidateRequest(ProcessWorkspaceShellRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Scope);
         ArgumentNullException.ThrowIfNull(request.Selection);
+        ArgumentNullException.ThrowIfNull(request.DefinitionCatalogQuery);
 
         if (request.Scope.Kind == ProcessWorkspaceScopeKind.Project &&
             request.Scope.ProjectId is null)
@@ -67,13 +80,6 @@ public sealed class ProcessWorkspaceShellProjectionService(IProcessProjectionClo
             ? $"Projection-first project workspace for {scope.ProjectId:D}."
             : "Projection-first workspace for definitions, launches, live runs, and history.";
 
-    private static ProcessDefinitionCatalogSummaryProjection CreateDefinitionCatalogSummary()
-        => new(
-            PublishedDefinitionCount: 0,
-            DraftDefinitionCount: 0,
-            TemplateCompatibilityIssueCount: 0,
-            Summary: "Definition catalog projections are not available in this workspace shell.");
-
     private static ProcessLiveRunSummaryProjection CreateLiveRunSummary()
         => new(
             ActiveRunCount: 0,
@@ -96,15 +102,20 @@ public sealed class ProcessWorkspaceShellProjectionService(IProcessProjectionClo
                 ? "Projection refresh was requested through the application boundary."
                 : "Projection store integration is pending; runtime data is intentionally not read by the UI shell.");
 
-    private static IReadOnlyList<ProcessWorkspaceTabProjection> CreateTabs()
-        =>
+    private static IReadOnlyList<ProcessWorkspaceTabProjection> CreateTabs(
+        ProcessDefinitionCatalogProjection definitionCatalog)
+    {
+        var definitionCount = definitionCatalog.PublishedDefinitionCount + definitionCatalog.DraftDefinitionCount;
+        var definitionCountText = definitionCount.ToString(CultureInfo.InvariantCulture);
+
+        return
         [
             new(
                 ProcessWorkspaceTabKey.Definitions,
                 "Definitions",
                 "account_tree",
                 "Definition catalog, template compatibility, and selected definition context.",
-                "0",
+                definitionCountText,
                 IsEnabled: true),
             new(
                 ProcessWorkspaceTabKey.LaunchPlans,
@@ -128,6 +139,7 @@ public sealed class ProcessWorkspaceShellProjectionService(IProcessProjectionClo
                 "0",
                 IsEnabled: true)
         ];
+    }
 
     private static IReadOnlyList<ProcessWorkspaceCommandProjection> CreateCommands(
         ProcessWorkspaceAuthorizationProjection authorization)
@@ -151,6 +163,12 @@ public sealed class ProcessWorkspaceShellProjectionService(IProcessProjectionClo
                 "add",
                 authorization.CanEditDefinitions,
                 "Definition editing is not available in this workspace shell."),
+            new(
+                ProcessWorkspaceCommandKind.FeedDefaults,
+                "Feed defaults",
+                "download",
+                authorization.CanRefreshProjections,
+                authorization.CanRefreshProjections ? null : "Projection refresh is not authorized."),
             new(
                 ProcessWorkspaceCommandKind.LaunchRun,
                 "Launch",

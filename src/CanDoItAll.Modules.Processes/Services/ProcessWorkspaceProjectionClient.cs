@@ -8,6 +8,10 @@ public interface IProcessWorkspaceProjectionClient
     Task<ProcessWorkspaceShellProjection> GetShellAsync(
         ProcessWorkspaceShellRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
+        ProcessDefinitionFeedDefaultsCommand command,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ProcessWorkspaceProjectionClient(
@@ -17,4 +21,9 @@ public sealed class ProcessWorkspaceProjectionClient(
         ProcessWorkspaceShellRequest request,
         CancellationToken cancellationToken = default)
         => shellProjectionService.GetShellAsync(request, cancellationToken);
+
+    public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
+        ProcessDefinitionFeedDefaultsCommand command,
+        CancellationToken cancellationToken = default)
+        => shellProjectionService.FeedDefaultDefinitionsAsync(command, cancellationToken);
 }

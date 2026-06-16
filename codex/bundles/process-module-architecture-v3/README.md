@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB13 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, Git/template foundations, driver abstraction contracts, immutable instance builder/compiler contracts, runtime scheduler/dispatcher/event ports, persistence/event/outbox/ledger/projection stores, manager/incidents/recovery/typed branch/subprocess control, monitoring projections/live-history contracts, execution adapter/layered driver foundations, template/runtime-history compatibility reporting, and the projection-first Process UI shell are implemented and validated. SB14 is next.
+Prepared architecture proposal and future implementation roadmap, third iteration. Execution started on 2026-06-15 after user approval. SB01 through SB14 are complete: legacy reference archive, active removal/skeleton boundaries, generic core contracts, Git/template foundations, driver abstraction contracts, immutable instance builder/compiler contracts, runtime scheduler/dispatcher/event ports, persistence/event/outbox/ledger/projection stores, manager/incidents/recovery/typed branch/subprocess control, monitoring projections/live-history contracts, execution adapter/layered driver foundations, template/runtime-history compatibility reporting, the projection-first Process UI shell, and the definition catalog/search/scope/Feed Defaults flow are implemented and validated. SB15 is next.
 
 Unlike v2, v3 now includes real future implementation subbundles. They are detailed work packages executed in dependency order after user approval. This update expands the roadmap from SB01-SB14 to SB01-SB28 and adds a current-implementation user-story map.
 
@@ -65,16 +65,16 @@ This bundle was grounded in the current repo, v2 bundle, and v3 planning instruc
 - `codex/bundles/process_module_architecture_v3_subbundle_planning_instructions`
 - current running Process UI at `http://localhost:5032/processes` and `http://localhost:5032/processes/live`
 
-The original preparation pass intentionally did not run product tests because no product behavior was changed. Execution proof for SB01-SB13 is recorded under [proof/](proof/), including focused unit tests, solution builds, static scans, browser validation, and CodeAnalytics MCP snapshots where required.
+The original preparation pass intentionally did not run product tests because no product behavior was changed. Execution proof for SB01-SB14 is recorded under [proof/](proof/), including focused unit tests, solution builds, static scans, browser validation, and CodeAnalytics MCP snapshots where required.
 
 ## Validation Summary
 
 - Bundle preparation status: Prepared architecture bundle v3 with future subbundle roadmap.
 - Bundle readiness gate: Prepared-stage validator passed before execution.
-- Execution status: SB01-SB13 completed in dependency order.
-- Subbundle gate review: SB01-SB13 closure proof is recorded in `proof/SB01/` through `proof/SB13/`; SB14-SB28 remain pending execution.
+- Execution status: SB01-SB14 completed in dependency order.
+- Subbundle gate review: SB01-SB14 closure proof is recorded in `proof/SB01/` through `proof/SB14/`; SB15-SB28 remain pending execution.
 - Final closure gate: Future implementation closure depends on the Phase 0 and project rebuild gates in `plan/`.
-- Browser validation analytics: Current UI was inspected for story-map evidence; SB13 captured route-level Playwright and Browser MCP proof for the rebuilt Process shell.
+- Browser validation analytics: Current UI was inspected for story-map evidence; SB13 captured route-level Playwright and Browser MCP proof for the rebuilt Process shell; SB14 captured route, search, selection, Feed Defaults, scope empty-state, and project route proof.
 - Prepared-stage validation is recorded in `reviews/01-execution-report.md`.
 - v2/v3 architecture gaps were converted into new architecture files, roadmap updates, real future subbundles, story traceability, validation checks, and reviews.
 - The performance guardrail review was added using the `analyzing-dotnet-performance` skill against current Process code signals and translated into architecture constraints for future implementation.
