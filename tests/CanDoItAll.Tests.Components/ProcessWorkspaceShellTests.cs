@@ -3,6 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
@@ -779,8 +780,176 @@ public sealed class ProcessWorkspaceShellTests
                 authorization,
                 CreateTabs(),
                 CreateCommands(),
-                CreateAgentEntry(request));
+                CreateAgentEntry(request))
+            {
+                Runtime = CreateRuntimeWorkspace(request)
+            };
         }
+
+        private static ProcessRuntimeWorkspaceProjection CreateRuntimeWorkspace(ProcessWorkspaceShellRequest request)
+        {
+            var runId = new ProcessRunId(Guid.Parse("77777777-7777-7777-7777-777777777777"));
+            var secondRunId = new ProcessRunId(Guid.Parse("88888888-8888-8888-8888-888888888888"));
+            var selectedRunId = request.RuntimeQuery?.SelectedRunId == secondRunId.Value
+                ? secondRunId
+                : runId;
+            var freshness = new ProcessProjectionFreshness(
+                Now,
+                SourceGlobalSequence: 12,
+                new ProcessProjectionLag(12, 12, BacklogEventCount: 0));
+            var events = CreateRuntimeEvents(selectedRunId);
+            var selectedRun = new ProcessRunDetailProjection(
+                selectedRunId,
+                selectedRunId,
+                selectedRunId == runId ? ProcessProjectedRunStatus.NeedsAttention : ProcessProjectedRunStatus.Active,
+                Now.AddMinutes(-35),
+                Now.AddMinutes(-2),
+                freshness,
+                events.Select(ToLiveRunEvent).ToArray());
+            var runs = new[]
+            {
+                CreateLiveRun(runId, ProcessProjectedRunStatus.NeedsAttention, freshness, events),
+                CreateLiveRun(secondRunId, ProcessProjectedRunStatus.Active, freshness, CreateRuntimeEvents(secondRunId, startSequence: 20))
+            };
+            var historyWindow = request.RuntimeQuery?.HistoryWindow ?? ProcessRuntimeHistoryWindow.OneDay;
+            var page = request.RuntimeQuery?.EventPage ?? 0;
+            var pageSize = request.RuntimeQuery?.EventPageSize ?? 25;
+
+            return new ProcessRuntimeWorkspaceProjection(
+                historyWindow,
+                page,
+                pageSize,
+                HasMoreEvents: false,
+                selectedRunId.Value,
+                selectedRun,
+                runs,
+                events,
+                runs.SelectMany(run => run.Incidents).ToArray(),
+                [
+                    new ProcessManagerMessageProjection(
+                        "manager-message-test",
+                        selectedRunId,
+                        selectedRunId,
+                        "Manager Incident Raised",
+                        "Manager incident raised; operator review is required.",
+                        Now.AddMinutes(-2),
+                        ProcessProjectedSensitivity.Normal,
+                        RestrictedDiagnosticReference: null)
+                ],
+                new ProcessRuntimeStatsProjection(
+                    ObservedRunCount: runs.Length,
+                    ActiveRunCount: 2,
+                    AttentionRunCount: 1,
+                    FailedRunCount: 0,
+                    EventCount: events.Count,
+                    ManagerEventCount: 1,
+                    ToolCallCount: events.Count,
+                    DurationMs: 33 * 60 * 1000,
+                    InputTokens: 0,
+                    CachedInputTokens: 0,
+                    OutputTokens: 0,
+                    EstimatedCost: 0m,
+                    ActualCost: 0m),
+                events.Select(runtimeEvent => new ProcessRuntimeMetricPointProjection(
+                    runtimeEvent.OccurredAtUtc,
+                    EventCount: 1,
+                    ManagerEventCount: runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal) ? 1 : 0,
+                    ToolCallCount: 1,
+                    DurationMs: 60_000,
+                    InputTokens: 0,
+                    CachedInputTokens: 0,
+                    OutputTokens: 0,
+                    EstimatedCost: 0m,
+                    ActualCost: 0m)).ToArray(),
+                [
+                    new ProcessRuntimeToolUsageProjection("Step Running", 1, Now.AddMinutes(-30), "1 event, latest test."),
+                    new ProcessRuntimeToolUsageProjection("Manager Incident Raised", 1, Now.AddMinutes(-2), "1 event, latest test.")
+                ],
+                freshness,
+                "2 run(s), 2 active, 1 needing attention, 3 event(s) on this page.",
+                "Cause: Manager incident raised. Next action: open the selected run and review manager messages.");
+        }
+
+        private static ProcessLiveProcessSnapshot CreateLiveRun(
+            ProcessRunId runId,
+            ProcessProjectedRunStatus status,
+            ProcessProjectionFreshness freshness,
+            IReadOnlyList<ProcessTimelineEventProjection> events)
+        {
+            IReadOnlyList<ProcessIncidentProjection> incidents = status == ProcessProjectedRunStatus.NeedsAttention
+                ?
+                [
+                    new ProcessIncidentProjection(
+                        "incident-test",
+                        runId,
+                        runId,
+                        "ManagerIncident",
+                        "NeedsAttention",
+                        "Raised",
+                        "Manager incident raised",
+                        "runtime-event:test",
+                        Now.AddMinutes(-2))
+                ]
+                : Array.Empty<ProcessIncidentProjection>();
+
+            return new ProcessLiveProcessSnapshot(
+                runId,
+                runId,
+                status,
+                IsActive: status is ProcessProjectedRunStatus.Active or ProcessProjectedRunStatus.NeedsAttention,
+                Now.AddMinutes(-35),
+                Now.AddMinutes(-2),
+                freshness,
+                events.Select(ToLiveRunEvent).ToArray(),
+                incidents);
+        }
+
+        private static IReadOnlyList<ProcessTimelineEventProjection> CreateRuntimeEvents(ProcessRunId runId, int startSequence = 10)
+            =>
+            [
+                new ProcessTimelineEventProjection(
+                    RuntimeEventId.New(),
+                    startSequence,
+                    runId,
+                    runId,
+                    "ProcessRunActivated",
+                    Now.AddMinutes(-35),
+                    ProcessProjectedSensitivity.Normal,
+                    "ProcessRunActivated",
+                    RestrictedDiagnosticReference: null),
+                new ProcessTimelineEventProjection(
+                    RuntimeEventId.New(),
+                    startSequence + 1,
+                    runId,
+                    runId,
+                    "StepRunning",
+                    Now.AddMinutes(-30),
+                    ProcessProjectedSensitivity.Normal,
+                    "StepRunning",
+                    RestrictedDiagnosticReference: null),
+                new ProcessTimelineEventProjection(
+                    RuntimeEventId.New(),
+                    startSequence + 2,
+                    runId,
+                    runId,
+                    "ManagerIncidentRaised",
+                    Now.AddMinutes(-2),
+                    ProcessProjectedSensitivity.Normal,
+                    "ManagerIncidentRaised",
+                    RestrictedDiagnosticReference: null)
+            ];
+
+        private static ProcessLiveRunEventProjection ToLiveRunEvent(ProcessTimelineEventProjection runtimeEvent)
+            => new(
+                runtimeEvent.EventId,
+                runtimeEvent.GlobalSequence,
+                runtimeEvent.RootRunId,
+                runtimeEvent.RunId,
+                runtimeEvent.EventType,
+                runtimeEvent.OccurredAtUtc,
+                runtimeEvent.Sensitivity,
+                runtimeEvent.Summary,
+                runtimeEvent.RestrictedDiagnosticReference);
 
         private static ProcessDefinitionCatalogProjection CreateDefinitionCatalog(
             ProcessDefinitionCatalogQueryProjection query,

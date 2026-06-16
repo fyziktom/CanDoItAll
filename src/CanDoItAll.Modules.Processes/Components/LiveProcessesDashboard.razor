@@ -138,7 +138,74 @@
     </ChildContent>
 </PageScaffold>
 
+@if (runDetailDialogOpen && runDetailSnapshot is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Live process"
+            Title="@BuildRunTitle(runDetailSnapshot)"
+            Subtitle="@BuildRunSubtitle(runDetailSnapshot)"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            TestId="live-processes-run-detail-dialog"
+            OnClose="CloseRunDetailDialogAsync">
+        <ChildContent>
+            @RenderRunDetailDialog(runDetailSnapshot)
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseRunDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
 @code {
+    private static readonly ProcessRuntimeHistoryWindow[] RuntimeHistoryWindowOptions =
+    [
+        ProcessRuntimeHistoryWindow.LiveHour,
+        ProcessRuntimeHistoryWindow.OneDay,
+        ProcessRuntimeHistoryWindow.SevenDays,
+        ProcessRuntimeHistoryWindow.ThirtyDays
+    ];
+
+    private static readonly ProcessProjectedRunStatus[] StatusFilterOptions =
+    [
+        ProcessProjectedRunStatus.Active,
+        ProcessProjectedRunStatus.NeedsAttention,
+        ProcessProjectedRunStatus.Failed,
+        ProcessProjectedRunStatus.Completed,
+        ProcessProjectedRunStatus.Cancelled
+    ];
+
+    private static readonly CdaChartOptions RuntimeActivityChartOptions = new()
+    {
+        Type = CdaChartType.Area,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Events",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        FillOpacity = 0.22,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#2563eb", "#7c3aed", "#0891b2"]
+    };
+
+    private static readonly CdaChartOptions RuntimeToolUsageChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        YAxisTitle = "Calls",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        ShowToolbar = false,
+        EnableZoom = false,
+        RotateXAxisLabels = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#f59e0b"]
+    };
+
     [Parameter]
     public Guid? ProjectId { get; set; }
 
@@ -155,6 +222,13 @@
     private bool isLoading;
     private string? errorMessage;
     private int selectedTabIndex;
+    private Guid? selectedRuntimeRunId;
+    private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.LiveHour;
+    private int runtimeEventPage;
+    private const int RuntimeEventPageSize = 25;
+    private ProcessProjectedRunStatus? statusFilter;
+    private bool runDetailDialogOpen;
+    private ProcessLiveProcessSnapshot? runDetailSnapshot;
 
     private string PageTitleText => ProjectId.HasValue ? "Project live processes" : "Live processes";
 
@@ -164,8 +238,8 @@
             : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount).ToString("N0", CultureInfo.CurrentCulture);
 
     private string LastEventText
-        => shell?.LiveRuns.LastEventAtUtc is { } lastEvent
-            ? lastEvent.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)
+        => shell?.Runtime.Runs.Count > 0
+            ? shell.Runtime.Runs.Max(run => run.LastEventAtUtc).LocalDateTime.ToString("g", CultureInfo.CurrentCulture)
             : "No events";
 
     private string ProjectionStatusText
@@ -210,21 +284,20 @@
 
         try
         {
-            shell = await ProjectionClient.GetShellAsync(new ProcessWorkspaceShellRequest(
-                ResolveScope(),
-                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
-                new ProcessDefinitionCatalogQueryProjection(
-                    SearchText: null,
-                    SelectedDefinitionKey: null,
-                    ProcessDefinitionCatalogScopeKind.All,
-                    Take: 25),
-                new ProcessTemplateCatalogQueryProjection(
-                    SearchText: null,
-                    ProcessTemplateCatalogCategoryKind.All,
-                    SelectedItemKey: null,
-                    ProcessTemplateCatalogPreviewTabKind.Overview,
-                    Take: 25),
-                forceRefresh));
+            shell = await LoadShellProjectionAsync(forceRefresh, selectedRuntimeRunId ?? RunIdQuery);
+            var requestedRunId = shell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
+            var resolvedRunId = ResolveRunIdForCurrentStatusFilter(shell.Runtime.Runs, requestedRunId);
+
+            if (resolvedRunId != requestedRunId)
+            {
+                selectedRuntimeRunId = resolvedRunId;
+                runtimeEventPage = 0;
+                shell = await LoadShellProjectionAsync(forceRefresh: false, selectedRuntimeRunId);
+            }
+            else
+            {
+                selectedRuntimeRunId = resolvedRunId;
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -237,6 +310,28 @@
         }
     }
 
+    private Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, Guid? runId)
+        => ProjectionClient.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ResolveScope(),
+            new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
+            new ProcessDefinitionCatalogQueryProjection(
+                SearchText: null,
+                SelectedDefinitionKey: null,
+                ProcessDefinitionCatalogScopeKind.All,
+                Take: 25),
+            new ProcessTemplateCatalogQueryProjection(
+                SearchText: null,
+                ProcessTemplateCatalogCategoryKind.All,
+                SelectedItemKey: null,
+                ProcessTemplateCatalogPreviewTabKind.Overview,
+                Take: 25),
+            forceRefresh,
+            new ProcessRuntimeWorkspaceQueryProjection(
+                runtimeHistoryWindow,
+                runtimeEventPage,
+                RuntimeEventPageSize,
+                runId)));
+
     private ProcessWorkspaceShellScope ResolveScope()
         => ProjectId.HasValue
             ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
@@ -248,31 +343,27 @@
         return Task.CompletedTask;
     }
 
-    private RenderFragment RenderActivityTab() => @<Grid Gap="LayoutGap.Medium"
-                                                         ColumnsLg="3"
-                                                         data-testid="live-processes-activity">
-        <SurfaceCard Soft="true">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Active runs" />
-            <h2 class="text-base font-semibold text-slate-900">@shell!.LiveRuns.ActiveRunCount active run(s)</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">@shell.LiveRuns.Summary</p>
-        </SurfaceCard>
-        <SurfaceCard Soft="true">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Attention" />
-            <h2 class="text-base font-semibold text-slate-900">@shell!.LiveRuns.AttentionRunCount run(s)</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Projected runs requiring operator review stay separated from definition authoring.</p>
-        </SurfaceCard>
-        <SurfaceCard Soft="true">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Failures" />
-            <h2 class="text-base font-semibold text-slate-900">@shell!.LiveRuns.FailedRunCount failed run(s)</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Failure counts come from the process runtime projection rather than the definition catalog.</p>
-        </SurfaceCard>
-    </Grid>;
+    private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuns
+        => shell?.Runtime.Runs
+            .Where(run => statusFilter is null || run.Status == statusFilter)
+            .ToArray() ?? [];
+
+    private RenderFragment RenderActivityTab() => @<Stack GapScale="LayoutGap.Medium"
+                                                          data-testid="live-processes-activity">
+        @RenderRuntimeToolbar("live-processes-runtime-toolbar")
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)">
+            @RenderRunCards()
+            @RenderEventLedger()
+        </Grid>
+    </Stack>;
 
     private RenderFragment RenderAgentsTab() => @<SurfaceCard Soft="true"
                                                               data-testid="live-processes-agents">
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager context" />
         <h2 class="text-base font-semibold text-slate-900">@shell!.AgentEntry.Label</h2>
         <p class="mt-2 text-sm leading-6 text-slate-600">@shell.AgentEntry.ContextKey</p>
+        <p class="mt-2 text-sm leading-6 text-slate-600">@shell.Runtime.AttentionSummary</p>
         <Cluster Gap="LayoutGap.Small"
                  Class="mt-4 flex-wrap">
             <StatusBadge Tone="@(shell.AgentEntry.IsAvailable ? "success" : "warning")"
@@ -284,18 +375,536 @@
         </Cluster>
     </SurfaceCard>;
 
-    private RenderFragment RenderGraphsTab() => @<SurfaceCard Soft="true"
-                                                              data-testid="live-processes-graphs">
-        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Runtime graph" />
-        <h2 class="text-base font-semibold text-slate-900">Projection graph pending runtime detail rows</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-600">This page intentionally stays runtime-focused while the current projection contract exposes live-run totals only.</p>
+    private RenderFragment RenderGraphsTab() => @<Stack GapScale="LayoutGap.Medium"
+                                                        data-testid="live-processes-graphs">
+        @RenderRuntimeToolbar("live-processes-graphs-toolbar")
+        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+            @RenderMetricCard("Events", shell!.Runtime.Stats.EventCount.ToString(CultureInfo.InvariantCulture), "info", "Paged runtime events in the selected history window.")
+            @RenderMetricCard("Manager", shell.Runtime.Stats.ManagerEventCount.ToString(CultureInfo.InvariantCulture), "warning", "Manager signals and escalations.")
+            @RenderMetricCard("Tool usage", shell.Runtime.Stats.ToolCallCount.ToString(CultureInfo.InvariantCulture), "neutral", "Runtime activity grouped by event/tool category.")
+            @RenderMetricCard("Time", FormatDuration(shell.Runtime.Stats.DurationMs), "info", "Observed runtime span for the current page.")
+        </Grid>
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+            <CdaChart Title="Selected history"
+                      Description="Events, manager signals, and tool activity."
+                      Series="@RuntimeActivitySeries"
+                      Options="@RuntimeActivityChartOptions"
+                      Height="320"
+                      EmptyText="No runtime events match the selected filters." />
+            <CdaChart Title="Tool usage"
+                      Description="Most active event/tool categories."
+                      Series="@RuntimeToolUsageSeries"
+                      Options="@RuntimeToolUsageChartOptions"
+                      Height="320"
+                      EmptyText="No runtime tool activity is present in this scope." />
+        </Grid>
+    </Stack>;
+
+    private RenderFragment RenderToolAnalyticsTab() => @<Grid Gap="LayoutGap.Medium"
+                                                              ColumnTemplateXl="minmax(0,0.8fr) minmax(0,1.2fr)"
+                                                              data-testid="live-processes-tool-analytics">
+        @RenderToolUsageLedger()
+        @RenderEventLedger()
+    </Grid>;
+
+    private IReadOnlyList<CdaChartSeries> RuntimeActivitySeries
+    {
+        get
+        {
+            var points = shell?.Runtime.MetricPoints ?? [];
+            if (points.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Events",
+                    Type = CdaChartType.Area,
+                    Color = "#2563eb",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.EventCount)).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Manager signals",
+                    Type = CdaChartType.Line,
+                    Color = "#7c3aed",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ManagerEventCount)).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Tool activity",
+                    Type = CdaChartType.Line,
+                    Color = "#0891b2",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ToolCallCount)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> RuntimeToolUsageSeries
+    {
+        get
+        {
+            var toolUsage = shell?.Runtime.ToolUsage.Take(15).ToArray() ?? [];
+            if (toolUsage.Length == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Calls",
+                    Type = CdaChartType.Bar,
+                    Color = "#f59e0b",
+                    Points = toolUsage.Select(item => new CdaChartPoint(TrimLabel(item.ToolName, 26), item.CallCount)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private RenderFragment RenderRuntimeToolbar(string testId) => @<SurfaceCard Soft="true"
+                                                                                Class="live-processes-filter-strip"
+                                                                                data-testid="@testId">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(14rem,0.55fr) minmax(14rem,0.55fr) minmax(16rem,1fr) auto"
+              AlignItems="AlignItems.End">
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History</label>
+                <select id="@($"{testId}-window")"
+                        class="cda-input"
+                        value="@runtimeHistoryWindow"
+                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                        data-testid="live-processes-history-window">
+                    @foreach (var option in RuntimeHistoryWindowOptions)
+                    {
+                        <option value="@option">@FormatHistoryWindow(option)</option>
+                    }
+                </select>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-status")">Status</label>
+                <select id="@($"{testId}-status")"
+                        class="cda-input"
+                        value="@StatusFilterValue"
+                        @onchange="ChangeStatusFilterAsync"
+                        data-testid="live-processes-status-filter">
+                    <option value="">All statuses</option>
+                    @foreach (var option in StatusFilterOptions)
+                    {
+                        <option value="@option">@option.ToString()</option>
+                    }
+                </select>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
+                <select id="@($"{testId}-run")"
+                        class="cda-input"
+                        value="@RuntimeRunSelectValue"
+                        @onchange="SelectRuntimeRunAsync"
+                        data-testid="live-processes-run-filter">
+                    @RenderRuntimeRunOptions()
+                </select>
+            </Stack>
+            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
+                <Button Icon="chevron_left"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        title="Previous event page"
+                        aria-label="Previous event page"
+                        Disabled="@(runtimeEventPage == 0 || isLoading)"
+                        Click="PreviousRuntimeEventPageAsync"
+                        data-testid="live-processes-events-prev" />
+                <StatusBadge Tone="neutral" Text="@($"Page {runtimeEventPage + 1}")" />
+                <Button Icon="chevron_right"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        title="Next event page"
+                        aria-label="Next event page"
+                        Disabled="@(!shell!.Runtime.HasMoreEvents || isLoading)"
+                        Click="NextRuntimeEventPageAsync"
+                        data-testid="live-processes-events-next" />
+            </Cluster>
+        </Grid>
     </SurfaceCard>;
 
-    private RenderFragment RenderToolAnalyticsTab() => @<SurfaceCard Soft="true"
-                                                                    data-testid="live-processes-tool-analytics">
-        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool analytics" />
-        <h2 class="text-base font-semibold text-slate-900">@shell!.Refresh.BacklogEventCount backlog event(s)</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-600">@shell.Refresh.Summary</p>
+    private RenderFragment RenderRuntimeRunOptions() => @<text>
+        @if (VisibleRuns.Count == 0)
+        {
+            <option value="">No runtime runs</option>
+        }
+        else
+        {
+            <option value="">All runs</option>
+            @foreach (var run in VisibleRuns)
+            {
+                <option value="@run.RunId.Value.ToString("D")">@BuildRunOptionText(run)</option>
+            }
+        }
+    </text>;
+
+    private RenderFragment RenderRunCards() => @<Stack GapScale="LayoutGap.Small"
+                                                       data-testid="live-processes-run-cards">
+        @if (VisibleRuns.Count == 0)
+        {
+            <EmptyState Eyebrow="Live processes"
+                        Title="No process cards match the filters"
+                        Description="Widen the history window or clear the status filter." />
+        }
+        else
+        {
+            @foreach (var run in VisibleRuns)
+            {
+                <article class="live-processes-run-card @(run.RunId.Value == selectedRuntimeRunId ? "live-processes-run-card--selected" : string.Empty)"
+                         data-testid="live-processes-run-card">
+                    <button type="button"
+                            class="live-processes-run-card__body"
+                            @onclick="@(() => SelectRuntimeRunAsync(run.RunId.Value))">
+                        <span class="live-processes-run-card__header">
+                            <span class="live-processes-run-card__title">@BuildRunTitle(run)</span>
+                            <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                        </span>
+                        <span class="live-processes-run-card__summary">@BuildRunCardSummary(run)</span>
+                        <span class="live-processes-run-card__badges">
+                            <StatusBadge Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" />
+                            <StatusBadge Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" />
+                            <StatusBadge Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" />
+                        </span>
+                    </button>
+                    <Button Icon="open_in_new"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Class="cda-button--quick live-processes-run-card__open"
+                            title="Open run details"
+                            aria-label="Open run details"
+                            Click="@(() => OpenRunDetailDialogAsync(run))"
+                            data-testid="live-processes-run-open-details" />
+                </article>
+            }
+        }
+    </Stack>;
+
+    private RenderFragment RenderEventLedger() => @<SurfaceCard Soft="true"
+                                                                data-testid="live-processes-event-ledger">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="History" />
+                <h2 class="text-base font-semibold text-slate-900">@($"{shell!.Runtime.Events.Count} event(s)")</h2>
+            </Stack>
+            <StatusBadge Tone="neutral" Text="@FormatHistoryWindow(shell!.Runtime.HistoryWindow)" />
+        </Split>
+        @if (shell!.Runtime.Events.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime events match the selected history filters.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var runtimeEvent in shell.Runtime.Events)
+                {
+                    <div class="live-processes-event-row" data-testid="live-processes-event-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.EventType" />
+                            <StatusBadge Tone="neutral" Text="@runtimeEvent.Sensitivity.ToString()" />
+                            <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">@runtimeEvent.Summary</p>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderToolUsageLedger() => @<SurfaceCard Soft="true"
+                                                                    data-testid="live-processes-tool-ledger">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool usage" />
+        @if (shell!.Runtime.ToolUsage.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime tool usage is present in this history window.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var tool in shell.Runtime.ToolUsage)
+                {
+                    <div class="live-processes-event-row" data-testid="live-processes-tool-row">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900">@tool.ToolName</p>
+                                <p class="mt-1 text-xs text-slate-500">@tool.Summary</p>
+                            </div>
+                            <StatusBadge Tone="warning" Text="@($"{tool.CallCount} calls")" />
+                        </Split>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderRunDetailDialog(ProcessLiveProcessSnapshot run) => @<Stack GapScale="LayoutGap.Medium"
+                                                                                           data-testid="live-processes-run-detail-dialog-content">
+        <CompactStatStrip>
+            <CompactStat Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" TooltipText="Projected run status." />
+            <CompactStat Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" TooltipText="Recent events kept in the live run snapshot." />
+            <CompactStat Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" TooltipText="Manager incidents projected for this run." />
+            <CompactStat Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" TooltipText="Latest runtime event time." />
+        </CompactStatStrip>
+        <Grid Gap="LayoutGap.Medium" ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+            <SurfaceCard Soft="true">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recent events" />
+                @foreach (var runtimeEvent in run.RecentEvents.OrderByDescending(item => item.OccurredAtUtc))
+                {
+                    <div class="live-processes-event-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@runtimeEvent.EventType" />
+                            <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">@runtimeEvent.Summary</p>
+                    </div>
+                }
+            </SurfaceCard>
+            <SurfaceCard Soft="true">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
+                @if (run.Incidents.Count == 0)
+                {
+                    <p class="mt-3 text-sm leading-6 text-slate-500">No incidents are attached to this run.</p>
+                }
+                else
+                {
+                    @foreach (var incident in run.Incidents.OrderByDescending(item => item.RaisedAtUtc))
+                    {
+                        <div class="live-processes-event-row">
+                            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                <StatusBadge Tone="warning" Text="@incident.Severity" />
+                                <StatusBadge Tone="neutral" Text="@incident.Status" />
+                            </Cluster>
+                            <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
+                            <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                        </div>
+                    }
+                }
+            </SurfaceCard>
+        </Grid>
+    </Stack>;
+
+    private string RuntimeRunSelectValue
+        => selectedRuntimeRunId.HasValue && VisibleRuns.Any(run => run.RunId.Value == selectedRuntimeRunId.Value)
+            ? selectedRuntimeRunId.Value.ToString("D")
+            : string.Empty;
+
+    private string StatusFilterValue => statusFilter?.ToString() ?? string.Empty;
+
+    private async Task ChangeRuntimeHistoryWindowAsync(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(args.Value?.ToString(), out var parsed))
+        {
+            runtimeHistoryWindow = parsed;
+            runtimeEventPage = 0;
+            await LoadAsync(forceRefresh: false);
+        }
+    }
+
+    private async Task ChangeStatusFilterAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        statusFilter = Enum.TryParse<ProcessProjectedRunStatus>(value, out var parsed)
+            ? parsed
+            : null;
+        runtimeEventPage = 0;
+        selectedRuntimeRunId = ResolveRunIdForCurrentStatusFilter(shell?.Runtime.Runs ?? [], selectedRuntimeRunId);
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectRuntimeRunAsync(ChangeEventArgs args)
+    {
+        selectedRuntimeRunId = Guid.TryParse(args.Value?.ToString(), out var parsed) && parsed != Guid.Empty
+            ? parsed
+            : null;
+        runtimeEventPage = 0;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectRuntimeRunAsync(Guid runId)
+    {
+        selectedRuntimeRunId = runId == Guid.Empty ? null : runId;
+        runtimeEventPage = 0;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private Guid? ResolveRunIdForCurrentStatusFilter(IReadOnlyList<ProcessLiveProcessSnapshot> runs, Guid? requestedRunId)
+    {
+        if (statusFilter is null)
+        {
+            return requestedRunId;
+        }
+
+        if (requestedRunId.HasValue && runs.Any(run => run.RunId.Value == requestedRunId.Value && run.Status == statusFilter))
+        {
+            return requestedRunId;
+        }
+
+        return runs
+            .Where(run => run.Status == statusFilter)
+            .OrderByDescending(run => run.LastEventAtUtc)
+            .Select(run => (Guid?)run.RunId.Value)
+            .FirstOrDefault();
+    }
+
+    private async Task PreviousRuntimeEventPageAsync()
+    {
+        if (runtimeEventPage == 0)
+        {
+            return;
+        }
+
+        runtimeEventPage--;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task NextRuntimeEventPageAsync()
+    {
+        if (shell?.Runtime.HasMoreEvents != true)
+        {
+            return;
+        }
+
+        runtimeEventPage++;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private Task OpenRunDetailDialogAsync(ProcessLiveProcessSnapshot run)
+    {
+        runDetailSnapshot = run;
+        runDetailDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRunDetailDialogAsync()
+    {
+        runDetailDialogOpen = false;
+        runDetailSnapshot = null;
+        return Task.CompletedTask;
+    }
+
+    private static string BuildRunTitle(ProcessLiveProcessSnapshot run)
+        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+
+    private static string BuildRunSubtitle(ProcessLiveProcessSnapshot run)
+        => $"{run.Status} / {run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}";
+
+    private static string BuildRunOptionText(ProcessLiveProcessSnapshot run)
+        => $"{BuildRunTitle(run)} / {run.Status} / {run.LastEventAtUtc.LocalDateTime:g}";
+
+    private static string BuildRunCardSummary(ProcessLiveProcessSnapshot run)
+    {
+        var incident = run.Incidents.OrderByDescending(item => item.RaisedAtUtc).FirstOrDefault();
+        if (incident is not null)
+        {
+            return $"Cause: {EnsureSentence(incident.SafeSummary)}";
+        }
+
+        var runtimeEvent = ResolveRunCardEvent(run.RecentEvents);
+        return runtimeEvent is null
+            ? "No recent runtime events are attached to this run."
+            : $"{runtimeEvent.EventType}: {runtimeEvent.Summary}";
+    }
+
+    private static string ResolveRunStatusTone(ProcessProjectedRunStatus status)
+        => status switch
+        {
+            ProcessProjectedRunStatus.Active => "success",
+            ProcessProjectedRunStatus.NeedsAttention => "warning",
+            ProcessProjectedRunStatus.Failed => "danger",
+            ProcessProjectedRunStatus.Completed => "info",
+            ProcessProjectedRunStatus.Cancelled => "neutral",
+            _ => "neutral"
+        };
+
+    private static string ResolveEventTone(ProcessTimelineEventProjection runtimeEvent)
+        => runtimeEvent.Sensitivity == ProcessProjectedSensitivity.Restricted
+            ? "warning"
+            : runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal)
+                ? "info"
+                : IsAttentionEventType(runtimeEvent.EventType)
+                    ? "warning"
+                    : "neutral";
+
+    private static ProcessLiveRunEventProjection? ResolveRunCardEvent(IReadOnlyList<ProcessLiveRunEventProjection> events)
+        => events
+            .OrderByDescending(item => IsAttentionEventType(item.EventType))
+            .ThenByDescending(item => item.OccurredAtUtc)
+            .FirstOrDefault();
+
+    private static bool IsAttentionEventType(string eventType)
+        => eventType.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Incident", StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatHistoryWindow(ProcessRuntimeHistoryWindow window)
+        => window switch
+        {
+            ProcessRuntimeHistoryWindow.LiveHour => "Last hour",
+            ProcessRuntimeHistoryWindow.OneDay => "Last 24 hours",
+            ProcessRuntimeHistoryWindow.SevenDays => "Last 7 days",
+            ProcessRuntimeHistoryWindow.ThirtyDays => "Last 30 days",
+            _ => window.ToString()
+        };
+
+    private static string FormatDuration(long durationMs)
+    {
+        if (durationMs <= 0)
+        {
+            return "0 min";
+        }
+
+        var duration = TimeSpan.FromMilliseconds(durationMs);
+        return duration.TotalHours >= 1
+            ? $"{duration.TotalHours:N1} h"
+            : $"{duration.TotalMinutes:N1} min";
+    }
+
+    private static string TrimLabel(string value, int maxLength)
+    {
+        if (value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        return $"{value[..Math.Max(0, maxLength - 3)]}...";
+    }
+
+    private static string EnsureSentence(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0 ||
+            trimmed.EndsWith(".", StringComparison.Ordinal) ||
+            trimmed.EndsWith("!", StringComparison.Ordinal) ||
+            trimmed.EndsWith("?", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        return $"{trimmed}.";
+    }
+
+    private RenderFragment RenderMetricCard(
+        string label,
+        string value,
+        string tone,
+        string summary) => @<SurfaceCard Soft="true">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="@label" />
+        <h3 class="text-base font-semibold text-slate-900">@value</h3>
+        <p class="mt-2 text-sm leading-6 text-slate-600">@summary</p>
+        <StatusBadge Tone="@tone" Text="@label" />
     </SurfaceCard>;
 
     private static string FormatCount(int count, string singular, string plural)

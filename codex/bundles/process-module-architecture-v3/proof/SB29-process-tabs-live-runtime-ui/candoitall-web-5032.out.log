@@ -1,4 +1,5 @@
 Použití nastavení spuštění z src\CanDoItAll.Web\Properties\launchSettings.json...
+Sestavování...
 info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
       Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
 info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
@@ -67,5 +68,3 @@ warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
       Skipping workflow example seed 'Example: Gmail Label Email Summary To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
 warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
       Skipping workflow example seed 'Example: Gmail Label Email Tasks To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
-info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
-      Completed AgentFramework catalog repair and projection warmup in 352005 ms.

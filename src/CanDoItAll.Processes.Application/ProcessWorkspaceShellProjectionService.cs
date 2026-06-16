@@ -1,4 +1,5 @@
 using System.Globalization;
+using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 
 namespace CanDoItAll.Processes.Application;
@@ -33,7 +34,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             CanOpenAgentContext: true,
             CanEditDefinitions: false,
             CanLaunchRuns: true);
-        var liveProcesses = await LoadLiveProcessesAsync(request, observedAtUtc, cancellationToken).ConfigureAwait(false);
+        var runtimeWorkspace = await LoadRuntimeWorkspaceAsync(request, observedAtUtc, cancellationToken).ConfigureAwait(false);
 
         var definitionCatalog = await definitionCatalogProjectionService
             .GetCatalogAsync(request.Scope, request.DefinitionCatalogQuery, cancellationToken: cancellationToken)
@@ -75,12 +76,15 @@ public sealed class ProcessWorkspaceShellProjectionService(
             ResolveTitle(request.Scope),
             ResolveSubtitle(request.Scope),
             definitionCatalog,
-            CreateLiveRunSummary(liveProcesses),
-            CreateRefreshProjection(request.ForceRefresh, observedAtUtc, liveProcesses?.Freshness),
+            CreateLiveRunSummary(runtimeWorkspace),
+            CreateRefreshProjection(request.ForceRefresh, observedAtUtc, runtimeWorkspace.Freshness),
             authorization,
-            CreateTabs(definitionCatalog, liveProcesses),
+            CreateTabs(definitionCatalog, runtimeWorkspace),
             CreateCommands(authorization),
-            CreateAgentEntry(request.Scope, request.Selection, authorization));
+            CreateAgentEntry(request.Scope, request.Selection, authorization))
+        {
+            Runtime = runtimeWorkspace
+        };
     }
 
     public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
@@ -154,14 +158,14 @@ public sealed class ProcessWorkspaceShellProjectionService(
             ? $"Projection-first project workspace for {scope.ProjectId:D}."
             : "Projection-first workspace for definitions, launches, live runs, and history.";
 
-    private async Task<ProcessLiveProcessesResult?> LoadLiveProcessesAsync(
+    private async Task<ProcessRuntimeWorkspaceProjection> LoadRuntimeWorkspaceAsync(
         ProcessWorkspaceShellRequest request,
         DateTimeOffset observedAtUtc,
         CancellationToken cancellationToken)
     {
         if (runtimeProjectionQueryService is null)
         {
-            return null;
+            return ProcessRuntimeWorkspaceProjection.Empty;
         }
 
         if (request.ForceRefresh && projectionCatchupService is not null)
@@ -169,19 +173,87 @@ public sealed class ProcessWorkspaceShellProjectionService(
             await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        return await runtimeProjectionQueryService
-            .GetLiveProcessesAsync(
-                new ProcessLiveProcessesQuery(
+        var runtimeQuery = NormalizeRuntimeQuery(request);
+        var result = await runtimeProjectionQueryService
+            .GetRuntimeWorkspaceAsync(
+                new ProcessRuntimeWorkspaceQuery(
                     observedAtUtc,
-                    TimeSpan.FromDays(30),
-                    Take: 100),
+                    ResolveHistoryWindow(runtimeQuery.HistoryWindow),
+                    runtimeQuery.EventPage,
+                    runtimeQuery.EventPageSize,
+                    TakeRuns: 100,
+                    ResolveRunId(runtimeQuery.SelectedRunId ?? request.Selection.RunId)),
                 cancellationToken)
             .ConfigureAwait(false);
+
+        return CreateRuntimeWorkspace(runtimeQuery, result);
     }
 
-    private static ProcessLiveRunSummaryProjection CreateLiveRunSummary(ProcessLiveProcessesResult? liveProcesses)
+    private static ProcessRuntimeWorkspaceQueryProjection NormalizeRuntimeQuery(ProcessWorkspaceShellRequest request)
     {
-        if (liveProcesses is null)
+        var query = request.RuntimeQuery ?? new ProcessRuntimeWorkspaceQueryProjection(
+            ProcessRuntimeHistoryWindow.ThirtyDays,
+            EventPage: 0,
+            EventPageSize: 25,
+            request.Selection.RunId);
+
+        return query with
+        {
+            EventPage = Math.Max(0, query.EventPage),
+            EventPageSize = Math.Clamp(query.EventPageSize, 5, 200)
+        };
+    }
+
+    private static ProcessRunId? ResolveRunId(Guid? runId)
+        => runId.HasValue && runId.Value != Guid.Empty
+            ? new ProcessRunId(runId.Value)
+            : null;
+
+    private static TimeSpan ResolveHistoryWindow(ProcessRuntimeHistoryWindow historyWindow)
+        => historyWindow switch
+        {
+            ProcessRuntimeHistoryWindow.LiveHour => TimeSpan.FromHours(1),
+            ProcessRuntimeHistoryWindow.OneDay => TimeSpan.FromDays(1),
+            ProcessRuntimeHistoryWindow.SevenDays => TimeSpan.FromDays(7),
+            ProcessRuntimeHistoryWindow.ThirtyDays => TimeSpan.FromDays(30),
+            _ => TimeSpan.FromDays(1)
+        };
+
+    private static ProcessRuntimeWorkspaceProjection CreateRuntimeWorkspace(
+        ProcessRuntimeWorkspaceQueryProjection query,
+        ProcessRuntimeWorkspaceResult result)
+    {
+        var events = result.Events;
+        var selectedRunId = result.SelectedRun?.RunId.Value ?? query.SelectedRunId;
+        var incidents = result.Runs
+            .SelectMany(run => run.Incidents)
+            .OrderByDescending(incident => incident.RaisedAtUtc)
+            .ToArray();
+        var managerMessages = BuildManagerMessages(events);
+        var stats = BuildRuntimeStats(result.Runs, events);
+
+        return new ProcessRuntimeWorkspaceProjection(
+            query.HistoryWindow,
+            query.EventPage,
+            query.EventPageSize,
+            result.HasMoreEvents,
+            selectedRunId,
+            result.SelectedRun,
+            result.Runs,
+            events,
+            incidents,
+            managerMessages,
+            stats,
+            BuildMetricPoints(events),
+            BuildToolUsage(events),
+            result.Freshness,
+            BuildRuntimeSummary(result.Runs, events),
+            BuildAttentionSummary(result.Runs, incidents, events));
+    }
+
+    private static ProcessLiveRunSummaryProjection CreateLiveRunSummary(ProcessRuntimeWorkspaceProjection runtime)
+    {
+        if (runtime == ProcessRuntimeWorkspaceProjection.Empty)
         {
             return new ProcessLiveRunSummaryProjection(
                 ActiveRunCount: 0,
@@ -191,21 +263,259 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 Summary: "Runtime projection store is not registered for this workspace shell.");
         }
 
-        var active = liveProcesses.Runs.Count(run => run.IsActive);
-        var attention = liveProcesses.Runs.Count(run => run.Status == ProcessProjectedRunStatus.NeedsAttention);
-        var failed = liveProcesses.Runs.Count(run => run.Status == ProcessProjectedRunStatus.Failed);
-        var lastEventAtUtc = liveProcesses.Runs.Count == 0
+        var active = runtime.Runs.Count(run => run.IsActive);
+        var attention = runtime.Runs.Count(run => run.Status == ProcessProjectedRunStatus.NeedsAttention);
+        var failed = runtime.Runs.Count(run => run.Status == ProcessProjectedRunStatus.Failed);
+        var lastEventAtUtc = runtime.Runs.Count == 0
             ? (DateTimeOffset?)null
-            : liveProcesses.Runs.Max(run => run.LastEventAtUtc);
+            : runtime.Runs.Max(run => run.LastEventAtUtc);
 
         return new ProcessLiveRunSummaryProjection(
             active,
             attention,
             failed,
             lastEventAtUtc,
-            liveProcesses.Runs.Count == 0
+            runtime.Runs.Count == 0
                 ? "No runtime runs are present in the current projection window."
                 : $"{active.ToString(CultureInfo.InvariantCulture)} active run(s), {attention.ToString(CultureInfo.InvariantCulture)} needing attention, {failed.ToString(CultureInfo.InvariantCulture)} failed.");
+    }
+
+    private static ProcessRuntimeStatsProjection BuildRuntimeStats(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+    {
+        var durationMs = events.Count < 2
+            ? 0
+            : checked((long)Math.Max(0, (events[^1].OccurredAtUtc - events[0].OccurredAtUtc).TotalMilliseconds));
+
+        return new ProcessRuntimeStatsProjection(
+            runs.Count,
+            runs.Count(run => run.IsActive),
+            runs.Count(run => run.Status == ProcessProjectedRunStatus.NeedsAttention),
+            runs.Count(run => run.Status == ProcessProjectedRunStatus.Failed),
+            events.Count,
+            events.Count(IsManagerEvent),
+            events.Count(IsToolUsageEvent),
+            durationMs,
+            InputTokens: 0,
+            CachedInputTokens: 0,
+            OutputTokens: 0,
+            EstimatedCost: 0m,
+            ActualCost: 0m);
+    }
+
+    private static IReadOnlyList<ProcessRuntimeMetricPointProjection> BuildMetricPoints(
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+    {
+        return events
+            .GroupBy(static runtimeEvent => TruncateToMinute(runtimeEvent.OccurredAtUtc))
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                var ordered = group.OrderBy(item => item.OccurredAtUtc).ToArray();
+                var durationMs = ordered.Length < 2
+                    ? 0
+                    : checked((long)Math.Max(0, (ordered[^1].OccurredAtUtc - ordered[0].OccurredAtUtc).TotalMilliseconds));
+
+                return new ProcessRuntimeMetricPointProjection(
+                    group.Key,
+                    ordered.Length,
+                    ordered.Count(IsManagerEvent),
+                    ordered.Count(IsToolUsageEvent),
+                    durationMs,
+                    InputTokens: 0,
+                    CachedInputTokens: 0,
+                    OutputTokens: 0,
+                    EstimatedCost: 0m,
+                    ActualCost: 0m);
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessRuntimeToolUsageProjection> BuildToolUsage(
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+    {
+        return events
+            .Where(IsToolUsageEvent)
+            .GroupBy(runtimeEvent => NormalizeEventType(runtimeEvent.EventType), StringComparer.Ordinal)
+            .Select(group => new ProcessRuntimeToolUsageProjection(
+                group.Key,
+                group.Count(),
+                group.Max(runtimeEvent => runtimeEvent.OccurredAtUtc),
+                BuildToolUsageSummary(group.Key, group.Count(), group.Max(runtimeEvent => runtimeEvent.OccurredAtUtc))))
+            .OrderByDescending(item => item.CallCount)
+            .ThenBy(item => item.ToolName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessManagerMessageProjection> BuildManagerMessages(
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+    {
+        return events
+            .Where(IsManagerEvent)
+            .OrderByDescending(runtimeEvent => runtimeEvent.OccurredAtUtc)
+            .Select(runtimeEvent => new ProcessManagerMessageProjection(
+                runtimeEvent.EventId.ToString(),
+                runtimeEvent.RootRunId,
+                runtimeEvent.RunId,
+                NormalizeEventType(runtimeEvent.EventType),
+                BuildManagerMessageSummary(runtimeEvent),
+                runtimeEvent.OccurredAtUtc,
+                runtimeEvent.Sensitivity,
+                runtimeEvent.RestrictedDiagnosticReference))
+            .ToArray();
+    }
+
+    private static string BuildRuntimeSummary(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+    {
+        if (runs.Count == 0)
+        {
+            return "No process runs match the selected runtime history window.";
+        }
+
+        var active = runs.Count(run => run.IsActive);
+        var attention = runs.Count(run => run.Status == ProcessProjectedRunStatus.NeedsAttention);
+        var latest = runs.Max(run => run.LastEventAtUtc).LocalDateTime.ToString("g", CultureInfo.CurrentCulture);
+        return $"{runs.Count.ToString(CultureInfo.InvariantCulture)} run(s), {active.ToString(CultureInfo.InvariantCulture)} active, {attention.ToString(CultureInfo.InvariantCulture)} needing attention, {events.Count.ToString(CultureInfo.InvariantCulture)} event(s) on this page. Latest event {latest}.";
+    }
+
+    private static string BuildAttentionSummary(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        IReadOnlyList<ProcessIncidentProjection> incidents,
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+    {
+        var incident = incidents.OrderByDescending(item => item.RaisedAtUtc).FirstOrDefault();
+        if (incident is not null)
+        {
+            return $"Cause: {EnsureSentence(incident.SafeSummary)} Next action: inspect diagnostic reference {incident.DiagnosticReference}.";
+        }
+
+        var attentionRun = runs
+            .Where(run => run.Status == ProcessProjectedRunStatus.NeedsAttention)
+            .OrderByDescending(run => run.LastEventAtUtc)
+            .FirstOrDefault();
+        if (attentionRun is not null)
+        {
+            var causeEvent = ResolveAttentionCauseEvent(attentionRun.RecentEvents);
+            var cause = causeEvent is null
+                ? "Run needs operator attention."
+                : BuildManagerMessageSummary(new ProcessTimelineEventProjection(
+                    causeEvent.EventId,
+                    causeEvent.GlobalSequence,
+                    causeEvent.RootRunId,
+                    causeEvent.RunId,
+                    causeEvent.EventType,
+                    causeEvent.OccurredAtUtc,
+                    causeEvent.Sensitivity,
+                    causeEvent.Summary,
+                    causeEvent.RestrictedDiagnosticReference));
+            return $"Cause: {EnsureSentence(cause)} Next action: open the selected run and review manager messages.";
+        }
+
+        var latestAttentionEvent = events
+            .Where(runtimeEvent => IsAttentionEventType(runtimeEvent.EventType))
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .FirstOrDefault();
+        if (latestAttentionEvent is not null)
+        {
+            return $"Latest attention signal: {EnsureSentence(BuildManagerMessageSummary(latestAttentionEvent))}";
+        }
+
+        var latestManagerEvent = events.Where(IsManagerEvent).OrderByDescending(item => item.OccurredAtUtc).FirstOrDefault();
+        if (latestManagerEvent is not null)
+        {
+            return $"Latest manager signal: {EnsureSentence(BuildManagerMessageSummary(latestManagerEvent))}";
+        }
+
+        return "No blocked or manager-escalated process runs are present in the selected history window.";
+    }
+
+    private static string BuildManagerMessageSummary(ProcessTimelineEventProjection runtimeEvent)
+        => runtimeEvent.Sensitivity == ProcessProjectedSensitivity.Restricted
+            ? $"Restricted manager event {runtimeEvent.EventType}."
+            : runtimeEvent.EventType switch
+            {
+                ProcessRuntimeProjectionEventTypeNames.ManagerIncidentRaised => "Manager incident raised; operator review is required.",
+                ProcessRuntimeProjectionEventTypeNames.ManagerRecoveryDenied => "Manager recovery was denied by policy.",
+                ProcessRuntimeProjectionEventTypeNames.ManagerBranchDecisionRejected => "Manager branch decision was rejected.",
+                ProcessRuntimeProjectionEventTypeNames.ManagerLoopBudgetEscalated => "Manager loop budget escalated.",
+                _ when runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal) => NormalizeEventType(runtimeEvent.EventType),
+                _ => runtimeEvent.Summary
+            };
+
+    private static string BuildToolUsageSummary(string toolName, int count, DateTimeOffset lastUsedAtUtc)
+        => $"{count.ToString(CultureInfo.InvariantCulture)} event(s), latest {lastUsedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}.";
+
+    private static bool IsManagerEvent(ProcessTimelineEventProjection runtimeEvent)
+        => runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal);
+
+    private static bool IsToolUsageEvent(ProcessTimelineEventProjection runtimeEvent)
+        => runtimeEvent.EventType.StartsWith("Dispatch", StringComparison.Ordinal) ||
+           runtimeEvent.EventType.StartsWith("Step", StringComparison.Ordinal) ||
+           runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal);
+
+    private static ProcessLiveRunEventProjection? ResolveAttentionCauseEvent(IReadOnlyList<ProcessLiveRunEventProjection> events)
+        => events
+            .OrderByDescending(item => IsAttentionEventType(item.EventType))
+            .ThenByDescending(item => item.OccurredAtUtc)
+            .FirstOrDefault();
+
+    private static bool IsAttentionEventType(string eventType)
+        => eventType.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Incident", StringComparison.OrdinalIgnoreCase);
+
+    private static DateTimeOffset TruncateToMinute(DateTimeOffset value)
+    {
+        var utc = value.ToUniversalTime();
+        return new DateTimeOffset(
+            utc.Year,
+            utc.Month,
+            utc.Day,
+            utc.Hour,
+            utc.Minute,
+            second: 0,
+            TimeSpan.Zero);
+    }
+
+    private static string NormalizeEventType(string eventType)
+    {
+        if (string.IsNullOrWhiteSpace(eventType))
+        {
+            return "Runtime event";
+        }
+
+        var words = new List<string>();
+        var start = 0;
+        for (var index = 1; index < eventType.Length; index++)
+        {
+            if (!char.IsUpper(eventType[index]))
+            {
+                continue;
+            }
+
+            words.Add(eventType[start..index]);
+            start = index;
+        }
+
+        words.Add(eventType[start..]);
+        return string.Join(' ', words);
+    }
+
+    private static string EnsureSentence(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0 || trimmed.EndsWith(".", StringComparison.Ordinal) || trimmed.EndsWith("!", StringComparison.Ordinal) || trimmed.EndsWith("?", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        return $"{trimmed}.";
     }
 
     private static ProcessWorkspaceProjectionRefreshProjection CreateRefreshProjection(
@@ -227,12 +537,12 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
     private static IReadOnlyList<ProcessWorkspaceTabProjection> CreateTabs(
         ProcessDefinitionCatalogProjection definitionCatalog,
-        ProcessLiveProcessesResult? liveProcesses)
+        ProcessRuntimeWorkspaceProjection runtime)
     {
         var definitionCount = definitionCatalog.PublishedDefinitionCount + definitionCatalog.DraftDefinitionCount;
         var definitionCountText = definitionCount.ToString(CultureInfo.InvariantCulture);
-        var activeRunCountText = (liveProcesses?.Runs.Count(run => run.IsActive) ?? 0).ToString(CultureInfo.InvariantCulture);
-        var historyCountText = (liveProcesses?.Runs.Count ?? 0).ToString(CultureInfo.InvariantCulture);
+        var activeRunCountText = runtime.Runs.Count(run => run.IsActive).ToString(CultureInfo.InvariantCulture);
+        var historyCountText = runtime.Events.Count.ToString(CultureInfo.InvariantCulture);
 
         return
         [

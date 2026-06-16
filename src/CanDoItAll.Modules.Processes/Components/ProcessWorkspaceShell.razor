@@ -1,5 +1,8 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
+@using CanDoItAll.AgentFramework.Components
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Processes.Application
 @using Microsoft.Extensions.DependencyInjection
 @inject IProcessWorkspaceProjectionClient ProjectionClient
@@ -170,6 +173,54 @@
     </ChildContent>
 </PageScaffold>
 
+@if (runDetailDialogOpen && runDetailSnapshot is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Process run"
+            Title="@BuildRunTitle(runDetailSnapshot)"
+            Subtitle="@BuildRunSubtitle(runDetailSnapshot)"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            TestId="processes-run-detail-dialog"
+            OnClose="CloseRunDetailDialogAsync">
+        <ChildContent>
+            @RenderRunDetailDialog(runDetailSnapshot)
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseRunDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (eventDetailDialogOpen && eventDetail is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Runtime event"
+            Title="@eventDetail.EventType"
+            Subtitle="@eventDetail.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="processes-runtime-event-detail-dialog"
+            OnClose="CloseEventDetailDialogAsync">
+        <ChildContent>
+            @RenderEventDetailDialog(eventDetail)
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseEventDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
 @code {
     [Parameter]
     public Guid? ProjectId { get; set; }
@@ -199,6 +250,29 @@
     private ProcessWorkspaceShellProjection? shell;
     private int activeDetailTabIndex;
     private int selectedRunViewIndex = 1;
+    private Guid? selectedRuntimeRunId;
+    private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.OneDay;
+    private int runtimeEventPage;
+    private const int RuntimeEventPageSize = 25;
+    private bool runDetailDialogOpen;
+    private ProcessLiveProcessSnapshot? runDetailSnapshot;
+    private bool eventDetailDialogOpen;
+    private ProcessTimelineEventProjection? eventDetail;
+    private IReadOnlyList<AgentDefinition> managerChatAgents = [];
+    private AgentDefinition? managerChatAgent;
+    private Guid? managerChatAgentId;
+    private Guid? managerChatSessionId;
+    private ChatAgentWorkspaceSnapshot? managerChatWorkspace;
+    private IReadOnlyList<ExecutionLogEntry> managerChatExecutionLog = [];
+    private string managerChatDraftPrompt = string.Empty;
+    private string managerChatPendingPrompt = string.Empty;
+    private IReadOnlyList<string> managerChatDraftAttachmentPaths = [];
+    private int managerChatComposerKey;
+    private bool managerChatIsLoading;
+    private bool managerChatIsBusy;
+    private string? managerChatErrorMessage;
+    private string managerChatRunStateText = string.Empty;
+    private string managerChatRunStateTone = "neutral";
     private bool activeDetailTabInitialized;
     private bool isBusy;
     private string? errorMessage;
@@ -262,6 +336,14 @@
         ProcessDefinitionOperatingModeKind.Manual,
         ProcessDefinitionOperatingModeKind.AssistedExecution,
         ProcessDefinitionOperatingModeKind.GovernedLive
+    ];
+
+    private static readonly ProcessRuntimeHistoryWindow[] RuntimeHistoryWindowOptions =
+    [
+        ProcessRuntimeHistoryWindow.LiveHour,
+        ProcessRuntimeHistoryWindow.OneDay,
+        ProcessRuntimeHistoryWindow.SevenDays,
+        ProcessRuntimeHistoryWindow.ThirtyDays
     ];
 
     private IReadOnlyList<ProcessWorkspaceDetailTabDescriptor> DetailTabs =>
@@ -397,7 +479,7 @@
         {
             var request = new ProcessWorkspaceShellRequest(
                 ResolveScope(),
-                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
+                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, selectedRuntimeRunId ?? RunIdQuery, LaunchPlanIdQuery),
                 new ProcessDefinitionCatalogQueryProjection(
                     searchText,
                     string.IsNullOrWhiteSpace(selectedDefinitionKey)
@@ -411,9 +493,15 @@
                     selectedTemplateItemKey,
                     selectedTemplatePreviewTab,
                     Take: 50),
-                forceRefresh);
+                forceRefresh,
+                new ProcessRuntimeWorkspaceQueryProjection(
+                    runtimeHistoryWindow,
+                    runtimeEventPage,
+                    RuntimeEventPageSize,
+                    selectedRuntimeRunId ?? RunIdQuery));
 
             shell = await ProjectionClient.GetShellAsync(request);
+            selectedRuntimeRunId = shell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
             if (!activeDetailTabInitialized)
             {
                 activeDetailTabIndex = ResolveDetailTabIndex(ResolvePreferredDetailTab());
@@ -422,6 +510,10 @@
 
             SyncDefinitionEditor(shell.DefinitionCatalog.SelectedEditor);
             SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
+            if (activeDetailTabIndex == ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat))
+            {
+                await EnsureManagerChatLoadedAsync();
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -453,10 +545,13 @@
         return index ?? 0;
     }
 
-    private Task HandleDetailTabChangedAsync(int index)
+    private async Task HandleDetailTabChangedAsync(int index)
     {
         activeDetailTabIndex = index;
-        return Task.CompletedTask;
+        if (DetailTabs.ElementAtOrDefault(index)?.Key == ProcessWorkspaceDetailTabKey.ManagerChat)
+        {
+            await EnsureManagerChatLoadedAsync();
+        }
     }
 
     private Task HandleSelectedRunViewChangedAsync(int index)
@@ -900,22 +995,31 @@
     private RenderFragment RenderRunsTab() => @<Stack GapScale="LayoutGap.Large"
                                                       Class="processes-runs-tab-shell"
                                                       data-testid="processes-runs-tab-shell">
+        @RenderRuntimeToolbar("processes-runs-runtime-toolbar")
+
         <SurfaceCard Soft="true"
                      data-testid="processes-selected-run-summary">
             <Split Gap="LayoutGap.Medium"
                    Wrap="FlexWrap.Wrap">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run focus" />
-                    <h3 class="text-base font-semibold text-slate-900">Runtime workspace</h3>
-                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.LiveRuns.Summary</p>
+                    <h3 class="text-base font-semibold text-slate-900">@SelectedRunTitle</h3>
+                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.Runtime.AttentionSummary</p>
                 </Stack>
-                <Cluster Gap="LayoutGap.XSmall"
-                         Class="flex-wrap">
-                    <StatusBadge Tone="success" Text="@($"{CurrentShell.LiveRuns.ActiveRunCount} active")" />
-                    <StatusBadge Tone="warning" Text="@($"{CurrentShell.LiveRuns.AttentionRunCount} attention")" />
-                    <StatusBadge Tone="danger" Text="@($"{CurrentShell.LiveRuns.FailedRunCount} failed")" />
-                    <StatusBadge Tone="@ProjectionTone" Text="@ProjectionStatusText" />
-                </Cluster>
+                <CompactStatStrip>
+                    <CompactStat Tone="success"
+                                 Text="@($"{CurrentShell.Runtime.Stats.ActiveRunCount} active")"
+                                 TooltipText="Active process runs in the selected window." />
+                    <CompactStat Tone="warning"
+                                 Text="@($"{CurrentShell.Runtime.Stats.AttentionRunCount} attention")"
+                                 TooltipText="Runs that need operator review." />
+                    <CompactStat Tone="danger"
+                                 Text="@($"{CurrentShell.Runtime.Stats.FailedRunCount} failed")"
+                                 TooltipText="Failed runs in the selected window." />
+                    <CompactStat Tone="@ProjectionTone"
+                                 Text="@ProjectionStatusText"
+                                 TooltipText="@ProjectionTooltip" />
+                </CompactStatStrip>
             </Split>
         </SurfaceCard>
 
@@ -929,32 +1033,16 @@
               AriaLabel="Process runs workspace sections"
               data-testid="processes-runs-tabs">
             <TabsItem Text="Launch" Icon="rocket_launch">
-                <EmptyState Eyebrow="Launch"
-                            Title="Launch planning"
-                            Description="Launch planning is kept with runtime runs, matching the original process workspace shape." />
+                @RenderLaunchSection()
             </TabsItem>
             <TabsItem Text="Activity" Icon="monitoring">
-                <Grid Gap="LayoutGap.Medium"
-                      ColumnsLg="3"
-                      data-testid="processes-run-activity">
-                    @RenderMetricCard("Active runs", CurrentShell.LiveRuns.ActiveRunCount.ToString(CultureInfo.InvariantCulture), "success", CurrentShell.LiveRuns.Summary)
-                    @RenderMetricCard("Attention", CurrentShell.LiveRuns.AttentionRunCount.ToString(CultureInfo.InvariantCulture), "warning", "Runs that need operator review.")
-                    @RenderMetricCard("Failed", CurrentShell.LiveRuns.FailedRunCount.ToString(CultureInfo.InvariantCulture), "danger", "Failed process runs in the current projection.")
-                </Grid>
+                @RenderRuntimeActivitySection()
             </TabsItem>
             <TabsItem Text="Control" Icon="rule">
-                <SurfaceCard Soft="true" data-testid="processes-operator-control-section">
-                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operator control" />
-                    <h3 class="text-base font-semibold text-slate-900">Manager Resolution</h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Escalations, approvals, rework, dispatch receipts, and attempt timeline controls remain grouped under run control.</p>
-                </SurfaceCard>
+                @RenderRuntimeControlSection()
             </TabsItem>
             <TabsItem Text="Execution" Icon="terminal">
-                <SurfaceCard Soft="true" data-testid="processes-runtime-host-readback">
-                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution" />
-                    <h3 class="text-base font-semibold text-slate-900">Runtime execution readback</h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Runtime canvas and technical execution telemetry are intentionally separated from definition authoring.</p>
-                </SurfaceCard>
+                @RenderRuntimeExecutionSection()
             </TabsItem>
             <TabsItem Text="Graphs" Icon="bar_chart">
                 <div data-testid="processes-selected-run-graphs-tab">
@@ -962,48 +1050,39 @@
                 </div>
             </TabsItem>
             <TabsItem Text="Coordination" Icon="hub">
-                <SurfaceCard Soft="true" data-testid="processes-run-coordination">
-                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Coordination" />
-                    <h3 class="text-base font-semibold text-slate-900">Assignments and direct role messaging</h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Run-scoped staffing and direct messaging remain in the runtime workspace rather than the definition form.</p>
-                </SurfaceCard>
+                @RenderRuntimeCoordinationSection()
             </TabsItem>
             <TabsItem Text="Evidence" Icon="inventory_2">
-                <SurfaceCard Soft="true" data-testid="processes-run-evidence">
-                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Evidence" />
-                    <h3 class="text-base font-semibold text-slate-900">Artifacts and decisions</h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Evidence, artifact satisfaction, decisions, work briefs, and conformance observations stay attached to the selected run.</p>
-                </SurfaceCard>
+                @RenderRuntimeEvidenceSection()
             </TabsItem>
         </Tabs>
     </Stack>;
 
     private RenderFragment RenderGraphsTab() => @<Stack GapScale="LayoutGap.Medium"
                                                         data-testid="processes-process-graphs-tab">
-        <Cluster Gap="LayoutGap.Small"
-                 JustifyContent="JustifyContent.End">
-            <Button Text="Refresh"
-                    Icon="refresh"
-                    ButtonStyle="ButtonStyle.Light"
-                    Size="ButtonSize.Small"
-                    Disabled="@isBusy"
-                    IsBusy="@isBusy"
-                    Click="RefreshAsync"
-                    data-testid="processes-process-graphs-load-button" />
-        </Cluster>
+        @RenderRuntimeToolbar("processes-process-graphs-toolbar")
         @RenderGraphMetricGrid("Process run history graph projection")
     </Stack>;
 
-    private RenderFragment RenderAnalyticsTab() => @<Grid Gap="LayoutGap.Medium"
-                                                          ColumnsLg="3"
-                                                          data-testid="processes-analytics-tab">
-        @RenderMetricCard("Readiness", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "Ready" : "Review", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "success" : "warning", "Simulation readiness from the selected definition projection.")
-        @RenderMetricCard("Compatibility", DefinitionCatalog.TemplateCompatibilityIssueCount.ToString(CultureInfo.InvariantCulture), DefinitionCatalog.TemplateCompatibilityIssueCount > 0 ? "warning" : "success", "Template compatibility issues for the current catalog.")
-        @RenderMetricCard("Projection backlog", CurrentShell.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture), ProjectionTone, CurrentShell.Refresh.Summary)
-    </Grid>;
+    private RenderFragment RenderAnalyticsTab() => @<Stack GapScale="LayoutGap.Medium"
+                                                           data-testid="processes-analytics-tab">
+        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+            @RenderMetricCard("Readiness", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "Ready" : "Review", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "success" : "warning", "Simulation readiness from the selected definition projection.")
+            @RenderMetricCard("Compatibility", DefinitionCatalog.TemplateCompatibilityIssueCount.ToString(CultureInfo.InvariantCulture), DefinitionCatalog.TemplateCompatibilityIssueCount > 0 ? "warning" : "success", "Template compatibility issues for the current catalog.")
+            @RenderMetricCard("Runtime events", CurrentShell.Runtime.Stats.EventCount.ToString(CultureInfo.InvariantCulture), "info", "Paged runtime history events in the selected window.")
+            @RenderMetricCard("Projection backlog", CurrentShell.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture), ProjectionTone, CurrentShell.Refresh.Summary)
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,1.2fr) minmax(0,0.8fr)"
+              data-testid="processes-runtime-analytics-ledger">
+            @RenderRuntimeEventLedger("processes-analytics-event-ledger")
+            @RenderToolUsageLedger("processes-analytics-tool-usage")
+        </Grid>
+    </Stack>;
 
     private RenderFragment RenderManagerChatTab() => @<Grid Gap="LayoutGap.Medium"
-                                                            ColumnTemplateXl="minmax(14rem,0.35fr) minmax(0,1.65fr)"
+                                                            ColumnTemplateXl="minmax(16rem,0.35fr) minmax(0,1.65fr)"
                                                             Class="h-full min-h-0 w-full"
                                                             data-testid="processes-manager-chat-tab">
         <SurfaceCard Soft="true"
@@ -1012,15 +1091,51 @@
             <Stack GapScale="LayoutGap.Medium">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Process manager" />
-                    <h3 class="text-base font-semibold text-slate-900">@CurrentShell.AgentEntry.Label</h3>
+                    <h3 class="text-base font-semibold text-slate-900">@ManagerChatManagerLabel</h3>
                     <p class="text-sm leading-6 text-slate-600">@CurrentShell.AgentEntry.ContextKey</p>
                 </Stack>
+
+                <Stack GapScale="LayoutGap.Small">
+                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-run-select">Run</label>
+                    <select id="processes-manager-chat-run-select"
+                            class="cda-input"
+                            value="@RuntimeRunSelectValue"
+                            @onchange="SelectRuntimeRunAsync"
+                            data-testid="processes-manager-chat-run-select">
+                        @RenderRuntimeRunOptions()
+                    </select>
+
+                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-agent-select">Manager agent</label>
+                    <select id="processes-manager-chat-agent-select"
+                            class="cda-input"
+                            value="@ManagerChatAgentSelectValue"
+                            @onchange="SelectManagerChatAgentAsync"
+                            disabled="@(managerChatAgents.Count == 0)"
+                            data-testid="processes-manager-chat-agent-select">
+                        @foreach (var agent in managerChatAgents)
+                        {
+                            <option value="@agent.Id.ToString("D")">@agent.Name</option>
+                        }
+                    </select>
+                </Stack>
+
                 <Cluster Gap="LayoutGap.XSmall"
                          Class="flex-wrap">
                     <StatusBadge Tone="@(CurrentShell.AgentEntry.IsAvailable ? "success" : "warning")"
                                  Text="@(CurrentShell.AgentEntry.IsAvailable ? "Available" : "Unavailable")" />
                     <StatusBadge Tone="neutral" Text="@CurrentShell.AgentEntry.Kind.ToString()" />
+                    <StatusBadge Tone="info" Text="@SelectedRunTitle" />
                 </Cluster>
+
+                <Button Text="Reload"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="w-full justify-start"
+                        Disabled="@managerChatIsLoading"
+                        IsBusy="@managerChatIsLoading"
+                        Click="ReloadManagerChatAsync"
+                        data-testid="processes-manager-chat-reload" />
                 <Button Text="Open agent context"
                         Icon="smart_toy"
                         ButtonStyle="ButtonStyle.Light"
@@ -1032,26 +1147,1104 @@
             </Stack>
         </SurfaceCard>
 
-        <SurfaceCard Soft="true"
-                     Class="h-full min-h-0"
-                     data-testid="processes-manager-chat-workspace">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager chat" />
-            <h3 class="text-base font-semibold text-slate-900">Run-scoped manager conversation</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Manager chat stays available as a dedicated process tab. The projection shell opens the scoped agent workspace by context key instead of embedding runtime persistence directly in the UI.</p>
-            @if (!string.IsNullOrWhiteSpace(CurrentShell.AgentEntry.DisabledReason))
+        <div class="h-full min-h-0" data-testid="processes-manager-chat-workspace">
+            @if (managerChatIsLoading)
             {
-                <p class="mt-3 text-sm font-semibold text-amber-700">@CurrentShell.AgentEntry.DisabledReason</p>
+                <LoadingState Eyebrow="Manager chat"
+                              Title="Loading manager workspace"
+                              Description="Resolving the selected run and manager agent thread." />
             }
-        </SurfaceCard>
+            else if (!string.IsNullOrWhiteSpace(managerChatErrorMessage))
+            {
+                <EmptyState Eyebrow="Manager chat unavailable"
+                            Title="Manager chat cannot be opened"
+                            Description="@managerChatErrorMessage" />
+            }
+            else if (managerChatAgent is null)
+            {
+                <EmptyState Eyebrow="Manager chat"
+                            Title="No manager agent is available"
+                            Description="Create or enable a process manager agent before starting a run-scoped conversation." />
+            }
+            else
+            {
+                <ChatWorkspacePanel Agent="@managerChatAgent"
+                                    Session="@managerChatWorkspace?.SelectedSession"
+                                    ActiveRun="@managerChatWorkspace?.SelectedRun"
+                                    ExecutionLog="@managerChatExecutionLog"
+                                    DraftPrompt="@managerChatDraftPrompt"
+                                    DraftPromptChanged="HandleManagerChatDraftPromptChangedAsync"
+                                    IsBusy="@managerChatIsBusy"
+                                    ComposerKey="@managerChatComposerKey"
+                                    RunStateText="@managerChatRunStateText"
+                                    RunStateTone="@managerChatRunStateTone"
+                                    PendingUserPrompt="@managerChatPendingPrompt"
+                                    DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
+                                    SendRequested="SendManagerChatMessageAsync"
+                                    ApprovalDecisionRequested="HandleManagerChatApprovalDecisionAsync"
+                                    ApprovalDecisionForConversationRequested="ApproveManagerChatConversationAsync"
+                                    AttachmentRequested="StageManagerChatRunArtifactsAsync"
+                                    SessionTitleChanged="RenameManagerChatSessionAsync" />
+            }
+        </div>
     </Grid>;
 
-    private RenderFragment RenderGraphMetricGrid(string title) => @<Grid Gap="LayoutGap.Medium"
-                                                                          ColumnsLg="3"
+    private RenderFragment RenderGraphMetricGrid(string title) => @<Stack GapScale="LayoutGap.Medium"
                                                                           data-testid="processes-graph-metric-grid">
-        @RenderMetricCard("Cost", "Projection pending", "warning", $"{title}: detailed cost rows require runtime metric projection rows.")
-        @RenderMetricCard("Tokens", "Projection pending", "warning", $"{title}: input, cached, output, and reasoning token rows are not exposed by the current shell contract.")
-        @RenderMetricCard("Time", CurrentShell.LiveRuns.LastEventAtUtc is null ? "No events" : CurrentShell.LiveRuns.LastEventAtUtc.Value.LocalDateTime.ToString("g", CultureInfo.CurrentCulture), "info", "Latest runtime event time from the live-run projection.")
+        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+            @RenderMetricCard("Cost", FormatCurrency(CurrentShell.Runtime.Stats.ActualCost), CurrentShell.Runtime.Stats.ActualCost > 0 ? "success" : "neutral", $"{title}: actual cost projected from runtime usage data when provider metrics are linked.")
+            @RenderMetricCard("Tokens", FormatTokenCount(CurrentShell.Runtime.Stats.InputTokens + CurrentShell.Runtime.Stats.OutputTokens), CurrentShell.Runtime.Stats.InputTokens + CurrentShell.Runtime.Stats.OutputTokens > 0 ? "info" : "neutral", "Input, cached input, and output tokens for the selected history scope.")
+            @RenderMetricCard("Time", FormatDuration(CurrentShell.Runtime.Stats.DurationMs), CurrentShell.Runtime.Stats.DurationMs > 0 ? "info" : "neutral", "Observed runtime span in the selected history page.")
+            @RenderMetricCard("Tool usage", CurrentShell.Runtime.Stats.ToolCallCount.ToString(CultureInfo.InvariantCulture), CurrentShell.Runtime.Stats.ToolCallCount > 0 ? "warning" : "neutral", "Runtime dispatch, step, and manager events grouped as tool/activity usage.")
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+              Class="w-full">
+            <CdaChart Title="Runtime activity"
+                      Description="Events, manager signals, and grouped tool activity."
+                      Series="@RuntimeActivitySeries"
+                      Options="@RuntimeActivityChartOptions"
+                      Height="320"
+                      EmptyText="No runtime events match the selected history window." />
+            <CdaChart Title="Token and cost telemetry"
+                      Description="Provider usage appears when linked runtime metrics are projected."
+                      Series="@RuntimeUsageSeries"
+                      Options="@RuntimeUsageChartOptions"
+                      Height="320"
+                      EmptyText="No provider usage metrics are linked to this process run yet." />
+            <CdaChart Title="Tool usage"
+                      Description="Most active runtime event/tool categories."
+                      Series="@RuntimeToolUsageSeries"
+                      Options="@RuntimeToolUsageChartOptions"
+                      Height="320"
+                      EmptyText="No runtime tool activity is present in this scope." />
+        </Grid>
+    </Stack>;
+
+    private static readonly CdaChartOptions RuntimeActivityChartOptions = new()
+    {
+        Type = CdaChartType.Area,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Events",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        FillOpacity = 0.22,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#2563eb", "#7c3aed", "#0891b2"]
+    };
+
+    private static readonly CdaChartOptions RuntimeUsageChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Usage",
+        TooltipPrecision = 2,
+        ValuePrecision = 2,
+        ShowToolbar = false,
+        EnableZoom = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#16a34a", "#d97706", "#dc2626"]
+    };
+
+    private static readonly CdaChartOptions RuntimeToolUsageChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        YAxisTitle = "Calls",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        ShowToolbar = false,
+        EnableZoom = false,
+        RotateXAxisLabels = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#f59e0b"]
+    };
+
+    private IReadOnlyList<CdaChartSeries> RuntimeActivitySeries
+    {
+        get
+        {
+            var points = CurrentShell.Runtime.MetricPoints;
+            if (points.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Runtime events",
+                    Type = CdaChartType.Area,
+                    Color = "#2563eb",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.EventCount)).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Manager signals",
+                    Type = CdaChartType.Line,
+                    Color = "#7c3aed",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ManagerEventCount)).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Tool activity",
+                    Type = CdaChartType.Line,
+                    Color = "#0891b2",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ToolCallCount)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> RuntimeUsageSeries
+    {
+        get
+        {
+            var points = CurrentShell.Runtime.MetricPoints;
+            if (points.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Tokens",
+                    Type = CdaChartType.Bar,
+                    Color = "#16a34a",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.InputTokens + item.OutputTokens)).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Minutes",
+                    Type = CdaChartType.Line,
+                    Color = "#d97706",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, Math.Round(item.DurationMs / 60000m, 2))).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Cost",
+                    Type = CdaChartType.Line,
+                    Color = "#dc2626",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ActualCost > 0 ? item.ActualCost : item.EstimatedCost)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> RuntimeToolUsageSeries
+    {
+        get
+        {
+            var toolUsage = CurrentShell.Runtime.ToolUsage.Take(15).ToArray();
+            if (toolUsage.Length == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Calls",
+                    Type = CdaChartType.Bar,
+                    Color = "#f59e0b",
+                    Points = toolUsage.Select(item => new CdaChartPoint(TrimLabel(item.ToolName, 26), item.CallCount)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private string SelectedRunTitle
+        => CurrentShell.Runtime.SelectedRun is { } selectedRun
+            ? BuildRunTitle(selectedRun)
+            : CurrentShell.Runtime.Runs.Count == 0
+                ? "No runtime run selected"
+                : "Select a runtime run";
+
+    private string RuntimeRunSelectValue => (selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId)?.ToString("D") ?? string.Empty;
+
+    private string ManagerChatAgentSelectValue => managerChatAgentId?.ToString("D") ?? string.Empty;
+
+    private string ManagerChatManagerLabel => managerChatAgent?.Name ?? CurrentShell.AgentEntry.Label;
+
+    private RenderFragment RenderRuntimeToolbar(string testId) => @<SurfaceCard Soft="true"
+                                                                                Class="processes-runtime-toolbar"
+                                                                                data-testid="@testId">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(14rem,0.6fr) minmax(16rem,1fr) auto"
+              AlignItems="AlignItems.End">
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History window</label>
+                <select id="@($"{testId}-window")"
+                        class="cda-input"
+                        value="@runtimeHistoryWindow"
+                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                        data-testid="processes-runtime-history-window">
+                    @foreach (var option in RuntimeHistoryWindowOptions)
+                    {
+                        <option value="@option">@FormatHistoryWindow(option)</option>
+                    }
+                </select>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
+                <select id="@($"{testId}-run")"
+                        class="cda-input"
+                        value="@RuntimeRunSelectValue"
+                        @onchange="SelectRuntimeRunAsync"
+                        data-testid="processes-runtime-run-select">
+                    @RenderRuntimeRunOptions()
+                </select>
+            </Stack>
+            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
+                <Button Icon="chevron_left"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        title="Previous event page"
+                        aria-label="Previous event page"
+                        Disabled="@(runtimeEventPage == 0 || isBusy)"
+                        Click="PreviousRuntimeEventPageAsync"
+                        data-testid="processes-runtime-events-prev" />
+                <StatusBadge Tone="neutral" Text="@($"Page {runtimeEventPage + 1}")" />
+                <Button Icon="chevron_right"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        title="Next event page"
+                        aria-label="Next event page"
+                        Disabled="@(!CurrentShell.Runtime.HasMoreEvents || isBusy)"
+                        Click="NextRuntimeEventPageAsync"
+                        data-testid="processes-runtime-events-next" />
+                <Button Text="Refresh"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        Click="RefreshAsync"
+                        data-testid="processes-process-graphs-load-button" />
+            </Cluster>
+        </Grid>
+    </SurfaceCard>;
+
+    private RenderFragment RenderRuntimeRunOptions() => @<text>
+        @if (CurrentShell.Runtime.Runs.Count == 0)
+        {
+            <option value="">No runtime runs</option>
+        }
+        else
+        {
+            @foreach (var run in CurrentShell.Runtime.Runs)
+            {
+                <option value="@run.RunId.Value.ToString("D")">@BuildRunOptionText(run)</option>
+            }
+        }
+    </text>;
+
+    private RenderFragment RenderLaunchSection() => @<Grid Gap="LayoutGap.Medium"
+                                                           ColumnsLg="2"
+                                                           data-testid="processes-run-launch-section">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Launch planning" />
+            <h3 class="text-base font-semibold text-slate-900">@(DefinitionCatalog.SelectedItem?.Name ?? "Select a definition")</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Launch uses the process application boundary and refreshes runtime projections after the run is accepted.</p>
+            <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
+                <StatusBadge Tone="info" Text="@ResolveHistoryWindowText(CurrentShell.Runtime.HistoryWindow)" />
+                <StatusBadge Tone="@ResolveEditorStatusTone(DefinitionCatalog.SelectedEditor?.Status ?? ProcessDefinitionAuthoringStatus.TemplateDefault)" Text="@(DefinitionCatalog.SelectedEditor?.Status.ToString() ?? "No definition")" />
+            </Cluster>
+            <Button Text="Launch"
+                    Icon="rocket_launch"
+                    ButtonStyle="ButtonStyle.Success"
+                    Size="ButtonSize.Small"
+                    Class="mt-4"
+                    Disabled="@(isBusy || DefinitionCatalog.SelectedItem is null)"
+                    IsBusy="@isBusy"
+                    Click="LaunchSelectedDefinitionAsync"
+                    data-testid="processes-runs-launch-selected-definition" />
+        </SurfaceCard>
+        @RenderRunList("processes-run-launch-run-list")
     </Grid>;
+
+    private RenderFragment RenderRuntimeActivitySection() => @<Grid Gap="LayoutGap.Medium"
+                                                                    ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)"
+                                                                    data-testid="processes-run-activity">
+        @RenderRunList("processes-run-activity-list")
+        @RenderRuntimeEventLedger("processes-run-activity-events")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeControlSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                   ColumnTemplateXl="minmax(0,0.8fr) minmax(0,1.2fr)"
+                                                                   data-testid="processes-operator-control-section">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager resolution" />
+            <h3 class="text-base font-semibold text-slate-900">@CurrentShell.Runtime.AttentionSummary</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Manager incidents, recovery denials, branch rejections, and loop-budget escalations are projected from runtime events.</p>
+        </SurfaceCard>
+        @RenderIncidentLedger("processes-run-control-incidents")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeExecutionSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                     ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                                                                     data-testid="processes-runtime-host-readback">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected run" />
+            <h3 class="text-base font-semibold text-slate-900">@SelectedRunTitle</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">@CurrentShell.Runtime.Summary</p>
+            <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
+                @if (CurrentShell.Runtime.SelectedRun is { } selectedRun)
+                {
+                    <StatusBadge Tone="@ResolveRunStatusTone(selectedRun.Status)" Text="@selectedRun.Status.ToString()" />
+                    <StatusBadge Tone="neutral" Text="@($"first {selectedRun.FirstEventAtUtc.LocalDateTime:g}")" />
+                    <StatusBadge Tone="info" Text="@($"latest {selectedRun.LastEventAtUtc.LocalDateTime:g}")" />
+                }
+                <StatusBadge Tone="neutral" Text="@($"{CurrentShell.Runtime.Events.Count} event(s)")" />
+            </Cluster>
+        </SurfaceCard>
+        @RenderRuntimeEventLedger("processes-run-execution-events")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeCoordinationSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                        ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)"
+                                                                        data-testid="processes-run-coordination">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Assignments and messaging" />
+            <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.ManagerMessages.Count} manager message(s)")</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Manager messages are filtered to the selected run and history window.</p>
+            <Button Text="Open manager chat"
+                    Icon="forum"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Class="mt-4"
+                    Click="OpenManagerChatTabAsync"
+                    data-testid="processes-run-open-manager-chat" />
+        </SurfaceCard>
+        @RenderManagerMessageLedger("processes-run-manager-messages")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeEvidenceSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                    ColumnTemplateXl="minmax(0,0.8fr) minmax(0,1.2fr)"
+                                                                    data-testid="processes-run-evidence">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Evidence" />
+            <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.Events.Count} event(s) on page")</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Runtime evidence is shown as event history, incidents, diagnostic references, and manager decisions until artifact-map projections contain concrete artifact rows.</p>
+        </SurfaceCard>
+        @RenderRuntimeEventLedger("processes-run-evidence-events")
+    </Grid>;
+
+    private RenderFragment RenderRunList(string testId) => @<Stack GapScale="LayoutGap.Small"
+                                                                    data-testid="@testId">
+        @if (CurrentShell.Runtime.Runs.Count == 0)
+        {
+            <EmptyState Eyebrow="Runtime runs"
+                        Title="No runs in the selected window"
+                        Description="Launch a process or widen the history window." />
+        }
+        else
+        {
+            @foreach (var run in CurrentShell.Runtime.Runs)
+            {
+                <article class="processes-runtime-run-card @(run.RunId.Value == (selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId) ? "processes-runtime-run-card--selected" : string.Empty)"
+                         data-testid="processes-runtime-run-card">
+                    <button type="button"
+                            class="processes-runtime-run-card__body"
+                            @onclick="@(() => SelectRuntimeRunAsync(run.RunId.Value))">
+                        <span class="processes-runtime-run-card__header">
+                            <span class="processes-runtime-run-card__title">@BuildRunTitle(run)</span>
+                            <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                        </span>
+                        <span class="processes-runtime-run-card__summary">@BuildRunCardSummary(run)</span>
+                        <span class="processes-runtime-run-card__badges">
+                            <StatusBadge Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" />
+                            <StatusBadge Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" />
+                            <StatusBadge Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" />
+                        </span>
+                    </button>
+                    <Button Icon="open_in_new"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Class="cda-button--quick processes-runtime-run-card__open"
+                            title="Open run details"
+                            aria-label="Open run details"
+                            Click="@(() => OpenRunDetailDialogAsync(run))"
+                            data-testid="processes-runtime-run-open-details" />
+                </article>
+            }
+        }
+    </Stack>;
+
+    private RenderFragment RenderRuntimeEventLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                    data-testid="@testId">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Runtime timeline" />
+                <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.Events.Count} event(s)")</h3>
+            </Stack>
+            <StatusBadge Tone="neutral" Text="@ResolveHistoryWindowText(CurrentShell.Runtime.HistoryWindow)" />
+        </Split>
+        @if (CurrentShell.Runtime.Events.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime events match this filter.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var runtimeEvent in CurrentShell.Runtime.Events)
+                {
+                    <button type="button"
+                            class="processes-runtime-event-row"
+                            @onclick="@(() => OpenEventDetailDialogAsync(runtimeEvent))"
+                            data-testid="processes-runtime-event-row">
+                        <span>
+                            <span class="processes-runtime-event-row__title">@runtimeEvent.EventType</span>
+                            <span class="processes-runtime-event-row__summary">@runtimeEvent.Summary</span>
+                        </span>
+                        <span class="processes-runtime-event-row__meta">
+                            <StatusBadge Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.Sensitivity.ToString()" />
+                            <span>@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </span>
+                    </button>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderIncidentLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                data-testid="@testId">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
+        @if (CurrentShell.Runtime.Incidents.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No manager incidents are open in this projection window.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var incident in CurrentShell.Runtime.Incidents)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-runtime-incident-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="warning" Text="@incident.Severity" />
+                            <StatusBadge Tone="neutral" Text="@incident.Status" />
+                            <span class="text-xs text-slate-500">@incident.RaisedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
+                        <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderManagerMessageLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                      data-testid="@testId">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager messages" />
+        @if (CurrentShell.Runtime.ManagerMessages.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No manager messages match the selected run and history window.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var message in CurrentShell.Runtime.ManagerMessages)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-runtime-manager-message-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ResolveManagerMessageTone(message)" Text="@message.Kind" />
+                            <span class="text-xs text-slate-500">@message.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">@message.Summary</p>
+                        @if (!string.IsNullOrWhiteSpace(message.RestrictedDiagnosticReference))
+                        {
+                            <p class="mt-1 text-xs text-slate-500">@message.RestrictedDiagnosticReference</p>
+                        }
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderToolUsageLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                 data-testid="@testId">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool usage" />
+        @if (CurrentShell.Runtime.ToolUsage.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime tool usage is present in this scope.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var tool in CurrentShell.Runtime.ToolUsage)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-runtime-tool-row">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900">@tool.ToolName</p>
+                                <p class="mt-1 text-xs text-slate-500">@tool.Summary</p>
+                            </div>
+                            <StatusBadge Tone="warning" Text="@($"{tool.CallCount} calls")" />
+                        </Split>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderRunDetailDialog(ProcessLiveProcessSnapshot run) => @<Stack GapScale="LayoutGap.Medium"
+                                                                                           data-testid="processes-run-detail-dialog-content">
+        <CompactStatStrip>
+            <CompactStat Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" TooltipText="Projected run status." />
+            <CompactStat Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" TooltipText="Recent events kept in the live run snapshot." />
+            <CompactStat Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" TooltipText="Manager incidents projected for this run." />
+            <CompactStat Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" TooltipText="Latest runtime event time." />
+        </CompactStatStrip>
+        <Grid Gap="LayoutGap.Medium" ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+            <SurfaceCard Soft="true">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recent events" />
+                @foreach (var runtimeEvent in run.RecentEvents.OrderByDescending(item => item.OccurredAtUtc))
+                {
+                    <div class="processes-runtime-ledger-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@runtimeEvent.EventType" />
+                            <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">@runtimeEvent.Summary</p>
+                    </div>
+                }
+            </SurfaceCard>
+            <SurfaceCard Soft="true">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
+                @if (run.Incidents.Count == 0)
+                {
+                    <p class="mt-3 text-sm leading-6 text-slate-500">No incidents are attached to this run.</p>
+                }
+                else
+                {
+                    @foreach (var incident in run.Incidents.OrderByDescending(item => item.RaisedAtUtc))
+                    {
+                        <div class="processes-runtime-ledger-row">
+                            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                <StatusBadge Tone="warning" Text="@incident.Severity" />
+                                <StatusBadge Tone="neutral" Text="@incident.Status" />
+                            </Cluster>
+                            <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
+                            <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                        </div>
+                    }
+                }
+            </SurfaceCard>
+        </Grid>
+    </Stack>;
+
+    private RenderFragment RenderEventDetailDialog(ProcessTimelineEventProjection runtimeEvent) => @<Stack GapScale="LayoutGap.Medium"
+                                                                                                          data-testid="processes-runtime-event-detail-content">
+        <CompactStatStrip>
+            <CompactStat Tone="info" Text="@runtimeEvent.GlobalSequence.ToString(CultureInfo.InvariantCulture)" TooltipText="Global sequence." />
+            <CompactStat Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.Sensitivity.ToString()" TooltipText="Event sensitivity." />
+            <CompactStat Tone="neutral" Text="@runtimeEvent.RunId.Value.ToString("N")[..8]" TooltipText="@runtimeEvent.RunId.Value.ToString("D")" />
+        </CompactStatStrip>
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Summary" />
+            <p class="mt-2 text-sm leading-6 text-slate-700">@runtimeEvent.Summary</p>
+            @if (!string.IsNullOrWhiteSpace(runtimeEvent.RestrictedDiagnosticReference))
+            {
+                <p class="mt-2 text-xs font-semibold text-slate-500">@runtimeEvent.RestrictedDiagnosticReference</p>
+            }
+        </SurfaceCard>
+    </Stack>;
+
+    private async Task ChangeRuntimeHistoryWindowAsync(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed))
+        {
+            runtimeHistoryWindow = parsed;
+            runtimeEventPage = 0;
+            await LoadAsync(forceRefresh: false);
+        }
+    }
+
+    private async Task SelectRuntimeRunAsync(ChangeEventArgs args)
+    {
+        var value = ReadChangeValue(args);
+        selectedRuntimeRunId = Guid.TryParse(value, out var parsed) && parsed != Guid.Empty
+            ? parsed
+            : null;
+        runtimeEventPage = 0;
+        managerChatDraftPrompt = string.Empty;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectRuntimeRunAsync(Guid runId)
+    {
+        selectedRuntimeRunId = runId == Guid.Empty ? null : runId;
+        runtimeEventPage = 0;
+        managerChatDraftPrompt = string.Empty;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task PreviousRuntimeEventPageAsync()
+    {
+        if (runtimeEventPage == 0)
+        {
+            return;
+        }
+
+        runtimeEventPage--;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task NextRuntimeEventPageAsync()
+    {
+        if (!CurrentShell.Runtime.HasMoreEvents)
+        {
+            return;
+        }
+
+        runtimeEventPage++;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private Task OpenRunDetailDialogAsync(ProcessLiveProcessSnapshot run)
+    {
+        runDetailSnapshot = run;
+        runDetailDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRunDetailDialogAsync()
+    {
+        runDetailDialogOpen = false;
+        runDetailSnapshot = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenEventDetailDialogAsync(ProcessTimelineEventProjection runtimeEvent)
+    {
+        eventDetail = runtimeEvent;
+        eventDetailDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseEventDetailDialogAsync()
+    {
+        eventDetailDialogOpen = false;
+        eventDetail = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenManagerChatTabAsync()
+    {
+        activeDetailTabIndex = ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat);
+        await EnsureManagerChatLoadedAsync();
+    }
+
+    private async Task ReloadManagerChatAsync()
+    {
+        managerChatWorkspace = null;
+        await EnsureManagerChatLoadedAsync(forceReload: true);
+    }
+
+    private async Task EnsureManagerChatLoadedAsync(bool forceReload = false)
+    {
+        if (!forceReload && managerChatWorkspace is not null && managerChatAgent is not null)
+        {
+            return;
+        }
+
+        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        if (workspaceService is null)
+        {
+            managerChatErrorMessage = "Agent workspace service is not registered for this module instance.";
+            return;
+        }
+
+        managerChatIsLoading = true;
+        managerChatErrorMessage = null;
+
+        try
+        {
+            managerChatAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+            managerChatAgentId = ResolveManagerAgentId(managerChatAgents, managerChatAgentId);
+            if (managerChatAgentId is null)
+            {
+                managerChatAgent = null;
+                managerChatWorkspace = null;
+                managerChatExecutionLog = [];
+                managerChatErrorMessage = "No technical agent is available for process manager chat.";
+                return;
+            }
+
+            managerChatAgent = managerChatAgents.First(agent => agent.Id == managerChatAgentId.Value);
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatSessionId = managerChatWorkspace.SelectedSessionId;
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
+            ResolveManagerChatRunState();
+            if (string.IsNullOrWhiteSpace(managerChatDraftPrompt))
+            {
+                managerChatDraftPrompt = BuildManagerChatPrompt();
+                managerChatComposerKey++;
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatErrorMessage = exception.Message;
+            managerChatWorkspace = null;
+        }
+        finally
+        {
+            managerChatIsLoading = false;
+        }
+    }
+
+    private async Task SelectManagerChatAgentAsync(ChangeEventArgs args)
+    {
+        managerChatAgentId = Guid.TryParse(ReadChangeValue(args), out var parsed) && parsed != Guid.Empty
+            ? parsed
+            : null;
+        managerChatSessionId = null;
+        managerChatWorkspace = null;
+        await EnsureManagerChatLoadedAsync(forceReload: true);
+    }
+
+    private Task HandleManagerChatDraftPromptChangedAsync(string value)
+    {
+        managerChatDraftPrompt = value;
+        return Task.CompletedTask;
+    }
+
+    private async Task SendManagerChatMessageAsync()
+    {
+        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        if (workspaceService is null || managerChatAgentId is null)
+        {
+            managerChatErrorMessage = "Select a manager agent before sending a message.";
+            return;
+        }
+
+        var prompt = BuildManagerChatPromptWithContext();
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            managerChatErrorMessage = "Enter a manager prompt before sending.";
+            return;
+        }
+
+        managerChatIsBusy = true;
+        managerChatPendingPrompt = managerChatDraftPrompt;
+        var previousDraft = managerChatDraftPrompt;
+        managerChatDraftPrompt = string.Empty;
+        managerChatComposerKey++;
+
+        try
+        {
+            var result = await workspaceService.SendMessageAsync(managerChatAgentId.Value, managerChatSessionId, prompt);
+            managerChatSessionId = result.ChatSessionId;
+            managerChatDraftAttachmentPaths = [];
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
+            ResolveManagerChatRunState();
+            managerChatErrorMessage = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatDraftPrompt = previousDraft;
+            managerChatComposerKey++;
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatPendingPrompt = string.Empty;
+            managerChatIsBusy = false;
+        }
+    }
+
+    private async Task HandleManagerChatApprovalDecisionAsync(bool approved)
+    {
+        await ContinueManagerChatApprovalAsync(approved, autoApprovePendingToolCalls: false);
+    }
+
+    private async Task ApproveManagerChatConversationAsync()
+    {
+        await ContinueManagerChatApprovalAsync(approved: true, autoApprovePendingToolCalls: true);
+    }
+
+    private async Task ContinueManagerChatApprovalAsync(bool approved, bool autoApprovePendingToolCalls)
+    {
+        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
+        {
+            return;
+        }
+
+        managerChatIsBusy = true;
+        try
+        {
+            await workspaceService.RespondToPendingApprovalsAsync(
+                managerChatAgentId.Value,
+                managerChatSessionId.Value,
+                approved,
+                autoApprovePendingToolCalls);
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
+            ResolveManagerChatRunState();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatIsBusy = false;
+        }
+    }
+
+    private async Task RenameManagerChatSessionAsync(string title)
+    {
+        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
+        {
+            return;
+        }
+
+        managerChatIsBusy = true;
+        try
+        {
+            var session = await workspaceService.RenameChatSessionAsync(managerChatAgentId.Value, managerChatSessionId.Value, title);
+            managerChatSessionId = session.Id;
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatIsBusy = false;
+        }
+    }
+
+    private async Task StageManagerChatRunArtifactsAsync()
+    {
+        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        if (workspaceService is null || managerChatWorkspace?.SelectedRun is null)
+        {
+            managerChatDraftAttachmentPaths = [];
+            return;
+        }
+
+        var detail = await workspaceService.GetExecutionRunDetailAsync(managerChatWorkspace.SelectedRun.Id);
+        managerChatDraftAttachmentPaths = detail.Artifacts
+            .Select(item => item.RelativePath)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private Guid? ResolveManagerAgentId(IReadOnlyList<AgentDefinition> agents, Guid? currentAgentId)
+    {
+        if (currentAgentId is { } current && agents.Any(agent => agent.Id == current))
+        {
+            return current;
+        }
+
+        return agents
+            .OrderByDescending(agent => agent.Name.Contains("process", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(agent => agent.Name.Contains("manager", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(agent => (Guid?)agent.Id)
+            .FirstOrDefault();
+    }
+
+    private void ResolveManagerChatRunState()
+    {
+        if (managerChatWorkspace?.SelectedRun is null)
+        {
+            managerChatRunStateText = string.Empty;
+            managerChatRunStateTone = "neutral";
+            return;
+        }
+
+        managerChatRunStateText = managerChatWorkspace.SelectedRun.State.ToString();
+        managerChatRunStateTone = ResolveExecutionTone(managerChatWorkspace.SelectedRun.State);
+    }
+
+    private string BuildManagerChatPromptWithContext()
+    {
+        var prompt = managerChatDraftPrompt.Trim();
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return string.Empty;
+        }
+
+        return $"{BuildManagerChatPrompt()}{Environment.NewLine}{Environment.NewLine}User request:{Environment.NewLine}{prompt}";
+    }
+
+    private string BuildManagerChatPrompt()
+    {
+        var selectedRun = CurrentShell.Runtime.SelectedRun;
+        var runId = selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId;
+        var recentEvents = CurrentShell.Runtime.Events.Take(8)
+            .Select(runtimeEvent => $"- {runtimeEvent.OccurredAtUtc:u} {runtimeEvent.EventType}: {runtimeEvent.Summary}")
+            .ToArray();
+        var eventText = recentEvents.Length == 0
+            ? "- No runtime events in the selected page."
+            : string.Join(Environment.NewLine, recentEvents);
+
+        return $"""
+            Process manager context
+            Scope: {CurrentShell.AgentEntry.ContextKey}
+            Selected run: {(runId.HasValue ? runId.Value.ToString("D") : "none")}
+            Status: {selectedRun?.Status.ToString() ?? "unknown"}
+            Attention summary: {CurrentShell.Runtime.AttentionSummary}
+            History window: {FormatHistoryWindow(CurrentShell.Runtime.HistoryWindow)}
+
+            Recent runtime events:
+            {eventText}
+            """;
+    }
+
+    private static string BuildRunTitle(ProcessRunDetailProjection run)
+        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+
+    private static string BuildRunTitle(ProcessLiveProcessSnapshot run)
+        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+
+    private static string BuildRunSubtitle(ProcessLiveProcessSnapshot run)
+        => $"{run.Status} / {run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}";
+
+    private static string BuildRunOptionText(ProcessLiveProcessSnapshot run)
+        => $"{BuildRunTitle(run)} / {run.Status} / {run.LastEventAtUtc.LocalDateTime:g}";
+
+    private static string BuildRunCardSummary(ProcessLiveProcessSnapshot run)
+    {
+        var incident = run.Incidents.OrderByDescending(item => item.RaisedAtUtc).FirstOrDefault();
+        if (incident is not null)
+        {
+            return $"Cause: {EnsureSentence(incident.SafeSummary)}";
+        }
+
+        var runtimeEvent = ResolveRunCardEvent(run.RecentEvents);
+        return runtimeEvent is null
+            ? "No recent runtime events are attached to this run."
+            : $"{runtimeEvent.EventType}: {runtimeEvent.Summary}";
+    }
+
+    private static string ResolveRunStatusTone(ProcessProjectedRunStatus status)
+        => status switch
+        {
+            ProcessProjectedRunStatus.Active => "success",
+            ProcessProjectedRunStatus.NeedsAttention => "warning",
+            ProcessProjectedRunStatus.Failed => "danger",
+            ProcessProjectedRunStatus.Completed => "info",
+            ProcessProjectedRunStatus.Cancelled => "neutral",
+            _ => "neutral"
+        };
+
+    private static string ResolveEventTone(ProcessTimelineEventProjection runtimeEvent)
+        => runtimeEvent.Sensitivity == ProcessProjectedSensitivity.Restricted
+            ? "warning"
+            : runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal)
+                ? "info"
+                : IsAttentionEventType(runtimeEvent.EventType)
+                    ? "warning"
+                    : "neutral";
+
+    private static string ResolveManagerMessageTone(ProcessManagerMessageProjection message)
+        => message.Sensitivity == ProcessProjectedSensitivity.Restricted
+            ? "warning"
+            : message.Kind.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
+              message.Kind.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
+              message.Kind.Contains("Escalated", StringComparison.OrdinalIgnoreCase)
+                ? "warning"
+                : "info";
+
+    private static ProcessLiveRunEventProjection? ResolveRunCardEvent(IReadOnlyList<ProcessLiveRunEventProjection> events)
+        => events
+            .OrderByDescending(item => IsAttentionEventType(item.EventType))
+            .ThenByDescending(item => item.OccurredAtUtc)
+            .FirstOrDefault();
+
+    private static bool IsAttentionEventType(string eventType)
+        => eventType.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Incident", StringComparison.OrdinalIgnoreCase);
+
+    private static string ResolveExecutionTone(ExecutionState state)
+        => state switch
+        {
+            ExecutionState.Completed => "success",
+            ExecutionState.WaitingOnTool => "warning",
+            ExecutionState.Failed => "danger",
+            ExecutionState.Running or ExecutionState.Preparing or ExecutionState.Persisting => "info",
+            _ => "neutral"
+        };
+
+    private static string FormatHistoryWindow(ProcessRuntimeHistoryWindow window)
+        => window switch
+        {
+            ProcessRuntimeHistoryWindow.LiveHour => "Last hour",
+            ProcessRuntimeHistoryWindow.OneDay => "Last 24 hours",
+            ProcessRuntimeHistoryWindow.SevenDays => "Last 7 days",
+            ProcessRuntimeHistoryWindow.ThirtyDays => "Last 30 days",
+            _ => window.ToString()
+        };
+
+    private static string ResolveHistoryWindowText(ProcessRuntimeHistoryWindow window)
+        => FormatHistoryWindow(window);
+
+    private static string FormatCurrency(decimal value)
+        => value == 0m
+            ? "$0.00"
+            : value.ToString("C2", CultureInfo.CurrentCulture);
+
+    private static string FormatTokenCount(int value)
+        => value.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string FormatDuration(long durationMs)
+    {
+        if (durationMs <= 0)
+        {
+            return "0 min";
+        }
+
+        var duration = TimeSpan.FromMilliseconds(durationMs);
+        return duration.TotalHours >= 1
+            ? $"{duration.TotalHours:N1} h"
+            : $"{duration.TotalMinutes:N1} min";
+    }
+
+    private static string TrimLabel(string value, int maxLength)
+    {
+        if (value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        return $"{value[..Math.Max(0, maxLength - 3)]}...";
+    }
+
+    private static string EnsureSentence(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0 ||
+            trimmed.EndsWith(".", StringComparison.Ordinal) ||
+            trimmed.EndsWith("!", StringComparison.Ordinal) ||
+            trimmed.EndsWith("?", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        return $"{trimmed}.";
+    }
 
     private RenderFragment RenderMetricCard(
         string label,

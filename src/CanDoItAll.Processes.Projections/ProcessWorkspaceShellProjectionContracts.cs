@@ -31,6 +31,14 @@ public enum ProcessWorkspaceProjectionStatus
     ProjectionStoreUnavailable
 }
 
+public enum ProcessRuntimeHistoryWindow
+{
+    LiveHour,
+    OneDay,
+    SevenDays,
+    ThirtyDays
+}
+
 public enum ProcessWorkspaceAgentEntryKind
 {
     WorkspaceContext,
@@ -212,7 +220,8 @@ public sealed record ProcessWorkspaceShellRequest(
     ProcessWorkspaceSelectionProjection Selection,
     ProcessDefinitionCatalogQueryProjection DefinitionCatalogQuery,
     ProcessTemplateCatalogQueryProjection TemplateCatalogQuery,
-    bool ForceRefresh);
+    bool ForceRefresh,
+    ProcessRuntimeWorkspaceQueryProjection? RuntimeQuery = null);
 
 public sealed record ProcessWorkspaceTabProjection(
     ProcessWorkspaceTabKey Key,
@@ -390,6 +399,98 @@ public sealed record ProcessLiveRunSummaryProjection(
     DateTimeOffset? LastEventAtUtc,
     string Summary);
 
+public sealed record ProcessRuntimeWorkspaceQueryProjection(
+    ProcessRuntimeHistoryWindow HistoryWindow,
+    int EventPage,
+    int EventPageSize,
+    Guid? SelectedRunId);
+
+public sealed record ProcessRuntimeStatsProjection(
+    int ObservedRunCount,
+    int ActiveRunCount,
+    int AttentionRunCount,
+    int FailedRunCount,
+    int EventCount,
+    int ManagerEventCount,
+    int ToolCallCount,
+    long DurationMs,
+    int InputTokens,
+    int CachedInputTokens,
+    int OutputTokens,
+    decimal EstimatedCost,
+    decimal ActualCost)
+{
+    public static ProcessRuntimeStatsProjection Empty { get; } = new(
+        ObservedRunCount: 0,
+        ActiveRunCount: 0,
+        AttentionRunCount: 0,
+        FailedRunCount: 0,
+        EventCount: 0,
+        ManagerEventCount: 0,
+        ToolCallCount: 0,
+        DurationMs: 0,
+        InputTokens: 0,
+        CachedInputTokens: 0,
+        OutputTokens: 0,
+        EstimatedCost: 0m,
+        ActualCost: 0m);
+}
+
+public sealed record ProcessRuntimeMetricPointProjection(
+    DateTimeOffset TimestampUtc,
+    int EventCount,
+    int ManagerEventCount,
+    int ToolCallCount,
+    long DurationMs,
+    int InputTokens,
+    int CachedInputTokens,
+    int OutputTokens,
+    decimal EstimatedCost,
+    decimal ActualCost);
+
+public sealed record ProcessRuntimeToolUsageProjection(
+    string ToolName,
+    int CallCount,
+    DateTimeOffset LastUsedAtUtc,
+    string Summary);
+
+public sealed record ProcessRuntimeWorkspaceProjection(
+    ProcessRuntimeHistoryWindow HistoryWindow,
+    int EventPage,
+    int EventPageSize,
+    bool HasMoreEvents,
+    Guid? SelectedRunId,
+    ProcessRunDetailProjection? SelectedRun,
+    IReadOnlyList<ProcessLiveProcessSnapshot> Runs,
+    IReadOnlyList<ProcessTimelineEventProjection> Events,
+    IReadOnlyList<ProcessIncidentProjection> Incidents,
+    IReadOnlyList<ProcessManagerMessageProjection> ManagerMessages,
+    ProcessRuntimeStatsProjection Stats,
+    IReadOnlyList<ProcessRuntimeMetricPointProjection> MetricPoints,
+    IReadOnlyList<ProcessRuntimeToolUsageProjection> ToolUsage,
+    ProcessProjectionFreshness? Freshness,
+    string Summary,
+    string AttentionSummary)
+{
+    public static ProcessRuntimeWorkspaceProjection Empty { get; } = new(
+        ProcessRuntimeHistoryWindow.OneDay,
+        EventPage: 0,
+        EventPageSize: 25,
+        HasMoreEvents: false,
+        SelectedRunId: null,
+        SelectedRun: null,
+        Runs: [],
+        Events: [],
+        Incidents: [],
+        ManagerMessages: [],
+        ProcessRuntimeStatsProjection.Empty,
+        MetricPoints: [],
+        ToolUsage: [],
+        Freshness: null,
+        Summary: "Runtime projection snapshots are not available in this workspace shell.",
+        AttentionSummary: "No runtime attention signals are available.");
+}
+
 public sealed record ProcessWorkspaceAgentEntryProjection(
     ProcessWorkspaceAgentEntryKind Kind,
     bool IsAvailable,
@@ -408,4 +509,7 @@ public sealed record ProcessWorkspaceShellProjection(
     ProcessWorkspaceAuthorizationProjection Authorization,
     IReadOnlyList<ProcessWorkspaceTabProjection> Tabs,
     IReadOnlyList<ProcessWorkspaceCommandProjection> Commands,
-    ProcessWorkspaceAgentEntryProjection AgentEntry);
+    ProcessWorkspaceAgentEntryProjection AgentEntry)
+{
+    public ProcessRuntimeWorkspaceProjection Runtime { get; init; } = ProcessRuntimeWorkspaceProjection.Empty;
+}

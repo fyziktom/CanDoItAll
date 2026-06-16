@@ -15,13 +15,30 @@ public sealed record ProcessRunHistoryQuery(
     ProcessRunId? RunId,
     DateTimeOffset FromUtc,
     DateTimeOffset ToUtc,
-    int Take);
+    int Take,
+    int Skip = 0);
 
 public sealed record ProcessRunHistoryResult(
     IReadOnlyList<ProcessTimelineEventProjection> Events,
-    ProcessProjectionFreshness? Freshness);
+    ProcessProjectionFreshness? Freshness,
+    bool HasMoreEvents = false);
 
 public sealed record ProcessRunDetailQuery(ProcessRunId RunId);
+
+public sealed record ProcessRuntimeWorkspaceQuery(
+    DateTimeOffset NowUtc,
+    TimeSpan Window,
+    int EventPage,
+    int EventPageSize,
+    int TakeRuns,
+    ProcessRunId? SelectedRunId);
+
+public sealed record ProcessRuntimeWorkspaceResult(
+    IReadOnlyList<ProcessLiveProcessSnapshot> Runs,
+    ProcessRunDetailProjection? SelectedRun,
+    IReadOnlyList<ProcessTimelineEventProjection> Events,
+    bool HasMoreEvents,
+    ProcessProjectionFreshness? Freshness);
 
 public sealed record ProcessProjectionHistoryQuery(
     ProcessProjectorName ProjectorName,
@@ -29,4 +46,5 @@ public sealed record ProcessProjectionHistoryQuery(
     DateTimeOffset FromUtc,
     DateTimeOffset ToUtc,
     int Take,
-    long? AfterGlobalSequence = null);
+    long? AfterGlobalSequence = null,
+    int Skip = 0);

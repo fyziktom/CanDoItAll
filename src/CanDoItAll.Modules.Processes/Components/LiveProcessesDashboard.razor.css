@@ -53,3 +53,67 @@
 .live-processes-tabs {
     min-height: 0;
 }
+
+.live-processes-filter-strip {
+    width: 100%;
+}
+
+.live-processes-run-card {
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 0.5rem;
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.7rem;
+}
+
+.live-processes-run-card--selected {
+    border-color: rgba(37, 99, 235, 0.55);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.live-processes-run-card__body {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+}
+
+.live-processes-run-card__header,
+.live-processes-run-card__badges {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.live-processes-run-card__title {
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 750;
+}
+
+.live-processes-run-card__summary {
+    color: #475569;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.live-processes-run-card__open {
+    align-self: start;
+}
+
+.live-processes-event-row {
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+}

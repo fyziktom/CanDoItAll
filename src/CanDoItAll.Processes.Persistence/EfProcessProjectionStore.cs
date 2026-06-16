@@ -113,6 +113,11 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
             throw new ArgumentOutOfRangeException(nameof(query.Take), query.Take, "Projection history read size must be positive.");
         }
 
+        if (query.Skip < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(query.Skip), query.Skip, "Projection history skip count cannot be negative.");
+        }
+
         var rowsQuery = dbContext.ProjectionHistory
             .AsNoTracking()
             .Where(history =>
@@ -132,6 +137,7 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
 
         var rows = await rowsQuery
             .OrderBy(history => history.GlobalSequence)
+            .Skip(query.Skip)
             .Take(query.Take)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 
 namespace CanDoItAll.Processes.Application;
@@ -58,6 +59,11 @@ public sealed class ProcessRuntimeProjectionQueryService(
         CancellationToken cancellationToken = default)
     {
         ValidateTake(query.Take, nameof(query.Take));
+        if (query.Skip < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(query.Skip), query.Skip, "Projection history skip count cannot be negative.");
+        }
+
         if (query.FromUtc >= query.ToUtc)
         {
             throw new ArgumentException("History query range must have FromUtc earlier than ToUtc.", nameof(query));
@@ -70,7 +76,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
                     query.RunId,
                     query.FromUtc,
                     query.ToUtc,
-                    query.Take),
+                    query.Take,
+                    Skip: query.Skip),
                 cancellationToken)
             .ConfigureAwait(false);
         var events = new List<ProcessTimelineEventProjection>(records.Count);
@@ -81,6 +88,53 @@ public sealed class ProcessRuntimeProjectionQueryService(
         }
 
         return new ProcessRunHistoryResult(events, CombineFreshness(events));
+    }
+
+    public async Task<ProcessRuntimeWorkspaceResult> GetRuntimeWorkspaceAsync(
+        ProcessRuntimeWorkspaceQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateTake(query.TakeRuns, nameof(query.TakeRuns));
+        ValidateTake(query.EventPageSize, nameof(query.EventPageSize));
+        if (query.EventPage < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(query.EventPage), query.EventPage, "Runtime event page cannot be negative.");
+        }
+
+        if (query.Window <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(query.Window), query.Window, "Runtime workspace window must be positive.");
+        }
+
+        var nowUtc = query.NowUtc == default ? clock.GetUtcNow() : query.NowUtc;
+        var liveProcesses = await GetLiveProcessesAsync(
+            new ProcessLiveProcessesQuery(nowUtc, query.Window, query.TakeRuns),
+            cancellationToken).ConfigureAwait(false);
+        var selectedRunId = ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId);
+        ProcessRunDetailProjection? selectedRun = null;
+        if (selectedRunId is not null)
+        {
+            selectedRun = await GetRunDetailAsync(new ProcessRunDetailQuery(selectedRunId.Value), cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var history = await GetRunHistoryAsync(
+            new ProcessRunHistoryQuery(
+                selectedRunId,
+                nowUtc - query.Window,
+                nowUtc,
+                Take: query.EventPageSize + 1,
+                Skip: checked(query.EventPage * query.EventPageSize)),
+            cancellationToken).ConfigureAwait(false);
+        var events = history.Events.Take(query.EventPageSize).ToArray();
+        var freshness = CombineFreshness(liveProcesses.Freshness, history.Freshness, selectedRun?.Freshness);
+
+        return new ProcessRuntimeWorkspaceResult(
+            liveProcesses.Runs,
+            selectedRun,
+            events,
+            history.Events.Count > query.EventPageSize,
+            freshness);
     }
 
     public async Task<ProcessRunDetailProjection?> GetRunDetailAsync(
@@ -107,6 +161,23 @@ public sealed class ProcessRuntimeProjectionQueryService(
         {
             throw new ArgumentOutOfRangeException(parameterName, take, "Projection query size must be positive.");
         }
+    }
+
+    private static ProcessRunId? ResolveSelectedRunId(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        ProcessRunId? requestedRunId)
+    {
+        if (requestedRunId is not null && runs.Any(run => run.RunId == requestedRunId))
+        {
+            return requestedRunId;
+        }
+
+        return runs
+            .OrderByDescending(run => run.Status == ProcessProjectedRunStatus.NeedsAttention)
+            .ThenByDescending(run => run.IsActive)
+            .ThenByDescending(run => run.LastEventAtUtc)
+            .Select(run => (ProcessRunId?)run.RunId)
+            .FirstOrDefault();
     }
 
     private static ProcessProjectionFreshness? CombineFreshness(IReadOnlyList<ProcessLiveProcessSnapshot> runs)
@@ -140,5 +211,24 @@ public sealed class ProcessRuntimeProjectionQueryService(
             latestEvent.OccurredAtUtc,
             latestEvent.GlobalSequence,
             new ProcessProjectionLag(latestEvent.GlobalSequence, latestEvent.GlobalSequence, 0));
+    }
+
+    private static ProcessProjectionFreshness? CombineFreshness(params ProcessProjectionFreshness?[] freshnessValues)
+    {
+        ProcessProjectionFreshness? latest = null;
+        foreach (var freshness in freshnessValues)
+        {
+            if (freshness is null)
+            {
+                continue;
+            }
+
+            if (latest is null || freshness.SourceGlobalSequence > latest.SourceGlobalSequence)
+            {
+                latest = freshness;
+            }
+        }
+
+        return latest;
     }
 }

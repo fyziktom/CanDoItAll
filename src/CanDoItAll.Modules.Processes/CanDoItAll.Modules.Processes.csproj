@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
@@ -26,6 +27,7 @@
     <ProjectReference Include="..\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Git\CanDoItAll.Components.Git.csproj" />
