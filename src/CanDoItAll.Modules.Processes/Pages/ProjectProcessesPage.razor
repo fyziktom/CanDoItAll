@@ -1,17 +1,15 @@
-@page "/processes/live"
-@page "/projects/{ProjectId:guid}/processes/live"
+@page "/projects/{ProjectId:guid}/processes"
 
-<PageTitle>Live Processes</PageTitle>
+<PageTitle>Project Processes</PageTitle>
 
 <ProcessWorkspaceShell ProjectId="@ProjectId"
                        ProcessIdQuery="@ProcessIdQuery"
                        RunIdQuery="@RunIdQuery"
-                       LaunchPlanIdQuery="@LaunchPlanIdQuery"
-                       LiveRoute="true" />
+                       LaunchPlanIdQuery="@LaunchPlanIdQuery" />
 
 @code {
     [Parameter]
-    public Guid? ProjectId { get; set; }
+    public Guid ProjectId { get; set; }
 
     [SupplyParameterFromQuery(Name = "processId")]
     public Guid? ProcessIdQuery { get; set; }

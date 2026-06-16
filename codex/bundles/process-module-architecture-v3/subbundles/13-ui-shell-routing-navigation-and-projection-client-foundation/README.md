@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed during architecture bundle v3 execution.
 
 ## Objective
 
@@ -92,11 +92,11 @@ Rebuild the Process UI shell over projection/application services, preserving th
 
 ## Acceptance Checklist
 
-- [ ] Shell renders global and project-scoped routes through projection services.
-- [ ] Tabs and command strip preserve the current UX direction.
-- [ ] Agent entry point uses authorized application contracts.
-- [ ] UI dependency scan passes.
-- [ ] Playwright proof and screenshots are recorded.
+- [x] Shell renders global and project-scoped routes through projection services.
+- [x] Tabs and command strip preserve the current UX direction.
+- [x] Agent entry point uses authorized application contracts.
+- [x] UI dependency scan passes.
+- [x] Playwright proof and screenshots are recorded.
 
 ## Proof Required
 
@@ -119,4 +119,29 @@ Execute SB13 from `codex/bundles/process-module-architecture-v3/subbundles/13-ui
 
 ## Handoff Notes For Next Bundle
 
-Record projection DTO gaps, shell screenshots, command receipt behavior, and any route issues that SB14 must handle.
+SB13 implemented a projection-first shell, route pages for `/processes`, `/projects/{ProjectId}/processes`, `/processes/live`, and project-scoped live routes, a scoped projection client, shared shell navigation contribution, workbench tab detection, and focused component/Playwright proof.
+
+Proof is recorded under `repo://codex/bundles/process-module-architecture-v3/proof/SB13/`.
+
+SB14 can build definition-list/editor behavior on:
+
+- `repo://src/CanDoItAll.Processes.Projections/ProcessWorkspaceShellProjectionContracts.cs`
+- `repo://src/CanDoItAll.Processes.Application/ProcessWorkspaceShellProjectionService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor`
+- `repo://src/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs`
+
+DTO gaps intentionally left for downstream UI subbundles:
+
+- Real definition catalog rows and definition commands.
+- Real launch-plan/run-history/live dashboard projections.
+- Runtime-connected refresh execution beyond typed `RefreshRequested` shell state.
+
+Validation notes:
+
+- Component tests passed: `bundle://proof/SB13/test-components-process-shell.txt`.
+- Playwright route proof passed: `bundle://proof/SB13/test-playwright-process-shell.txt`.
+- Browser MCP desktop/narrow screenshots and snapshots are in `bundle://proof/SB13/browser/`.
+- UI forbidden runtime/persistence scan passed: `bundle://proof/SB13/scans/ui-forbidden-runtime-persistence-scan.txt`.
+- CodeAnalytics snapshot `snap-20260616003325-e1504595` shows `CanDoItAll.Modules.Processes` depending only on `Processes.Application` and `Processes.Projections` in the scoped dependency query.
+- AppDbContext migration `ProcessModuleArchitectureV3RuntimePersistence` removes stale legacy Process tables from the active migration snapshot so full app startup can pass after SB02 removal; it does not wire the new `ProcessPersistenceDbContext` into deployment.
+- AgentFramework receives `UnavailableProcessRuntimeEvidenceSourceProvider` only to satisfy composition after legacy Process removal; it throws an explicit unavailable-source error if Process runtime evidence is requested before the real provider is deployed.

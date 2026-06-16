@@ -9,12 +9,14 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Git\CanDoItAll.Components.Git.csproj" />
+    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>

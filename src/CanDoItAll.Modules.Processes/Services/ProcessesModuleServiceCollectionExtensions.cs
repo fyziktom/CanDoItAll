@@ -1,5 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Projections;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -11,7 +15,11 @@ public static class ProcessesModuleServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        services.AddSingleton(ProcessModuleRewriteState.Disabled);
+        services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
+        services.TryAddScoped<ProcessWorkspaceShellProjectionService>();
+        services.TryAddScoped<IProcessWorkspaceProjectionClient, ProcessWorkspaceProjectionClient>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());
+        services.AddSingleton<ProcessModuleRewriteState>(ProcessModuleRewriteState.Enabled);
         return services;
     }
 }
@@ -19,6 +27,8 @@ public static class ProcessesModuleServiceCollectionExtensions
 public sealed record ProcessModuleRewriteState(bool IsEnabled)
 {
     public static ProcessModuleRewriteState Disabled { get; } = new(false);
+
+    public static ProcessModuleRewriteState Enabled { get; } = new(true);
 }
 
 public static class ProcessesModuleAssemblyMarker;

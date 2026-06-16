@@ -128,6 +128,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowRuntimeManager, WorkflowRuntimeManager>();
         services.TryAddScoped<IWorkflowProcessExecutorBridge, WorkflowProcessExecutorBridge>();
         services.TryAddScoped<IWorkflowTestRunner, WorkflowTestRunner>();
+        services.TryAddScoped<IProcessRuntimeEvidenceSourceProvider, UnavailableProcessRuntimeEvidenceSourceProvider>();
 
         if (backgroundWorkersEnabled)
         {
