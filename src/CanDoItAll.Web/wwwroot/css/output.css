@@ -426,6 +426,9 @@
   .max-h-64 {
     max-height: calc(var(--spacing) * 64);
   }
+  .max-h-96 {
+    max-height: calc(var(--spacing) * 96);
+  }
   .max-h-\[26rem\] {
     max-height: 26rem;
   }
@@ -1204,6 +1207,9 @@
   }
   .whitespace-nowrap {
     white-space: nowrap;
+  }
+  .whitespace-pre-wrap {
+    white-space: pre-wrap;
   }
   .text-\[var\(--cda-danger\)\] {
     color: var(--cda-danger);

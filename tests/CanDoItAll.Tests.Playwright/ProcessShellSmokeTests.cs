@@ -20,7 +20,7 @@ public sealed class ProcessShellSmokeTests
             PlaywrightTestHostPaths.RepositoryRoot,
             "output",
             "playwright",
-            "process-shell-sb18");
+            "process-shell-sb19");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -102,6 +102,60 @@ public sealed class ProcessShellSmokeTests
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "processes-definition-step-editor.png"),
+            FullPage = true
+        });
+        await page.GetByTestId("processes-template-library").WaitForAsync();
+        await page.GetByTestId("processes-template-library-search").FillAsync("AI-assisted");
+        await page.GetByTestId("processes-template-library-search-submit").ClickAsync();
+        await page.GetByTestId("processes-template-library-category-processes").ClickAsync();
+        await page.GetByTestId("processes-template-library-item-process-ai-assisted-change-delivery").WaitForAsync();
+        await page.GetByTestId("processes-template-library-item-process-ai-assisted-change-delivery").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-preview"), "AI-assisted");
+        await page.GetByTestId("processes-template-library-import-process").WaitForAsync();
+        await page.GetByTestId("processes-template-library-preview-tab-markdown").ClickAsync();
+        await page.GetByTestId("processes-template-library-markdown").WaitForAsync();
+        await page.GetByTestId("processes-template-library-preview-tab-diagram").ClickAsync();
+        await page.GetByTestId("processes-template-library-diagram").WaitForAsync();
+        await page.GetByTestId("processes-template-library-preview-tab-json").ClickAsync();
+        await page.GetByTestId("processes-template-library-json").WaitForAsync();
+        await page.GetByTestId("processes-template-library-preview-tab-structure").ClickAsync();
+        await page.GetByTestId("processes-template-library-structure").WaitForAsync();
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(artifactDirectory, "processes-template-library-preview.png"),
+            FullPage = true
+        });
+        await page.GetByTestId("processes-template-library-import-process").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-import-receipt"), "imported");
+        var roleImportButton = page.Locator("[data-testid^='processes-template-library-import-role-role-']").First;
+        await roleImportButton.WaitForAsync();
+        await roleImportButton.ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-import-receipt"), "Role component");
+        var artifactTarget = page.GetByTestId("processes-template-library-artifact-target");
+        await artifactTarget.WaitForAsync();
+        var selectedArtifactTarget = await artifactTarget.EvaluateAsync<string>(
+            @"element => {
+                if (element.value) {
+                    return element.value;
+                }
+
+                const option = Array.from(element.options).find(candidate => candidate.value);
+                if (!option) {
+                    return '';
+                }
+
+                element.value = option.value;
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                return element.value;
+            }");
+        Assert.False(string.IsNullOrWhiteSpace(selectedArtifactTarget), "Expected a target step for artifact template imports.");
+        var artifactImportButton = page.Locator("[data-testid^='processes-template-library-import-artifact-artifact-']").First;
+        await artifactImportButton.WaitForAsync();
+        await artifactImportButton.ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-import-receipt"), "Artifact component");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(artifactDirectory, "processes-template-library-imports.png"),
             FullPage = true
         });
         await page.GetByTestId("processes-definition-role-editor").WaitForAsync();

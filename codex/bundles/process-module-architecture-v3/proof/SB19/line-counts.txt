@@ -1,0 +1,17 @@
+1209  repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor
+431  repo://src/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryPanel.razor
+59  repo://src/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs
+34  repo://src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs
+591  repo://src/CanDoItAll.Processes.Application/ProcessTemplateCatalogProjectionService.cs
+290  repo://src/CanDoItAll.Processes.Application/ProcessWorkspaceShellProjectionService.cs
+175  repo://src/CanDoItAll.Processes.Projections/ProcessTemplateCatalogProjectionContracts.cs
+349  repo://src/CanDoItAll.Processes.Projections/ProcessWorkspaceShellProjectionContracts.cs
+204  repo://src/CanDoItAll.Processes.Templates/ProcessTemplateLibrarySummaries.cs
+559  repo://src/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs
+956  repo://tests/CanDoItAll.Tests.Unit/ProcessDefinitionCatalogProjectionTests.cs
+1367  repo://tests/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs
+285  repo://tests/CanDoItAll.Tests.Playwright/ProcessShellSmokeTests.cs
+3497  repo://src/CanDoItAll.Web/wwwroot/css/output.css
+66  repo://codex/bundles/process-module-architecture-v3/README.md
+610  repo://codex/bundles/process-module-architecture-v3/reviews/01-execution-report.md
+84  repo://codex/bundles/process-module-architecture-v3/subbundles/19-template-library-browser-preview-and-selective-import/README.md

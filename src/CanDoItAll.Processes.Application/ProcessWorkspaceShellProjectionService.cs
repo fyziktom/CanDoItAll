@@ -9,7 +9,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
     ProcessDefinitionEditorProjectionService definitionEditorProjectionService,
     ProcessDefinitionRoleEditorProjectionService definitionRoleEditorProjectionService,
     ProcessDefinitionCanvasEditorProjectionService definitionCanvasEditorProjectionService,
-    ProcessDefinitionStepEditorProjectionService definitionStepEditorProjectionService)
+    ProcessDefinitionStepEditorProjectionService definitionStepEditorProjectionService,
+    ProcessTemplateCatalogProjectionService templateCatalogProjectionService)
 {
     private const string WorkspaceContextPrefix = "processes:workspace";
     private const string ProjectContextPrefix = "processes:project";
@@ -44,14 +45,18 @@ public sealed class ProcessWorkspaceShellProjectionService(
             var selectedRoleEditor = await definitionRoleEditorProjectionService
                 .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
                 .ConfigureAwait(false);
+            var selectedStepEditor = await definitionStepEditorProjectionService
+                .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+                .ConfigureAwait(false);
             selectedEditor = selectedEditor with
             {
                 RoleEditor = selectedRoleEditor,
                 Canvas = await definitionCanvasEditorProjectionService
                     .GetCanvasAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
                     .ConfigureAwait(false),
-                StepEditor = await definitionStepEditorProjectionService
-                    .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+                StepEditor = selectedStepEditor,
+                TemplateCatalog = await templateCatalogProjectionService
+                    .GetCatalogAsync(request.Scope, selectedEditor.DefinitionKey, request.TemplateCatalogQuery, selectedStepEditor, cancellationToken)
                     .ConfigureAwait(false)
             };
         }
@@ -100,12 +105,28 @@ public sealed class ProcessWorkspaceShellProjectionService(
         CancellationToken cancellationToken = default)
         => definitionStepEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
 
+    public async Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
+        ProcessTemplateImportCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(command);
+
+        var stepEditor = await definitionStepEditorProjectionService
+            .GetEditorAsync(command.Scope, command.TargetDefinitionKey, cancellationToken)
+            .ConfigureAwait(false);
+        return await templateCatalogProjectionService
+            .ExecuteCommandAsync(command, stepEditor, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     private static void ValidateRequest(ProcessWorkspaceShellRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Scope);
         ArgumentNullException.ThrowIfNull(request.Selection);
         ArgumentNullException.ThrowIfNull(request.DefinitionCatalogQuery);
+        ArgumentNullException.ThrowIfNull(request.TemplateCatalogQuery);
 
         if (request.Scope.Kind == ProcessWorkspaceScopeKind.Project &&
             request.Scope.ProjectId is null)

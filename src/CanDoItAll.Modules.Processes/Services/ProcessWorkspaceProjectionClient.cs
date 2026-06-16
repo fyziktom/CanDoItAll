@@ -28,6 +28,10 @@ public interface IProcessWorkspaceProjectionClient
     Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
         ProcessDefinitionStepEditorCommand command,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
+        ProcessTemplateImportCommand command,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ProcessWorkspaceProjectionClient(
@@ -62,4 +66,9 @@ public sealed class ProcessWorkspaceProjectionClient(
         ProcessDefinitionStepEditorCommand command,
         CancellationToken cancellationToken = default)
         => shellProjectionService.ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken);
+
+    public Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
+        ProcessTemplateImportCommand command,
+        CancellationToken cancellationToken = default)
+        => shellProjectionService.ExecuteTemplateImportCommandAsync(command, cancellationToken);
 }

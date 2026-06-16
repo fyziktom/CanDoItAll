@@ -211,6 +211,7 @@ public sealed record ProcessWorkspaceShellRequest(
     ProcessWorkspaceShellScope Scope,
     ProcessWorkspaceSelectionProjection Selection,
     ProcessDefinitionCatalogQueryProjection DefinitionCatalogQuery,
+    ProcessTemplateCatalogQueryProjection TemplateCatalogQuery,
     bool ForceRefresh);
 
 public sealed record ProcessWorkspaceTabProjection(
@@ -365,6 +366,8 @@ public sealed record ProcessDefinitionEditorProjection(
     public ProcessDefinitionCanvasEditorProjection? Canvas { get; init; }
 
     public ProcessDefinitionStepEditorProjection? StepEditor { get; init; }
+
+    public ProcessTemplateCatalogProjection? TemplateCatalog { get; init; }
 }
 
 public sealed record ProcessDefinitionCatalogProjection(

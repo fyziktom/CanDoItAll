@@ -115,7 +115,8 @@ public sealed class ProcessWorkspaceShellTests
             new ProcessDefinitionEditorProjectionService(clock),
             new ProcessDefinitionRoleEditorProjectionService(clock),
             new ProcessDefinitionCanvasEditorProjectionService(clock),
-            new ProcessDefinitionStepEditorProjectionService(clock));
+            new ProcessDefinitionStepEditorProjectionService(clock),
+            new ProcessTemplateCatalogProjectionService(clock));
         var selection = new ProcessWorkspaceSelectionProjection(
             ProcessId: null,
             RunId: null,
@@ -125,12 +126,14 @@ public sealed class ProcessWorkspaceShellTests
             new ProcessWorkspaceShellScope(ProcessWorkspaceScopeKind.Project, ProjectId: null),
             selection,
             new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ScopeFilter: ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
             ForceRefresh: false)));
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.GetShellAsync(new ProcessWorkspaceShellRequest(
             new ProcessWorkspaceShellScope(ProcessWorkspaceScopeKind.Global, Guid.Parse("55555555-5555-5555-5555-555555555555")),
             selection,
             new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ScopeFilter: ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
             ForceRefresh: false)));
     }
 
@@ -363,6 +366,54 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public void Template_library_renders_search_categories_and_preview_tabs()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library']")));
+        Assert.Contains("Template catalog is projected from canonical JSON", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Blazor app delivery", cut.Markup, StringComparison.Ordinal);
+        cut.Find("[data-testid='processes-template-library-search']").Input("architect");
+        cut.Find("[data-testid='processes-template-library-search-submit']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("architect", client.Requests.Last().TemplateCatalogQuery.SearchText));
+        cut.Find("[data-testid='processes-template-library-category-roles']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessTemplateCatalogCategoryKind.Roles, client.Requests.Last().TemplateCatalogQuery.Category));
+        Assert.Contains("Solution architect", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='processes-template-library-preview-tab-json']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessTemplateCatalogPreviewTabKind.Json, client.Requests.Last().TemplateCatalogQuery.PreviewTab));
+        Assert.NotNull(cut.Find("[data-testid='processes-template-library-json']"));
+        cut.Find("[data-testid='processes-template-library-preview-tab-structure']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessTemplateCatalogPreviewTabKind.Structure, client.Requests.Last().TemplateCatalogQuery.PreviewTab));
+        Assert.NotNull(cut.Find("[data-testid='processes-template-library-structure']"));
+    }
+
+    [Fact]
+    public void Template_library_imports_role_and_artifact_components_with_target_step()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-import-process']")));
+        cut.Find("[data-testid='processes-template-library-import-process']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessTemplateImportCommandKind.ImportProcess, client.LastTemplateImportCommand?.CommandKind));
+        Assert.Contains("Process template imported", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='processes-template-library-import-role-role-blazor-app-delivery-solution-architect']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessTemplateImportCommandKind.ImportRole, client.LastTemplateImportCommand?.CommandKind));
+        Assert.Equal(new ProcessTemplateCatalogItemKey("role:blazor-app-delivery:solution-architect"), client.LastTemplateImportCommand?.ItemKey);
+        Assert.Contains("Role component imported", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='processes-template-library-artifact-target']").Change("architecture-decision");
+        cut.Find("[data-testid='processes-template-library-import-artifact-artifact-blazor-app-delivery-architecture-decision-architecture-decision-record']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(ProcessTemplateImportCommandKind.ImportArtifact, client.LastTemplateImportCommand?.CommandKind));
+        Assert.Equal(new ProcessDefinitionStepKey("architecture-decision"), client.LastTemplateImportCommand?.TargetStepKey);
+        Assert.Contains("Artifact component imported", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Processes_navigation_contributor_adds_processes_to_shell_navigation()
     {
         var items = ShellNavigation.GetItems(0, [new ProcessesShellNavigationContributor()]);
@@ -396,6 +447,8 @@ public sealed class ProcessWorkspaceShellTests
         public ProcessDefinitionCanvasCommand? LastCanvasCommand { get; private set; }
 
         public ProcessDefinitionStepEditorCommand? LastStepCommand { get; private set; }
+
+        public ProcessTemplateImportCommand? LastTemplateImportCommand { get; private set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
@@ -525,11 +578,50 @@ public sealed class ProcessWorkspaceShellTests
             return Task.FromResult(new ProcessDefinitionStepEditorCommandResult(receipt, projection));
         }
 
+        public Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
+            ProcessTemplateImportCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            LastTemplateImportCommand = command;
+            var versionToken = new ProcessTemplateCatalogVersionToken("templates:test:1");
+            var receipt = new ProcessTemplateImportCommandReceipt(
+                Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                command.CommandKind,
+                ProcessTemplateImportCommandStatus.Accepted,
+                versionToken,
+                Now,
+                command.CommandKind switch
+                {
+                    ProcessTemplateImportCommandKind.ImportRole => "Role component imported.",
+                    ProcessTemplateImportCommandKind.ImportArtifact => "Artifact component imported.",
+                    _ => "Process template imported."
+                });
+            var imported = new[]
+            {
+                new ProcessTemplateImportedComponentProjection(
+                    command.ItemKey,
+                    command.CommandKind switch
+                    {
+                        ProcessTemplateImportCommandKind.ImportRole => ProcessTemplateCatalogItemKind.Role,
+                        ProcessTemplateImportCommandKind.ImportArtifact => ProcessTemplateCatalogItemKind.Artifact,
+                        _ => ProcessTemplateCatalogItemKind.Process
+                    },
+                    command.ItemKey.Value,
+                    "blazor-app-delivery",
+                    command.ItemKey.Value,
+                    "sha256:component-test",
+                    command.TargetStepKey,
+                    Now)
+            };
+            var projection = CreateTemplateCatalog(command.TargetDefinitionKey, command.Query, receipt, imported);
+            return Task.FromResult(new ProcessTemplateImportCommandResult(receipt, projection));
+        }
+
         private static ProcessWorkspaceShellProjection CreateShell(
             ProcessWorkspaceShellRequest request,
             ProcessDefinitionCatalogCommandReceipt? lastReceipt)
         {
-            var catalog = CreateDefinitionCatalog(request.DefinitionCatalogQuery, lastReceipt);
+            var catalog = CreateDefinitionCatalog(request.DefinitionCatalogQuery, request.TemplateCatalogQuery, lastReceipt);
             var authorization = new ProcessWorkspaceAuthorizationProjection(
                 CanReadDefinitions: true,
                 CanRefreshProjections: true,
@@ -562,6 +654,7 @@ public sealed class ProcessWorkspaceShellTests
 
         private static ProcessDefinitionCatalogProjection CreateDefinitionCatalog(
             ProcessDefinitionCatalogQueryProjection query,
+            ProcessTemplateCatalogQueryProjection templateQuery,
             ProcessDefinitionCatalogCommandReceipt? lastReceipt)
         {
             var items = new[]
@@ -616,11 +709,13 @@ public sealed class ProcessWorkspaceShellTests
                 ],
                 filtered,
                 selected,
-                selected is null ? null : CreateEditor(selected.Key),
+                selected is null ? null : CreateEditor(selected.Key, templateQuery),
                 lastReceipt);
         }
 
-        private static ProcessDefinitionEditorProjection CreateEditor(ProcessDefinitionCatalogItemKey key)
+        private static ProcessDefinitionEditorProjection CreateEditor(
+            ProcessDefinitionCatalogItemKey key,
+            ProcessTemplateCatalogQueryProjection? templateQuery = null)
         {
             var draft = new ProcessDefinitionEditorDraftProjection(
                 key,
@@ -657,7 +752,19 @@ public sealed class ProcessWorkspaceShellTests
                 ProcessDefinitionAuthoringStatus.TemplateDefault,
                 new ProcessDefinitionEditorVersionToken($"template:{key.Value}"),
                 new ProcessDefinitionEditorLintProjection([]),
-                lastReceipt: null);
+                lastReceipt: null) with
+            {
+                TemplateCatalog = CreateTemplateCatalog(
+                    key,
+                    templateQuery ?? new ProcessTemplateCatalogQueryProjection(
+                        SearchText: null,
+                        ProcessTemplateCatalogCategoryKind.All,
+                        SelectedItemKey: null,
+                        ProcessTemplateCatalogPreviewTabKind.Overview,
+                        Take: 50),
+                    lastReceipt: null,
+                    importedComponents: [])
+            };
         }
 
         private static ProcessDefinitionEditorProjection CreateEditor(
@@ -870,6 +977,143 @@ public sealed class ProcessWorkspaceShellTests
                     new(ProcessDefinitionStepCommandKind.MapSubprocess, "Map subprocess", "account_tree", IsEnabled: true, DisabledReason: null)
                 ],
                 lint,
+                lastReceipt);
+        }
+
+        private static ProcessTemplateCatalogProjection CreateTemplateCatalog(
+            ProcessDefinitionCatalogItemKey definitionKey,
+            ProcessTemplateCatalogQueryProjection query,
+            ProcessTemplateImportCommandReceipt? lastReceipt,
+            IReadOnlyList<ProcessTemplateImportedComponentProjection> importedComponents)
+        {
+            var allItems = new[]
+            {
+                new ProcessTemplateCatalogItemProjection(
+                    new ProcessTemplateCatalogItemKey("process:blazor-app-delivery"),
+                    ProcessTemplateCatalogItemKind.Process,
+                    "Blazor app delivery",
+                    "Build and prove a Blazor application.",
+                    "blazor-app-delivery",
+                    "blazor-app-delivery",
+                    "Process",
+                    [new("Source", "blazor-app-delivery")],
+                    IsSelected: false),
+                new ProcessTemplateCatalogItemProjection(
+                    new ProcessTemplateCatalogItemKey("role:blazor-app-delivery:solution-architect"),
+                    ProcessTemplateCatalogItemKind.Role,
+                    "Solution architect",
+                    "Owns architecture decisions and technical tradeoffs.",
+                    "blazor-app-delivery",
+                    "solution-architect",
+                    "Role",
+                    [new("Executor", "person-or-agent")],
+                    IsSelected: false),
+                new ProcessTemplateCatalogItemProjection(
+                    new ProcessTemplateCatalogItemKey("artifact:blazor-app-delivery:architecture-decision:architecture-decision-record"),
+                    ProcessTemplateCatalogItemKind.Artifact,
+                    "Architecture decision record",
+                    "Must include selected option and rationale.",
+                    "blazor-app-delivery",
+                    "architecture-decision-record",
+                    "Artifact",
+                    [new("Artifact", "Deliverable")],
+                    IsSelected: false)
+            };
+            var categoryFiltered = query.Category switch
+            {
+                ProcessTemplateCatalogCategoryKind.Processes => allItems.Where(item => item.Kind == ProcessTemplateCatalogItemKind.Process),
+                ProcessTemplateCatalogCategoryKind.Roles => allItems.Where(item => item.Kind == ProcessTemplateCatalogItemKind.Role),
+                ProcessTemplateCatalogCategoryKind.Artifacts => allItems.Where(item => item.Kind == ProcessTemplateCatalogItemKind.Artifact),
+                _ => allItems
+            };
+            var filtered = string.IsNullOrWhiteSpace(query.SearchText)
+                ? categoryFiltered.ToArray()
+                : categoryFiltered
+                    .Where(item => item.Title.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                                   item.SourceComponentKey.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+            var selected = query.SelectedItemKey is { } selectedKey
+                ? filtered.FirstOrDefault(item => item.Key == selectedKey)
+                : filtered.FirstOrDefault();
+            var selectedQuery = query with { SelectedItemKey = selected?.Key ?? query.SelectedItemKey };
+            var importedKeys = importedComponents.Select(component => component.ItemKey).ToHashSet();
+            var projectedItems = filtered
+                .Select(item => item with
+                {
+                    IsSelected = selected?.Key == item.Key,
+                    Facts = importedKeys.Contains(item.Key)
+                        ? [.. item.Facts, new ProcessTemplateCatalogFactProjection("Import", "Imported")]
+                        : item.Facts
+                })
+                .ToArray();
+            var preview = selected is null
+                ? null
+                : new ProcessTemplateCatalogPreviewProjection(
+                    selected.Key,
+                    selected.Kind,
+                    selected.Title,
+                    selected.Summary,
+                    "processes/blazor-app-delivery/definition.json",
+                    "sha256:test-template-hash",
+                    "Generated projections are derived from canonical JSON.",
+                    "# Blazor app delivery\n\nGenerated from canonical JSON process template `blazor-app-delivery`.",
+                    "flowchart TD\n    process[\"Blazor app delivery\"]\n    step[\"Architecture decision\"]\n    process --> step",
+                    "{\"key\":\"blazor-app-delivery\",\"displayName\":\"Blazor app delivery\"}",
+                    [
+                        new("process:blazor-app-delivery", ParentNodeKey: null, ProcessTemplateStructureNodeKind.Process, "Blazor app delivery", "Build and prove a Blazor application.", Depth: 0),
+                        new("process:blazor-app-delivery:steps", "process:blazor-app-delivery", ProcessTemplateStructureNodeKind.Section, "Steps", "1 step", Depth: 1),
+                        new("process:blazor-app-delivery:steps:architecture-decision", "process:blazor-app-delivery:steps", ProcessTemplateStructureNodeKind.Step, "Architecture decision", "Governed review step.", Depth: 2)
+                    ],
+                    [
+                        new(
+                            new ProcessTemplateCatalogItemKey("role:blazor-app-delivery:solution-architect"),
+                            ProcessTemplateCatalogItemKind.Role,
+                            "Solution architect",
+                            "Owns architecture decisions and technical tradeoffs.",
+                            "blazor-app-delivery",
+                            "solution-architect",
+                            importedKeys.Contains(new ProcessTemplateCatalogItemKey("role:blazor-app-delivery:solution-architect"))),
+                        new(
+                            new ProcessTemplateCatalogItemKey("artifact:blazor-app-delivery:architecture-decision:architecture-decision-record"),
+                            ProcessTemplateCatalogItemKind.Artifact,
+                            "Architecture decision record",
+                            "Must include selected option and rationale.",
+                            "blazor-app-delivery",
+                            "architecture-decision-record",
+                            importedKeys.Contains(new ProcessTemplateCatalogItemKey("artifact:blazor-app-delivery:architecture-decision:architecture-decision-record")))
+                    ]);
+
+            return new ProcessTemplateCatalogProjection(
+                definitionKey,
+                lastReceipt?.VersionToken ?? new ProcessTemplateCatalogVersionToken("templates:test:0"),
+                selectedQuery,
+                string.IsNullOrWhiteSpace(query.SearchText)
+                    ? "3 template catalog item(s) from pack test-pack."
+                    : $"{filtered.Length} template catalog item(s) match '{query.SearchText}'.",
+                "test-pack",
+                "Template catalog is projected from canonical JSON.",
+                [
+                    new(ProcessTemplateCatalogCategoryKind.All, "All", "All template items.", allItems.Length, query.Category == ProcessTemplateCatalogCategoryKind.All),
+                    new(ProcessTemplateCatalogCategoryKind.Processes, "Processes", "Process templates.", 1, query.Category == ProcessTemplateCatalogCategoryKind.Processes),
+                    new(ProcessTemplateCatalogCategoryKind.Roles, "Roles", "Role components.", 1, query.Category == ProcessTemplateCatalogCategoryKind.Roles),
+                    new(ProcessTemplateCatalogCategoryKind.Artifacts, "Artifacts", "Artifact components.", 1, query.Category == ProcessTemplateCatalogCategoryKind.Artifacts)
+                ],
+                projectedItems,
+                selected,
+                preview,
+                [
+                    new(
+                        new ProcessDefinitionStepKey("architecture-decision"),
+                        "Architecture decision",
+                        "Governed review step",
+                        IsDefaultTarget: true)
+                ],
+                [
+                    new(ProcessTemplateImportCommandKind.ImportProcess, "Import process", "account_tree", selected?.Kind == ProcessTemplateCatalogItemKind.Process, null),
+                    new(ProcessTemplateImportCommandKind.ImportRole, "Import role", "badge", selected?.Kind == ProcessTemplateCatalogItemKind.Role, null),
+                    new(ProcessTemplateImportCommandKind.ImportArtifact, "Import artifact", "inventory_2", selected?.Kind == ProcessTemplateCatalogItemKind.Artifact, null)
+                ],
+                importedComponents,
                 lastReceipt);
         }
 

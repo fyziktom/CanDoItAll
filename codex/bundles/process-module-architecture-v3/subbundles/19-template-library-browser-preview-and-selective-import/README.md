@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed on 2026-06-16. Implemented and validated as SB19 during the approved architecture bundle execution.
 
 ## Objective
 
@@ -88,16 +88,25 @@ Rebuild the template library dialog for process, role, and artifact templates wi
 
 ## Acceptance Checklist
 
-- [ ] Template catalog renders from JSON-backed projections.
-- [ ] Preview tabs work and identify generated projections.
-- [ ] Selective import works for process, role, and artifact components.
-- [ ] Playwright proof exists.
+- [x] Template catalog renders from JSON-backed projections.
+- [x] Preview tabs work and identify generated projections.
+- [x] Selective import works for process, role, and artifact components.
+- [x] Playwright proof exists.
 
 ## Proof Required
 
 - Template projection/component test output.
 - Playwright template library screenshot evidence.
 - Story coverage table for US-021 through US-023.
+
+## Closure Proof
+
+- `bundle://proof/SB19/manifest.md`
+- `bundle://proof/SB19/semantic-invariants.md`
+- `bundle://proof/SB19/story-coverage.md`
+- `bundle://proof/SB19/browser-validation.md`
+- `bundle://proof/SB19/codeanalytics-snapshot-summary.txt`
+- `bundle://proof/SB19/subbundle-closure-gate-sb19.md`
 
 ## Browser Validation Logging
 
@@ -113,4 +122,4 @@ Execute SB19 from `codex/bundles/process-module-architecture-v3/subbundles/19-te
 
 ## Handoff Notes For Next Bundle
 
-Record template conflict metadata and Git projection fields needed by SB20.
+SB20 can consume typed template catalog item identity, imported component source definition/component keys, canonical source hashes, target-step artifact import metadata, and stale-version rejection proof. SB20 still owns Git exchange, diff, merge, and conflict UI.

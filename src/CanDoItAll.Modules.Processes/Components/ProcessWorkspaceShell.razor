@@ -205,6 +205,10 @@
     private int editorStepCount;
     private int editorRequiredRoleCount;
     private int editorRequiredArtifactExpectationCount;
+    private string templateSearchText = string.Empty;
+    private ProcessTemplateCatalogCategoryKind selectedTemplateCategory = ProcessTemplateCatalogCategoryKind.All;
+    private ProcessTemplateCatalogItemKey? selectedTemplateItemKey;
+    private ProcessTemplateCatalogPreviewTabKind selectedTemplatePreviewTab = ProcessTemplateCatalogPreviewTabKind.Overview;
 
     private static readonly ProcessDefinitionCriticalityLevel[] CriticalityOptions =
     [
@@ -315,11 +319,18 @@
                         : new ProcessDefinitionCatalogItemKey(selectedDefinitionKey),
                     selectedDefinitionScope,
                     Take: 50),
+                new ProcessTemplateCatalogQueryProjection(
+                    templateSearchText,
+                    selectedTemplateCategory,
+                    selectedTemplateItemKey,
+                    selectedTemplatePreviewTab,
+                    Take: 50),
                 forceRefresh);
 
             shell = await ProjectionClient.GetShellAsync(request);
             activeTabIndex = ResolveActiveTabIndex(shell);
             SyncDefinitionEditor(shell.DefinitionCatalog.SelectedEditor);
+            SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -397,6 +408,7 @@
     {
         searchText = pendingSearchText.Trim();
         selectedDefinitionKey = null;
+        selectedTemplateItemKey = null;
         await LoadAsync(forceRefresh: false);
     }
 
@@ -405,12 +417,14 @@
         pendingSearchText = string.Empty;
         searchText = string.Empty;
         selectedDefinitionKey = null;
+        selectedTemplateItemKey = null;
         await LoadAsync(forceRefresh: false);
     }
 
     private async Task SelectDefinitionAsync(ProcessDefinitionCatalogItemKey key)
     {
         selectedDefinitionKey = key.Value;
+        selectedTemplateItemKey = null;
         await LoadAsync(forceRefresh: false);
     }
 
@@ -418,6 +432,7 @@
     {
         selectedDefinitionScope = scopeKind;
         selectedDefinitionKey = null;
+        selectedTemplateItemKey = null;
         await LoadAsync(forceRefresh: false);
     }
 
@@ -586,6 +601,14 @@
         @if (DefinitionCatalog.SelectedEditor is not null)
         {
             @RenderDefinitionEditor(DefinitionCatalog.SelectedEditor)
+            @if (DefinitionCatalog.SelectedEditor.TemplateCatalog is not null)
+            {
+                <ProcessTemplateLibraryPanel TemplateCatalog="DefinitionCatalog.SelectedEditor.TemplateCatalog"
+                                             Scope="ResolveScope()"
+                                             Disabled="@isBusy"
+                                             QueryChanged="ApplyTemplateCatalogQueryAsync"
+                                             ExecuteImport="ExecuteTemplateImportCommandAsync" />
+            }
             @if (DefinitionCatalog.SelectedEditor.Canvas is not null)
             {
                 <ProcessDefinitionCanvasPanel Canvas="DefinitionCatalog.SelectedEditor.Canvas"
@@ -909,6 +932,11 @@
                 selectedEditor = selectedEditor with { StepEditor = stepEditor };
             }
 
+            if (selectedEditor.TemplateCatalog is null && shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog is { } templateCatalog)
+            {
+                selectedEditor = selectedEditor with { TemplateCatalog = templateCatalog };
+            }
+
             shell = shell with
             {
                 DefinitionCatalog = shell.DefinitionCatalog with
@@ -942,6 +970,73 @@
         {
             isBusy = false;
         }
+    }
+
+    private void SyncTemplateCatalogQuery(ProcessTemplateCatalogProjection? templateCatalog)
+    {
+        if (templateCatalog is null)
+        {
+            templateSearchText = string.Empty;
+            selectedTemplateCategory = ProcessTemplateCatalogCategoryKind.All;
+            selectedTemplateItemKey = null;
+            selectedTemplatePreviewTab = ProcessTemplateCatalogPreviewTabKind.Overview;
+            return;
+        }
+
+        templateSearchText = templateCatalog.Query.SearchText ?? string.Empty;
+        selectedTemplateCategory = templateCatalog.Query.Category;
+        selectedTemplateItemKey = templateCatalog.Query.SelectedItemKey;
+        selectedTemplatePreviewTab = templateCatalog.Query.PreviewTab;
+    }
+
+    private async Task ApplyTemplateCatalogQueryAsync(ProcessTemplateCatalogQueryProjection query)
+    {
+        templateSearchText = query.SearchText ?? string.Empty;
+        selectedTemplateCategory = query.Category;
+        selectedTemplateItemKey = query.SelectedItemKey;
+        selectedTemplatePreviewTab = query.PreviewTab;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task ExecuteTemplateImportCommandAsync(ProcessTemplateImportCommand command)
+    {
+        isBusy = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteTemplateImportCommandAsync(command);
+            ApplyTemplateCatalogProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void ApplyTemplateCatalogProjection(ProcessTemplateCatalogProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is null)
+        {
+            return;
+        }
+
+        var selectedEditor = shell.DefinitionCatalog.SelectedEditor with
+        {
+            TemplateCatalog = projection
+        };
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor
+            }
+        };
+        SyncTemplateCatalogQuery(projection);
     }
 
     private void ApplyDefinitionRoleEditorProjection(ProcessDefinitionRoleEditorProjection projection)

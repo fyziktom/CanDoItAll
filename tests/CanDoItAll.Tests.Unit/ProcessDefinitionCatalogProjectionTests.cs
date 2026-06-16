@@ -484,6 +484,169 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Template_catalog_projection_uses_canonical_json_and_generated_previews()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var loader = new ProcessTemplatePackLoader(pack.RootPath);
+        var stepEditorService = new ProcessDefinitionStepEditorProjectionService(
+            loader,
+            new FixedProcessProjectionClock(Now));
+        var templateService = new ProcessTemplateCatalogProjectionService(
+            loader,
+            new FixedProcessProjectionClock(Now));
+        var definitionKey = new ProcessDefinitionCatalogItemKey("architecture-review");
+        var stepEditor = await stepEditorService.GetEditorAsync(ProcessWorkspaceShellScope.Global, definitionKey);
+
+        var catalog = await templateService.GetCatalogAsync(
+            ProcessWorkspaceShellScope.Global,
+            definitionKey,
+            new ProcessTemplateCatalogQueryProjection(
+                "architecture",
+                ProcessTemplateCatalogCategoryKind.All,
+                SelectedItemKey: null,
+                ProcessTemplateCatalogPreviewTabKind.Json,
+                Take: 25),
+            stepEditor);
+
+        Assert.Equal(definitionKey, catalog.TargetDefinitionKey);
+        Assert.StartsWith("templates:architecture-review:", catalog.VersionToken.Value, StringComparison.Ordinal);
+        Assert.Contains(catalog.Categories, category => category.Kind == ProcessTemplateCatalogCategoryKind.Processes && category.Count == 2);
+        Assert.Contains(catalog.Categories, category => category.Kind == ProcessTemplateCatalogCategoryKind.Roles && category.Count == 2);
+        Assert.Contains(catalog.Categories, category => category.Kind == ProcessTemplateCatalogCategoryKind.Artifacts && category.Count == 2);
+        Assert.Contains(catalog.Items, item => item.Kind == ProcessTemplateCatalogItemKind.Process && item.SourceDefinitionKey == "architecture-review");
+        Assert.Contains(catalog.Items, item => item.Kind == ProcessTemplateCatalogItemKind.Role && item.SourceComponentKey == "solution-architect");
+        Assert.Contains(catalog.Items, item => item.Kind == ProcessTemplateCatalogItemKind.Artifact && item.SourceComponentKey == "architecture-decision-record");
+        Assert.NotNull(catalog.Preview);
+        Assert.StartsWith("sha256:", catalog.Preview!.SourceJsonHash, StringComparison.Ordinal);
+        Assert.Contains("\"key\":\"architecture-review\"", catalog.Preview.CanonicalJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("# Architecture review", catalog.Preview.GeneratedMarkdown, StringComparison.Ordinal);
+        Assert.StartsWith("flowchart TD", catalog.Preview.GeneratedMermaid, StringComparison.Ordinal);
+        Assert.Contains(catalog.Preview.Structure, node => node.Kind == ProcessTemplateStructureNodeKind.Step && node.Title == "Architecture decision");
+        Assert.Contains(catalog.ImportTargets, target => target.StepKey == new ProcessDefinitionStepKey("architecture-decision"));
+    }
+
+    [Fact]
+    public async Task Template_catalog_imports_process_role_and_artifact_with_target_validation()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var loader = new ProcessTemplatePackLoader(pack.RootPath);
+        var stepEditorService = new ProcessDefinitionStepEditorProjectionService(
+            loader,
+            new FixedProcessProjectionClock(Now));
+        var templateService = new ProcessTemplateCatalogProjectionService(
+            loader,
+            new FixedProcessProjectionClock(Now));
+        var definitionKey = new ProcessDefinitionCatalogItemKey("architecture-review");
+        var stepEditor = await stepEditorService.GetEditorAsync(ProcessWorkspaceShellScope.Global, definitionKey);
+        var query = new ProcessTemplateCatalogQueryProjection(
+            SearchText: null,
+            ProcessTemplateCatalogCategoryKind.All,
+            SelectedItemKey: null,
+            ProcessTemplateCatalogPreviewTabKind.Overview,
+            Take: 50);
+        var catalog = await templateService.GetCatalogAsync(ProcessWorkspaceShellScope.Global, definitionKey, query, stepEditor);
+
+        var processImport = await templateService.ExecuteCommandAsync(
+            new ProcessTemplateImportCommand(
+                ProcessWorkspaceShellScope.Global,
+                definitionKey,
+                ProcessTemplateImportCommandKind.ImportProcess,
+                new ProcessTemplateCatalogItemKey("process:architecture-review"),
+                catalog.VersionToken,
+                catalog.Query,
+                TargetStepKey: null),
+            stepEditor);
+        var roleImport = await templateService.ExecuteCommandAsync(
+            new ProcessTemplateImportCommand(
+                ProcessWorkspaceShellScope.Global,
+                definitionKey,
+                ProcessTemplateImportCommandKind.ImportRole,
+                new ProcessTemplateCatalogItemKey("role:architecture-review:solution-architect"),
+                processImport.Projection.VersionToken,
+                processImport.Projection.Query,
+                TargetStepKey: null),
+            stepEditor);
+        var rejectedArtifact = await templateService.ExecuteCommandAsync(
+            new ProcessTemplateImportCommand(
+                ProcessWorkspaceShellScope.Global,
+                definitionKey,
+                ProcessTemplateImportCommandKind.ImportArtifact,
+                new ProcessTemplateCatalogItemKey("artifact:architecture-review:architecture-decision:architecture-decision-record"),
+                roleImport.Projection.VersionToken,
+                roleImport.Projection.Query,
+                TargetStepKey: null),
+            stepEditor);
+        var artifactImport = await templateService.ExecuteCommandAsync(
+            new ProcessTemplateImportCommand(
+                ProcessWorkspaceShellScope.Global,
+                definitionKey,
+                ProcessTemplateImportCommandKind.ImportArtifact,
+                new ProcessTemplateCatalogItemKey("artifact:architecture-review:architecture-decision:architecture-decision-record"),
+                roleImport.Projection.VersionToken,
+                roleImport.Projection.Query,
+                new ProcessDefinitionStepKey("architecture-decision")),
+            stepEditor);
+
+        Assert.Equal(ProcessTemplateImportCommandStatus.Accepted, processImport.Receipt.Status);
+        Assert.Equal(ProcessTemplateImportCommandStatus.Accepted, roleImport.Receipt.Status);
+        Assert.Equal(ProcessTemplateImportCommandStatus.Rejected, rejectedArtifact.Receipt.Status);
+        Assert.Contains("target step", rejectedArtifact.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ProcessTemplateImportCommandStatus.Accepted, artifactImport.Receipt.Status);
+        Assert.Contains(artifactImport.Projection.ImportedComponents, component => component.Kind == ProcessTemplateCatalogItemKind.Process);
+        Assert.Contains(artifactImport.Projection.ImportedComponents, component => component.Kind == ProcessTemplateCatalogItemKind.Role);
+        Assert.Contains(artifactImport.Projection.ImportedComponents, component =>
+            component.Kind == ProcessTemplateCatalogItemKind.Artifact &&
+            component.SourceDefinitionKey == "architecture-review" &&
+            component.SourceComponentKey == "architecture-decision-record" &&
+            component.SourceJsonHash.StartsWith("sha256:", StringComparison.Ordinal) &&
+            component.TargetStepKey == new ProcessDefinitionStepKey("architecture-decision"));
+    }
+
+    [Fact]
+    public async Task Template_catalog_rejects_stale_import_version_tokens()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var loader = new ProcessTemplatePackLoader(pack.RootPath);
+        var stepEditorService = new ProcessDefinitionStepEditorProjectionService(
+            loader,
+            new FixedProcessProjectionClock(Now));
+        var templateService = new ProcessTemplateCatalogProjectionService(
+            loader,
+            new FixedProcessProjectionClock(Now));
+        var definitionKey = new ProcessDefinitionCatalogItemKey("architecture-review");
+        var stepEditor = await stepEditorService.GetEditorAsync(ProcessWorkspaceShellScope.Global, definitionKey);
+        var catalog = await templateService.GetCatalogAsync(
+            ProcessWorkspaceShellScope.Global,
+            definitionKey,
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
+            stepEditor);
+        var accepted = await templateService.ExecuteCommandAsync(
+            new ProcessTemplateImportCommand(
+                ProcessWorkspaceShellScope.Global,
+                definitionKey,
+                ProcessTemplateImportCommandKind.ImportProcess,
+                new ProcessTemplateCatalogItemKey("process:architecture-review"),
+                catalog.VersionToken,
+                catalog.Query,
+                TargetStepKey: null),
+            stepEditor);
+
+        var stale = await templateService.ExecuteCommandAsync(
+            new ProcessTemplateImportCommand(
+                ProcessWorkspaceShellScope.Global,
+                definitionKey,
+                ProcessTemplateImportCommandKind.ImportRole,
+                new ProcessTemplateCatalogItemKey("role:architecture-review:solution-architect"),
+                catalog.VersionToken,
+                accepted.Projection.Query,
+                TargetStepKey: null),
+            stepEditor);
+
+        Assert.Equal(ProcessTemplateImportCommandStatus.Rejected, stale.Receipt.Status);
+        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Publish_rejects_blocking_lint_and_returns_actionable_projection()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();

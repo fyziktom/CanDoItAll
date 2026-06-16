@@ -1,0 +1,3 @@
+# SB19 anti-stub scan
+
+No TODO, NotImplementedException, temporary stub, placeholder implementation, or fake implementation markers found in changed production files.

@@ -1,0 +1,24 @@
+# Process Shell Browser Validation Summary
+
+ConsoleMessages=6
+FailedRequests=0
+IgnoredFailedRequests=2
+PageErrors=0
+
+## Console
+info: [2026-06-16T06:07:34.016Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:53354/_blazor'.
+info: [2026-06-16T06:07:34.044Z] Information: WebSocket connected to ws://127.0.0.1:53354/_blazor?id=S9-wGWloTpH0l3uKHmcOyA.
+info: [2026-06-16T06:07:39.090Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:53354/_blazor'.
+info: [2026-06-16T06:07:39.098Z] Information: WebSocket connected to ws://127.0.0.1:53354/_blazor?id=peRoXg_uoaW_MoBsZBIAXA.
+info: [2026-06-16T06:07:54.994Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:53354/_blazor'.
+info: [2026-06-16T06:07:55.002Z] Information: WebSocket connected to ws://127.0.0.1:53354/_blazor?id=9zBzQ2N_jahGe8NmIxZ5Mw.
+
+## Failed Requests
+None.
+
+## Ignored Failed Requests
+POST http://127.0.0.1:53354/_blazor/disconnect net::ERR_ABORTED
+POST http://127.0.0.1:53354/_blazor/disconnect net::ERR_ABORTED
+
+## Page Errors
+None.

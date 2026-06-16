@@ -71,7 +71,8 @@ public sealed class ProcessTemplatePackLoader
                     definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired))),
                 BuildRoleAuthoringDefaults(root, relativePath, definition, roleTemplateActions),
                 ProcessTemplateStepSummaryBuilder.Build(definition),
-                ProcessTemplateCanvasSummaryBuilder.Build(root, definition)));
+                ProcessTemplateCanvasSummaryBuilder.Build(root, definition),
+                ProcessTemplateLibrarySummaryBuilder.Build(relativePath, definition)));
         }
 
         return new ProcessTemplatePack(root, manifest, definitions);
@@ -312,7 +313,8 @@ public sealed record ProcessTemplateDefinitionSummary(
     ProcessTemplateDefinitionAuthoringDefaults AuthoringDefaults,
     ProcessTemplateDefinitionRoleAuthoringDefaults RoleAuthoringDefaults,
     ProcessTemplateDefinitionStepAuthoringDefaults StepAuthoringDefaults,
-    ProcessTemplateDefinitionCanvasAuthoringDefaults CanvasAuthoringDefaults);
+    ProcessTemplateDefinitionCanvasAuthoringDefaults CanvasAuthoringDefaults,
+    ProcessTemplateDefinitionLibrarySummary LibrarySummary);
 
 public sealed record ProcessTemplateDefinitionAuthoringDefaults(
     string ValueStatement,

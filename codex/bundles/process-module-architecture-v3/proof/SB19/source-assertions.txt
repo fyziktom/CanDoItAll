@@ -1,0 +1,25 @@
+SB19 source assertions
+
+1. Template catalog contracts are strongly typed.
+   Evidence: repo://src/CanDoItAll.Processes.Projections/ProcessTemplateCatalogProjectionContracts.cs defines typed item kinds, categories, preview tabs, import command kinds, item keys, version tokens, query projections, preview projections, import commands, receipts, and imported component projections.
+
+2. Canonical template JSON is the source for previews.
+   Evidence: repo://src/CanDoItAll.Processes.Templates/ProcessTemplateLibrarySummaries.cs serializes `ProcessTemplateDefinitionDocument` through `ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument`, computes the canonical hash, and generates Markdown, Mermaid, and structure projections.
+
+3. Template pack loading remains the infrastructure boundary.
+   Evidence: repo://src/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs attaches `ProcessTemplateDefinitionLibrarySummary` to each loaded definition summary. UI code does not call file APIs.
+
+4. Catalog projection and import validation are application-service behavior.
+   Evidence: repo://src/CanDoItAll.Processes.Application/ProcessTemplateCatalogProjectionService.cs builds bounded catalog projections, validates command kind, validates stale version tokens, validates artifact target steps, and records imported component source identity/hash.
+
+5. Shell projection carries template query state explicitly.
+   Evidence: repo://src/CanDoItAll.Processes.Projections/ProcessWorkspaceShellProjectionContracts.cs adds `TemplateCatalogQuery`; repo://src/CanDoItAll.Processes.Application/ProcessWorkspaceShellProjectionService.cs builds `TemplateCatalog` after definition, role, step, and canvas projections.
+
+6. UI stays component-library based and projection-only.
+   Evidence: repo://src/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryPanel.razor renders BaseLib/Radzen-backed controls from `ProcessTemplateCatalogProjection` and emits `ProcessTemplateCatalogQueryProjection` or `ProcessTemplateImportCommand`.
+
+7. Selective artifact import uses SB18 target-step projections.
+   Evidence: repo://src/CanDoItAll.Processes.Application/ProcessTemplateCatalogProjectionService.cs creates import targets from `ProcessDefinitionStepEditorProjection.Steps` and rejects artifact commands with missing or unavailable target steps.
+
+8. Focused tests cover positive and negative behavior.
+   Evidence: repo://tests/CanDoItAll.Tests.Unit/ProcessDefinitionCatalogProjectionTests.cs asserts preview generation, accepted process/role/artifact imports, source metadata, target-step validation, and stale-token rejection; repo://tests/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs asserts UI query state and import command payloads; repo://tests/CanDoItAll.Tests.Playwright/ProcessShellSmokeTests.cs exercises browser search, preview tabs, and selective import.
