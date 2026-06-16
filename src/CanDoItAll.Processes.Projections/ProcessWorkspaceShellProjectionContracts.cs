@@ -358,7 +358,10 @@ public sealed record ProcessDefinitionEditorProjection(
     ProcessDefinitionEditorSimulationProjection Simulation,
     ProcessDefinitionEditorLintProjection Lint,
     IReadOnlyList<ProcessDefinitionEditorCommandProjection> Commands,
-    ProcessDefinitionEditorCommandReceipt? LastCommandReceipt);
+    ProcessDefinitionEditorCommandReceipt? LastCommandReceipt)
+{
+    public ProcessDefinitionRoleEditorProjection? RoleEditor { get; init; }
+}
 
 public sealed record ProcessDefinitionCatalogProjection(
     int PublishedDefinitionCount,

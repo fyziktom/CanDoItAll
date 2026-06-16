@@ -83,6 +83,156 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public async Task Role_editor_projection_reads_roles_templates_and_step_bindings()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionRoleEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+
+        var role = Assert.Single(editor.Roles);
+        var templateAction = Assert.Single(editor.TemplateActions);
+        var binding = Assert.Single(editor.StepRoleBindings);
+        Assert.Equal(new ProcessDefinitionRoleKey("solution-architect"), role.RoleKey);
+        Assert.Equal("Solution architect", role.DisplayName);
+        Assert.Equal(ProcessDefinitionRoleExecutorKind.PersonOrAgent, role.Draft.PreferredExecutorKind);
+        Assert.Equal(ProcessDefinitionRoleProjectAssignmentKind.Architect, role.Draft.PreferredProjectAssignmentRole);
+        Assert.True(role.Draft.IsRequired);
+        Assert.True(role.Draft.AllowsFallback);
+        Assert.True(role.Draft.RequiresExplicitApproval);
+        Assert.Equal("process-role-template/solution-architect", role.Draft.RoleTemplateSourceKey);
+        Assert.Equal(ProcessDefinitionRoleTemplateOverrideStatus.AppliedFromTemplate, role.Draft.OverrideStatus);
+        Assert.Equal(new ProcessDefinitionRoleTemplateActionKey("role-template.solution-architect"), templateAction.ActionKey);
+        Assert.Equal(ProcessDefinitionRoleExecutorKind.PersonOrAgent, templateAction.PreferredExecutorKind);
+        Assert.Equal(role.RoleKey, binding.RoleKey);
+        Assert.Equal(ProcessStepRoleResponsibilityKind.Approver, binding.ResponsibilityKind);
+        Assert.False(editor.Lint.HasBlockingIssues);
+        Assert.All(editor.Commands, command => Assert.True(command.IsEnabled));
+    }
+
+    [Fact]
+    public async Task Role_editor_save_rejects_invalid_executor_or_allocation()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionRoleEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var invalidDraft = editor.SelectedRole!.Draft with
+        {
+            PreferredExecutorKind = ProcessDefinitionRoleExecutorKind.Unspecified,
+            DefaultAllocationPercent = 101
+        };
+
+        var result = await service.ExecuteCommandAsync(new ProcessDefinitionRoleEditorCommand(
+            ProcessWorkspaceShellScope.Global,
+            editor.DefinitionKey,
+            ProcessDefinitionRoleCommandKind.SaveRole,
+            editor.VersionToken,
+            invalidDraft,
+            TemplateActionKey: null));
+
+        Assert.Equal(ProcessDefinitionRoleCommandStatus.Rejected, result.Receipt.Status);
+        Assert.True(result.Projection.Lint.HasBlockingIssues);
+        Assert.Contains(result.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.execution.executor-required");
+        Assert.Contains(result.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.execution.allocation-out-of-range");
+    }
+
+    [Fact]
+    public async Task Role_editor_add_apply_save_and_delete_follow_typed_command_boundary()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionRoleEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var templateActionKey = editor.TemplateActions.Single().ActionKey;
+
+        var added = await ExecuteRoleCommandAsync(
+            service,
+            editor,
+            ProcessDefinitionRoleCommandKind.AddRole,
+            editor.SelectedRole!.Draft,
+            templateActionKey);
+        var savedDraft = added.Projection.SelectedRole!.Draft with
+        {
+            DisplayName = "Principal architecture steward",
+            PreferredProjectAssignmentRole = ProcessDefinitionRoleProjectAssignmentKind.Manager
+        };
+        var saved = await ExecuteRoleCommandAsync(
+            service,
+            added.Projection,
+            ProcessDefinitionRoleCommandKind.SaveRole,
+            savedDraft,
+            templateActionKey: null);
+        var applied = await ExecuteRoleCommandAsync(
+            service,
+            saved.Projection,
+            ProcessDefinitionRoleCommandKind.ApplyTemplate,
+            saved.Projection.SelectedRole!.Draft,
+            templateActionKey);
+        var deleted = await ExecuteRoleCommandAsync(
+            service,
+            applied.Projection,
+            ProcessDefinitionRoleCommandKind.DeleteRole,
+            applied.Projection.SelectedRole!.Draft,
+            templateActionKey: null);
+
+        Assert.Equal(ProcessDefinitionRoleCommandStatus.Accepted, added.Receipt.Status);
+        Assert.Equal(2, added.Projection.Roles.Count);
+        Assert.Equal("Principal architecture steward", saved.Projection.SelectedRole?.DisplayName);
+        Assert.Equal(ProcessDefinitionRoleTemplateOverrideStatus.AppliedFromTemplate, applied.Projection.SelectedRole?.Draft.OverrideStatus);
+        Assert.DoesNotContain(deleted.Projection.Roles, role => role.RoleKey == applied.Projection.SelectedRole!.RoleKey);
+    }
+
+    [Fact]
+    public async Task Role_editor_rejects_stale_version_tokens()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionRoleEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var editor = await service.GetEditorAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var templateActionKey = editor.TemplateActions.Single().ActionKey;
+        var added = await ExecuteRoleCommandAsync(
+            service,
+            editor,
+            ProcessDefinitionRoleCommandKind.AddRole,
+            editor.SelectedRole!.Draft,
+            templateActionKey);
+
+        var staleAdd = await service.ExecuteCommandAsync(new ProcessDefinitionRoleEditorCommand(
+            ProcessWorkspaceShellScope.Global,
+            editor.DefinitionKey,
+            ProcessDefinitionRoleCommandKind.AddRole,
+            editor.VersionToken,
+            editor.SelectedRole.Draft,
+            templateActionKey));
+        var staleSave = await service.ExecuteCommandAsync(new ProcessDefinitionRoleEditorCommand(
+            ProcessWorkspaceShellScope.Global,
+            added.Projection.DefinitionKey,
+            ProcessDefinitionRoleCommandKind.SaveRole,
+            editor.VersionToken,
+            added.Projection.SelectedRole!.Draft,
+            TemplateActionKey: null));
+
+        Assert.Equal(ProcessDefinitionRoleCommandStatus.Rejected, staleAdd.Receipt.Status);
+        Assert.Equal(ProcessDefinitionRoleCommandStatus.Rejected, staleSave.Receipt.Status);
+        Assert.Contains(staleAdd.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.version-conflict");
+        Assert.Contains(staleSave.Projection.Lint.Issues, issue => issue.Code == "processes.definition.role.version-conflict");
+    }
+
+    [Fact]
     public async Task Publish_rejects_blocking_lint_and_returns_actionable_projection()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();
@@ -182,6 +332,20 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             editor.VersionToken,
             CreateDraft(editor)));
 
+    private static Task<ProcessDefinitionRoleEditorCommandResult> ExecuteRoleCommandAsync(
+        ProcessDefinitionRoleEditorProjectionService service,
+        ProcessDefinitionRoleEditorProjection editor,
+        ProcessDefinitionRoleCommandKind commandKind,
+        ProcessDefinitionRoleDraftProjection draft,
+        ProcessDefinitionRoleTemplateActionKey? templateActionKey)
+        => service.ExecuteCommandAsync(new ProcessDefinitionRoleEditorCommand(
+            ProcessWorkspaceShellScope.Global,
+            editor.DefinitionKey,
+            commandKind,
+            editor.VersionToken,
+            draft,
+            templateActionKey));
+
     private static ProcessDefinitionEditorDraftProjection CreateDraft(
         ProcessDefinitionEditorProjection editor)
         => new(
@@ -264,11 +428,36 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                       "AutonomyLevel": "Guarded",
                       "RoleUsages": [
                         {
-                          "IsRequired": true
+                          "Key": "solution-architect",
+                          "RoleResourceKey": "solution-architect",
+                          "DisplayName": "Solution architect",
+                          "Purpose": "Own architecture decisions and technical tradeoffs.",
+                          "StaffingIntent": "Assign a senior architecture owner before launch planning.",
+                          "PreferredExecutorKind": "person-or-agent",
+                          "PreferredProjectAssignmentRole": "Architect",
+                          "IsRequired": true,
+                          "AllowsFallback": true,
+                          "RequiresExplicitApproval": true,
+                          "DefaultAllocationPercent": 60,
+                          "RoleTemplateSourceKey": "process-role-template/solution-architect",
+                          "RoleTemplateSnapshotName": "Solution architect v1",
+                          "SnapshotSummary": "Architecture role template snapshot.",
+                          "Notes": "Coordinates architecture choices."
                         }
                       ],
                       "Steps": [
                         {
+                          "Key": "architecture-decision",
+                          "Title": "Architecture decision",
+                          "RoleAssignments": [
+                            {
+                              "RoleKey": "solution-architect",
+                              "ResponsibilityKind": "Approver",
+                              "IsRequired": true,
+                              "FallbackOrder": 1,
+                              "RebindPolicySummary": "Rebind to the architecture board when the primary owner is unavailable."
+                            }
+                          ],
                           "ArtifactExpectations": [
                             {
                               "IsRequired": true
@@ -279,6 +468,24 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                     }
                     """);
             }
+
+            Directory.CreateDirectory(Path.Combine(root, "toolbox"));
+            File.WriteAllText(
+                Path.Combine(root, "toolbox", "role-templates.json"),
+                """
+                [
+                  {
+                    "ActionId": "role-template.solution-architect",
+                    "Label": "Solution architect template",
+                    "Summary": "Owns architecture decisions and technical tradeoffs.",
+                    "TemplateRoleKey": "solution-architect",
+                    "KeyPrefix": "solution-architect",
+                    "DisplayNameTemplate": "Solution architect {ordinal}",
+                    "PreferredExecutorKind": "person-or-agent",
+                    "DefaultAllocationPercent": 60
+                  }
+                ]
+                """);
 
             return new TemporaryProcessTemplatePack(root);
         }

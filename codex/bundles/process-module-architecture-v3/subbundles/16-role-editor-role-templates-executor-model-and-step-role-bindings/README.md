@@ -2,7 +2,7 @@
 
 ## Status
 
-Future implementation package; prepared by architecture bundle v3; not executed in v3.
+Completed in architecture bundle v3 execution. Proof is recorded under `proof/SB16/`.
 
 ## Objective
 
@@ -88,10 +88,10 @@ Rebuild role authoring, role template application, executor preferences, fallbac
 
 ## Acceptance Checklist
 
-- [ ] Role editor uses typed role and executor models.
-- [ ] Role template apply/customize flow records override metadata.
-- [ ] Step role binding foundation exists for SB18.
-- [ ] Component and Playwright proof exists.
+- [x] Role editor uses typed role and executor models.
+- [x] Role template apply/customize flow records override metadata.
+- [x] Step role binding foundation exists for SB18.
+- [x] Component and Playwright proof exists.
 
 ## Proof Required
 

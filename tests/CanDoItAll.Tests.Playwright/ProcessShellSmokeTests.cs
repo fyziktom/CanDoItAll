@@ -20,7 +20,7 @@ public sealed class ProcessShellSmokeTests
             PlaywrightTestHostPaths.RepositoryRoot,
             "output",
             "playwright",
-            "process-shell-sb15");
+            "process-shell-sb16");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -45,16 +45,26 @@ public sealed class ProcessShellSmokeTests
         await page.GetByTestId("processes-definition-architecture-decision-governance").WaitForAsync();
         await page.GetByTestId("processes-definition-architecture-decision-governance").ClickAsync();
         await page.GetByTestId("processes-definition-editor").WaitForAsync();
-        await page.GetByTestId("processes-definition-editor-name").FillAsync("Architecture decision governance SB15");
+        await page.GetByTestId("processes-definition-editor-name").FillAsync("Architecture decision governance SB16");
         await page.GetByTestId("processes-definition-editor-owner").FillAsync("Architecture board");
         await page.GetByTestId("processes-definition-editor-manager-override").FillAsync("Use the architecture board manager.");
         await page.GetByTestId("processes-definition-save").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "Draft saved");
         await page.GetByTestId("processes-definition-publish").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "published");
+        await page.GetByTestId("processes-definition-role-editor").WaitForAsync();
+        await page.GetByTestId("processes-role-solution-architect").ClickAsync();
+        await page.GetByTestId("processes-role-display-name").FillAsync("Principal architecture steward SB16");
+        await page.GetByTestId("processes-role-project-assignment").SelectOptionAsync(new[] { "Manager" });
+        await page.GetByTestId("processes-role-allocation").FillAsync("45");
+        await page.GetByTestId("processes-role-save").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-role-editor-receipt"), "saved");
+        await page.GetByTestId("processes-role-template-action").SelectOptionAsync(new[] { "process-role.solution-architect" });
+        await page.GetByTestId("processes-role-apply-template").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-role-editor-receipt"), "customized");
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
-            Path = Path.Combine(artifactDirectory, "processes-definition-editor-published.png"),
+            Path = Path.Combine(artifactDirectory, "processes-definition-role-editor.png"),
             FullPage = true
         });
         await page.GetByTestId("processes-feed-defaults").ClickAsync();

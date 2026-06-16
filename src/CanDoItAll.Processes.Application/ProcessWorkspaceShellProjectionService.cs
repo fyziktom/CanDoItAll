@@ -6,7 +6,8 @@ namespace CanDoItAll.Processes.Application;
 public sealed class ProcessWorkspaceShellProjectionService(
     IProcessProjectionClock clock,
     ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService,
-    ProcessDefinitionEditorProjectionService definitionEditorProjectionService)
+    ProcessDefinitionEditorProjectionService definitionEditorProjectionService,
+    ProcessDefinitionRoleEditorProjectionService definitionRoleEditorProjectionService)
 {
     private const string WorkspaceContextPrefix = "processes:workspace";
     private const string ProjectContextPrefix = "processes:project";
@@ -36,6 +37,17 @@ public sealed class ProcessWorkspaceShellProjectionService(
             : await definitionEditorProjectionService
                 .GetEditorAsync(request.Scope, definitionCatalog.SelectedItem.Key, cancellationToken)
                 .ConfigureAwait(false);
+        if (selectedEditor is not null)
+        {
+            var selectedRoleEditor = await definitionRoleEditorProjectionService
+                .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+                .ConfigureAwait(false);
+            selectedEditor = selectedEditor with
+            {
+                RoleEditor = selectedRoleEditor
+            };
+        }
+
         definitionCatalog = definitionCatalog with
         {
             SelectedEditor = selectedEditor
@@ -64,6 +76,11 @@ public sealed class ProcessWorkspaceShellProjectionService(
         ProcessDefinitionEditorCommand command,
         CancellationToken cancellationToken = default)
         => definitionEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+
+    public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
+        ProcessDefinitionRoleEditorCommand command,
+        CancellationToken cancellationToken = default)
+        => definitionRoleEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
 
     private static void ValidateRequest(ProcessWorkspaceShellRequest request)
     {

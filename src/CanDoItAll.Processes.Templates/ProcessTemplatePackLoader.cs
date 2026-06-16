@@ -8,6 +8,9 @@ public sealed class ProcessTemplatePackLoader
 {
     private const string ManifestFileName = "manifest.json";
     private const string DefinitionFileName = "definition.json";
+    private const string SharedDirectoryName = "shared";
+    private const string RolesDirectoryName = "roles";
+    private static readonly string RoleTemplatesRelativePath = Path.Combine("toolbox", "role-templates.json");
 
     private readonly string? configuredPackRoot;
     private readonly Lazy<ProcessTemplatePack> pack;
@@ -28,6 +31,7 @@ public sealed class ProcessTemplatePackLoader
         var manifestPath = Path.Combine(root, ManifestFileName);
         var manifest = ReadJson(manifestPath, ProcessTemplateJsonContext.Default.ProcessTemplatePackManifest);
         var definitions = new List<ProcessTemplateDefinitionSummary>(manifest.Processes.Count);
+        var roleTemplateActions = LoadRoleTemplateActions(root);
 
         foreach (var entry in manifest.Processes.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
         {
@@ -64,10 +68,127 @@ public sealed class ProcessTemplatePackLoader
                     NormalizeOptional(definition.SimulationReadinessSummary, string.Empty),
                     definition.Steps.Count,
                     definition.RoleUsages.Count(role => role.IsRequired),
-                    definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired)))));
+                    definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired))),
+                BuildRoleAuthoringDefaults(root, relativePath, definition, roleTemplateActions)));
         }
 
         return new ProcessTemplatePack(root, manifest, definitions);
+    }
+
+    private static IReadOnlyList<ProcessTemplateRoleTemplateActionSummary> LoadRoleTemplateActions(string root)
+    {
+        var path = Path.Combine(root, RoleTemplatesRelativePath);
+        if (!File.Exists(path))
+        {
+            return [];
+        }
+
+        var documents = ReadJson(path, ProcessTemplateJsonContext.Default.ProcessTemplateRoleTemplateActionDocumentArray);
+        return documents
+            .Select(document => new ProcessTemplateRoleTemplateActionSummary(
+                Require(document.ActionId, "role template action id", path),
+                Require(document.Label, "role template label", path),
+                NormalizeOptional(document.Summary, string.Empty),
+                NormalizeOptional(document.TemplateRoleKey, string.Empty),
+                NormalizeOptional(document.KeyPrefix, "role"),
+                NormalizeOptional(document.DisplayNameTemplate, "Role {ordinal}"),
+                NormalizeOptional(document.PreferredExecutorKind, "person"),
+                document.DefaultAllocationPercent))
+            .ToArray();
+    }
+
+    private static ProcessTemplateDefinitionRoleAuthoringDefaults BuildRoleAuthoringDefaults(
+        string root,
+        string definitionRelativePath,
+        ProcessTemplateDefinitionDocument definition,
+        IReadOnlyList<ProcessTemplateRoleTemplateActionSummary> roleTemplateActions)
+    {
+        var roles = definition.RoleUsages
+            .Select((role, index) => CreateRoleSummary(root, definitionRelativePath, role, index))
+            .ToArray();
+        var roleNames = roles.ToDictionary(role => role.Key, role => role.DisplayName, StringComparer.OrdinalIgnoreCase);
+        var stepRoleBindings = definition.Steps
+            .SelectMany(step => step.RoleAssignments.Select(assignment => CreateStepRoleBinding(step, assignment, roleNames)))
+            .ToArray();
+
+        return new ProcessTemplateDefinitionRoleAuthoringDefaults(
+            roles,
+            roleTemplateActions,
+            stepRoleBindings);
+    }
+
+    private static ProcessTemplateDefinitionRoleSummary CreateRoleSummary(
+        string root,
+        string definitionRelativePath,
+        ProcessTemplateDefinitionRoleUsageDocument usage,
+        int index)
+    {
+        var usageKey = NormalizeOptional(usage.Key, string.Empty);
+        var resourceKey = NormalizeOptional(usage.RoleResourceKey, usageKey);
+        var resource = string.IsNullOrWhiteSpace(resourceKey)
+            ? null
+            : TryLoadRoleResource(root, definitionRelativePath, resourceKey);
+        var key = NormalizeOptional(usageKey, NormalizeOptional(resource?.Key, $"role-{index + 1}"));
+        var displayName = NormalizeOptional(usage.DisplayName, NormalizeOptional(resource?.DisplayName, $"Role {index + 1}"));
+        var summary = NormalizeOptional(usage.Notes, NormalizeOptional(resource?.Summary, string.Empty));
+        var roleTemplateSourceKey = NormalizeOptional(
+            usage.RoleTemplateSourceKey,
+            NormalizeOptional(resource?.RoleTemplateSourceKey, string.IsNullOrWhiteSpace(resourceKey) ? string.Empty : $"process-role-template/{resourceKey}"));
+
+        return new ProcessTemplateDefinitionRoleSummary(
+            key,
+            resourceKey,
+            displayName,
+            summary,
+            NormalizeOptional(usage.Purpose, NormalizeOptional(resource?.Purpose, string.Empty)),
+            NormalizeOptional(usage.StaffingIntent, NormalizeOptional(resource?.StaffingIntent, string.Empty)),
+            NormalizeOptional(usage.PreferredExecutorKind, NormalizeOptional(resource?.PreferredExecutorKind, "person")),
+            NormalizeOptional(usage.PreferredProjectAssignmentRole, NormalizeOptional(resource?.PreferredProjectAssignmentRole, string.Empty)),
+            usage.IsRequired,
+            usage.AllowsFallback,
+            usage.RequiresExplicitApproval,
+            usage.DefaultAllocationPercent,
+            roleTemplateSourceKey,
+            NormalizeOptional(usage.RoleTemplateSnapshotName, NormalizeOptional(resource?.RoleTemplateSnapshotName, string.Empty)),
+            NormalizeOptional(usage.SnapshotSummary, NormalizeOptional(resource?.SnapshotSummary, summary)),
+            string.IsNullOrWhiteSpace(roleTemplateSourceKey)
+                ? "Local role without template source."
+                : $"Resolved from {roleTemplateSourceKey}.");
+    }
+
+    private static ProcessTemplateRoleResourceDocument? TryLoadRoleResource(
+        string root,
+        string definitionRelativePath,
+        string roleResourceKey)
+    {
+        var localPath = Path.Combine(root, definitionRelativePath, RolesDirectoryName, $"{roleResourceKey}.json");
+        if (File.Exists(localPath))
+        {
+            return ReadJson(localPath, ProcessTemplateJsonContext.Default.ProcessTemplateRoleResourceDocument);
+        }
+
+        var sharedPath = Path.Combine(root, SharedDirectoryName, RolesDirectoryName, $"{roleResourceKey}.json");
+        return File.Exists(sharedPath)
+            ? ReadJson(sharedPath, ProcessTemplateJsonContext.Default.ProcessTemplateRoleResourceDocument)
+            : null;
+    }
+
+    private static ProcessTemplateDefinitionStepRoleBindingSummary CreateStepRoleBinding(
+        ProcessTemplateDefinitionStepDocument step,
+        ProcessTemplateDefinitionStepRoleAssignmentDocument assignment,
+        IReadOnlyDictionary<string, string> roleNames)
+    {
+        var roleKey = NormalizeOptional(assignment.RoleKey, string.Empty);
+        roleNames.TryGetValue(roleKey, out var roleDisplayName);
+        return new ProcessTemplateDefinitionStepRoleBindingSummary(
+            NormalizeOptional(step.Key, "step"),
+            NormalizeOptional(step.Title, NormalizeOptional(step.Key, "Step")),
+            roleKey,
+            NormalizeOptional(roleDisplayName, roleKey),
+            NormalizeOptional(assignment.ResponsibilityKind, "Responsible"),
+            assignment.IsRequired,
+            assignment.FallbackOrder,
+            NormalizeOptional(assignment.RebindPolicySummary, string.Empty));
     }
 
     private static T ReadJson<T>(
@@ -184,7 +305,8 @@ public sealed record ProcessTemplateDefinitionSummary(
     string OperatingMode,
     string AutonomyLevel,
     DateTimeOffset UpdatedAtUtc,
-    ProcessTemplateDefinitionAuthoringDefaults AuthoringDefaults);
+    ProcessTemplateDefinitionAuthoringDefaults AuthoringDefaults,
+    ProcessTemplateDefinitionRoleAuthoringDefaults RoleAuthoringDefaults);
 
 public sealed record ProcessTemplateDefinitionAuthoringDefaults(
     string ValueStatement,
@@ -201,6 +323,49 @@ public sealed record ProcessTemplateDefinitionAuthoringDefaults(
     int StepCount,
     int RequiredRoleCount,
     int RequiredArtifactExpectationCount);
+
+public sealed record ProcessTemplateDefinitionRoleAuthoringDefaults(
+    IReadOnlyList<ProcessTemplateDefinitionRoleSummary> Roles,
+    IReadOnlyList<ProcessTemplateRoleTemplateActionSummary> TemplateActions,
+    IReadOnlyList<ProcessTemplateDefinitionStepRoleBindingSummary> StepRoleBindings);
+
+public sealed record ProcessTemplateDefinitionRoleSummary(
+    string Key,
+    string RoleResourceKey,
+    string DisplayName,
+    string Summary,
+    string Purpose,
+    string StaffingIntent,
+    string PreferredExecutorKind,
+    string PreferredProjectAssignmentRole,
+    bool IsRequired,
+    bool AllowsFallback,
+    bool RequiresExplicitApproval,
+    int DefaultAllocationPercent,
+    string RoleTemplateSourceKey,
+    string RoleTemplateSnapshotName,
+    string SnapshotSummary,
+    string OverrideSummary);
+
+public sealed record ProcessTemplateRoleTemplateActionSummary(
+    string ActionId,
+    string Label,
+    string Summary,
+    string TemplateRoleKey,
+    string KeyPrefix,
+    string DisplayNameTemplate,
+    string PreferredExecutorKind,
+    int DefaultAllocationPercent);
+
+public sealed record ProcessTemplateDefinitionStepRoleBindingSummary(
+    string StepKey,
+    string StepTitle,
+    string RoleKey,
+    string RoleDisplayName,
+    string ResponsibilityKind,
+    bool IsRequired,
+    int FallbackOrder,
+    string RebindPolicySummary);
 
 public sealed class ProcessTemplatePackManifest
 {
@@ -265,15 +430,104 @@ public sealed class ProcessTemplateDefinitionDocument
 
 public sealed class ProcessTemplateDefinitionRoleUsageDocument
 {
+    public string Key { get; set; } = string.Empty;
+
+    public string RoleResourceKey { get; set; } = string.Empty;
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string Purpose { get; set; } = string.Empty;
+
+    public string StaffingIntent { get; set; } = string.Empty;
+
+    public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public string PreferredProjectAssignmentRole { get; set; } = string.Empty;
+
     public bool IsRequired { get; set; }
+
+    public bool AllowsFallback { get; set; }
+
+    public bool RequiresExplicitApproval { get; set; }
+
+    public int DefaultAllocationPercent { get; set; }
+
+    public string RoleTemplateSourceKey { get; set; } = string.Empty;
+
+    public string RoleTemplateSnapshotName { get; set; } = string.Empty;
+
+    public string SnapshotSummary { get; set; } = string.Empty;
+
+    public string Notes { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateDefinitionStepDocument
 {
+    public string Key { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public List<ProcessTemplateDefinitionStepRoleAssignmentDocument> RoleAssignments { get; set; } = [];
+
     public List<ProcessTemplateDefinitionArtifactExpectationDocument> ArtifactExpectations { get; set; } = [];
+}
+
+public sealed class ProcessTemplateDefinitionStepRoleAssignmentDocument
+{
+    public string RoleKey { get; set; } = string.Empty;
+
+    public string ResponsibilityKind { get; set; } = string.Empty;
+
+    public bool IsRequired { get; set; }
+
+    public int FallbackOrder { get; set; }
+
+    public string RebindPolicySummary { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateDefinitionArtifactExpectationDocument
 {
     public bool IsRequired { get; set; }
+}
+
+public sealed class ProcessTemplateRoleResourceDocument
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string Purpose { get; set; } = string.Empty;
+
+    public string StaffingIntent { get; set; } = string.Empty;
+
+    public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public string PreferredProjectAssignmentRole { get; set; } = string.Empty;
+
+    public string RoleTemplateSourceKey { get; set; } = string.Empty;
+
+    public string RoleTemplateSnapshotName { get; set; } = string.Empty;
+
+    public string SnapshotSummary { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateRoleTemplateActionDocument
+{
+    public string ActionId { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string TemplateRoleKey { get; set; } = string.Empty;
+
+    public string KeyPrefix { get; set; } = string.Empty;
+
+    public string DisplayNameTemplate { get; set; } = string.Empty;
+
+    public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public int DefaultAllocationPercent { get; set; }
 }

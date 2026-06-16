@@ -605,3 +605,23 @@ Result:
 ```
 
 Architecture domain-boundary scan found only explicit examples, forbidden-vocabulary statements, UI technology placement, and future UI/browser validation references. No generic core/runtime contract in v3 uses those terms as model concepts.
+
+SB16 role editor/template/executor proof:
+
+```text
+bundle://proof/SB16/manifest.md
+bundle://proof/SB16/build-process-module.txt
+bundle://proof/SB16/build-solution-sb16.txt
+bundle://proof/SB16/test-unit-role-editor-sb16.txt
+bundle://proof/SB16/test-components-process-shell-sb16.txt
+bundle://proof/SB16/test-playwright-process-shell-sb16.txt
+bundle://proof/SB16/browser-validation.md
+bundle://proof/SB16/codeanalytics-snapshot-summary.txt
+bundle://proof/SB16/subbundle-closure-gate-sb16.md
+```
+
+Result:
+
+```text
+Process module build and full solution build passed with 0 warnings and 0 errors. Focused SB16 unit tests passed 11/11, focused ProcessWorkspaceShell component tests passed 15/15, and focused ProcessShell Playwright smoke passed 1/1. Role authoring now uses typed role/executor/template/step-binding projections, role template apply/customize commands preserve override metadata, stale role editor version tokens are rejected, and the UI role panel remains projection-only. Browser proof captured role editor presence, role command receipt, step binding visibility, no Blazor error UI, and Playwright screenshots. CodeAnalytics final snapshot snap-20260616032916-4d1a8d1f completed with no blocking errors; remaining diagnostics are existing generated-program naming and component-test DI collector ambiguity.
+```

@@ -101,4 +101,6 @@ public enum ProcessTemplateProjectionKind
 [JsonSerializable(typeof(ProcessBranchMigrationDiagnosticReport))]
 [JsonSerializable(typeof(ProcessTemplatePackManifest))]
 [JsonSerializable(typeof(ProcessTemplateDefinitionDocument))]
+[JsonSerializable(typeof(ProcessTemplateRoleResourceDocument))]
+[JsonSerializable(typeof(ProcessTemplateRoleTemplateActionDocument[]))]
 public sealed partial class ProcessTemplateJsonContext : JsonSerializerContext;

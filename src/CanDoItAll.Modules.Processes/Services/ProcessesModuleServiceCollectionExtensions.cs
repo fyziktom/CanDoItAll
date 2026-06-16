@@ -18,6 +18,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddScoped<ProcessDefinitionCatalogProjectionService>();
         services.TryAddScoped<ProcessDefinitionEditorProjectionService>();
+        services.TryAddScoped<ProcessDefinitionRoleEditorProjectionService>();
         services.TryAddScoped<ProcessWorkspaceShellProjectionService>();
         services.TryAddScoped<IProcessWorkspaceProjectionClient, ProcessWorkspaceProjectionClient>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());

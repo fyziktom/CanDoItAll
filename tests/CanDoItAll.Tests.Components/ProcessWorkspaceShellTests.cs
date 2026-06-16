@@ -112,7 +112,8 @@ public sealed class ProcessWorkspaceShellTests
         var service = new ProcessWorkspaceShellProjectionService(
             clock,
             new ProcessDefinitionCatalogProjectionService(clock),
-            new ProcessDefinitionEditorProjectionService(clock));
+            new ProcessDefinitionEditorProjectionService(clock),
+            new ProcessDefinitionRoleEditorProjectionService(clock));
         var selection = new ProcessWorkspaceSelectionProjection(
             ProcessId: null,
             RunId: null,
@@ -178,6 +179,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Contains("Draft saved", cut.Markup, StringComparison.Ordinal);
         Assert.Equal("Architecture owner", client.LastEditorCommand?.Draft.Identity.OwnerName);
         Assert.Equal("Use the architecture board manager.", client.LastEditorCommand?.Draft.Governance.ManagerOverrideSummary);
+        Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']"));
     }
 
     [Fact]
@@ -193,6 +195,58 @@ public sealed class ProcessWorkspaceShellTests
         cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionEditorCommandKind.Publish, client.LastEditorCommand?.CommandKind));
         Assert.Contains("Definition name is required", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Rejected", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Role_editor_renders_roles_templates_and_step_bindings()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']")));
+        Assert.Equal("Solution architect", cut.Find("[data-testid='processes-role-display-name']").GetAttribute("value"));
+        Assert.Equal("process-role-template/solution-architect", cut.Find("[data-testid='processes-role-template-source']").GetAttribute("value"));
+        Assert.Contains("Solution architect template", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Architecture decision", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Approver", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Role_save_uses_typed_role_command_boundary()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-save']")));
+        cut.Find("[data-testid='processes-role-display-name']").Input("Principal architecture steward");
+        cut.Find("[data-testid='processes-role-executor-kind']").Change(ProcessDefinitionRoleExecutorKind.PersonOrAgent.ToString());
+        cut.Find("[data-testid='processes-role-project-assignment']").Change(ProcessDefinitionRoleProjectAssignmentKind.Manager.ToString());
+        cut.Find("[data-testid='processes-role-allocation']").Input("75");
+        cut.Find("[data-testid='processes-role-save']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionRoleCommandKind.SaveRole, client.LastRoleCommand?.CommandKind));
+        Assert.Equal("Principal architecture steward", client.LastRoleCommand?.Draft.DisplayName);
+        Assert.Equal(ProcessDefinitionRoleExecutorKind.PersonOrAgent, client.LastRoleCommand?.Draft.PreferredExecutorKind);
+        Assert.Equal(ProcessDefinitionRoleProjectAssignmentKind.Manager, client.LastRoleCommand?.Draft.PreferredProjectAssignmentRole);
+        Assert.Equal(75, client.LastRoleCommand?.Draft.DefaultAllocationPercent);
+        Assert.Contains("Role saved", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Role_apply_template_uses_selected_template_action()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-apply-template']")));
+        cut.Find("[data-testid='processes-role-template-action']").Change("role-template.solution-architect");
+        cut.Find("[data-testid='processes-role-apply-template']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ProcessDefinitionRoleCommandKind.ApplyTemplate, client.LastRoleCommand?.CommandKind));
+        Assert.Equal(new ProcessDefinitionRoleTemplateActionKey("role-template.solution-architect"), client.LastRoleCommand?.TemplateActionKey);
+        Assert.Equal(ProcessDefinitionRoleTemplateOverrideStatus.AppliedFromTemplate, client.LastRoleCommand?.Draft.OverrideStatus);
+        Assert.Contains("Role template applied", cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -223,6 +277,8 @@ public sealed class ProcessWorkspaceShellTests
         public int FeedDefaultsCommandCount { get; private set; }
 
         public ProcessDefinitionEditorCommand? LastEditorCommand { get; private set; }
+
+        public ProcessDefinitionRoleEditorCommand? LastRoleCommand { get; private set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
@@ -275,6 +331,32 @@ public sealed class ProcessWorkspaceShellTests
                 lint.Issues);
             var projection = CreateEditor(command.Draft.DefinitionKey, command.Draft, authoringStatus, versionToken, lint, receipt);
             return Task.FromResult(new ProcessDefinitionEditorCommandResult(receipt, projection));
+        }
+
+        public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
+            ProcessDefinitionRoleEditorCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            LastRoleCommand = command;
+            var lint = CreateRoleLint(command);
+            var status = lint.HasBlockingIssues
+                ? ProcessDefinitionRoleCommandStatus.Rejected
+                : ProcessDefinitionRoleCommandStatus.Accepted;
+            var versionToken = new ProcessDefinitionRoleEditorVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
+            var receipt = new ProcessDefinitionRoleCommandReceipt(
+                Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+                command.CommandKind,
+                status,
+                versionToken,
+                Now,
+                status == ProcessDefinitionRoleCommandStatus.Accepted
+                    ? command.CommandKind == ProcessDefinitionRoleCommandKind.ApplyTemplate
+                        ? "Role template applied."
+                        : "Role saved."
+                    : "Role was not saved because blocking role lint issues remain.",
+                lint.Issues);
+            var projection = CreateRoleEditor(command.DefinitionKey, command.Draft, versionToken, lint, receipt);
+            return Task.FromResult(new ProcessDefinitionRoleEditorCommandResult(receipt, projection));
         }
 
         private static ProcessWorkspaceShellProjection CreateShell(
@@ -434,7 +516,95 @@ public sealed class ProcessWorkspaceShellTests
                     new(ProcessDefinitionEditorCommandKind.Archive, "Archive", "archive", IsEnabled: true, DisabledReason: null),
                     new(ProcessDefinitionEditorCommandKind.Delete, "Delete", "delete", IsEnabled: true, DisabledReason: null)
                 ],
+                lastReceipt)
+            {
+                RoleEditor = CreateRoleEditor(key)
+            };
+
+        private static ProcessDefinitionRoleEditorProjection CreateRoleEditor(ProcessDefinitionCatalogItemKey key)
+        {
+            var draft = CreateRoleDraft();
+            return CreateRoleEditor(
+                key,
+                draft,
+                new ProcessDefinitionRoleEditorVersionToken($"template:{key.Value}:roles"),
+                new ProcessDefinitionRoleLintProjection([]),
+                lastReceipt: null);
+        }
+
+        private static ProcessDefinitionRoleEditorProjection CreateRoleEditor(
+            ProcessDefinitionCatalogItemKey key,
+            ProcessDefinitionRoleDraftProjection draft,
+            ProcessDefinitionRoleEditorVersionToken versionToken,
+            ProcessDefinitionRoleLintProjection lint,
+            ProcessDefinitionRoleCommandReceipt? lastReceipt)
+        {
+            var role = new ProcessDefinitionRoleProjection(
+                draft.RoleKey,
+                draft.DisplayName,
+                draft.SnapshotSummary,
+                draft,
+                StepBindingCount: 1);
+            return new ProcessDefinitionRoleEditorProjection(
+                key,
+                versionToken,
+                role.RoleKey,
+                [role],
+                role,
+                [
+                    new ProcessDefinitionRoleTemplateActionProjection(
+                        new ProcessDefinitionRoleTemplateActionKey("role-template.solution-architect"),
+                        "Solution architect template",
+                        "Owns architecture decisions and technical tradeoffs.",
+                        new ProcessDefinitionRoleKey("solution-architect"),
+                        "solution-architect",
+                        "Solution architect next",
+                        ProcessDefinitionRoleExecutorKind.PersonOrAgent,
+                        DefaultAllocationPercent: 60)
+                ],
+                [
+                    new ProcessDefinitionStepRoleBindingProjection(
+                        new ProcessDefinitionStepKey("architecture-decision"),
+                        "Architecture decision",
+                        draft.RoleKey,
+                        draft.DisplayName,
+                        ProcessStepRoleResponsibilityKind.Approver,
+                        IsRequired: true,
+                        FallbackOrder: 1,
+                        "Rebind to the architecture board when the primary owner is unavailable.")
+                ],
+                lint,
+                [
+                    new(ProcessDefinitionRoleCommandKind.AddRole, "Add role", "add", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionRoleCommandKind.SaveRole, "Save role", "save", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionRoleCommandKind.ApplyTemplate, "Apply template", "content_copy", IsEnabled: true, DisabledReason: null),
+                    new(ProcessDefinitionRoleCommandKind.DeleteRole, "Delete role", "delete", IsEnabled: true, DisabledReason: null)
+                ],
                 lastReceipt);
+        }
+
+        private static ProcessDefinitionRoleDraftProjection CreateRoleDraft()
+            => new(
+                new ProcessDefinitionRoleKey("solution-architect"),
+                "Solution architect",
+                "Own architecture decisions and technical tradeoffs.",
+                "Assign a senior architecture owner before launch planning.",
+                ProcessDefinitionRoleExecutorKind.PersonOrAgent,
+                new ProcessDefinitionWorkflowPreferenceProjection(
+                    ProcessDefinitionRoleWorkflowPreferenceKind.AnyActiveWorkflow,
+                    WorkflowDefinitionId: null,
+                    WorkflowVersionId: null,
+                    "Any active workflow"),
+                ProcessDefinitionRoleProjectAssignmentKind.Architect,
+                IsRequired: true,
+                AllowsFallback: true,
+                RequiresExplicitApproval: true,
+                DefaultAllocationPercent: 60,
+                "process-role-template/solution-architect",
+                "Solution architect v1",
+                "Architecture role template snapshot.",
+                ProcessDefinitionRoleTemplateOverrideStatus.AppliedFromTemplate,
+                "Resolved from process-role-template/solution-architect.");
 
         private static ProcessDefinitionEditorLintProjection CreateEditorLint(
             ProcessDefinitionEditorCommand command)
@@ -452,6 +622,27 @@ public sealed class ProcessWorkspaceShellTests
                     ProcessDefinitionEditorLintSection.Identity,
                     "Definition name is required.",
                     "Enter a stable, user-facing definition name.")
+            ]);
+        }
+
+        private static ProcessDefinitionRoleLintProjection CreateRoleLint(
+            ProcessDefinitionRoleEditorCommand command)
+        {
+            if (!string.IsNullOrWhiteSpace(command.Draft.DisplayName) &&
+                command.Draft.PreferredExecutorKind != ProcessDefinitionRoleExecutorKind.Unspecified &&
+                command.Draft.DefaultAllocationPercent is >= 0 and <= 100)
+            {
+                return new ProcessDefinitionRoleLintProjection([]);
+            }
+
+            return new ProcessDefinitionRoleLintProjection(
+            [
+                new ProcessDefinitionRoleLintIssueProjection(
+                    "processes.definition.role.execution.invalid",
+                    ProcessDefinitionRoleLintSeverity.Error,
+                    ProcessDefinitionRoleLintSection.Execution,
+                    "Role execution fields are invalid.",
+                    "Choose a typed executor kind and bounded allocation.")
             ]);
         }
 
