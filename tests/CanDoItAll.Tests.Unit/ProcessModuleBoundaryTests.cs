@@ -117,6 +117,7 @@ public sealed class ProcessModuleBoundaryTests
             "DbContext",
             "EntityFramework",
             "ProjectStructure",
+            "ProjectContext",
             "Workbench",
             "SchedulerPlanner",
             "CrmHr",
@@ -141,6 +142,29 @@ public sealed class ProcessModuleBoundaryTests
         Assert.True(
             findings.Length == 0,
             "Generic process boundary projects must stay domain-agnostic: " + string.Join(", ", findings));
+    }
+
+    [Fact]
+    public void Process_launch_application_service_does_not_embed_adapter_specific_step_briefs()
+    {
+        var root = FindRepositoryRoot();
+        var path = Path.Combine(root, "src", "CanDoItAll.Processes.Application", "ProcessLaunchApplicationService.cs");
+        var blockedTerms = new[]
+        {
+            "project_structure_process_subprocess_launch",
+            "process_step_outcome_result",
+            "Do not write evidence under output/",
+            "BranchName, RepositoryRoot, SessionId",
+            "ChildManagedArtifactRoot",
+            "Project id:",
+            "Project node id:"
+        };
+
+        var findings = FindTermMatches(root, path, blockedTerms).ToArray();
+
+        Assert.True(
+            findings.Length == 0,
+            "Generic launch orchestration must delegate adapter-specific step brief text: " + string.Join(", ", findings));
     }
 
     [Fact]

@@ -815,6 +815,70 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         string MatchSummary);
 }
 
+internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefBuilder
+{
+    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
+    private readonly GenericProcessStepBriefBuilder genericBuilder = new();
+
+    public string Build(ProcessStepBriefBuildRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var genericBrief = genericBuilder.Build(request);
+        var subprocessGuidance = BuildSubprocessGuidance(request.Step);
+
+        return $"""
+        {genericBrief}
+
+        AgentFramework execution contract:
+        Return only JSON matching the process_step_outcome_result structured output contract.
+        Use Status Completed when the step is done, Blocked when required input or tools are missing, Failed for unrecoverable execution failure, or WaitingApproval when a human approval is required.
+        If branch outcomes are listed, set BranchOutcomeKey to exactly one listed outcome key.
+
+        Project-scoped launch context:
+        Project id: {request.LaunchRequest.ProjectId?.ToString("D") ?? "not scoped"}
+        Project node id: {request.LaunchRequest.ProjectNodeId ?? "not scoped"}
+
+        AgentFramework evidence write rule:
+        Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Include the written managed artifact paths in evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
+
+        AgentFramework subprocess adapter guidance:
+        {subprocessGuidance}
+        """;
+    }
+
+    private static string BuildSubprocessGuidance(ProcessTemplateDefinitionStepDocument step)
+    {
+        var isSubprocessStep = string.Equals(step.StepKind, ProcessTemplateStepKinds.Subprocess, StringComparison.OrdinalIgnoreCase) ||
+                               !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
+        if (!isSubprocessStep)
+        {
+            return "No subprocess mapping.";
+        }
+
+        var hasSubprocessKey = !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
+        var subprocessKey = hasSubprocessKey
+            ? step.SubprocessProcessKey.Trim()
+            : "not mapped";
+        var snapshotName = string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName)
+            ? "not supplied"
+            : step.SubprocessDefinitionSnapshotName.Trim();
+        var launchInstruction = !hasSubprocessKey
+            ? "This step is marked as a subprocess but has no child process definition key. Return Blocked unless upstream evidence already supplies the missing child run."
+            : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ProcessOperationContractNames.ExecuteExternalAction} is allowed. Do not mark Completed until the child run receipt and required child evidence are available, or return Blocked with the missing evidence.";
+
+        return $"""
+        - Child process definition key: {subprocessKey}
+        - Child definition snapshot name: {snapshotName}
+        - Governed launch tool: {SubprocessLaunchToolName}
+        - Completion rule: {launchInstruction}
+        - Live-run profile rule: leave LiveRunProfileKey empty unless the launch variables explicitly provide a valid process live-run profile key for this child definition. BranchName, RepositoryRoot, SessionId, parent DefinitionKey, and child DefinitionKey are not live-run profile keys.
+        - Retry rule: repeated launch-tool calls for the same parent run, parent step, project node, and child definition return the existing child run instead of creating another child.
+        - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, and ExpectedChildEvidenceRefs. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root.
+        """;
+    }
+}
+
 internal sealed class AgentFrameworkProcessExecutionAdapter(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProcessRuntimeStepAssignmentStore assignmentStore) : IProcessExecutionAdapter

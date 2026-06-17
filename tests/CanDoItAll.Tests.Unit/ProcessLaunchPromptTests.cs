@@ -1,8 +1,7 @@
-using System.Reflection;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
-using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Tests.Unit;
@@ -10,24 +9,63 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessLaunchPromptTests
 {
     [Fact]
-    public void Step_prompt_includes_process_run_id_and_managed_artifact_root()
+    public void Generic_step_brief_includes_runtime_context_without_agent_or_project_guidance()
     {
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
-        var prompt = BuildStepPrompt(runId);
+        var prompt = BuildStepPrompt(new GenericProcessStepBriefBuilder(), runId);
 
         Assert.Contains("Process run id: d9450dd1-4920-457c-92a4-48d1ec648181", prompt, StringComparison.Ordinal);
-        Assert.Contains("Managed process artifact root: artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181", prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not write evidence under output/", prompt, StringComparison.Ordinal);
+        Assert.Contains("Managed artifact root: artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Project id:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Project node id:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("process_step_outcome_result", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Do not write evidence under output/", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Step_prompt_includes_subprocess_mapping_and_launch_tool_guidance()
+    public void Generic_step_brief_handles_non_software_process_domains_without_runtime_domain_leaks()
+    {
+        var scenarios = new[]
+        {
+            ("business-market-sizing", "Business market sizing", "Estimate market segments and buying triggers."),
+            ("claims-quality-review", "Claims quality review", "Review sampled claims for policy quality issues."),
+            ("multistep-data-analysis", "Multistep data analysis", "Clean, enrich, and summarize quarterly operating data."),
+            ("marketing-campaign-planning", "Marketing campaign planning", "Plan channels, offers, and launch calendar.")
+        };
+
+        foreach (var (definitionKey, displayName, notes) in scenarios)
+        {
+            var definition = CreateDefinition(definitionKey, displayName, notes);
+            var prompt = BuildStepPrompt(
+                new GenericProcessStepBriefBuilder(),
+                ProcessRunId.New(),
+                CreatePromptStep(notes),
+                definition,
+                variables: new Dictionary<string, string>
+                {
+                    ["SourceData"] = $"{definitionKey}.csv"
+                });
+
+            Assert.Contains(displayName, prompt, StringComparison.Ordinal);
+            Assert.Contains(notes, prompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("Blazor", prompt, StringComparison.Ordinal);
+            Assert.DoesNotContain(".NET", prompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("RepositoryRoot", prompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("BranchName", prompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("process_step_outcome_result", prompt, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void AgentFramework_step_brief_keeps_project_structure_guidance_outside_generic_application_layer()
     {
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
-        var step = CreatePromptStep();
+        var step = CreatePromptStep("Resolve product and evidence paths.");
         step.Key = "architecture-review";
         step.Title = ".NET architecture review";
-        step.StepKind = "Subprocess";
+        step.StepKind = ProcessTemplateStepKinds.Subprocess;
         step.SubprocessProcessKey = "dotnet-architecture-design-review";
         step.SubprocessDefinitionSnapshotName = ".NET architecture design and review subprocess";
         step.AllowedOperations =
@@ -35,11 +73,14 @@ public sealed class ProcessLaunchPromptTests
             ProcessOperationContractNames.ReadProjectStructure,
             ProcessOperationContractNames.ExecuteExternalAction
         ];
-        var prompt = BuildStepPrompt(runId, step);
+
+        var prompt = BuildStepPrompt(new AgentFrameworkProcessStepBriefBuilder(), runId, step);
 
         Assert.Contains("Step kind: Subprocess", prompt, StringComparison.Ordinal);
-        Assert.Contains("Subprocess mapping:", prompt, StringComparison.Ordinal);
-        Assert.Contains("Child process definition key: dotnet-architecture-design-review", prompt, StringComparison.Ordinal);
+        Assert.Contains("Project id: 3324868f-66e2-478a-bb8f-14f32a5db1e9", prompt, StringComparison.Ordinal);
+        Assert.Contains("Project node id: custom:bd8169fc3fa944dbafd13998fb167fe8", prompt, StringComparison.Ordinal);
+        Assert.Contains("AgentFramework execution contract:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Return only JSON matching the process_step_outcome_result structured output contract.", prompt, StringComparison.Ordinal);
         Assert.Contains("Governed launch tool: project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not mark Completed until the child run receipt", prompt, StringComparison.Ordinal);
         Assert.Contains("leave LiveRunProfileKey empty", prompt, StringComparison.Ordinal);
@@ -49,43 +90,44 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
-    public void Step_prompt_maps_required_upstream_slots_to_producer_evidence_paths()
+    public void Generic_step_brief_maps_required_upstream_slots_to_producer_artifact_paths()
     {
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
         var designSlot = new ArtifactSlotId(Guid.Parse("0dd0f0c0-4224-faba-36b0-6df9286b51b3"));
-        var producer = CreatePromptStep();
+        var producer = CreatePromptStep("Draft architecture design.");
         producer.Key = "draft-architecture-design";
-        producer.Title = "Draft .NET architecture design";
+        producer.Title = "Draft architecture design";
         producer.ArtifactExpectations =
         [
             new ProcessTemplateDefinitionArtifactExpectationDocument
             {
-                Key = "dotnet-architecture-design",
-                Title = ".NET architecture design draft",
+                Key = "architecture-design",
+                Title = "Architecture design draft",
                 ArtifactKind = "Decision",
                 IsRequired = true,
-                ValidationRequirementSummary = "Must describe boundaries and testability seams."
+                ValidationRequirementSummary = "Must describe boundaries and testability."
             }
         ];
-        var consumer = CreatePromptStep();
+        var consumer = CreatePromptStep("Review architecture design.");
         consumer.Key = "review-architecture-design";
-        consumer.Title = "Review .NET architecture design";
+        consumer.Title = "Review architecture design";
         consumer.ArtifactInputs =
         [
             new ProcessTemplateDefinitionArtifactInputDocument
             {
                 SourceStepKey = "draft-architecture-design",
-                ArtifactExpectationKey = "dotnet-architecture-design"
+                ArtifactExpectationKey = "architecture-design"
             }
         ];
         var definition = new ProcessTemplateDefinitionDocument
         {
-            Key = "dotnet-architecture-design-review",
-            DisplayName = ".NET architecture design and review",
+            Key = "architecture-design-review",
+            DisplayName = "Architecture design and review",
             Summary = "Design and review architecture.",
             Steps = [producer, consumer]
         };
         var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
             runId,
             consumer,
             definition,
@@ -93,23 +135,25 @@ public sealed class ProcessLaunchPromptTests
             producedSlots: [],
             artifactSlotByStepExpectation: new Dictionary<(string StepKey, string ExpectationKey), ArtifactSlotId>
             {
-                [("draft-architecture-design", "dotnet-architecture-design")] = designSlot
+                [("draft-architecture-design", "architecture-design")] = designSlot
             });
 
-        Assert.Contains("Producer step: draft-architecture-design - Draft .NET architecture design", prompt, StringComparison.Ordinal);
-        Assert.Contains("Artifact expectation: dotnet-architecture-design - .NET architecture design draft (Decision)", prompt, StringComparison.Ordinal);
+        Assert.Contains("Producer step: draft-architecture-design - Draft architecture design", prompt, StringComparison.Ordinal);
+        Assert.Contains("Artifact expectation: architecture-design - Architecture design draft (Decision)", prompt, StringComparison.Ordinal);
         Assert.Contains("artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181/steps/draft-architecture-design.md", prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not block only because a slot-id directory is absent", prompt, StringComparison.Ordinal);
-        Assert.Contains("Must describe boundaries and testability seams.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Runtime rule: this slot is available only after the producer completed.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Must describe boundaries and testability.", prompt, StringComparison.Ordinal);
     }
 
     private static string BuildStepPrompt(
+        IProcessStepBriefBuilder builder,
         ProcessRunId runId,
         ProcessTemplateDefinitionStepDocument? step = null,
         ProcessTemplateDefinitionDocument? definition = null,
         IReadOnlyList<ArtifactSlotId>? requiredSlots = null,
         IReadOnlyList<ArtifactSlotId>? producedSlots = null,
-        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId>? artifactSlotByStepExpectation = null)
+        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId>? artifactSlotByStepExpectation = null,
+        IReadOnlyDictionary<string, string>? variables = null)
     {
         var request = new ProcessLaunchRequest(
             DefinitionKey: "blazor-app-delivery",
@@ -118,79 +162,53 @@ public sealed class ProcessLaunchPromptTests
             ProjectId: Guid.Parse("3324868f-66e2-478a-bb8f-14f32a5db1e9"),
             ProjectNodeId: "custom:bd8169fc3fa944dbafd13998fb167fe8",
             RequestedBy: "codex-process-e2e",
-            Variables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["RepositoryRoot"] = @"C:\programovani\dotnet\output"
-            },
+            Variables: variables ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
             RunReadiness: true,
             Execute: true);
-        step ??= CreatePromptStep();
-        definition ??= new ProcessTemplateDefinitionDocument
-        {
-            Key = "blazor-app-delivery",
-            DisplayName = "Blazor app delivery",
-            Summary = "Deliver a Blazor app."
-        };
-        var selection = CreateSelection(definition);
-        var method = typeof(ProcessLaunchApplicationService).GetMethod(
-            "BuildStepPrompt",
-            BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("BuildStepPrompt was not found.");
+        step ??= CreatePromptStep("Resolve product and evidence paths.");
+        definition ??= CreateDefinition("blazor-app-delivery", "Blazor app delivery", "Deliver a Blazor app.");
 
-        return Assert.IsType<string>(method.Invoke(
-            null,
-            [
-                request,
-                selection,
-                step,
-                null,
-                requiredSlots ?? Array.Empty<ArtifactSlotId>(),
-                producedSlots ?? new[] { ArtifactSlotId.New() },
-                artifactSlotByStepExpectation ?? new Dictionary<(string StepKey, string ExpectationKey), ArtifactSlotId>(),
-                runId
-            ]));
+        return builder.Build(new ProcessStepBriefBuildRequest(
+            request,
+            definition,
+            step,
+            ExecutorBinding: null,
+            requiredSlots ?? Array.Empty<ArtifactSlotId>(),
+            producedSlots ?? new[] { ArtifactSlotId.New() },
+            artifactSlotByStepExpectation ?? new Dictionary<(string StepKey, string ExpectationKey), ArtifactSlotId>(),
+            runId,
+            ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(runId)));
     }
 
-    private static ProcessTemplateDefinitionStepDocument CreatePromptStep()
+    private static ProcessTemplateDefinitionStepDocument CreatePromptStep(string notes)
     {
         return new ProcessTemplateDefinitionStepDocument
         {
-            Key = "resolve-blazor-contract",
-            Title = "Resolve Blazor delivery contract",
-            Notes = "Resolve product and evidence paths.",
-            InputContractSummary = "Use project structure.",
-            OutputContractSummary = "Produce the handoff contract.",
-            EvidenceContractSummary = "Write durable evidence.",
+            Key = "resolve-contract",
+            Title = "Resolve process contract",
+            Notes = notes,
+            InputContractSummary = "Use supplied process inputs.",
+            OutputContractSummary = "Produce the requested process output.",
+            EvidenceContractSummary = "Record durable completion evidence.",
             AllowedOperations =
             [
-                ProcessOperationContractNames.ReadProjectStructure,
-                ProcessOperationContractNames.WriteManagedProcessArtifacts
+                "read-inputs",
+                "write-managed-artifacts"
             ],
-            OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly
+            OperationTargetScope = "managed-process-artifacts"
         };
     }
 
-    private static object CreateSelection(ProcessTemplateDefinitionDocument definition)
+    private static ProcessTemplateDefinitionDocument CreateDefinition(
+        string definitionKey,
+        string displayName,
+        string summary)
     {
-        var selectionType = typeof(ProcessLaunchApplicationService).GetNestedType(
-            "ProcessTemplateSelection",
-            BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("ProcessTemplateSelection was not found.");
-        var pack = new ProcessTemplatePack(
-            RootPath: string.Empty,
-            new ProcessTemplatePackManifest
-            {
-                PackKey = "test-pack",
-                Name = "Test pack",
-                Version = "1.0"
-            },
-            Definitions: []);
-        return Activator.CreateInstance(
-            selectionType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            binder: null,
-            args: [pack, definition, null],
-            culture: null)
-            ?? throw new InvalidOperationException("ProcessTemplateSelection could not be created.");
+        return new ProcessTemplateDefinitionDocument
+        {
+            Key = definitionKey,
+            DisplayName = displayName,
+            Summary = summary
+        };
     }
 }

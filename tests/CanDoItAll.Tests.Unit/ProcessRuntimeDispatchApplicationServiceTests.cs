@@ -76,6 +76,50 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCompleted);
     }
 
+    [Theory]
+    [InlineData("business-market-sizing")]
+    [InlineData("multistep-data-analysis")]
+    [InlineData("claims-quality-review")]
+    [InlineData("marketing-campaign-planning")]
+    public async Task ExecuteReady_dispatches_domain_neutral_process_steps_through_same_strategy_path(string stepKey)
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var plan = NewSingleStepPlan(stepId, stepKey);
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Pending)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new RecordingStrategyFactoryResolver(stepKey);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            new InMemoryAssignmentStore([]),
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, stepId).Status);
+        Assert.Single(strategyResolver.ExecutionContexts);
+        Assert.Equal(stepId, strategyResolver.ExecutionContexts[0].StepId);
+        Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.DispatchClaimCompleted);
+        Assert.DoesNotContain(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.PayloadHash.Contains("Tetris", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static ProcessRuntimeStepState NewStep(
         ProcessStepInstanceId stepId,
         ProcessRuntimeStepStatus status)
@@ -119,6 +163,34 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 NewPlanStep(HandoffAfterRepairStepId, "feature-handoff-after-repair"),
                 NewPlanStep(EscalationStepId, "feature-repair-escalation")
             ],
+            new ArtifactPlan([], []),
+            new BranchRouteTable([]),
+            [],
+            new ManagerPlan("sha256:manager", null, [], []),
+            new BudgetPlan([]),
+            new MonitoringPlan(true, "sha256:monitoring"),
+            new SecurityPlan("sha256:security", []),
+            "sha256:plan");
+    }
+
+    private static ProcessInstancePlan NewSingleStepPlan(
+        ProcessStepInstanceId stepId,
+        string stepKey)
+    {
+        return new ProcessInstancePlan(
+            new ProcessInstancePlanHeader(PlanId, PlanId, null, null, "processes.instance-plan.v1", Now, 0),
+            new ResolvedProcessDefinitionSnapshot(
+                ProcessDefinitionId.New(),
+                ProcessDefinitionVersionId.New(),
+                "sha256:definition",
+                "template/1",
+                "template/1",
+                [],
+                [],
+                []),
+            new DriverStackSnapshot([]),
+            new StrategyBindingSet([Binding], [], [], []),
+            [NewPlanStep(stepId, stepKey)],
             new ArtifactPlan([], []),
             new BranchRouteTable([]),
             [],
@@ -240,6 +312,62 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ProcessStrategyBindingSnapshot binding,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("No strategy should be resolved when only branch skip propagation is required.");
+    }
+
+    private sealed class RecordingStrategyFactoryResolver(string resultKey) : IProcessRuntimeStrategyFactoryResolver
+    {
+        public List<ProcessStrategyExecutionContext> ExecutionContexts { get; } = [];
+
+        public ValueTask<IProcessStrategyFactory> ResolveAsync(
+            ProcessStrategyBindingSnapshot binding,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IProcessStrategyFactory>(new RecordingStrategyFactory(binding, resultKey, ExecutionContexts));
+        }
+    }
+
+    private sealed class RecordingStrategyFactory(
+        ProcessStrategyBindingSnapshot binding,
+        string resultKey,
+        List<ProcessStrategyExecutionContext> executionContexts) : IProcessStrategyFactory
+    {
+        public ProcessStrategyDescriptor Descriptor { get; } = new(
+            binding.StrategyId,
+            binding.StrategyVersion,
+            ProcessStrategyKind.StepExecution,
+            new HashSet<CapabilityTag>());
+
+        public ValueTask<IProcessStrategy> CreateAsync(
+            ProcessStrategyBindingSnapshot binding,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IProcessStrategy>(new RecordingStrategy(resultKey, executionContexts));
+        }
+    }
+
+    private sealed class RecordingStrategy(
+        string resultKey,
+        List<ProcessStrategyExecutionContext> executionContexts) : IProcessStrategy
+    {
+        public ValueTask<StrategyResultEnvelope> ExecuteAsync(
+            ProcessStrategyExecutionContext context,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            executionContexts.Add(context);
+            return ValueTask.FromResult(new StrategyResultEnvelope(
+                context.Binding.StrategyId,
+                context.Binding.StrategyVersion,
+                Guid.NewGuid(),
+                StrategyOutcome.Succeeded,
+                [],
+                [],
+                [],
+                [],
+                $"sha256:{resultKey}"));
+        }
     }
 
     private sealed class EmptyRuntimeEventReplayStore : IProcessRuntimeEventReplayStore

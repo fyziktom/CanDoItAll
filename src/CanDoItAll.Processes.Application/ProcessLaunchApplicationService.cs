@@ -21,13 +21,10 @@ public sealed class ProcessLaunchApplicationService(
     IProcessRuntimeStateStore stateStore,
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessLaunchArtifactInitializer artifactInitializer,
+    IProcessStepBriefBuilder stepBriefBuilder,
     ProcessRuntimeDispatchApplicationService dispatchService,
     ProcessRuntimeProjectionCatchupService projectionCatchupService)
 {
-    private const string ExecuteExternalActionOperationName = "ExecuteExternalAction";
-    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
-    private const string SubprocessStepKind = "Subprocess";
-
     public async Task<ProcessLaunchResult> PreviewAsync(
         ProcessLaunchRequest request,
         CancellationToken cancellationToken = default)
@@ -448,7 +445,7 @@ public sealed class ProcessLaunchApplicationService(
             Subprocesses: []);
     }
 
-    private static IReadOnlyList<ProcessRuntimeStepAssignment> BuildAssignments(
+    private IReadOnlyList<ProcessRuntimeStepAssignment> BuildAssignments(
         ProcessLaunchRequest request,
         ProcessTemplateSelection selection,
         ProcessTemplateKernelBuildResult kernelBuild,
@@ -469,6 +466,7 @@ public sealed class ProcessLaunchApplicationService(
         var stepsByKey = selection.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
         var launchVariables = NormalizeLaunchVariables(request.Variables);
         var runId = ProcessRunId.New();
+        var managedArtifactRoot = BuildManagedProcessArtifactRoot(runId);
         var assignments = new List<ProcessRuntimeStepAssignment>();
 
         foreach (var planStep in plan.Steps.Where(step => step.IsExecutable))
@@ -502,15 +500,16 @@ public sealed class ProcessLaunchApplicationService(
                 binding?.ExecutorKind ?? string.Empty,
                 binding?.ExecutorId ?? string.Empty,
                 binding?.ExecutorDisplayName ?? string.Empty,
-                BuildStepPrompt(
+                stepBriefBuilder.Build(new ProcessStepBriefBuildRequest(
                     request,
-                    selection,
+                    selection.Definition,
                     templateStep,
                     binding,
                     requiredSlots,
                     producedSlots,
                     kernelBuild.ArtifactSlotByStepExpectation,
-                    runId),
+                    runId,
+                    managedArtifactRoot)),
                 binding?.ReadinessHash ?? ComputeHash($"missing:{planStep.StepKey}"),
                 binding?.AssignmentReason ?? "No executor binding was resolved.",
                 producedSlots,
@@ -728,285 +727,6 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         return normalized;
-    }
-
-    private static string BuildStepPrompt(
-        ProcessLaunchRequest request,
-        ProcessTemplateSelection selection,
-        ProcessTemplateDefinitionStepDocument step,
-        ProcessLaunchExecutorBinding? binding,
-        IReadOnlyList<ArtifactSlotId> requiredSlots,
-        IReadOnlyList<ArtifactSlotId> producedSlots,
-        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> artifactSlotByStepExpectation,
-        ProcessRunId runId)
-    {
-        var variables = request.Variables.Count == 0
-            ? "No launch variables were supplied."
-            : string.Join(Environment.NewLine, request.Variables.OrderBy(item => item.Key).Select(item => $"- {item.Key}: {item.Value}"));
-        var branchOutcomes = step.BranchOutcomes.Count == 0
-            ? "No branch outcomes."
-            : string.Join(
-                Environment.NewLine,
-                step.BranchOutcomes.Select(outcome => $"- {outcome.Key}: {outcome.Title} - {outcome.Description}"));
-        var requiredArtifacts = BuildRequiredArtifactContext(
-            selection.Definition,
-            step,
-            requiredSlots,
-            artifactSlotByStepExpectation,
-            runId);
-        var producedArtifacts = BuildProducedArtifactContext(
-            step,
-            producedSlots,
-            artifactSlotByStepExpectation,
-            runId);
-        var stepKind = string.IsNullOrWhiteSpace(step.StepKind)
-            ? "Work"
-            : step.StepKind.Trim();
-        var subprocessGuidance = BuildSubprocessGuidance(step);
-
-        return $"""
-        You are executing a CanDoItAll process step.
-
-        Process: {selection.Definition.DisplayName}
-        Step key: {step.Key}
-        Step title: {step.Title}
-        Step kind: {stepKind}
-        Role key: {binding?.RoleKey ?? ResolvePrimaryRoleKey(step)}
-        Requested by: {request.RequestedBy}
-        Project id: {request.ProjectId?.ToString("D") ?? "not scoped"}
-        Project node id: {request.ProjectNodeId ?? "not scoped"}
-        Process run id: {runId}
-        Managed process artifact root: {BuildManagedProcessArtifactRoot(runId)}
-        Evidence write rule: write process step summaries, proof, screenshots, logs, and handoff notes under the managed process artifact root or a child path. Include the written managed artifact paths in evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
-
-        Launch variables:
-        {variables}
-
-        Step instructions:
-        {step.Notes}
-
-        Input contract:
-        {step.InputContractSummary}
-
-        Output contract:
-        {step.OutputContractSummary}
-
-        Evidence contract:
-        {step.EvidenceContractSummary}
-
-        Allowed operations:
-        {string.Join(", ", step.AllowedOperations)}
-
-        Operation target scope:
-        {NormalizeOperationTargetScope(step.OperationTargetScope)}
-
-        Subprocess mapping:
-        {subprocessGuidance}
-
-        Required upstream artifact slots:
-        {requiredArtifacts}
-
-        Produced artifact slots:
-        {producedArtifacts}
-
-        Available branch outcomes:
-        {branchOutcomes}
-
-        Return only JSON matching the process_step_outcome_result structured output contract.
-        Use Status Completed when the step is done, Blocked when required input or tools are missing, Failed for unrecoverable execution failure, or WaitingApproval when a human approval is required.
-        If branch outcomes are listed, set BranchOutcomeKey to exactly one listed outcome key.
-        """;
-    }
-
-    private static string BuildRequiredArtifactContext(
-        ProcessTemplateDefinitionDocument definition,
-        ProcessTemplateDefinitionStepDocument step,
-        IReadOnlyList<ArtifactSlotId> requiredSlots,
-        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> artifactSlotByStepExpectation,
-        ProcessRunId runId)
-    {
-        if (requiredSlots.Count == 0)
-        {
-            return "No required upstream artifact slots.";
-        }
-
-        var requiredSlotSet = requiredSlots.ToHashSet();
-        var describedSlots = new HashSet<ArtifactSlotId>();
-        var stepsByKey = definition.Steps.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
-        var lines = new List<string>();
-
-        foreach (var input in step.ArtifactInputs)
-        {
-            var sourceStepKey = NormalizeOptional(input.SourceStepKey, string.Empty);
-            var expectationKey = NormalizeOptional(input.ArtifactExpectationKey, string.Empty);
-            if (string.IsNullOrWhiteSpace(sourceStepKey) ||
-                string.IsNullOrWhiteSpace(expectationKey) ||
-                !artifactSlotByStepExpectation.TryGetValue((sourceStepKey, expectationKey), out var slotId) ||
-                !requiredSlotSet.Contains(slotId) ||
-                !stepsByKey.TryGetValue(sourceStepKey, out var sourceStep))
-            {
-                continue;
-            }
-
-            var expectation = sourceStep.ArtifactExpectations.FirstOrDefault(item =>
-                string.Equals(item.Key, expectationKey, StringComparison.OrdinalIgnoreCase));
-            lines.Add(FormatRequiredArtifactContext(runId, slotId, sourceStep, expectationKey, expectation));
-            describedSlots.Add(slotId);
-        }
-
-        foreach (var slotId in requiredSlots.Where(slotId => !describedSlots.Contains(slotId)))
-        {
-            lines.Add($"""
-            - Slot {slotId}
-              Producer context: unresolved from template artifact input mapping.
-              Runtime rule: this slot was available before scheduling this step. Do not block only because a slot-id directory is absent; inspect upstream step summaries and managed process artifacts first.
-            """);
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static string FormatRequiredArtifactContext(
-        ProcessRunId runId,
-        ArtifactSlotId slotId,
-        ProcessTemplateDefinitionStepDocument sourceStep,
-        string expectationKey,
-        ProcessTemplateDefinitionArtifactExpectationDocument? expectation)
-    {
-        var expectationTitle = string.IsNullOrWhiteSpace(expectation?.Title)
-            ? expectationKey
-            : expectation.Title.Trim();
-        var artifactKind = string.IsNullOrWhiteSpace(expectation?.ArtifactKind)
-            ? "Artifact"
-            : expectation.ArtifactKind.Trim();
-        var validation = string.IsNullOrWhiteSpace(expectation?.ValidationRequirementSummary)
-            ? "Use the producer step output contract and evidence contract."
-            : expectation.ValidationRequirementSummary.Trim();
-
-        return $"""
-        - Slot {slotId}
-          Producer step: {sourceStep.Key} - {sourceStep.Title}
-          Artifact expectation: {expectationKey} - {expectationTitle} ({artifactKind})
-          Evidence refs to inspect: {BuildStepEvidencePath(runId, sourceStep.Key)}; {BuildSlotEvidenceRoot(runId, slotId)}; {BuildStepEvidenceRoot(runId, sourceStep.Key)}
-          Runtime rule: this slot is available only after the producer completed. Do not block only because a slot-id directory is absent; the producer step summary path is valid upstream evidence for this slot.
-          Validation: {validation}
-        """;
-    }
-
-    private static string BuildProducedArtifactContext(
-        ProcessTemplateDefinitionStepDocument step,
-        IReadOnlyList<ArtifactSlotId> producedSlots,
-        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> artifactSlotByStepExpectation,
-        ProcessRunId runId)
-    {
-        if (producedSlots.Count == 0)
-        {
-            return "No produced artifact slots.";
-        }
-
-        var producedSlotSet = producedSlots.ToHashSet();
-        var describedSlots = new HashSet<ArtifactSlotId>();
-        var lines = new List<string>();
-
-        foreach (var expectation in step.ArtifactExpectations)
-        {
-            if (!artifactSlotByStepExpectation.TryGetValue((step.Key, expectation.Key), out var slotId) ||
-                !producedSlotSet.Contains(slotId))
-            {
-                continue;
-            }
-
-            lines.Add(FormatProducedArtifactContext(runId, slotId, step, expectation));
-            describedSlots.Add(slotId);
-        }
-
-        foreach (var slotId in producedSlots.Where(slotId => !describedSlots.Contains(slotId)))
-        {
-            lines.Add($"""
-            - Slot {slotId}
-              Write refs: {BuildStepEvidencePath(runId, step.Key)}; {BuildSlotEvidenceRoot(runId, slotId)}
-              Completion rule: include the written managed artifact path in evidenceRefs before returning Completed.
-            """);
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static string FormatProducedArtifactContext(
-        ProcessRunId runId,
-        ArtifactSlotId slotId,
-        ProcessTemplateDefinitionStepDocument step,
-        ProcessTemplateDefinitionArtifactExpectationDocument expectation)
-    {
-        var title = string.IsNullOrWhiteSpace(expectation.Title)
-            ? expectation.Key
-            : expectation.Title.Trim();
-        var artifactKind = string.IsNullOrWhiteSpace(expectation.ArtifactKind)
-            ? "Artifact"
-            : expectation.ArtifactKind.Trim();
-        var validation = string.IsNullOrWhiteSpace(expectation.ValidationRequirementSummary)
-            ? "Use this step's output contract and evidence contract."
-            : expectation.ValidationRequirementSummary.Trim();
-
-        return $"""
-        - Slot {slotId}
-          Artifact expectation: {expectation.Key} - {title} ({artifactKind})
-          Write refs: {BuildStepEvidencePath(runId, step.Key)}; {BuildSlotEvidenceRoot(runId, slotId)}; {BuildStepEvidenceRoot(runId, step.Key)}
-          Completion rule: include the written managed artifact path in evidenceRefs before returning Completed.
-          Validation: {validation}
-        """;
-    }
-
-    private static string BuildStepEvidencePath(ProcessRunId runId, string stepKey)
-        => $"{BuildManagedProcessArtifactRoot(runId)}/steps/{SanitizeEvidencePathSegment(stepKey)}.md";
-
-    private static string BuildSlotEvidenceRoot(ProcessRunId runId, ArtifactSlotId slotId)
-        => $"{BuildManagedProcessArtifactRoot(runId)}/{slotId}";
-
-    private static string BuildStepEvidenceRoot(ProcessRunId runId, string stepKey)
-        => $"{BuildManagedProcessArtifactRoot(runId)}/{SanitizeEvidencePathSegment(stepKey)}/";
-
-    private static string SanitizeEvidencePathSegment(string value)
-    {
-        var normalized = NormalizeOptional(value, "step");
-        var builder = new StringBuilder(normalized.Length);
-        foreach (var character in normalized)
-        {
-            builder.Append(char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '-');
-        }
-
-        return builder.Length == 0 ? "step" : builder.ToString();
-    }
-
-    private static string BuildSubprocessGuidance(ProcessTemplateDefinitionStepDocument step)
-    {
-        var isSubprocessStep = string.Equals(step.StepKind, SubprocessStepKind, StringComparison.OrdinalIgnoreCase) ||
-                               !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
-        if (!isSubprocessStep)
-        {
-            return "No subprocess mapping.";
-        }
-
-        var hasSubprocessKey = !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
-        var subprocessKey = hasSubprocessKey
-            ? step.SubprocessProcessKey.Trim()
-            : "not mapped";
-        var snapshotName = string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName)
-            ? "not supplied"
-            : step.SubprocessDefinitionSnapshotName.Trim();
-        var launchInstruction = !hasSubprocessKey
-            ? "This step is marked as a subprocess but has no child process definition key. Return Blocked unless upstream evidence already supplies the missing child run."
-            : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ExecuteExternalActionOperationName} is allowed. Do not mark Completed until the child run receipt and required child evidence are available, or return Blocked with the missing evidence.";
-
-        return $"""
-        - Child process definition key: {subprocessKey}
-        - Child definition snapshot name: {snapshotName}
-        - Governed launch tool: {SubprocessLaunchToolName}
-        - Completion rule: {launchInstruction}
-        - Live-run profile rule: leave LiveRunProfileKey empty unless the launch variables explicitly provide a valid process live-run profile key for this child definition. BranchName, RepositoryRoot, SessionId, parent DefinitionKey, and child DefinitionKey are not live-run profile keys.
-        - Retry rule: repeated launch-tool calls for the same parent run, parent step, project node, and child definition return the existing child run instead of creating another child.
-        - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, and ExpectedChildEvidenceRefs. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root.
-        """;
     }
 
     public static string BuildManagedProcessArtifactRoot(ProcessRunId runId)

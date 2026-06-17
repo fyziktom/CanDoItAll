@@ -1,0 +1,20 @@
+Command: rg -n "project_structure_process_subprocess_launch|process_step_outcome_result|Do not write evidence under output/|BranchName, RepositoryRoot, SessionId|ChildManagedArtifactRoot|Project id:|Project node id:" src\CanDoItAll.Processes.Application -S
+WorkingDirectory: repo://.
+Exit code: 1
+ExpectedResult: no matches
+
+Command: rg -n "Blazor|Razor|DbContext|EntityFramework|ProjectStructure|ProjectContext|Workbench|SchedulerPlanner|CrmHr|Gmail|Office365|Docker|Tetris|Invoice|Recipe|Radzen" src\CanDoItAll.Processes.Contracts src\CanDoItAll.Processes.Abstractions src\CanDoItAll.Processes.Core src\CanDoItAll.Processes.Drivers.Abstractions src\CanDoItAll.Processes.Builder src\CanDoItAll.Processes.Runtime -S --glob '*.cs' --glob '*.csproj'
+WorkingDirectory: repo://.
+Exit code: 1
+ExpectedResult: no matches
+
+Command: rg -n "ProcessExecutionAdapterKind\.ProjectContext|ProjectContext|project-context" src\CanDoItAll.Processes.Drivers.Abstractions src\CanDoItAll.Processes.Drivers.Standard src\CanDoItAll.Processes.Runtime src\CanDoItAll.Processes.Core -S
+WorkingDirectory: repo://.
+Exit code: 1
+ExpectedResult: no matches
+
+Summary:
+- Generic launch orchestration no longer contains the AgentFramework/project-structure brief text.
+- Generic process core/runtime/builder/driver projects did not contain blocked domain vocabulary.
+- Generic driver/runtime/core projects no longer expose ProjectContext adapter vocabulary.
+

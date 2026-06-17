@@ -97,7 +97,7 @@ public static class StandardProcessAdapterDriverPackageFactory
             ProcessExecutionAdapterKind.AgentGroup => "agent-group",
             ProcessExecutionAdapterKind.Handoff => "handoff",
             ProcessExecutionAdapterKind.SchedulerTrigger => "scheduler-trigger",
-            ProcessExecutionAdapterKind.ProjectContext => "project-context",
+            ProcessExecutionAdapterKind.ScopedContext => "scoped-context",
             ProcessExecutionAdapterKind.Plugin => "plugin",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported adapter kind.")
         };

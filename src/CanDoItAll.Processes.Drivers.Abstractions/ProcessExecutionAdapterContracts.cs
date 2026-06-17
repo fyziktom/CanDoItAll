@@ -72,6 +72,6 @@ public enum ProcessExecutionAdapterKind
     AgentGroup,
     Handoff,
     SchedulerTrigger,
-    ProjectContext,
+    ScopedContext,
     Plugin
 }
