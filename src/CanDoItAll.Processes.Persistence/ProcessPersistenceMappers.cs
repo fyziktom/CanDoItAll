@@ -146,12 +146,10 @@ internal static class ProcessPersistenceMappers
 
     public static ProcessRuntimeEventEntity ToEventEntity(
         ProcessRuntimeEventEnvelope envelope,
-        long globalSequence,
         long rootSequence)
     {
         return new ProcessRuntimeEventEntity
         {
-            GlobalSequence = globalSequence,
             RootSequence = rootSequence,
             EventId = envelope.EventId.Value,
             RootRunId = envelope.RootRunId.Value,

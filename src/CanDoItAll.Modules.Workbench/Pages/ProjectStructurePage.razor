@@ -888,8 +888,8 @@ else
         var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
         var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
         await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
-        storageCatalog = loadStorageCatalogTask.Result;
-        var loadResult = loadStructureTask.Result;
+        storageCatalog = await loadStorageCatalogTask;
+        var loadResult = await loadStructureTask;
         if (!loadResult.IsSuccess || loadResult.Surface is null)
         {
             unavailableState = loadResult.UnavailableState;

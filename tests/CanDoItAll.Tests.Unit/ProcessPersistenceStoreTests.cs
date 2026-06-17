@@ -144,6 +144,25 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
+    public async Task Runtime_event_store_assigns_contiguous_sequences_within_append_batch()
+    {
+        await using var dbContext = CreateDbContext();
+        var eventStore = new EfProcessRuntimeEventStore(dbContext);
+        var runId = ProcessRunId.New();
+
+        await eventStore.AppendAsync(
+            [
+                NewEvent(runId, runId, ProcessRuntimeEventTypes.ProcessRunActivated, Now),
+                NewEvent(runId, runId, ProcessRuntimeEventTypes.StepCompleted, Now.AddSeconds(1))
+            ]);
+
+        var events = await eventStore.ReadByRootRunAsync(runId, 0, 10);
+
+        Assert.Equal([1, 2], events.Select(runtimeEvent => runtimeEvent.GlobalSequence));
+        Assert.Equal([1, 2], events.Select(runtimeEvent => runtimeEvent.RootSequence));
+    }
+
+    [Fact]
     public async Task Outbox_store_claims_retries_and_marks_delivery_explicitly()
     {
         await using var dbContext = CreateDbContext();
@@ -319,6 +338,44 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
+    public async Task Runtime_step_assignment_store_finds_launch_variables_by_key_value_pairs()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessRuntimeStepAssignmentStore(dbContext);
+        var targetRunId = ProcessRunId.New();
+        var decoyRunId = ProcessRunId.New();
+        var target = NewAssignment(
+            targetRunId,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProjectId"] = "project-1",
+                ["ParentProcessRunId"] = "parent-1",
+                ["Optional"] = string.Empty
+            });
+        var decoy = NewAssignment(
+            decoyRunId,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProjectId"] = "project-1",
+                ["Other"] = "parent-1",
+                ["Optional"] = string.Empty
+            },
+            Now.AddSeconds(1));
+
+        await store.SaveAsync([target, decoy]);
+        var found = await store.FindByLaunchVariablesAsync(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProjectId"] = "project-1",
+                ["ParentProcessRunId"] = "parent-1",
+                ["Optional"] = string.Empty
+            });
+
+        var assignment = Assert.Single(found);
+        Assert.Equal(targetRunId, assignment.RunId);
+    }
+
+    [Fact]
     public void Persistence_model_declares_required_unique_constraints()
     {
         using var dbContext = CreateDbContext();
@@ -484,6 +541,32 @@ public sealed class ProcessPersistenceStoreTests
             occurredAtUtc,
             eventType,
             "hash:event");
+    }
+
+    private static ProcessRuntimeStepAssignment NewAssignment(
+        ProcessRunId runId,
+        IReadOnlyDictionary<string, string> launchVariables,
+        DateTimeOffset? createdAtUtc = null)
+    {
+        return new ProcessRuntimeStepAssignment(
+            runId,
+            ProcessInstancePlanId.New(),
+            ProcessStepInstanceId.New(),
+            "test-step",
+            "test-role",
+            ProcessLaunchExecutorKinds.Agent,
+            Guid.NewGuid().ToString("D"),
+            "Test executor",
+            "Execute the step.",
+            "sha256:readiness",
+            "Resolved from test.",
+            [],
+            [],
+            [ProcessOperationContractNames.ReadProjectStructure],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            launchVariables,
+            null,
+            createdAtUtc ?? Now);
     }
 
     private static ProcessInstancePlan NewDispatchablePlan(

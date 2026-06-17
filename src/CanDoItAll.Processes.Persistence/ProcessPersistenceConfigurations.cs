@@ -136,6 +136,7 @@ internal sealed class ProcessRuntimeEventEntityConfiguration : IEntityTypeConfig
     {
         builder.ToTable("process_runtime_events");
         builder.HasKey(runtimeEvent => runtimeEvent.GlobalSequence);
+        builder.Property(runtimeEvent => runtimeEvent.GlobalSequence).ValueGeneratedOnAdd();
         builder.Property(runtimeEvent => runtimeEvent.EventType).HasMaxLength(256).IsRequired();
         builder.Property(runtimeEvent => runtimeEvent.CorrelationId).HasMaxLength(256).IsRequired();
         builder.Property(runtimeEvent => runtimeEvent.ActorKind).HasMaxLength(64).IsRequired();

@@ -19,12 +19,21 @@ public sealed class EfProcessRuntimeEventStore(ProcessPersistenceDbContext dbCon
             return;
         }
 
-        var nextGlobalSequence = await NextGlobalSequenceAsync(cancellationToken).ConfigureAwait(false);
+        var rootSequences = new Dictionary<Guid, long>(events.Count);
         foreach (var runtimeEvent in events)
         {
-            var rootSequence = await NextRootSequenceAsync(runtimeEvent.RootRunId.Value, cancellationToken).ConfigureAwait(false);
-            dbContext.RuntimeEvents.Add(ProcessPersistenceMappers.ToEventEntity(runtimeEvent, nextGlobalSequence, rootSequence));
-            nextGlobalSequence++;
+            if (!rootSequences.TryGetValue(runtimeEvent.RootRunId.Value, out var nextRootSequence))
+            {
+                nextRootSequence = await NextRootSequenceAsync(
+                    runtimeEvent.RootRunId.Value,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            dbContext.RuntimeEvents.Add(ProcessPersistenceMappers.ToEventEntity(
+                runtimeEvent,
+                nextRootSequence));
+
+            rootSequences[runtimeEvent.RootRunId.Value] = nextRootSequence + 1;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -79,33 +88,13 @@ public sealed class EfProcessRuntimeEventStore(ProcessPersistenceDbContext dbCon
         return events;
     }
 
-    private async Task<long> NextGlobalSequenceAsync(CancellationToken cancellationToken)
-    {
-        var hasEvents = await dbContext.RuntimeEvents.AnyAsync(cancellationToken).ConfigureAwait(false);
-        if (!hasEvents)
-        {
-            return 1;
-        }
-
-        return await dbContext.RuntimeEvents.MaxAsync(
-            runtimeEvent => runtimeEvent.GlobalSequence,
-            cancellationToken).ConfigureAwait(false) + 1;
-    }
-
     private async Task<long> NextRootSequenceAsync(Guid rootRunId, CancellationToken cancellationToken)
     {
-        var hasEvents = await dbContext.RuntimeEvents
-            .AnyAsync(runtimeEvent => runtimeEvent.RootRunId == rootRunId, cancellationToken)
-            .ConfigureAwait(false);
-        if (!hasEvents)
-        {
-            return 1;
-        }
-
-        return await dbContext.RuntimeEvents
+        var maxSequence = await dbContext.RuntimeEvents
             .Where(runtimeEvent => runtimeEvent.RootRunId == rootRunId)
-            .MaxAsync(runtimeEvent => runtimeEvent.RootSequence, cancellationToken)
-            .ConfigureAwait(false) + 1;
+            .MaxAsync(runtimeEvent => (long?)runtimeEvent.RootSequence, cancellationToken)
+            .ConfigureAwait(false);
+        return (maxSequence ?? 0) + 1;
     }
 
     private static void ValidateTake(int take)

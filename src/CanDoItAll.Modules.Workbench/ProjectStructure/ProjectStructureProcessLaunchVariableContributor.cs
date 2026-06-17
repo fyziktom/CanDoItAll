@@ -21,15 +21,12 @@ public sealed record ProjectStructureProcessLaunchVariableContext(
     ProcessRuntimeStepAssignment? ParentAssignment,
     bool IsSubprocess);
 
-internal sealed class DotNetSolutionSetupLaunchVariableContributor : IProjectStructureProcessLaunchVariableContributor
+internal sealed partial class DotNetSolutionSetupLaunchVariableContributor : IProjectStructureProcessLaunchVariableContributor
 {
     private const string DefinitionKey = "dotnet-solution-setup";
     private const string DefaultTargetFramework = "net10.0";
     private const string DefaultTestTemplate = "xunit";
     private const string DefaultTestFramework = "xUnit";
-
-    private static readonly Regex TargetFrameworkRegex = new(@"\bnet\d+(?:\.\d+)?\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private static readonly Regex IdentifierPartRegex = new(@"[A-Za-z0-9]+", RegexOptions.Compiled);
 
     public void Enrich(ProjectStructureProcessLaunchVariableContext context, IDictionary<string, string> variables)
     {
@@ -185,7 +182,7 @@ internal sealed class DotNetSolutionSetupLaunchVariableContributor : IProjectStr
 
     private static string ResolveTargetFramework(string contextText)
     {
-        var match = TargetFrameworkRegex.Match(contextText);
+        var match = TargetFrameworkRegex().Match(contextText);
         return match.Success
             ? match.Value.ToLowerInvariant()
             : DefaultTargetFramework;
@@ -282,7 +279,7 @@ internal sealed class DotNetSolutionSetupLaunchVariableContributor : IProjectStr
             return string.Empty;
         }
 
-        var parts = IdentifierPartRegex
+        var parts = IdentifierPartRegex()
             .Matches(value)
             .Select(match => match.Value)
             .Where(part => !string.IsNullOrWhiteSpace(part))
@@ -342,4 +339,10 @@ internal sealed class DotNetSolutionSetupLaunchVariableContributor : IProjectStr
         string Template,
         string TemplateOptions,
         string AllowedTemplateSwitches);
+
+    [GeneratedRegex(@"\bnet\d+(?:\.\d+)?\b", RegexOptions.IgnoreCase)]
+    private static partial Regex TargetFrameworkRegex();
+
+    [GeneratedRegex(@"[A-Za-z0-9]+")]
+    private static partial Regex IdentifierPartRegex();
 }

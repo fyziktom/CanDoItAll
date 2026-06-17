@@ -14,7 +14,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
         var userAuthoredLinks = await context.DbContext.Set<ProjectObjectLinkRecord>()
-            .Where(item => item.ProjectId == context.ProjectId && !item.IsSystemManaged)
+            .AsNoTracking()
+            .Where(item =>
+                item.ProjectId == context.ProjectId &&
+                !item.IsSystemManaged &&
+                (item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix) ||
+                 item.SourceNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix) ||
+                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessDefinitionPrefix) ||
+                 item.TargetNodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix)))
             .Select(item => new ProjectStructureProcessLink(
                 item.SourceNodeKey,
                 item.TargetNodeKey,
@@ -64,16 +71,26 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 .AsNoTracking()
                 .Where(item => runIds.Contains(item.RunId))
                 .OrderByDescending(item => item.UpdatedAtUtc)
+                .Select(item => new ProjectStructureProcessRuntimeState(
+                    item.RunId,
+                    item.RootRunId,
+                    item.PlanId,
+                    item.Status,
+                    item.UpdatedAtUtc))
                 .ToListAsync(cancellationToken);
         var planIds = runtimeStates
             .Select(item => item.PlanId)
             .Distinct()
             .ToArray();
         var plansById = planIds.Length == 0
-            ? new Dictionary<Guid, ProcessInstancePlanEntity>()
+            ? new Dictionary<Guid, ProjectStructureProcessPlan>()
             : await processDbContext.InstancePlans
                 .AsNoTracking()
                 .Where(item => planIds.Contains(item.PlanId))
+                .Select(item => new ProjectStructureProcessPlan(
+                    item.PlanId,
+                    item.DefinitionId,
+                    item.CreatedAtUtc))
                 .ToDictionaryAsync(item => item.PlanId, cancellationToken);
         var stepStatsByRunId = runIds.Length == 0
             ? new Dictionary<Guid, ProcessRunProjectionStats>()
@@ -180,8 +197,8 @@ internal sealed class ProjectStructureProcessProjectionContributor(
 
     private static void AddRunNode(
         ProjectStructureProjectionContext context,
-        ProcessRuntimeStateEntity state,
-        ProcessInstancePlanEntity? plan,
+        ProjectStructureProcessRuntimeState state,
+        ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
         ProcessRunProjectionStats stats,
         int index,
@@ -293,7 +310,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             });
     }
 
-    private static string BuildRunSubtitle(ProcessRuntimeStateEntity state, ProcessRunProjectionStats stats)
+    private static string BuildRunSubtitle(ProjectStructureProcessRuntimeState state, ProcessRunProjectionStats stats)
     {
         var stepSummary = stats.TotalStepCount == 0
             ? "No runtime steps"
@@ -310,8 +327,8 @@ internal sealed class ProjectStructureProcessProjectionContributor(
 
     private static string BuildRunNotes(
         Guid projectId,
-        ProcessRuntimeStateEntity state,
-        ProcessInstancePlanEntity? plan,
+        ProjectStructureProcessRuntimeState state,
+        ProjectStructureProcessPlan? plan,
         ProcessDefinitionCatalogItemProjection? definition,
         ProcessRunProjectionStats stats)
     {
@@ -339,6 +356,18 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         string SourceNodeKey,
         string TargetNodeKey,
         ProjectObjectLinkKind LinkKind,
+        DateTimeOffset CreatedAtUtc);
+
+    private sealed record ProjectStructureProcessRuntimeState(
+        Guid RunId,
+        Guid RootRunId,
+        Guid PlanId,
+        ProcessRuntimeStatus Status,
+        DateTimeOffset UpdatedAtUtc);
+
+    private sealed record ProjectStructureProcessPlan(
+        Guid PlanId,
+        Guid DefinitionId,
         DateTimeOffset CreatedAtUtc);
 
     private sealed record ProcessRunProjectionStats(

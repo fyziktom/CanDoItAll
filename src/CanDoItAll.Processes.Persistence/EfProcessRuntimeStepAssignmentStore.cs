@@ -56,11 +56,10 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             return [];
         }
 
-        var firstValue = normalized.Values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
         var query = dbContext.RuntimeStepAssignments.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(firstValue))
+        foreach (var snippet in normalized.Select(item => BuildLaunchVariableJsonSnippet(item.Key, item.Value)))
         {
-            query = query.Where(assignment => assignment.LaunchVariablesJson.Contains(firstValue));
+            query = query.Where(assignment => assignment.LaunchVariablesJson.Contains(snippet));
         }
 
         var rows = await query
@@ -213,15 +212,7 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
 
     private static string SerializeLaunchVariables(IReadOnlyDictionary<string, string> variables)
     {
-        var normalized = variables
-            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
-            .OrderBy(item => item.Key, StringComparer.Ordinal)
-            .ToDictionary(
-                item => item.Key.Trim(),
-                item => item.Value?.Trim() ?? string.Empty,
-                StringComparer.Ordinal);
-
-        return JsonSerializer.Serialize(normalized);
+        return JsonSerializer.Serialize(NormalizeLaunchVariables(variables));
     }
 
     private static IReadOnlyDictionary<string, string> DeserializeLaunchVariables(string value)
@@ -244,13 +235,23 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
 
     private static IReadOnlyDictionary<string, string> NormalizeRequiredVariables(
         IReadOnlyDictionary<string, string> variables)
+        => NormalizeLaunchVariables(variables);
+
+    private static IReadOnlyDictionary<string, string> NormalizeLaunchVariables(
+        IReadOnlyDictionary<string, string> variables)
     {
         return variables
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .OrderBy(item => item.Key, StringComparer.Ordinal)
             .ToDictionary(
                 item => item.Key.Trim(),
                 item => item.Value?.Trim() ?? string.Empty,
                 StringComparer.Ordinal);
+    }
+
+    private static string BuildLaunchVariableJsonSnippet(string key, string value)
+    {
+        return $"{JsonSerializer.Serialize(key)}:{JsonSerializer.Serialize(value)}";
     }
 
     private static bool MatchesRequiredVariables(

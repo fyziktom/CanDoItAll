@@ -894,3 +894,19 @@ Result:
 ```text
 Follow-up repair restored the missing projected process definition/run nodes in the project-structure surface. Workbench now contributes process definitions and process runs from user-authored links without coupling the generic Process runtime to project-structure UI concerns. The dev DB TetrisGame structure read shows process-definition:* and process-run:* nodes, including the active multi-team run aa8bb4e7-aecd-457a-9b2c-5167ac3ca379, parented under Main App. The add-process dialog on Main App contains the full process catalog, including Multi-team software delivery and release governance, .NET runtime command project-structure writeback, and .NET UI screenshot project-structure writeback. Subprocess launch variables now carry ProcessRunNodeId, ParentProcessRunNodeId, and TargetProcessRunNodeId, and the subprocess launch service links parent process-run nodes to child process-run nodes. Runtime command and screenshot writeback templates now prefer those process-run node ids as their parent, so future process executions create run commands and screenshots under the process-run node instead of falling back to the project node/root. Workbench build passed, focused project-structure integration tests passed 26/26, focused process/workbench unit tests passed 29/29, and CodeAnalytics MCP snapshot snap-20260617101111-7ea15dd4 completed with no blocking errors.
 ```
+
+## Post-Bundle Process Data Performance Hardening
+
+Proof artifacts:
+
+```text
+bundle://proof/post-bundle-process-data-performance-hardening/manifest.md
+bundle://proof/post-bundle-process-data-performance-hardening/semantic-invariants.md
+bundle://proof/post-bundle-process-data-performance-hardening/changed-file-hashes.txt
+```
+
+Result:
+
+```text
+Post-bundle hardening reduced EF query work in project-structure process projection, moved runtime event global sequence allocation to EF/database generated keys, cached root sequence allocation per append batch, canonicalized launch-variable serialization and lookup, replaced a Blazor Task.Result path with awaited task results, and replaced static compiled regex fields with generated regex methods. Focused process unit validation passed 23/23. Focused ProjectStructureAgentIntegrationTests ran 25/26 passing; the remaining failure is the existing prompt-template/test drift at ProjectStructureAgentIntegrationTests.cs:519 expecting `Do not block only because a slot-id directory is absent`, which no longer exists in current templates or prompt-builder sources.
+```
