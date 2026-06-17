@@ -35,6 +35,7 @@
     <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

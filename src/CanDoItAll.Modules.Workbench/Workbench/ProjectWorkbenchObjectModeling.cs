@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -13,6 +14,16 @@ internal enum ProjectMarkerMutationMode
 
 internal static class ProjectWorkbenchObjectModeling
 {
+    private static readonly string[] ProjectBlockRootMetadataKeys =
+    [
+        "outputRoot",
+        "productRoot",
+        "targetRoot",
+        "targetPath",
+        "repositoryRoot",
+        "workspaceRoot"
+    ];
+
     internal static DateTimeOffset? ResolveEndUtc(DateTimeOffset? startUtc, DateTimeOffset? endUtc, int? durationSeconds)
     {
         if (endUtc.HasValue || !startUtc.HasValue)
@@ -62,12 +73,15 @@ internal static class ProjectWorkbenchObjectModeling
             : HasMeaningfulMetadata(fallbackMetadataJson)
                 ? fallbackMetadataJson
                 : null;
+        var parsedMetadata = effectiveMetadataJson is null
+            ? new ProjectObjectMetadataEnvelope()
+            : ProjectObjectMetadataSerializer.Parse(effectiveMetadataJson);
+        ApplyProjectBlockRootCompatibility(objectType, parsedMetadata, effectiveMetadataJson);
+
         var metadata = ProjectNodeKindRegistry.NormalizeMetadata(
             objectType,
             objectSubtype,
-            effectiveMetadataJson is null
-                ? new ProjectObjectMetadataEnvelope()
-                : ProjectObjectMetadataSerializer.Parse(effectiveMetadataJson),
+            parsedMetadata,
             notes,
             media);
 
@@ -80,6 +94,59 @@ internal static class ProjectWorkbenchObjectModeling
         return !string.IsNullOrWhiteSpace(metadataJson) &&
             !string.Equals(metadataJson.Trim(), "{}", StringComparison.Ordinal);
     }
+
+    private static void ApplyProjectBlockRootCompatibility(
+        ProjectObjectType objectType,
+        ProjectObjectMetadataEnvelope metadata,
+        string? metadataJson)
+    {
+        if (objectType != ProjectObjectType.ProjectBlock ||
+            metadata.ProjectBlock is not null ||
+            string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return;
+            }
+
+            var projectBlock = new ProjectBlockMetadata
+            {
+                OutputRoot = ReadString(document.RootElement, "outputRoot"),
+                ProductRoot = ReadString(document.RootElement, "productRoot"),
+                TargetRoot = FirstNonEmpty(
+                    ReadString(document.RootElement, "targetRoot"),
+                    ReadString(document.RootElement, "targetPath")),
+                RepositoryRoot = ReadString(document.RootElement, "repositoryRoot"),
+                WorkspaceRoot = ReadString(document.RootElement, "workspaceRoot")
+            };
+
+            if (ProjectBlockRootMetadataKeys.Any(key => !string.IsNullOrWhiteSpace(ReadString(document.RootElement, key))))
+            {
+                metadata.ProjectBlock = projectBlock;
+            }
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException("Invalid project object metadata payload.");
+        }
+    }
+
+    private static string ReadString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) &&
+            property.ValueKind == JsonValueKind.String
+                ? property.GetString()?.Trim() ?? string.Empty
+                : string.Empty;
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 
     internal static string NormalizeProgressMode(string? progressMode)
     {

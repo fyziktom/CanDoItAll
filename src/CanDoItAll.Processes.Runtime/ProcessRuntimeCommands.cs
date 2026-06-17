@@ -31,6 +31,11 @@ public sealed record RenewDispatchClaimCommand(
     DispatchClaimToken ClaimToken,
     DateTimeOffset LeaseExpiresAtUtc);
 
+public sealed record ReleaseDispatchClaimCommand(
+    ProcessStepInstanceId StepInstanceId,
+    DispatcherOwnerId OwnerId,
+    DispatchClaimToken ClaimToken);
+
 public sealed record SubmitStrategyResultCommand(
     ProcessStepInstanceId StepInstanceId,
     DispatcherOwnerId OwnerId,

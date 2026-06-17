@@ -1709,6 +1709,30 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_allows_known_finalizer_tools_without_approval_or_process_operation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+
+        foreach (var toolName in ToolContractCatalog.FinalizerToolNames)
+        {
+            var context = CreateContext(
+                toolName,
+                AgentToolInvocationPolicyMetadata.Classify(toolName),
+                isKnownTool: ToolContractCatalog.IsKnownToolName(toolName),
+                autoApprovalAllowed: false,
+                approvalWrapperAvailable: false,
+                processStepAllowedOperations: [],
+                processStepTargetScope: "ExternalProductTargetMutable");
+
+            var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+            Assert.Equal(ToolInvocationClassification.Read, context.Classification);
+            Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+        }
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_command_run_without_execute_external_action_operation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -1848,6 +1872,7 @@ public sealed class AgentToolInvocationPolicyTests
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeCommandExecute,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessDefinitionLink,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
+            AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowDefinitionCreate,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete,

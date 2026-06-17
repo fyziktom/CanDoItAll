@@ -26,6 +26,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     ProcessRuntimeProjectionCatchupService projectionCatchupService)
 {
     private const int MaximumDispatchIterations = 200;
+    private const string DispatcherActorId = "process-runtime-dispatcher";
+    private const string ClaimReleaseFailureExceptionDataKey = "ProcessDispatchClaimReleaseFailure";
     private static readonly TimeSpan DispatchLease = TimeSpan.FromMinutes(30);
 
     public async Task<ProcessRuntimeDispatchResult> ExecuteReadyAsync(
@@ -51,11 +53,28 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                 ?? throw new InvalidOperationException($"Process run '{runId}' references missing plan '{state.PlanId}'.");
             if (state.Status == ProcessRuntimeStatus.Active)
             {
+                var nowUtc = NormalizeUtc(clock.GetUtcNow());
+                var expireCommit = await engine.ExpireClaimsAsync(
+                    state,
+                    CreateContext(requestedBy, iteration, "expire-claims"),
+                    new ExpireDispatchClaimsCommand(nowUtc),
+                    cancellationToken).ConfigureAwait(false);
+                state = expireCommit.State;
+
                 var scheduleCommit = await engine.ScheduleReadyAsync(
                     state,
                     CreateContext(requestedBy, iteration, "schedule"),
                     cancellationToken).ConfigureAwait(false);
                 state = scheduleCommit.State;
+                state = await ApplySkippedBranchGatePropagationAsync(
+                    state,
+                    requestedBy,
+                    iteration,
+                    cancellationToken).ConfigureAwait(false);
+                if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+                {
+                    return new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics);
+                }
             }
 
             var readyWork = scheduler.CalculateReadyWork(state, plan, NormalizeUtc(clock.GetUtcNow()));
@@ -67,69 +86,121 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             foreach (var workItem in readyWork)
             {
                 var claimToken = DispatchClaimToken.New();
-                var ownerId = new DispatcherOwnerId("process-runtime-dispatcher");
-                var claimCommit = await engine.CreateClaimAsync(
-                    state,
-                    CreateContext(requestedBy, iteration, "claim"),
-                    new CreateDispatchClaimCommand(
-                        workItem,
-                        ownerId,
+                var ownerId = new DispatcherOwnerId(DispatcherActorId);
+                var claimCreated = false;
+                var resultSubmitted = false;
+                try
+                {
+                    var claimCommit = await engine.CreateClaimAsync(
+                        state,
+                        CreateContext(requestedBy, iteration, "claim"),
+                        new CreateDispatchClaimCommand(
+                            workItem,
+                            ownerId,
+                            claimToken,
+                            NormalizeUtc(clock.GetUtcNow()).Add(DispatchLease)),
+                        cancellationToken).ConfigureAwait(false);
+                    if (!claimCommit.Succeeded)
+                    {
+                        diagnostics.AddRange(claimCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
+                        continue;
+                    }
+
+                    claimCreated = true;
+
+                    var runningCommit = await engine.MarkClaimRunningAsync(
+                        claimCommit.State,
+                        CreateContext(requestedBy, iteration, "running"),
+                        workItem.StepInstanceId,
                         claimToken,
-                        NormalizeUtc(clock.GetUtcNow()).Add(DispatchLease)),
-                    cancellationToken).ConfigureAwait(false);
-                if (!claimCommit.Succeeded)
-                {
-                    diagnostics.AddRange(claimCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
-                    continue;
-                }
+                        cancellationToken).ConfigureAwait(false);
+                    if (!runningCommit.Succeeded)
+                    {
+                        diagnostics.AddRange(runningCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
+                        var releaseDiagnostic = await ReleaseClaimBestEffortAsync(
+                            runId,
+                            workItem.StepInstanceId,
+                            ownerId,
+                            claimToken,
+                            requestedBy,
+                            iteration,
+                            CancellationToken.None).ConfigureAwait(false);
+                        if (releaseDiagnostic is not null)
+                        {
+                            diagnostics.Add(releaseDiagnostic);
+                        }
 
-                var runningCommit = await engine.MarkClaimRunningAsync(
-                    claimCommit.State,
-                    CreateContext(requestedBy, iteration, "running"),
-                    workItem.StepInstanceId,
-                    claimToken,
-                    cancellationToken).ConfigureAwait(false);
-                if (!runningCommit.Succeeded)
-                {
-                    diagnostics.AddRange(runningCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
-                    continue;
-                }
+                        continue;
+                    }
 
-                var strategyFactory = await strategyFactoryResolver.ResolveAsync(
-                    workItem.StrategyBinding,
-                    cancellationToken).ConfigureAwait(false);
-                var result = await dispatcher.InvokeAsync(
-                    workItem,
-                    plan,
-                    strategyFactory,
-                    cancellationToken).ConfigureAwait(false);
-                var resultCommit = await engine.SubmitStrategyResultAsync(
-                    runningCommit.State,
-                    CreateContext(requestedBy, iteration, "result"),
-                    new SubmitStrategyResultCommand(
+                    var strategyFactory = await strategyFactoryResolver.ResolveAsync(
+                        workItem.StrategyBinding,
+                        cancellationToken).ConfigureAwait(false);
+                    var result = await dispatcher.InvokeAsync(
+                        workItem,
+                        plan,
+                        strategyFactory,
+                        cancellationToken).ConfigureAwait(false);
+                    var resultCommit = await engine.SubmitStrategyResultAsync(
+                        runningCommit.State,
+                        CreateContext(requestedBy, iteration, "result"),
+                        new SubmitStrategyResultCommand(
+                            workItem.StepInstanceId,
+                            ownerId,
+                            claimToken,
+                            new StrategyResultIdempotencyKey(result.IdempotencyKey),
+                            result),
+                        CancellationToken.None).ConfigureAwait(false);
+                    if (!resultCommit.Succeeded)
+                    {
+                        diagnostics.AddRange(resultCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
+                        var releaseDiagnostic = await ReleaseClaimBestEffortAsync(
+                            runId,
+                            workItem.StepInstanceId,
+                            ownerId,
+                            claimToken,
+                            requestedBy,
+                            iteration,
+                            CancellationToken.None).ConfigureAwait(false);
+                        if (releaseDiagnostic is not null)
+                        {
+                            diagnostics.Add(releaseDiagnostic);
+                        }
+
+                        continue;
+                    }
+
+                    resultSubmitted = true;
+
+                    await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+
+                    await ApplyBranchSignalsAsync(
+                        resultCommit.State,
+                        plan,
+                        result,
+                        requestedBy,
+                        iteration,
+                        cancellationToken).ConfigureAwait(false);
+
+                    state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? resultCommit.State;
+                }
+                catch (Exception exception) when (claimCreated && !resultSubmitted)
+                {
+                    var releaseDiagnostic = await ReleaseClaimBestEffortAsync(
+                        runId,
                         workItem.StepInstanceId,
                         ownerId,
                         claimToken,
-                        new StrategyResultIdempotencyKey(result.IdempotencyKey),
-                        result),
-                    cancellationToken).ConfigureAwait(false);
-                if (!resultCommit.Succeeded)
-                {
-                    diagnostics.AddRange(resultCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
-                    continue;
+                        requestedBy,
+                        iteration,
+                        CancellationToken.None).ConfigureAwait(false);
+                    if (releaseDiagnostic is not null)
+                    {
+                        exception.Data[ClaimReleaseFailureExceptionDataKey] = releaseDiagnostic;
+                    }
+
+                    throw;
                 }
-
-                await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-
-                await ApplyBranchSignalsAsync(
-                    resultCommit.State,
-                    plan,
-                    result,
-                    requestedBy,
-                    iteration,
-                    cancellationToken).ConfigureAwait(false);
-
-                state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? resultCommit.State;
             }
         }
 
@@ -214,17 +285,17 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                 ComputeHash($"{completedPlanStep.StepKey}:{selectedOutcome}:{assignment.StepKey}")));
         }
 
+        if (PropagateSkippedBranchGates(state, assignments, nextSteps, events, context))
+        {
+            changed = true;
+        }
+
         if (!changed)
         {
             return;
         }
 
-        var next = state with
-        {
-            Steps = nextSteps,
-            Status = ResolveRunStatus(state.Status, nextSteps),
-            UpdatedAtUtc = context.OccurredAtUtc
-        };
+        var next = CreateBranchStepMutationState(state, nextSteps, events, context);
         var mutation = new ProcessRuntimeMutation(
             ProcessRuntimeTransitionOutcome.Applied,
             next,
@@ -241,6 +312,173 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             new ProcessRuntimeCommitRequest(context.CommandId, state, mutation),
             cancellationToken).ConfigureAwait(false);
         await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ProcessRuntimeStateSnapshot> ApplySkippedBranchGatePropagationAsync(
+        ProcessRuntimeStateSnapshot state,
+        string requestedBy,
+        int iteration,
+        CancellationToken cancellationToken)
+    {
+        if (state.Status != ProcessRuntimeStatus.Active)
+        {
+            return state;
+        }
+
+        var assignments = await assignmentStore.LoadByRunAsync(state.RunId, cancellationToken).ConfigureAwait(false);
+        var nextSteps = state.Steps.ToList();
+        var events = new List<ProcessRuntimeEventEnvelope>();
+        var context = CreateContext(requestedBy, iteration, "branch-skip-propagation");
+
+        if (!PropagateSkippedBranchGates(state, assignments, nextSteps, events, context))
+        {
+            return state;
+        }
+
+        var next = CreateBranchStepMutationState(state, nextSteps, events, context);
+        var mutation = new ProcessRuntimeMutation(
+            ProcessRuntimeTransitionOutcome.Applied,
+            next,
+            events,
+            events.Select(runtimeEvent => new ProcessOutboxMessage(
+                RuntimeOutboxMessageId.New(),
+                runtimeEvent.EventId,
+                ProcessOutboxSubscriberKind.RuntimeProjection,
+                runtimeEvent.PayloadHash)).ToArray(),
+            [],
+            []);
+
+        var commit = await unitOfWork.CommitAsync(
+            new ProcessRuntimeCommitRequest(context.CommandId, state, mutation),
+            cancellationToken).ConfigureAwait(false);
+        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+
+        return commit.State;
+    }
+
+    private static bool PropagateSkippedBranchGates(
+        ProcessRuntimeStateSnapshot state,
+        IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
+        IList<ProcessRuntimeStepState> steps,
+        IList<ProcessRuntimeEventEnvelope> events,
+        RuntimeCommandContext context)
+    {
+        var stepKeyById = assignments.ToDictionary(
+            assignment => assignment.StepInstanceId,
+            assignment => assignment.StepKey);
+        var skippedSourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var step in steps)
+        {
+            if (step.Status == ProcessRuntimeStepStatus.Skipped &&
+                stepKeyById.TryGetValue(step.StepInstanceId, out var stepKey))
+            {
+                skippedSourceKeys.Add(stepKey);
+            }
+        }
+
+        var changed = false;
+        var changedInPass = true;
+        while (changedInPass)
+        {
+            changedInPass = false;
+            for (var index = 0; index < steps.Count; index++)
+            {
+                var step = steps[index];
+                if (ProcessRuntimeTerminalStates.IsStepTerminal(step.Status) ||
+                    step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running)
+                {
+                    continue;
+                }
+
+                var assignment = assignments.FirstOrDefault(candidate => candidate.StepInstanceId == step.StepInstanceId);
+                if (assignment?.BranchGate is null ||
+                    !skippedSourceKeys.Contains(assignment.BranchGate.SourceStepKey))
+                {
+                    continue;
+                }
+
+                steps[index] = step with
+                {
+                    Status = ProcessRuntimeStepStatus.Skipped,
+                    ActiveClaimToken = null
+                };
+                skippedSourceKeys.Add(assignment.StepKey);
+                changed = true;
+                changedInPass = true;
+                events.Add(CreateEvent(
+                    state,
+                    context,
+                    ProcessRuntimeEventTypes.StepSkipped,
+                    ComputeHash($"{assignment.BranchGate.SourceStepKey}:source-skipped:{assignment.StepKey}")));
+            }
+        }
+
+        return changed;
+    }
+
+    private static ProcessRuntimeStateSnapshot CreateBranchStepMutationState(
+        ProcessRuntimeStateSnapshot state,
+        IReadOnlyList<ProcessRuntimeStepState> nextSteps,
+        IList<ProcessRuntimeEventEnvelope> events,
+        RuntimeCommandContext context)
+    {
+        var nextStatus = ResolveRunStatus(state.Status, nextSteps);
+        var next = state with
+        {
+            Steps = nextSteps,
+            Status = nextStatus,
+            UpdatedAtUtc = context.OccurredAtUtc
+        };
+
+        if (nextStatus != state.Status && ProcessRuntimeTerminalStates.IsRunTerminal(nextStatus))
+        {
+            events.Add(CreateEvent(
+                next,
+                context,
+                ToRunTerminalEvent(nextStatus),
+                next.PlanHash));
+        }
+
+        return next;
+    }
+
+    private async Task<string?> ReleaseClaimBestEffortAsync(
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        DispatcherOwnerId ownerId,
+        DispatchClaimToken claimToken,
+        string requestedBy,
+        int iteration,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                return $"Dispatch claim release skipped because process run '{runId}' was not found.";
+            }
+
+            var engine = new ProcessRuntimeEngine(unitOfWork);
+            var releaseCommit = await engine.ReleaseClaimAsync(
+                state,
+                CreateContext(requestedBy, iteration, "release-claim"),
+                new ReleaseDispatchClaimCommand(stepInstanceId, ownerId, claimToken),
+                cancellationToken).ConfigureAwait(false);
+            if (!releaseCommit.Succeeded)
+            {
+                var releaseMessages = string.Join("; ", releaseCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
+                return $"Dispatch claim release rejected for run '{runId}', step '{stepInstanceId}', token '{claimToken}': {releaseMessages}";
+            }
+
+            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+
+            return null;
+        }
+        catch (Exception exception)
+        {
+            return $"Dispatch claim release failed for run '{runId}', step '{stepInstanceId}', token '{claimToken}': {exception.Message}";
+        }
     }
 
     private static ProcessRuntimeStatus ResolveRunStatus(
@@ -272,7 +510,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     {
         return new RuntimeCommandContext(
             RuntimeCommandId.New(),
-            new ProcessEventActor(ProcessEventActorKind.System, new ProcessActorId("process-runtime-dispatcher")),
+            new ProcessEventActor(ProcessEventActorKind.System, new ProcessActorId(DispatcherActorId)),
             new ProcessCorrelationId($"dispatch-{iteration}-{phase}-{Guid.NewGuid():N}"),
             NormalizeUtc(DateTimeOffset.UtcNow));
     }
@@ -316,6 +554,17 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             ProcessRuntimeStatus.Completed => ProcessLaunchStage.Completed,
             ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled => ProcessLaunchStage.Failed,
             _ => ProcessLaunchStage.Running
+        };
+    }
+
+    private static ProcessEventType ToRunTerminalEvent(ProcessRuntimeStatus status)
+    {
+        return status switch
+        {
+            ProcessRuntimeStatus.Completed => ProcessRuntimeEventTypes.ProcessRunCompleted,
+            ProcessRuntimeStatus.Failed => ProcessRuntimeEventTypes.ProcessRunFailed,
+            ProcessRuntimeStatus.Cancelled => ProcessRuntimeEventTypes.ProcessRunCancelled,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Run status is not terminal.")
         };
     }
 

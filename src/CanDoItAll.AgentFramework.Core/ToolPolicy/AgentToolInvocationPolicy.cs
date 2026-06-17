@@ -1934,6 +1934,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureNodeCommandExecute = "project_structure_node_command_execute";
     public const string ProjectStructureNodeProcessDefinitionLink = "project_structure_node_process_definition_link";
     public const string ProjectStructureNodeProcessStart = "project_structure_node_process_start";
+    public const string ProjectStructureProcessSubprocessLaunch = "project_structure_process_subprocess_launch";
     public const string ProjectStructureNodeWorkflowAddOptions = "project_structure_node_workflow_add_options";
     public const string ProjectStructureNodeWorkflowDefinitionCreate = "project_structure_node_workflow_definition_create";
     public const string ProjectStructureNodeWorkflowStart = "project_structure_node_workflow_start";
@@ -1999,6 +2000,7 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureNodeCommandExecute,
         ProjectStructureNodeProcessDefinitionLink,
         ProjectStructureNodeProcessStart,
+        ProjectStructureProcessSubprocessLaunch,
         ProjectStructureNodeWorkflowDefinitionCreate,
         ProjectStructureNodeWorkflowStart,
         ProjectStructureNodeDelete,

@@ -51,7 +51,8 @@ internal sealed class StandardProcessRuntimeStrategyFactoryResolver(
 
 internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    ProcessMockAgentCatalogService processMockAgentCatalogService) : IProcessLaunchExecutorResolver
+    ProcessMockAgentCatalogService processMockAgentCatalogService,
+    IProviderProfileService providerProfileService) : IProcessLaunchExecutorResolver
 {
     public async ValueTask<ProcessLaunchExecutorResolution> ResolveAsync(
         ProcessLaunchExecutorResolutionRequest request,
@@ -87,25 +88,27 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
             profileAssignmentByStep.TryGetValue(planStep.StepKey, out var profileAssignment);
             var roleKey = ResolveRoleKey(templateStep, profileAssignment);
-            var executorKind = ResolveExecutorKind(profileAssignment, roleByKey.GetValueOrDefault(roleKey));
-            if (!string.Equals(executorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase))
+            var role = roleByKey.GetValueOrDefault(roleKey);
+            var roleQuery = ResolveRoleQuery(roleKey, role);
+            var requestedExecutorKind = ResolveExecutorKind(profileAssignment, role);
+            if (!ProcessLaunchExecutorKinds.CanResolveAsAgent(requestedExecutorKind))
             {
                 findings.Add(new ProcessLaunchReadinessFinding(
                     ProcessLaunchReadinessSeverity.Error,
                     "process.launch.executor_kind_unsupported",
-                    $"Step '{planStep.StepKey}' role '{roleKey}' requested unsupported executor kind '{executorKind}'.",
+                    $"Step '{planStep.StepKey}' role '{roleKey}' requested unsupported executor kind '{requestedExecutorKind}'.",
                     planStep.StepKey,
                     roleKey));
                 continue;
             }
 
-            var candidate = SelectAgent(roleKey, agents, providerById);
+            var candidate = SelectAgent(roleQuery, agents, providerById, providerProfileService);
             if (candidate is null)
             {
                 findings.Add(new ProcessLaunchReadinessFinding(
                     ProcessLaunchReadinessSeverity.Error,
                     "process.launch.agent_missing",
-                    $"No active agent with an enabled provider is available for role '{roleKey}' on step '{planStep.StepKey}'.",
+                    FormatMissingAgentMessage(roleQuery, planStep.StepKey),
                     planStep.StepKey,
                     roleKey));
                 continue;
@@ -118,9 +121,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 candidate.Agent.Id.ToString("D"),
                 candidate.Agent.Name,
                 ComputeHash($"{planStep.StepKey}|{roleKey}|{candidate.Agent.Id:D}|{candidate.Provider.Id:D}|{candidate.Provider.IsEnabled}"),
-                string.IsNullOrWhiteSpace(profileAssignment?.BindingReason)
-                    ? $"Resolved active agent '{candidate.Agent.Name}' by role '{roleKey}'."
-                    : profileAssignment.BindingReason));
+                ResolveAssignmentReason(profileAssignment, candidate, roleQuery, requestedExecutorKind)));
         }
 
         if (findings.Count == 0)
@@ -128,7 +129,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             findings.Add(new ProcessLaunchReadinessFinding(
                 ProcessLaunchReadinessSeverity.Info,
                 "process.launch.readiness_ok",
-                "All executable steps have active agent bindings with enabled providers."));
+                "All executable steps have active agent bindings with enabled structured-output-capable providers."));
         }
 
         return new ProcessLaunchExecutorResolution(bindings, findings);
@@ -166,14 +167,66 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         return ProcessLaunchExecutorKinds.Agent;
     }
 
-    private static AgentProviderCandidate? SelectAgent(
+    private static ProcessRoleQuery ResolveRoleQuery(
         string roleKey,
-        IReadOnlyList<AgentDefinition> agents,
-        IReadOnlyDictionary<Guid, ProviderProfile> providerById)
+        ProcessTemplateDefinitionRoleUsageDocument? role)
     {
-        var roleTag = ProcessMockAgentCatalog.CreateRoleTag(roleKey);
-        var roleTokens = ExtractTokens(roleKey)
+        var matchKeys = new[]
+            {
+                roleKey,
+                role?.RoleResourceKey
+            }
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new ProcessRoleQuery(roleKey, matchKeys.Length == 0 ? [roleKey] : matchKeys);
+    }
+
+    private static string FormatMissingAgentMessage(
+        ProcessRoleQuery roleQuery,
+        string stepKey)
+    {
+        var aliases = roleQuery.MatchKeys
+            .Where(key => !string.Equals(key, roleQuery.BindingRoleKey, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var aliasSummary = aliases.Length == 0
+            ? string.Empty
+            : $" Shared role aliases checked: {string.Join(", ", aliases)}.";
+
+        return $"No active agent with an enabled structured-output-capable provider is available for role '{roleQuery.BindingRoleKey}' on step '{stepKey}'.{aliasSummary}";
+    }
+
+    private static string ResolveAssignmentReason(
+        ProcessTemplateLiveRunAssignmentDocument? profileAssignment,
+        AgentProviderCandidate candidate,
+        ProcessRoleQuery roleQuery,
+        string requestedExecutorKind)
+    {
+        if (!string.IsNullOrWhiteSpace(profileAssignment?.BindingReason))
+        {
+            return profileAssignment.BindingReason.Trim();
+        }
+
+        if (string.Equals(requestedExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Resolved active agent '{candidate.Agent.Name}' by role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}.";
+        }
+
+        return $"Resolved active agent '{candidate.Agent.Name}' by hybrid executor intent '{requestedExecutorKind}' for role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}.";
+    }
+
+    private static AgentProviderCandidate? SelectAgent(
+        ProcessRoleQuery roleQuery,
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService)
+    {
+        var roleTokens = roleQuery.MatchKeys
+            .SelectMany(ExtractTokens)
             .Where(token => !IgnoredRoleTokens.Contains(token))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var matches = new List<AgentRoleMatch>();
 
@@ -183,19 +236,21 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         {
             if (agent.ProviderProfileId is not { } providerId ||
                 !providerById.TryGetValue(providerId, out var provider) ||
-                !provider.IsEnabled)
+                !provider.IsEnabled ||
+                !providerProfileService.ResolveFeatureMatrix(provider).SupportsStructuredOutput)
             {
                 continue;
             }
 
-            var exactScore = CalculateExactRoleScore(agent, roleKey, roleTag);
+            var exactMatch = CalculateBestExactRoleMatch(agent, roleQuery.MatchKeys);
+            var exactScore = exactMatch.Score;
             if (exactScore > 0)
             {
                 matches.Add(new AgentRoleMatch(
                     agent,
                     provider,
                     1_000 + exactScore,
-                    "exact process role metadata"));
+                    $"exact process role metadata for '{exactMatch.MatchKey}'"));
                 continue;
             }
 
@@ -222,6 +277,26 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 bestMatch.Provider,
                 bestMatch.Score,
                 bestMatch.Summary);
+    }
+
+    private static ExactRoleMatch CalculateBestExactRoleMatch(
+        AgentDefinition agent,
+        IReadOnlyList<string> matchKeys)
+    {
+        var bestMatch = ExactRoleMatch.NoMatch;
+        foreach (var matchKey in matchKeys)
+        {
+            var exactScore = CalculateExactRoleScore(
+                agent,
+                matchKey,
+                ProcessMockAgentCatalog.CreateRoleTag(matchKey));
+            if (exactScore > bestMatch.Score)
+            {
+                bestMatch = new ExactRoleMatch(matchKey, exactScore);
+            }
+        }
+
+        return bestMatch;
     }
 
     private static int CalculateExactRoleScore(
@@ -450,6 +525,8 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             "qa" or "quality" or "test" or "tester" or "validation" or "validate" => QualityRoleAliases,
             "delivery" or "release" => DeliveryTokenAliases,
             "manager" => ManagerTokenAliases,
+            "product" => ProductRoleAliases,
+            "owner" => OwnerRoleAliases,
             "lead" => LeadRoleAliases,
             "blazor" => BlazorRoleAliases,
             "dotnet" or "net" => DotNetRoleAliases,
@@ -655,6 +732,26 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         "owner"
     ];
 
+    private static readonly string[] ProductRoleAliases =
+    [
+        "business",
+        "planning",
+        "product",
+        "requirements",
+        "scope",
+        "strategy"
+    ];
+
+    private static readonly string[] OwnerRoleAliases =
+    [
+        "business",
+        "delivery",
+        "manager",
+        "owner",
+        "planning",
+        "strategy"
+    ];
+
     private static readonly string[] LeadRoleAliases =
     [
         "lead",
@@ -692,6 +789,17 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         ProviderProfile Provider,
         int Score,
         string Summary);
+
+    private sealed record ProcessRoleQuery(
+        string BindingRoleKey,
+        IReadOnlyList<string> MatchKeys);
+
+    private sealed record ExactRoleMatch(
+        string MatchKey,
+        int Score)
+    {
+        public static ExactRoleMatch NoMatch { get; } = new(string.Empty, 0);
+    }
 
     private sealed record AgentSemanticRoleMatch(
         int Score,

@@ -143,6 +143,59 @@ public sealed partial class ProcessRuntimeEngine
         return Applied(next, context, ProcessRuntimeEventTypes.DispatchLeaseRenewed, command.ClaimToken.ToString());
     }
 
+    private static ProcessRuntimeMutation ReleaseClaim(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context,
+        ReleaseDispatchClaimCommand command)
+    {
+        ValidateArguments(state, context);
+
+        if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot release dispatch claims.");
+        }
+
+        var step = FindStep(state, command.StepInstanceId);
+        var claim = FindClaim(state, command.ClaimToken);
+        if (step is null ||
+            claim is null ||
+            claim.StepInstanceId != command.StepInstanceId ||
+            step.ActiveClaimToken != command.ClaimToken)
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.ClaimMissing", "Claim release requires the current active claim.");
+        }
+
+        if (claim.OwnerId != command.OwnerId)
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.ClaimOwnerMismatch", "Claim release requires the current owner and token.");
+        }
+
+        if (claim.Status is not (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed))
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.ClaimClosed", "Closed claims cannot be released.");
+        }
+
+        if (step.Status is not (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running))
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.StepNotClaimed", "Only claimed or running steps can release a dispatch claim.");
+        }
+
+        var next = state with
+        {
+            Steps = ReplaceStep(
+                state,
+                step with
+                {
+                    Status = ProcessRuntimeStepStatus.Ready,
+                    ActiveClaimToken = null
+                }),
+            Claims = ReplaceClaim(state, claim with { Status = DispatchClaimStatus.Released }),
+            UpdatedAtUtc = context.OccurredAtUtc
+        };
+
+        return Applied(next, context, ProcessRuntimeEventTypes.DispatchClaimReleased, command.ClaimToken.ToString());
+    }
+
     private static ProcessRuntimeMutation ExpireClaims(
         ProcessRuntimeStateSnapshot state,
         RuntimeCommandContext context,

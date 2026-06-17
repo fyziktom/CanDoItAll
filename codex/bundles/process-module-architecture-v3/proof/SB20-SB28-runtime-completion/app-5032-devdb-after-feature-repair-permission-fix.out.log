@@ -1,0 +1,127 @@
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: DBConnectionManager[0]
+      Registering datasource 'default' with db provider: 'Quartz.Impl.AdoJobStore.Common.DbProvider'
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using object serializer: Quartz.Simpl.JsonObjectSerializer, Quartz.Serialization.Json
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Using thread monitor-based data access locking (synchronization).
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Successfully validated presence of 10 schema objects
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      JobStoreTX initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll Automation' with instanceId 'CanDoItAll.Automation' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Impl.AdoJobStore.JobStoreTX', supports persistence: True, clustered: False
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run 52b3bae6-cd14-421f-9196-49dcaba0508f for agent 549a3e86-5ffc-0d58-bf8c-10952fcdaac4.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryWorker[0]
+      Recovered 1 interrupted AgentFramework execution run(s) during startup.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 919 ms.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Freed 0 triggers from 'acquired' / 'blocked' state.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovering 0 jobs that were in-progress at the time of the last shut-down.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovery complete.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 'complete' triggers.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 stale fired job entries.
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll Automation_$_CanDoItAll.Automation started.
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://localhost:5032/api/processes/runs/a24a25d1-132d-440d-991d-eaf2c1dc5236/dispatch - application/json 63
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/processes/runs/{runId:guid}/dispatch'
+warn: Microsoft.EntityFrameworkCore.Query[20504]
+      Compiling a query which loads related collections for more than one collection navigation, either via 'Include' or through projection, but no 'QuerySplittingBehavior' has been configured. By default, Entity Framework will use 'QuerySplittingBehavior.SingleQuery', which can potentially result in slow query performance. See https://go.microsoft.com/fwlink/?linkid=2134277 for more information. To identify the query that's triggering this warning call 'ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning))'.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=d0bc32f3-a245-44d2-9297-c2fa92dac23d SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=ee331680-7cd3-4ccd-9a19-8434a8618c8f RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=d0bc32f3-a245-44d2-9297-c2fa92dac23d SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=ee331680-7cd3-4ccd-9a19-8434a8618c8f RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=3324868f-66e2-478a-bb8f-14f32a5db1e9,request={"nodeIds":["custom:cfd406780f034384a70ea6b87507422a"],"includeNotes":true,"includeMetadata":true,"includeLinks":true,"includeLayout":false,"includeAssets":fals...#f339200fde5f
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_execution_boundary on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=d0bc32f3-a245-44d2-9297-c2fa92dac23d SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=ee331680-7cd3-4ccd-9a19-8434a8618c8f RuntimeToolProviderKey= Signature=workspace_execution_boundary
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_create_directory on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=d0bc32f3-a245-44d2-9297-c2fa92dac23d SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=ee331680-7cd3-4ccd-9a19-8434a8618c8f RuntimeToolProviderKey= Signature=workspace_create_directory|path=artifacts/process-runs/a24a25d1-132d-440d-991d-eaf2c1dc5236/feature-intake
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=d0bc32f3-a245-44d2-9297-c2fa92dac23d SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=ee331680-7cd3-4ccd-9a19-8434a8618c8f RuntimeToolProviderKey= Signature=workspace_write_file|content=# Feature Intake - Clarify .NET scope and app type boundary  ## Requested outcome Clarify the .NET delivery scope for the Main App in TetrisGame and establish t...#8bec59907d0d,path=artifacts/process-runs/a24a25d1-132d-440d-991d-eaf2c1dc5236/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=d0bc32f3-a245-44d2-9297-c2fa92dac23d SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=ee331680-7cd3-4ccd-9a19-8434a8618c8f RuntimeToolProviderKey= Signature=workspace_write_file|content=# Scope Boundary Packet - Clarify .NET scope and app type boundary  ## Decision summary The current scope is a frontend-only Blazor WebAssembly PWA for the Tetr...#07a936c69cdb,path=artifacts/process-runs/a24a25d1-132d-440d-991d-eaf2c1dc5236/acfdcb63-5b16-ff2f-185f-2b621f77eb3a/scope-boundary-packet.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool submit_process_step_outcome on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=d0bc32f3-a245-44d2-9297-c2fa92dac23d SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=ee331680-7cd3-4ccd-9a19-8434a8618c8f RuntimeToolProviderKey= Signature=submit_process_step_outcome|result={"status":"Completed","reason":"Captured the .NET scope boundary for TetrisGame Main App and wrote the decision-ready scope packet plus step summary to managed ...#976b32f43f13
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=b0236021-58a5-485b-9292-9d9f6b91b408 SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=9d42dbd2-df48-46bb-b0de-915bc516cfdf RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/a24a25d1-132d-440d-991d-eaf2c1dc5236/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=b0236021-58a5-485b-9292-9d9f6b91b408 SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=9d42dbd2-df48-46bb-b0de-915bc516cfdf RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=200,relativePath=artifacts/process-runs/a24a25d1-132d-440d-991d-eaf2c1dc5236,searchPattern=*
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=b0236021-58a5-485b-9292-9d9f6b91b408 SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=9d42dbd2-df48-46bb-b0de-915bc516cfdf RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=3324868f-66e2-478a-bb8f-14f32a5db1e9,request={"nodeIds":["custom:cfd406780f034384a70ea6b87507422a"],"includeMetadata":true,"includeNotes":true,"includeLinks":true,"includeLayout":true,"take":20}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_process_subprocess_launch on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=b0236021-58a5-485b-9292-9d9f6b91b408 SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=9d42dbd2-df48-46bb-b0de-915bc516cfdf RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_process_subprocess_launch|estimatedMinutes=15,request={"definitionKey":"dotnet-architecture-design-review","liveRunProfileKey":"codex/process-module-architecture-v3-implementation","parentProjectNodeId":"custom:cfd...#fcd3b5435423
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      project_structure_process_subprocess_launch invocation failed.
+      System.InvalidOperationException: Live-run profile 'codex/process-module-architecture-v3-implementation' is not available.
+         at CanDoItAll.Processes.Application.ProcessLaunchApplicationService.ResolveLiveRunProfile(ProcessLaunchRequest request, IReadOnlyList`1 liveProfiles, String definitionKey) in C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Application\ProcessLaunchApplicationService.cs:line 387
+         at CanDoItAll.Processes.Application.ProcessLaunchApplicationService.ResolveDefinition(ProcessLaunchRequest request) in C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Application\ProcessLaunchApplicationService.cs:line 360
+         at CanDoItAll.Processes.Application.ProcessLaunchApplicationService.FindExistingLaunchAsync(ProcessExistingLaunchLookupRequest request, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Application\ProcessLaunchApplicationService.cs:line 192
+         at CanDoItAll.Modules.Workbench.ProjectStructureProcessNodeService.StartSubprocessAsync(Guid projectId, String parentProcessRunId, String parentProcessStepId, ProjectStructureProcessSubprocessLaunchInput request, ProjectStructureAgentContext agent, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureProcessNodeService.cs:line 258
+         at CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureToolBuilder.<>c__DisplayClass44_0.<<ProjectStructureProcessSubprocessLaunchAsync>b__0>d.MoveNext() in C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\AgentTools\ProjectStructureAgentRuntimeToolProvider.cs:line 1175
+      --- End of stack trace from previous location ---
+         at CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureToolBuilder.ExecuteAsync[T](AgentDefinition agent, String operationName, Nullable`1 projectId, String nodeId, Nullable`1 scopeKind, String scopeKey, Object requestSummary, Func`2 action, CancellationToken cancellationToken, Func`2 projectIdSelector) in C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\AgentTools\ProjectStructureAgentRuntimeToolProvider.cs:line 1763
+         at CanDoItAll.Modules.Workbench.ProjectStructureAgentRuntimeToolProvider.ProjectStructureToolBuilder.ExecuteAsync[T](AgentDefinition agent, String operationName, Nullable`1 projectId, String nodeId, Nullable`1 scopeKind, String scopeKey, Object requestSummary, Func`2 action, CancellationToken cancellationToken, Func`2 projectIdSelector) in C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\AgentTools\ProjectStructureAgentRuntimeToolProvider.cs:line 1823
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass41_1.<<GetReturnParameterMarshaller>b__12>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass83_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:line 551
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=b0236021-58a5-485b-9292-9d9f6b91b408 SourceKind=process-step ProcessRunId=a24a25d1-132d-440d-991d-eaf2c1dc5236 ProcessStepId=9d42dbd2-df48-46bb-b0de-915bc516cfdf RuntimeToolProviderKey= Signature=workspace_write_file|content=# Architecture Review Step - Blocked  ## Context - Process: Multi-team software delivery and release governance - Step key: architecture-review - Step title: Ru...#ca5f34ce73dc,overwrite=True,path=artifacts/process-runs/a24a25d1-132d-440d-991d-eaf2c1dc5236/steps/architecture-review.md
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'ProcessDispatchApiResponse' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/processes/runs/{runId:guid}/dispatch'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://localhost:5032/api/processes/runs/a24a25d1-132d-440d-991d-eaf2c1dc5236/dispatch - 200 - application/json;+charset=utf-8 62572.9531ms

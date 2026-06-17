@@ -156,11 +156,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
-                    "Creates a new project-structure node through the internal workspace service. For work task nodes, use objectType WorkItem and objectSubtype task. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
+                    "Creates a new project-structure node through the internal workspace service. For work task nodes, use objectType WorkItem and objectSubtype task. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Delivery target blocks should set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
+                    "Updates an existing project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeTypeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeTypeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_type_update",
@@ -229,6 +229,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     (Guid projectId, string nodeId, ProjectStructureProcessNodeStartInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeProcessStartAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_process_start",
                     "Starts or prepares the process linked to a project-structure node. This can create launch plans and optionally execute a process run when requested."),
+                AIFunctionFactory.Create(
+                    (ProjectStructureProcessSubprocessLaunchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProcessSubprocessLaunchAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
+                    "project_structure_process_subprocess_launch",
+                    "Starts the child process mapped by the current governed process step. This tool is available only inside governed process automation with ExecuteExternalAction and inherits the parent process project scope. Leave liveRunProfileKey null unless the parent process explicitly provides a valid CanDoItAll process live-run profile key; never copy branch names, session ids, process definition keys, or template names into liveRunProfileKey."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureWorkflowAddOptionsInput request, CancellationToken cancellationToken = default) => ProjectStructureNodeWorkflowAddOptionsAsync(agent, accessState, projectId, nodeId, request, cancellationToken),
                     "project_structure_node_workflow_add_options",
@@ -1149,6 +1153,36 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 cancellationToken);
         }
 
+        private Task<ProjectStructureProcessSubprocessLaunchResult> ProjectStructureProcessSubprocessLaunchAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            ProjectStructureProcessSubprocessLaunchInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            var scopedProcessAccess = accessState.ScopedProcessAccess;
+            return ExecuteAsync(
+                agent,
+                "structure.process-subprocess-launch",
+                scopedProcessAccess?.ProjectId,
+                request.ParentProjectNodeId,
+                scopedProcessAccess is null ? null : ProjectStructureLeaseScopeKind.Project,
+                scopedProcessAccess?.ProjectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    scopedProcessAccess = EnsureScopedProcessExternalActionAllowed(accessState);
+                    return await agentService.StartProcessSubprocessAsync(
+                        scopedProcessAccess.ProjectId,
+                        scopedProcessAccess.ProcessRunId,
+                        scopedProcessAccess.ProcessStepId,
+                        request,
+                        BuildAgentContext(agent, accessState, scopedProcessAccess.ProjectId),
+                        cancellationToken);
+                },
+                cancellationToken);
+        }
+
         private Task<ProjectStructureWorkflowAddOptionsResult> ProjectStructureNodeWorkflowAddOptionsAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
@@ -2056,6 +2090,19 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             EnsureProjectAllowed(accessState, projectId);
         }
 
+        private static ProjectStructureScopedProcessAccess EnsureScopedProcessExternalActionAllowed(ProjectStructureAccessState accessState)
+        {
+            if (accessState.ScopedProcessAccess is { CanWrite: true } scopedProcessAccess)
+            {
+                return scopedProcessAccess;
+            }
+
+            throw new ProjectStructureAgentException(
+                403,
+                "ProcessSubprocessLaunchDenied",
+                $"Launching a child process from project structure requires governed process automation with {ProcessOperationContractNames.ExecuteExternalAction}.");
+        }
+
         private static void EnsureProjectAllowed(ProjectStructureAccessState accessState, Guid projectId)
         {
             if (accessState.AllowAllProjects ||
@@ -2091,6 +2138,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 ? null
                 : new ProjectStructureScopedProcessAccess(
                     projectId,
+                    auditScope.ProcessRunId.Trim(),
+                    auditScope.ProcessStepId.Trim(),
                     canRead,
                     canWrite,
                     MapScopedProcessAgentContext(auditScope.ProjectStructureLaunchAgent));
@@ -2145,6 +2194,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
                 ProjectStructureImportResult importResult => importResult.Warnings,
                 ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
+                ProjectStructureProcessSubprocessLaunchResult subprocessLaunchResult => subprocessLaunchResult.Warnings,
                 ProjectStructureWorkflowNodeCreateResult workflowNodeCreateResult => workflowNodeCreateResult.Warnings,
                 ProjectStructureWorkflowAddOptionsResult workflowAddOptionsResult => workflowAddOptionsResult.Warnings,
                 ProjectStructureWorkflowNodeStartResult workflowNodeStartResult => workflowNodeStartResult.Warnings,
@@ -2212,6 +2262,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
     private sealed record ProjectStructureScopedProcessAccess(
         Guid ProjectId,
+        string ProcessRunId,
+        string ProcessStepId,
         bool CanRead,
         bool CanWrite,
         ProjectStructureAgentContext? AgentContext);

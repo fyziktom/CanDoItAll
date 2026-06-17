@@ -1,0 +1,350 @@
+{
+  "projectId": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+  "nodeId": "custom:cfd406780f034384a70ea6b87507422a",
+  "processDefinitionId": "3458e5d8-36b4-1861-83b1-522604c8e302",
+  "launchPlanId": "b676114f-2fb9-4e17-bd2a-f42252ef43d7",
+  "runId": "e217637c-fa10-4e65-94c5-eb1ec98bdffe",
+  "stage": "Running",
+  "route": "/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/processes/live?runId=e217637c-fa10-4e65-94c5-eb1ec98bdffe",
+  "launchPlan": {
+    "planId": {
+      "value": "b676114f-2fb9-4e17-bd2a-f42252ef43d7"
+    },
+    "definitionId": {
+      "value": "3458e5d8-36b4-1861-83b1-522604c8e302"
+    },
+    "definitionVersionId": {
+      "value": "de5309ba-a4a6-1d1d-5d56-68f203b47d1b"
+    },
+    "definitionKey": "software-delivery",
+    "definitionName": "Multi-team software delivery and release governance",
+    "definitionSummary": ".NET-focused multi-team delivery template for planned software change with explicit app-type classification, architecture design and review, subprocess-backed implementation, QA, runtime command writeback, UI screenshot writeback, security, release, deployment, and retrospective governance.",
+    "liveRunProfileKey": null,
+    "planHash": "sha256:a5d636c74ae7cb40d1177118a71995f8d1ae36ec66686e94618d141d75a0481e",
+    "steps": [
+      {
+        "stepInstanceId": {
+          "value": "1bbc62fb-ba46-49cb-9231-94b192204767"
+        },
+        "stepKey": "feature-intake",
+        "title": "Clarify .NET scope and app type boundary",
+        "roleKey": "product-owner",
+        "executorKind": "agent",
+        "executorId": "9fc87ec2-e918-d756-b6c9-b42b8eecbe6e",
+        "executorDisplayName": "Business Strategist",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "ecda2bf5-25a6-4738-abc8-ca463db88cf7"
+        },
+        "stepKey": "architecture-review",
+        "title": "Run .NET architecture design and review subprocess",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "f136763c-15d7-46db-a857-067eec9a72bb"
+        },
+        "stepKey": "implementation",
+        "title": "Run .NET implementation slice subprocess",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "681b7783-2376-4eae-9172-3f15781860da"
+        },
+        "stepKey": "peer-review",
+        "title": "Complete peer review and integration readiness",
+        "roleKey": "lead-engineer",
+        "executorKind": "agent",
+        "executorId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+        "executorDisplayName": ".NET Application Developer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "4b604f65-54c9-4e13-a2c9-b3228ab4be44"
+        },
+        "stepKey": "qa-validation",
+        "title": "Run QA validation and runtime or browser proof",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "ec8f9b27-1b7a-443f-9ac1-febc6d8bc1fb"
+        },
+        "stepKey": "quality-repair",
+        "title": "Repair validation findings",
+        "roleKey": "lead-engineer",
+        "executorKind": "agent",
+        "executorId": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+        "executorDisplayName": ".NET Application Developer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "3c696905-f069-4e14-b417-b1e341743f83"
+        },
+        "stepKey": "qa-recheck",
+        "title": "Re-run QA validation and runtime or browser proof after repair",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "repair-required"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "1373c9bb-45f7-4e37-a4bf-5e11f55c0451"
+        },
+        "stepKey": "security-review",
+        "title": "Perform security and data-handling review",
+        "roleKey": "security-reviewer",
+        "executorKind": "agent",
+        "executorId": "5ab2958c-08de-b251-8ead-caa321248b91",
+        "executorDisplayName": "Security Reviewer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "55a8b141-0539-4747-9bdc-607b844bd18e"
+        },
+        "stepKey": "record-runtime-commands",
+        "title": "Record .NET run commands under process run node",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "980682b1-6fec-4182-b93c-67a6ec494c33"
+        },
+        "stepKey": "capture-ui-screenshots",
+        "title": "Capture and store .NET UI screenshots",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "afae9a4d-9dca-4c96-83a3-770820b785bf"
+        },
+        "stepKey": "release-approval",
+        "title": "Approve first-pass release readiness",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-validation",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "fec47e7e-8007-43eb-9fa3-41979f1f14ec"
+        },
+        "stepKey": "execute-release-rollout",
+        "title": "Execute first-pass controlled release rollout",
+        "roleKey": "release-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "067591b3-a14b-43b1-89f4-efe6777d652c"
+        },
+        "stepKey": "post-release-learning",
+        "title": "Capture first-pass post-release learning",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "a01a2d45-92ce-4f6d-87e6-5980691291e1"
+        },
+        "stepKey": "security-review-after-repair",
+        "title": "Perform security review after repair",
+        "roleKey": "security-reviewer",
+        "executorKind": "agent",
+        "executorId": "5ab2958c-08de-b251-8ead-caa321248b91",
+        "executorDisplayName": "Security Reviewer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "dd99a5d2-a919-4b9a-a527-415ac021d928"
+        },
+        "stepKey": "record-runtime-commands-after-repair",
+        "title": "Record repaired .NET run commands under process run node",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "ae853d58-2f9b-4468-99ef-7a7008ac4b35"
+        },
+        "stepKey": "capture-ui-screenshots-after-repair",
+        "title": "Capture and store repaired .NET UI screenshots",
+        "roleKey": "qa-lead",
+        "executorKind": "agent",
+        "executorId": "549a3e86-5ffc-0d58-bf8c-10952fcdaac4",
+        "executorDisplayName": "Delivery QA Observer",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "6d46f6fd-04ba-4096-9b43-b1b2b98926be"
+        },
+        "stepKey": "repair-escalation",
+        "title": "Escalate unresolved repair findings",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "repair-escalation"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "83a47ab9-9232-48b2-9e8a-99c7074871b0"
+        },
+        "stepKey": "release-approval-after-repair",
+        "title": "Approve repaired release readiness",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": {
+          "sourceStepKey": "qa-recheck",
+          "requiredOutcomeKey": "quality-accepted"
+        }
+      },
+      {
+        "stepInstanceId": {
+          "value": "44ba89d9-a879-41aa-b818-5ceb7a8c12e9"
+        },
+        "stepKey": "execute-release-rollout-after-repair",
+        "title": "Execute repaired controlled release rollout",
+        "roleKey": "release-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": {
+          "value": "8f702a74-dab3-4547-82a8-86b579e410f7"
+        },
+        "stepKey": "post-release-learning-after-repair",
+        "title": "Capture repaired-release learning",
+        "roleKey": "delivery-manager",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      }
+    ],
+    "readinessFindings": [
+      {
+        "severity": 0,
+        "code": "process.launch.readiness_ok",
+        "message": "All executable steps have active agent bindings with enabled structured-output-capable providers.",
+        "stepKey": null,
+        "roleKey": null
+      }
+    ]
+  },
+  "warnings": []
+}

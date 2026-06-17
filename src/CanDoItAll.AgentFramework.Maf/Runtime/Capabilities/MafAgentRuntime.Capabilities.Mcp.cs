@@ -698,72 +698,13 @@ public sealed partial class MafAgentRuntime
                 AIFunctionArguments arguments,
                 CancellationToken cancellationToken)
             {
+                var fileName = TryGetStringArgument(arguments, "filename");
+                BrowserMcpArtifactPathService.EnsureWritableArtifactDirectories(workspaceRoot, workspaceScope, fileName);
+
                 var result = await base.InvokeCoreAsync(arguments, cancellationToken).ConfigureAwait(false);
-                if (string.Equals(Name, "browser_take_screenshot", StringComparison.OrdinalIgnoreCase))
-                {
-                    MirrorScreenshotToScopedArtifactPath(workspaceRoot, workspaceScope, TryGetStringArgument(arguments, "filename"));
-                }
+                BrowserMcpArtifactPathService.TryMirrorToScopedArtifactPath(workspaceRoot, workspaceScope, fileName, out _);
 
                 return CompactBrowserMcpToolResultForModelContext(Name, arguments, result);
-            }
-
-            private static void MirrorScreenshotToScopedArtifactPath(
-                string workspaceRoot,
-                WorkspaceScopeDescriptor workspaceScope,
-                string? fileName)
-            {
-                if (workspaceScope.IsDefaultSandbox ||
-                    string.IsNullOrWhiteSpace(fileName))
-                {
-                    return;
-                }
-
-                var normalizedFileName = WorkspaceScopeDescriptor.NormalizeRelativePath(fileName);
-                if (string.IsNullOrWhiteSpace(normalizedFileName) ||
-                    Path.IsPathRooted(normalizedFileName) ||
-                    !MatchesRoot(normalizedFileName, "artifacts") ||
-                    MatchesRoot(normalizedFileName, workspaceScope.ArtifactRootRelativePath) ||
-                    normalizedFileName.StartsWith("artifacts/scopes/", StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
-                var unscopedFullPath = Path.GetFullPath(Path.Combine(
-                    workspaceRoot,
-                    normalizedFileName.Replace('/', Path.DirectorySeparatorChar)));
-                if (!File.Exists(unscopedFullPath))
-                {
-                    return;
-                }
-
-                var suffix = RemoveRoot(normalizedFileName, "artifacts");
-                var scopedRelativePath = string.IsNullOrWhiteSpace(suffix)
-                    ? workspaceScope.ArtifactRootRelativePath
-                    : WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(workspaceScope.ArtifactRootRelativePath, suffix));
-                var scopedFullPath = Path.GetFullPath(Path.Combine(
-                    workspaceRoot,
-                    scopedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-                var scopedDirectory = Path.GetDirectoryName(scopedFullPath);
-                if (string.IsNullOrWhiteSpace(scopedDirectory))
-                {
-                    return;
-                }
-
-                Directory.CreateDirectory(scopedDirectory);
-                File.Copy(unscopedFullPath, scopedFullPath, overwrite: true);
-            }
-
-            private static bool MatchesRoot(string relativePath, string rootRelativePath)
-            {
-                return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase) ||
-                       relativePath.StartsWith(rootRelativePath + "/", StringComparison.OrdinalIgnoreCase);
-            }
-
-            private static string RemoveRoot(string relativePath, string rootRelativePath)
-            {
-                return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase)
-                    ? string.Empty
-                    : relativePath[(rootRelativePath.Length + 1)..];
             }
         }
 

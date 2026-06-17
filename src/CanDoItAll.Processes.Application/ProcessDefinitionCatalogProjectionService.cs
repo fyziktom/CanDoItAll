@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.Processes.Abstractions;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -25,6 +26,9 @@ public sealed class ProcessDefinitionCatalogProjectionService
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
+
+    public static ProcessDefinitionId CreateDefinitionId(ProcessDefinitionCatalogItemKey key)
+        => ProcessTemplateKernelBuilder.CreateDefinitionId(key.Value);
 
     public Task<ProcessDefinitionCatalogProjection> GetCatalogAsync(
         ProcessWorkspaceShellScope scope,

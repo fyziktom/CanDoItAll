@@ -15,7 +15,25 @@ public sealed record ProcessLaunchRequest(
     string RequestedBy,
     IReadOnlyDictionary<string, string> Variables,
     bool RunReadiness,
-    bool Execute);
+    bool Execute)
+{
+    public IReadOnlyList<ProcessLaunchExecutorOverride> ExecutorOverrides { get; init; } = [];
+    public ProcessRunId? RootRunIdOverride { get; init; }
+}
+
+public sealed record ProcessExistingLaunchLookupRequest(
+    string DefinitionKey,
+    string? LiveRunProfileKey,
+    Guid? ProjectId,
+    IReadOnlyDictionary<string, string> RequiredLaunchVariables);
+
+public sealed record ProcessLaunchExecutorOverride(
+    string StepKey,
+    string RoleKey,
+    string ExecutorKind,
+    string ExecutorId,
+    string ExecutorDisplayName,
+    string AssignmentReason);
 
 public sealed record ProcessLaunchResult(
     ProcessDefinitionId DefinitionId,
@@ -120,6 +138,21 @@ public interface IProcessRuntimeStrategyFactoryResolver
 public static class ProcessLaunchExecutorKinds
 {
     public const string Agent = "agent";
+    public const string AiAgent = "ai agent";
+    public const string Person = "person";
+    public const string PersonOrAgent = "person-or-agent";
+    public const string Workflow = "workflow";
+
+    public static bool CanResolveAsAgent(string executorKind)
+    {
+        var normalized = NormalizeExecutorKind(executorKind);
+        return normalized is "agent" or "aiagent" or "personoragent";
+    }
+
+    private static string NormalizeExecutorKind(string executorKind)
+        => string.IsNullOrWhiteSpace(executorKind)
+            ? string.Empty
+            : new string(executorKind.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
 }
 
 public static class ProcessBranchSignalCodes

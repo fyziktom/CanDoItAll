@@ -101,6 +101,18 @@ public static class ToolContractCatalog
         BrowserTakeScreenshot
     ];
 
+    public static IReadOnlyList<string> FinalizerToolNames { get; } =
+    [
+        AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+        AgentFinalizerPolicies.SubmitCodeReviewResultToolName,
+        AgentFinalizerPolicies.SubmitArchitectureReviewResultToolName,
+        AgentFinalizerPolicies.SubmitImplementationPlanToolName,
+        AgentFinalizerPolicies.SubmitTestPlanToolName,
+        AgentFinalizerPolicies.SubmitToolExecutionDecisionToolName,
+        AgentFinalizerPolicies.SubmitProcessStatePatchToolName,
+        AgentFinalizerPolicies.SubmitHumanEscalationRequestToolName
+    ];
+
     public static IReadOnlyList<string> RepresentativeBrowserInteractionToolNames { get; } =
     [
         BrowserClick,
@@ -123,6 +135,7 @@ public static class ToolContractCatalog
     [
         .. WorkspaceToolNames,
         .. BrowserToolNames,
+        .. FinalizerToolNames,
         AgentToolInvocationPolicyMetadata.LoadSkill,
         AgentToolInvocationPolicyMetadata.ReadSkillResource,
         AgentToolInvocationPolicyMetadata.RunSkillScript,

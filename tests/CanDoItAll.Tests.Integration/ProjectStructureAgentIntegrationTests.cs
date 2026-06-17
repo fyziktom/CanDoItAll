@@ -3,9 +3,15 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
@@ -179,6 +185,726 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(results[0].Id, results[1].Id);
         Assert.Single(matchingNodes);
         Assert.Equal("Confirm renewal scope", matchingNodes[0].Title);
+    }
+
+    [Fact]
+    public async Task StartProcessNodeAsync_resolves_linked_definition_targets_source_node_and_records_launch_context()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+        var workspaceFiles = scope.ServiceProvider.GetRequiredService<IWorkspaceFileService>();
+
+        var projectId = await CreateProjectAsync(projects, "Process launch target context");
+        const string outputRoot = @"C:\temp\CanDoItAll\TetrisGame";
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Build TetrisGame",
+                "Blazor delivery target",
+                "Implement the TetrisGame app in the outputRoot path.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: $$"""{ "outputRoot": "{{outputRoot.Replace(@"\", @"\\", StringComparison.Ordinal)}}" }"""));
+        var definitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+
+        var link = await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(definitionId),
+            DefaultAgent);
+        Assert.True(link.Changed);
+
+        var result = await agentService.StartProcessNodeAsync(
+            projectId,
+            ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId),
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        Assert.Equal(projectId, result.ProjectId);
+        Assert.Equal(definitionId, result.ProcessDefinitionId);
+        Assert.NotEqual(Guid.Empty, result.LaunchPlanId);
+        Assert.NotNull(result.RunId);
+        Assert.Equal("Running", result.Stage);
+        Assert.StartsWith($"/projects/{projectId:D}/processes/live?runId=", result.Route, StringComparison.Ordinal);
+        Assert.IsType<ProcessLaunchPlanView>(result.LaunchPlan);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var definitionNodeId = ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId);
+        var runNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId!.Value);
+        var definitionNode = Assert.Single(surface.Nodes, item => string.Equals(item.Id, definitionNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ProcessDefinition, definitionNode.ObjectType);
+        Assert.Equal(deliveryNode.Id, definitionNode.ParentId);
+        var runNode = Assert.Single(surface.Nodes, item => string.Equals(item.Id, runNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ProcessRun, runNode.ObjectType);
+        Assert.Equal(deliveryNode.Id, runNode.ParentId);
+        Assert.Equal(result.RunId.Value, runNode.ArtifactId);
+        Assert.Contains(surface.Links, item =>
+            item.IsUserAuthored &&
+            string.Equals(item.SourceId, deliveryNode.Id, StringComparison.Ordinal) &&
+            string.Equals(item.TargetId, runNodeId, StringComparison.Ordinal) &&
+            item.Kind == ProjectObjectLinkKind.Uses);
+        var commandGroup = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Run commands",
+                "Runtime operations",
+                "Runtime command group written by the process.",
+                runNodeId,
+                2040,
+                260,
+                null,
+                null,
+                "operations"));
+        Assert.Equal(runNodeId, commandGroup.ParentId);
+
+        var assignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(result.RunId.Value));
+        var assignment = Assert.Single(assignments, item => item.StepKey == "feature-intake");
+        Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
+        Assert.Equal(deliveryNode.Title, assignment.LaunchVariables["ProjectNodeTitle"]);
+        Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
+        Assert.Equal(outputRoot, assignment.LaunchVariables["ProductRoot"]);
+        Assert.Equal(outputRoot, assignment.LaunchVariables["ExternalTargetRoot"]);
+        Assert.Equal("ExternalActionControlled", assignments.Single(item => item.StepKey == "record-runtime-commands").OperationTargetScope);
+        Assert.Contains("ExecuteExternalAction", assignments.Single(item => item.StepKey == "record-runtime-commands").AllowedOperations);
+        Assert.Contains("ExecuteExternalAction", assignments.Single(item => item.StepKey == "capture-ui-screenshots").AllowedOperations);
+
+        var artifactRoot = workspaceFiles.StatPath($"artifacts/process-runs/{result.RunId.Value:D}");
+        Assert.True(artifactRoot.Succeeded, artifactRoot.Message);
+        Assert.Equal("directory", artifactRoot.PathKind);
+    }
+
+    [Fact]
+    public async Task StartProcessNodeAsync_reports_missing_project_as_project_structure_error()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = Guid.NewGuid();
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.StartProcessNodeAsync(
+                projectId,
+                "custom:missing",
+                new ProjectStructureProcessNodeStartInput(
+                    ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
+                        new ProcessDefinitionCatalogItemKey("software-delivery")).Value,
+                    RunHrMatch: true,
+                    Execute: false,
+                    IncludeLaunchPlan: true,
+                    RequestedBy: "integration-test"),
+                DefaultAgent));
+
+        Assert.Equal(404, exception.StatusCode);
+        Assert.Equal("ProjectNotFound", exception.ErrorCode);
+        Assert.Contains(projectId.ToString("D"), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartProcessNodeAsync_accepts_source_node_with_single_process_definition_link()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+
+        var projectId = await CreateProjectAsync(projects, "Process launch source node");
+        const string outputRoot = @"C:\temp\CanDoItAll\TetrisGame";
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Build TetrisGame",
+                "Blazor delivery target",
+                "Implement the TetrisGame app in the configured output root.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: "{}"));
+        var architectureNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Main Architecture",
+                string.Empty,
+                string.Empty,
+                $"project:{projectId:D}",
+                520,
+                220,
+                null,
+                null,
+                "architecture"));
+        await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Blazor WASM PWA app shape",
+                "Frontend-only web app",
+                "Blazor WebAssembly PWA with no backend. Single client app, static-host friendly, offline-friendly shell, and local-first scope.",
+                architectureNode.Id,
+                700,
+                180,
+                null,
+                null,
+                "architecture"));
+        await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Output folder",
+                string.Empty,
+                $"Final app must be placed in {outputRoot}",
+                architectureNode.Id,
+                700,
+                260,
+                null,
+                null,
+                "delivery"));
+        var definitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+
+        await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(definitionId),
+            DefaultAgent);
+
+        var result = await agentService.StartProcessNodeAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        Assert.Equal(definitionId, result.ProcessDefinitionId);
+        Assert.NotNull(result.RunId);
+
+        var assignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(result.RunId!.Value));
+        var assignment = Assert.Single(assignments, item => item.StepKey == "feature-intake");
+        Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
+        Assert.Equal(ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId), assignment.LaunchVariables["ProcessNodeId"]);
+        Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
+        Assert.Contains("Blazor WASM PWA app shape", assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
+        Assert.Contains(outputRoot, assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartProcessSubprocessAsync_inherits_parent_context_and_links_child_run()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+        var stateStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStateStore>();
+
+        var projectId = await CreateProjectAsync(projects, "Process subprocess launch");
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Build TetrisGame",
+                "Blazor delivery target",
+                "Implement the TetrisGame app in the configured output root.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: """{ "outputRoot": "C:\\temp\\CanDoItAll\\TetrisGame" }"""));
+        var parentDefinitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+
+        await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(parentDefinitionId),
+            DefaultAgent);
+
+        var parent = await agentService.StartProcessNodeAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
+        var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "architecture-review");
+
+        var subprocess = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-architecture-design-review",
+                Variables: new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["ProjectNodeId"] = "attempted-scope-escape",
+                    ["ChildLaunchReason"] = "integration-test",
+                    ["includeLaunchPlan"] = JsonDocument.Parse("true").RootElement.Clone(),
+                    ["subprocessPriority"] = JsonDocument.Parse("3").RootElement.Clone()
+                },
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        var childDefinitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("dotnet-architecture-design-review"))
+            .Value;
+        Assert.Equal(projectId, subprocess.ProjectId);
+        Assert.Equal(deliveryNode.Id, subprocess.ProjectNodeId);
+        Assert.Equal(parent.RunId.Value.ToString("D"), subprocess.ParentProcessRunId);
+        Assert.Equal(parentAssignment.StepInstanceId.ToString(), subprocess.ParentProcessStepId);
+        Assert.Equal("architecture-review", subprocess.ParentProcessStepKey);
+        Assert.Equal("dotnet-architecture-design-review", subprocess.DefinitionKey);
+        Assert.Equal(childDefinitionId, subprocess.ProcessDefinitionId);
+        Assert.NotNull(subprocess.RunId);
+        Assert.Equal("Running", subprocess.Stage);
+        Assert.StartsWith($"/projects/{projectId:D}/processes/live?runId=", subprocess.Route, StringComparison.Ordinal);
+        Assert.IsType<ProcessLaunchPlanView>(subprocess.LaunchPlan);
+        Assert.Equal($"artifacts/process-runs/{subprocess.RunId.Value:D}", subprocess.ChildManagedArtifactRoot);
+        Assert.Equal($"artifacts/process-runs/{subprocess.RunId.Value:D}/steps", subprocess.ChildStepsArtifactRoot);
+        Assert.Equal($"/projects/{projectId:D}/processes/live?runId={subprocess.RunId.Value:D}", subprocess.ChildLiveProcessesRoute);
+        Assert.Contains($"artifacts/process-runs/{subprocess.RunId.Value:D}/steps/classify-dotnet-application.md", subprocess.ExpectedChildEvidenceRefs);
+        Assert.Contains($"artifacts/process-runs/{subprocess.RunId.Value:D}/steps/architecture-handoff.md", subprocess.ExpectedChildEvidenceRefs);
+
+        var parentState = await stateStore.LoadAsync(new ProcessRunId(parent.RunId.Value));
+        var childState = await stateStore.LoadAsync(new ProcessRunId(subprocess.RunId.Value));
+        Assert.NotNull(parentState);
+        Assert.NotNull(childState);
+            Assert.Equal(parentState!.RootRunId, childState!.RootRunId);
+
+        var childAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(subprocess.RunId.Value));
+        Assert.NotEmpty(childAssignments);
+        Assert.All(childAssignments, assignment =>
+        {
+            Assert.Equal("True", assignment.LaunchVariables["includeLaunchPlan"]);
+            Assert.Equal("3", assignment.LaunchVariables["subprocessPriority"]);
+        });
+
+        var reviewAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "review-architecture-design");
+        Assert.Contains("Producer step: draft-architecture-design - Draft .NET architecture design", reviewAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains($"artifacts/process-runs/{subprocess.RunId.Value:D}/steps/draft-architecture-design.md", reviewAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not block only because a slot-id directory is absent", reviewAssignment.Prompt, StringComparison.Ordinal);
+        var parentProcessRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(parent.RunId.Value);
+        Assert.All(childAssignments, assignment =>
+        {
+            Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
+            Assert.Equal(parent.RunId.Value.ToString("D"), assignment.LaunchVariables["ParentProcessRunId"]);
+            Assert.Equal(parentProcessRunNodeId, assignment.LaunchVariables["ProcessRunNodeId"]);
+            Assert.Equal(parentProcessRunNodeId, assignment.LaunchVariables["ParentProcessRunNodeId"]);
+            Assert.Equal(parentProcessRunNodeId, assignment.LaunchVariables["TargetProcessRunNodeId"]);
+            Assert.Equal(parentAssignment.StepInstanceId.ToString(), assignment.LaunchVariables["ParentProcessStepId"]);
+            Assert.Equal("architecture-review", assignment.LaunchVariables["ParentProcessStepKey"]);
+            Assert.Equal("dotnet-architecture-design-review", assignment.LaunchVariables["SubprocessDefinitionKey"]);
+            Assert.Equal(@"C:\temp\CanDoItAll\TetrisGame", assignment.LaunchVariables["OutputRoot"]);
+            Assert.Equal("integration-test", assignment.LaunchVariables["ChildLaunchReason"]);
+        });
+
+        var retry = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-architecture-design-review",
+                Variables: new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["ChildLaunchReason"] = "retry-should-reuse-existing-run"
+                },
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        Assert.Equal(subprocess.RunId, retry.RunId);
+        Assert.Contains(retry.Warnings, warning => warning.Contains("Reused existing process run", StringComparison.Ordinal));
+        var retryLaunchPlan = Assert.IsType<ProcessLaunchPlanView>(retry.LaunchPlan);
+        Assert.Equal("dotnet-architecture-design-review", retryLaunchPlan.DefinitionKey);
+
+        var matchingChildAssignments = await assignmentStore.FindByLaunchVariablesAsync(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProjectId"] = projectId.ToString("D"),
+                ["ProjectNodeId"] = deliveryNode.Id,
+                ["ParentProcessRunId"] = parent.RunId.Value.ToString("D"),
+                ["ParentProcessStepId"] = parentAssignment.StepInstanceId.ToString(),
+                ["SubprocessDefinitionKey"] = "dotnet-architecture-design-review"
+            });
+        var matchingChildRunId = Assert.Single(matchingChildAssignments
+            .Select(assignment => assignment.RunId)
+            .Distinct());
+        Assert.Equal(new ProcessRunId(subprocess.RunId.Value), matchingChildRunId);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var childProcessRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(subprocess.RunId.Value);
+        var childRunNode = Assert.Single(surface.Nodes, item => string.Equals(item.Id, childProcessRunNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ProcessRun, childRunNode.ObjectType);
+        Assert.Equal(parentProcessRunNodeId, childRunNode.ParentId);
+        Assert.Contains(surface.Links, item =>
+            item.IsUserAuthored &&
+            string.Equals(item.SourceId, deliveryNode.Id, StringComparison.Ordinal) &&
+            string.Equals(item.TargetId, childProcessRunNodeId, StringComparison.Ordinal) &&
+            item.Kind == ProjectObjectLinkKind.Uses);
+        Assert.Contains(surface.Links, item =>
+            item.IsUserAuthored &&
+            string.Equals(item.SourceId, parentProcessRunNodeId, StringComparison.Ordinal) &&
+            string.Equals(item.TargetId, childProcessRunNodeId, StringComparison.Ordinal) &&
+            item.Kind == ProjectObjectLinkKind.Uses);
+    }
+
+    [Fact]
+    public async Task StartProcessSubprocessAsync_supplies_dotnet_solution_setup_scaffold_contract()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+
+        var projectId = await CreateProjectAsync(projects, "TetrisGame");
+        const string outputRoot = @"C:\temp\CanDoItAll\TetrisGame";
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Main App",
+                "Delivery target",
+                "Implement the TetrisGame app in the configured output root.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: $$"""{ "outputRoot": "{{outputRoot.Replace(@"\", @"\\", StringComparison.Ordinal)}}" }"""));
+        var architectureNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Main Architecture",
+                string.Empty,
+                string.Empty,
+                $"project:{projectId:D}",
+                520,
+                220,
+                null,
+                null,
+                "architecture"));
+        await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Blazor WASM PWA app shape",
+                "Frontend-only web app",
+                "Blazor WebAssembly PWA with no backend. Single client app, static-host friendly, offline-friendly shell, and local-first scope.",
+                architectureNode.Id,
+                700,
+                180,
+                null,
+                null,
+                "architecture"));
+
+        var parentDefinitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+        await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(parentDefinitionId),
+            DefaultAgent);
+
+        var parent = await agentService.StartProcessNodeAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
+        var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "implementation");
+
+        var subprocess = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-solution-setup",
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        var childAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(subprocess.RunId!.Value));
+        var scaffoldAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "scaffold-contract");
+        Assert.Equal("TetrisGame", scaffoldAssignment.LaunchVariables["DotNetSolutionName"]);
+        Assert.Equal("TetrisGame", scaffoldAssignment.LaunchVariables["DotNetAppProjectName"]);
+        Assert.Equal(@"C:\temp\CanDoItAll\TetrisGame\src\TetrisGame", scaffoldAssignment.LaunchVariables["DotNetAppProjectDirectory"]);
+        Assert.Equal("Blazor WebAssembly PWA", scaffoldAssignment.LaunchVariables["DotNetAppArchetype"]);
+        Assert.Equal("blazorwasm", scaffoldAssignment.LaunchVariables["DotNetAppTemplate"]);
+        Assert.Equal("--pwa", scaffoldAssignment.LaunchVariables["DotNetAllowedTemplateSwitches"]);
+        Assert.Equal("TetrisGame.Tests", scaffoldAssignment.LaunchVariables["DotNetTestProjectName"]);
+        Assert.Equal(@"C:\temp\CanDoItAll\TetrisGame\tests\TetrisGame.Tests", scaffoldAssignment.LaunchVariables["DotNetTestProjectDirectory"]);
+        Assert.Equal("xunit", scaffoldAssignment.LaunchVariables["DotNetTestTemplate"]);
+        Assert.Equal("xUnit", scaffoldAssignment.LaunchVariables["DotNetTestFrameworkPreference"]);
+        Assert.Equal("net10.0", scaffoldAssignment.LaunchVariables["DotNetTargetFramework"]);
+        Assert.Contains("SolutionName: TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("AppTemplate: blazorwasm", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("AllowedTemplateSwitches: --pwa", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("TestTemplate: xunit", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartProcessNodeAsync_hr_match_resolves_software_delivery_person_or_agent_roles()
+    {
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigurationOverrides = new Dictionary<string, string?>
+            {
+                ["AgentFramework:ProcessMockAgents:Enabled"] = "true"
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+
+        var projectId = await CreateProjectAsync(projects, "Process launch HR match");
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Build TetrisGame",
+                "Blazor delivery target",
+                "Implement the TetrisGame app in the configured output root.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: """{ "outputRoot": "C:\\temp\\CanDoItAll\\TetrisGame" }"""));
+        var definitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+
+        await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(definitionId),
+            DefaultAgent);
+
+        var result = await agentService.StartProcessNodeAsync(
+            projectId,
+            ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId),
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: true,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        var launchPlan = Assert.IsType<ProcessLaunchPlanView>(result.LaunchPlan);
+        Assert.Equal("software-delivery", launchPlan.DefinitionKey);
+        Assert.Null(launchPlan.LiveRunProfileKey);
+        Assert.DoesNotContain(
+            launchPlan.ReadinessFindings,
+            finding => string.Equals(finding.Code, "process.launch.executor_kind_unsupported", StringComparison.Ordinal));
+        Assert.Contains(
+            launchPlan.ReadinessFindings,
+            finding => finding.Severity == ProcessLaunchReadinessSeverity.Info &&
+                       string.Equals(finding.Code, "process.launch.readiness_ok", StringComparison.Ordinal));
+
+        var assignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(result.RunId!.Value));
+        Assert.NotEmpty(assignments);
+        Assert.All(assignments, assignment =>
+        {
+            Assert.Equal(ProcessLaunchExecutorKinds.Agent, assignment.ExecutorKind);
+            Assert.False(string.IsNullOrWhiteSpace(assignment.ExecutorId));
+        });
+        Assert.Contains(assignments, assignment => assignment.StepKey == "record-runtime-commands");
+        Assert.Contains(assignments, assignment => assignment.StepKey == "capture-ui-screenshots");
+    }
+
+    [Fact]
+    public async Task StartProcessNodeAsync_hr_match_skips_exact_agent_when_provider_cannot_satisfy_process_output_contract()
+    {
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigurationOverrides = new Dictionary<string, string?>
+            {
+                ["AgentFramework:ProcessMockAgents:Enabled"] = "false"
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceService = scope.ServiceProvider
+            .GetRequiredService<ICanDoItAllAgentWorkspaceFactory>()
+            .GetOrganizationWorkspaceService();
+
+        var existingAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+        foreach (var existingAgent in existingAgents.Where(agent => agent.Status == AgentLifecycleStatus.Active))
+        {
+            var editor = await workspaceService.GetAgentEditorAsync(existingAgent.Id);
+            editor.Status = AgentLifecycleStatus.Suspended;
+            await workspaceService.SaveAgentAsync(editor);
+        }
+
+        var unsupportedProviderId = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        {
+            Name = "Process regression Ollama",
+            Kind = ProviderKind.Ollama,
+            BaseUrl = "http://ollama.internal:11434",
+            ApiKeyEnvironmentVariable = string.Empty,
+            DefaultModel = "gptoss32k:latest",
+            Transport = ProviderTransportKind.ChatCompletions,
+            Purpose = ProviderProfilePurpose.Chat,
+            IsEnabled = true,
+            SupportsStreaming = false,
+            SupportsTools = true,
+            PreferFrameworkManagedChatHistory = true,
+            SupportsBackgroundResponses = false,
+            ConfigurationJson = "{}",
+            Notes = "Regression fixture for process HR matching."
+        });
+        var structuredProviderId = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        {
+            Name = "Process regression OpenAI",
+            Kind = ProviderKind.OpenAi,
+            BaseUrl = "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            DefaultModel = "gpt-5.4-mini",
+            Transport = ProviderTransportKind.Responses,
+            Purpose = ProviderProfilePurpose.Chat,
+            IsEnabled = true,
+            SupportsStreaming = false,
+            SupportsTools = true,
+            PreferFrameworkManagedChatHistory = true,
+            SupportsBackgroundResponses = false,
+            ConfigurationJson = "{}",
+            Notes = "Regression fixture for process HR matching."
+        });
+        var unsupportedAgentId = await workspaceService.SaveAgentAsync(new AgentEditorModel
+        {
+            Name = "Product owner AI agent",
+            RoleTitle = "Product owner",
+            Summary = "Exact product owner role fixture backed by a provider that cannot return process structured output.",
+            Instructions = "Summarize product owner requests.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = unsupportedProviderId,
+            Workload = AgentWorkloadKind.Management,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            ConfigurationJson = "{}",
+            IsTemplate = false,
+            Permissions = AgentPermissionsPolicy.Default,
+            Tags =
+            [
+                "product-owner"
+            ]
+        });
+        var structuredAgentId = await workspaceService.SaveAgentAsync(new AgentEditorModel
+        {
+            Name = "Business Strategist Structured",
+            RoleTitle = "Business Strategist",
+            Summary = "Owns product scope, business planning, requirements, and delivery strategy.",
+            Instructions = "Convert product goals into process-ready scope and requirements.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = structuredProviderId,
+            Workload = AgentWorkloadKind.Management,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            ConfigurationJson = "{}",
+            IsTemplate = false,
+            Permissions = AgentPermissionsPolicy.Default,
+            Tags =
+            [
+                "business",
+                "strategy",
+                "requirements"
+            ]
+        });
+
+        var projectId = await CreateProjectAsync(projects, "Process launch HR provider filtering");
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Build TetrisGame",
+                "Blazor delivery target",
+                "Implement the TetrisGame app in the configured output root.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: """{ "outputRoot": "C:\\temp\\CanDoItAll\\TetrisGame" }"""));
+        var definitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+
+        await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(definitionId),
+            DefaultAgent);
+
+        var result = await agentService.StartProcessNodeAsync(
+            projectId,
+            ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId),
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: true,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        var launchPlan = Assert.IsType<ProcessLaunchPlanView>(result.LaunchPlan);
+        Assert.DoesNotContain(
+            launchPlan.ReadinessFindings,
+            finding => string.Equals(finding.StepKey, "feature-intake", StringComparison.Ordinal) &&
+                       finding.Severity == ProcessLaunchReadinessSeverity.Error);
+
+        var featureIntake = Assert.Single(launchPlan.Steps, step => step.StepKey == "feature-intake");
+        Assert.NotEqual(unsupportedAgentId.ToString("D"), featureIntake.ExecutorId);
+        Assert.Equal(structuredAgentId.ToString("D"), featureIntake.ExecutorId);
+        Assert.Equal("Business Strategist Structured", featureIntake.ExecutorDisplayName);
     }
 
     [Fact]

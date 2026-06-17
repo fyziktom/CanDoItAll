@@ -1,0 +1,11 @@
+{
+  "projectId": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+  "nodeId": "custom:cfd406780f034384a70ea6b87507422a",
+  "processDefinitionId": "3458e5d8-36b4-1861-83b1-522604c8e302",
+  "launchPlanId": "d64f5b78-d574-4416-8eb4-1b9a593d87c6",
+  "runId": "aa8bb4e7-aecd-457a-9b2c-5167ac3ca379",
+  "stage": "Running",
+  "route": "/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/processes/live?runId=aa8bb4e7-aecd-457a-9b2c-5167ac3ca379",
+  "launchPlan": null,
+  "warnings": []
+}

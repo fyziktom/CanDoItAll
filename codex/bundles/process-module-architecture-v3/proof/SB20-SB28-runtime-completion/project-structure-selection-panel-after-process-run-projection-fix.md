@@ -1,0 +1,121 @@
+- region "Project structure selection panel" [ref=e1090] [box=1224,96,360,360]:
+  - generic [ref=e1091] [box=1237,109,335,95]:
+    - generic [ref=e1092] [box=1237,109,216,95]:
+      - paragraph [ref=e1093] [box=1237,109,216,14]: Selection panel
+      - heading "Main App" [level=3] [ref=e1094] [box=1237,125,216,18]
+      - paragraph [ref=e1095] [box=1237,146,216,57]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+    - generic [ref=e1096] [box=1464,109,107,32]:
+      - button "Minimize window" [ref=e1097] [box=1464,109,32,32]:
+        - generic [ref=e1098] [box=1473,117,14,14]: minimize
+      - button "Restart window position and size" [ref=e1099] [box=1502,109,32,32]:
+        - generic [ref=e1100] [box=1511,117,14,14]: restart_alt
+      - button "Hide window" [ref=e1101] [box=1539,109,32,32]:
+        - generic [ref=e1102] [box=1548,117,14,14]: visibility_off
+  - generic [ref=e1104] [box=1237,215,317,1388]:
+    - generic [ref=e1105] [box=1237,215,317,278]:
+      - paragraph [ref=e1106] [box=1254,232,283,14]: Delivery block
+      - heading "Main App" [level=3] [ref=e1107] [box=1254,259,283,36]
+      - paragraph [ref=e1108] [box=1254,314,283,25]: "Status: Draft"
+      - generic [ref=e1109] [box=1254,352,283,38]:
+        - generic [ref=e1111] [box=1267,359,37,24]: Draft
+        - generic [ref=e1113] [box=1339,359,103,24]: Delivery block
+      - generic [ref=e1114] [box=1254,404,283,72]:
+        - generic [ref=e1115] [box=1254,404,283,24]:
+          - text: Progress
+          - strong [ref=e1116] [box=1319,405,23,22]: 0%
+        - generic [ref=e1117] [box=1254,428,283,24]:
+          - text: Priority
+          - strong [ref=e1118] [box=1308,429,41,22]: None
+        - generic [ref=e1119] [box=1254,452,283,24]:
+          - text: Marker
+          - strong [ref=e1120] [box=1308,453,41,22]: None
+    - generic [ref=e1121] [box=1237,509,317,571]:
+      - paragraph [ref=e1122] [box=1254,526,283,14]: Node actions
+      - generic [ref=e1123] [box=1254,553,283,510]:
+        - button "Edit" [ref=e1124] [box=1254,553,85,43]:
+          - generic [ref=e1125] [box=1271,562,51,25]:
+            - generic [ref=e1127] [box=1271,567,20,20]: draw
+            - text: Edit
+        - button "Copy id" [ref=e1128] [box=1339,553,172,43]:
+          - generic [ref=e1129] [box=1356,562,138,25]:
+            - generic [ref=e1131] [box=1356,567,80,20]: copy
+            - text: Copy id
+        - button "Copy info" [ref=e1132] [box=1254,596,187,43]:
+          - generic [ref=e1133] [box=1271,605,153,25]:
+            - generic [ref=e1135] [box=1271,609,80,20]: copy
+            - text: Copy info
+        - button "Copy tree ids" [ref=e1136] [box=1254,638,211,43]:
+          - generic [ref=e1137] [box=1271,647,177,25]:
+            - generic [ref=e1139] [box=1271,652,80,20]: copy
+            - text: Copy tree ids
+        - button "Open" [ref=e1140] [box=1254,681,97,43]:
+          - generic [ref=e1141] [box=1271,690,63,25]:
+            - generic [ref=e1143] [box=1271,694,20,20]: open_in_new
+            - text: Open
+        - button "Validate" [ref=e1144] [box=1351,681,114,43]:
+          - generic [ref=e1145] [box=1368,690,80,25]:
+            - generic [ref=e1147] [box=1368,694,20,20]: fact_check
+            - text: Validate
+        - button "Test" [ref=e1148] [box=1254,723,86,43]:
+          - generic [ref=e1149] [box=1271,732,52,25]:
+            - generic [ref=e1151] [box=1271,737,20,20]: science
+            - text: Test
+        - button "Summary" [ref=e1152] [box=1339,723,125,43]:
+          - generic [ref=e1153] [box=1356,732,91,25]:
+            - generic [ref=e1155] [box=1356,737,20,20]: pie_chart
+            - text: Summary
+        - button "Add process" [ref=e1156] [box=1254,766,146,43]:
+          - generic [ref=e1157] [box=1271,775,112,25]:
+            - generic [ref=e1159] [box=1271,779,20,20]: account_tree
+            - text: Add process
+        - button "Add workflow" [ref=e1160] [box=1254,808,156,43]:
+          - generic [ref=e1161] [box=1271,817,122,25]:
+            - generic [ref=e1163] [box=1271,822,20,20]: account_tree
+            - text: Add workflow
+        - button "Connect selected" [ref=e1164] [box=1254,851,179,43]:
+          - generic [ref=e1165] [box=1271,860,145,25]:
+            - generic [ref=e1167] [box=1271,864,20,20]: link
+            - text: Connect selected
+        - button "Reconnect" [ref=e1168] [box=1254,893,132,43]:
+          - generic [ref=e1169] [box=1271,902,98,25]:
+            - generic [ref=e1171] [box=1271,907,20,20]: sync_alt
+            - text: Reconnect
+        - button "Disconnect" [ref=e1172] [box=1385,893,136,43]:
+          - generic [ref=e1173] [box=1402,902,102,25]:
+            - generic [ref=e1175] [box=1402,907,20,20]: link_off
+            - text: Disconnect
+        - button "To subproject" [ref=e1176] [box=1254,936,154,43]:
+          - generic [ref=e1177] [box=1271,945,120,25]:
+            - generic [ref=e1179] [box=1271,949,20,20]: call_split
+            - text: To subproject
+        - button "Export image" [ref=e1180] [box=1254,978,152,43]:
+          - generic [ref=e1181] [box=1271,987,118,25]:
+            - generic [ref=e1183] [box=1271,992,20,20]: image
+            - text: Export image
+        - button "Change block" [ref=e1184] [box=1254,1021,155,43]:
+          - generic [ref=e1185] [box=1271,1030,121,25]:
+            - generic [ref=e1187] [box=1271,1034,20,20]: swap_horiz
+            - text: Change block
+        - button "Delete" [ref=e1188] [box=1408,1021,104,43]:
+          - generic [ref=e1189] [box=1425,1030,70,25]:
+            - generic [ref=e1191] [box=1425,1034,20,20]: delete
+            - text: Delete
+    - generic [ref=e1192] [box=1237,1096,317,370]:
+      - paragraph [ref=e1193] [box=1254,1113,283,14]: Create next to source
+      - heading "Use the floating toolbox" [level=3] [ref=e1194] [box=1254,1141,283,36]
+      - paragraph [ref=e1195] [box=1254,1196,283,98]:
+        - text: The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from
+        - strong [ref=e1196] [box=1451,1272,71,21]: Main App
+        - text: .
+      - generic [ref=e1197] [box=1254,1308,283,86]:
+        - generic [ref=e1199] [box=1267,1315,129,24]: "Source: Main App"
+        - generic [ref=e1201] [box=1267,1362,256,24]: "Mode: child placement"
+      - button "Open standard blocks" [ref=e1203] [box=1254,1407,188,42]:
+        - generic [ref=e1204] [box=1271,1416,154,24]: Open standard blocks
+    - group [ref=e1205] [box=1237,1482,317,120]:
+      - generic "Advanced details Show advanced details help" [ref=e1206] [box=1254,1499,283,73]:
+        - generic [ref=e1208] [box=1254,1500,283,47]:
+          - strong [ref=e1209] [box=1267,1500,128,22]: Advanced details
+          - button "Show advanced details help" [ref=e1212] [cursor=pointer] [box=1254,1529,17,17]:
+            - generic [ref=e1213] [box=1260,1533,4,10]: "?"
+        - generic [ref=e1215] [box=1254,1552,20,20]: expand_more

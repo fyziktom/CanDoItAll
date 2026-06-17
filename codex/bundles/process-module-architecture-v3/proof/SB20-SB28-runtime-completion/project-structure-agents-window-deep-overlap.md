@@ -1,0 +1,348 @@
+- region "Project structure agents" [ref=e1009] [box=1184,96,400,560]:
+  - generic [ref=e1010] [box=1197,109,375,35]:
+    - generic [ref=e1011] [box=1197,109,135,35]:
+      - paragraph [ref=e1012] [box=1197,109,135,14]: Project agents
+      - heading "Project agents" [level=3] [ref=e1013] [box=1197,125,135,18]
+    - generic [ref=e1014] [box=1464,109,107,32]:
+      - button "Minimize window" [ref=e1015] [box=1464,109,32,32]:
+        - generic [ref=e1016] [box=1473,117,14,14]: minimize
+      - button "Restart window position and size" [ref=e1017] [box=1502,109,32,32]:
+        - generic [ref=e1018] [box=1511,117,14,14]: restart_alt
+      - button "Hide window" [ref=e1019] [box=1539,109,32,32]:
+        - generic [ref=e1020] [box=1548,117,14,14]: visibility_off
+  - generic [ref=e1022] [box=1197,155,357,489]:
+    - generic [ref=e1023] [box=1197,155,357,42]:
+      - textbox "Search contextual agents" [ref=e1024] [box=1197,155,175,42]:
+        - /placeholder: Search agents
+      - textbox "Filter tags" [ref=e1028] [box=1389,161,155,24]
+    - generic [ref=e1029] [box=1197,207,357,26]:
+      - generic [ref=e1030] [box=1197,207,67,26]: 23 of 23
+      - generic [ref=e1031] [box=1270,207,85,26]: This project
+      - generic "Show contextual agent window help" [ref=e1033] [box=1363,209,22,22]:
+        - generic [ref=e1034] [box=1364,210,20,20]: info
+    - generic [ref=e1035] [box=1197,243,357,400]:
+      - article [ref=e1036] [box=1197,243,339,99]:
+        - button "Open a new contextual chat thread with .NET Application Developer" [ref=e1037] [cursor=pointer] [box=1198,244,337,97]:
+          - img ".NET Application Developer" [ref=e1038] [box=1208,255,40,40]
+          - generic [ref=e1039] [box=1260,255,234,44]:
+            - generic [ref=e1041] [box=1260,255,195,20]: .NET Application Developer
+            - generic [ref=e1042] [box=1260,281,234,18]:
+              - generic [ref=e1043] [box=1260,281,51,18]: "#blazor"
+              - generic [ref=e1044] [box=1315,281,53,18]: "#dotnet"
+              - generic [ref=e1045] [box=1373,281,89,18]: "#programming"
+          - generic [ref=e1046] [box=1260,313,234,18]:
+            - generic [ref=e1047] [box=1260,313,38,18]: Read
+            - generic [ref=e1048] [box=1302,313,70,18]: All projects
+        - button "Open recent threads with .NET Application Developer" [ref=e1049] [cursor=pointer] [box=1498,252,30,30]:
+          - generic [ref=e1050] [box=1502,256,20,20]: history
+      - article [ref=e1051] [box=1197,351,339,99]:
+        - button "Open a new contextual chat thread with .NET QA Review Lead" [ref=e1052] [cursor=pointer] [box=1198,352,337,97]:
+          - img ".NET QA Review Lead" [ref=e1053] [box=1208,363,40,40]
+          - generic [ref=e1054] [box=1260,363,234,44]:
+            - generic [ref=e1056] [box=1260,363,150,20]: .NET QA Review Lead
+            - generic [ref=e1057] [box=1260,388,234,18]:
+              - generic [ref=e1058] [box=1260,388,60,18]: "#browser"
+              - generic [ref=e1059] [box=1324,388,53,18]: "#dotnet"
+              - generic [ref=e1060] [box=1382,388,32,18]: "#qa"
+          - generic [ref=e1061] [box=1260,421,234,18]:
+            - generic [ref=e1062] [box=1260,421,38,18]: Read
+            - generic [ref=e1063] [box=1302,421,70,18]: All projects
+        - button "Open recent threads with .NET QA Review Lead" [ref=e1064] [cursor=pointer] [box=1498,359,30,30]:
+          - generic [ref=e1065] [box=1502,364,20,20]: history
+      - article [ref=e1066] [box=1197,459,339,99]:
+        - button "Open a new contextual chat thread with .NET Solution Architect" [ref=e1067] [cursor=pointer] [box=1198,460,337,97]:
+          - img ".NET Solution Architect" [ref=e1068] [box=1208,470,40,40]
+          - generic [ref=e1069] [box=1260,470,234,44]:
+            - generic [ref=e1071] [box=1260,470,165,20]: .NET Solution Architect
+            - generic [ref=e1072] [box=1260,496,234,18]:
+              - generic [ref=e1073] [box=1260,496,79,18]: "#architecture"
+              - generic [ref=e1074] [box=1344,496,51,18]: "#blazor"
+              - generic [ref=e1075] [box=1399,496,53,18]: "#dotnet"
+          - generic [ref=e1076] [box=1260,528,234,18]:
+            - generic [ref=e1077] [box=1260,528,38,18]: Read
+            - generic [ref=e1078] [box=1302,528,70,18]: All projects
+        - button "Open recent threads with .NET Solution Architect" [ref=e1079] [cursor=pointer] [box=1498,467,30,30]:
+          - generic [ref=e1080] [box=1502,472,20,20]: history
+      - article [ref=e1081] [box=1197,567,339,121]:
+        - button "Open a new contextual chat thread with Blazor Application Developer" [ref=e1082] [cursor=pointer] [box=1198,568,337,119]:
+          - img "Blazor Application Developer" [ref=e1083] [box=1208,578,40,40]
+          - generic [ref=e1084] [box=1260,578,234,66]:
+            - generic [ref=e1086] [box=1260,578,207,20]: Blazor Application Developer
+            - generic [ref=e1087] [box=1260,604,234,40]:
+              - generic [ref=e1088] [box=1260,604,51,18]: "#blazor"
+              - generic [ref=e1089] [box=1315,604,53,18]: "#dotnet"
+              - generic [ref=e1090] [box=1373,604,64,18]: "#frontend"
+              - generic [ref=e1091] [box=1260,626,89,18]: "#programming"
+          - generic [ref=e1092] [box=1260,659,234,18]:
+            - generic [ref=e1093] [box=1260,659,38,18]: Read
+            - generic [ref=e1094] [box=1302,659,70,18]: All projects
+        - button "Open recent threads with Blazor Application Developer" [ref=e1095] [cursor=pointer] [box=1498,575,30,30]:
+          - generic [ref=e1096] [box=1502,580,20,20]: history
+      - article [ref=e1097] [box=1197,697,339,99]:
+        - button "Open a new contextual chat thread with Business Strategist" [ref=e1098] [cursor=pointer] [box=1198,698,337,97]:
+          - img "Business Strategist" [ref=e1099] [box=1208,708,40,40]
+          - generic [ref=e1100] [box=1260,708,234,44]:
+            - generic [ref=e1102] [box=1260,708,132,20]: Business Strategist
+            - generic [ref=e1103] [box=1260,734,234,18]:
+              - generic [ref=e1104] [box=1260,734,62,18]: "#business"
+              - generic [ref=e1105] [box=1326,734,64,18]: "#planning"
+              - generic [ref=e1106] [box=1394,734,60,18]: "#strategy"
+          - generic [ref=e1107] [box=1260,766,234,18]:
+            - generic [ref=e1108] [box=1260,766,38,18]: Read
+            - generic [ref=e1109] [box=1302,766,70,18]: All projects
+        - button "Open recent threads with Business Strategist" [ref=e1110] [cursor=pointer] [box=1498,705,30,30]:
+          - generic [ref=e1111] [box=1502,710,20,20]: history
+      - article [ref=e1112] [box=1197,805,339,99]:
+        - button "Open a new contextual chat thread with Code Review Lead" [ref=e1113] [cursor=pointer] [box=1198,806,337,97]:
+          - img "Code Review Lead" [ref=e1114] [box=1208,816,40,40]
+          - generic [ref=e1115] [box=1260,816,234,44]:
+            - generic [ref=e1117] [box=1260,816,128,20]: Code Review Lead
+            - generic [ref=e1118] [box=1260,842,234,18]:
+              - generic [ref=e1119] [box=1260,842,44,18]: "#code"
+              - generic [ref=e1120] [box=1308,842,54,18]: "#quality"
+              - generic [ref=e1121] [box=1367,842,53,18]: "#review"
+          - generic [ref=e1122] [box=1260,874,234,18]:
+            - generic [ref=e1123] [box=1260,874,38,18]: Read
+            - generic [ref=e1124] [box=1302,874,70,18]: All projects
+        - button "Open recent threads with Code Review Lead" [ref=e1125] [cursor=pointer] [box=1498,813,30,30]:
+          - generic [ref=e1126] [box=1502,818,20,20]: history
+      - article [ref=e1127] [box=1197,912,339,121]:
+        - button "Open a new contextual chat thread with Delivery Manager" [ref=e1128] [cursor=pointer] [box=1198,913,337,119]:
+          - img "Delivery Manager" [ref=e1129] [box=1208,924,40,40]
+          - generic [ref=e1130] [box=1260,924,234,66]:
+            - generic [ref=e1132] [box=1260,924,125,20]: Delivery Manager
+            - generic [ref=e1133] [box=1260,949,234,40]:
+              - generic [ref=e1134] [box=1260,949,59,18]: "#delivery"
+              - generic [ref=e1135] [box=1324,949,64,18]: "#evidence"
+              - generic [ref=e1136] [box=1392,949,78,18]: "#governance"
+              - generic [ref=e1137] [box=1260,972,64,18]: "#manager"
+          - generic [ref=e1138] [box=1260,1004,234,18]:
+            - generic [ref=e1139] [box=1260,1004,38,18]: Read
+            - generic [ref=e1140] [box=1302,1004,41,18]: Write
+            - generic [ref=e1141] [box=1348,1004,70,18]: All projects
+        - button "Open recent threads with Delivery Manager" [ref=e1142] [cursor=pointer] [box=1498,921,30,30]:
+          - generic [ref=e1143] [box=1502,925,20,20]: history
+      - article [ref=e1144] [box=1197,1043,339,99]:
+        - button "Open a new contextual chat thread with Delivery QA Observer" [ref=e1145] [cursor=pointer] [box=1198,1044,337,97]:
+          - img "Delivery QA Observer" [ref=e1146] [box=1208,1054,40,40]
+          - generic [ref=e1147] [box=1260,1054,234,44]:
+            - generic [ref=e1149] [box=1260,1054,152,20]: Delivery QA Observer
+            - generic [ref=e1150] [box=1260,1080,234,18]:
+              - generic [ref=e1151] [box=1260,1080,60,18]: "#browser"
+              - generic [ref=e1152] [box=1324,1080,78,18]: "#governance"
+              - generic [ref=e1153] [box=1407,1080,32,18]: "#qa"
+          - generic [ref=e1154] [box=1260,1112,234,18]:
+            - generic [ref=e1155] [box=1260,1112,38,18]: Read
+            - generic [ref=e1156] [box=1302,1112,70,18]: All projects
+        - button "Open recent threads with Delivery QA Observer" [ref=e1157] [cursor=pointer] [box=1498,1051,30,30]:
+          - generic [ref=e1158] [box=1502,1056,20,20]: history
+      - article [ref=e1159] [box=1197,1150,339,99]:
+        - button "Open a new contextual chat thread with Financial Strategist" [ref=e1160] [cursor=pointer] [box=1198,1151,337,97]:
+          - img "Financial Strategist" [ref=e1161] [box=1208,1162,40,40]
+          - generic [ref=e1162] [box=1260,1162,234,44]:
+            - generic [ref=e1164] [box=1260,1162,134,20]: Financial Strategist
+            - generic [ref=e1165] [box=1260,1187,234,18]:
+              - generic [ref=e1166] [box=1260,1187,56,18]: "#finance"
+              - generic [ref=e1167] [box=1320,1187,80,18]: "#spreadsheet"
+              - generic [ref=e1168] [box=1405,1187,60,18]: "#strategy"
+          - generic [ref=e1169] [box=1260,1220,234,18]:
+            - generic [ref=e1170] [box=1260,1220,38,18]: Read
+            - generic [ref=e1171] [box=1302,1220,70,18]: All projects
+        - button "Open recent threads with Financial Strategist" [ref=e1172] [cursor=pointer] [box=1498,1158,30,30]:
+          - generic [ref=e1173] [box=1502,1163,20,20]: history
+      - article [ref=e1174] [box=1197,1258,339,99]:
+        - button "Open a new contextual chat thread with HR Staffing Manager" [ref=e1175] [cursor=pointer] [box=1198,1259,337,97]:
+          - img "HR Staffing Manager" [ref=e1176] [box=1208,1269,40,40]
+          - generic [ref=e1177] [box=1260,1269,234,44]:
+            - generic [ref=e1179] [box=1260,1269,149,20]: HR Staffing Manager
+            - generic [ref=e1180] [box=1260,1295,234,18]:
+              - generic [ref=e1181] [box=1260,1295,77,18]: "#assignment"
+              - generic [ref=e1182] [box=1341,1295,30,18]: "#hr"
+              - generic [ref=e1183] [box=1376,1295,58,18]: "#staffing"
+          - generic [ref=e1184] [box=1260,1328,234,18]:
+            - generic [ref=e1185] [box=1260,1328,38,18]: Read
+            - generic [ref=e1186] [box=1302,1328,70,18]: All projects
+        - button "Open recent threads with HR Staffing Manager" [ref=e1187] [cursor=pointer] [box=1498,1266,30,30]:
+          - generic [ref=e1188] [box=1502,1271,20,20]: history
+      - article [ref=e1189] [box=1197,1366,339,121]:
+        - button "Open a new contextual chat thread with JavaScript Application Developer" [ref=e1190] [cursor=pointer] [box=1198,1367,337,119]:
+          - img "JavaScript Application Developer" [ref=e1191] [box=1208,1377,40,40]
+          - generic [ref=e1192] [box=1260,1377,234,66]:
+            - generic [ref=e1194] [box=1260,1377,234,20]: JavaScript Application Developer
+            - generic [ref=e1195] [box=1260,1403,234,40]:
+              - generic [ref=e1196] [box=1260,1403,67,18]: "#javascript"
+              - generic [ref=e1197] [box=1332,1403,89,18]: "#programming"
+              - generic [ref=e1198] [box=1260,1425,69,18]: "#typescript"
+          - generic [ref=e1199] [box=1260,1458,234,18]:
+            - generic [ref=e1200] [box=1260,1458,38,18]: Read
+            - generic [ref=e1201] [box=1302,1458,70,18]: All projects
+        - button "Open recent threads with JavaScript Application Developer" [ref=e1202] [cursor=pointer] [box=1498,1374,30,30]:
+          - generic [ref=e1203] [box=1502,1379,20,20]: history
+      - article [ref=e1204] [box=1197,1496,339,99]:
+        - button "Open a new contextual chat thread with JavaScript QA Review Lead" [ref=e1205] [cursor=pointer] [box=1198,1497,337,97]:
+          - img "JavaScript QA Review Lead" [ref=e1206] [box=1208,1507,40,40]
+          - generic [ref=e1207] [box=1260,1507,234,44]:
+            - generic [ref=e1209] [box=1260,1507,190,20]: JavaScript QA Review Lead
+            - generic [ref=e1210] [box=1260,1533,234,18]:
+              - generic [ref=e1211] [box=1260,1533,60,18]: "#browser"
+              - generic [ref=e1212] [box=1324,1533,67,18]: "#javascript"
+              - generic [ref=e1213] [box=1396,1533,32,18]: "#qa"
+          - generic [ref=e1214] [box=1260,1565,234,18]:
+            - generic [ref=e1215] [box=1260,1565,38,18]: Read
+            - generic [ref=e1216] [box=1302,1565,70,18]: All projects
+        - button "Open recent threads with JavaScript QA Review Lead" [ref=e1217] [cursor=pointer] [box=1498,1504,30,30]:
+          - generic [ref=e1218] [box=1502,1509,20,20]: history
+      - article [ref=e1219] [box=1197,1604,339,99]:
+        - button "Open a new contextual chat thread with JavaScript Solution Architect" [ref=e1220] [cursor=pointer] [box=1198,1605,337,97]:
+          - img "JavaScript Solution Architect" [ref=e1221] [box=1208,1615,40,40]
+          - generic [ref=e1222] [box=1260,1615,234,44]:
+            - generic [ref=e1224] [box=1260,1615,204,20]: JavaScript Solution Architect
+            - generic [ref=e1225] [box=1260,1641,234,18]:
+              - generic [ref=e1226] [box=1260,1641,79,18]: "#architecture"
+              - generic [ref=e1227] [box=1344,1641,67,18]: "#javascript"
+              - generic [ref=e1228] [box=1416,1641,69,18]: "#typescript"
+          - generic [ref=e1229] [box=1260,1673,234,18]:
+            - generic [ref=e1230] [box=1260,1673,38,18]: Read
+            - generic [ref=e1231] [box=1302,1673,70,18]: All projects
+        - button "Open recent threads with JavaScript Solution Architect" [ref=e1232] [cursor=pointer] [box=1498,1612,30,30]:
+          - generic [ref=e1233] [box=1502,1617,20,20]: history
+      - article [ref=e1234] [box=1197,1711,339,99]:
+        - button "Open a new contextual chat thread with Mail Triage Analyst" [ref=e1235] [cursor=pointer] [box=1198,1712,337,97]:
+          - img "Mail Triage Analyst" [ref=e1236] [box=1208,1723,40,40]
+          - generic [ref=e1237] [box=1260,1723,234,44]:
+            - generic [ref=e1239] [box=1260,1723,135,20]: Mail Triage Analyst
+            - generic [ref=e1240] [box=1260,1749,234,18]:
+              - generic [ref=e1241] [box=1260,1749,41,18]: "#mail"
+              - generic [ref=e1242] [box=1306,1749,45,18]: "#reply"
+              - generic [ref=e1243] [box=1355,1749,49,18]: "#triage"
+          - generic [ref=e1244] [box=1260,1781,234,18]:
+            - generic [ref=e1245] [box=1260,1781,38,18]: Read
+            - generic [ref=e1246] [box=1302,1781,70,18]: All projects
+        - button "Open recent threads with Mail Triage Analyst" [ref=e1247] [cursor=pointer] [box=1498,1720,30,30]:
+          - generic [ref=e1248] [box=1502,1724,20,20]: history
+      - article [ref=e1249] [box=1197,1819,339,99]:
+        - button "Open a new contextual chat thread with Marketing Specialist" [ref=e1250] [cursor=pointer] [box=1198,1820,337,97]:
+          - img "Marketing Specialist" [ref=e1251] [box=1208,1831,40,40]
+          - generic [ref=e1252] [box=1260,1831,234,44]:
+            - generic [ref=e1254] [box=1260,1831,144,20]: Marketing Specialist
+            - generic [ref=e1255] [box=1260,1856,234,18]:
+              - generic [ref=e1256] [box=1260,1856,87,18]: "#go-to-market"
+              - generic [ref=e1257] [box=1352,1856,71,18]: "#marketing"
+              - generic [ref=e1258] [box=1427,1856,60,18]: "#strategy"
+          - generic [ref=e1259] [box=1260,1889,234,18]:
+            - generic [ref=e1260] [box=1260,1889,38,18]: Read
+            - generic [ref=e1261] [box=1302,1889,70,18]: All projects
+        - button "Open recent threads with Marketing Specialist" [ref=e1262] [cursor=pointer] [box=1498,1827,30,30]:
+          - generic [ref=e1263] [box=1502,1832,20,20]: history
+      - article [ref=e1264] [box=1197,1927,339,99]:
+        - button "Open a new contextual chat thread with Portfolio Architect" [ref=e1265] [cursor=pointer] [box=1198,1928,337,97]:
+          - img "Portfolio Architect" [ref=e1266] [box=1208,1938,40,40]
+          - generic [ref=e1267] [box=1260,1938,234,44]:
+            - generic [ref=e1269] [box=1260,1938,131,20]: Portfolio Architect
+            - generic [ref=e1270] [box=1260,1964,234,18]:
+              - generic [ref=e1271] [box=1260,1964,79,18]: "#architecture"
+              - generic [ref=e1272] [box=1344,1964,75,18]: "#integration"
+              - generic [ref=e1273] [box=1424,1964,67,18]: "#oversight"
+          - generic [ref=e1274] [box=1260,1996,234,18]:
+            - generic [ref=e1275] [box=1260,1996,38,18]: Read
+            - generic [ref=e1276] [box=1302,1996,41,18]: Write
+            - generic [ref=e1277] [box=1348,1996,70,18]: All projects
+        - button "Open recent threads with Portfolio Architect" [ref=e1278] [cursor=pointer] [box=1498,1935,30,30]:
+          - generic [ref=e1279] [box=1502,1940,20,20]: history
+      - article [ref=e1280] [box=1197,2035,339,121]:
+        - button "Open a new contextual chat thread with Product owner AI agent" [ref=e1281] [cursor=pointer] [box=1198,2036,337,119]:
+          - img "Product owner AI agent" [ref=e1282] [box=1208,2046,40,40]
+          - generic [ref=e1283] [box=1260,2046,234,66]:
+            - generic [ref=e1285] [box=1260,2046,169,20]: Product owner AI agent
+            - generic [ref=e1286] [box=1260,2072,234,40]:
+              - generic [ref=e1287] [box=1260,2072,54,18]: "#crm-hr"
+              - generic [ref=e1288] [box=1260,2094,233,18]: "#party-6c6070bdeec74a93b81fcfa435c40f6b"
+          - generic [ref=e1289] [box=1260,2127,234,18]:
+            - generic [ref=e1290] [box=1260,2127,38,18]: Read
+            - generic [ref=e1291] [box=1302,2127,72,18]: This project
+        - button "Open recent threads with Product owner AI agent" [ref=e1292] [cursor=pointer] [box=1498,2043,30,30]:
+          - generic [ref=e1293] [box=1502,2048,20,20]: history
+      - article [ref=e1294] [box=1197,2165,339,99]:
+        - button "Open a new contextual chat thread with Programming Workspace Analyst" [ref=e1295] [cursor=pointer] [box=1198,2166,337,97]:
+          - img "Programming Workspace Analyst" [ref=e1296] [box=1208,2176,40,40]
+          - generic [ref=e1297] [box=1260,2176,234,44]:
+            - generic [ref=e1299] [box=1260,2176,234,20]: Programming Workspace Analyst
+            - generic [ref=e1300] [box=1260,2202,234,18]:
+              - generic [ref=e1301] [box=1260,2202,64,18]: "#approval"
+              - generic [ref=e1302] [box=1328,2202,89,18]: "#programming"
+              - generic [ref=e1303] [box=1421,2202,72,18]: "#workspace"
+          - generic [ref=e1304] [box=1260,2234,234,18]:
+            - generic [ref=e1305] [box=1260,2234,38,18]: Read
+            - generic [ref=e1306] [box=1302,2234,70,18]: All projects
+        - button "Open recent threads with Programming Workspace Analyst" [ref=e1307] [cursor=pointer] [box=1498,2173,30,30]:
+          - generic [ref=e1308] [box=1502,2178,20,20]: history
+      - article [ref=e1309] [box=1197,2273,339,99]:
+        - button "Open a new contextual chat thread with Release Readiness Manager" [ref=e1310] [cursor=pointer] [box=1198,2274,337,97]:
+          - img "Release Readiness Manager" [ref=e1311] [box=1208,2284,40,40]
+          - generic [ref=e1312] [box=1260,2284,234,44]:
+            - generic [ref=e1314] [box=1260,2284,194,20]: Release Readiness Manager
+            - generic [ref=e1315] [box=1260,2310,234,18]:
+              - generic [ref=e1316] [box=1260,2310,73,18]: "#operations"
+              - generic [ref=e1317] [box=1337,2310,66,18]: "#readiness"
+              - generic [ref=e1318] [box=1408,2310,54,18]: "#release"
+          - generic [ref=e1319] [box=1260,2342,234,18]:
+            - generic [ref=e1320] [box=1260,2342,38,18]: Read
+            - generic [ref=e1321] [box=1302,2342,70,18]: All projects
+        - button "Open recent threads with Release Readiness Manager" [ref=e1322] [cursor=pointer] [box=1498,2281,30,30]:
+          - generic [ref=e1323] [box=1502,2286,20,20]: history
+      - article [ref=e1324] [box=1197,2380,339,99]:
+        - button "Open a new contextual chat thread with Research Deep Dive Analyst" [ref=e1325] [cursor=pointer] [box=1198,2381,337,97]:
+          - img "Research Deep Dive Analyst" [ref=e1326] [box=1208,2392,40,40]
+          - generic [ref=e1327] [box=1260,2392,234,44]:
+            - generic [ref=e1329] [box=1260,2392,196,20]: Research Deep Dive Analyst
+            - generic [ref=e1330] [box=1260,2417,234,18]:
+              - generic [ref=e1331] [box=1260,2417,79,18]: "#background"
+              - generic [ref=e1332] [box=1344,2417,64,18]: "#evidence"
+              - generic [ref=e1333] [box=1412,2417,61,18]: "#research"
+          - generic [ref=e1334] [box=1260,2450,234,18]:
+            - generic [ref=e1335] [box=1260,2450,38,18]: Read
+            - generic [ref=e1336] [box=1302,2450,70,18]: All projects
+        - button "Open recent threads with Research Deep Dive Analyst" [ref=e1337] [cursor=pointer] [box=1498,2388,30,30]:
+          - generic [ref=e1338] [box=1502,2393,20,20]: history
+      - article [ref=e1339] [box=1197,2488,339,99]:
+        - button "Open a new contextual chat thread with Security Reviewer" [ref=e1340] [cursor=pointer] [box=1198,2489,337,97]:
+          - img "Security Reviewer" [ref=e1341] [box=1208,2499,40,40]
+          - generic [ref=e1342] [box=1260,2499,234,44]:
+            - generic [ref=e1344] [box=1260,2499,126,20]: Security Reviewer
+            - generic [ref=e1345] [box=1260,2525,234,18]:
+              - generic [ref=e1346] [box=1260,2525,53,18]: "#review"
+              - generic [ref=e1347] [box=1317,2525,38,18]: "#risk"
+              - generic [ref=e1348] [box=1359,2525,59,18]: "#security"
+          - generic [ref=e1349] [box=1260,2558,234,18]:
+            - generic [ref=e1350] [box=1260,2558,38,18]: Read
+            - generic [ref=e1351] [box=1302,2558,70,18]: All projects
+        - button "Open recent threads with Security Reviewer" [ref=e1352] [cursor=pointer] [box=1498,2496,30,30]:
+          - generic [ref=e1353] [box=1502,2501,20,20]: history
+      - article [ref=e1354] [box=1197,2596,339,99]:
+        - button "Open a new contextual chat thread with Spreadsheet Analyst" [ref=e1355] [cursor=pointer] [box=1198,2597,337,97]:
+          - img "Spreadsheet Analyst" [ref=e1356] [box=1208,2607,40,40]
+          - generic [ref=e1357] [box=1260,2607,234,44]:
+            - generic [ref=e1359] [box=1260,2607,144,20]: Spreadsheet Analyst
+            - generic [ref=e1360] [box=1260,2633,234,18]:
+              - generic [ref=e1361] [box=1260,2633,59,18]: "#analysis"
+              - generic [ref=e1362] [box=1323,2633,80,18]: "#spreadsheet"
+              - generic [ref=e1363] [box=1407,2633,55,18]: "#tabular"
+          - generic [ref=e1364] [box=1260,2665,234,18]:
+            - generic [ref=e1365] [box=1260,2665,38,18]: Read
+            - generic [ref=e1366] [box=1302,2665,70,18]: All projects
+        - button "Open recent threads with Spreadsheet Analyst" [ref=e1367] [cursor=pointer] [box=1498,2604,30,30]:
+          - generic [ref=e1368] [box=1502,2609,20,20]: history
+      - article [ref=e1369] [box=1197,2703,339,99]:
+        - button "Open a new contextual chat thread with UI Review Lead" [ref=e1370] [cursor=pointer] [box=1198,2704,337,97]:
+          - img "UI Review Lead" [ref=e1371] [box=1208,2715,40,40]
+          - generic [ref=e1372] [box=1260,2715,234,44]:
+            - generic [ref=e1374] [box=1260,2715,107,20]: UI Review Lead
+            - generic [ref=e1375] [box=1260,2741,234,18]:
+              - generic [ref=e1376] [box=1260,2741,60,18]: "#browser"
+              - generic [ref=e1377] [box=1324,2741,53,18]: "#review"
+              - generic [ref=e1378] [box=1381,2741,29,18]: "#ui"
+          - generic [ref=e1379] [box=1260,2773,234,18]:
+            - generic [ref=e1380] [box=1260,2773,38,18]: Read
+            - generic [ref=e1381] [box=1302,2773,70,18]: All projects
+        - button "Open recent threads with UI Review Lead" [ref=e1382] [cursor=pointer] [box=1498,2712,30,30]:
+          - generic [ref=e1383] [box=1502,2716,20,20]: history

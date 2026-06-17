@@ -1,0 +1,65 @@
+{
+  "definitionId": "68967250-8086-9207-fb59-436d78d9222c",
+  "launchPlanId": "dab7bda7-0e81-47c8-9ff2-f628291ac7b7",
+  "runId": "5b0411a2-2825-4ebe-a306-7373288388d1",
+  "stage": "Completed",
+  "route": "/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/processes/live?runId=5b0411a2-2825-4ebe-a306-7373288388d1",
+  "launchPlan": {
+    "planId": "dab7bda7-0e81-47c8-9ff2-f628291ac7b7",
+    "definitionId": "68967250-8086-9207-fb59-436d78d9222c",
+    "definitionVersionId": "649775c2-305a-7ba4-53aa-78514378fae9",
+    "definitionKey": "dotnet-runtime-command-writeback",
+    "definitionName": ".NET runtime command project-structure writeback",
+    "definitionSummary": "Creates durable runtime-capable Run app and Run tests project-structure nodes under the current process run node.",
+    "liveRunProfileKey": null,
+    "planHash": "sha256:19b51ff10dfeea61500510e73c22dac3239d1623835f821487e9fd9909c42c73",
+    "steps": [
+      {
+        "stepInstanceId": "8aa32578-23d8-4bfb-ab28-c6324e27bc19",
+        "stepKey": "resolve-dotnet-run-commands",
+        "title": "Resolve .NET run and test commands",
+        "roleKey": "runtime-command-recorder",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "b56342f5-e753-4217-b3cc-5e8f4a495918",
+        "stepKey": "write-run-command-nodes",
+        "title": "Write Run command project nodes",
+        "roleKey": "runtime-command-recorder",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      },
+      {
+        "stepInstanceId": "693e7811-d9d4-4066-b1da-66c87538ad56",
+        "stepKey": "runtime-command-handoff",
+        "title": "Hand off runtime command nodes",
+        "roleKey": "runtime-command-recorder",
+        "executorKind": "agent",
+        "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+        "executorDisplayName": "Delivery Manager",
+        "isBlocked": false,
+        "blockedReason": null,
+        "branchGate": null
+      }
+    ],
+    "readinessFindings": [
+      {
+        "severity": "Info",
+        "code": "process.launch.readiness_ok",
+        "message": "All executable steps have active agent bindings with enabled structured-output-capable providers.",
+        "stepKey": null,
+        "roleKey": null
+      }
+    ]
+  },
+  "warnings": []
+}

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
@@ -14,6 +15,15 @@ public sealed class ProcessMockAgentCatalogService(
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
+    };
+    private static readonly AgentPermissionsPolicy ProcessMockAgentPermissions = AgentPermissionsPolicy.Default with
+    {
+        CanUseTools = true,
+        CanAskOtherAgents = true,
+        CanEscalateToHuman = true,
+        RequiresApprovalForExternalCalls = false,
+        AutoApproveExternalCallsByDefault = true,
+        AllowedSecrets = []
     };
 
     public async Task<ProcessMockAgentCatalogContext?> EnsureCatalogAsync(CancellationToken cancellationToken = default)
@@ -33,18 +43,26 @@ public sealed class ProcessMockAgentCatalogService(
             return null;
         }
 
-        provider = await EnsureProviderAsync(workspaceService, provider, cancellationToken);
-        var agentIdsByRoleKey = await EnsureAgentsAsync(workspaceService, provider, cancellationToken);
-        await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        var providerResult = await EnsureProviderAsync(workspaceService, provider, cancellationToken);
+        var agentResult = await EnsureAgentsAsync(workspaceService, providerResult.Provider, cancellationToken);
+        if (providerResult.Changed || agentResult.Changed)
+        {
+            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        }
 
-        return new ProcessMockAgentCatalogContext(provider.Id, agentIdsByRoleKey);
+        return new ProcessMockAgentCatalogContext(providerResult.Provider.Id, agentResult.AgentIdsByRoleKey);
     }
 
-    private static async Task<ProviderProfile> EnsureProviderAsync(
+    private static async Task<ProviderEnsureResult> EnsureProviderAsync(
         IAgentFrameworkWorkspaceService workspaceService,
         ProviderProfile? provider,
         CancellationToken cancellationToken)
     {
+        if (provider is not null && IsProcessMockProviderCurrent(provider))
+        {
+            return new ProviderEnsureResult(provider, Changed: false);
+        }
+
         var editor = provider is null
             ? await workspaceService.GetProviderEditorAsync(cancellationToken: cancellationToken)
             : await workspaceService.GetProviderEditorAsync(provider.Id, cancellationToken);
@@ -60,12 +78,7 @@ public sealed class ProcessMockAgentCatalogService(
         editor.SupportsTools = true;
         editor.PreferFrameworkManagedChatHistory = true;
         editor.SupportsBackgroundResponses = false;
-        editor.ConfigurationJson = JsonSerializer.Serialize(
-            new
-            {
-                processMockAgents = true
-            },
-            JsonOptions);
+        editor.ConfigurationJson = CreateProviderConfigurationJson();
         editor.Notes = "Settings-gated deterministic mock provider for process automation flow tuning.";
         editor.SuggestedModels =
         [
@@ -74,16 +87,17 @@ public sealed class ProcessMockAgentCatalogService(
 
         var providerId = await workspaceService.SaveProviderAsync(editor, cancellationToken);
         var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-        return providers.First(item => item.Id == providerId);
+        return new ProviderEnsureResult(providers.First(item => item.Id == providerId), Changed: true);
     }
 
-    private static async Task<IReadOnlyDictionary<string, Guid>> EnsureAgentsAsync(
+    private static async Task<AgentCatalogEnsureResult> EnsureAgentsAsync(
         IAgentFrameworkWorkspaceService workspaceService,
         ProviderProfile provider,
         CancellationToken cancellationToken)
     {
         var agents = (await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken)).ToList();
         var agentIdsByRoleKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var changed = false;
 
         foreach (var role in ProcessMockAgentCatalog.Roles)
         {
@@ -94,6 +108,11 @@ public sealed class ProcessMockAgentCatalogService(
                 agents.FirstOrDefault(item =>
                     item.ProviderProfileId == provider.Id &&
                     string.Equals(item.Name, role.AgentName, StringComparison.Ordinal));
+            if (agent is not null && IsProcessMockAgentCurrent(agent, provider, role))
+            {
+                agentIdsByRoleKey[role.RoleKey] = agent.Id;
+                continue;
+            }
 
             var editor = agent is null
                 ? await workspaceService.GetAgentEditorAsync(cancellationToken: cancellationToken)
@@ -111,28 +130,10 @@ public sealed class ProcessMockAgentCatalogService(
             editor.Temperature = 0d;
             editor.RequirePerServiceCallChatHistoryPersistence = false;
             editor.EnableBackgroundResponses = false;
-            editor.ConfigurationJson = JsonSerializer.Serialize(
-                new
-                {
-                    processMockAgent = true,
-                    roleKey = role.RoleKey
-                },
-                JsonOptions);
-            editor.ConfigurationJson = AgentFrameworkCrmHrMetadata.Write(
-                editor.ConfigurationJson,
-                role.PartyId,
-                AiExecutionMode.Remote,
-                []);
+            editor.ConfigurationJson = CreateAgentConfigurationJson(role);
             editor.IsTemplate = false;
             editor.TemplateKey = string.Empty;
-            editor.Permissions = AgentPermissionsPolicy.Default with
-            {
-                CanUseTools = true,
-                CanAskOtherAgents = true,
-                CanEscalateToHuman = true,
-                RequiresApprovalForExternalCalls = false,
-                AutoApproveExternalCallsByDefault = true
-            };
+            editor.Permissions = ProcessMockAgentPermissions;
             editor.ProjectStructureAccess.CanRead = true;
             editor.ProjectStructureAccess.CanWrite = false;
             editor.ProjectStructureAccess.AllowAllProjects = true;
@@ -152,9 +153,10 @@ public sealed class ProcessMockAgentCatalogService(
 
             var agentId = await workspaceService.SaveAgentAsync(editor, cancellationToken);
             agentIdsByRoleKey[role.RoleKey] = agentId;
+            changed = true;
         }
 
-        return agentIdsByRoleKey;
+        return new AgentCatalogEnsureResult(agentIdsByRoleKey, changed);
     }
 
     private static async Task DisableCatalogAsync(
@@ -184,4 +186,141 @@ public sealed class ProcessMockAgentCatalogService(
             await workspaceService.SaveAgentAsync(agentEditor, cancellationToken);
         }
     }
+
+    private static string CreateProviderConfigurationJson()
+    {
+        return JsonSerializer.Serialize(
+            new
+            {
+                processMockAgents = true
+            },
+            JsonOptions);
+    }
+
+    private static string CreateAgentConfigurationJson(ProcessMockAgentRoleDefinition role)
+    {
+        var configurationJson = JsonSerializer.Serialize(
+            new
+            {
+                processMockAgent = true,
+                roleKey = role.RoleKey
+            },
+            JsonOptions);
+        return AgentFrameworkCrmHrMetadata.Write(
+            configurationJson,
+            role.PartyId,
+            AiExecutionMode.Remote,
+            []);
+    }
+
+    private static bool IsProcessMockProviderCurrent(ProviderProfile provider)
+    {
+        return string.Equals(provider.Name, ProcessMockAgentCatalog.ProviderName, StringComparison.Ordinal) &&
+               provider.Kind == ProviderKind.OpenAi &&
+               string.Equals(provider.BaseUrl, ProcessMockAgentCatalog.ProviderBaseUrl, StringComparison.OrdinalIgnoreCase) &&
+               string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable) &&
+               string.Equals(provider.DefaultModel, ProcessMockAgentCatalog.Model, StringComparison.Ordinal) &&
+               provider.Transport == ProviderTransportKind.Responses &&
+               provider.IsEnabled &&
+               !provider.SupportsStreaming &&
+               provider.SupportsTools &&
+               provider.PreferFrameworkManagedChatHistory &&
+               !provider.SupportsBackgroundResponses &&
+               JsonContentEquals(provider.ConfigurationJson, CreateProviderConfigurationJson()) &&
+               string.Equals(provider.Notes, "Settings-gated deterministic mock provider for process automation flow tuning.", StringComparison.Ordinal) &&
+               provider.SuggestedModels.SequenceEqual([ProcessMockAgentCatalog.Model], StringComparer.Ordinal);
+    }
+
+    private static bool IsProcessMockAgentCurrent(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        ProcessMockAgentRoleDefinition role)
+    {
+        var projectStructureAccess = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
+        var processAccess = AgentProcessAccessMetadata.Read(agent.ConfigurationJson);
+        var crmHrMetadata = AgentFrameworkCrmHrMetadata.Read(agent.ConfigurationJson);
+        var desiredTags = CreateAgentTags(role);
+
+        return string.Equals(agent.Name, role.AgentName, StringComparison.Ordinal) &&
+               string.Equals(agent.RoleTitle, role.RoleTitle, StringComparison.Ordinal) &&
+               string.Equals(agent.Summary, role.Summary, StringComparison.Ordinal) &&
+               string.Equals(agent.Instructions, role.Instructions, StringComparison.Ordinal) &&
+               agent.Status == AgentLifecycleStatus.Active &&
+               agent.ProviderProfileId == provider.Id &&
+               string.IsNullOrWhiteSpace(agent.Model) &&
+               agent.Workload == role.Workload &&
+               agent.ChatHistoryMode == AgentChatHistoryMode.ProviderDefault &&
+               agent.Temperature == 0d &&
+               !agent.RequirePerServiceCallChatHistoryPersistence &&
+               !agent.EnableBackgroundResponses &&
+               !agent.IsTemplate &&
+               string.IsNullOrWhiteSpace(agent.TemplateKey) &&
+               PermissionsMatch(agent.Permissions, ProcessMockAgentPermissions) &&
+               agent.Capabilities.Count == 0 &&
+               TagsMatch(agent.Tags, desiredTags) &&
+               string.Equals(ProcessMockAgentCatalog.ResolveRoleKey(agent), role.RoleKey, StringComparison.OrdinalIgnoreCase) &&
+               crmHrMetadata?.PartyId == role.PartyId &&
+               crmHrMetadata.ExecutionMode == AiExecutionMode.Remote &&
+               crmHrMetadata.Capabilities.Count == 0 &&
+               projectStructureAccess.CanRead &&
+               !projectStructureAccess.CanWrite &&
+               projectStructureAccess.AllowAllProjects &&
+               projectStructureAccess.AllowedProjectIds.Count == 0 &&
+               processAccess.CanRead &&
+               !processAccess.CanWrite &&
+               processAccess.AllowAllDefinitions &&
+               processAccess.AllowedDefinitionIds.Count == 0;
+    }
+
+    private static IReadOnlyList<string> CreateAgentTags(ProcessMockAgentRoleDefinition role)
+    {
+        var roleTag = ProcessMockAgentCatalog.CreateRoleTag(role.RoleKey);
+        return AgentFrameworkCrmHrMetadata.EnsurePartyTag(
+                [
+                    ProcessMockAgentCatalog.AgentTag,
+                    roleTag
+                ],
+                role.PartyId)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+    }
+
+    private static bool PermissionsMatch(AgentPermissionsPolicy current, AgentPermissionsPolicy desired)
+    {
+        return current.CanUseTools == desired.CanUseTools &&
+               current.CanAskOtherAgents == desired.CanAskOtherAgents &&
+               current.CanEscalateToHuman == desired.CanEscalateToHuman &&
+               current.CanObserveOtherAgents == desired.CanObserveOtherAgents &&
+               current.CanScheduleWork == desired.CanScheduleWork &&
+               current.RequiresApprovalForExternalCalls == desired.RequiresApprovalForExternalCalls &&
+               current.AutoApproveExternalCallsByDefault == desired.AutoApproveExternalCallsByDefault &&
+               current.NormalizedAllowedSecrets.SequenceEqual(desired.NormalizedAllowedSecrets);
+    }
+
+    private static bool TagsMatch(IReadOnlyList<string> current, IReadOnlyList<string> desired)
+    {
+        return current.Count == desired.Count &&
+               current.All(item => desired.Contains(item, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static bool JsonContentEquals(string? current, string desired)
+    {
+        try
+        {
+            return string.Equals(
+                JsonNode.Parse(current ?? string.Empty)?.ToJsonString(),
+                JsonNode.Parse(desired)?.ToJsonString(),
+                StringComparison.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private sealed record ProviderEnsureResult(ProviderProfile Provider, bool Changed);
+
+    private sealed record AgentCatalogEnsureResult(
+        IReadOnlyDictionary<string, Guid> AgentIdsByRoleKey,
+        bool Changed);
 }

@@ -38,6 +38,8 @@ public static class ProcessRuntimeEventTypes
 
     public static ProcessEventType DispatchClaimExpired { get; } = new("DispatchClaimExpired");
 
+    public static ProcessEventType DispatchClaimReleased { get; } = new("DispatchClaimReleased");
+
     public static ProcessEventType DispatchClaimReclaimed { get; } = new("DispatchClaimReclaimed");
 
     public static ProcessEventType DispatchClaimCompleted { get; } = new("DispatchClaimCompleted");

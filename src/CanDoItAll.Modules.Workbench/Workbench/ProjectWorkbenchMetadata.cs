@@ -168,6 +168,8 @@ public sealed class ProjectObjectMetadataEnvelope
 {
     public ProjectWorkflowProjectWriteMetadata? WorkflowProjectWrite { get; set; }
 
+    public ProjectBlockMetadata? ProjectBlock { get; set; }
+
     public ProjectMeetingMetadata? Meeting { get; set; }
 
     public ProjectRecordingMetadata? Recording { get; set; }
@@ -200,6 +202,24 @@ public sealed class ProjectWorkflowProjectWriteMetadata
     public string IdempotencyKey { get; set; } = string.Empty;
 
     public string BatchIdempotencyKey { get; set; } = string.Empty;
+}
+
+public sealed class ProjectBlockMetadata
+{
+    [ProjectStructurePreviewField("Output root", 10)]
+    public string OutputRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Product root", 20)]
+    public string ProductRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Target root", 30)]
+    public string TargetRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Repository root", 40)]
+    public string RepositoryRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Workspace root", 50)]
+    public string WorkspaceRoot { get; set; } = string.Empty;
 }
 
 public sealed record ProjectNodeMarker(
@@ -827,6 +847,11 @@ public static class ProjectObjectMetadataSerializer
     private static int CountFamilies(ProjectObjectMetadataEnvelope metadata)
     {
         var count = 0;
+        if (metadata.ProjectBlock is not null)
+        {
+            count++;
+        }
+
         if (metadata.Meeting is not null)
         {
             count++;
@@ -897,6 +922,11 @@ public static class ProjectObjectMetadataSerializer
 
     private static ProjectNodeKindFamily ResolveMetadataFamily(ProjectObjectMetadataEnvelope metadata)
     {
+        if (metadata.ProjectBlock is not null)
+        {
+            return ProjectNodeKindFamily.ProjectBlock;
+        }
+
         if (metadata.Meeting is not null)
         {
             return ProjectNodeKindFamily.Meeting;

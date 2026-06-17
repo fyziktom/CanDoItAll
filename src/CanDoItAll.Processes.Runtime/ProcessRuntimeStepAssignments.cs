@@ -36,6 +36,10 @@ public interface IProcessRuntimeStepAssignmentStore
         ProcessRunId runId,
         CancellationToken cancellationToken = default);
 
+    ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
+        IReadOnlyDictionary<string, string> requiredVariables,
+        CancellationToken cancellationToken = default);
+
     ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
         ProcessRunId runId,
         ProcessStepInstanceId stepInstanceId,

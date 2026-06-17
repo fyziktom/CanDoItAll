@@ -18,10 +18,48 @@ public sealed class ProcessLaunchApplicationService(
     IProcessLaunchExecutorResolver executorResolver,
     IProcessInstancePlanStore planStore,
     IProcessRuntimeUnitOfWork unitOfWork,
+    IProcessRuntimeStateStore stateStore,
     IProcessRuntimeStepAssignmentStore assignmentStore,
+    IProcessLaunchArtifactInitializer artifactInitializer,
     ProcessRuntimeDispatchApplicationService dispatchService,
     ProcessRuntimeProjectionCatchupService projectionCatchupService)
 {
+    private const string ExecuteExternalActionOperationName = "ExecuteExternalAction";
+    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
+    private const string SubprocessStepKind = "Subprocess";
+
+    public async Task<ProcessLaunchResult> PreviewAsync(
+        ProcessLaunchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var nowUtc = NormalizeUtc(clock.GetUtcNow());
+        var preparation = await PrepareLaunchAsync(request, nowUtc, cancellationToken).ConfigureAwait(false);
+        if (preparation.EarlyResult is not null)
+        {
+            return preparation.EarlyResult;
+        }
+
+        var plan = preparation.Plan ?? throw new InvalidOperationException("Prepared process launch did not include an instance plan.");
+        var launchPlan = preparation.LaunchPlan ?? throw new InvalidOperationException("Prepared process launch did not include a launch plan view.");
+        var stage = preparation.BlockingFindings.Count > 0
+            ? ProcessLaunchStage.Blocked
+            : ProcessLaunchStage.Planned;
+
+        return new ProcessLaunchResult(
+            plan.Definition.DefinitionId,
+            plan.Header.PlanId,
+            RunId: null,
+            stage,
+            Route: string.Empty,
+            launchPlan,
+            launchPlan.ReadinessFindings
+                .Where(finding => finding.Severity != ProcessLaunchReadinessSeverity.Info)
+                .Select(finding => finding.Message)
+                .ToArray());
+    }
+
     public async Task<ProcessLaunchResult> LaunchAsync(
         ProcessLaunchRequest request,
         CancellationToken cancellationToken = default)
@@ -29,80 +67,16 @@ public sealed class ProcessLaunchApplicationService(
         ArgumentNullException.ThrowIfNull(request);
 
         var nowUtc = NormalizeUtc(clock.GetUtcNow());
-        var selected = ResolveDefinition(request);
-        var driverCatalog = await driverCatalogProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
-        var kernelBuild = ProcessTemplateKernelBuilder.Build(
-            selected.Definition,
-            selected.Pack.Manifest.Version,
-            driverCatalog.StepExecutionStrategyId);
-        var compileRequest = CreateCompileRequest(
-            kernelBuild,
-            selected,
-            driverCatalog);
-        var compileResult = new ProcessInstancePlanCompiler().Compile(compileRequest);
-        if (!compileResult.Succeeded || compileResult.Plan is null)
+        var preparation = await PrepareLaunchAsync(request, nowUtc, cancellationToken).ConfigureAwait(false);
+        if (preparation.EarlyResult is not null)
         {
-            var findings = compileResult.Diagnostics
-                .Select(diagnostic => new ProcessLaunchReadinessFinding(
-                    ProcessLaunchReadinessSeverity.Error,
-                    diagnostic.Code,
-                    diagnostic.Message))
-                .ToArray();
-            var blockedPlanId = ProcessInstancePlanId.New();
-            return new ProcessLaunchResult(
-                kernelBuild.Definition.DefinitionId,
-                blockedPlanId,
-                RunId: null,
-                ProcessLaunchStage.Blocked,
-                Route: string.Empty,
-                new ProcessLaunchPlanView(
-                    blockedPlanId,
-                    kernelBuild.Definition.DefinitionId,
-                    kernelBuild.Definition.VersionId,
-                    selected.Definition.Key,
-                    selected.Definition.DisplayName,
-                    selected.Definition.Summary,
-                    selected.LiveRunProfile?.Key,
-                    PlanHash: string.Empty,
-                    Steps: [],
-                    findings),
-                findings.Select(finding => finding.Message).ToArray());
+            return preparation.EarlyResult;
         }
 
-        var plan = compileResult.Plan;
-        var executorResolution = await executorResolver.ResolveAsync(
-            new ProcessLaunchExecutorResolutionRequest(
-                selected.Definition,
-                plan,
-                selected.LiveRunProfile,
-                request.Variables),
-            cancellationToken).ConfigureAwait(false);
-        var assignments = BuildAssignments(
-            request,
-            selected,
-            kernelBuild,
-            plan,
-            executorResolution,
-            nowUtc);
-        var launchPlan = CreateLaunchPlanView(
-            selected,
-            plan,
-            assignments,
-            executorResolution.Findings);
-        var blockingFindings = executorResolution.Findings
-            .Where(finding => finding.Severity == ProcessLaunchReadinessSeverity.Error)
-            .ToArray();
-        if (request.RunReadiness && blockingFindings.Length > 0)
-        {
-            return new ProcessLaunchResult(
-                plan.Definition.DefinitionId,
-                plan.Header.PlanId,
-                RunId: null,
-                ProcessLaunchStage.Blocked,
-                Route: string.Empty,
-                launchPlan,
-                blockingFindings.Select(finding => finding.Message).ToArray());
-        }
+        var selected = preparation.Selected ?? throw new InvalidOperationException("Prepared process launch did not include a template selection.");
+        var plan = preparation.Plan ?? throw new InvalidOperationException("Prepared process launch did not include an instance plan.");
+        var assignments = preparation.Assignments;
+        var launchPlan = preparation.LaunchPlan ?? throw new InvalidOperationException("Prepared process launch did not include a launch plan view.");
 
         await planStore.PersistAsync(plan, cancellationToken).ConfigureAwait(false);
 
@@ -110,6 +84,7 @@ public sealed class ProcessLaunchApplicationService(
             plan,
             selected.Definition,
             assignments,
+            request.RootRunIdOverride,
             nowUtc);
         var createContext = CreateContext(request.RequestedBy, nowUtc);
         var createMutation = CreateAppliedMutation(
@@ -133,6 +108,30 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         await assignmentStore.SaveAsync(assignments, cancellationToken).ConfigureAwait(false);
+        var artifactRoot = BuildManagedProcessArtifactRoot(initialState.RunId);
+        try
+        {
+            await artifactInitializer.InitializeAsync(
+                new ProcessLaunchArtifactInitializationRequest(
+                    initialState.RunId,
+                    plan.Definition.DefinitionId,
+                    plan.Header.PlanId,
+                    selected.Definition.Key,
+                    request.ProjectId,
+                    artifactRoot),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return new ProcessLaunchResult(
+                plan.Definition.DefinitionId,
+                plan.Header.PlanId,
+                initialState.RunId,
+                ProcessLaunchStage.Failed,
+                BuildRunRoute(initialState.RunId, request.ProjectId),
+                launchPlan,
+                [$"Failed to initialize managed process artifact root '{artifactRoot}': {exception.Message}"]);
+        }
 
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var activeCommit = await engine.ActivateAsync(
@@ -168,17 +167,188 @@ public sealed class ProcessLaunchApplicationService(
             stage,
             BuildRunRoute(activeState.RunId, request.ProjectId),
             launchPlan,
-            executorResolution.Findings
+            launchPlan.ReadinessFindings
                 .Where(finding => finding.Severity != ProcessLaunchReadinessSeverity.Info)
                 .Select(finding => finding.Message)
                 .ToArray());
+    }
+
+    public async Task<ProcessLaunchResult?> FindExistingLaunchAsync(
+        ProcessExistingLaunchLookupRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.DefinitionKey))
+        {
+            throw new ArgumentException("A process definition key is required for existing launch lookup.", nameof(request));
+        }
+
+        if (request.RequiredLaunchVariables.Count == 0)
+        {
+            throw new ArgumentException("At least one launch variable is required for existing launch lookup.", nameof(request));
+        }
+
+        var selected = ResolveDefinition(new ProcessLaunchRequest(
+            request.DefinitionKey,
+            ProcessDefinitionId: null,
+            request.LiveRunProfileKey,
+            request.ProjectId,
+            ProjectNodeId: null,
+            RequestedBy: "existing-launch-lookup",
+            Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+            RunReadiness: false,
+            Execute: false));
+        var expectedDefinitionId = ProcessTemplateKernelBuilder.CreateDefinitionId(selected.Definition.Key);
+        var matchingAssignments = await assignmentStore
+            .FindByLaunchVariablesAsync(request.RequiredLaunchVariables, cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var runGroup in matchingAssignments
+            .GroupBy(assignment => assignment.RunId)
+            .OrderByDescending(group => group.Max(assignment => assignment.CreatedAtUtc)))
+        {
+            var state = await stateStore.LoadAsync(runGroup.Key, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                throw new InvalidOperationException($"Existing launch lookup found assignments for missing process run '{runGroup.Key}'.");
+            }
+
+            var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Existing launch lookup found process run '{state.RunId}' with missing plan '{state.PlanId}'.");
+            if (plan.Definition.DefinitionId != expectedDefinitionId)
+            {
+                continue;
+            }
+
+            var assignments = await assignmentStore.LoadByRunAsync(state.RunId, cancellationToken).ConfigureAwait(false);
+            var launchPlan = CreateLaunchPlanView(
+                selected,
+                plan,
+                assignments,
+                [new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Info,
+                    "process.launch.existing_reused",
+                    $"Reused existing process run '{state.RunId.Value:D}' for matching launch variables.")]);
+
+            return new ProcessLaunchResult(
+                plan.Definition.DefinitionId,
+                plan.Header.PlanId,
+                state.RunId,
+                MapLaunchStage(state.Status),
+                BuildRunRoute(state.RunId, request.ProjectId),
+                launchPlan,
+                [$"Reused existing process run '{state.RunId.Value:D}' for matching launch variables."]);
+        }
+
+        return null;
+    }
+
+    private async Task<ProcessLaunchPreparation> PrepareLaunchAsync(
+        ProcessLaunchRequest request,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var selected = ResolveDefinition(request);
+        var driverCatalog = await driverCatalogProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
+        var kernelBuild = ProcessTemplateKernelBuilder.Build(
+            selected.Definition,
+            selected.Pack.Manifest.Version,
+            driverCatalog.StepExecutionStrategyId);
+        var compileRequest = CreateCompileRequest(
+            kernelBuild,
+            selected,
+            driverCatalog);
+        var compileResult = new ProcessInstancePlanCompiler().Compile(compileRequest);
+        if (!compileResult.Succeeded || compileResult.Plan is null)
+        {
+            var findings = compileResult.Diagnostics
+                .Select(diagnostic => new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    diagnostic.Code,
+                    diagnostic.Message))
+                .ToArray();
+            var blockedPlanId = ProcessInstancePlanId.New();
+            return new ProcessLaunchPreparation(
+                new ProcessLaunchResult(
+                    kernelBuild.Definition.DefinitionId,
+                    blockedPlanId,
+                    RunId: null,
+                    ProcessLaunchStage.Blocked,
+                    Route: string.Empty,
+                    new ProcessLaunchPlanView(
+                        blockedPlanId,
+                        kernelBuild.Definition.DefinitionId,
+                        kernelBuild.Definition.VersionId,
+                        selected.Definition.Key,
+                        selected.Definition.DisplayName,
+                        selected.Definition.Summary,
+                        selected.LiveRunProfile?.Key,
+                        PlanHash: string.Empty,
+                        Steps: [],
+                        findings),
+                    findings.Select(finding => finding.Message).ToArray()),
+                Selected: null,
+                Plan: null,
+                Assignments: [],
+                LaunchPlan: null,
+                BlockingFindings: findings);
+        }
+
+        var plan = compileResult.Plan;
+        var executorResolution = await executorResolver.ResolveAsync(
+            new ProcessLaunchExecutorResolutionRequest(
+                selected.Definition,
+                plan,
+                selected.LiveRunProfile,
+                request.Variables),
+            cancellationToken).ConfigureAwait(false);
+        var assignments = BuildAssignments(
+            request,
+            selected,
+            kernelBuild,
+            plan,
+            executorResolution,
+            nowUtc);
+        var launchPlan = CreateLaunchPlanView(
+            selected,
+            plan,
+            assignments,
+            executorResolution.Findings);
+        var blockingFindings = executorResolution.Findings
+            .Where(finding => finding.Severity == ProcessLaunchReadinessSeverity.Error)
+            .ToArray();
+        if (request.RunReadiness && blockingFindings.Length > 0)
+        {
+            return new ProcessLaunchPreparation(
+                new ProcessLaunchResult(
+                    plan.Definition.DefinitionId,
+                    plan.Header.PlanId,
+                    RunId: null,
+                    ProcessLaunchStage.Blocked,
+                    Route: string.Empty,
+                    launchPlan,
+                    blockingFindings.Select(finding => finding.Message).ToArray()),
+                Selected: null,
+                Plan: null,
+                Assignments: [],
+                LaunchPlan: null,
+                BlockingFindings: blockingFindings);
+        }
+
+        return new ProcessLaunchPreparation(
+            EarlyResult: null,
+            Selected: selected,
+            Plan: plan,
+            Assignments: assignments,
+            LaunchPlan: launchPlan,
+            BlockingFindings: blockingFindings);
     }
 
     private ProcessTemplateSelection ResolveDefinition(ProcessLaunchRequest request)
     {
         var pack = templatePackLoader.Load();
         var liveProfiles = templatePackLoader.LoadLiveRunProfiles();
-        var liveProfile = ResolveLiveRunProfile(request, liveProfiles);
         var definitionKey = request.DefinitionKey;
         if (string.IsNullOrWhiteSpace(definitionKey) && request.ProcessDefinitionId is { } definitionId)
         {
@@ -187,6 +357,7 @@ public sealed class ProcessLaunchApplicationService(
                 ?.Key;
         }
 
+        var liveProfile = ResolveLiveRunProfile(request, liveProfiles, definitionKey);
         if (string.IsNullOrWhiteSpace(definitionKey))
         {
             definitionKey = liveProfile?.ProcessTemplateKey;
@@ -208,19 +379,29 @@ public sealed class ProcessLaunchApplicationService(
 
     private static ProcessTemplateLiveRunProfileDocument? ResolveLiveRunProfile(
         ProcessLaunchRequest request,
-        IReadOnlyList<ProcessTemplateLiveRunProfileDocument> liveProfiles)
+        IReadOnlyList<ProcessTemplateLiveRunProfileDocument> liveProfiles,
+        string? definitionKey)
     {
         if (!string.IsNullOrWhiteSpace(request.LiveRunProfileKey))
         {
-            return liveProfiles.FirstOrDefault(profile =>
+            var profile = liveProfiles.FirstOrDefault(profile =>
                 string.Equals(profile.Key, request.LiveRunProfileKey.Trim(), StringComparison.OrdinalIgnoreCase))
                 ?? throw new InvalidOperationException($"Live-run profile '{request.LiveRunProfileKey}' is not available.");
+
+            if (!string.IsNullOrWhiteSpace(definitionKey) &&
+                !string.Equals(profile.ProcessTemplateKey, definitionKey.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Live-run profile '{profile.Key}' targets process template '{profile.ProcessTemplateKey}', not '{definitionKey.Trim()}'.");
+            }
+
+            return profile;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.DefinitionKey))
+        if (!string.IsNullOrWhiteSpace(definitionKey))
         {
             return liveProfiles.FirstOrDefault(profile =>
-                string.Equals(profile.ProcessTemplateKey, request.DefinitionKey.Trim(), StringComparison.OrdinalIgnoreCase));
+                string.Equals(profile.ProcessTemplateKey, definitionKey.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
         return liveProfiles.FirstOrDefault();
@@ -278,6 +459,13 @@ public sealed class ProcessLaunchApplicationService(
         var executorByStepKey = executorResolution.Bindings.ToDictionary(
             binding => binding.StepKey,
             StringComparer.OrdinalIgnoreCase);
+        var overrideByStepKey = request.ExecutorOverrides
+            .Where(item => !string.IsNullOrWhiteSpace(item.StepKey))
+            .GroupBy(item => item.StepKey.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Last(),
+                StringComparer.OrdinalIgnoreCase);
         var stepsByKey = selection.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
         var launchVariables = NormalizeLaunchVariables(request.Variables);
         var runId = ProcessRunId.New();
@@ -291,6 +479,18 @@ public sealed class ProcessLaunchApplicationService(
             }
 
             executorByStepKey.TryGetValue(planStep.StepKey, out var binding);
+            if (overrideByStepKey.TryGetValue(planStep.StepKey, out var executorOverride))
+            {
+                binding = new ProcessLaunchExecutorBinding(
+                    planStep.StepKey,
+                    NormalizeOptional(executorOverride.RoleKey, binding?.RoleKey ?? ResolvePrimaryRoleKey(templateStep)),
+                    NormalizeOptional(executorOverride.ExecutorKind, binding?.ExecutorKind ?? string.Empty),
+                    NormalizeOptional(executorOverride.ExecutorId, binding?.ExecutorId ?? string.Empty),
+                    NormalizeOptional(executorOverride.ExecutorDisplayName, binding?.ExecutorDisplayName ?? string.Empty),
+                    ComputeHash($"override:{planStep.StepKey}:{executorOverride.ExecutorKind}:{executorOverride.ExecutorId}"),
+                    NormalizeOptional(executorOverride.AssignmentReason, "Executor selected during launch review."));
+            }
+
             var requiredSlots = ResolveRequiredSlots(templateStep, kernelBuild);
             var producedSlots = ResolveProducedSlots(templateStep, kernelBuild);
             assignments.Add(new ProcessRuntimeStepAssignment(
@@ -302,7 +502,15 @@ public sealed class ProcessLaunchApplicationService(
                 binding?.ExecutorKind ?? string.Empty,
                 binding?.ExecutorId ?? string.Empty,
                 binding?.ExecutorDisplayName ?? string.Empty,
-                BuildStepPrompt(request, selection, templateStep, binding, requiredSlots, producedSlots, runId),
+                BuildStepPrompt(
+                    request,
+                    selection,
+                    templateStep,
+                    binding,
+                    requiredSlots,
+                    producedSlots,
+                    kernelBuild.ArtifactSlotByStepExpectation,
+                    runId),
                 binding?.ReadinessHash ?? ComputeHash($"missing:{planStep.StepKey}"),
                 binding?.AssignmentReason ?? "No executor binding was resolved.",
                 producedSlots,
@@ -326,6 +534,7 @@ public sealed class ProcessLaunchApplicationService(
         ProcessInstancePlan plan,
         ProcessTemplateDefinitionDocument definition,
         IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
+        ProcessRunId? rootRunIdOverride,
         DateTimeOffset nowUtc)
     {
         var assignmentByStep = assignments.ToDictionary(assignment => assignment.StepInstanceId);
@@ -358,7 +567,7 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         return new ProcessRuntimeStateSnapshot(
-            runId,
+            rootRunIdOverride ?? runId,
             runId,
             plan.Header.PlanId,
             plan.PlanHash,
@@ -496,6 +705,9 @@ public sealed class ProcessLaunchApplicationService(
             : value.Trim();
     }
 
+    private static string NormalizeOptional(string? value, string defaultValue)
+        => string.IsNullOrWhiteSpace(value) ? defaultValue : value.Trim();
+
     private static IReadOnlyDictionary<string, string> NormalizeLaunchVariables(
         IReadOnlyDictionary<string, string> variables)
     {
@@ -525,6 +737,7 @@ public sealed class ProcessLaunchApplicationService(
         ProcessLaunchExecutorBinding? binding,
         IReadOnlyList<ArtifactSlotId> requiredSlots,
         IReadOnlyList<ArtifactSlotId> producedSlots,
+        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> artifactSlotByStepExpectation,
         ProcessRunId runId)
     {
         var variables = request.Variables.Count == 0
@@ -535,12 +748,21 @@ public sealed class ProcessLaunchApplicationService(
             : string.Join(
                 Environment.NewLine,
                 step.BranchOutcomes.Select(outcome => $"- {outcome.Key}: {outcome.Title} - {outcome.Description}"));
-        var requiredArtifacts = requiredSlots.Count == 0
-            ? "No required upstream artifact slots."
-            : string.Join(Environment.NewLine, requiredSlots.Select(slotId => $"- {slotId}"));
-        var producedArtifacts = producedSlots.Count == 0
-            ? "No produced artifact slots."
-            : string.Join(Environment.NewLine, producedSlots.Select(slotId => $"- {slotId}"));
+        var requiredArtifacts = BuildRequiredArtifactContext(
+            selection.Definition,
+            step,
+            requiredSlots,
+            artifactSlotByStepExpectation,
+            runId);
+        var producedArtifacts = BuildProducedArtifactContext(
+            step,
+            producedSlots,
+            artifactSlotByStepExpectation,
+            runId);
+        var stepKind = string.IsNullOrWhiteSpace(step.StepKind)
+            ? "Work"
+            : step.StepKind.Trim();
+        var subprocessGuidance = BuildSubprocessGuidance(step);
 
         return $"""
         You are executing a CanDoItAll process step.
@@ -548,13 +770,14 @@ public sealed class ProcessLaunchApplicationService(
         Process: {selection.Definition.DisplayName}
         Step key: {step.Key}
         Step title: {step.Title}
+        Step kind: {stepKind}
         Role key: {binding?.RoleKey ?? ResolvePrimaryRoleKey(step)}
         Requested by: {request.RequestedBy}
         Project id: {request.ProjectId?.ToString("D") ?? "not scoped"}
         Project node id: {request.ProjectNodeId ?? "not scoped"}
         Process run id: {runId}
         Managed process artifact root: {BuildManagedProcessArtifactRoot(runId)}
-        Evidence write rule: write process step summaries, proof, screenshots, logs, and handoff notes under the managed process artifact root or a child path. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
+        Evidence write rule: write process step summaries, proof, screenshots, logs, and handoff notes under the managed process artifact root or a child path. Include the written managed artifact paths in evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
 
         Launch variables:
         {variables}
@@ -577,6 +800,9 @@ public sealed class ProcessLaunchApplicationService(
         Operation target scope:
         {NormalizeOperationTargetScope(step.OperationTargetScope)}
 
+        Subprocess mapping:
+        {subprocessGuidance}
+
         Required upstream artifact slots:
         {requiredArtifacts}
 
@@ -592,7 +818,198 @@ public sealed class ProcessLaunchApplicationService(
         """;
     }
 
-    private static string BuildManagedProcessArtifactRoot(ProcessRunId runId)
+    private static string BuildRequiredArtifactContext(
+        ProcessTemplateDefinitionDocument definition,
+        ProcessTemplateDefinitionStepDocument step,
+        IReadOnlyList<ArtifactSlotId> requiredSlots,
+        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> artifactSlotByStepExpectation,
+        ProcessRunId runId)
+    {
+        if (requiredSlots.Count == 0)
+        {
+            return "No required upstream artifact slots.";
+        }
+
+        var requiredSlotSet = requiredSlots.ToHashSet();
+        var describedSlots = new HashSet<ArtifactSlotId>();
+        var stepsByKey = definition.Steps.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
+        var lines = new List<string>();
+
+        foreach (var input in step.ArtifactInputs)
+        {
+            var sourceStepKey = NormalizeOptional(input.SourceStepKey, string.Empty);
+            var expectationKey = NormalizeOptional(input.ArtifactExpectationKey, string.Empty);
+            if (string.IsNullOrWhiteSpace(sourceStepKey) ||
+                string.IsNullOrWhiteSpace(expectationKey) ||
+                !artifactSlotByStepExpectation.TryGetValue((sourceStepKey, expectationKey), out var slotId) ||
+                !requiredSlotSet.Contains(slotId) ||
+                !stepsByKey.TryGetValue(sourceStepKey, out var sourceStep))
+            {
+                continue;
+            }
+
+            var expectation = sourceStep.ArtifactExpectations.FirstOrDefault(item =>
+                string.Equals(item.Key, expectationKey, StringComparison.OrdinalIgnoreCase));
+            lines.Add(FormatRequiredArtifactContext(runId, slotId, sourceStep, expectationKey, expectation));
+            describedSlots.Add(slotId);
+        }
+
+        foreach (var slotId in requiredSlots.Where(slotId => !describedSlots.Contains(slotId)))
+        {
+            lines.Add($"""
+            - Slot {slotId}
+              Producer context: unresolved from template artifact input mapping.
+              Runtime rule: this slot was available before scheduling this step. Do not block only because a slot-id directory is absent; inspect upstream step summaries and managed process artifacts first.
+            """);
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string FormatRequiredArtifactContext(
+        ProcessRunId runId,
+        ArtifactSlotId slotId,
+        ProcessTemplateDefinitionStepDocument sourceStep,
+        string expectationKey,
+        ProcessTemplateDefinitionArtifactExpectationDocument? expectation)
+    {
+        var expectationTitle = string.IsNullOrWhiteSpace(expectation?.Title)
+            ? expectationKey
+            : expectation.Title.Trim();
+        var artifactKind = string.IsNullOrWhiteSpace(expectation?.ArtifactKind)
+            ? "Artifact"
+            : expectation.ArtifactKind.Trim();
+        var validation = string.IsNullOrWhiteSpace(expectation?.ValidationRequirementSummary)
+            ? "Use the producer step output contract and evidence contract."
+            : expectation.ValidationRequirementSummary.Trim();
+
+        return $"""
+        - Slot {slotId}
+          Producer step: {sourceStep.Key} - {sourceStep.Title}
+          Artifact expectation: {expectationKey} - {expectationTitle} ({artifactKind})
+          Evidence refs to inspect: {BuildStepEvidencePath(runId, sourceStep.Key)}; {BuildSlotEvidenceRoot(runId, slotId)}; {BuildStepEvidenceRoot(runId, sourceStep.Key)}
+          Runtime rule: this slot is available only after the producer completed. Do not block only because a slot-id directory is absent; the producer step summary path is valid upstream evidence for this slot.
+          Validation: {validation}
+        """;
+    }
+
+    private static string BuildProducedArtifactContext(
+        ProcessTemplateDefinitionStepDocument step,
+        IReadOnlyList<ArtifactSlotId> producedSlots,
+        IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> artifactSlotByStepExpectation,
+        ProcessRunId runId)
+    {
+        if (producedSlots.Count == 0)
+        {
+            return "No produced artifact slots.";
+        }
+
+        var producedSlotSet = producedSlots.ToHashSet();
+        var describedSlots = new HashSet<ArtifactSlotId>();
+        var lines = new List<string>();
+
+        foreach (var expectation in step.ArtifactExpectations)
+        {
+            if (!artifactSlotByStepExpectation.TryGetValue((step.Key, expectation.Key), out var slotId) ||
+                !producedSlotSet.Contains(slotId))
+            {
+                continue;
+            }
+
+            lines.Add(FormatProducedArtifactContext(runId, slotId, step, expectation));
+            describedSlots.Add(slotId);
+        }
+
+        foreach (var slotId in producedSlots.Where(slotId => !describedSlots.Contains(slotId)))
+        {
+            lines.Add($"""
+            - Slot {slotId}
+              Write refs: {BuildStepEvidencePath(runId, step.Key)}; {BuildSlotEvidenceRoot(runId, slotId)}
+              Completion rule: include the written managed artifact path in evidenceRefs before returning Completed.
+            """);
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string FormatProducedArtifactContext(
+        ProcessRunId runId,
+        ArtifactSlotId slotId,
+        ProcessTemplateDefinitionStepDocument step,
+        ProcessTemplateDefinitionArtifactExpectationDocument expectation)
+    {
+        var title = string.IsNullOrWhiteSpace(expectation.Title)
+            ? expectation.Key
+            : expectation.Title.Trim();
+        var artifactKind = string.IsNullOrWhiteSpace(expectation.ArtifactKind)
+            ? "Artifact"
+            : expectation.ArtifactKind.Trim();
+        var validation = string.IsNullOrWhiteSpace(expectation.ValidationRequirementSummary)
+            ? "Use this step's output contract and evidence contract."
+            : expectation.ValidationRequirementSummary.Trim();
+
+        return $"""
+        - Slot {slotId}
+          Artifact expectation: {expectation.Key} - {title} ({artifactKind})
+          Write refs: {BuildStepEvidencePath(runId, step.Key)}; {BuildSlotEvidenceRoot(runId, slotId)}; {BuildStepEvidenceRoot(runId, step.Key)}
+          Completion rule: include the written managed artifact path in evidenceRefs before returning Completed.
+          Validation: {validation}
+        """;
+    }
+
+    private static string BuildStepEvidencePath(ProcessRunId runId, string stepKey)
+        => $"{BuildManagedProcessArtifactRoot(runId)}/steps/{SanitizeEvidencePathSegment(stepKey)}.md";
+
+    private static string BuildSlotEvidenceRoot(ProcessRunId runId, ArtifactSlotId slotId)
+        => $"{BuildManagedProcessArtifactRoot(runId)}/{slotId}";
+
+    private static string BuildStepEvidenceRoot(ProcessRunId runId, string stepKey)
+        => $"{BuildManagedProcessArtifactRoot(runId)}/{SanitizeEvidencePathSegment(stepKey)}/";
+
+    private static string SanitizeEvidencePathSegment(string value)
+    {
+        var normalized = NormalizeOptional(value, "step");
+        var builder = new StringBuilder(normalized.Length);
+        foreach (var character in normalized)
+        {
+            builder.Append(char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '-');
+        }
+
+        return builder.Length == 0 ? "step" : builder.ToString();
+    }
+
+    private static string BuildSubprocessGuidance(ProcessTemplateDefinitionStepDocument step)
+    {
+        var isSubprocessStep = string.Equals(step.StepKind, SubprocessStepKind, StringComparison.OrdinalIgnoreCase) ||
+                               !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
+        if (!isSubprocessStep)
+        {
+            return "No subprocess mapping.";
+        }
+
+        var hasSubprocessKey = !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
+        var subprocessKey = hasSubprocessKey
+            ? step.SubprocessProcessKey.Trim()
+            : "not mapped";
+        var snapshotName = string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName)
+            ? "not supplied"
+            : step.SubprocessDefinitionSnapshotName.Trim();
+        var launchInstruction = !hasSubprocessKey
+            ? "This step is marked as a subprocess but has no child process definition key. Return Blocked unless upstream evidence already supplies the missing child run."
+            : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ExecuteExternalActionOperationName} is allowed. Do not mark Completed until the child run receipt and required child evidence are available, or return Blocked with the missing evidence.";
+
+        return $"""
+        - Child process definition key: {subprocessKey}
+        - Child definition snapshot name: {snapshotName}
+        - Governed launch tool: {SubprocessLaunchToolName}
+        - Completion rule: {launchInstruction}
+        - Live-run profile rule: leave LiveRunProfileKey empty unless the launch variables explicitly provide a valid process live-run profile key for this child definition. BranchName, RepositoryRoot, SessionId, parent DefinitionKey, and child DefinitionKey are not live-run profile keys.
+        - Retry rule: repeated launch-tool calls for the same parent run, parent step, project node, and child definition return the existing child run instead of creating another child.
+        - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, and ExpectedChildEvidenceRefs. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root.
+        """;
+    }
+
+    public static string BuildManagedProcessArtifactRoot(ProcessRunId runId)
     {
         return $"artifacts/process-runs/{runId}";
     }
@@ -659,11 +1076,30 @@ public sealed class ProcessLaunchApplicationService(
             : $"/processes/live?runId={runId.Value:D}";
     }
 
+    private static ProcessLaunchStage MapLaunchStage(ProcessRuntimeStatus status)
+    {
+        return status switch
+        {
+            ProcessRuntimeStatus.Completed => ProcessLaunchStage.Completed,
+            ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled => ProcessLaunchStage.Failed,
+            ProcessRuntimeStatus.Blocked => ProcessLaunchStage.Blocked,
+            _ => ProcessLaunchStage.Running
+        };
+    }
+
     private static string ComputeHash(string? value)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value ?? string.Empty));
         return "sha256:" + Convert.ToHexString(bytes).ToLowerInvariant();
     }
+
+    private sealed record ProcessLaunchPreparation(
+        ProcessLaunchResult? EarlyResult,
+        ProcessTemplateSelection? Selected,
+        ProcessInstancePlan? Plan,
+        IReadOnlyList<ProcessRuntimeStepAssignment> Assignments,
+        ProcessLaunchPlanView? LaunchPlan,
+        IReadOnlyList<ProcessLaunchReadinessFinding> BlockingFindings);
 
     private sealed record ProcessTemplateSelection(
         ProcessTemplatePack Pack,

@@ -33,7 +33,6 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedProviders = providers
             .Select(MapToAgentFrameworkProvider)
             .ToList();
-        await UpsertCatalogProvidersAsync(mappedProviders, cancellationToken);
 
         return await MergeWithCatalogProvidersAsync(mappedProviders, cancellationToken);
     }

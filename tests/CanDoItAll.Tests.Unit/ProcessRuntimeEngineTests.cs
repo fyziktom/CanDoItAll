@@ -128,6 +128,51 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Release_claim_closes_current_claim_and_returns_step_to_ready()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var release = await engine.ReleaseClaimAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new ReleaseDispatchClaimCommand(ActivityStepId, OwnerId, token));
+        var submit = await engine.SubmitStrategyResultAsync(
+            release.State,
+            Context(Now.AddMinutes(2)),
+            new SubmitStrategyResultCommand(ActivityStepId, OwnerId, token, StrategyResultIdempotencyKey.New(), SucceededResult()));
+
+        Assert.True(release.Succeeded);
+        Assert.Equal(DispatchClaimStatus.Released, release.State.Claims.Single(claim => claim.ClaimToken == token).Status);
+        var releasedStep = release.State.Steps.Single(step => step.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, releasedStep.Status);
+        Assert.Null(releasedStep.ActiveClaimToken);
+        Assert.Equal(1, releasedStep.AttemptNumber);
+        Assert.Contains(release.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.DispatchClaimReleased);
+        Assert.False(submit.Succeeded);
+        Assert.Contains(submit.Diagnostics, diagnostic => diagnostic.Code == "Runtime.LostLease");
+        Assert.Single(unitOfWork.Requests);
+    }
+
+    [Fact]
     public async Task Strategy_result_completes_step_run_event_outbox_and_artifact_ledger()
     {
         var unitOfWork = new RecordingUnitOfWork();

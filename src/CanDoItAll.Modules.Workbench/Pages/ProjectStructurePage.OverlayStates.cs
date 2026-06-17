@@ -205,6 +205,9 @@ public sealed record ProjectStructureProcessStartRoleState(
     string ReadinessSummary,
     IReadOnlyList<ProjectStructureProcessStartCandidateState> Candidates)
 {
+    public string StepKey { get; init; } = string.Empty;
+    public string RoleKey { get; init; } = string.Empty;
+
     public bool HasBlockingGap => IsRequired && !IsResolved;
 }
 

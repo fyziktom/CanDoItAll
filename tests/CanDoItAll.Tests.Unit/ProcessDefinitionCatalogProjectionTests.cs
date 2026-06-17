@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Templates;
@@ -55,6 +56,90 @@ public sealed class ProcessDefinitionCatalogProjectionTests
 
         var exception = Assert.Throws<InvalidOperationException>(() => loader.Load());
         Assert.Contains("does not match manifest key", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Dotnet_feature_code_change_keeps_browser_proof_in_targeted_validation_step()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-feature-function-implementation");
+
+        var codeChange = Assert.Single(definition.Steps, step => string.Equals(step.Key, "code-change", StringComparison.Ordinal));
+        var targetedValidation = Assert.Single(definition.Steps, step => string.Equals(step.Key, "targeted-validation", StringComparison.Ordinal));
+        var featureRepair = Assert.Single(definition.Steps, step => string.Equals(step.Key, "feature-repair", StringComparison.Ordinal));
+
+        Assert.DoesNotContain(ProcessOperationContractNames.LaunchRuntime, codeChange.AllowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.CaptureRuntimeProof, codeChange.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.LaunchRuntime, targetedValidation.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, targetedValidation.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.LaunchRuntime, featureRepair.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, featureRepair.AllowedOperations);
+        Assert.Contains("does not own runtime launch", codeChange.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not block this step only because browser proof is missing", codeChange.Notes, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Software_delivery_quality_repair_can_verify_runtime_browser_repairs()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var definition = loader.LoadDefinition("software-delivery");
+
+        var qualityRepair = Assert.Single(definition.Steps, step => string.Equals(step.Key, "quality-repair", StringComparison.Ordinal));
+        var qualityRepairDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "software-delivery",
+            "steps",
+            "quality-repair.md"));
+
+        Assert.Contains(ProcessOperationContractNames.LaunchRuntime, qualityRepair.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, qualityRepair.AllowedOperations);
+        Assert.Contains("runtime or browser proof", qualityRepairDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Capture current-run managed artifacts", qualityRepairDoc, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Dotnet_architecture_review_accepts_project_structure_scope_evidence()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-architecture-design-review");
+
+        var draft = Assert.Single(definition.Steps, step => string.Equals(step.Key, "draft-architecture-design", StringComparison.Ordinal));
+        var review = Assert.Single(definition.Steps, step => string.Equals(step.Key, "review-architecture-design", StringComparison.Ordinal));
+        var reviewDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-architecture-design-review",
+            "steps",
+            "review-architecture-design.md"));
+
+        Assert.Contains("ProjectStructureContextSummary", draft.Notes, StringComparison.Ordinal);
+        Assert.Contains("available scope/acceptance evidence", review.InputContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Missing standalone acceptance/user-story files are not a hard block", review.DecisionRightsSummary, StringComparison.Ordinal);
+        Assert.Contains("Do not block solely because a separate acceptance-criteria or user-story artifact is absent", review.ExceptionPolicySummary, StringComparison.Ordinal);
+        Assert.Contains("Do not hard-block solely because a standalone acceptance-criteria or user-story file is absent", reviewDoc, StringComparison.Ordinal);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find repository root.");
     }
 
     [Fact]

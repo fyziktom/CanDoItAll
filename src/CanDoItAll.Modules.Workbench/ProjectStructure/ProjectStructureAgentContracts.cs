@@ -748,6 +748,36 @@ public sealed record ProjectStructureProcessNodeStartResult(
     object? LaunchPlan,
     IReadOnlyList<string> Warnings);
 
+public sealed record ProjectStructureProcessSubprocessLaunchInput(
+    string DefinitionKey,
+    string? LiveRunProfileKey = null,
+    string? ParentProjectNodeId = null,
+    IReadOnlyDictionary<string, object?>? Variables = null,
+    bool RunHrMatch = true,
+    bool Execute = true,
+    bool IncludeLaunchPlan = true,
+    string RequestedBy = "project-structure-process",
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureProcessSubprocessLaunchResult(
+    Guid ProjectId,
+    string ProjectNodeId,
+    string ParentProcessRunId,
+    string ParentProcessStepId,
+    string ParentProcessStepKey,
+    string DefinitionKey,
+    Guid ProcessDefinitionId,
+    Guid LaunchPlanId,
+    Guid? RunId,
+    string Stage,
+    string Route,
+    object? LaunchPlan,
+    string ChildManagedArtifactRoot,
+    string ChildStepsArtifactRoot,
+    string ChildLiveProcessesRoute,
+    IReadOnlyList<string> ExpectedChildEvidenceRefs,
+    IReadOnlyList<string> Warnings);
+
 public enum ProjectStructureImportSourceKind
 {
     Mermaid,

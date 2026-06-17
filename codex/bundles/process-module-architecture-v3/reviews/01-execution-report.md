@@ -853,3 +853,41 @@ Result:
 ```text
 The project-scoped Process launch path can now start the rebuilt Process runtime from the dev DB TetrisGame node. The process completed with runtime state Completed, initial QA produced a repair-required result, repair executed through the process, revalidation accepted the repaired result, and final result recording completed. workspace_dotnet_stop replaced raw PowerShell cleanup in validation/revalidation templates and agent capability catalogs, stopped all recorded process-tree ids, and left no TetrisGame process running. Full solution build passed with 0 warnings and 0 errors, focused unit tests passed 186/186, focused seed integration tests passed 5/5, and CodeAnalytics MCP snapshot snap-20260616192748-4bd433ce completed with no blocking errors.
 ```
+
+## Project-Structure Launch and Subprocess Handoff Repair
+
+Proof artifacts:
+
+```text
+bundle://proof/SB20-SB28-runtime-completion/project-structure-process-launch-handoff-repair.md
+bundle://proof/SB20-SB28-runtime-completion/tetris-process-dropdown-options-after-context-fix.json
+bundle://proof/SB20-SB28-runtime-completion/tetris-process-dropdown-multiteam-selected-after-context-fix.png
+bundle://proof/SB20-SB28-runtime-completion/tetris-hr-review-after-context-fix.md
+bundle://proof/SB20-SB28-runtime-completion/tetris-hr-review-after-context-fix.png
+bundle://proof/SB20-SB28-runtime-completion/tetris-structure-before-new-run-subprocess-handoff-fix.md
+bundle://proof/SB20-SB28-runtime-completion/tetris-hr-after-subprocess-handoff-fix.json
+```
+
+Result:
+
+```text
+Follow-up repair fixed project-structure process launch from the TetrisGame Main App node. The add-process dropdown is populated, HR assignment resolves 20/20 roles, process launch creates the managed artifact root before dispatch, and launch variables now include whole-project context plus OutputRoot/ProductRoot/ExternalTargetRoot resolved from surrounding architecture/output-folder nodes. The live run add70022-e062-451f-85bd-4c30caf9eeed proved the previous subprocess defect: child run f2a4d3ee-a93d-4439-a768-4c07065caff6 completed and wrote child artifacts, but the parent architecture step blocked because it only searched the parent run root. The subprocess launch contract now returns ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, and ExpectedChildEvidenceRefs, and the subprocess prompt guidance treats the child root as valid child evidence. Focused unit tests passed 3/3, focused project-structure integration tests passed 5/5, and CodeAnalytics MCP snapshot snap-20260617015748-8a607416 completed with no blocking errors. A fresh UI-started run 83cc6023-5990-4f95-9999-0cd8610f77d6 was still live in feature-intake provider execution when this addendum was recorded; no crash, denied tool, missing process dropdown, missing output root, or missing artifact root was observed.
+```
+
+## Project-Structure Process Projection and Writeback Parent Repair
+
+Proof artifacts:
+
+```text
+bundle://proof/SB20-SB28-runtime-completion/project-structure-tree-after-process-run-projection-fix.md
+bundle://proof/SB20-SB28-runtime-completion/project-structure-selection-panel-after-process-run-projection-fix.md
+bundle://proof/SB20-SB28-runtime-completion/project-structure-add-process-dialog-target-after-projection-fix.md
+bundle://proof/SB20-SB28-runtime-completion/app-5032-devdb-after-process-run-projection-fix.out.log
+bundle://proof/SB20-SB28-runtime-completion/app-5032-devdb-after-process-run-projection-fix.err.log
+```
+
+Result:
+
+```text
+Follow-up repair restored the missing projected process definition/run nodes in the project-structure surface. Workbench now contributes process definitions and process runs from user-authored links without coupling the generic Process runtime to project-structure UI concerns. The dev DB TetrisGame structure read shows process-definition:* and process-run:* nodes, including the active multi-team run aa8bb4e7-aecd-457a-9b2c-5167ac3ca379, parented under Main App. The add-process dialog on Main App contains the full process catalog, including Multi-team software delivery and release governance, .NET runtime command project-structure writeback, and .NET UI screenshot project-structure writeback. Subprocess launch variables now carry ProcessRunNodeId, ParentProcessRunNodeId, and TargetProcessRunNodeId, and the subprocess launch service links parent process-run nodes to child process-run nodes. Runtime command and screenshot writeback templates now prefer those process-run node ids as their parent, so future process executions create run commands and screenshots under the process-run node instead of falling back to the project node/root. Workbench build passed, focused project-structure integration tests passed 26/26, focused process/workbench unit tests passed 29/29, and CodeAnalytics MCP snapshot snap-20260617101111-7ea15dd4 completed with no blocking errors.
+```

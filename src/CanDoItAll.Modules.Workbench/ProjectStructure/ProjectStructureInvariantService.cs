@@ -58,7 +58,8 @@ internal sealed class ProjectStructureInvariantService
         string sourceNodeKey,
         string targetNodeKey,
         ProjectObjectLinkKind linkKind,
-        IReadOnlyCollection<ProjectObjectRecord> nodes)
+        IReadOnlyCollection<ProjectObjectRecord> nodes,
+        Func<string, bool>? isProjectionNodeKey = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceNodeKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetNodeKey);
@@ -74,12 +75,14 @@ internal sealed class ProjectStructureInvariantService
         }
 
         var nodesByKey = nodes.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
-        if (!nodesByKey.ContainsKey(sourceNodeKey))
+        if (!nodesByKey.ContainsKey(sourceNodeKey) &&
+            isProjectionNodeKey?.Invoke(sourceNodeKey) != true)
         {
             throw new InvalidOperationException($"Source node '{sourceNodeKey}' was not found in project '{projectId}'.");
         }
 
-        if (!nodesByKey.ContainsKey(targetNodeKey))
+        if (!nodesByKey.ContainsKey(targetNodeKey) &&
+            isProjectionNodeKey?.Invoke(targetNodeKey) != true)
         {
             throw new InvalidOperationException($"Target node '{targetNodeKey}' was not found in project '{projectId}'.");
         }

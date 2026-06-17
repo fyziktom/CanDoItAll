@@ -44,6 +44,38 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         return rows.Select(ToAssignment).ToArray();
     }
 
+    public async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
+        IReadOnlyDictionary<string, string> requiredVariables,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(requiredVariables);
+
+        var normalized = NormalizeRequiredVariables(requiredVariables);
+        if (normalized.Count == 0)
+        {
+            return [];
+        }
+
+        var firstValue = normalized.Values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        var query = dbContext.RuntimeStepAssignments.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(firstValue))
+        {
+            query = query.Where(assignment => assignment.LaunchVariablesJson.Contains(firstValue));
+        }
+
+        var rows = await query
+            .OrderBy(assignment => assignment.CreatedAtUtc)
+            .ThenBy(assignment => assignment.RunId)
+            .ThenBy(assignment => assignment.StepKey)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows
+            .Select(ToAssignment)
+            .Where(assignment => MatchesRequiredVariables(assignment.LaunchVariables, normalized))
+            .ToArray();
+    }
+
     public async ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
         ProcessRunId runId,
         ProcessStepInstanceId stepInstanceId,
@@ -208,5 +240,32 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
                 item => item.Key.Trim(),
                 item => item.Value?.Trim() ?? string.Empty,
                 StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyDictionary<string, string> NormalizeRequiredVariables(
+        IReadOnlyDictionary<string, string> variables)
+    {
+        return variables
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .ToDictionary(
+                item => item.Key.Trim(),
+                item => item.Value?.Trim() ?? string.Empty,
+                StringComparer.Ordinal);
+    }
+
+    private static bool MatchesRequiredVariables(
+        IReadOnlyDictionary<string, string> candidate,
+        IReadOnlyDictionary<string, string> required)
+    {
+        foreach (var item in required)
+        {
+            if (!candidate.TryGetValue(item.Key, out var candidateValue) ||
+                !string.Equals(candidateValue, item.Value, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

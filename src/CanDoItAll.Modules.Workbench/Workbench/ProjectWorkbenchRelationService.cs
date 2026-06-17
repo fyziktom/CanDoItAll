@@ -22,7 +22,13 @@ public sealed class ProjectWorkbenchRelationService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
-        InvariantService.ValidateUserAuthoredLink(projectId, sourceNodeKey, targetNodeKey, linkKind, existingNodes);
+        InvariantService.ValidateUserAuthoredLink(
+            projectId,
+            sourceNodeKey,
+            targetNodeKey,
+            linkKind,
+            existingNodes,
+            IsProcessProjectionNodeKey);
         await UpsertUserAuthoredLinkAsync(
             dbContext,
             projectId,
@@ -53,6 +59,11 @@ public sealed class ProjectWorkbenchRelationService(
     }
 
     private static bool IsProjectionLayoutResetCandidate(string nodeKey)
+    {
+        return IsProcessProjectionNodeKey(nodeKey);
+    }
+
+    private static bool IsProcessProjectionNodeKey(string nodeKey)
     {
         return TryResolveProcessDefinitionId(nodeKey).HasValue ||
                TryResolveProcessRunId(nodeKey).HasValue;

@@ -64,6 +64,17 @@ public sealed partial class ProcessRuntimeEngine(IProcessRuntimeUnitOfWork unitO
         return CommitAsync(state, context.CommandId, mutation, cancellationToken);
     }
 
+    public Task<ProcessRuntimeCommitResult> ReleaseClaimAsync(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context,
+        ReleaseDispatchClaimCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var mutation = ReleaseClaim(state, context, command);
+
+        return CommitAsync(state, context.CommandId, mutation, cancellationToken);
+    }
+
     public Task<ProcessRuntimeCommitResult> ExpireClaimsAsync(
         ProcessRuntimeStateSnapshot state,
         RuntimeCommandContext context,

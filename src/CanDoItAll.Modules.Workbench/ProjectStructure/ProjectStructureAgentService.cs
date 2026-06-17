@@ -777,6 +777,23 @@ public sealed class ProjectStructureAgentService(
         return processNodeService.StartAsync(projectId, nodeId, request, agent, cancellationToken);
     }
 
+    public Task<ProjectStructureProcessSubprocessLaunchResult> StartProcessSubprocessAsync(
+        Guid projectId,
+        string parentProcessRunId,
+        string parentProcessStepId,
+        ProjectStructureProcessSubprocessLaunchInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return processNodeService.StartSubprocessAsync(
+            projectId,
+            parentProcessRunId,
+            parentProcessStepId,
+            request,
+            agent,
+            cancellationToken);
+    }
+
     public Task<ProjectStructureWorkflowNodeCreateResult> CreateWorkflowNodeAsync(
         Guid projectId,
         string parentNodeId,

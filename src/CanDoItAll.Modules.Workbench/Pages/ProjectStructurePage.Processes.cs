@@ -1,26 +1,89 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Projections;
+using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage
 {
+    private const string ProjectStructureHrManagerName = "HR Staffing Manager";
+    private static readonly TimeSpan ProcessStartPreviewTimeout = TimeSpan.FromSeconds(45);
+    private static readonly string[] OutputRootMetadataKeys =
+    [
+        "outputRoot",
+        "productRoot",
+        "targetRoot",
+        "targetPath",
+        "repositoryRoot",
+        "workspaceRoot"
+    ];
+
+    [Inject]
+    private ProcessDefinitionCatalogProjectionService ProcessDefinitionCatalogService { get; set; } = default!;
+
+    [Inject]
+    private ProcessLaunchApplicationService ProcessLaunchService { get; set; } = default!;
+
+    [Inject]
+    private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
+    private IReadOnlyDictionary<Guid, ProjectStructureProcessStartAgentMetadata> processStartAgentMetadataById =
+        new Dictionary<Guid, ProjectStructureProcessStartAgentMetadata>();
 
     private Task OpenAddProcessDialogAsync(ProjectStructureNode node)
     {
         return OpenLinkProcessDialogAsync(node);
     }
 
-    private Task OpenLinkProcessDialogAsync(ProjectStructureNode node)
+    private async Task OpenLinkProcessDialogAsync(ProjectStructureNode node)
     {
-        processLinkDialog = new ProjectStructureProcessLinkDialogState(
-            node.Id,
-            node.Title,
-            [],
-            null,
-            "Process linking is unavailable while the Process module is rebuilt.");
-        return InvokeAsync(StateHasChanged);
+        CloseQuickActionDialog();
+
+        try
+        {
+            var catalog = await ProcessDefinitionCatalogService.GetCatalogAsync(
+                ProcessWorkspaceShellScope.ForProject(ProjectId),
+                new ProcessDefinitionCatalogQueryProjection(
+                    SearchText: null,
+                    SelectedDefinitionKey: null,
+                    ProcessDefinitionCatalogScopeKind.All,
+                    Take: 200));
+            var options = catalog.Items
+                .OrderBy(item => item.ScopeKind == ProcessDefinitionCatalogScopeKind.Project ? 0 : 1)
+                .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.Key.Value, StringComparer.OrdinalIgnoreCase)
+                .Select(MapProcessLinkOption)
+                .ToList();
+
+            processLinkDialog = new ProjectStructureProcessLinkDialogState(
+                node.Id,
+                node.Title,
+                options,
+                options.FirstOrDefault()?.DefinitionId,
+                options.Count == 0 ? "No process definitions are available in the process template catalog." : string.Empty);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(exception, "Project structure process definition catalog load failed. ProjectId={ProjectId}", ProjectId);
+            processLinkDialog = new ProjectStructureProcessLinkDialogState(
+                node.Id,
+                node.Title,
+                [],
+                null,
+                $"Process definitions could not be loaded: {exception.Message}");
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private void CloseProcessLinkDialog()
@@ -30,46 +93,133 @@ public partial class ProjectStructurePage
 
     private void HandleProcessLinkSelectionChanged(ChangeEventArgs args)
     {
-    }
-
-    private Task ExecuteProcessLinkAsync()
-    {
-        if (processLinkDialog is not null)
+        if (processLinkDialog is null)
         {
-            processLinkDialog = processLinkDialog with
-            {
-                Error = "Process linking is unavailable while the Process module is rebuilt."
-            };
+            return;
         }
 
-        return InvokeAsync(StateHasChanged);
+        var selectedDefinitionId = Guid.TryParse(args.Value?.ToString(), out var parsedDefinitionId)
+            ? parsedDefinitionId
+            : (Guid?)null;
+        processLinkDialog = processLinkDialog with
+        {
+            SelectedDefinitionId = selectedDefinitionId,
+            Error = string.Empty
+        };
+    }
+
+    private async Task ExecuteProcessLinkAsync()
+    {
+        if (processLinkDialog is null)
+        {
+            return;
+        }
+
+        if (!processLinkDialog.SelectedDefinitionId.HasValue)
+        {
+            processLinkDialog = processLinkDialog with { Error = "Select a process before continuing." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var selectedOption = processLinkDialog.Options
+            .FirstOrDefault(option => option.DefinitionId == processLinkDialog.SelectedDefinitionId.Value);
+        if (selectedOption is null)
+        {
+            processLinkDialog = processLinkDialog with { Error = "The selected process is no longer available." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            await ProjectWorkbenchService.LinkObjectsAsync(
+                ProjectId,
+                processLinkDialog.SourceNodeId,
+                ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(selectedOption.DefinitionId),
+                ProjectObjectLinkKind.Uses);
+        }
+        catch (InvalidOperationException exception)
+        {
+            processLinkDialog = processLinkDialog with { Error = exception.Message };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var sourceNodeId = processLinkDialog.SourceNodeId;
+        var processNodeId = ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(selectedOption.DefinitionId);
+        workflowFeedback = $"{selectedOption.DisplayName} was linked to {processLinkDialog.SourceNodeTitle}.";
+        workflowFeedbackTone = "mint";
+        processLinkDialog = null;
+        await ReloadSurfaceAsync(sourceNodeId);
+        await OpenProcessDialogAsync(
+            selectedOption.DefinitionId,
+            processNodeId,
+            selectedOption.DisplayName,
+            ResolveNode(sourceNodeId),
+            estimateOnly: false);
     }
 
     private Task OpenStartProcessDialogAsync(ProjectStructureNode node)
     {
-        processStartDialog = new ProjectStructureProcessStartDialogState(
-            ProjectId,
-            Guid.Empty,
-            node.Id,
-            node.Title,
-            null,
-            string.Empty,
-            null,
-            ProjectStructureProcessStartStage.Confirm,
-            false,
-            false,
-            "Process launching is unavailable while the Process module is rebuilt.",
-            [],
-            string.Empty,
-            DateTimeOffset.UtcNow,
-            false,
-            string.Empty);
-        return InvokeAsync(StateHasChanged);
+        return OpenProcessDialogAsync(node, estimateOnly: false);
     }
 
     private Task OpenEstimateProcessDialogAsync(ProjectStructureNode node)
     {
-        return OpenStartProcessDialogAsync(node);
+        return OpenProcessDialogAsync(node, estimateOnly: true);
+    }
+
+    private async Task OpenProcessDialogAsync(ProjectStructureNode node, bool estimateOnly)
+    {
+        var processDefinitionId = ResolveProcessDefinitionId(node);
+        if (!processDefinitionId.HasValue)
+        {
+            workflowFeedback = "The selected process node is missing its process definition id.";
+            workflowFeedbackTone = "warn";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        CloseQuickActionDialog();
+        var targetNode = ResolveProcessStartTargetNode(node);
+        await OpenProcessDialogAsync(processDefinitionId.Value, node.Id, node.Title, targetNode, estimateOnly);
+    }
+
+    private async Task OpenProcessDialogAsync(
+        Guid processDefinitionId,
+        string processNodeId,
+        string processNodeTitle,
+        ProjectStructureNode? targetNode,
+        bool estimateOnly)
+    {
+        CloseQuickActionDialog();
+        processStartDialog = new ProjectStructureProcessStartDialogState(
+            ProjectId,
+            processDefinitionId,
+            processNodeId,
+            processNodeTitle,
+            targetNode?.Id,
+            targetNode?.Title ?? string.Empty,
+            null,
+            ProjectStructureProcessStartStage.Confirm,
+            false,
+            false,
+            string.Empty,
+            [],
+            ProjectStructureHrManagerName,
+            DateTimeOffset.UtcNow,
+            false,
+            string.Empty)
+        {
+            EstimateOnlyMode = estimateOnly
+        };
+
+        await InvokeAsync(StateHasChanged);
+        if (estimateOnly)
+        {
+            await ExecuteProcessStartAsync();
+        }
     }
 
     private void CloseProcessStartDialog()
@@ -77,60 +227,1032 @@ public partial class ProjectStructurePage
         processStartDialog = null;
     }
 
-    private Task ReviewAndStartProcessAsync()
+    private async Task ReviewAndStartProcessAsync()
     {
-        return ExecuteProcessStartAsync();
-    }
-
-    private Task ExecuteProcessStartAsync()
-    {
-        if (processStartDialog is not null)
+        if (processStartDialog is null)
         {
-            processStartDialog = processStartDialog with
-            {
-                Error = "Process launching is unavailable while the Process module is rebuilt."
-            };
+            return;
         }
 
-        return InvokeAsync(StateHasChanged);
+        processStartDialog = processStartDialog with
+        {
+            AssignmentsReviewed = true,
+            Error = string.Empty
+        };
+        await ExecuteProcessStartAsync();
+    }
+
+    private async Task ExecuteProcessStartAsync()
+    {
+        if (processStartDialog is null)
+        {
+            return;
+        }
+
+        var dialog = processStartDialog;
+        if (dialog.ProcessDefinitionId == Guid.Empty)
+        {
+            processStartDialog = dialog with { Error = "The selected process definition id is missing." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            if (dialog.Stage == ProjectStructureProcessStartStage.Confirm)
+            {
+                await PreviewProcessStartAsync(
+                    dialog,
+                    "Launch plan prepared. Review the resolved assignments before starting.",
+                    runReadiness: false);
+                return;
+            }
+
+            if (!dialog.AssignmentsReviewed)
+            {
+                processStartDialog = dialog with
+                {
+                    IsBusy = false,
+                    Error = "Review the proposed role assignments and confirm them before starting the process."
+                };
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            if (dialog.RequiredGapCount > 0)
+            {
+                processStartDialog = dialog with
+                {
+                    IsBusy = false,
+                    Error = "Resolve every required role before starting the process."
+                };
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            processStartDialog = dialog with
+            {
+                IsBusy = true,
+                Error = string.Empty,
+                ConfirmHrManagerMatch = false,
+                StatusMessage = "Starting the reviewed process run."
+            };
+            await InvokeAsync(StateHasChanged);
+
+            var launchRequest = CreateProcessLaunchRequest(dialog, execute: true, runReadiness: true);
+            var result = await ProcessLaunchService.LaunchAsync(launchRequest);
+            if (result.Stage is ProcessLaunchStage.Blocked or ProcessLaunchStage.Failed || result.RunId is null)
+            {
+                processStartDialog = dialog with
+                {
+                    IsBusy = false,
+                    Error = result.Warnings.Count == 0
+                        ? $"Process launch returned {result.Stage}."
+                        : string.Join(" ", result.Warnings)
+                };
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            processStartDialog = null;
+            await TryLinkStartedProcessRunAsync(dialog.TargetNodeId, result.RunId.Value);
+            workflowFeedback = $"{dialog.NodeTitle} started for {dialog.TargetNodeTitle}.";
+            workflowFeedbackTone = "mint";
+            Navigation.NavigateTo(result.Route);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await SetProcessActionExceptionAsync(exception, "starting the process");
+        }
+    }
+
+    private async Task PreviewProcessStartAsync(
+        ProjectStructureProcessStartDialogState dialog,
+        string statusMessage,
+        bool runReadiness)
+    {
+        processStartDialog = dialog with
+        {
+            IsBusy = true,
+            Error = string.Empty,
+            ConfirmHrManagerMatch = false,
+            StatusMessage = statusMessage
+        };
+        await InvokeAsync(StateHasChanged);
+
+        using var previewTimeout = new CancellationTokenSource(ProcessStartPreviewTimeout);
+        try
+        {
+            await RefreshProcessStartAgentMetadataAsync(previewTimeout.Token);
+            var preview = await ProcessLaunchService.PreviewAsync(
+                CreateProcessLaunchRequest(dialog, execute: false, runReadiness),
+                previewTimeout.Token);
+            var previewStatusMessage = preview.Stage == ProcessLaunchStage.Blocked && preview.Warnings.Count > 0
+                ? string.Join(" ", preview.Warnings)
+                : statusMessage;
+            processStartDialog = MapProcessStartDialogState(
+                dialog,
+                preview.LaunchPlan,
+                previewStatusMessage,
+                string.Empty);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException exception) when (previewTimeout.IsCancellationRequested)
+        {
+            Logger.LogWarning(
+                exception,
+                "Project structure process launch preview timed out. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} NodeId={NodeId} RunReadiness={RunReadiness}",
+                ProjectId,
+                dialog.ProcessDefinitionId,
+                dialog.NodeId,
+                runReadiness);
+            processStartDialog = dialog with
+            {
+                IsBusy = false,
+                ConfirmHrManagerMatch = false,
+                Error = $"Process launch preview did not finish within {ProcessStartPreviewTimeout.TotalSeconds:N0} seconds. Try again after checking the agent/provider catalog."
+            };
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await SetProcessActionExceptionAsync(exception, "preparing the process launch preview");
+        }
     }
 
     private Task SelectProcessStartCandidateAsync(ProjectStructureProcessStartCandidateSelection selection)
     {
-        return Task.CompletedTask;
+        if (processStartDialog is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var roles = processStartDialog.Roles
+            .Select(role => role.LaunchPlanRoleId == selection.LaunchPlanRoleId
+                ? SelectCandidate(role, selection.CandidateId)
+                : role)
+            .ToList();
+        processStartDialog = processStartDialog with
+        {
+            Roles = roles,
+            AssignmentsReviewed = false,
+            Error = string.Empty,
+            StatusMessage = "Role selection updated. Review the assignments before starting."
+        };
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task OpenManualProcessStartAgentPickerAsync(Guid launchPlanRoleId)
     {
-        return Task.CompletedTask;
+        if (processStartDialog is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        processStartDialog = processStartDialog with
+        {
+            StatusMessage = "Available active agents are listed as candidates inside each role panel.",
+            Error = string.Empty
+        };
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task HandleProcessStartAssignmentsReviewedChanged(ChangeEventArgs args)
     {
-        if (processStartDialog is not null)
+        if (processStartDialog is null)
         {
-            var isChecked = args.Value is bool value && value;
-            processStartDialog = processStartDialog with
-            {
-                AssignmentsReviewed = isChecked
-            };
+            return Task.CompletedTask;
         }
 
+        var isChecked = args.Value switch
+        {
+            bool value => value,
+            string value when bool.TryParse(value, out var parsed) => parsed,
+            _ => false
+        };
+        processStartDialog = processStartDialog with
+        {
+            AssignmentsReviewed = isChecked,
+            Error = string.Empty,
+            StatusMessage = isChecked
+                ? "Assignments confirmed. The process can start when every required role is resolved."
+                : "Review the assignments below and confirm them before starting the process."
+        };
         return InvokeAsync(StateHasChanged);
     }
 
     private Task RequestHrManagerMatchAsync()
     {
-        return ExecuteProcessStartAsync();
+        if (processStartDialog is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        processStartDialog = processStartDialog with
+        {
+            ConfirmHrManagerMatch = true,
+            Error = string.Empty
+        };
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task CancelHrManagerMatchAsync()
     {
-        return Task.CompletedTask;
+        if (processStartDialog is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        processStartDialog = processStartDialog with
+        {
+            ConfirmHrManagerMatch = false,
+            Error = string.Empty
+        };
+        return InvokeAsync(StateHasChanged);
     }
 
-    private Task ExecuteHrManagerMatchAsync()
+    private async Task ExecuteHrManagerMatchAsync()
     {
-        return ExecuteProcessStartAsync();
+        if (processStartDialog is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await PreviewProcessStartAsync(
+                processStartDialog,
+                $"{ProjectStructureHrManagerName} refreshed the staffing suggestions from the active agent directory.",
+                runReadiness: true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await SetProcessActionExceptionAsync(exception, "requesting HR manager staffing");
+        }
+    }
+
+    private ProcessLaunchRequest CreateProcessLaunchRequest(
+        ProjectStructureProcessStartDialogState dialog,
+        bool execute,
+        bool runReadiness = true)
+    {
+        var processNode = ResolveNode(dialog.NodeId);
+        var targetNode = ResolveNode(dialog.TargetNodeId) ?? processNode;
+        var variables = CreateProcessLaunchVariables(dialog, processNode, targetNode);
+        return new ProcessLaunchRequest(
+            DefinitionKey: null,
+            new ProcessDefinitionId(dialog.ProcessDefinitionId),
+            LiveRunProfileKey: null,
+            ProjectId,
+            ProjectNodeId: targetNode?.Id ?? dialog.TargetNodeId,
+            RequestedBy: "project-structure",
+            variables,
+            RunReadiness: runReadiness,
+            execute)
+        {
+            ExecutorOverrides = CreateExecutorOverrides(dialog)
+        };
+    }
+
+    private IReadOnlyDictionary<string, string> CreateProcessLaunchVariables(
+        ProjectStructureProcessStartDialogState dialog,
+        ProjectStructureNode? processNode,
+        ProjectStructureNode? targetNode)
+    {
+        var variables = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["LaunchSource"] = "project-structure-ui",
+            ["ProjectId"] = ProjectId.ToString("D"),
+            ["ProjectName"] = surface?.ProjectName ?? string.Empty,
+            ["AgentId"] = "project-structure-ui",
+            ["AgentName"] = "Project structure UI",
+            ["MachineName"] = Environment.MachineName,
+            ["BranchName"] = string.Empty,
+            ["SessionId"] = $"project-structure-ui-{Guid.NewGuid():N}"
+        };
+
+        AddNodeVariables(variables, "ProcessNode", processNode);
+        AddNodeVariables(variables, "ProjectNode", targetNode);
+        if (processNode is null)
+        {
+            variables["ProcessNodeId"] = dialog.NodeId;
+            variables["ProcessNodeTitle"] = dialog.NodeTitle;
+            variables["ProcessNodeSubtitle"] = string.Empty;
+            variables["ProcessNodeStatus"] = string.Empty;
+            variables["ProcessNodeNotes"] = string.Empty;
+            variables["ProcessNodeObjectType"] = ProjectObjectType.ProcessDefinition.ToString();
+            variables["ProcessNodeObjectSubtype"] = string.Empty;
+        }
+
+        var contextSummary = BuildProjectStructureContextSummary(surface, targetNode);
+        if (!string.IsNullOrWhiteSpace(contextSummary))
+        {
+            variables["ProjectStructureContextSummary"] = contextSummary;
+        }
+
+        var outputRoot = targetNode is null || surface is null
+            ? ResolveOutputRoot(targetNode)
+            : ResolveOutputRoot(surface, targetNode);
+        if (!string.IsNullOrWhiteSpace(outputRoot))
+        {
+            variables["OutputRoot"] = outputRoot;
+            variables["ProductRoot"] = outputRoot;
+            variables["ExternalTargetRoot"] = outputRoot;
+        }
+
+        return variables;
+    }
+
+    private static string BuildProjectStructureContextSummary(
+        ProjectStructureSurface? currentSurface,
+        ProjectStructureNode? focusNode)
+    {
+        if (currentSurface is null || focusNode is null)
+        {
+            return string.Empty;
+        }
+
+        var rows = EnumerateProjectStructureContextNodes(currentSurface, focusNode)
+            .Take(40)
+            .ToArray();
+        if (rows.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine($"Project structure source: {currentSurface.ProjectName} ({currentSurface.ProjectId:D}).");
+        builder.AppendLine($"Selected node: {focusNode.Title} ({focusNode.Id}).");
+        foreach (var (node, depth) in rows)
+        {
+            var marker = string.Equals(node.Id, focusNode.Id, StringComparison.Ordinal)
+                ? " [selected]"
+                : string.Empty;
+            var subtype = string.IsNullOrWhiteSpace(node.ObjectSubtype)
+                ? node.ObjectType.ToString()
+                : $"{node.ObjectType}/{node.ObjectSubtype}";
+            var notes = NormalizeProcessContextText(string.Join(" ", node.Subtitle, node.Notes), 420);
+            var indent = depth <= 0 ? string.Empty : new string(' ', Math.Min(depth, 8) * 2);
+
+            builder.Append("- ");
+            builder.Append(indent);
+            builder.Append(node.Title);
+            builder.Append(marker);
+            builder.Append(" [");
+            builder.Append(subtype);
+            builder.Append("; ");
+            builder.Append(string.IsNullOrWhiteSpace(node.Status) ? "Draft" : node.Status);
+            builder.Append(']');
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                builder.Append(": ");
+                builder.Append(notes);
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static IReadOnlyList<(ProjectStructureNode Node, int Depth)> EnumerateProjectStructureContextNodes(
+        ProjectStructureSurface currentSurface,
+        ProjectStructureNode focusNode)
+    {
+        var projectRootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(currentSurface.ProjectId);
+        var childrenByParent = currentSurface.Nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
+            .GroupBy(node => node.ParentId!, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderBy(node => node.Y).ThenBy(node => node.X).ThenBy(node => node.Title, StringComparer.OrdinalIgnoreCase).ToArray(),
+                StringComparer.Ordinal);
+        var rows = new List<(ProjectStructureNode Node, int Depth)>();
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+
+        void Visit(ProjectStructureNode node, int depth)
+        {
+            if (!visited.Add(node.Id))
+            {
+                return;
+            }
+
+            rows.Add((node, depth));
+            if (!childrenByParent.TryGetValue(node.Id, out var children))
+            {
+                return;
+            }
+
+            foreach (var child in children)
+            {
+                Visit(child, depth + 1);
+            }
+        }
+
+        if (childrenByParent.TryGetValue(projectRootNodeId, out var rootChildren))
+        {
+            foreach (var rootChild in rootChildren)
+            {
+                Visit(rootChild, 0);
+            }
+        }
+
+        foreach (var node in currentSurface.Nodes.OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase))
+        {
+            Visit(node, 0);
+        }
+
+        if (rows.Any(row => string.Equals(row.Node.Id, focusNode.Id, StringComparison.Ordinal)))
+        {
+            return rows;
+        }
+
+        return [(focusNode, 0), .. rows];
+    }
+
+    private static void AddNodeVariables(
+        IDictionary<string, string> variables,
+        string prefix,
+        ProjectStructureNode? node)
+    {
+        if (node is null)
+        {
+            return;
+        }
+
+        variables[$"{prefix}Id"] = node.Id;
+        variables[$"{prefix}Title"] = node.Title;
+        variables[$"{prefix}Subtitle"] = node.Subtitle;
+        variables[$"{prefix}Status"] = node.Status;
+        variables[$"{prefix}Notes"] = node.Notes;
+        variables[$"{prefix}ObjectType"] = node.ObjectType.ToString();
+        variables[$"{prefix}ObjectSubtype"] = node.ObjectSubtype;
+        if (node.RelatedProjectId is { } relatedProjectId)
+        {
+            variables[$"{prefix}RelatedProjectId"] = relatedProjectId.ToString("D");
+        }
+    }
+
+    private IReadOnlyList<ProcessLaunchExecutorOverride> CreateExecutorOverrides(ProjectStructureProcessStartDialogState dialog)
+    {
+        if (dialog.Stage != ProjectStructureProcessStartStage.Staffing)
+        {
+            return [];
+        }
+
+        return dialog.Roles
+            .Select(role =>
+            {
+                var selectedCandidate = role.Candidates.FirstOrDefault(candidate => candidate.IsSelected && candidate.IsResolvable);
+                if (selectedCandidate is null ||
+                    selectedCandidate.TechnicalAgentId is not { } agentId ||
+                    string.IsNullOrWhiteSpace(role.StepKey) ||
+                    string.IsNullOrWhiteSpace(role.RoleKey))
+                {
+                    return null;
+                }
+
+                return new ProcessLaunchExecutorOverride(
+                    role.StepKey,
+                    role.RoleKey,
+                    ProcessLaunchExecutorKinds.Agent,
+                    agentId.ToString("D"),
+                    selectedCandidate.DisplayName,
+                    selectedCandidate.IsRecommended
+                        ? "Accepted HR manager recommendation during project-structure launch review."
+                        : "Selected during project-structure launch review.");
+            })
+            .Where(item => item is not null)
+            .Cast<ProcessLaunchExecutorOverride>()
+            .ToList();
+    }
+
+    private ProjectStructureProcessStartDialogState MapProcessStartDialogState(
+        ProjectStructureProcessStartDialogState dialog,
+        ProcessLaunchPlanView launchPlan,
+        string statusMessage,
+        string error)
+    {
+        var steps = launchPlan.Steps
+            .Where(step =>
+                !string.IsNullOrWhiteSpace(step.RoleKey) ||
+                !string.IsNullOrWhiteSpace(step.ExecutorKind) ||
+                step.IsBlocked)
+            .ToList();
+        if (steps.Count == 0)
+        {
+            steps = launchPlan.Steps.ToList();
+        }
+
+        return dialog with
+        {
+            LaunchPlanId = launchPlan.PlanId.Value,
+            Stage = ProjectStructureProcessStartStage.Staffing,
+            IsBusy = false,
+            ConfirmHrManagerMatch = false,
+            StatusMessage = string.IsNullOrWhiteSpace(statusMessage)
+                ? $"Resolved {steps.Count(step => !step.IsBlocked && !string.IsNullOrWhiteSpace(step.ExecutorId))} of {steps.Count} assignments."
+                : statusMessage,
+            StageActivatedAtUtc = DateTimeOffset.UtcNow,
+            AssignmentsReviewed = false,
+            Roles = steps.Select(MapProcessStartRoleState).ToList(),
+            Estimate = new ProjectStructureProcessEstimateSummary(
+                EstimatedCostUsd: 0,
+                EstimatedElapsedMinutes: Math.Max(15, steps.Count * 30),
+                EstimatedTouchMinutes: Math.Max(10, steps.Count * 20),
+                "Template",
+                launchPlan.DefinitionName,
+                $"{steps.Count} executable assignment(s) resolved from process template '{launchPlan.DefinitionKey}'."),
+            Error = error
+        };
+    }
+
+    private ProjectStructureProcessStartRoleState MapProcessStartRoleState(ProcessLaunchStepView step)
+    {
+        var candidates = BuildProcessStartCandidates(step);
+        var selected = candidates.FirstOrDefault(candidate => candidate.IsSelected);
+        var isResolved = !step.IsBlocked && selected?.IsResolvable == true;
+        return new ProjectStructureProcessStartRoleState(
+            step.StepInstanceId.Value,
+            ResolveStepDisplayName(step),
+            string.IsNullOrWhiteSpace(step.ExecutorKind) ? ProcessLaunchExecutorKinds.Agent : step.ExecutorKind,
+            IsRequired: true,
+            isResolved,
+            RequiresProvisioning: false,
+            isResolved
+                ? $"Selected {selected!.DisplayName}."
+                : step.BlockedReason ?? "No active executor is resolved for this step.",
+            step.BlockedReason ?? "Resolved from active process launch executor catalog.",
+            candidates)
+        {
+            StepKey = step.StepKey,
+            RoleKey = step.RoleKey
+        };
+    }
+
+    private IReadOnlyList<ProjectStructureProcessStartCandidateState> BuildProcessStartCandidates(ProcessLaunchStepView step)
+    {
+        var candidates = new List<ProjectStructureProcessStartCandidateState>();
+        var selectedAgentId = Guid.TryParse(step.ExecutorId, out var parsedAgentId)
+            ? parsedAgentId
+            : (Guid?)null;
+
+        if (selectedAgentId.HasValue)
+        {
+            candidates.Add(CreateCandidateState(
+                step,
+                selectedAgentId.Value,
+                isSelected: true,
+                isRecommended: true));
+        }
+
+        foreach (var metadata in processStartAgentMetadataById.Values
+            .Where(agent => !selectedAgentId.HasValue || agent.AgentId != selectedAgentId.Value)
+            .Select(agent => new { Agent = agent, Score = ScoreAgentForStep(agent, step) })
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Agent.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Take(8))
+        {
+            candidates.Add(CreateCandidateState(
+                step,
+                metadata.Agent.AgentId,
+                isSelected: false,
+                isRecommended: metadata.Score > 0));
+        }
+
+        if (candidates.Count == 0)
+        {
+            candidates.Add(new ProjectStructureProcessStartCandidateState(
+                step.StepInstanceId.Value,
+                TechnicalAgentId: null,
+                "No active agent available",
+                "Gap",
+                string.IsNullOrWhiteSpace(step.ExecutorKind) ? ProcessLaunchExecutorKinds.Agent : step.ExecutorKind,
+                "0.0 score",
+                IsSelected: true,
+                IsRecommended: false,
+                RequiresProvisioning: true,
+                IsResolvable: false,
+                step.BlockedReason ?? "No active agent with an enabled provider was found for this role.",
+                "Provision or enable an agent before launch.",
+                "process-launch/gap"));
+        }
+
+        return candidates;
+    }
+
+    private ProjectStructureProcessStartCandidateState CreateCandidateState(
+        ProcessLaunchStepView step,
+        Guid agentId,
+        bool isSelected,
+        bool isRecommended)
+    {
+        processStartAgentMetadataById.TryGetValue(agentId, out var metadata);
+        var displayName = metadata?.DisplayName ??
+            (!string.IsNullOrWhiteSpace(step.ExecutorDisplayName) ? step.ExecutorDisplayName : $"Agent {agentId:D}");
+        var roleScore = metadata is null ? 0 : ScoreAgentForStep(metadata, step);
+        return new ProjectStructureProcessStartCandidateState(
+            agentId,
+            agentId,
+            displayName,
+            "Agent",
+            string.IsNullOrWhiteSpace(step.ExecutorKind) ? ProcessLaunchExecutorKinds.Agent : step.ExecutorKind,
+            $"{Math.Max(1, roleScore) / 10.0:0.0} score",
+            isSelected,
+            isRecommended,
+            RequiresProvisioning: false,
+            IsResolvable: true,
+            isRecommended
+                ? $"Recommended for role '{step.RoleKey}' on step '{step.StepKey}'."
+                : $"Available active agent for step '{step.StepKey}'.",
+            metadata?.StatusLabel ?? "Active",
+            metadata?.ProviderName ?? "agent-directory",
+            metadata?.ProviderName ?? string.Empty,
+            metadata?.Model ?? string.Empty,
+            metadata?.RoleTitle ?? string.Empty,
+            metadata?.Summary ?? string.Empty,
+            metadata?.StatusLabel ?? string.Empty,
+            metadata?.WorkloadLabel ?? string.Empty,
+            metadata?.AvatarImageUrl ?? string.Empty,
+            metadata?.ToolNames,
+            metadata?.SkillNames);
+    }
+
+    private async Task RefreshProcessStartAgentMetadataAsync(CancellationToken cancellationToken)
+    {
+        var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        IReadOnlyList<ProviderProfile> providers = [];
+        try
+        {
+            providers = await AgentWorkspaceService.ListProvidersAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogDebug(exception, "Agent provider metadata could not be loaded for process assignment badges.");
+        }
+
+        var providerById = providers.ToDictionary(item => item.Id);
+        processStartAgentMetadataById = agents
+            .Where(agent => !agent.IsTemplate && agent.Status == AgentLifecycleStatus.Active)
+            .ToDictionary(
+                agent => agent.Id,
+                agent =>
+                {
+                    ProviderProfile? provider = null;
+                    if (agent.ProviderProfileId.HasValue)
+                    {
+                        providerById.TryGetValue(agent.ProviderProfileId.Value, out provider);
+                    }
+
+                    return ProjectStructureProcessStartAgentMetadata.FromAgent(agent, provider);
+                });
+    }
+
+    private ProjectStructureProcessStartRoleState SelectCandidate(
+        ProjectStructureProcessStartRoleState role,
+        Guid candidateId)
+    {
+        var selectedCandidate = role.Candidates.FirstOrDefault(candidate => candidate.CandidateId == candidateId);
+        if (selectedCandidate is null || !selectedCandidate.IsResolvable)
+        {
+            return role;
+        }
+
+        var candidates = role.Candidates
+            .Select(candidate => candidate with { IsSelected = candidate.CandidateId == candidateId })
+            .ToList();
+        return role with
+        {
+            IsResolved = true,
+            RequiresProvisioning = selectedCandidate.RequiresProvisioning,
+            SelectionSummary = $"Selected {selectedCandidate.DisplayName}.",
+            Candidates = candidates
+        };
+    }
+
+    private async Task TryLinkStartedProcessRunAsync(string sourceNodeId, ProcessRunId runId)
+    {
+        if (string.IsNullOrWhiteSpace(sourceNodeId))
+        {
+            return;
+        }
+
+        try
+        {
+            await ProjectWorkbenchService.LinkObjectsAsync(
+                ProjectId,
+                sourceNodeId,
+                ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId.Value),
+                ProjectObjectLinkKind.Uses);
+        }
+        catch (InvalidOperationException exception)
+        {
+            Logger.LogDebug(
+                exception,
+                "Project structure process run link could not be created. ProjectId={ProjectId} SourceNodeId={SourceNodeId} RunId={RunId}",
+                ProjectId,
+                sourceNodeId,
+                runId.Value);
+        }
+    }
+
+    private Task SetProcessActionExceptionAsync(Exception exception, string action)
+    {
+        var message = exception.GetBaseException().Message;
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            message = $"The process action failed unexpectedly while {action}.";
+        }
+        else
+        {
+            message = $"The process action failed while {action}: {message}";
+        }
+
+        if (processStartDialog is not null)
+        {
+            processStartDialog = processStartDialog with
+            {
+                IsBusy = false,
+                ConfirmHrManagerMatch = false,
+                Error = message
+            };
+        }
+
+        Logger.LogWarning(
+            exception,
+            "Project structure process action failed while {Action}. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId} Stage={Stage}",
+            action,
+            ProjectId,
+            processStartDialog?.ProcessDefinitionId,
+            processStartDialog?.LaunchPlanId,
+            processStartDialog?.Stage);
+        workflowFeedback = message;
+        workflowFeedbackTone = "warn";
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private ProjectStructureNode? ResolveProcessStartTargetNode(ProjectStructureNode node)
+    {
+        if (surface is null)
+        {
+            return ResolveNode(node.ParentId);
+        }
+
+        var projectRootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(ProjectId);
+        var authoredTargetLink = surface.Links
+            .Where(link =>
+                link.IsUserAuthored &&
+                string.Equals(link.TargetId, node.Id, StringComparison.Ordinal))
+            .OrderBy(link => link.Kind == ProjectObjectLinkKind.Uses ? 0 : 1)
+            .ThenBy(link => string.Equals(link.SourceId, projectRootNodeId, StringComparison.Ordinal) ? 1 : 0)
+            .Select(link => ResolveNode(link.SourceId))
+            .FirstOrDefault(candidate => candidate is not null);
+        if (authoredTargetLink is not null)
+        {
+            return authoredTargetLink;
+        }
+
+        return ResolveNode(node.ParentId);
+    }
+
+    private static ProjectStructureProcessLinkOption MapProcessLinkOption(ProcessDefinitionCatalogItemProjection definition)
+    {
+        var definitionId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(definition.Key).Value;
+        return new ProjectStructureProcessLinkOption(
+            definitionId,
+            definition.Name,
+            definition.ScopeKind == ProcessDefinitionCatalogScopeKind.Project ? "Project" : "Global",
+            definition.Status.ToString(),
+            definition.Status is ProcessDefinitionCatalogItemStatus.TemplateDefault or ProcessDefinitionCatalogItemStatus.Published);
+    }
+
+    private static Guid? ResolveProcessDefinitionId(ProjectStructureNode node)
+    {
+        if (node.ArtifactId.HasValue)
+        {
+            return node.ArtifactId.Value;
+        }
+
+        return ProjectStructureProcessNodeKeys.TryParseProcessDefinitionNodeKey(node.Id, out var definitionId)
+            ? definitionId
+            : null;
+    }
+
+    private static string ResolveOutputRoot(ProjectStructureNode? node)
+    {
+        if (node is null)
+        {
+            return string.Empty;
+        }
+
+        var metadataOutputRoot = TryReadOutputRootFromMetadata(node.MetadataJson);
+        if (!string.IsNullOrWhiteSpace(metadataOutputRoot))
+        {
+            return metadataOutputRoot;
+        }
+
+        var text = string.Join(Environment.NewLine, node.Title, node.Subtitle, node.Notes);
+        var match = Regex.Match(text, @"[A-Za-z]:\\[^\r\n""<>|]+");
+        return match.Success
+            ? match.Value.Trim().TrimEnd('.', ',', ';', ')', ']')
+            : string.Empty;
+    }
+
+    private static string ResolveOutputRoot(ProjectStructureSurface currentSurface, ProjectStructureNode targetNode)
+    {
+        var direct = ResolveOutputRoot(targetNode);
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return direct;
+        }
+
+        foreach (var (node, _) in EnumerateProjectStructureContextNodes(currentSurface, targetNode))
+        {
+            var candidate = ResolveOutputRoot(node);
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string TryReadOutputRootFromMetadata(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            var metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
+            var typedOutputRoot = FirstNonEmpty(
+                metadata.ProjectBlock?.OutputRoot,
+                metadata.ProjectBlock?.ProductRoot,
+                metadata.ProjectBlock?.TargetRoot,
+                metadata.ProjectBlock?.RepositoryRoot,
+                metadata.ProjectBlock?.WorkspaceRoot);
+            if (!string.IsNullOrWhiteSpace(typedOutputRoot))
+            {
+                return typedOutputRoot;
+            }
+
+            using var document = JsonDocument.Parse(metadataJson);
+            return TryReadOutputRootFromElement(document.RootElement);
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+        {
+        }
+
+        return string.Empty;
+    }
+
+    private static string TryReadOutputRootFromElement(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var key in OutputRootMetadataKeys)
+            {
+                if (element.TryGetProperty(key, out var property) &&
+                    property.ValueKind == JsonValueKind.String)
+                {
+                    var value = property.GetString();
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value.Trim();
+                    }
+                }
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                var value = TryReadOutputRootFromElement(property.Value);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                var value = TryReadOutputRootFromElement(item);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private static string NormalizeProcessContextText(string value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = Regex.Replace(value, @"\s+", " ").Trim();
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength].TrimEnd() + "...";
+    }
+
+    private static string ResolveStepDisplayName(ProcessLaunchStepView step)
+        => string.IsNullOrWhiteSpace(step.RoleKey)
+            ? step.Title
+            : $"{step.Title} ({step.RoleKey})";
+
+    private static int ScoreAgentForStep(
+        ProjectStructureProcessStartAgentMetadata metadata,
+        ProcessLaunchStepView step)
+    {
+        var score = 10;
+        score += ContainsNormalized(metadata.RoleTitle, step.RoleKey) ? 30 : 0;
+        score += ContainsNormalized(metadata.DisplayName, step.RoleKey) ? 20 : 0;
+        score += ContainsNormalized(metadata.Summary, step.RoleKey) ? 10 : 0;
+        score += ContainsNormalized(metadata.RoleTitle, step.Title) ? 10 : 0;
+        score += metadata.Tags.Any(tag => ContainsNormalized(tag, step.RoleKey)) ? 20 : 0;
+        return score;
+    }
+
+    private static bool ContainsNormalized(string source, string value)
+    {
+        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return source.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+               NormalizeToken(source).Contains(NormalizeToken(value), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeToken(string value)
+        => new(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
+
+    private sealed record ProjectStructureProcessStartAgentMetadata(
+        Guid AgentId,
+        string DisplayName,
+        string ProviderName,
+        string Model,
+        string RoleTitle,
+        string Summary,
+        string StatusLabel,
+        string WorkloadLabel,
+        string AvatarImageUrl,
+        IReadOnlyList<string> ToolNames,
+        IReadOnlyList<string> SkillNames,
+        IReadOnlyList<string> Tags)
+    {
+        public static ProjectStructureProcessStartAgentMetadata FromAgent(
+            AgentDefinition agent,
+            ProviderProfile? provider)
+        {
+            var toolNames = agent.Capabilities
+                .Where(item => item.Kind is not CapabilityKind.Skill)
+                .Select(ResolveCapabilityDisplayName)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var skillNames = agent.Capabilities
+                .Where(item => item.Kind == CapabilityKind.Skill)
+                .Select(ResolveCapabilityDisplayName)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return new ProjectStructureProcessStartAgentMetadata(
+                agent.Id,
+                agent.Name,
+                provider?.Name ?? string.Empty,
+                agent.Model,
+                agent.RoleTitle,
+                agent.Summary,
+                agent.Status.ToString(),
+                agent.Workload.ToString(),
+                agent.AvatarImageUrl ?? string.Empty,
+                toolNames,
+                skillNames,
+                agent.Tags);
+        }
+
+        private static string ResolveCapabilityDisplayName(AgentCapabilityAssignment capability)
+            => !string.IsNullOrWhiteSpace(capability.CapabilityKey)
+                ? capability.CapabilityKey
+                : capability.Kind.ToString();
     }
 }

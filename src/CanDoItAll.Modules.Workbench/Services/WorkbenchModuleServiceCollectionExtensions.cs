@@ -28,6 +28,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectStructureProjectionContributor, ProjectHierarchyProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectResourceProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, PromptFactoryProjectionContributor>();
+        services.AddScoped<IProjectStructureProjectionContributor, ProjectStructureProcessProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ValidationProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, TestPlanProjectionContributor>();
         services.AddScoped<ProjectWorkbenchService>();
@@ -37,6 +38,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAnalyticsService>();
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectStructureProcessLaunchVariableContributor, DotNetSolutionSetupLaunchVariableContributor>());
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>

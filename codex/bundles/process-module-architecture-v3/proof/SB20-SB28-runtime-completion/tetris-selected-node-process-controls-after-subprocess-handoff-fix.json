@@ -1,0 +1,128 @@
+[
+  {
+    "i": 6,
+    "tag": "button",
+    "testid": "shell-nav-agents-workflows",
+    "text": "account_tree",
+    "disabled": null
+  },
+  {
+    "i": 7,
+    "tag": "button",
+    "testid": "shell-nav-processes",
+    "text": "account_tree",
+    "disabled": null
+  },
+  {
+    "i": 8,
+    "tag": "button",
+    "testid": "shell-nav-processes-live",
+    "text": "monitor_heart",
+    "disabled": null
+  },
+  {
+    "i": 32,
+    "tag": "button",
+    "testid": null,
+    "text": "Quality Desk\n                                    Validation runs, test plans, and evidence review.",
+    "disabled": null
+  },
+  {
+    "i": 36,
+    "tag": "button",
+    "testid": null,
+    "text": "forum\n                                Collaboration92\n                                Human escalation, inbox, and process-scoped conversations.",
+    "disabled": null
+  },
+  {
+    "i": 37,
+    "tag": "button",
+    "testid": null,
+    "text": "groups\n                                CRM / HR\n                                Unified party directory, CRM, workforce, recruiting, agents, and assignments.",
+    "disabled": null
+  },
+  {
+    "i": 39,
+    "tag": "button",
+    "testid": null,
+    "text": "account_tree\n                                Workflows\n                                Workflow definitions, components, test runs, and runtime execution.",
+    "disabled": null
+  },
+  {
+    "i": 40,
+    "tag": "button",
+    "testid": null,
+    "text": "account_tree\n                                Processes\n                                Projection-first process definitions, launch planning, live runs, and history.",
+    "disabled": null
+  },
+  {
+    "i": 41,
+    "tag": "button",
+    "testid": null,
+    "text": "monitor_heart\n                                Live Processes\n                                Runtime process runs, attention queues, projection freshness, and manager context.",
+    "disabled": null
+  },
+  {
+    "i": 42,
+    "tag": "button",
+    "testid": null,
+    "text": "psychology\n                                Cognitive Memory\n                                Memory review, recall traces, consolidation health, projection health, replay, and procedures.",
+    "disabled": null
+  },
+  {
+    "i": 47,
+    "tag": "button",
+    "testid": null,
+    "text": "fact_check\n                                Validation Center\n                                Checklists, findings, review decisions, and coverage.",
+    "disabled": null
+  },
+  {
+    "i": 51,
+    "tag": "button",
+    "testid": null,
+    "text": "calendar_month\n                                Scheduler\n                                Calendar-backed workflow and process run planning.",
+    "disabled": null
+  },
+  {
+    "i": 59,
+    "tag": "button",
+    "testid": null,
+    "text": "Processes",
+    "disabled": null
+  },
+  {
+    "i": 65,
+    "tag": "button",
+    "testid": null,
+    "text": "Live Processes",
+    "disabled": null
+  },
+  {
+    "i": 83,
+    "tag": "button",
+    "testid": null,
+    "text": "TetrisGame · Live Processes",
+    "disabled": null
+  },
+  {
+    "i": 109,
+    "tag": "button",
+    "testid": null,
+    "text": "restart_alt",
+    "disabled": null
+  },
+  {
+    "i": 119,
+    "tag": "button",
+    "testid": null,
+    "text": "account_tree Add process",
+    "disabled": null
+  },
+  {
+    "i": 120,
+    "tag": "button",
+    "testid": null,
+    "text": "account_tree Add workflow",
+    "disabled": null
+  }
+]

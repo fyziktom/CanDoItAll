@@ -1,0 +1,25 @@
+
+FullName                                                                     Mode  Length LastWriteTime
+--------                                                                     ----  ------ -------------
+C:\programovani\dotnet\output\src                                            d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\tests                                          d----        16.06.2026 23:11:24
+C:\programovani\dotnet\output\TetrisGame.slnx                                -a--- 231    16.06.2026 23:11:35
+C:\programovani\dotnet\output\src\TetrisGame                                 d----        16.06.2026 23:16:38
+C:\programovani\dotnet\output\src\TetrisGame\bin                             d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\src\TetrisGame\Domain                          d----        16.06.2026 23:16:38
+C:\programovani\dotnet\output\src\TetrisGame\Layout                          d----        16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\obj                             d----        17.06.2026 3:22:34
+C:\programovani\dotnet\output\src\TetrisGame\Pages                           d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\Properties                      d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot                         d----        16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\_Imports.razor                  -a--- 406    16.06.2026 23:16:51
+C:\programovani\dotnet\output\src\TetrisGame\App.razor                       -a--- 292    16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\Program.cs                      -a--- 435    16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\TetrisGame.csproj               -a--- 564    16.06.2026 23:10:03
+C:\programovani\dotnet\output\tests\TetrisGame.Tests                         d----        17.06.2026 2:39:04
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\bin                     d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj                     d----        17.06.2026 3:22:34
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\TetrisGame.Tests.csproj -a--- 741    16.06.2026 23:11:35
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\ViewportFitTests.cs     -a--- 1344   17.06.2026 1:30:17
+
+
