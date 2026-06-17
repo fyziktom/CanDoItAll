@@ -20,21 +20,23 @@ internal sealed partial class ProcessMockAgentRuntime(
     private const string BrowserConsoleMessagesToolName = "browser_console_messages";
     private const string BrowserEvaluateToolName = "browser_evaluate";
 
-    private static readonly Regex ManagedWorkspacePathRegex = new(
+    [GeneratedRegex(
         @"(?<path>\b(?:artifacts|output|integration-map|data)/[^\s`'""<>()\[\]{},;]+)",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ManagedWorkspacePathRegex();
 
-    private static readonly Regex RequiredArtifactLineRegex = new(
+    [GeneratedRegex(
         @"^-\s+(?<title>.+?)\s+\[(?<kind>[^\]]+)\](?:\s+required)?\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex RequiredArtifactLineRegex();
 
-    private static readonly Regex BranchOutcomeLineRegex = new(
+    [GeneratedRegex(
         @"^-\s+(?:(?<key>[^\s()]+)\s+\((?<title>[^)]+)\)|(?<titleOnly>[^:]+))(?:\:\s*(?<description>.*))?\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex BranchOutcomeLineRegex();
 
-    private static readonly Regex RequiredToolNameRegex = new(
-        @"`(?<toolName>[^`]+)`",
-        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    [GeneratedRegex(@"`(?<toolName>[^`]+)`", RegexOptions.CultureInvariant)]
+    private static partial Regex RequiredToolNameRegex();
 
     private static readonly byte[] MockBrowserScreenshotPngBytes = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");

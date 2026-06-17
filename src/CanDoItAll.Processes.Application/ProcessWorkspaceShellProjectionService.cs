@@ -307,45 +307,157 @@ public sealed class ProcessWorkspaceShellProjectionService(
     private static IReadOnlyList<ProcessRuntimeMetricPointProjection> BuildMetricPoints(
         IReadOnlyList<ProcessTimelineEventProjection> events)
     {
-        return events
-            .GroupBy(static runtimeEvent => TruncateToMinute(runtimeEvent.OccurredAtUtc))
-            .OrderBy(group => group.Key)
-            .Select(group =>
-            {
-                var ordered = group.OrderBy(item => item.OccurredAtUtc).ToArray();
-                var durationMs = ordered.Length < 2
-                    ? 0
-                    : checked((long)Math.Max(0, (ordered[^1].OccurredAtUtc - ordered[0].OccurredAtUtc).TotalMilliseconds));
+        if (events.Count == 0)
+        {
+            return [];
+        }
 
-                return new ProcessRuntimeMetricPointProjection(
-                    group.Key,
-                    ordered.Length,
-                    ordered.Count(IsManagerEvent),
-                    ordered.Count(IsToolUsageEvent),
-                    durationMs,
-                    InputTokens: 0,
-                    CachedInputTokens: 0,
-                    OutputTokens: 0,
-                    EstimatedCost: 0m,
-                    ActualCost: 0m);
-            })
-            .ToArray();
+        var buckets = new Dictionary<DateTimeOffset, RuntimeMetricAccumulator>();
+        foreach (var runtimeEvent in events)
+        {
+            var bucket = TruncateToMinute(runtimeEvent.OccurredAtUtc);
+            if (!buckets.TryGetValue(bucket, out var accumulator))
+            {
+                accumulator = new RuntimeMetricAccumulator(bucket);
+                buckets.Add(bucket, accumulator);
+            }
+
+            accumulator.Add(runtimeEvent);
+        }
+
+        var points = new List<ProcessRuntimeMetricPointProjection>(buckets.Count);
+        foreach (var accumulator in buckets.Values)
+        {
+            points.Add(accumulator.ToProjection());
+        }
+
+        points.Sort(static (left, right) => left.TimestampUtc.CompareTo(right.TimestampUtc));
+        return points;
     }
 
     private static IReadOnlyList<ProcessRuntimeToolUsageProjection> BuildToolUsage(
         IReadOnlyList<ProcessTimelineEventProjection> events)
     {
-        return events
-            .Where(IsToolUsageEvent)
-            .GroupBy(runtimeEvent => NormalizeEventType(runtimeEvent.EventType), StringComparer.Ordinal)
-            .Select(group => new ProcessRuntimeToolUsageProjection(
-                group.Key,
-                group.Count(),
-                group.Max(runtimeEvent => runtimeEvent.OccurredAtUtc),
-                BuildToolUsageSummary(group.Key, group.Count(), group.Max(runtimeEvent => runtimeEvent.OccurredAtUtc))))
-            .OrderByDescending(item => item.CallCount)
-            .ThenBy(item => item.ToolName, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        if (events.Count == 0)
+        {
+            return [];
+        }
+
+        var tools = new Dictionary<string, RuntimeToolUsageAccumulator>(StringComparer.Ordinal);
+        foreach (var runtimeEvent in events)
+        {
+            if (!IsToolUsageEvent(runtimeEvent))
+            {
+                continue;
+            }
+
+            var toolName = NormalizeEventType(runtimeEvent.EventType);
+            if (!tools.TryGetValue(toolName, out var accumulator))
+            {
+                accumulator = new RuntimeToolUsageAccumulator(toolName);
+                tools.Add(toolName, accumulator);
+            }
+
+            accumulator.Add(runtimeEvent);
+        }
+
+        var usage = new List<ProcessRuntimeToolUsageProjection>(tools.Count);
+        foreach (var accumulator in tools.Values)
+        {
+            usage.Add(accumulator.ToProjection());
+        }
+
+        usage.Sort(static (left, right) =>
+        {
+            var callCountComparison = right.CallCount.CompareTo(left.CallCount);
+            return callCountComparison != 0
+                ? callCountComparison
+                : string.Compare(left.ToolName, right.ToolName, StringComparison.OrdinalIgnoreCase);
+        });
+
+        return usage;
+    }
+
+    private sealed class RuntimeMetricAccumulator(DateTimeOffset timestampUtc)
+    {
+        private DateTimeOffset firstEventAtUtc;
+        private DateTimeOffset lastEventAtUtc;
+
+        public DateTimeOffset TimestampUtc { get; } = timestampUtc;
+
+        public int EventCount { get; private set; }
+
+        public int ManagerEventCount { get; private set; }
+
+        public int ToolCallCount { get; private set; }
+
+        public void Add(ProcessTimelineEventProjection runtimeEvent)
+        {
+            if (EventCount == 0 || runtimeEvent.OccurredAtUtc < firstEventAtUtc)
+            {
+                firstEventAtUtc = runtimeEvent.OccurredAtUtc;
+            }
+
+            if (EventCount == 0 || runtimeEvent.OccurredAtUtc > lastEventAtUtc)
+            {
+                lastEventAtUtc = runtimeEvent.OccurredAtUtc;
+            }
+
+            EventCount++;
+            if (IsManagerEvent(runtimeEvent))
+            {
+                ManagerEventCount++;
+            }
+
+            if (IsToolUsageEvent(runtimeEvent))
+            {
+                ToolCallCount++;
+            }
+        }
+
+        public ProcessRuntimeMetricPointProjection ToProjection()
+        {
+            var durationMs = EventCount < 2
+                ? 0
+                : checked((long)Math.Max(0, (lastEventAtUtc - firstEventAtUtc).TotalMilliseconds));
+
+            return new ProcessRuntimeMetricPointProjection(
+                TimestampUtc,
+                EventCount,
+                ManagerEventCount,
+                ToolCallCount,
+                durationMs,
+                InputTokens: 0,
+                CachedInputTokens: 0,
+                OutputTokens: 0,
+                EstimatedCost: 0m,
+                ActualCost: 0m);
+        }
+    }
+
+    private sealed class RuntimeToolUsageAccumulator(string toolName)
+    {
+        public string ToolName { get; } = toolName;
+
+        public int CallCount { get; private set; }
+
+        public DateTimeOffset LastUsedAtUtc { get; private set; }
+
+        public void Add(ProcessTimelineEventProjection runtimeEvent)
+        {
+            CallCount++;
+            if (CallCount == 1 || runtimeEvent.OccurredAtUtc > LastUsedAtUtc)
+            {
+                LastUsedAtUtc = runtimeEvent.OccurredAtUtc;
+            }
+        }
+
+        public ProcessRuntimeToolUsageProjection ToProjection()
+            => new(
+                ToolName,
+                CallCount,
+                LastUsedAtUtc,
+                BuildToolUsageSummary(ToolName, CallCount, LastUsedAtUtc));
     }
 
     private static IReadOnlyList<ProcessManagerMessageProjection> BuildManagerMessages(

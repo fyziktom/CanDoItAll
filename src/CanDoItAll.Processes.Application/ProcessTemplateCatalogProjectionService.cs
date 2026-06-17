@@ -15,6 +15,7 @@ public sealed class ProcessTemplateCatalogProjectionService
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
     private readonly Dictionary<ProcessTemplateCatalogStateKey, ProcessTemplateCatalogImportSnapshot> importSnapshots = [];
+    private readonly Lazy<IReadOnlyList<ProcessTemplateCatalogSourceItem>> sourceItems;
 
     public ProcessTemplateCatalogProjectionService(IProcessProjectionClock clock)
         : this(new ProcessTemplatePackLoader(), clock)
@@ -27,6 +28,9 @@ public sealed class ProcessTemplateCatalogProjectionService
     {
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        sourceItems = new Lazy<IReadOnlyList<ProcessTemplateCatalogSourceItem>>(
+            () => CreateSourceItems(this.templatePackLoader.Load()),
+            LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public Task<ProcessTemplateCatalogProjection> GetCatalogAsync(
@@ -81,8 +85,8 @@ public sealed class ProcessTemplateCatalogProjectionService
                 "Template import was rejected because the template catalog projection changed before submission."));
         }
 
-        var sourceItems = CreateSourceItems(pack);
-        var selectedItem = sourceItems.FirstOrDefault(item => item.Key == command.ItemKey);
+        var allItems = sourceItems.Value;
+        var selectedItem = allItems.FirstOrDefault(item => item.Key == command.ItemKey);
         if (selectedItem is null)
         {
             return Task.FromResult(CreateRejectedResult(
@@ -234,7 +238,7 @@ public sealed class ProcessTemplateCatalogProjectionService
         ProcessTemplateCatalogImportSnapshot snapshot,
         ProcessTemplateImportCommandReceipt? lastReceipt)
     {
-        var allItems = CreateSourceItems(pack);
+        var allItems = sourceItems.Value;
         var normalizedSearchText = query.SearchText ?? string.Empty;
         var categoryFilteredItems = FilterByCategory(allItems, query.Category).ToArray();
         var filteredSourceItems = FilterItems(categoryFilteredItems, normalizedSearchText)
@@ -287,7 +291,18 @@ public sealed class ProcessTemplateCatalogProjectionService
     private static IReadOnlyList<ProcessTemplateCatalogSourceItem> CreateSourceItems(
         ProcessTemplatePack pack)
     {
-        var items = new List<ProcessTemplateCatalogSourceItem>();
+        var estimatedCount = 0;
+        foreach (var definition in pack.Definitions)
+        {
+            estimatedCount++;
+            estimatedCount += definition.RoleAuthoringDefaults.Roles.Count;
+            foreach (var step in definition.StepAuthoringDefaults.Steps)
+            {
+                estimatedCount += step.ArtifactExpectations.Count;
+            }
+        }
+
+        var items = new List<ProcessTemplateCatalogSourceItem>(estimatedCount);
         foreach (var definition in pack.Definitions)
         {
             items.Add(new ProcessTemplateCatalogSourceItem(
@@ -338,7 +353,7 @@ public sealed class ProcessTemplateCatalogProjectionService
 
         return items
             .OrderBy(item => item.Kind)
-            .ThenBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.Key.Value, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -366,8 +381,8 @@ public sealed class ProcessTemplateCatalogProjectionService
 
         return items.Where(item =>
             item.Key.Value.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            item.Title.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
-            item.Summary.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
+            item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            item.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             item.SourceDefinitionKey.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             item.SourceComponentKey.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
@@ -522,7 +537,7 @@ public sealed class ProcessTemplateCatalogProjectionService
 
         return stepEditor.Steps
             .OrderBy(step => step.Order)
-            .ThenBy(step => step.Title, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(step => step.Title, StringComparer.OrdinalIgnoreCase)
             .Select(step => new ProcessTemplateImportTargetStepProjection(
                 step.StepKey,
                 step.Title,

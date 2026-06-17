@@ -1,3 +1,4 @@
+using System.Globalization;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
@@ -28,6 +29,50 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Equal("Architecture review", catalog.SelectedItem?.Name);
         Assert.Equal(2, catalog.PublishedDefinitionCount);
         Assert.Contains(catalog.ScopeGroups, group => group.ScopeKind == ProcessDefinitionCatalogScopeKind.Global && group.Count == 2);
+    }
+
+    [Fact]
+    public async Task Catalog_query_uses_ordinal_search_independent_of_current_culture()
+    {
+        using var culture = UseCulture("tr-TR");
+        using var pack = TemporaryProcessTemplatePack.Create(
+            ("culture-case", "culture-case", "INDIGO delivery", "Default flow"));
+        var service = new ProcessDefinitionCatalogProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var catalog = await service.GetCatalogAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogQueryProjection("indigo", SelectedDefinitionKey: null, ProcessDefinitionCatalogScopeKind.All, Take: 20));
+
+        var item = Assert.Single(catalog.Items);
+        Assert.Equal("INDIGO delivery", item.Name);
+    }
+
+    [Fact]
+    public async Task Template_catalog_query_uses_ordinal_search_independent_of_current_culture()
+    {
+        using var culture = UseCulture("tr-TR");
+        using var pack = TemporaryProcessTemplatePack.Create(
+            ("culture-case", "culture-case", "INDIGO delivery", "Default flow"));
+        var service = new ProcessTemplateCatalogProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+
+        var catalog = await service.GetCatalogAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("culture-case"),
+            new ProcessTemplateCatalogQueryProjection(
+                "indigo",
+                ProcessTemplateCatalogCategoryKind.All,
+                SelectedItemKey: null,
+                ProcessTemplateCatalogPreviewTabKind.Overview,
+                Take: 20),
+            stepEditor: null);
+
+        var item = Assert.Single(catalog.Items);
+        Assert.Equal(ProcessTemplateCatalogItemKind.Process, item.Kind);
+        Assert.Equal("INDIGO delivery", item.Title);
     }
 
     [Fact]
@@ -140,6 +185,30 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         }
 
         throw new InvalidOperationException("Could not find repository root.");
+    }
+
+    private static CultureScope UseCulture(string cultureName)
+        => new(cultureName);
+
+    private sealed class CultureScope : IDisposable
+    {
+        private readonly CultureInfo originalCulture;
+        private readonly CultureInfo originalUICulture;
+
+        public CultureScope(string cultureName)
+        {
+            originalCulture = CultureInfo.CurrentCulture;
+            originalUICulture = CultureInfo.CurrentUICulture;
+            var culture = CultureInfo.GetCultureInfo(cultureName);
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+        }
+
+        public void Dispose()
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUICulture;
+        }
     }
 
     [Fact]

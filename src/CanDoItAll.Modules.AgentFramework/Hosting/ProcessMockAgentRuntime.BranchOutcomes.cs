@@ -99,7 +99,7 @@ internal sealed partial class ProcessMockAgentRuntime
                 continue;
             }
 
-            var match = BranchOutcomeLineRegex.Match(line.Trim());
+            var match = BranchOutcomeLineRegex().Match(line.Trim());
             if (!match.Success)
             {
                 continue;

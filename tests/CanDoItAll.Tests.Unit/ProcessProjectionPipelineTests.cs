@@ -5,6 +5,7 @@ using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.Processes.Templates;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit;
@@ -164,6 +165,71 @@ public sealed class ProcessProjectionPipelineTests
         Assert.DoesNotContain("restricted-secret", runtimeEvent.Summary, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Shell_projection_aggregates_metric_buckets_and_tool_usage_deterministically()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5).AddSeconds(10)),
+            latestKnownGlobalSequence: 3);
+        await ProjectAsync(
+            store,
+            StoredEvent(2, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5).AddSeconds(50)),
+            latestKnownGlobalSequence: 3);
+        await ProjectAsync(
+            store,
+            StoredEvent(3, runId, ProcessRuntimeEventTypes.ManagerIncidentRaised, Now.AddMinutes(-4).AddSeconds(5)),
+            latestKnownGlobalSequence: 3);
+        var clock = new FixedProcessProjectionClock(Now);
+        var templateLoader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(templateLoader, clock),
+            new ProcessDefinitionEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionStepEditorProjectionService(templateLoader, clock),
+            new ProcessTemplateCatalogProjectionService(templateLoader, clock),
+            new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, clock));
+
+        var shell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(ProcessId: null, RunId: null, LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(ProcessRuntimeHistoryWindow.OneDay, EventPage: 0, EventPageSize: 25, SelectedRunId: null)));
+
+        Assert.Equal(3, shell.Runtime.Stats.EventCount);
+        Assert.Equal(
+            [
+                new DateTimeOffset(2026, 6, 15, 11, 55, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 6, 15, 11, 56, 0, TimeSpan.Zero)
+            ],
+            shell.Runtime.MetricPoints.Select(point => point.TimestampUtc));
+        Assert.Equal(2, shell.Runtime.MetricPoints[0].EventCount);
+        Assert.Equal(0, shell.Runtime.MetricPoints[0].ManagerEventCount);
+        Assert.Equal(2, shell.Runtime.MetricPoints[0].ToolCallCount);
+        Assert.Equal(40_000, shell.Runtime.MetricPoints[0].DurationMs);
+        Assert.Collection(
+            shell.Runtime.ToolUsage,
+            tool =>
+            {
+                Assert.Equal("Step Running", tool.ToolName);
+                Assert.Equal(2, tool.CallCount);
+                Assert.Equal(Now.AddMinutes(-5).AddSeconds(50), tool.LastUsedAtUtc);
+            },
+            tool =>
+            {
+                Assert.Equal("Manager Incident Raised", tool.ToolName);
+                Assert.Equal(1, tool.CallCount);
+                Assert.Equal(Now.AddMinutes(-4).AddSeconds(5), tool.LastUsedAtUtc);
+            });
+    }
+
     private static async Task ProjectAsync(
         EfProcessProjectionStore store,
         ProcessStoredRuntimeEvent runtimeEvent,
@@ -186,6 +252,22 @@ public sealed class ProcessProjectionPipelineTests
             .UseInMemoryDatabase($"process-projections-{Guid.NewGuid():N}")
             .Options;
         return new ProcessPersistenceDbContext(options);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find repository root.");
     }
 
     private static ProcessStoredRuntimeEvent StoredEvent(

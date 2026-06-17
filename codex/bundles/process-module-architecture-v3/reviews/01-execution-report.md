@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB19 are complete and validated. Post-review UI parity repairs are complete, the combined SB20-SB28 runtime completion repair closes the project-scoped launch/runtime/dispatch gap with a real dev-DB TetrisGame process run, and SB29 completes the current generic runtime-dispatcher leak repair.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB19 are complete and validated. Post-review UI parity repairs are complete, the combined SB20-SB28 runtime completion repair closes the project-scoped launch/runtime/dispatch gap with a real dev-DB TetrisGame process run, SB29 completes the current generic runtime-dispatcher leak repair, and SB30 completes targeted Process hot-path performance hardening.
 
 ## Changes Made In This Task
 
@@ -909,4 +909,33 @@ Result:
 
 ```text
 Post-bundle hardening reduced EF query work in project-structure process projection, moved runtime event global sequence allocation to EF/database generated keys, cached root sequence allocation per append batch, canonicalized launch-variable serialization and lookup, replaced a Blazor Task.Result path with awaited task results, and replaced static compiled regex fields with generated regex methods. Focused process unit validation passed 23/23. Focused ProjectStructureAgentIntegrationTests ran 25/26 passing; the remaining failure is the existing prompt-template/test drift at ProjectStructureAgentIntegrationTests.cs:519 expecting `Do not block only because a slot-id directory is absent`, which no longer exists in current templates or prompt-builder sources.
+```
+
+## SB30 Performance Hot Path Hardening Proof
+
+Proof artifacts:
+
+```text
+bundle://proof/SB30-performance-hot-path-hardening/manifest.md
+bundle://proof/SB30-performance-hot-path-hardening/semantic-invariants.md
+bundle://proof/SB30-performance-hot-path-hardening/changed-file-hashes.txt
+bundle://proof/SB30-performance-hot-path-hardening/transcripts/build-application.txt
+bundle://proof/SB30-performance-hot-path-hardening/transcripts/build-agentframework-module.txt
+bundle://proof/SB30-performance-hot-path-hardening/transcripts/test-focused-performance.txt
+bundle://proof/SB30-performance-hot-path-hardening/transcripts/performance-scan.txt
+bundle://proof/SB30-performance-hot-path-hardening/transcripts/static-regression-scans.txt
+```
+
+Result:
+
+```text
+SB30 cached stable Process definition/template catalog projections per service instance, switched catalog search/sort comparisons to ordinal ignore-case, replaced runtime dashboard metric/tool-usage grouping chains with explicit accumulators, and converted process mock/scenario harness literal regexes to source-generated regex methods. Process Application and AgentFramework module builds passed with 0 warnings and 0 errors. Focused unit validation passed 34/34. The modified-scope performance scan reports zero sync-over-async, zero missing non-linguistic StringComparison findings, zero RegexOptions.Compiled/new Regex hits, zero per-call JsonSerializerOptions, zero unsealed leaf candidates, and five GeneratedRegex methods.
+```
+
+Subbundle Gate Results for SB30:
+
+```text
+Entry gate: Pass. SB29 was complete, the v3 performance guardrails/checklist existed, and the touched source references were active product code.
+Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, changed-file hashes recorded, focused builds/tests passed, and final performance/static scans were clean for critical findings.
+Progression: Future performance work should add BenchmarkDotNet or production telemetry only if catalog sizes or dashboard refresh frequency grow enough to require measured throughput evidence.
 ```

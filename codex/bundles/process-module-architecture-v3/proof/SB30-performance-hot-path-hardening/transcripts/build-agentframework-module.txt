@@ -1,0 +1,10 @@
+Command:
+
+dotnet build src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj --no-restore -v:minimal
+
+Result:
+
+Build succeeded.
+Warnings: 0.
+Errors: 0.
+

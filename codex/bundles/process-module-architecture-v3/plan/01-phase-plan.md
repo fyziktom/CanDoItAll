@@ -154,3 +154,8 @@ flowchart TD
 26. SB26 Analytics, Graphs, Live Processes Dashboard, Snapshot Cache, And Time Windows.
 27. SB27 Project-Scoped Processes, Project Structure Integration, Process APIs, Codex Skill, And API Compatibility.
 28. SB28 E2E User Story Regression, Refactoring Hardening, Security, And Final Closure.
+
+## Post-Execution Addenda
+
+29. SB29 Generic Runtime Dispatcher Leak Repair: completed after runtime completion to remove current AgentFramework/project-structure vocabulary from generic launch orchestration and driver contracts.
+30. SB30 Performance Hot Path Hardening: completed after SB29 to apply the .NET performance guardrails to active catalog projection, runtime dashboard aggregation, and process harness regex paths.

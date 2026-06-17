@@ -13,6 +13,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
     private const int MaximumTake = 200;
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
+    private readonly Lazy<IReadOnlyList<ProcessDefinitionCatalogItemProjection>> catalogItems;
 
     public ProcessDefinitionCatalogProjectionService(IProcessProjectionClock clock)
         : this(new ProcessTemplatePackLoader(), clock)
@@ -25,6 +26,9 @@ public sealed class ProcessDefinitionCatalogProjectionService
     {
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        catalogItems = new Lazy<IReadOnlyList<ProcessDefinitionCatalogItemProjection>>(
+            LoadCatalogItems,
+            LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public static ProcessDefinitionId CreateDefinitionId(ProcessDefinitionCatalogItemKey key)
@@ -42,11 +46,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
 
         var normalizedQuery = NormalizeQuery(query);
         var pack = templatePackLoader.Load();
-        var allItems = pack.Definitions
-            .Select(CreateCatalogItem)
-            .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(item => item.Key.Value, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var allItems = catalogItems.Value;
         var normalizedSearchText = normalizedQuery.SearchText ?? string.Empty;
         var scopeFilteredItems = FilterByScope(allItems, normalizedQuery.ScopeFilter)
             .ToArray();
@@ -58,17 +58,26 @@ public sealed class ProcessDefinitionCatalogProjectionService
         var summary = CreateSummary(pack, filteredItems.Length, normalizedSearchText);
 
         return Task.FromResult(new ProcessDefinitionCatalogProjection(
-            PublishedDefinitionCount: allItems.Length,
+            PublishedDefinitionCount: allItems.Count,
             DraftDefinitionCount: 0,
             TemplateCompatibilityIssueCount: allItems.Sum(item => item.CompatibilityIssueCount),
             summary,
             normalizedSearchText,
             selectedKey,
-            CreateScopeGroups(scope, allItems.Length, normalizedQuery.ScopeFilter),
+            CreateScopeGroups(scope, allItems.Count, normalizedQuery.ScopeFilter),
             filteredItems,
             selectedItem,
             SelectedEditor: null,
             lastCommandReceipt));
+    }
+
+    private IReadOnlyList<ProcessDefinitionCatalogItemProjection> LoadCatalogItems()
+    {
+        return templatePackLoader.Load().Definitions
+            .Select(CreateCatalogItem)
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Key.Value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
@@ -134,8 +143,8 @@ public sealed class ProcessDefinitionCatalogProjectionService
 
         return items.Where(item =>
             item.Key.Value.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            item.Name.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
-            item.Summary.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
+            item.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            item.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             item.Criticality.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             item.OperatingMode.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }

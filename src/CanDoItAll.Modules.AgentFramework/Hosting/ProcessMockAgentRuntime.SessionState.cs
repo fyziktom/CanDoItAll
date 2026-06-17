@@ -355,7 +355,7 @@ internal sealed partial class ProcessMockAgentRuntime
                 continue;
             }
 
-            foreach (Match match in ManagedWorkspacePathRegex.Matches(line))
+            foreach (Match match in ManagedWorkspacePathRegex().Matches(line))
             {
                 var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
                 if (IsConcreteManagedInspectionPath(normalizedPath))
@@ -497,7 +497,7 @@ internal sealed partial class ProcessMockAgentRuntime
                 continue;
             }
 
-            foreach (Match match in RequiredToolNameRegex.Matches(line))
+            foreach (Match match in RequiredToolNameRegex().Matches(line))
             {
                 var toolName = match.Groups["toolName"].Value.Trim();
                 if (!string.IsNullOrWhiteSpace(toolName))

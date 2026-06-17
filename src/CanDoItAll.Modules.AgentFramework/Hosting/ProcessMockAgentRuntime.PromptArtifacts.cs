@@ -269,7 +269,7 @@ internal sealed partial class ProcessMockAgentRuntime
                 continue;
             }
 
-            var artifactMatch = RequiredArtifactLineRegex.Match(line.Trim());
+            var artifactMatch = RequiredArtifactLineRegex().Match(line.Trim());
             if (artifactMatch.Success)
             {
                 current = new PromptRequiredArtifactBuilder(

@@ -1,0 +1,8 @@
+Commands:
+
+rg -n "RegexOptions\.Compiled|new Regex\(|CurrentCultureIgnoreCase|\.Result\s*(;|$)|\.Wait\(|GetAwaiter\(\)\.GetResult\(|new HttpClient\(" src\CanDoItAll.Processes.Application src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.cs src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.BranchOutcomes.cs src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.PromptArtifacts.cs src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs src\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs
+
+Result:
+
+No matches in the modified production scope.
+

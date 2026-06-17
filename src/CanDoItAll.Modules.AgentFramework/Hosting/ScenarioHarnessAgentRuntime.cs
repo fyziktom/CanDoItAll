@@ -17,6 +17,9 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
     private const string StandaloneScenarioOutputRoot = "output/sh";
     private const string StandaloneScenarioArtifactRoot = "artifacts/sh";
 
+    [GeneratedRegex(@"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")]
+    private static partial Regex AnsiEscapeSequenceRegex();
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -705,11 +708,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
     private static string StripAnsiEscapeSequences(string content)
         => string.IsNullOrEmpty(content)
             ? string.Empty
-            : Regex.Replace(
-                content,
-                @"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])",
-                string.Empty,
-                RegexOptions.Compiled);
+            : AnsiEscapeSequenceRegex().Replace(content, string.Empty);
 
     private static string BuildGuidedResponse(ScenarioHarnessDefinition definition, ScenarioRuntimeState state)
     {
