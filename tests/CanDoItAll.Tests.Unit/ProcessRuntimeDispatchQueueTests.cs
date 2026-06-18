@@ -137,7 +137,7 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
-    public async Task Recovery_query_excludes_expired_claims_older_than_ready_cutoff()
+    public async Task Recovery_query_includes_expired_claims_older_than_ready_cutoff()
     {
         await using var dbContext = CreateDbContext();
         var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
@@ -170,7 +170,7 @@ public sealed class ProcessRuntimeDispatchQueueTests
             now,
             readyUpdatedAfterUtc: now.AddMinutes(-5));
 
-        Assert.DoesNotContain(expiredRunId, runIds);
+        Assert.Contains(expiredRunId, runIds);
     }
 
     [Fact]
@@ -403,6 +403,81 @@ public sealed class ProcessRuntimeDispatchQueueTests
         var parentRunIds = await ProcessRuntimeChildRunParentQuery.LoadActiveParentRunIdsAsync(dbContext, childRunId);
 
         Assert.Equal([activeParentRunId], parentRunIds);
+    }
+
+    [Fact]
+    public async Task Child_parent_query_returns_waiting_and_blocked_parent_steps_for_completed_child_rework()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var parentRunId = Guid.NewGuid();
+        var waitingParentRunId = Guid.NewGuid();
+        var completedParentRunId = Guid.NewGuid();
+        var childRunId = Guid.NewGuid();
+
+        var parentStepId = AddRuntimeState(
+            dbContext,
+            parentRunId,
+            ProcessRuntimeStatus.Active,
+            now,
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        var waitingParentStepId = AddRuntimeState(
+            dbContext,
+            waitingParentRunId,
+            ProcessRuntimeStatus.Active,
+            now,
+            ProcessRuntimeStepStatus.Waiting,
+            activeClaimToken: null);
+        var completedParentStepId = AddRuntimeState(
+            dbContext,
+            completedParentRunId,
+            ProcessRuntimeStatus.Completed,
+            now,
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            childRunId,
+            ProcessRuntimeStatus.Completed,
+            now,
+            ProcessRuntimeStepStatus.Completed,
+            activeClaimToken: null);
+        AddAssignment(
+            dbContext,
+            childRunId,
+            Guid.NewGuid(),
+            new Dictionary<string, string>
+            {
+                ["ParentProcessRunId"] = parentRunId.ToString("D"),
+                ["ParentProcessStepId"] = parentStepId.ToString("D")
+            });
+        AddAssignment(
+            dbContext,
+            childRunId,
+            Guid.NewGuid(),
+            new Dictionary<string, string>
+            {
+                ["ParentProcessRunId"] = waitingParentRunId.ToString("D"),
+                ["ParentProcessStepId"] = waitingParentStepId.ToString("D")
+            });
+        AddAssignment(
+            dbContext,
+            childRunId,
+            Guid.NewGuid(),
+            new Dictionary<string, string>
+            {
+                ["ParentProcessRunId"] = completedParentRunId.ToString("D"),
+                ["ParentProcessStepId"] = completedParentStepId.ToString("D")
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var parentSteps = await ProcessRuntimeChildRunParentQuery.LoadActiveParentStepsAsync(dbContext, childRunId);
+
+        Assert.Equal(2, parentSteps.Count);
+        Assert.Contains(parentSteps, parentStep => parentStep.RunId == parentRunId && parentStep.StepInstanceId == parentStepId);
+        Assert.Contains(parentSteps, parentStep => parentStep.RunId == waitingParentRunId && parentStep.StepInstanceId == waitingParentStepId);
     }
 
     private static ProcessPersistenceDbContext CreateDbContext()

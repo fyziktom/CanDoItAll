@@ -23,6 +23,7 @@ public enum ProcessRuntimeStepStatus
     Planned,
     Pending,
     Ready,
+    Waiting,
     WaitingApproval,
     Claimed,
     Running,

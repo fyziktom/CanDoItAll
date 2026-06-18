@@ -16,6 +16,13 @@ public sealed record ProcessRuntimeDispatchResult(
     ProcessRuntimeStatus Status,
     IReadOnlyList<string> Diagnostics);
 
+public sealed class ProcessRuntimeDispatchOptions
+{
+    public TimeSpan DispatchLease { get; init; } = TimeSpan.FromMinutes(25);
+
+    public TimeSpan StepExecutionTimeout { get; init; } = TimeSpan.FromMinutes(20);
+}
+
 public sealed class ProcessRuntimeDispatchApplicationService(
     IProcessProjectionClock clock,
     IProcessRuntimeStateStore stateStore,
@@ -23,13 +30,14 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     IProcessInstancePlanStore planStore,
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeStrategyFactoryResolver strategyFactoryResolver,
-    ProcessRuntimeProjectionCatchupService projectionCatchupService)
+    ProcessRuntimeProjectionCatchupService projectionCatchupService,
+    ProcessRuntimeDispatchOptions? options = null)
 {
     private const int MaximumDispatchIterations = 200;
     private const int MaximumStepDispatchAttempts = 20;
     private const string DispatcherActorId = "process-runtime-dispatcher";
     private const string ClaimReleaseFailureExceptionDataKey = "ProcessDispatchClaimReleaseFailure";
-    private static readonly TimeSpan DispatchLease = TimeSpan.FromMinutes(30);
+    private readonly ProcessRuntimeDispatchOptions dispatchOptions = NormalizeOptions(options);
 
     public async Task<ProcessRuntimeDispatchResult> ExecuteReadyAsync(
         ProcessRunId runId,
@@ -99,7 +107,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                             workItem,
                             ownerId,
                             claimToken,
-                            NormalizeUtc(clock.GetUtcNow()).Add(DispatchLease)),
+                            NormalizeUtc(clock.GetUtcNow()).Add(dispatchOptions.DispatchLease)),
                         cancellationToken).ConfigureAwait(false);
                     if (!claimCommit.Succeeded)
                     {
@@ -176,10 +184,12 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     var strategyFactory = await strategyFactoryResolver.ResolveAsync(
                         workItem.StrategyBinding,
                         cancellationToken).ConfigureAwait(false);
-                    var result = await dispatcher.InvokeAsync(
+                    var result = await InvokeStrategyWithTimeoutAsync(
+                        dispatcher,
                         workItem,
                         plan,
                         strategyFactory,
+                        dispatchOptions.StepExecutionTimeout,
                         cancellationToken).ConfigureAwait(false);
                     var resultCommit = await engine.SubmitStrategyResultAsync(
                         runningCommit.State,
@@ -227,17 +237,18 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                 catch (ProcessRuntimeDispatchDeferredException exception) when (claimCreated && !resultSubmitted)
                 {
                     diagnostics.Add(exception.Message);
-                    var releaseDiagnostic = await ReleaseClaimBestEffortAsync(
+                    var deferDiagnostic = await DeferClaimBestEffortAsync(
                         runId,
                         workItem.StepInstanceId,
                         ownerId,
                         claimToken,
+                        exception.DeferredRunId,
                         requestedBy,
                         iteration,
                         CancellationToken.None).ConfigureAwait(false);
-                    if (releaseDiagnostic is not null)
+                    if (deferDiagnostic is not null)
                     {
-                        diagnostics.Add(releaseDiagnostic);
+                        diagnostics.Add(deferDiagnostic);
                     }
 
                     await projectionCatchupService.CatchUpAsync(CancellationToken.None).ConfigureAwait(false);
@@ -524,6 +535,46 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         return next;
     }
 
+    private async Task<string?> DeferClaimBestEffortAsync(
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        DispatcherOwnerId ownerId,
+        DispatchClaimToken claimToken,
+        ProcessRunId? deferredRunId,
+        string requestedBy,
+        int iteration,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                return $"Dispatch claim deferral skipped because process run '{runId}' was not found.";
+            }
+
+            var engine = new ProcessRuntimeEngine(unitOfWork);
+            var deferCommit = await engine.DeferClaimAsync(
+                state,
+                CreateContext(requestedBy, iteration, "defer-claim"),
+                new DeferDispatchClaimCommand(stepInstanceId, ownerId, claimToken, deferredRunId),
+                cancellationToken).ConfigureAwait(false);
+            if (!deferCommit.Succeeded)
+            {
+                var deferMessages = string.Join("; ", deferCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
+                return $"Dispatch claim deferral rejected for run '{runId}', step '{stepInstanceId}', token '{claimToken}': {deferMessages}";
+            }
+
+            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+
+            return null;
+        }
+        catch (Exception exception)
+        {
+            return $"Dispatch claim deferral failed for run '{runId}', step '{stepInstanceId}', token '{claimToken}': {exception.Message}";
+        }
+    }
+
     private async Task<string?> ReleaseClaimBestEffortAsync(
         ProcessRunId runId,
         ProcessStepInstanceId stepInstanceId,
@@ -614,6 +665,117 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     summary)
             ],
             resultHash);
+    }
+
+    private static async Task<StrategyResultEnvelope> InvokeStrategyWithTimeoutAsync(
+        ProcessStrategyDispatcher dispatcher,
+        DispatchWorkItem workItem,
+        ProcessInstancePlan plan,
+        IProcessStrategyFactory strategyFactory,
+        TimeSpan stepExecutionTimeout,
+        CancellationToken cancellationToken)
+    {
+        var stepExecution = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        stepExecution.CancelAfter(stepExecutionTimeout);
+        var invocationTask = Task.Run(
+            async () => await dispatcher
+                .InvokeAsync(workItem, plan, strategyFactory, stepExecution.Token)
+                .ConfigureAwait(false),
+            CancellationToken.None);
+
+        try
+        {
+            var result = await invocationTask.WaitAsync(stepExecutionTimeout, cancellationToken).ConfigureAwait(false);
+            stepExecution.Dispose();
+            return result;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            ObserveLateStrategyCompletion(invocationTask, stepExecution);
+            return CreateExecutionTimeoutResult(workItem, stepExecutionTimeout);
+        }
+        catch (TimeoutException)
+        {
+            await stepExecution.CancelAsync().ConfigureAwait(false);
+            ObserveLateStrategyCompletion(invocationTask, stepExecution);
+            return CreateExecutionTimeoutResult(workItem, stepExecutionTimeout);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await stepExecution.CancelAsync().ConfigureAwait(false);
+            ObserveLateStrategyCompletion(invocationTask, stepExecution);
+            throw;
+        }
+    }
+
+    private static StrategyResultEnvelope CreateExecutionTimeoutResult(
+        DispatchWorkItem workItem,
+        TimeSpan stepExecutionTimeout)
+    {
+        var summary = $"Step '{workItem.StepInstanceId}' exceeded the per-step execution timeout of {stepExecutionTimeout.TotalMinutes:N0} minutes and requires operator review before another retry.";
+        var stableKey = $"process-runtime:step-execution-timeout:{workItem.RunId}:{workItem.StepInstanceId}:{workItem.AttemptNumber}";
+        var resultHash = ComputeHash(stableKey);
+        return new StrategyResultEnvelope(
+            workItem.StrategyBinding.StrategyId,
+            workItem.StrategyBinding.StrategyVersion,
+            CreateDeterministicGuid(stableKey),
+            StrategyOutcome.Failed,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.runtime.step_execution_timeout"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    resultHash,
+                    summary,
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.runtime.step_execution_timeout"),
+                    resultHash,
+                    summary)
+            ],
+            resultHash);
+    }
+
+    private static void ObserveLateStrategyCompletion(
+        Task<StrategyResultEnvelope> invocationTask,
+        CancellationTokenSource stepExecution)
+    {
+        _ = invocationTask.ContinueWith(
+            static (task, state) =>
+            {
+                ((CancellationTokenSource)state!).Dispose();
+                _ = task.Exception;
+            },
+            stepExecution,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private static ProcessRuntimeDispatchOptions NormalizeOptions(ProcessRuntimeDispatchOptions? options)
+    {
+        options ??= new ProcessRuntimeDispatchOptions();
+        if (options.DispatchLease <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException("Process runtime dispatch lease must be greater than zero.");
+        }
+
+        if (options.StepExecutionTimeout <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException("Process runtime step execution timeout must be greater than zero.");
+        }
+
+        if (options.DispatchLease <= options.StepExecutionTimeout)
+        {
+            throw new InvalidOperationException("Process runtime dispatch lease must be greater than the step execution timeout so valid step results can be accepted before the claim expires.");
+        }
+
+        return options;
     }
 
     private static RuntimeCommandContext CreateContext(

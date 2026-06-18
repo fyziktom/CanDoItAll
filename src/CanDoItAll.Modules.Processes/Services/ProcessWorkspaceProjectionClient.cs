@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -32,43 +33,99 @@ public interface IProcessWorkspaceProjectionClient
     Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
         ProcessTemplateImportCommand command,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(
+        ProcessRuntimeOperatorActionCommand command,
+        CancellationToken cancellationToken = default);
 }
 
-public sealed class ProcessWorkspaceProjectionClient(
-    ProcessWorkspaceShellProjectionService shellProjectionService) : IProcessWorkspaceProjectionClient
+public sealed class ProcessWorkspaceProjectionClient(IServiceScopeFactory scopeFactory) : IProcessWorkspaceProjectionClient
 {
-    public Task<ProcessWorkspaceShellProjection> GetShellAsync(
+    public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
         ProcessWorkspaceShellRequest request,
         CancellationToken cancellationToken = default)
-        => shellProjectionService.GetShellAsync(request, cancellationToken);
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .GetShellAsync(request, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
-    public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
+    public async Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(
         ProcessDefinitionFeedDefaultsCommand command,
         CancellationToken cancellationToken = default)
-        => shellProjectionService.FeedDefaultDefinitionsAsync(command, cancellationToken);
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .FeedDefaultDefinitionsAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
-    public Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
+    public async Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
         ProcessDefinitionEditorCommand command,
         CancellationToken cancellationToken = default)
-        => shellProjectionService.ExecuteDefinitionEditorCommandAsync(command, cancellationToken);
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .ExecuteDefinitionEditorCommandAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
-    public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
+    public async Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
         ProcessDefinitionRoleEditorCommand command,
         CancellationToken cancellationToken = default)
-        => shellProjectionService.ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken);
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
-    public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+    public async Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
         ProcessDefinitionCanvasCommand command,
         CancellationToken cancellationToken = default)
-        => shellProjectionService.ExecuteDefinitionCanvasCommandAsync(command, cancellationToken);
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .ExecuteDefinitionCanvasCommandAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
-    public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+    public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
         ProcessDefinitionStepEditorCommand command,
         CancellationToken cancellationToken = default)
-        => shellProjectionService.ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken);
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
-    public Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
+    public async Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
         ProcessTemplateImportCommand command,
         CancellationToken cancellationToken = default)
-        => shellProjectionService.ExecuteTemplateImportCommandAsync(command, cancellationToken);
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .ExecuteTemplateImportCommandAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(
+        ProcessRuntimeOperatorActionCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider
+            .GetRequiredService<ProcessRuntimeOperatorApplicationService>()
+            .ExecuteAsync(command, cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

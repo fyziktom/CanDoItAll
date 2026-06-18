@@ -50,9 +50,10 @@ public static class AgentProcessReadinessEvaluator
         var roleFamilyEligibilityTokens = ResolveRoleFamilyEligibilityTokens(request, roleIdentityTokens, roleTokens);
         var agentTerms = CollectAgentTerms(agent);
         var primaryTerms = CollectPrimaryAgentTerms(agent);
+        var roleFamilyTerms = CollectRoleFamilyAgentTerms(agent);
         var exactMatch = CalculateBestExactRoleMatch(agent, ResolveMatchKeys(request));
         var findings = new List<AgentProcessReadinessFinding>();
-        var roleFamilyFit = HasRequiredRoleFamilySignal(roleFamilyEligibilityTokens, agentTerms);
+        var roleFamilyFit = HasRequiredRoleFamilySignal(roleFamilyEligibilityTokens, roleFamilyTerms, primaryTerms);
         var roleFit = (exactMatch.Score > 0 || roleFamilyFit) && roleFamilyFit;
         var score = exactMatch.Score > 0 ? 1_000 + exactMatch.Score : 0;
         var matchedTokens = new List<string>();
@@ -168,7 +169,7 @@ public static class AgentProcessReadinessEvaluator
             findings.Add(MissingTool(agent, request, "agent.readiness.workspace-write-files-missing", "write workspace files"));
         }
 
-        if (RequiresValidationCommands(request) && !normalized.CanRunValidationCommands)
+        if (RequiresValidationCommands(request, roleTokens) && !normalized.CanRunValidationCommands)
         {
             findings.Add(MissingTool(agent, request, "agent.readiness.workspace-validation-missing", "run .NET validation/runtime commands"));
         }
@@ -208,11 +209,18 @@ public static class AgentProcessReadinessEvaluator
                IsTargetScope(request, ProcessOperationContractNames.ManagedOutputProduct);
     }
 
-    private static bool RequiresValidationCommands(AgentProcessRoleReadinessRequest request)
+    private static bool RequiresValidationCommands(
+        AgentProcessRoleReadinessRequest request,
+        IReadOnlyList<string> roleTokens)
     {
         return HasOperation(request, ProcessOperationContractNames.RunValidation) ||
-               HasOperation(request, ProcessOperationContractNames.LaunchRuntime) ||
-               HasOperation(request, ProcessOperationContractNames.CaptureRuntimeProof);
+               ((HasOperation(request, ProcessOperationContractNames.LaunchRuntime) ||
+                 HasOperation(request, ProcessOperationContractNames.CaptureRuntimeProof)) &&
+                (roleTokens.Any(IsEngineeringRoleToken) ||
+                 roleTokens.Any(IsQualityRoleToken) ||
+                 IsTargetScope(request, ProcessOperationContractNames.ExternalProductTargetMutable) ||
+                 IsTargetScope(request, ProcessOperationContractNames.ExternalProductTargetReadOnly) ||
+                 IsTargetScope(request, ProcessOperationContractNames.ManagedOutputProduct)));
     }
 
     private static bool RequiresEngineeringScaffoldTools(
@@ -358,6 +366,26 @@ public static class AgentProcessReadinessEvaluator
         return terms;
     }
 
+    private static HashSet<string> CollectRoleFamilyAgentTerms(AgentDefinition agent)
+    {
+        var terms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddTerms(terms, agent.Name);
+        AddTerms(terms, agent.RoleTitle);
+        AddTerms(terms, agent.Workload.ToString());
+
+        foreach (var tag in agent.Tags)
+        {
+            AddTerms(terms, tag);
+            var normalizedTag = Normalize(tag);
+            if (!string.IsNullOrWhiteSpace(normalizedTag))
+            {
+                terms.Add(normalizedTag);
+            }
+        }
+
+        return terms;
+    }
+
     private static ExactRoleMatch CalculateBestExactRoleMatch(
         AgentDefinition agent,
         IReadOnlyList<string> matchKeys)
@@ -393,19 +421,32 @@ public static class AgentProcessReadinessEvaluator
             score += 10;
         }
 
+        var roleTokens = ExtractTokens(roleKey)
+            .Where(token => !IgnoredRoleTokens.Contains(token))
+            .ToArray();
+        if (roleTokens.Length >= 2)
+        {
+            var primaryTerms = CollectPrimaryAgentTerms(agent);
+            if (roleTokens.All(primaryTerms.Contains))
+            {
+                score += 8;
+            }
+        }
+
         return score;
     }
 
     private static bool HasRequiredRoleFamilySignal(
         IReadOnlyList<string> roleTokens,
-        IReadOnlySet<string> terms)
+        IReadOnlySet<string> terms,
+        IReadOnlySet<string> primaryTerms)
     {
         var hasRoleFamilyRequirement = false;
 
         if (roleTokens.Any(IsArchitectureRoleToken))
         {
             hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, ArchitectureRoleAliases))
+            if (!MatchesAnyTerm(primaryTerms, ArchitectureRoleAliases))
             {
                 return false;
             }
@@ -414,7 +455,7 @@ public static class AgentProcessReadinessEvaluator
         if (roleTokens.Any(IsEngineeringRoleToken))
         {
             hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, EngineeringRoleAliases))
+            if (!MatchesAnyTerm(primaryTerms, EngineeringRoleAliases))
             {
                 return false;
             }
@@ -423,7 +464,7 @@ public static class AgentProcessReadinessEvaluator
         if (roleTokens.Any(IsQualityRoleToken))
         {
             hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, QualityRoleAliases))
+            if (!MatchesAnyTerm(primaryTerms, QualityRoleAliases))
             {
                 return false;
             }
@@ -432,7 +473,7 @@ public static class AgentProcessReadinessEvaluator
         if (roleTokens.Any(IsDeliveryRoleToken))
         {
             hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, DeliveryRoleAliases))
+            if (!MatchesAnyTerm(primaryTerms, DeliveryRoleAliases))
             {
                 return false;
             }
@@ -441,7 +482,7 @@ public static class AgentProcessReadinessEvaluator
         if (roleTokens.Any(IsSecurityRoleToken))
         {
             hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, SecurityRoleAliases))
+            if (!MatchesAnyTerm(primaryTerms, SecurityRoleAliases))
             {
                 return false;
             }
@@ -663,7 +704,6 @@ public static class AgentProcessReadinessEvaluator
         "process",
         "role",
         "runtime",
-        "solution",
         "step",
         "subprocess",
         "the",
@@ -689,7 +729,9 @@ public static class AgentProcessReadinessEvaluator
     private static readonly HashSet<string> ArchitectureTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
     {
         "architect",
-        "architecture"
+        "architecture",
+        "design",
+        "solution"
     };
 
     private static readonly HashSet<string> EngineeringTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
@@ -730,7 +772,6 @@ public static class AgentProcessReadinessEvaluator
         "architect",
         "architecture",
         "design",
-        "review",
         "solution"
     ];
 

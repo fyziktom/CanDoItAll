@@ -167,6 +167,116 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Runtime_readiness_rejects_qa_review_lead_for_solution_architect_role()
+    {
+        var qaReviewLead = NewAgent(
+            ".NET QA Review Lead",
+            ".NET QA Review Lead",
+            AgentWorkloadKind.Qa,
+            [
+                "qa-lead",
+                "dotnet",
+                "architecture",
+                "review"
+            ],
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var architect = NewAgent(
+            ".NET Architect",
+            ".NET Architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet-architect",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var request = new AgentProcessRoleReadinessRequest(
+            "architecture-review",
+            "Run .NET architecture design and review subprocess",
+            "solution-architect",
+            "solution-architect",
+            "Solution architect",
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                ProcessOperationContractNames.ExecuteExternalAction,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof
+            ],
+            ProcessOperationContractNames.ExternalActionControlled);
+
+        var qaReadiness = AgentProcessReadinessEvaluator.Evaluate(qaReviewLead, request);
+        var architectReadiness = AgentProcessReadinessEvaluator.Evaluate(architect, request);
+
+        Assert.False(qaReadiness.HasRoleFit);
+        Assert.False(qaReadiness.IsExecutionReady);
+        Assert.Contains(qaReadiness.Findings, finding => finding.Code == "agent.readiness.role-family-mismatch");
+        Assert.True(architectReadiness.HasRoleFit);
+        Assert.True(architectReadiness.IsExecutionReady);
+        Assert.True(architectReadiness.Score > qaReadiness.Score);
+    }
+
+    [Fact]
+    public void Runtime_readiness_rejects_generic_code_reviewer_capability_for_solution_architect_role()
+    {
+        var codeReviewLead = NewAgent(
+            "Code Review Lead",
+            "Code reviewer",
+            AgentWorkloadKind.Qa,
+            [
+                "review",
+                "code",
+                "quality"
+            ],
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            [
+                new AgentCapabilityAssignment(
+                    Guid.NewGuid(),
+                    "architecture-source-rag",
+                    CapabilityKind.Rag,
+                    CapabilityProofStatus.Verified,
+                    DateTimeOffset.UtcNow,
+                    "Available for architecture source lookup.")
+            ]);
+        var dotnetArchitect = NewAgent(
+            ".NET Solution Architect",
+            ".NET architecture specialist",
+            AgentWorkloadKind.Programming,
+            [
+                "dotnet",
+                "architecture",
+                "blazor"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var request = new AgentProcessRoleReadinessRequest(
+            "architecture-review",
+            "Run .NET architecture design and review subprocess",
+            "solution-architect",
+            "solution-architect",
+            ".NET Architect",
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                ProcessOperationContractNames.ExecuteExternalAction
+            ],
+            ProcessOperationContractNames.ExternalActionControlled);
+
+        var reviewerReadiness = AgentProcessReadinessEvaluator.Evaluate(codeReviewLead, request);
+        var architectReadiness = AgentProcessReadinessEvaluator.Evaluate(dotnetArchitect, request);
+
+        Assert.False(reviewerReadiness.HasRoleFit);
+        Assert.False(reviewerReadiness.IsExecutionReady);
+        Assert.Contains(reviewerReadiness.Findings, finding => finding.Code == "agent.readiness.role-family-mismatch");
+        Assert.True(architectReadiness.HasRoleFit);
+        Assert.True(architectReadiness.IsExecutionReady);
+        Assert.True(architectReadiness.Score > reviewerReadiness.Score);
+    }
+
+    [Fact]
     public async Task Pending_child_run_detection_defers_blocked_controlled_subprocess_step()
     {
         var parentRunId = ProcessRunId.New();
@@ -397,7 +507,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         string roleTitle,
         AgentWorkloadKind workload,
         IReadOnlyList<string> tags,
-        AgentWorkspaceToolProfileKind toolProfile)
+        AgentWorkspaceToolProfileKind toolProfile,
+        IReadOnlyList<AgentCapabilityAssignment>? capabilities = null)
     {
         var now = DateTimeOffset.UtcNow;
         return new AgentDefinition(
@@ -423,7 +534,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             IsTemplate: false,
             TemplateKey: string.Empty,
             AgentPermissionsPolicy.Default,
-            [],
+            capabilities ?? [],
             tags,
             now,
             now);

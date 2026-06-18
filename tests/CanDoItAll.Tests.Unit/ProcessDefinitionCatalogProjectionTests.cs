@@ -219,6 +219,27 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Software_delivery_screenshot_writeback_steps_can_launch_and_capture_browser_proof()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("software-delivery");
+
+        var screenshotSteps = new[]
+        {
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "capture-ui-screenshots", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "capture-ui-screenshots-after-repair", StringComparison.Ordinal))
+        };
+
+        foreach (var step in screenshotSteps)
+        {
+            Assert.Equal(ProcessOperationContractNames.ExternalActionControlled, step.OperationTargetScope);
+            Assert.Contains(ProcessOperationContractNames.ExecuteExternalAction, step.AllowedOperations);
+            Assert.Contains(ProcessOperationContractNames.LaunchRuntime, step.AllowedOperations);
+            Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, step.AllowedOperations);
+        }
+    }
+
+    [Fact]
     public void Software_delivery_peer_review_can_run_read_only_validation()
     {
         var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));

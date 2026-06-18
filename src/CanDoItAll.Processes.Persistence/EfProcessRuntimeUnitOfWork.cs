@@ -14,7 +14,10 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         ProcessRunId runId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await LoadStateEntityAsync(runId.Value, cancellationToken).ConfigureAwait(false);
+        var entity = await LoadStateEntityAsync(
+            runId.Value,
+            trackChanges: false,
+            cancellationToken).ConfigureAwait(false);
         return entity is null ? null : ProcessPersistenceMappers.ToSnapshot(entity);
     }
 
@@ -46,6 +49,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
 
         var existing = await LoadStateEntityAsync(
             request.Mutation.State.RunId.Value,
+            trackChanges: true,
             cancellationToken).ConfigureAwait(false);
 
         if (existing is null)
@@ -123,9 +127,17 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
 
     private async Task<ProcessRuntimeStateEntity?> LoadStateEntityAsync(
         Guid runId,
+        bool trackChanges,
         CancellationToken cancellationToken)
     {
-        return await dbContext.RuntimeStates
+        var query = dbContext.RuntimeStates.AsQueryable();
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query
+            .AsSplitQuery()
             .Include(state => state.Steps)
             .Include(state => state.Claims)
             .Include(state => state.ResultReceipts)

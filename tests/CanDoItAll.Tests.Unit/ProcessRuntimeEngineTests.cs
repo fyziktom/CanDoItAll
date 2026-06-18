@@ -173,6 +173,53 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Defer_claim_closes_current_claim_and_pauses_step_without_requeueing()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var childRunId = ProcessRunId.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var defer = await engine.DeferClaimAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new DeferDispatchClaimCommand(ActivityStepId, OwnerId, token, childRunId));
+        var submit = await engine.SubmitStrategyResultAsync(
+            defer.State,
+            Context(Now.AddMinutes(2)),
+            new SubmitStrategyResultCommand(ActivityStepId, OwnerId, token, StrategyResultIdempotencyKey.New(), SucceededResult()));
+
+        Assert.True(defer.Succeeded);
+        Assert.Equal(DispatchClaimStatus.Released, defer.State.Claims.Single(claim => claim.ClaimToken == token).Status);
+        var deferredStep = defer.State.Steps.Single(step => step.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Waiting, deferredStep.Status);
+        Assert.Null(deferredStep.ActiveClaimToken);
+        Assert.Equal(1, deferredStep.AttemptNumber);
+        Assert.Contains(defer.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepWaiting);
+        Assert.Contains(defer.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.DispatchClaimReleased);
+        Assert.False(submit.Succeeded);
+        Assert.Contains(submit.Diagnostics, diagnostic => diagnostic.Code == "Runtime.LostLease");
+        Assert.Single(unitOfWork.Requests);
+    }
+
+    [Fact]
     public async Task Strategy_result_completes_step_run_event_outbox_and_artifact_ledger()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -365,6 +412,101 @@ public sealed class ProcessRuntimeEngineTests
         Assert.True(result.Succeeded);
         Assert.Equal(ProcessRuntimeStatus.Failed, result.State.Status);
         Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunFailed);
+    }
+
+    [Fact]
+    public async Task Rework_request_reactivates_failed_run_and_requeues_failed_step()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var resultKey = StrategyResultIdempotencyKey.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Failed,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Failed) with
+            {
+                AttemptNumber = 2,
+                CompletedResultKey = resultKey
+            },
+            receipts:
+            [
+                new StrategyResultReceipt(
+                    ActivityStepId,
+                    StrategyId,
+                    resultKey,
+                    StrategyOutcome.Failed,
+                    ProcessRuntimeStepStatus.Failed,
+                    "sha256:failed-result")
+            ]);
+
+        var result = await engine.RequestStepReworkAsync(
+            state,
+            Context(Now.AddMinutes(2)),
+            new RequestStepReworkCommand(ActivityStepId, "Unit test retry after failed child handoff."));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
+        Assert.Equal(0, step.AttemptNumber);
+        Assert.Null(step.ActiveClaimToken);
+        Assert.Null(step.CompletedResultKey);
+        Assert.Empty(result.State.AppliedResults);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReworkRequested);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunReactivated);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+        Assert.Single(unitOfWork.Requests);
+    }
+
+    [Fact]
+    public async Task Rework_request_requeues_waiting_step_after_child_process_completes()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Waiting) with
+            {
+                AttemptNumber = 3
+            });
+
+        var result = await engine.RequestStepReworkAsync(
+            state,
+            Context(Now.AddMinutes(2)),
+            new RequestStepReworkCommand(ActivityStepId, "Child process completed."));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
+        Assert.Equal(3, step.AttemptNumber);
+        Assert.Null(step.ActiveClaimToken);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReworkRequested);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunReactivated);
+        Assert.Single(unitOfWork.Requests);
+    }
+
+    [Fact]
+    public async Task Rework_request_rejects_blocked_step_with_unresolved_dependency()
+    {
+        var engine = new ProcessRuntimeEngine(new RecordingUnitOfWork());
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Running),
+            NewActivityStep(
+                ProcessRuntimeStepStatus.Blocked,
+                dependencies: new HashSet<ProcessStepInstanceId> { StartStepId }));
+
+        var result = await engine.RequestStepReworkAsync(
+            state,
+            Context(Now.AddMinutes(2)),
+            new RequestStepReworkCommand(ActivityStepId, "Blocked downstream branch is not actionable yet."));
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "Runtime.BlockedStepNotActionable");
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
     }
 
     [Fact]

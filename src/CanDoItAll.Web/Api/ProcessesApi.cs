@@ -15,6 +15,7 @@ internal static class ProcessesApi
             [
                 "POST /api/processes/launch",
                 "POST /api/processes/runs/{runId}/dispatch",
+                "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
                 "GET /api/processes/live",
                 "GET /api/processes/runs/{runId}",
                 "GET /api/processes/runs/{runId}/history"
@@ -82,6 +83,43 @@ internal static class ProcessesApi
             }
         })
         .WithName("DispatchProcessRun");
+
+        processes.MapPost("/runs/{runId:guid}/steps/{stepInstanceId:guid}/rework", async (
+                Guid runId,
+                Guid stepInstanceId,
+                ProcessRuntimeReworkApiRequest request,
+                ProcessRuntimeOperatorApplicationService operatorService,
+                ProcessRuntimeProjectionCatchupService projectionCatchupService,
+                CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await operatorService
+                    .ExecuteAsync(
+                        new ProcessRuntimeOperatorActionCommand(
+                            new ProcessRunId(runId),
+                            new ProcessStepInstanceId(stepInstanceId),
+                            ProcessRuntimeOperatorActionKind.RequestRework,
+                            string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
+                            request.Reason),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+
+                return Results.Ok(new ProcessRuntimeReworkApiResponse(
+                    result.RunId.Value,
+                    result.StepInstanceId.Value,
+                    result.Kind.ToString(),
+                    result.Outcome.ToString(),
+                    result.Status.ToString(),
+                    result.Diagnostics));
+            }
+            catch (InvalidOperationException exception)
+            {
+                return ApiEndpointResults.NotFound(exception.Message, "process.run_not_found");
+            }
+        })
+        .WithName("RequestProcessStepRework");
 
         processes.MapGet("/live", async (
                 int? take,
@@ -305,6 +343,10 @@ internal sealed record ProcessLaunchApiRequest(
 
 internal sealed record ProcessDispatchApiRequest(string RequestedBy = "process-api");
 
+internal sealed record ProcessRuntimeReworkApiRequest(
+    string RequestedBy = "process-api",
+    string Reason = "Operator requested process step rework.");
+
 internal sealed record ProcessLaunchApiResponse(
     Guid DefinitionId,
     Guid LaunchPlanId,
@@ -352,6 +394,14 @@ internal sealed record ProcessLaunchReadinessFindingApiView(
 internal sealed record ProcessDispatchApiResponse(
     Guid RunId,
     string Stage,
+    string Status,
+    IReadOnlyList<string> Diagnostics);
+
+internal sealed record ProcessRuntimeReworkApiResponse(
+    Guid RunId,
+    Guid StepInstanceId,
+    string Kind,
+    string Outcome,
     string Status,
     IReadOnlyList<string> Diagnostics);
 

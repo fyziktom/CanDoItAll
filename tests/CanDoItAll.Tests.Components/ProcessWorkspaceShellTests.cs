@@ -5,6 +5,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -544,7 +545,37 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-started-notification']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-request-rework']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-operator-note']"));
+        Assert.Contains("Approve rework", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Approve rework to return implement-code-change", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(".NET Developer", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='live-processes-operator-note']").Change("Reuse the approved architecture and keep the Tetris output folder.");
+        cut.Find("[data-testid='live-processes-request-rework']").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(client.LastOperatorActionCommand));
+        Assert.Contains("Manager-approved rework for step 'implement-code-change'", client.LastOperatorActionCommand!.Reason, StringComparison.Ordinal);
+        Assert.Contains("Operator note:", client.LastOperatorActionCommand.Reason, StringComparison.Ordinal);
+        Assert.Contains("Tetris output folder", client.LastOperatorActionCommand.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Live_processes_active_card_prefers_working_agent_summary_over_stale_attention_event()
+    {
+        using var context = CreateContext(out _);
+        var activeRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.RunIdQuery, activeRunId));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
+        var activeCard = cut
+            .FindAll("[data-testid='live-processes-activity-card']")
+            .Single(card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+
+        Assert.Contains("Active: .NET Developer is Running on implementation as lead-engineer.", activeCard.TextContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("ManagerIncidentRaised: ManagerIncidentRaised", activeCard.TextContent, StringComparison.Ordinal);
     }
 
     private static TestContext CreateContext(out RecordingProcessWorkspaceProjectionClient client)
@@ -584,6 +615,8 @@ public sealed class ProcessWorkspaceShellTests
         public ProcessDefinitionStepEditorCommand? LastStepCommand { get; private set; }
 
         public ProcessTemplateImportCommand? LastTemplateImportCommand { get; private set; }
+
+        public ProcessRuntimeOperatorActionCommand? LastOperatorActionCommand { get; private set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
@@ -752,6 +785,20 @@ public sealed class ProcessWorkspaceShellTests
             return Task.FromResult(new ProcessTemplateImportCommandResult(receipt, projection));
         }
 
+        public Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(
+            ProcessRuntimeOperatorActionCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            LastOperatorActionCommand = command;
+            return Task.FromResult(new ProcessRuntimeOperatorActionResult(
+                command.RunId,
+                command.StepInstanceId,
+                command.Kind,
+                ProcessRuntimeTransitionOutcome.Applied,
+                ProcessRuntimeStatus.Active,
+                Diagnostics: []));
+        }
+
         private static ProcessWorkspaceShellProjection CreateShell(
             ProcessWorkspaceShellRequest request,
             ProcessDefinitionCatalogCommandReceipt? lastReceipt)
@@ -914,7 +961,7 @@ public sealed class ProcessWorkspaceShellTests
                 ]
                 : Array.Empty<ProcessIncidentProjection>();
 
-            return new ProcessLiveProcessSnapshot(
+            var snapshot = new ProcessLiveProcessSnapshot(
                 runId,
                 runId,
                 status,
@@ -924,6 +971,34 @@ public sealed class ProcessWorkspaceShellTests
                 freshness,
                 events.Select(ToLiveRunEvent).ToArray(),
                 incidents);
+
+            return status == ProcessProjectedRunStatus.NeedsAttention
+                ? snapshot with
+                {
+                    OperatorActions =
+                    [
+                        new ProcessRuntimeOperatorActionProjection(
+                            runId.Value,
+                            Guid.Parse("99999999-9999-9999-9999-999999999998"),
+                            "implement-code-change",
+                            ProcessRuntimeStepStatus.Blocked.ToString(),
+                            "dotnet-developer",
+                            ".NET Developer",
+                            ".NET Developer",
+                            ProcessRuntimeOperatorActionKind.RequestRework,
+                            "Approve rework",
+                            "Root action: approve manager-guided rework for implement-code-change after Blocked. Last strategy outcome: NeedsManager. Assigned role: .NET Developer. Executor: .NET Developer.",
+                            IsEnabled: true,
+                            DisabledReason: null)
+                        {
+                            ProblemSummary = "implement-code-change is Blocked on attempt 1. The last strategy outcome was NeedsManager and the runtime applied Blocked. This is the actionable upstream step for role .NET Developer, currently assigned to .NET Developer.",
+                            RequiredOperatorDecision = "Approve rework to return implement-code-change from Blocked to Ready and let the process manager dispatch .NET Developer again. Add an operator note if the agent needs extra context.",
+                            RecommendedInstruction = "Manager-approved rework for step 'implement-code-change'. Resolve the previous NeedsManager outcome, preserve accepted upstream artifacts, produce the required evidence for role '.NET Developer', and continue the process. Previous executor: .NET Developer. Step status before rework: Blocked.",
+                            PrimaryRootCause = true
+                        }
+                    ]
+                }
+                : snapshot;
         }
 
         private static IReadOnlyList<ProcessTimelineEventProjection> CreateRuntimeEvents(ProcessRunId runId, int startSequence = 10)

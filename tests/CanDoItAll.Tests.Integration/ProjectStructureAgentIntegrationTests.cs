@@ -296,7 +296,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.DoesNotContain("MutateProductTarget", peerReviewAssignment.AllowedOperations);
         Assert.Equal("ExternalActionControlled", assignments.Single(item => item.StepKey == "record-runtime-commands").OperationTargetScope);
         Assert.Contains("ExecuteExternalAction", assignments.Single(item => item.StepKey == "record-runtime-commands").AllowedOperations);
-        Assert.Contains("ExecuteExternalAction", assignments.Single(item => item.StepKey == "capture-ui-screenshots").AllowedOperations);
+        var screenshotAssignment = assignments.Single(item => item.StepKey == "capture-ui-screenshots");
+        Assert.Equal("ExternalActionControlled", screenshotAssignment.OperationTargetScope);
+        Assert.Contains("ExecuteExternalAction", screenshotAssignment.AllowedOperations);
+        Assert.Contains("LaunchRuntime", screenshotAssignment.AllowedOperations);
+        Assert.Contains("CaptureRuntimeProof", screenshotAssignment.AllowedOperations);
 
         var artifactRoot = workspaceFiles.StatPath($"artifacts/process-runs/{result.RunId.Value:D}");
         Assert.True(artifactRoot.Succeeded, artifactRoot.Message);

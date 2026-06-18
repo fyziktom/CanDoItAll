@@ -215,15 +215,158 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
-    public async Task Runtime_workspace_active_agents_include_only_live_nonstale_execution_observations()
+    public async Task Runtime_workspace_projects_operator_rework_actions_for_blocked_and_failed_steps()
     {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessProjectionStore(dbContext);
         var runId = ProcessRunId.New();
         var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var failedStepId = ProcessStepInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New()),
+                new ProcessRuntimeStepState(
+                    failedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Failed,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New())
+            ],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, blockedStepId, "implement-code-change", ".NET Application Developer"),
+                CreateAssignment(runId, planId, failedStepId, "feature-repair", ".NET Application Developer")
+            ]));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var run = Assert.Single(workspace.Runs);
+        Assert.Collection(
+            run.OperatorActions,
+            action =>
+            {
+                Assert.Equal(failedStepId.Value, action.StepInstanceId);
+                Assert.Equal("feature-repair", action.StepKey);
+                Assert.Equal(ProcessRuntimeOperatorActionKind.RequestRework, action.Kind);
+                Assert.True(action.IsEnabled);
+            },
+            action =>
+            {
+                Assert.Equal(blockedStepId.Value, action.StepInstanceId);
+                Assert.Equal("implement-code-change", action.StepKey);
+                Assert.Equal(".NET Application Developer", action.ExecutorDisplayName);
+            });
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_operator_actions_are_suppressed_while_claim_is_open()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
         var runningStepId = ProcessStepInstanceId.New();
-        var completedStepId = ProcessStepInstanceId.New();
-        var staleStepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New()),
+                CreateStepState(runningStepId, claimToken)
+            ],
+            [
+                CreateClaim(runningStepId, claimToken, Now.AddMinutes(-1), Now.AddMinutes(29))
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, blockedStepId, "feature-handoff-after-repair", "Delivery Manager"),
+                CreateAssignment(runId, planId, runningStepId, "feature-repair", ".NET Application Developer")
+            ]));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var run = Assert.Single(workspace.Runs);
+        Assert.Empty(run.OperatorActions);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_projects_retry_action_for_expired_active_claim()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
         await ProjectAsync(
             store,
             StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
@@ -234,8 +377,138 @@ public sealed class ProcessProjectionPipelineTests
             planId,
             "sha256:plan",
             ProcessRuntimeStatus.Active,
+            [
+                CreateStepState(stepId, claimToken)
+            ],
+            [
+                CreateClaim(stepId, claimToken, Now.AddMinutes(-7), Now.AddMinutes(-2))
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-2));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, stepId, "architecture-review", ".NET Solution Architect")
+            ]));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var run = Assert.Single(workspace.Runs);
+        var action = Assert.Single(run.OperatorActions);
+        Assert.Equal("Retry expired claim", action.Label);
+        Assert.Equal("architecture-review", action.StepKey);
+        Assert.Contains("dispatch lease expired", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".NET Solution Architect", action.RequiredOperatorDecision, StringComparison.Ordinal);
+        Assert.Contains("Preserve any managed artifacts", action.RecommendedInstruction, StringComparison.Ordinal);
+        Assert.True(action.PrimaryRootCause);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_operator_actions_skip_dependency_gated_blocked_steps()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var dependencyStepId = ProcessStepInstanceId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    dependencyStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Pending,
+                    IsExecutable: true,
+                    AttemptNumber: 0,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: null),
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 0,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId> { dependencyStepId },
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: null)
+            ],
             [],
             [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, dependencyStepId, "feature-repair", ".NET Application Developer"),
+                CreateAssignment(runId, planId, blockedStepId, "feature-handoff-after-repair", "Delivery Manager")
+            ]));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var run = Assert.Single(workspace.Runs);
+        Assert.Empty(run.OperatorActions);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_active_agents_include_only_live_nonstale_execution_observations()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var runningStepId = ProcessStepInstanceId.New();
+        var completedStepId = ProcessStepInstanceId.New();
+        var staleStepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                CreateStepState(runningStepId, claimToken)
+            ],
+            [
+                CreateClaim(runningStepId, claimToken, Now.AddMinutes(-1), Now.AddMinutes(29))
+            ],
             [],
             new HashSet<ArtifactSlotId>(),
             Now.AddMinutes(-1));
@@ -272,7 +545,55 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
-    public async Task Runtime_workspace_active_agents_omit_missing_evidence_claims_when_observation_reader_is_available()
+    public async Task Runtime_workspace_active_agents_do_not_scan_observations_without_active_runtime_steps()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var observationReader = new InMemoryObservationReader(
+            CreateObservation(runId, stepId, ".NET Developer", "Running", Now.AddMinutes(-1)));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, stepId, "implementation", ".NET Developer")
+            ]),
+            observationReader);
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        Assert.Empty(workspace.ActiveAgents);
+        Assert.Equal(0, observationReader.CallCount);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_active_agents_fall_back_to_runtime_claim_when_observation_reader_has_no_match()
     {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessProjectionStore(dbContext);
@@ -318,7 +639,13 @@ public sealed class ProcessProjectionPipelineTests
             TakeRuns: 10,
             SelectedRunId: null));
 
-        Assert.Empty(workspace.ActiveAgents);
+        var activeAgent = Assert.Single(workspace.ActiveAgents);
+        Assert.Equal(stepId.Value, activeAgent.StepInstanceId);
+        Assert.Equal("feature-intake", activeAgent.StepKey);
+        Assert.Equal("Programming Workspace Analyst", activeAgent.ExecutorDisplayName);
+        Assert.True(activeAgent.IsWorking);
+        Assert.Equal("Runtime claim without AgentFramework execution evidence", activeAgent.ObservationSource);
+        Assert.Contains("No AgentFramework execution run was observed", activeAgent.CurrentActivity, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -428,6 +755,74 @@ public sealed class ProcessProjectionPipelineTests
                 Assert.Equal(1, tool.CallCount);
                 Assert.Equal(Now.AddMinutes(-4).AddSeconds(5), tool.LastUsedAtUtc);
             });
+    }
+
+    [Fact]
+    public async Task Shell_projection_selected_active_run_attention_summary_does_not_borrow_unselected_blocker()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var selectedRunId = ProcessRunId.New();
+        var blockedRunId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var selectedStepId = ProcessStepInstanceId.New();
+        var selectedClaimToken = DispatchClaimToken.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, blockedRunId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-3)),
+            latestKnownGlobalSequence: 2);
+        await ProjectAsync(
+            store,
+            StoredEvent(2, selectedRunId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-1)),
+            latestKnownGlobalSequence: 2);
+        var selectedState = new ProcessRuntimeStateSnapshot(
+            selectedRunId,
+            selectedRunId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                CreateStepState(selectedStepId, selectedClaimToken)
+            ],
+            [
+                CreateClaim(selectedStepId, selectedClaimToken, Now.AddMinutes(-2), Now.AddMinutes(20))
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var clock = new FixedProcessProjectionClock(Now);
+        var templateLoader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(templateLoader, clock),
+            new ProcessDefinitionEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionStepEditorProjectionService(templateLoader, clock),
+            new ProcessTemplateCatalogProjectionService(templateLoader, clock),
+            new ProcessRuntimeProjectionQueryService(
+                store,
+                ProcessProjectionJsonCodec.Default,
+                clock,
+                new InMemoryRuntimeStateStore(selectedState),
+                new InMemoryAssignmentStore(
+                [
+                    CreateAssignment(selectedRunId, planId, selectedStepId, "code-change", ".NET Application Developer")
+                ]),
+                new InMemoryObservationReader()));
+
+        var shell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(ProcessId: null, RunId: selectedRunId.Value, LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(ProcessRuntimeHistoryWindow.OneDay, EventPage: 0, EventPageSize: 25, selectedRunId.Value)));
+
+        Assert.Contains("active agent", shell.Runtime.AttentionSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(selectedRunId.Value.ToString("N")[..8], shell.Runtime.AttentionSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("StepBlocked", shell.Runtime.AttentionSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain(blockedRunId.Value.ToString("N")[..8], shell.Runtime.AttentionSummary, StringComparison.Ordinal);
     }
 
     private static async Task ProjectAsync(
@@ -665,10 +1060,13 @@ public sealed class ProcessProjectionPipelineTests
 
     private sealed class InMemoryObservationReader(params ProcessExecutionObservation[] observations) : IProcessExecutionObservationReader
     {
+        public int CallCount { get; private set; }
+
         public ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
             ProcessExecutionObservationQuery query,
             CancellationToken cancellationToken = default)
         {
+            CallCount++;
             var runIds = query.RunIds.ToHashSet();
             IReadOnlyList<ProcessExecutionObservation> result = observations
                 .Where(observation =>

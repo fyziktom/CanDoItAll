@@ -10,6 +10,7 @@ using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;
 
@@ -220,7 +221,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             "Reviews .NET architecture handoffs and validation evidence.",
             AgentWorkloadKind.Qa,
             AgentWorkspaceToolProfileKind.SoftwareDevelopment,
-            ["qa-lead", "dotnet", "review"]);
+            ["qa-lead", "dotnet", "architecture", "review"]);
         var workspace = new ResolverWorkspaceService([deliveryAgent, qaAgent], [CreateProvider(providerId)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
@@ -265,6 +266,33 @@ public sealed class ProcessLaunchExecutorResolverTests
             AgentWorkloadKind.Programming,
             AgentWorkspaceToolProfileKind.SoftwareDevelopment,
             ["solution-architect", "dotnet-architect", "architecture"]);
+        var codeReviewLead = CreateAgent(
+            providerId,
+            Guid.Parse("8a1a6873-3c60-4815-b4b7-0cdb1310f52c"),
+            "Code Review Lead",
+            "Code reviewer",
+            "Owns code-review lane selection, quality normalization, and escalation discipline.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["review", "code", "quality"],
+            [
+                new AgentCapabilityAssignment(
+                    Guid.Parse("306bb943-3dc0-4c44-a703-226cf2b58df0"),
+                    "architecture-source-rag",
+                    CapabilityKind.Rag,
+                    CapabilityProofStatus.Verified,
+                    Now,
+                    "Available for architecture source lookup.")
+            ]);
+        var qaAgent = CreateAgent(
+            providerId,
+            Guid.Parse("5b408530-7f41-4f5c-aacf-fb4807bcd6b2"),
+            ".NET QA Review Lead",
+            ".NET QA Review Lead",
+            "Reviews .NET architecture handoffs and validation evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["qa-lead", "dotnet", "architecture", "review"]);
         var developerAgent = CreateAgent(
             providerId,
             Guid.Parse("2975f892-3ceb-44b9-80e7-19327551a10f"),
@@ -274,7 +302,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             AgentWorkloadKind.Programming,
             AgentWorkspaceToolProfileKind.SoftwareDevelopment,
             ["lead-engineer", "dotnet-developer", "implementation"]);
-        var workspace = new ResolverWorkspaceService([deliveryAgent, architectAgent, developerAgent], [CreateProvider(providerId)]);
+        var workspace = new ResolverWorkspaceService([deliveryAgent, codeReviewLead, qaAgent, architectAgent, developerAgent], [CreateProvider(providerId)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
 
@@ -293,6 +321,8 @@ public sealed class ProcessLaunchExecutorResolverTests
                 Assert.Equal("solution-architect", binding.RoleKey);
                 Assert.Equal(architectAgent.Id.ToString("D"), binding.ExecutorId);
                 Assert.NotEqual(deliveryAgent.Id.ToString("D"), binding.ExecutorId);
+                Assert.NotEqual(codeReviewLead.Id.ToString("D"), binding.ExecutorId);
+                Assert.NotEqual(qaAgent.Id.ToString("D"), binding.ExecutorId);
             },
             binding =>
             {
@@ -301,6 +331,43 @@ public sealed class ProcessLaunchExecutorResolverTests
                 Assert.Equal(developerAgent.Id.ToString("D"), binding.ExecutorId);
                 Assert.NotEqual(deliveryAgent.Id.ToString("D"), binding.ExecutorId);
             });
+    }
+
+    [Fact]
+    public async Task Runtime_assignment_repair_rebinds_stale_qa_reviewer_to_dotnet_architect()
+    {
+        var providerId = Guid.Parse("f14f722f-6562-4fa4-a29a-68fe7f6892ef");
+        var qaReviewLead = CreateAgent(
+            providerId,
+            Guid.Parse("752665f3-bf7d-0b54-9208-7809282cd415"),
+            ".NET QA Review Lead",
+            string.Empty,
+            string.Empty,
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["dotnet", "qa", "browser"]);
+        var architectAgent = CreateAgent(
+            providerId,
+            Guid.Parse("484b504d-5f6e-40ea-9af2-0bc18b1395a1"),
+            ".NET Solution Architect",
+            string.Empty,
+            string.Empty,
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            ["dotnet", "architecture", "blazor"]);
+        var workspace = new ResolverWorkspaceService([qaReviewLead, architectAgent], [CreateProvider(providerId)]);
+        var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+            new ResolverWorkspaceFactory(workspace),
+            new ProviderProfileService());
+        var assignment = CreateArchitectureReviewAssignment(qaReviewLead);
+
+        var result = await repairService.RepairAsync(assignment, "Operator approved manager-guided rework.");
+
+        Assert.True(result.Repaired);
+        Assert.Equal(architectAgent.Id.ToString("D"), result.Assignment.ExecutorId);
+        Assert.Equal(architectAgent.Name, result.Assignment.ExecutorDisplayName);
+        Assert.Contains("Reassigned step 'architecture-review'", result.Summary, StringComparison.Ordinal);
+        Assert.Contains(architectAgent.Name, result.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -693,6 +760,39 @@ public sealed class ProcessLaunchExecutorResolverTests
             "sha256:plan");
     }
 
+    private static ProcessRuntimeStepAssignment CreateArchitectureReviewAssignment(AgentDefinition executor)
+    {
+        return new ProcessRuntimeStepAssignment(
+            new ProcessRunId(Guid.Parse("7760d755-3051-4ebe-a859-eac27a4d73cb")),
+            PlanId,
+            StepId,
+            "architecture-review",
+            "solution-architect",
+            "solution-architect",
+            "Solution architect",
+            ProcessLaunchExecutorKinds.Agent,
+            executor.Id.ToString("D"),
+            executor.Name,
+            "Prepare architecture handoff.",
+            "sha256:stale",
+            $"Resolved active agent '{executor.Name}' before HR role repair.",
+            [],
+            [],
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                ProcessOperationContractNames.ExecuteExternalAction,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof
+            ],
+            ProcessOperationContractNames.ExternalActionControlled,
+            new Dictionary<string, string>(),
+            BranchGate: null,
+            Now);
+    }
+
     private static ProcessInstancePlan CreatePlan(string stepKey = "record-runtime-commands")
     {
         return new ProcessInstancePlan(
@@ -738,7 +838,8 @@ public sealed class ProcessLaunchExecutorResolverTests
         string summary,
         AgentWorkloadKind workload,
         AgentWorkspaceToolProfileKind workspaceToolProfile,
-        IReadOnlyList<string> tags)
+        IReadOnlyList<string> tags,
+        IReadOnlyList<AgentCapabilityAssignment>? capabilities = null)
     {
         return new AgentDefinition(
             Id: agentId,
@@ -760,7 +861,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             IsTemplate: false,
             TemplateKey: string.Empty,
             Permissions: AgentPermissionsPolicy.Default,
-            Capabilities: [],
+            Capabilities: capabilities ?? [],
             Tags: tags,
             CreatedAtUtc: Now,
             UpdatedAtUtc: Now);

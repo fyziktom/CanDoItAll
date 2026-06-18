@@ -75,6 +75,29 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public void Process_execution_metadata_allows_browser_tools_for_persisted_screenshot_steps()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                ProcessOperationContractNames.ExecuteExternalAction
+            ],
+            ProcessOperationContractNames.ExternalActionControlled,
+            stepKey: "capture-ui-screenshots-after-repair");
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+        var allowedOperations = ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run);
+
+        Assert.True(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+        Assert.Contains(ProcessOperationContractNames.LaunchRuntime, allowedOperations);
+        Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, allowedOperations);
+    }
+
+    [Fact]
     public void Process_execution_metadata_does_not_trust_repository_root_as_product_target_alias()
     {
         var assignment = CreateAssignment(
@@ -110,13 +133,14 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Guid projectId,
         IReadOnlyList<string>? allowedOperations = null,
         string? operationTargetScope = null,
-        IReadOnlyDictionary<string, string>? launchVariables = null)
+        IReadOnlyDictionary<string, string>? launchVariables = null,
+        string stepKey = "resolve-blazor-contract")
     {
         return new ProcessRuntimeStepAssignment(
             ProcessRunId.New(),
             ProcessInstancePlanId.New(),
             ProcessStepInstanceId.New(),
-            "resolve-blazor-contract",
+            stepKey,
             "blazor-engineer",
             "lead-engineer",
             "Blazor engineer",

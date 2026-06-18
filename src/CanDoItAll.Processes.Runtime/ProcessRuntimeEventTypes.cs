@@ -16,7 +16,11 @@ public static class ProcessRuntimeEventTypes
 
     public static ProcessEventType ProcessRunFailed { get; } = new("ProcessRunFailed");
 
+    public static ProcessEventType ProcessRunReactivated { get; } = new("ProcessRunReactivated");
+
     public static ProcessEventType StepReady { get; } = new("StepReady");
+
+    public static ProcessEventType StepWaiting { get; } = new("StepWaiting");
 
     public static ProcessEventType StepClaimed { get; } = new("StepClaimed");
 
@@ -31,6 +35,8 @@ public static class ProcessRuntimeEventTypes
     public static ProcessEventType StepCancelled { get; } = new("StepCancelled");
 
     public static ProcessEventType StepSkipped { get; } = new("StepSkipped");
+
+    public static ProcessEventType StepReworkRequested { get; } = new("StepReworkRequested");
 
     public static ProcessEventType DispatchClaimCreated { get; } = new("DispatchClaimCreated");
 

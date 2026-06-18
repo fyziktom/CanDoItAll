@@ -189,10 +189,14 @@ public sealed class ProcessRuntimeProjectionProjector(
     {
         return eventType.Value switch
         {
+            ProcessRuntimeProjectionEventTypeNames.ProcessRunReactivated => ProcessProjectedRunStatus.Active,
             ProcessRuntimeProjectionEventTypeNames.ProcessRunCompleted => ProcessProjectedRunStatus.Completed,
             ProcessRuntimeProjectionEventTypeNames.ProcessRunFailed => ProcessProjectedRunStatus.Failed,
             ProcessRuntimeProjectionEventTypeNames.ProcessRunCancelled => ProcessProjectedRunStatus.Cancelled,
+            ProcessRuntimeProjectionEventTypeNames.StepReady => ProcessProjectedRunStatus.Active,
+            ProcessRuntimeProjectionEventTypeNames.StepWaiting => ProcessProjectedRunStatus.Active,
             ProcessRuntimeProjectionEventTypeNames.StepBlocked => ProcessProjectedRunStatus.NeedsAttention,
+            ProcessRuntimeProjectionEventTypeNames.StepReworkRequested => ProcessProjectedRunStatus.NeedsAttention,
             ProcessRuntimeProjectionEventTypeNames.ManagerIncidentRaised => ProcessProjectedRunStatus.NeedsAttention,
             ProcessRuntimeProjectionEventTypeNames.ManagerLoopBudgetEscalated => ProcessProjectedRunStatus.NeedsAttention,
             ProcessRuntimeProjectionEventTypeNames.ManagerRecoveryDenied => ProcessProjectedRunStatus.NeedsAttention,
@@ -211,6 +215,8 @@ public sealed class ProcessRuntimeProjectionProjector(
 
 public static class ProcessRuntimeProjectionEventTypeNames
 {
+    public const string ProcessRunReactivated = "ProcessRunReactivated";
+
     public const string ProcessRunCompleted = "ProcessRunCompleted";
 
     public const string ProcessRunFailed = "ProcessRunFailed";
@@ -218,6 +224,12 @@ public static class ProcessRuntimeProjectionEventTypeNames
     public const string ProcessRunCancelled = "ProcessRunCancelled";
 
     public const string StepBlocked = "StepBlocked";
+
+    public const string StepReady = "StepReady";
+
+    public const string StepWaiting = "StepWaiting";
+
+    public const string StepReworkRequested = "StepReworkRequested";
 
     public const string ManagerIncidentRaised = "ManagerIncidentRaised";
 

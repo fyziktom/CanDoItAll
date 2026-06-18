@@ -36,6 +36,12 @@ public sealed record ReleaseDispatchClaimCommand(
     DispatcherOwnerId OwnerId,
     DispatchClaimToken ClaimToken);
 
+public sealed record DeferDispatchClaimCommand(
+    ProcessStepInstanceId StepInstanceId,
+    DispatcherOwnerId OwnerId,
+    DispatchClaimToken ClaimToken,
+    ProcessRunId? DeferredRunId);
+
 public sealed record SubmitStrategyResultCommand(
     ProcessStepInstanceId StepInstanceId,
     DispatcherOwnerId OwnerId,
@@ -50,3 +56,7 @@ public sealed record ReclaimDispatchClaimCommand(
     DispatcherOwnerId OwnerId,
     DispatchClaimToken NewClaimToken,
     DateTimeOffset LeaseExpiresAtUtc);
+
+public sealed record RequestStepReworkCommand(
+    ProcessStepInstanceId StepInstanceId,
+    string Reason);

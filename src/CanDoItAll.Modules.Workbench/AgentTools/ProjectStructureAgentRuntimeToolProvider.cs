@@ -13,6 +13,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 {
     private const int ProviderOrder = 900;
     private const int GovernedProcessDefaultStructureReadTake = 80;
+    private const int GovernedProcessMaxExplicitLeaseMinutes = 5;
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
 
@@ -1604,12 +1605,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    var resolvedDurationMinutes = ResolveExplicitLeaseDuration(accessState, durationMinutes);
                     return await leaseService.AcquireAsync(
                         new ProjectStructureLeaseAcquireRequest(
                             ProjectStructureLeaseScopeKind.Project,
                             projectId.ToString("D"),
                             reason,
-                            durationMinutes),
+                            resolvedDurationMinutes),
                         BuildAgentContext(agent, accessState, projectId),
                         cancellationToken);
                 },
@@ -1649,12 +1651,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     var context = BuildAgentContext(agent, resolvedBranchName, resolvedRepositoryRoot);
+                    var resolvedDurationMinutes = ResolveExplicitLeaseDuration(accessState, durationMinutes);
                     return await leaseService.AcquireAsync(
                         new ProjectStructureLeaseAcquireRequest(
                             ProjectStructureLeaseScopeKind.RepoBranch,
                             scopeKey,
                             reason,
-                            durationMinutes),
+                            resolvedDurationMinutes),
                         context,
                         cancellationToken);
                 },
@@ -1701,12 +1704,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     var context = BuildAgentContext(agent, accessState, resolvedScope.ProjectId, resolvedScope.BranchName, resolvedScope.RepositoryRoot);
+                    var resolvedDurationMinutes = ResolveExplicitLeaseDuration(accessState, durationMinutes);
                     return await leaseService.RenewAsync(
                         new ProjectStructureLeaseRenewRequest(
                             resolvedScope.ScopeKind,
                             resolvedScope.ScopeKey,
                             leaseToken,
-                            durationMinutes),
+                            resolvedDurationMinutes),
                         context,
                         cancellationToken);
                 },
@@ -2037,6 +2041,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         private static string BuildRepoBranchScopeKey(string repositoryRoot, string branchName)
         {
             return $"repo-branch:{repositoryRoot}:{branchName}";
+        }
+
+        private static int ResolveExplicitLeaseDuration(ProjectStructureAccessState accessState, int requestedDurationMinutes)
+        {
+            return accessState.ScopedProcessAccess is null
+                ? Math.Clamp(requestedDurationMinutes, 1, 120)
+                : Math.Clamp(requestedDurationMinutes, 1, GovernedProcessMaxExplicitLeaseMinutes);
         }
 
         private static void EnsureReadAllowed(ProjectStructureAccessState accessState)

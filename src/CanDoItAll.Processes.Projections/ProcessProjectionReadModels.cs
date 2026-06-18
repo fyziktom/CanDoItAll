@@ -29,6 +29,11 @@ public enum ProcessProjectedSensitivity
     Restricted
 }
 
+public enum ProcessRuntimeOperatorActionKind
+{
+    RequestRework
+}
+
 public sealed record ProcessLiveRunEventProjection(
     RuntimeEventId EventId,
     long GlobalSequence,
@@ -49,7 +54,33 @@ public sealed record ProcessLiveProcessSnapshot(
     DateTimeOffset LastEventAtUtc,
     ProcessProjectionFreshness Freshness,
     IReadOnlyList<ProcessLiveRunEventProjection> RecentEvents,
-    IReadOnlyList<ProcessIncidentProjection> Incidents);
+    IReadOnlyList<ProcessIncidentProjection> Incidents)
+{
+    public IReadOnlyList<ProcessRuntimeOperatorActionProjection> OperatorActions { get; init; } = [];
+}
+
+public sealed record ProcessRuntimeOperatorActionProjection(
+    Guid RunId,
+    Guid StepInstanceId,
+    string StepKey,
+    string StepStatus,
+    string RoleKey,
+    string RoleDisplayName,
+    string ExecutorDisplayName,
+    ProcessRuntimeOperatorActionKind Kind,
+    string Label,
+    string Summary,
+    bool IsEnabled,
+    string? DisabledReason)
+{
+    public string ProblemSummary { get; init; } = string.Empty;
+
+    public string RequiredOperatorDecision { get; init; } = string.Empty;
+
+    public string RecommendedInstruction { get; init; } = string.Empty;
+
+    public bool PrimaryRootCause { get; init; }
+}
 
 public sealed record ProcessRunDetailProjection(
     ProcessRunId RootRunId,

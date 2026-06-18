@@ -372,6 +372,8 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
@@ -491,6 +493,8 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
@@ -1197,7 +1201,9 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
-        "ExecuteExternalAction"
+        "ExecuteExternalAction",
+        "LaunchRuntime",
+        "CaptureRuntimeProof"
       ],
       "OperationTargetScope": "ExternalActionControlled"
     },
@@ -1410,7 +1416,9 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
-        "ExecuteExternalAction"
+        "ExecuteExternalAction",
+        "LaunchRuntime",
+        "CaptureRuntimeProof"
       ],
       "OperationTargetScope": "ExternalActionControlled"
     },
@@ -1762,7 +1770,9 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
-        "ExecuteExternalAction"
+        "ExecuteExternalAction",
+        "LaunchRuntime",
+        "CaptureRuntimeProof"
       ],
       "OperationTargetScope": "ExternalActionControlled"
     },

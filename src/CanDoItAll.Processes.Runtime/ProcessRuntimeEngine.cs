@@ -75,6 +75,17 @@ public sealed partial class ProcessRuntimeEngine(IProcessRuntimeUnitOfWork unitO
         return CommitAsync(state, context.CommandId, mutation, cancellationToken);
     }
 
+    public Task<ProcessRuntimeCommitResult> DeferClaimAsync(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context,
+        DeferDispatchClaimCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var mutation = DeferClaim(state, context, command);
+
+        return CommitAsync(state, context.CommandId, mutation, cancellationToken);
+    }
+
     public Task<ProcessRuntimeCommitResult> ExpireClaimsAsync(
         ProcessRuntimeStateSnapshot state,
         RuntimeCommandContext context,
@@ -114,6 +125,17 @@ public sealed partial class ProcessRuntimeEngine(IProcessRuntimeUnitOfWork unitO
         CancellationToken cancellationToken = default)
     {
         var mutation = RequestCancellation(state, context);
+
+        return CommitAsync(state, context.CommandId, mutation, cancellationToken);
+    }
+
+    public Task<ProcessRuntimeCommitResult> RequestStepReworkAsync(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context,
+        RequestStepReworkCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var mutation = RequestStepRework(state, context, command);
 
         return CommitAsync(state, context.CommandId, mutation, cancellationToken);
     }

@@ -23,29 +23,10 @@ public static class ProcessesModuleServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        services.AddDbContext<ProcessPersistenceDbContext>((serviceProvider, options) =>
-        {
-            var profile = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
-            AppDbContextOptionsConfigurator.ConfigureModelCacheKey(options);
-
-            switch (profile.Profile.ProviderKind)
-            {
-                case DatabaseProviderKind.InMemory:
-                    options.UseInMemoryDatabase(string.IsNullOrWhiteSpace(profile.ConnectionString)
-                        ? $"processes-{profile.Profile.Id:D}"
-                        : profile.ConnectionString);
-                    break;
-
-                case DatabaseProviderKind.PostgreSql:
-                    options.UseNpgsql(
-                        profile.ConnectionString,
-                        builder => builder.MigrationsAssembly("CanDoItAll.Migrations.PostgreSql"));
-                    break;
-
-                default:
-                    throw new InvalidOperationException($"Unsupported process database provider '{profile.Profile.ProviderKind}'.");
-            }
-        });
+        services.AddDbContext<ProcessPersistenceDbContext>(ConfigureProcessPersistenceDbContext);
+        services.AddDbContextFactory<ProcessPersistenceDbContext>(
+            ConfigureProcessPersistenceDbContext,
+            ServiceLifetime.Scoped);
 
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
@@ -69,6 +50,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
         services.TryAddScoped<IProcessLaunchDriverCatalogProvider, StandardProcessLaunchDriverCatalogProvider>();
         services.TryAddScoped<IProcessLaunchExecutorResolver, AgentFrameworkProcessLaunchExecutorResolver>();
+        services.TryAddScoped<IProcessRuntimeStepAssignmentRepairService, AgentFrameworkProcessRuntimeStepAssignmentRepairService>();
         services.TryAddScoped<IProcessLaunchArtifactInitializer, WorkspaceProcessLaunchArtifactInitializer>();
         services.TryAddScoped<IProcessRuntimeStrategyFactoryResolver, StandardProcessRuntimeStrategyFactoryResolver>();
         services.Configure<ProcessRuntimeDispatchQueueOptions>(
@@ -78,6 +60,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddHostedService<ProcessRuntimeDispatchQueueWorker>();
         services.TryAddScoped<ProcessLaunchApplicationService>();
         services.TryAddScoped<ProcessRuntimeDispatchApplicationService>();
+        services.TryAddScoped<ProcessRuntimeOperatorApplicationService>();
         services.TryAddScoped<ProcessRuntimeProjectionQueryService>();
         services.TryAddScoped<ProcessDefinitionCatalogProjectionService>();
         services.TryAddScoped<ProcessDefinitionEditorProjectionService>();
@@ -86,10 +69,36 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessDefinitionStepEditorProjectionService>();
         services.TryAddScoped<ProcessTemplateCatalogProjectionService>();
         services.TryAddScoped<ProcessWorkspaceShellProjectionService>();
-        services.TryAddScoped<IProcessWorkspaceProjectionClient, ProcessWorkspaceProjectionClient>();
+        services.TryAddSingleton<IProcessWorkspaceProjectionClient, ProcessWorkspaceProjectionClient>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());
         services.AddSingleton<ProcessModuleRewriteState>(ProcessModuleRewriteState.Enabled);
         return services;
+    }
+
+    private static void ConfigureProcessPersistenceDbContext(
+        IServiceProvider serviceProvider,
+        DbContextOptionsBuilder options)
+    {
+        var profile = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(options);
+
+        switch (profile.Profile.ProviderKind)
+        {
+            case DatabaseProviderKind.InMemory:
+                options.UseInMemoryDatabase(string.IsNullOrWhiteSpace(profile.ConnectionString)
+                    ? $"processes-{profile.Profile.Id:D}"
+                    : profile.ConnectionString);
+                break;
+
+            case DatabaseProviderKind.PostgreSql:
+                options.UseNpgsql(
+                    profile.ConnectionString,
+                    builder => builder.MigrationsAssembly("CanDoItAll.Migrations.PostgreSql"));
+                break;
+
+            default:
+                throw new InvalidOperationException($"Unsupported process database provider '{profile.Profile.ProviderKind}'.");
+        }
     }
 }
 

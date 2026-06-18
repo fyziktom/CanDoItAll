@@ -87,7 +87,9 @@
 }
 
 .live-processes-tabs-frame ::deep .rz-tab-panel,
-.live-processes-tabs ::deep .rz-tab-panel {
+.live-processes-tabs ::deep .rz-tab-panel,
+.live-processes-tabs-frame ::deep .rz-tabview-panels,
+.live-processes-tabs ::deep .rz-tabview-panels {
     width: 100%;
 }
 
@@ -138,7 +140,8 @@
 
 .live-processes-attention-card {
     border-color: rgba(245, 158, 11, 0.52);
-    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    grid-template-columns: minmax(0, 1fr);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
 }
 
@@ -197,7 +200,25 @@
 
 .live-processes-attention-card__actions {
     align-self: start;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    min-width: 0;
+}
+
+.live-processes-attention-card__decision {
+    background: #fffbeb;
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    border-radius: 0.5rem;
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.65rem;
+}
+
+.live-processes-attention-card__decision p {
+    color: #92400e;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    line-height: 1.45;
+    margin: 0;
 }
 
 .live-processes-agent-section {
@@ -321,14 +342,69 @@
     padding: 0.75rem;
 }
 
-@media (max-width: 640px) {
-    .live-processes-activity-card,
-    .live-processes-attention-card {
-        grid-template-columns: minmax(0, 1fr);
-    }
+.live-processes-operator-action-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(24rem, 1fr));
+    margin-top: 0.85rem;
+    min-width: 0;
+}
 
-    .live-processes-activity-card__actions,
-    .live-processes-attention-card__actions {
-        justify-content: flex-start;
-    }
+.live-processes-operator-action-row {
+    align-items: start;
+    background: #ffffff;
+    border: 1px solid rgba(245, 158, 11, 0.38);
+    border-radius: 0.5rem;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.75rem;
+}
+
+.live-processes-operator-action-row__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.live-processes-operator-action-row__title {
+    color: #0f172a;
+    font-size: 0.875rem;
+    font-weight: 750;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.live-processes-operator-action-row__summary,
+.live-processes-operator-action-row__problem,
+.live-processes-operator-action-row__decision,
+.live-processes-operator-action-row__instruction,
+.live-processes-operator-action-row__disabled {
+    color: #475569;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.live-processes-operator-action-row__problem {
+    color: #334155;
+    font-weight: 650;
+}
+
+.live-processes-operator-action-row__decision {
+    color: #92400e;
+}
+
+.live-processes-operator-action-row__instruction {
+    color: #0f766e;
+}
+
+.live-processes-operator-action-row__disabled {
+    color: #9f1239;
+}
+
+.live-processes-operator-action-row__note {
+    min-height: 5rem;
+    resize: vertical;
 }

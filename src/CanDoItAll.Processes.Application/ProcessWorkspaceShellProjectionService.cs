@@ -249,7 +249,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             BuildToolUsage(events),
             result.Freshness,
             BuildRuntimeSummary(result.Runs, events),
-            BuildAttentionSummary(result.Runs, incidents, events));
+            BuildAttentionSummary(result.Runs, incidents, events, result.SelectedRun, result.ActiveAgents));
     }
 
     private static ProcessLiveRunSummaryProjection CreateLiveRunSummary(ProcessRuntimeWorkspaceProjection runtime)
@@ -497,8 +497,43 @@ public sealed class ProcessWorkspaceShellProjectionService(
     private static string BuildAttentionSummary(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
         IReadOnlyList<ProcessIncidentProjection> incidents,
-        IReadOnlyList<ProcessTimelineEventProjection> events)
+        IReadOnlyList<ProcessTimelineEventProjection> events,
+        ProcessRunDetailProjection? selectedRun,
+        IReadOnlyList<ProcessRuntimeActiveAgentProjection> activeAgents)
     {
+        if (selectedRun is not null)
+        {
+            var selectedLiveRun = runs.FirstOrDefault(run => run.RunId == selectedRun.RunId);
+            if (selectedLiveRun is not null)
+            {
+                var selectedAction = selectedLiveRun.OperatorActions.FirstOrDefault(action => action.IsEnabled);
+                if (selectedAction is not null)
+                {
+                    var actionSummary = string.IsNullOrWhiteSpace(selectedAction.ProblemSummary)
+                        ? selectedAction.Summary
+                        : selectedAction.ProblemSummary;
+                    return $"Cause: {EnsureSentence(actionSummary)} Next action: {selectedAction.Label.ToLowerInvariant()} for {selectedAction.StepKey}.";
+                }
+            }
+
+            var selectedIncident = incidents
+                .Where(incident => incident.RunId == selectedRun.RunId)
+                .OrderByDescending(incident => incident.RaisedAtUtc)
+                .FirstOrDefault();
+            if (selectedIncident is not null)
+            {
+                return $"Cause: {EnsureSentence(selectedIncident.SafeSummary)} Next action: inspect diagnostic reference {selectedIncident.DiagnosticReference}.";
+            }
+
+            var selectedAgentCount = activeAgents.Count(agent => agent.RunId == selectedRun.RunId.Value && agent.IsWorking);
+            if (selectedAgentCount > 0)
+            {
+                return $"{selectedAgentCount.ToString(CultureInfo.InvariantCulture)} active agent(s) are working on run {selectedRun.RunId.Value.ToString("N")[..8]}; no operator action is currently required.";
+            }
+
+            return $"Run {selectedRun.RunId.Value.ToString("N")[..8]} has no current operator action in the selected history window.";
+        }
+
         var incident = incidents.OrderByDescending(item => item.RaisedAtUtc).FirstOrDefault();
         if (incident is not null)
         {
@@ -524,7 +559,11 @@ public sealed class ProcessWorkspaceShellProjectionService(
                     causeEvent.Sensitivity,
                     causeEvent.Summary,
                     causeEvent.RestrictedDiagnosticReference));
-            return $"Cause: {EnsureSentence(cause)} Next action: open the selected run and review manager messages.";
+            var action = attentionRun.OperatorActions.FirstOrDefault(action => action.IsEnabled);
+            var nextAction = action is null
+                ? "open the selected run and review manager messages."
+                : $"{action.Label.ToLowerInvariant()} for {action.StepKey}.";
+            return $"Cause: {EnsureSentence(cause)} Next action: {nextAction}";
         }
 
         var latestAttentionEvent = events
@@ -578,7 +617,6 @@ public sealed class ProcessWorkspaceShellProjectionService(
     private static bool IsAttentionEventType(string eventType)
         => eventType.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
-           eventType.Contains("Released", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||

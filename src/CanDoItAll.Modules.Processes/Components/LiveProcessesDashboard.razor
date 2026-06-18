@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
 @using CanDoItAll.Processes.Abstractions
+@using CanDoItAll.Processes.Application
 @using CanDoItAll.Processes.Projections
 @using CanDoItAll.Processes.Runtime
 @inject IProcessWorkspaceProjectionClient ProjectionClient
@@ -72,6 +73,24 @@
                      data-testid="live-processes-started-notification">
                     <Icon Name="check_circle" />
                     <span>Process started. Live run projection is loading.</span>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(operatorActionError))
+            {
+                <div class="live-processes-alert"
+                     role="alert"
+                     data-testid="live-processes-operator-action-error">
+                    <Icon Name="error" />
+                    <span>@operatorActionError</span>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(operatorActionMessage))
+            {
+                <div class="live-processes-alert live-processes-alert--success"
+                     role="status"
+                     data-testid="live-processes-operator-action-message">
+                    <Icon Name="check_circle" />
+                    <span>@operatorActionMessage</span>
                 </div>
             }
 
@@ -277,6 +296,10 @@
     private ProcessLiveProcessSnapshot? runDetailSnapshot;
     private bool agentDetailDialogOpen;
     private ProcessRuntimeActiveAgentProjection? agentDetailAgent;
+    private Guid? busyOperatorActionStepId;
+    private string? operatorActionMessage;
+    private string? operatorActionError;
+    private readonly Dictionary<Guid, string> operatorActionNotes = new();
 
     private string PageTitleText => ProjectId.HasValue ? "Project live processes" : "Live processes";
 
@@ -391,9 +414,22 @@
         return Task.CompletedTask;
     }
 
-    private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuns
+    private IReadOnlyList<ProcessLiveProcessSnapshot> SelectableRuns
         => shell?.Runtime.Runs
             .Where(run => statusFilter is null || run.Status == statusFilter)
+            .ToArray() ?? [];
+
+    private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuns
+        => SelectableRuns
+            .Where(run => !selectedRuntimeRunId.HasValue || run.RunId.Value == selectedRuntimeRunId.Value)
+            .ToArray();
+
+    private IReadOnlyList<ProcessRuntimeActiveAgentProjection> VisibleActiveAgents
+        => shell?.Runtime.ActiveAgents
+            .Where(agent => !selectedRuntimeRunId.HasValue || agent.RunId == selectedRuntimeRunId.Value)
+            .OrderByDescending(agent => agent.IsWorking)
+            .ThenByDescending(agent => string.Equals(agent.Status, "Running", StringComparison.Ordinal))
+            .ThenBy(agent => agent.ExecutorDisplayName, StringComparer.OrdinalIgnoreCase)
             .ToArray() ?? [];
 
     private IReadOnlyList<ProcessLiveProcessSnapshot> ActivityCardRuns
@@ -443,10 +479,10 @@
                      Class="mt-4 flex-wrap">
                 <StatusBadge Tone="@(shell.AgentEntry.IsAvailable ? "success" : "warning")"
                              Text="@(shell.AgentEntry.IsAvailable ? "Available" : "Unavailable")" />
-                <StatusBadge Tone="info" Text="@FormatCount(CountWorkingAgents(shell.Runtime.ActiveAgents), "working agent", "working agents")" />
-                @if (CountStaleAgentClaims(shell.Runtime.ActiveAgents) > 0)
+                <StatusBadge Tone="info" Text="@FormatCount(CountWorkingAgents(VisibleActiveAgents), "working agent", "working agents")" />
+                @if (CountStaleAgentClaims(VisibleActiveAgents) > 0)
                 {
-                    <StatusBadge Tone="warning" Text="@FormatCount(CountStaleAgentClaims(shell.Runtime.ActiveAgents), "stale claim", "stale claims")" />
+                    <StatusBadge Tone="warning" Text="@FormatCount(CountStaleAgentClaims(VisibleActiveAgents), "stale claim", "stale claims")" />
                 }
                 @if (!string.IsNullOrWhiteSpace(shell.AgentEntry.DisabledReason))
                 {
@@ -454,7 +490,7 @@
                 }
             </Cluster>
         </SurfaceCard>
-        @RenderActiveAgentGrid(shell!.Runtime.ActiveAgents, "live-processes-active-agents")
+        @RenderActiveAgentGrid(VisibleActiveAgents, "live-processes-active-agents")
     </Stack>;
 
     private RenderFragment RenderGraphsTab() => @<Stack GapScale="LayoutGap.Medium"
@@ -644,8 +680,32 @@
                             </Cluster>
                             <h3 class="live-processes-attention-card__title">@BuildRunTitle(run)</h3>
                             <p class="live-processes-attention-card__summary">@BuildAttentionSummary(run)</p>
+                            @if (ResolvePrimaryOperatorAction(run) is { } cardAction)
+                            {
+                                <div class="live-processes-attention-card__decision"
+                                     data-testid="live-processes-attention-decision">
+                                    <p>@cardAction.RequiredOperatorDecision</p>
+                                    <TextArea Value="@GetOperatorActionNote(cardAction)"
+                                              Change="@((string? value) => SetOperatorActionNote(cardAction, value))"
+                                              Rows="3"
+                                              Placeholder="Optional note for the manager or next agent"
+                                              class="live-processes-operator-action-row__note"
+                                              data-testid="live-processes-operator-note" />
+                                </div>
+                            }
                         </div>
                         <Cluster Gap="LayoutGap.XSmall" Class="live-processes-attention-card__actions">
+                            @if (ResolvePrimaryOperatorAction(run) is { } action)
+                            {
+                                <Button Icon="replay"
+                                        Text="@action.Label"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@IsOperatorActionBusy(action)"
+                                        IsBusy="@IsOperatorActionBusy(action)"
+                                        Click="@(() => ExecuteOperatorActionAsync(action))"
+                                        data-testid="live-processes-request-rework" />
+                            }
                             <Button Icon="info"
                                     Text="Details"
                                     ButtonStyle="ButtonStyle.Light"
@@ -666,14 +726,14 @@
     </section>;
 
     private RenderFragment RenderRuntimeRunOptions() => @<text>
-        @if (VisibleRuns.Count == 0)
+        @if (SelectableRuns.Count == 0)
         {
             <option value="">No runtime runs</option>
         }
         else
         {
             <option value="">All runs</option>
-            @foreach (var run in VisibleRuns)
+            @foreach (var run in SelectableRuns)
             {
                 <option value="@run.RunId.Value.ToString("D")">@BuildRunOptionText(run)</option>
             }
@@ -729,6 +789,18 @@
             <p class="live-processes-activity-card__time">@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</p>
         </div>
         <Cluster Gap="LayoutGap.XSmall" Class="live-processes-activity-card__actions">
+            @if (ResolvePrimaryOperatorAction(run) is { } action)
+            {
+                <Button Icon="replay"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Size="ButtonSize.Small"
+                        title="@action.Label"
+                        aria-label="@action.Label"
+                        Disabled="@IsOperatorActionBusy(action)"
+                        IsBusy="@IsOperatorActionBusy(action)"
+                        Click="@(() => ExecuteOperatorActionAsync(action))"
+                        data-testid="live-processes-activity-request-rework" />
+            }
             <Button Icon="open_in_new"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
@@ -769,6 +841,10 @@
                         <span class="live-processes-run-card__badges">
                             <StatusBadge Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" />
                             <StatusBadge Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" />
+                            @if (run.OperatorActions.Count > 0)
+                            {
+                                <StatusBadge Tone="warning" Text="@FormatCount(run.OperatorActions.Count, "action", "actions")" />
+                            }
                             <StatusBadge Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" />
                         </span>
                     </button>
@@ -929,6 +1005,7 @@
             }
             <CompactStat Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" TooltipText="Latest runtime event time." />
         </CompactStatStrip>
+        @RenderOperatorActions(run)
         @RenderActiveAgentGrid(ResolveActiveAgents(run.RunId.Value), "live-processes-run-detail-active-agents")
         <Grid Gap="LayoutGap.Medium" ColumnTemplateXl="repeat(3,minmax(0,1fr))">
             <SurfaceCard Soft="true">
@@ -992,6 +1069,72 @@
             </SurfaceCard>
         </Grid>
     </Stack>;
+
+    private RenderFragment RenderOperatorActions(ProcessLiveProcessSnapshot run) => @<SurfaceCard Soft="true"
+                                                                                                   data-testid="live-processes-operator-actions">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operator actions" />
+                <h2 class="text-base font-semibold text-slate-900">@FormatCount(run.OperatorActions.Count, "available action", "available actions")</h2>
+            </Stack>
+            <StatusBadge Tone="@(run.OperatorActions.Count > 0 ? "warning" : "success")"
+                         Text="@(run.OperatorActions.Count > 0 ? "Actionable" : "No action needed")" />
+        </Split>
+        @if (run.OperatorActions.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No blocked or failed executable step is waiting for operator rework.</p>
+        }
+        else
+        {
+            <div class="live-processes-operator-action-grid">
+                @foreach (var action in run.OperatorActions)
+                {
+                    <article class="live-processes-operator-action-row"
+                             data-testid="live-processes-operator-action-row">
+                        <div class="live-processes-operator-action-row__body">
+                            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                <StatusBadge Tone="warning" Text="@action.StepStatus" />
+                                <StatusBadge Tone="info" Text="@action.RoleDisplayName" />
+                                <StatusBadge Tone="neutral" Text="@action.ExecutorDisplayName" />
+                            </Cluster>
+                            <p class="live-processes-operator-action-row__title">@action.StepKey</p>
+                            <p class="live-processes-operator-action-row__summary">@action.Summary</p>
+                            @if (!string.IsNullOrWhiteSpace(action.ProblemSummary))
+                            {
+                                <p class="live-processes-operator-action-row__problem">@action.ProblemSummary</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(action.RequiredOperatorDecision))
+                            {
+                                <p class="live-processes-operator-action-row__decision">@action.RequiredOperatorDecision</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(action.RecommendedInstruction))
+                            {
+                                <p class="live-processes-operator-action-row__instruction">@action.RecommendedInstruction</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(action.DisabledReason))
+                            {
+                                <p class="live-processes-operator-action-row__disabled">@action.DisabledReason</p>
+                            }
+                            <TextArea Value="@GetOperatorActionNote(action)"
+                                      Change="@((string? value) => SetOperatorActionNote(action, value))"
+                                      Rows="3"
+                                      Placeholder="Optional note for the manager or next agent"
+                                      class="live-processes-operator-action-row__note"
+                                      data-testid="live-processes-dialog-operator-note" />
+                        </div>
+                        <Button Icon="replay"
+                                Text="@action.Label"
+                                ButtonStyle="ButtonStyle.Primary"
+                                Size="ButtonSize.Small"
+                                Disabled="@(!action.IsEnabled || IsOperatorActionBusy(action))"
+                                IsBusy="@IsOperatorActionBusy(action)"
+                                Click="@(() => ExecuteOperatorActionAsync(action))"
+                                data-testid="live-processes-dialog-request-rework" />
+                    </article>
+                }
+            </div>
+        }
+    </SurfaceCard>;
 
     private RenderFragment RenderAgentDetailDialog(ProcessRuntimeActiveAgentProjection agent) => @<Stack GapScale="LayoutGap.Medium"
                                                                                                        data-testid="live-processes-agent-detail-dialog-content">
@@ -1092,7 +1235,7 @@
     </Stack>;
 
     private string RuntimeRunSelectValue
-        => selectedRuntimeRunId.HasValue && VisibleRuns.Any(run => run.RunId.Value == selectedRuntimeRunId.Value)
+        => selectedRuntimeRunId.HasValue && SelectableRuns.Any(run => run.RunId.Value == selectedRuntimeRunId.Value)
             ? selectedRuntimeRunId.Value.ToString("D")
             : string.Empty;
 
@@ -1213,6 +1356,53 @@
         return Task.CompletedTask;
     }
 
+    private async Task ExecuteOperatorActionAsync(ProcessRuntimeOperatorActionProjection action)
+    {
+        if (!action.IsEnabled || busyOperatorActionStepId.HasValue)
+        {
+            return;
+        }
+
+        busyOperatorActionStepId = action.StepInstanceId;
+        operatorActionMessage = null;
+        operatorActionError = null;
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteRuntimeOperatorActionAsync(new ProcessRuntimeOperatorActionCommand(
+                new ProcessRunId(action.RunId),
+                new ProcessStepInstanceId(action.StepInstanceId),
+                action.Kind,
+                "live-processes",
+                BuildOperatorActionReason(action)));
+            if (!result.Succeeded)
+            {
+                operatorActionError = result.Diagnostics.Count == 0
+                    ? $"{action.Label} was rejected by the runtime."
+                    : string.Join(" ", result.Diagnostics);
+                return;
+            }
+
+            operatorActionMessage = $"{action.Label} accepted for {action.StepKey}. Dispatch has been queued.";
+            operatorActionNotes.Remove(action.StepInstanceId);
+            selectedRuntimeRunId = action.RunId;
+            runtimeEventPage = 0;
+            await LoadAsync(forceRefresh: true);
+            if (runDetailDialogOpen)
+            {
+                runDetailSnapshot = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == action.RunId);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            operatorActionError = exception.Message;
+        }
+        finally
+        {
+            busyOperatorActionStepId = null;
+        }
+    }
+
     private IReadOnlyList<ProcessRuntimeActiveAgentProjection> ResolveActiveAgents(Guid runId)
         => shell?.Runtime.ActiveAgents
             .Where(agent => agent.RunId == runId)
@@ -1227,6 +1417,43 @@
             .OrderByDescending(message => message.CreatedAtUtc)
             .ToArray() ?? [];
 
+    private static ProcessRuntimeOperatorActionProjection? ResolvePrimaryOperatorAction(ProcessLiveProcessSnapshot run)
+        => run.OperatorActions
+            .Where(action => action.IsEnabled)
+            .OrderByDescending(action => string.Equals(action.StepStatus, nameof(ProcessRuntimeStepStatus.Failed), StringComparison.Ordinal))
+            .ThenByDescending(action => string.Equals(action.StepStatus, nameof(ProcessRuntimeStepStatus.Blocked), StringComparison.Ordinal))
+            .ThenBy(action => action.StepKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+    private bool IsOperatorActionBusy(ProcessRuntimeOperatorActionProjection action)
+        => busyOperatorActionStepId == action.StepInstanceId;
+
+    private string GetOperatorActionNote(ProcessRuntimeOperatorActionProjection action)
+        => operatorActionNotes.GetValueOrDefault(action.StepInstanceId, string.Empty);
+
+    private void SetOperatorActionNote(ProcessRuntimeOperatorActionProjection action, string? value)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            operatorActionNotes.Remove(action.StepInstanceId);
+            return;
+        }
+
+        operatorActionNotes[action.StepInstanceId] = normalized;
+    }
+
+    private string BuildOperatorActionReason(ProcessRuntimeOperatorActionProjection action)
+    {
+        var instruction = FirstNonEmpty(
+            action.RecommendedInstruction,
+            $"LiveProcesses requested {action.Kind} for step '{action.StepKey}'.");
+        var note = GetOperatorActionNote(action);
+        return string.IsNullOrWhiteSpace(note)
+            ? instruction
+            : $"{instruction}{Environment.NewLine}{Environment.NewLine}Operator note:{Environment.NewLine}{note}";
+    }
+
     private static string BuildRunTitle(ProcessLiveProcessSnapshot run)
         => $"Run {run.RunId.Value.ToString("N")[..8]}";
 
@@ -1236,12 +1463,33 @@
     private static string BuildRunOptionText(ProcessLiveProcessSnapshot run)
         => $"{BuildRunTitle(run)} / {run.Status} / {run.LastEventAtUtc.LocalDateTime:g}";
 
-    private static string BuildRunCardSummary(ProcessLiveProcessSnapshot run)
+    private string BuildRunCardSummary(ProcessLiveProcessSnapshot run)
     {
+        var action = ResolvePrimaryOperatorAction(run);
+        if (action is not null)
+        {
+            return FirstNonEmpty(
+                action.ProblemSummary,
+                $"Cause: {action.StepKey} is {action.StepStatus}. Next action: {action.Label.ToLowerInvariant()} for {action.RoleDisplayName}.");
+        }
+
         var incident = run.Incidents.OrderByDescending(item => item.RaisedAtUtc).FirstOrDefault();
         if (incident is not null)
         {
             return $"Cause: {EnsureSentence(incident.SafeSummary)}";
+        }
+
+        var activeAgents = ResolveActiveAgents(run.RunId.Value);
+        var workingAgent = activeAgents.FirstOrDefault(agent => agent.IsWorking && !agent.IsLeaseExpired);
+        if (run.Status == ProcessProjectedRunStatus.Active && workingAgent is not null)
+        {
+            return $"Active: {EnsureSentence(ResolveAgentCardSummary(workingAgent))}";
+        }
+
+        var staleAgent = activeAgents.FirstOrDefault(agent => agent.IsLeaseExpired);
+        if (staleAgent is not null)
+        {
+            return $"Attention: {ResolveAgentDisplayName(staleAgent)} has an expired lease on {staleAgent.StepKey}.";
         }
 
         var runtimeEvent = ResolveRunCardEvent(run.RecentEvents);
@@ -1252,6 +1500,12 @@
 
     private string BuildAttentionSummary(ProcessLiveProcessSnapshot run)
     {
+        var action = ResolvePrimaryOperatorAction(run);
+        if (action is not null)
+        {
+            return $"{FirstNonEmpty(action.ProblemSummary, action.Summary)} {FirstNonEmpty(action.RequiredOperatorDecision, $"Next action: {action.Label} for {action.StepKey}.")}";
+        }
+
         var managerMessage = ResolveManagerMessages(run.RunId).FirstOrDefault();
         if (managerMessage is not null)
         {
@@ -1262,9 +1516,9 @@
     }
 
     private bool RequiresOperatorAttention(ProcessLiveProcessSnapshot run)
-        => run.Status is ProcessProjectedRunStatus.NeedsAttention or ProcessProjectedRunStatus.Failed ||
+        => run.OperatorActions.Any(action => action.IsEnabled) ||
+           run.Status == ProcessProjectedRunStatus.Failed ||
            run.Incidents.Count > 0 ||
-           run.RecentEvents.Any(runtimeEvent => IsAttentionEventType(runtimeEvent.EventType)) ||
            ResolveManagerMessages(run.RunId).Any(message => IsAttentionEventType(message.Kind));
 
     private static string ResolveRunStatusTone(ProcessProjectedRunStatus status)
@@ -1307,6 +1561,7 @@
             "Completed" => "success",
             nameof(ProcessRuntimeStepStatus.Running) => "success",
             nameof(ProcessRuntimeStepStatus.Claimed) => "info",
+            nameof(ProcessRuntimeStepStatus.Waiting) => "info",
             nameof(ProcessRuntimeStepStatus.Blocked) => "warning",
             nameof(ProcessRuntimeStepStatus.Failed) => "danger",
             _ => "neutral"
@@ -1395,7 +1650,6 @@
     private static bool IsAttentionEventType(string eventType)
         => eventType.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
-           eventType.Contains("Released", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||

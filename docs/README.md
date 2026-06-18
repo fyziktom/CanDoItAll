@@ -35,6 +35,7 @@ These docs are for readers who need to understand what CanDoItAll does before th
 
 ## Components And UI
 
+- [UI support scope](ui-support-scope.md): current large-desktop-only UI target and validation guidance.
 - [UI shared components](ui-shared-components/README.md): current shared Blazor component-library shape, usage rules, and component references.
 - [Shared components governance](shared-components-governance.md): ownership and change-request boundaries for shared UI libraries.
 

@@ -42,6 +42,7 @@ flowchart LR
 - [Cognitive Memory](docs/cognitive-memory/README.md): current implementation stage, architecture, API, validation, and roadmap for Cognitive Memory.
 - [Enterprise operating system](docs/enterprise-operating-system.md): customer-facing explanation of CanDoItAll as an operating system for projects.
 - [API control plane](docs/api-control-plane.md): current process, project-structure, project, and agent HTTP APIs.
+- [UI support scope](docs/ui-support-scope.md): current large-desktop-only UI target for product screens and validation.
 - [Architecture index](architecture/README.md): current architecture docs, ADRs, and historical architecture reviews.
 - [Shared components](docs/ui-shared-components/README.md): current shared component-library split and usage guidance.
 

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureProcessProjectionContributor(
-    ProcessPersistenceDbContext processDbContext,
+    IDbContextFactory<ProcessPersistenceDbContext> processDbContextFactory,
     ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService) : IProjectStructureProjectionContributor
 {
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
@@ -64,6 +64,9 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 item => ProcessDefinitionCatalogProjectionService.CreateDefinitionId(item.Key).Value,
                 item => item);
 
+        await using var processDbContext = await processDbContextFactory
+            .CreateDbContextAsync(cancellationToken)
+            .ConfigureAwait(false);
         var runIds = linkedRunIds.ToArray();
         var runtimeStates = runIds.Length == 0
             ? []
@@ -105,6 +108,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     group.Count(item => item.Status == ProcessRuntimeStepStatus.Blocked),
                     group.Count(item => item.Status == ProcessRuntimeStepStatus.WaitingApproval),
                     group.Count(item => item.Status == ProcessRuntimeStepStatus.Ready ||
+                                        item.Status == ProcessRuntimeStepStatus.Waiting ||
                                         item.Status == ProcessRuntimeStepStatus.Running ||
                                         item.Status == ProcessRuntimeStepStatus.Claimed)))
                 .ToDictionaryAsync(item => item.RunId, cancellationToken);

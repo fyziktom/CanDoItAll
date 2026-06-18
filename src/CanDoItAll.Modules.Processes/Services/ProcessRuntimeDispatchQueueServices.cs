@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
+using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -250,6 +251,34 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
             if (ProcessRuntimeTerminalStates.IsRunTerminal(result.Status))
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ProcessPersistenceDbContext>();
+                if (result.Status == ProcessRuntimeStatus.Completed)
+                {
+                    var operatorService = scope.ServiceProvider.GetRequiredService<ProcessRuntimeOperatorApplicationService>();
+                    var parentSteps = await ProcessRuntimeChildRunParentQuery
+                        .LoadActiveParentStepsAsync(dbContext, request.RunId.Value, cancellationToken)
+                        .ConfigureAwait(false);
+                    foreach (var parentStep in parentSteps)
+                    {
+                        var rework = await operatorService.ExecuteAsync(
+                            new ProcessRuntimeOperatorActionCommand(
+                                new ProcessRunId(parentStep.RunId),
+                                new ProcessStepInstanceId(parentStep.StepInstanceId),
+                                ProcessRuntimeOperatorActionKind.RequestRework,
+                                NormalizeRequestedBy(request.RequestedBy),
+                                $"Child process run '{request.RunId}' completed; parent subprocess step can re-evaluate child evidence."),
+                            cancellationToken).ConfigureAwait(false);
+                        if (!rework.Succeeded)
+                        {
+                            logger.LogWarning(
+                                "Process background dispatch could not requeue parent step {StepInstanceId} for parent run {ParentRunId} after completed child run {ChildRunId}. Diagnostics={Diagnostics}",
+                                parentStep.StepInstanceId,
+                                parentStep.RunId,
+                                request.RunId.Value,
+                                string.Join("; ", rework.Diagnostics));
+                        }
+                    }
+                }
+
                 var parentRunIds = await ProcessRuntimeChildRunParentQuery
                     .LoadActiveParentRunIdsAsync(dbContext, request.RunId.Value, cancellationToken)
                     .ConfigureAwait(false);
@@ -321,6 +350,8 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
 
 internal static class ProcessRuntimeChildRunParentQuery
 {
+    public sealed record ParentStep(Guid RunId, Guid StepInstanceId);
+
     public static async Task<IReadOnlyList<Guid>> LoadActiveParentRunIdsAsync(
         ProcessPersistenceDbContext dbContext,
         Guid childRunId,
@@ -360,6 +391,72 @@ internal static class ProcessRuntimeChildRunParentQuery
             .ConfigureAwait(false);
     }
 
+    public static async Task<IReadOnlyList<ParentStep>> LoadActiveParentStepsAsync(
+        ProcessPersistenceDbContext dbContext,
+        Guid childRunId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var parentRunKeySnippet = JsonSerializer.Serialize("ParentProcessRunId");
+        var childLaunchVariables = await dbContext.RuntimeStepAssignments
+            .AsNoTracking()
+            .Where(assignment =>
+                assignment.RunId == childRunId &&
+                assignment.LaunchVariablesJson.Contains(parentRunKeySnippet))
+            .Select(assignment => assignment.LaunchVariablesJson)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var requestedParentSteps = childLaunchVariables
+            .Select(TryReadParentStep)
+            .Where(parentStep => parentStep is not null)
+            .Select(parentStep => parentStep!)
+            .Distinct()
+            .ToArray();
+        if (requestedParentSteps.Length == 0)
+        {
+            return [];
+        }
+
+        var parentRunIds = requestedParentSteps
+            .Select(parentStep => parentStep.RunId)
+            .Distinct()
+            .ToArray();
+        var parentStepIds = requestedParentSteps
+            .Select(parentStep => parentStep.StepInstanceId)
+            .Distinct()
+            .ToArray();
+
+        var candidates = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                parentRunIds.Contains(state.RunId) &&
+                state.Status == ProcessRuntimeStatus.Active)
+            .Join(
+                dbContext.RuntimeSteps.AsNoTracking(),
+                state => state.RunId,
+                step => step.RunId,
+                (state, step) => new { state.RunId, Step = step })
+            .Where(item =>
+                parentStepIds.Contains(item.Step.StepInstanceId) &&
+                item.Step.IsExecutable &&
+                item.Step.ActiveClaimToken == null &&
+                (item.Step.Status == ProcessRuntimeStepStatus.Waiting ||
+                 item.Step.Status == ProcessRuntimeStepStatus.Blocked ||
+                 item.Step.Status == ProcessRuntimeStepStatus.Failed ||
+                 item.Step.Status == ProcessRuntimeStepStatus.Ready))
+            .Select(item => new ParentStep(item.RunId, item.Step.StepInstanceId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return candidates
+            .Distinct()
+            .OrderBy(parentStep => parentStep.RunId)
+            .ThenBy(parentStep => parentStep.StepInstanceId)
+            .ToArray();
+    }
+
     private static Guid? TryReadParentRunId(string launchVariablesJson)
     {
         if (string.IsNullOrWhiteSpace(launchVariablesJson))
@@ -374,6 +471,30 @@ internal static class ProcessRuntimeChildRunParentQuery
                    variables.TryGetValue("ParentProcessRunId", out var parentRunId) &&
                    Guid.TryParse(parentRunId, out var runId)
                 ? runId
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static ParentStep? TryReadParentStep(string launchVariablesJson)
+    {
+        if (string.IsNullOrWhiteSpace(launchVariablesJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            var variables = JsonSerializer.Deserialize<Dictionary<string, string>>(launchVariablesJson);
+            return variables is not null &&
+                   variables.TryGetValue("ParentProcessRunId", out var parentRunId) &&
+                   variables.TryGetValue("ParentProcessStepId", out var parentStepId) &&
+                   Guid.TryParse(parentRunId, out var runId) &&
+                   Guid.TryParse(parentStepId, out var stepInstanceId)
+                ? new ParentStep(runId, stepInstanceId)
                 : null;
         }
         catch (JsonException)
@@ -443,7 +564,6 @@ internal static class ProcessRuntimeDispatchRecoveryRunQuery
         var expiredClaimRunIds = await dbContext.RuntimeStates
             .AsNoTracking()
             .Where(state => state.Status == ProcessRuntimeStatus.Active)
-            .Where(state => readyUpdatedAfterUtc == null || state.UpdatedAtUtc >= readyUpdatedAfterUtc)
             .Join(
                 dbContext.DispatchClaims.AsNoTracking(),
                 state => state.RunId,

@@ -965,6 +965,157 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         string ReadinessSummary);
 }
 
+internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IProviderProfileService providerProfileService) : IProcessRuntimeStepAssignmentRepairService
+{
+    public async ValueTask<ProcessRuntimeStepAssignmentRepairResult> RepairAsync(
+        ProcessRuntimeStepAssignment assignment,
+        string operatorReason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(assignment);
+
+        var readinessRequest = CreateReadinessRequest(assignment);
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        var providerById = providers.ToDictionary(provider => provider.Id);
+        var currentAgent = ResolveCurrentAgent(assignment, agents);
+        if (currentAgent is not null)
+        {
+            var currentReadiness = AgentProcessReadinessEvaluator.Evaluate(currentAgent, readinessRequest);
+            if (currentReadiness.IsExecutionReady && currentReadiness.HasRoleFit)
+            {
+                return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
+            }
+        }
+
+        var candidate = SelectAgent(readinessRequest, agents, providerById);
+        if (candidate is null)
+        {
+            return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
+        }
+
+        if (string.Equals(assignment.ExecutorId, candidate.Agent.Id.ToString("D"), StringComparison.OrdinalIgnoreCase))
+        {
+            return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
+        }
+
+        var previousExecutor = string.IsNullOrWhiteSpace(assignment.ExecutorDisplayName)
+            ? assignment.ExecutorId
+            : assignment.ExecutorDisplayName.Trim();
+        var summary =
+            $"Reassigned step '{assignment.StepKey}' from '{previousExecutor}' to '{candidate.Agent.Name}' because the previous executor no longer satisfies role/tool readiness for role '{ResolveRoleLabel(assignment)}'. New match: {candidate.MatchSummary}. {candidate.ReadinessSummary}";
+        var repaired = assignment with
+        {
+            ExecutorKind = ProcessLaunchExecutorKinds.Agent,
+            ExecutorId = candidate.Agent.Id.ToString("D"),
+            ExecutorDisplayName = candidate.Agent.Name,
+            ReadinessHash = candidate.ReadinessHash,
+            AssignmentReason = string.IsNullOrWhiteSpace(assignment.AssignmentReason)
+                ? summary
+                : $"{assignment.AssignmentReason.Trim()} {summary}"
+        };
+
+        return new ProcessRuntimeStepAssignmentRepairResult(repaired, true, summary);
+    }
+
+    private RepairCandidate? SelectAgent(
+        AgentProcessRoleReadinessRequest readinessRequest,
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById)
+    {
+        var matches = new List<RepairCandidate>();
+
+        foreach (var agent in agents
+            .Where(agent => !agent.IsTemplate && agent.Status == AgentLifecycleStatus.Active)
+            .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (agent.ProviderProfileId is not { } providerId ||
+                !providerById.TryGetValue(providerId, out var provider) ||
+                !provider.IsEnabled ||
+                !providerProfileService.ResolveFeatureMatrix(provider).SupportsStructuredOutput)
+            {
+                continue;
+            }
+
+            var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, readinessRequest);
+            if (!readiness.IsExecutionReady || !readiness.HasRoleFit)
+            {
+                continue;
+            }
+
+            matches.Add(new RepairCandidate(
+                agent,
+                readiness.Score,
+                readiness.MatchSummary,
+                readiness.ReadinessHash,
+                readiness.ReadinessSummary));
+        }
+
+        return matches
+            .OrderByDescending(match => match.Score)
+            .ThenBy(match => match.Agent.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+    }
+
+    private static AgentDefinition? ResolveCurrentAgent(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<AgentDefinition> agents)
+    {
+        return Guid.TryParse(assignment.ExecutorId, out var agentId)
+            ? agents.FirstOrDefault(agent => agent.Id == agentId)
+            : null;
+    }
+
+    private static AgentProcessRoleReadinessRequest CreateReadinessRequest(ProcessRuntimeStepAssignment assignment)
+    {
+        return new AgentProcessRoleReadinessRequest(
+            assignment.StepKey,
+            assignment.StepKey,
+            assignment.RoleKey,
+            assignment.RoleResourceKey,
+            assignment.RoleDisplayName,
+            NormalizeOperations(assignment.AllowedOperations),
+            string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
+                ? string.Empty
+                : assignment.OperationTargetScope.Trim());
+    }
+
+    private static IReadOnlyList<string> NormalizeOperations(IReadOnlyList<string> operations)
+    {
+        return operations
+            .Where(operation => !string.IsNullOrWhiteSpace(operation))
+            .Select(operation => operation.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(operation => operation, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string ResolveRoleLabel(ProcessRuntimeStepAssignment assignment)
+    {
+        if (!string.IsNullOrWhiteSpace(assignment.RoleDisplayName))
+        {
+            return assignment.RoleDisplayName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(assignment.RoleKey))
+        {
+            return assignment.RoleKey.Trim();
+        }
+
+        return assignment.StepKey.Trim();
+    }
+
+    private sealed record RepairCandidate(
+        AgentDefinition Agent,
+        int Score,
+        string MatchSummary,
+        string ReadinessHash,
+        string ReadinessSummary);
+}
+
 internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefBuilder
 {
     private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
@@ -1161,7 +1312,7 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
 
     private static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
     {
-        var allowedOperations = NormalizeOperations(assignment.AllowedOperations);
+        var allowedOperations = ResolveEffectiveOperations(assignment.StepKey, assignment.AllowedOperations);
         var targetScope = string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
             ? string.Empty
             : assignment.OperationTargetScope.Trim();
@@ -1252,6 +1403,31 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(operation => operation, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static IReadOnlyList<string> ResolveEffectiveOperations(
+        string stepKey,
+        IReadOnlyList<string> allowedOperations)
+    {
+        var normalized = NormalizeOperations(allowedOperations);
+        if (!IsRuntimeProofCaptureStep(stepKey))
+        {
+            return normalized;
+        }
+
+        return NormalizeOperations(
+        [
+            .. normalized,
+            ProcessOperationContractNames.LaunchRuntime,
+            ProcessOperationContractNames.CaptureRuntimeProof
+        ]);
+    }
+
+    private static bool IsRuntimeProofCaptureStep(string stepKey)
+    {
+        return stepKey.Contains("screenshot", StringComparison.OrdinalIgnoreCase) ||
+            stepKey.Contains("browser-proof", StringComparison.OrdinalIgnoreCase) ||
+            stepKey.Contains("runtime-proof", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool AllowsProductMutation(

@@ -1,3 +1,4 @@
+using System.Globalization;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
@@ -42,6 +43,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
             runs.Add(run);
         }
+
+        runs = (await EnrichOperatorActionsAsync(runs, nowUtc, cancellationToken).ConfigureAwait(false)).ToList();
 
         runs.Sort(static (left, right) =>
         {
@@ -244,17 +247,20 @@ public sealed class ProcessRuntimeProjectionQueryService(
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
-        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        var activeRuns = runs.Where(run => run.IsActive).ToArray();
+        if (runtimeStateStore is null || assignmentStore is null || activeRuns.Length == 0)
         {
             return [];
         }
 
         var activeAgents = new List<ProcessRuntimeActiveAgentProjection>();
+        var claimAgents = new List<ProcessRuntimeActiveAgentProjection>();
         var observedStepKeys = new HashSet<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId)>();
         var assignmentsByRun = new Dictionary<ProcessRunId, IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>>();
-        var runById = runs.ToDictionary(run => run.RunId);
+        var observedCandidateRunIds = new HashSet<ProcessRunId>();
+        var runById = activeRuns.ToDictionary(run => run.RunId);
 
-        foreach (var run in runs)
+        foreach (var run in activeRuns)
         {
             var assignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             assignmentsByRun[run.RunId] = assignments
@@ -262,14 +268,73 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 .ToDictionary(group => group.Key, group => group.First());
         }
 
-        if (executionObservationReader is not null)
+        foreach (var run in activeRuns)
         {
-            var windowStartUtc = runs.Count == 0
-                ? nowUtc - ActiveExecutionStaleAfter
-                : runs.Min(run => run.FirstEventAtUtc).AddMinutes(-5);
+            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                continue;
+            }
+
+            if (!assignmentsByRun.TryGetValue(run.RunId, out var assignmentsByStep))
+            {
+                continue;
+            }
+
+            foreach (var step in state.Steps.Where(IsAgentActiveStep))
+            {
+                if (!assignmentsByStep.TryGetValue(step.StepInstanceId, out var assignment))
+                {
+                    continue;
+                }
+
+                observedCandidateRunIds.Add(run.RunId);
+                var claim = step.ActiveClaimToken is { } activeClaimToken
+                    ? state.Claims.FirstOrDefault(item => item.ClaimToken == activeClaimToken)
+                    : null;
+                var isLeaseExpired = claim is not null && claim.ExpiresAtUtc < nowUtc;
+                var isWorking = !isLeaseExpired &&
+                    step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
+                claimAgents.Add(new ProcessRuntimeActiveAgentProjection(
+                    run.RunId.Value,
+                    step.StepInstanceId.Value,
+                    BuildRunLabel(run),
+                    assignment.StepKey,
+                    assignment.RoleKey,
+                    assignment.ExecutorKind,
+                    assignment.ExecutorId,
+                    assignment.ExecutorDisplayName,
+                    step.Status.ToString(),
+                    isWorking,
+                    isLeaseExpired,
+                    state.UpdatedAtUtc,
+                    claim?.CreatedAtUtc,
+                    claim?.ExpiresAtUtc,
+                    BuildActiveAgentSummary(assignment, step, claim, isLeaseExpired, executionObservationReader is not null))
+                {
+                    AgentId = Guid.TryParse(assignment.ExecutorId, out var parsedAgentId) ? parsedAgentId : null,
+                    AgentName = assignment.ExecutorDisplayName,
+                    ObservationSource = executionObservationReader is null
+                        ? "Runtime claim"
+                        : "Runtime claim without AgentFramework execution evidence",
+                    CurrentActivity = executionObservationReader is null
+                        ? $"{assignment.StepKey} is {step.Status}."
+                        : $"No AgentFramework execution run was observed for step {assignment.StepKey}."
+                });
+            }
+        }
+
+        if (executionObservationReader is not null && observedCandidateRunIds.Count > 0)
+        {
+            var windowStartUtc = activeRuns
+                .Where(run => observedCandidateRunIds.Contains(run.RunId))
+                .Select(run => run.FirstEventAtUtc)
+                .DefaultIfEmpty(nowUtc - ActiveExecutionStaleAfter)
+                .Min()
+                .AddMinutes(-5);
             var observations = await executionObservationReader.ListAsync(
                 new ProcessExecutionObservationQuery(
-                    runs.Select(run => run.RunId).Distinct().ToArray(),
+                    observedCandidateRunIds.ToArray(),
                     windowStartUtc,
                     nowUtc,
                     TakePerRun: 25),
@@ -300,68 +365,11 @@ public sealed class ProcessRuntimeProjectionQueryService(
             }
         }
 
-        foreach (var run in runs)
+        foreach (var claimAgent in claimAgents)
         {
-            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
-            if (state is null)
+            if (!observedStepKeys.Contains((new ProcessRunId(claimAgent.RunId), new ProcessStepInstanceId(claimAgent.StepInstanceId))))
             {
-                continue;
-            }
-
-            if (!assignmentsByRun.TryGetValue(run.RunId, out var assignmentsByStep))
-            {
-                continue;
-            }
-
-            foreach (var step in state.Steps.Where(IsAgentActiveStep))
-            {
-                if (observedStepKeys.Contains((run.RunId, step.StepInstanceId)))
-                {
-                    continue;
-                }
-
-                if (!assignmentsByStep.TryGetValue(step.StepInstanceId, out var assignment))
-                {
-                    continue;
-                }
-
-                if (executionObservationReader is not null)
-                {
-                    continue;
-                }
-
-                var claim = step.ActiveClaimToken is { } activeClaimToken
-                    ? state.Claims.FirstOrDefault(item => item.ClaimToken == activeClaimToken)
-                    : null;
-                var isLeaseExpired = claim is not null && claim.ExpiresAtUtc < nowUtc;
-                var isWorking = !isLeaseExpired &&
-                    step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
-                activeAgents.Add(new ProcessRuntimeActiveAgentProjection(
-                    run.RunId.Value,
-                    step.StepInstanceId.Value,
-                    BuildRunLabel(run),
-                    assignment.StepKey,
-                    assignment.RoleKey,
-                    assignment.ExecutorKind,
-                    assignment.ExecutorId,
-                    assignment.ExecutorDisplayName,
-                    step.Status.ToString(),
-                    isWorking,
-                    isLeaseExpired,
-                    state.UpdatedAtUtc,
-                    claim?.CreatedAtUtc,
-                    claim?.ExpiresAtUtc,
-                    BuildActiveAgentSummary(assignment, step, claim, isLeaseExpired, executionObservationReader is not null))
-                {
-                    AgentId = Guid.TryParse(assignment.ExecutorId, out var parsedAgentId) ? parsedAgentId : null,
-                    AgentName = assignment.ExecutorDisplayName,
-                    ObservationSource = executionObservationReader is null
-                        ? "Runtime claim"
-                        : "Runtime claim without AgentFramework execution evidence",
-                    CurrentActivity = executionObservationReader is null
-                        ? $"{assignment.StepKey} is {step.Status}."
-                        : $"No AgentFramework execution run was observed for step {assignment.StepKey}."
-                });
+                activeAgents.Add(claimAgent);
             }
         }
 
@@ -371,6 +379,255 @@ public sealed class ProcessRuntimeProjectionQueryService(
             .ThenByDescending(agent => agent.UpdatedAtUtc)
             .ThenBy(agent => agent.ExecutorDisplayName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichOperatorActionsAsync(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        {
+            return runs;
+        }
+
+        var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            if (!CanHaveOperatorActions(run))
+            {
+                enriched.Add(run);
+                continue;
+            }
+
+            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                enriched.Add(run);
+                continue;
+            }
+
+            var assignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var assignmentsByStep = assignments
+                .GroupBy(assignment => assignment.StepInstanceId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var hasOpenNonExpiredClaims = HasOpenNonExpiredClaims(state, nowUtc);
+            var actionableSteps = new List<(ProcessRuntimeStepState Step, DispatchClaimState? ExpiredClaim)>();
+            foreach (var step in state.Steps)
+            {
+                if (TryGetExpiredActiveClaim(state, step, nowUtc, out var expiredClaim))
+                {
+                    actionableSteps.Add((step, expiredClaim));
+                }
+            }
+
+            if (!hasOpenNonExpiredClaims)
+            {
+                foreach (var step in state.Steps.Where(step => IsOperatorReworkCandidate(state, step)))
+                {
+                    actionableSteps.Add((step, null));
+                }
+            }
+
+            var actions = actionableSteps
+                .OrderByDescending(item => item.ExpiredClaim is not null)
+                .ThenByDescending(item => item.Step.Status == ProcessRuntimeStepStatus.Failed)
+                .ThenByDescending(item => item.Step.Status == ProcessRuntimeStepStatus.Blocked)
+                .ThenBy(item => ResolveStepKey(item.Step, assignmentsByStep), StringComparer.OrdinalIgnoreCase)
+                .Select((item, index) => CreateOperatorActionProjection(run, state, item.Step, assignmentsByStep, item.ExpiredClaim, primaryRootCause: index == 0))
+                .ToArray();
+
+            enriched.Add(run with { OperatorActions = actions });
+        }
+
+        return enriched;
+    }
+
+    private static bool CanHaveOperatorActions(ProcessLiveProcessSnapshot run)
+        => run.IsActive || run.Status is ProcessProjectedRunStatus.Failed;
+
+    private static bool IsOperatorReworkCandidate(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step)
+    {
+        if (!step.IsExecutable ||
+            step.ActiveClaimToken is not null ||
+            step.Status is not (ProcessRuntimeStepStatus.Blocked or ProcessRuntimeStepStatus.Failed))
+        {
+            return false;
+        }
+
+        return step.Status != ProcessRuntimeStepStatus.Blocked ||
+               BlockedStepCanBeReworked(state, step);
+    }
+
+    private static bool HasOpenNonExpiredClaims(ProcessRuntimeStateSnapshot state, DateTimeOffset nowUtc)
+        => state.Claims.Any(claim =>
+            claim.Status is (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) &&
+            claim.ExpiresAtUtc > nowUtc);
+
+    private static bool TryGetExpiredActiveClaim(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step,
+        DateTimeOffset nowUtc,
+        out DispatchClaimState? expiredClaim)
+    {
+        expiredClaim = null;
+        if (!step.IsExecutable ||
+            step.ActiveClaimToken is not { } activeClaimToken ||
+            step.Status is not (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running))
+        {
+            return false;
+        }
+
+        var claim = state.Claims.FirstOrDefault(candidate => candidate.ClaimToken == activeClaimToken);
+        if (claim is null ||
+            claim.Status is not (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) ||
+            claim.ExpiresAtUtc > nowUtc)
+        {
+            return false;
+        }
+
+        expiredClaim = claim;
+        return true;
+    }
+
+    private static bool BlockedStepCanBeReworked(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step)
+    {
+        foreach (var dependencyId in step.DependencyStepIds)
+        {
+            var dependency = state.Steps.FirstOrDefault(candidate => candidate.StepInstanceId == dependencyId);
+            if (dependency is null ||
+                !ProcessRuntimeTerminalStates.IsStepTerminal(dependency.Status) ||
+                dependency.Status is ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled)
+            {
+                return false;
+            }
+        }
+
+        return step.RequiredArtifactSlots.All(state.AvailableArtifactSlots.Contains);
+    }
+
+    private static ProcessRuntimeOperatorActionProjection CreateOperatorActionProjection(
+        ProcessLiveProcessSnapshot run,
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step,
+        IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment> assignmentsByStep,
+        DispatchClaimState? expiredClaim,
+        bool primaryRootCause)
+    {
+        assignmentsByStep.TryGetValue(step.StepInstanceId, out var assignment);
+        var stepKey = ResolveStepKey(step, assignmentsByStep);
+        var roleKey = FirstNonEmpty(assignment?.RoleKey, "unassigned");
+        var roleDisplayName = FirstNonEmpty(assignment?.RoleDisplayName, roleKey);
+        var executorDisplayName = FirstNonEmpty(assignment?.ExecutorDisplayName, "Unassigned executor");
+        var receipt = state.AppliedResults
+            .Where(item => item.StepInstanceId == step.StepInstanceId)
+            .LastOrDefault();
+        var problemSummary = BuildOperatorProblemSummary(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim);
+        var requiredDecision = BuildOperatorDecision(stepKey, step.Status, roleDisplayName, executorDisplayName, expiredClaim);
+        var recommendedInstruction = BuildRecommendedOperatorInstruction(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim);
+        return new ProcessRuntimeOperatorActionProjection(
+            run.RunId.Value,
+            step.StepInstanceId.Value,
+            stepKey,
+            step.Status.ToString(),
+            roleKey,
+            roleDisplayName,
+            executorDisplayName,
+            ProcessRuntimeOperatorActionKind.RequestRework,
+            expiredClaim is null ? "Approve rework" : "Retry expired claim",
+            BuildOperatorActionSummary(stepKey, step.Status, roleDisplayName, executorDisplayName, receipt),
+            IsEnabled: true,
+            DisabledReason: null)
+        {
+            ProblemSummary = problemSummary,
+            RequiredOperatorDecision = requiredDecision,
+            RecommendedInstruction = recommendedInstruction,
+            PrimaryRootCause = primaryRootCause
+        };
+    }
+
+    private static string ResolveStepKey(
+        ProcessRuntimeStepState step,
+        IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment> assignmentsByStep)
+    {
+        return assignmentsByStep.TryGetValue(step.StepInstanceId, out var assignment) &&
+               !string.IsNullOrWhiteSpace(assignment.StepKey)
+            ? assignment.StepKey
+            : step.StepInstanceId.ToString();
+    }
+
+    private static string BuildOperatorActionSummary(
+        string stepKey,
+        ProcessRuntimeStepStatus status,
+        string roleDisplayName,
+        string executorDisplayName,
+        StrategyResultReceipt? receipt)
+    {
+        var outcomeText = receipt is null ? string.Empty : $" Last strategy outcome: {receipt.Outcome}.";
+        return $"Root action: approve manager-guided rework for {stepKey} after {status}.{outcomeText} Assigned role: {roleDisplayName}. Executor: {executorDisplayName}.";
+    }
+
+    private static string BuildOperatorProblemSummary(
+        string stepKey,
+        ProcessRuntimeStepState step,
+        string roleDisplayName,
+        string executorDisplayName,
+        StrategyResultReceipt? receipt,
+        DispatchClaimState? expiredClaim)
+    {
+        if (expiredClaim is not null)
+        {
+            var expiredAt = expiredClaim.ExpiresAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+            return $"{stepKey} is still {step.Status}, but its dispatch lease expired at {expiredAt}. The runtime cannot accept a late result for the expired claim. Approve retry to expire the stale claim, return the step to Ready, and dispatch {roleDisplayName} again. Current executor: {executorDisplayName}.";
+        }
+
+        var outcomeText = receipt is null
+            ? "The runtime has no stored strategy outcome for the current blocker."
+            : $"The last strategy outcome was {receipt.Outcome} and the runtime applied {receipt.AppliedStepStatus}.";
+        var attemptText = step.AttemptNumber <= 0
+            ? "before a dispatch attempt was recorded"
+            : $"on attempt {step.AttemptNumber.ToString(CultureInfo.InvariantCulture)}";
+
+        return $"{stepKey} is {step.Status} {attemptText}. {outcomeText} This is the actionable upstream step for role {roleDisplayName}, currently assigned to {executorDisplayName}.";
+    }
+
+    private static string BuildOperatorDecision(
+        string stepKey,
+        ProcessRuntimeStepStatus status,
+        string roleDisplayName,
+        string executorDisplayName,
+        DispatchClaimState? expiredClaim)
+    {
+        if (expiredClaim is not null)
+        {
+            return $"Retry {stepKey} by expiring the stale dispatch claim and letting the process manager dispatch {roleDisplayName} again. Current executor: {executorDisplayName}. Add an operator note if the agent needs extra context.";
+        }
+
+        return $"Approve rework to return {stepKey} from {status} to Ready and let the process manager dispatch {roleDisplayName} again. Current executor: {executorDisplayName}. Add an operator note if the agent needs extra context.";
+    }
+
+    private static string BuildRecommendedOperatorInstruction(
+        string stepKey,
+        ProcessRuntimeStepState step,
+        string roleDisplayName,
+        string executorDisplayName,
+        StrategyResultReceipt? receipt,
+        DispatchClaimState? expiredClaim)
+    {
+        if (expiredClaim is not null)
+        {
+            return $"Manager-approved retry for expired dispatch claim on step '{stepKey}'. Preserve any managed artifacts already written by {executorDisplayName}, verify they satisfy the output contract, produce the required evidence for role '{roleDisplayName}', and continue the process. Step status before retry: {step.Status}.";
+        }
+
+        var outcomeText = receipt is null
+            ? "the previous blocker"
+            : $"the previous {receipt.Outcome} outcome";
+
+        return $"Manager-approved rework for step '{stepKey}'. Resolve {outcomeText}, preserve accepted upstream artifacts, produce the required evidence for role '{roleDisplayName}', and continue the process. Previous executor: {executorDisplayName}. Step status before rework: {step.Status}.";
     }
 
     private static bool IsAgentActiveStep(ProcessRuntimeStepState step)
