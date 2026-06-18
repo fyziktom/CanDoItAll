@@ -6,7 +6,8 @@
 <LiveProcessesDashboard ProjectId="@ProjectId"
                         ProcessIdQuery="@ProcessIdQuery"
                         RunIdQuery="@RunIdQuery"
-                        LaunchPlanIdQuery="@LaunchPlanIdQuery" />
+                        LaunchPlanIdQuery="@LaunchPlanIdQuery"
+                        LaunchStarted="@IsProcessStarted" />
 
 @code {
     [Parameter]
@@ -21,4 +22,10 @@
     [SupplyParameterFromQuery(Name = "launchPlanId")]
     public Guid? LaunchPlanIdQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "processStarted")]
+    public string? ProcessStartedQuery { get; set; }
+
+    private bool IsProcessStarted
+        => string.Equals(ProcessStartedQuery, "1", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(ProcessStartedQuery, "true", StringComparison.OrdinalIgnoreCase);
 }

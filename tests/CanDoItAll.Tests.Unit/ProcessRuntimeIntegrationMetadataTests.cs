@@ -39,7 +39,78 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
     }
 
-    private static ProcessRuntimeStepAssignment CreateAssignment(Guid projectId)
+    [Fact]
+    public void Process_execution_metadata_disables_browser_tools_without_runtime_proof_operation()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.False(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+    }
+
+    [Fact]
+    public void Process_execution_metadata_allows_browser_tools_for_runtime_proof_operation()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof
+            ],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        Assert.True(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+    }
+
+    [Fact]
+    public void Process_execution_metadata_does_not_trust_repository_root_as_product_target_alias()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.MutateProductTarget
+            ],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            launchVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProjectId"] = Guid.NewGuid().ToString("D"),
+                ["AgentId"] = "codex-process-e2e",
+                ["AgentName"] = "Codex Process E2E",
+                ["MachineName"] = "LUCYSPOWER",
+                ["RepositoryRoot"] = @"C:\repositories\CanDoItAll",
+                ["OutputRoot"] = @"C:\programovani\dotnet\output",
+                ["ProductRoot"] = @"C:\programovani\dotnet\output",
+                ["BranchName"] = "main",
+                ["SessionId"] = "codex-process-e2e-session"
+            });
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
+
+        Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+        Assert.DoesNotContain("external-target/C/repositories/CanDoItAll", writableAliases);
+    }
+
+    private static ProcessRuntimeStepAssignment CreateAssignment(
+        Guid projectId,
+        IReadOnlyList<string>? allowedOperations = null,
+        string? operationTargetScope = null,
+        IReadOnlyDictionary<string, string>? launchVariables = null)
     {
         return new ProcessRuntimeStepAssignment(
             ProcessRunId.New(),
@@ -47,6 +118,8 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             ProcessStepInstanceId.New(),
             "resolve-blazor-contract",
             "blazor-engineer",
+            "lead-engineer",
+            "Blazor engineer",
             ProcessLaunchExecutorKinds.Agent,
             Guid.NewGuid().ToString("D"),
             "Blazor engineer",
@@ -55,19 +128,22 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             "Resolved from live profile.",
             [ArtifactSlotId.New()],
             [],
+            allowedOperations ??
             [
                 ProcessOperationContractNames.ReadProjectStructure,
                 ProcessOperationContractNames.ExecuteExternalAction,
                 ProcessOperationContractNames.MutateProductTarget
             ],
-            ProcessOperationContractNames.ExternalProductTargetMutable,
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            operationTargetScope ?? ProcessOperationContractNames.ExternalProductTargetMutable,
+            launchVariables ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["ProjectId"] = projectId.ToString("D"),
                 ["AgentId"] = "codex-process-e2e",
                 ["AgentName"] = "Codex Process E2E",
                 ["MachineName"] = "LUCYSPOWER",
                 ["RepositoryRoot"] = @"C:\programovani\dotnet\output",
+                ["OutputRoot"] = @"C:\programovani\dotnet\output",
+                ["ProductRoot"] = @"C:\programovani\dotnet\output",
                 ["BranchName"] = "main",
                 ["SessionId"] = "codex-process-e2e-session"
             },

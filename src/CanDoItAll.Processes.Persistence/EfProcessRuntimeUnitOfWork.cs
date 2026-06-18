@@ -29,6 +29,10 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
         }
 
+        using var rootSequenceLock = await ProcessRuntimeRootSequenceLocks
+            .AcquireAsync([request.Mutation.State.RootRunId.Value], cancellationToken)
+            .ConfigureAwait(false);
+
         var duplicate = await FindCompletedCommandAsync(
             request.OriginalState.RunId,
             request.CommandId,

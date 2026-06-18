@@ -1,0 +1,45 @@
+- generic [ref=e565] [box=0,0,1440,950]:
+  - complementary [ref=e566] [box=16,8,76,934]:
+    - generic [ref=e567] [box=27,19,54,912]:
+      - generic [ref=e568] [box=27,19,54,40]:
+        - generic [ref=e569] [box=27,19,10,40]
+        - button "Expand navigation" [ref=e572] [box=45,21,36,36]
+      - navigation "Primary navigation" [ref=e574] [box=27,67,54,753]:
+        - button "Dashboard" [ref=e576] [box=27,71,44,44]
+        - button "Projects" [ref=e580] [box=27,121,44,44]
+        - button "Collaboration" [ref=e584] [box=27,171,44,44]
+        - button "CRM / HR" [ref=e589] [box=27,221,44,44]
+        - button "Agents" [ref=e593] [box=27,271,44,44]
+        - button "Workflows" [ref=e597] [box=27,321,44,44]
+        - button "Processes" [ref=e601] [box=27,371,44,44]
+        - button "Live Processes" [ref=e605] [box=27,421,44,44]
+        - button "Cognitive Memory" [ref=e609] [box=27,471,44,44]
+        - button "Resources" [ref=e613] [box=27,521,44,44]
+        - button "Plugins" [ref=e617] [box=27,571,44,44]
+        - button "Prompt Gallery" [ref=e621] [box=27,621,44,44]
+        - button "Prompt Factory" [ref=e625] [box=27,671,44,44]
+        - button "More pages" [ref=e629] [box=32,721,44,44]
+      - generic [ref=e633] [box=27,837,54,94]:
+        - button "Settings" [ref=e635] [box=27,837,54,44]
+        - button "Switch Database" [ref=e640] [box=27,887,54,44]
+  - main [ref=e644] [box=100,8,1324,934]:
+    - generic [ref=e645] [box=100,8,1324,30]:
+      - generic [ref=e649] [box=104,8,667,30]:
+        - button "Dashboard" [ref=e651] [box=113,13,85,20]
+        - button "Dashboard" [ref=e656] [box=222,13,85,20]
+        - button "Live Processes" [ref=e661] [box=331,15,77,16]
+        - button "TetrisGame · Live Processes" [ref=e664] [box=432,15,144,16]
+      - generic [ref=e667] [box=791,10,633,26]:
+        - generic [ref=e668] [box=791,10,207,26]
+        - generic [ref=e671] [box=1006,10,83,26]: TetrisGame
+        - generic [ref=e672] [box=1096,10,44,26]: WIP
+        - generic [ref=e673] [box=1148,10,117,26]: Interactive Server
+        - generic [ref=e674] [box=1273,10,86,26]: Live items 0
+        - generic [ref=e675] [box=1368,10,56,26]: Tabs 4
+    - generic [ref=e678] [box=100,46,1324,896]:
+      - generic [ref=e681] [box=117,63,1290,36]:
+        - generic [ref=e682] [box=117,70,1198,22]
+        - generic [ref=e697] [box=1327,63,80,36]
+      - generic [ref=e707] [box=100,132,1324,810]:
+        - generic [ref=e709] [box=113,145,588,22]
+        - generic [ref=e729] [box=100,192,1324,750]

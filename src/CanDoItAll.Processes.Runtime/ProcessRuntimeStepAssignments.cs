@@ -8,6 +8,8 @@ public sealed record ProcessRuntimeStepAssignment(
     ProcessStepInstanceId StepInstanceId,
     string StepKey,
     string RoleKey,
+    string RoleResourceKey,
+    string RoleDisplayName,
     string ExecutorKind,
     string ExecutorId,
     string ExecutorDisplayName,

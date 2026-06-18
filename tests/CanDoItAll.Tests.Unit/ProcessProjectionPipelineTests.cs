@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Contracts;
@@ -102,7 +103,7 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
-    public async Task Live_last_hour_query_includes_active_runs_outside_window()
+    public async Task Live_last_hour_query_excludes_stale_active_runs()
     {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessProjectionStore(dbContext);
@@ -115,10 +116,209 @@ public sealed class ProcessProjectionPipelineTests
 
         var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
 
-        var run = Assert.Single(live.Runs);
-        Assert.Equal(runId, run.RunId);
-        Assert.True(run.IsActive);
-        Assert.Equal(Now.AddHours(-2), run.LastEventAtUtc);
+        Assert.Empty(live.Runs);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_projects_active_agents_from_running_step_assignments()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    stepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Running,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    claimToken,
+                    CompletedResultKey: null)
+            ],
+            [
+                new DispatchClaimState(
+                    claimToken,
+                    stepId,
+                    new DispatcherOwnerId("unit-test-dispatcher"),
+                    DispatchClaimStatus.Claimed,
+                    AttemptNumber: 1,
+                    Now.AddMinutes(-5),
+                    Now.AddMinutes(25),
+                    RenewedAtUtc: null,
+                    ResultIdempotencyKey: null)
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var assignment = new ProcessRuntimeStepAssignment(
+            runId,
+            planId,
+            stepId,
+            "implementation",
+            "lead-engineer",
+            "lead-engineer",
+            "Lead engineer",
+            ProcessLaunchExecutorKinds.Agent,
+            "agent-dotnet-developer",
+            ".NET Developer",
+            "Implement the selected slice.",
+            "sha256:readiness",
+            "Matched role and workspace tool readiness.",
+            [],
+            [],
+            [ProcessOperationContractNames.MutateProductTarget, ProcessOperationContractNames.RunValidation],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            new Dictionary<string, string>(),
+            BranchGate: null,
+            Now.AddMinutes(-6));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore([assignment]));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var activeAgent = Assert.Single(workspace.ActiveAgents);
+        Assert.Equal(runId.Value, activeAgent.RunId);
+        Assert.Equal(stepId.Value, activeAgent.StepInstanceId);
+        Assert.Equal("implementation", activeAgent.StepKey);
+        Assert.Equal("lead-engineer", activeAgent.RoleKey);
+        Assert.Equal(".NET Developer", activeAgent.ExecutorDisplayName);
+        Assert.Equal(ProcessRuntimeStepStatus.Running.ToString(), activeAgent.Status);
+        Assert.True(activeAgent.IsWorking);
+        Assert.False(activeAgent.IsLeaseExpired);
+        Assert.Equal(Now.AddMinutes(-5), activeAgent.ClaimedAtUtc);
+        Assert.Equal(Now.AddMinutes(25), activeAgent.LeaseExpiresAtUtc);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_active_agents_include_only_live_nonstale_execution_observations()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var runningStepId = ProcessStepInstanceId.New();
+        var completedStepId = ProcessStepInstanceId.New();
+        var staleStepId = ProcessStepInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var assignments = new[]
+        {
+            CreateAssignment(runId, planId, runningStepId, "implementation", ".NET Developer"),
+            CreateAssignment(runId, planId, completedStepId, "peer-review", ".NET QA Review Lead"),
+            CreateAssignment(runId, planId, staleStepId, "qa-validation", "Delivery QA Observer")
+        };
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(assignments),
+            new InMemoryObservationReader(
+                CreateObservation(runId, runningStepId, ".NET Developer", "Running", Now.AddMinutes(-1)),
+                CreateObservation(runId, completedStepId, ".NET QA Review Lead", "Completed", Now.AddMinutes(-1)),
+                CreateObservation(runId, staleStepId, "Delivery QA Observer", "Running", Now.AddMinutes(-31))));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var activeAgent = Assert.Single(workspace.ActiveAgents);
+        Assert.Equal(runningStepId.Value, activeAgent.StepInstanceId);
+        Assert.Equal(".NET Developer", activeAgent.ExecutorDisplayName);
+        Assert.True(activeAgent.IsWorking);
+        Assert.Equal("AgentFramework execution run", activeAgent.ObservationSource);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_active_agents_omit_missing_evidence_claims_when_observation_reader_is_available()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                CreateStepState(stepId, claimToken)
+            ],
+            [
+                CreateClaim(stepId, claimToken, Now.AddMinutes(-1), Now.AddMinutes(29))
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, stepId, "feature-intake", "Programming Workspace Analyst")
+            ]),
+            new InMemoryObservationReader());
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        Assert.Empty(workspace.ActiveAgents);
     }
 
     [Fact]
@@ -293,6 +493,107 @@ public sealed class ProcessProjectionPipelineTests
         return new ProcessStoredRuntimeEvent(globalSequence, globalSequence, envelope);
     }
 
+    private static ProcessRuntimeStepAssignment CreateAssignment(
+        ProcessRunId runId,
+        ProcessInstancePlanId planId,
+        ProcessStepInstanceId stepId,
+        string stepKey,
+        string executorDisplayName)
+    {
+        return new ProcessRuntimeStepAssignment(
+            runId,
+            planId,
+            stepId,
+            stepKey,
+            "lead-engineer",
+            "lead-engineer",
+            "Lead engineer",
+            ProcessLaunchExecutorKinds.Agent,
+            Guid.NewGuid().ToString("D"),
+            executorDisplayName,
+            $"Execute {stepKey}.",
+            "sha256:readiness",
+            "Matched role and workspace tool readiness.",
+            [],
+            [],
+            [ProcessOperationContractNames.ReadProjectStructure],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            new Dictionary<string, string>(),
+            BranchGate: null,
+            Now.AddMinutes(-6));
+    }
+
+    private static ProcessRuntimeStepState CreateStepState(
+        ProcessStepInstanceId stepId,
+        DispatchClaimToken claimToken)
+    {
+        return new ProcessRuntimeStepState(
+            stepId,
+            ProcessStepDefinitionId.New(),
+            ProcessRuntimeStepStatus.Running,
+            IsExecutable: true,
+            AttemptNumber: 1,
+            DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+            RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+            claimToken,
+            CompletedResultKey: null);
+    }
+
+    private static DispatchClaimState CreateClaim(
+        ProcessStepInstanceId stepId,
+        DispatchClaimToken claimToken,
+        DateTimeOffset createdAtUtc,
+        DateTimeOffset expiresAtUtc)
+    {
+        return new DispatchClaimState(
+            claimToken,
+            stepId,
+            new DispatcherOwnerId("unit-test-dispatcher"),
+            DispatchClaimStatus.Claimed,
+            AttemptNumber: 1,
+            createdAtUtc,
+            expiresAtUtc,
+            RenewedAtUtc: null,
+            ResultIdempotencyKey: null);
+    }
+
+    private static ProcessExecutionObservation CreateObservation(
+        ProcessRunId runId,
+        ProcessStepInstanceId stepId,
+        string agentName,
+        string state,
+        DateTimeOffset updatedAtUtc)
+    {
+        var isTerminal = string.Equals(state, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(state, "Failed", StringComparison.OrdinalIgnoreCase);
+        return new ProcessExecutionObservation(
+            Guid.NewGuid(),
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            agentName,
+            "OpenAI default",
+            "gpt-test",
+            state,
+            isTerminal ? "Succeeded" : string.Empty,
+            updatedAtUtc.AddMinutes(-1),
+            updatedAtUtc,
+            updatedAtUtc.AddMinutes(-1),
+            isTerminal ? updatedAtUtc : null,
+            $"Input for {agentName}.",
+            isTerminal ? "Execution run response persisted." : string.Empty,
+            [
+                new ProcessExecutionActivityObservation(
+                    updatedAtUtc,
+                    state,
+                    "Execution",
+                    $"{agentName} is {state}.")
+            ],
+            [],
+            [],
+            LastError: string.Empty);
+    }
+
     private sealed class RecordingRuntimeEventReplayStore(params ProcessStoredRuntimeEvent[] events) : IProcessRuntimeEventReplayStore
     {
         private readonly IReadOnlyList<ProcessStoredRuntimeEvent> events = events;
@@ -324,6 +625,60 @@ public sealed class ProcessProjectionPipelineTests
                 .Take(take)
                 .ToArray();
             return Task.FromResult(result);
+        }
+    }
+
+    private sealed class InMemoryRuntimeStateStore(ProcessRuntimeStateSnapshot state) : IProcessRuntimeStateStore
+    {
+        public Task<ProcessRuntimeStateSnapshot?> LoadAsync(
+            ProcessRunId runId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<ProcessRuntimeStateSnapshot?>(state.RunId == runId ? state : null);
+    }
+
+    private sealed class InMemoryAssignmentStore(IReadOnlyList<ProcessRuntimeStepAssignment> assignments) : IProcessRuntimeStepAssignmentStore
+    {
+        public ValueTask SaveAsync(
+            IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
+            CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunAsync(
+            ProcessRunId runId,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(assignments.Where(assignment => assignment.RunId == runId).ToArray() as IReadOnlyList<ProcessRuntimeStepAssignment>);
+
+        public ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
+            IReadOnlyDictionary<string, string> requiredVariables,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyList<ProcessRuntimeStepAssignment>>([]);
+
+        public ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
+            ProcessRunId runId,
+            ProcessStepInstanceId stepInstanceId,
+            CancellationToken cancellationToken = default)
+        {
+            var assignment = assignments.FirstOrDefault(item => item.RunId == runId && item.StepInstanceId == stepInstanceId);
+            return ValueTask.FromResult(assignment);
+        }
+    }
+
+    private sealed class InMemoryObservationReader(params ProcessExecutionObservation[] observations) : IProcessExecutionObservationReader
+    {
+        public ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
+            ProcessExecutionObservationQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            var runIds = query.RunIds.ToHashSet();
+            IReadOnlyList<ProcessExecutionObservation> result = observations
+                .Where(observation =>
+                    runIds.Contains(observation.RunId) &&
+                    observation.UpdatedAtUtc >= query.FromUtc &&
+                    observation.UpdatedAtUtc <= query.ToUtc)
+                .OrderByDescending(observation => observation.UpdatedAtUtc)
+                .Take(query.TakePerRun * Math.Max(1, query.RunIds.Count))
+                .ToArray();
+            return ValueTask.FromResult(result);
         }
     }
 

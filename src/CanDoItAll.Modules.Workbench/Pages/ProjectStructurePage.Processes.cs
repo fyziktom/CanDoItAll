@@ -314,11 +314,13 @@ public partial class ProjectStructurePage
                 return;
             }
 
+            var feedbackMessage = $"{dialog.NodeTitle} started for {dialog.TargetNodeTitle}.";
             processStartDialog = null;
-            await TryLinkStartedProcessRunAsync(dialog.TargetNodeId, result.RunId.Value);
-            workflowFeedback = $"{dialog.NodeTitle} started for {dialog.TargetNodeTitle}.";
+            workflowFeedback = feedbackMessage;
             workflowFeedbackTone = "mint";
-            Navigation.NavigateTo(result.Route);
+            await InvokeAsync(StateHasChanged);
+            await TryLinkStartedProcessRunAsync(dialog.TargetNodeId, result.RunId.Value);
+            Navigation.NavigateTo(AppendProcessStartedQuery(result.Route));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -378,6 +380,17 @@ public partial class ProjectStructurePage
         {
             await SetProcessActionExceptionAsync(exception, "preparing the process launch preview");
         }
+    }
+
+    private static string AppendProcessStartedQuery(string route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return "/processes/live?processStarted=1";
+        }
+
+        var separator = route.Contains('?', StringComparison.Ordinal) ? '&' : '?';
+        return $"{route}{separator}processStarted=1";
     }
 
     private Task SelectProcessStartCandidateAsync(ProjectStructureProcessStartCandidateSelection selection)
@@ -808,8 +821,9 @@ public partial class ProjectStructurePage
 
         foreach (var metadata in processStartAgentMetadataById.Values
             .Where(agent => !selectedAgentId.HasValue || agent.AgentId != selectedAgentId.Value)
-            .Select(agent => new { Agent = agent, Score = ScoreAgentForStep(agent, step) })
-            .OrderByDescending(item => item.Score)
+            .Select(agent => new { Agent = agent, Readiness = EvaluateAgentForStep(agent, step) })
+            .Where(item => item.Readiness.IsExecutionReady && item.Readiness.HasRoleFit)
+            .OrderByDescending(item => item.Readiness.Score)
             .ThenBy(item => item.Agent.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Take(8))
         {
@@ -817,7 +831,7 @@ public partial class ProjectStructurePage
                 step,
                 metadata.Agent.AgentId,
                 isSelected: false,
-                isRecommended: metadata.Score > 0));
+                isRecommended: true));
         }
 
         if (candidates.Count == 0)
@@ -850,21 +864,30 @@ public partial class ProjectStructurePage
         processStartAgentMetadataById.TryGetValue(agentId, out var metadata);
         var displayName = metadata?.DisplayName ??
             (!string.IsNullOrWhiteSpace(step.ExecutorDisplayName) ? step.ExecutorDisplayName : $"Agent {agentId:D}");
-        var roleScore = metadata is null ? 0 : ScoreAgentForStep(metadata, step);
+        var readiness = metadata is null ? null : EvaluateAgentForStep(metadata, step);
+        var isResolvable = metadata is null || readiness?.IsExecutionReady == true;
+        var isRoleFit = metadata is null || readiness?.HasRoleFit == true;
+        var isReadyRecommendation = isRecommended && isResolvable && isRoleFit;
+        var roleScore = readiness?.Score ?? 0;
+        var summary = readiness is null
+            ? $"Available active agent for step '{step.StepKey}'."
+            : readiness.IsExecutionReady && readiness.HasRoleFit
+                ? $"{readiness.MatchSummary}. {readiness.ReadinessSummary}"
+                : readiness.ReadinessSummary;
         return new ProjectStructureProcessStartCandidateState(
             agentId,
             agentId,
             displayName,
             "Agent",
             string.IsNullOrWhiteSpace(step.ExecutorKind) ? ProcessLaunchExecutorKinds.Agent : step.ExecutorKind,
-            $"{Math.Max(1, roleScore) / 10.0:0.0} score",
+            $"{Math.Max(0, roleScore) / 10.0:0.0} score",
             isSelected,
-            isRecommended,
-            RequiresProvisioning: false,
-            IsResolvable: true,
-            isRecommended
+            isReadyRecommendation,
+            RequiresProvisioning: !isResolvable,
+            IsResolvable: isResolvable,
+            isReadyRecommendation
                 ? $"Recommended for role '{step.RoleKey}' on step '{step.StepKey}'."
-                : $"Available active agent for step '{step.StepKey}'.",
+                : summary,
             metadata?.StatusLabel ?? "Active",
             metadata?.ProviderName ?? "agent-directory",
             metadata?.ProviderName ?? string.Empty,
@@ -1168,41 +1191,31 @@ public partial class ProjectStructurePage
     }
 
     private static string ResolveStepDisplayName(ProcessLaunchStepView step)
-        => string.IsNullOrWhiteSpace(step.RoleKey)
+        => string.IsNullOrWhiteSpace(ResolveStepRoleLabel(step))
             ? step.Title
-            : $"{step.Title} ({step.RoleKey})";
+            : $"{step.Title} ({ResolveStepRoleLabel(step)})";
 
-    private static int ScoreAgentForStep(
+    private static AgentProcessRoleReadinessResult EvaluateAgentForStep(
         ProjectStructureProcessStartAgentMetadata metadata,
         ProcessLaunchStepView step)
     {
-        var score = 10;
-        score += ContainsNormalized(metadata.RoleTitle, step.RoleKey) ? 30 : 0;
-        score += ContainsNormalized(metadata.DisplayName, step.RoleKey) ? 20 : 0;
-        score += ContainsNormalized(metadata.Summary, step.RoleKey) ? 10 : 0;
-        score += ContainsNormalized(metadata.RoleTitle, step.Title) ? 10 : 0;
-        score += metadata.Tags.Any(tag => ContainsNormalized(tag, step.RoleKey)) ? 20 : 0;
-        return score;
+        return AgentProcessReadinessEvaluator.Evaluate(
+            metadata.Agent,
+            new AgentProcessRoleReadinessRequest(
+                step.StepKey,
+                step.Title,
+                step.RoleKey,
+                step.RoleResourceKey,
+                ResolveStepRoleLabel(step),
+                step.AllowedOperations,
+                step.OperationTargetScope));
     }
 
-    private static bool ContainsNormalized(string source, string value)
-    {
-        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return source.Contains(value, StringComparison.OrdinalIgnoreCase) ||
-               NormalizeToken(source).Contains(NormalizeToken(value), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeToken(string value)
-        => new(value
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToLowerInvariant)
-            .ToArray());
+    private static string ResolveStepRoleLabel(ProcessLaunchStepView step)
+        => FirstNonEmpty(step.RoleDisplayName, step.RoleResourceKey, step.RoleKey);
 
     private sealed record ProjectStructureProcessStartAgentMetadata(
+        AgentDefinition Agent,
         Guid AgentId,
         string DisplayName,
         string ProviderName,
@@ -1223,6 +1236,7 @@ public partial class ProjectStructurePage
             var toolNames = agent.Capabilities
                 .Where(item => item.Kind is not CapabilityKind.Skill)
                 .Select(ResolveCapabilityDisplayName)
+                .Concat(AgentProcessReadinessEvaluator.ResolveWorkspaceToolNames(agent))
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
@@ -1236,6 +1250,7 @@ public partial class ProjectStructurePage
                 .ToList();
 
             return new ProjectStructureProcessStartAgentMetadata(
+                agent,
                 agent.Id,
                 agent.Name,
                 provider?.Name ?? string.Empty,

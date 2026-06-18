@@ -13562,6 +13562,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("RoleResourceKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("RoleDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<string>("StepKey")
                         .IsRequired()
                         .HasMaxLength(256)

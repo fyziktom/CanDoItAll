@@ -38,7 +38,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAnalyticsService>();
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectStructureProcessLaunchVariableContributor, DotNetSolutionSetupLaunchVariableContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectStructureProcessLaunchVariableContributor, DotNetProcessLaunchVariableContributor>());
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>

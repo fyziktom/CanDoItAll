@@ -308,6 +308,8 @@ public sealed class ProcessPersistenceStoreTests
             stepId,
             "implement-blazor-change",
             "blazor-engineer",
+            "lead-engineer",
+            "Blazor engineer",
             ProcessLaunchExecutorKinds.Agent,
             Guid.NewGuid().ToString("D"),
             "Blazor engineer",
@@ -330,6 +332,9 @@ public sealed class ProcessPersistenceStoreTests
         var loaded = await store.LoadAsync(runId, stepId);
 
         Assert.NotNull(loaded);
+        Assert.Equal("blazor-engineer", loaded.RoleKey);
+        Assert.Equal("lead-engineer", loaded.RoleResourceKey);
+        Assert.Equal("Blazor engineer", loaded.RoleDisplayName);
         Assert.Equal(ProcessOperationContractNames.ExternalProductTargetMutable, loaded.OperationTargetScope);
         Assert.Contains(ProcessOperationContractNames.MutateProductTarget, loaded.AllowedOperations);
         Assert.True(loaded.LaunchVariables.TryGetValue("RepositoryRoot", out var repositoryRoot));
@@ -554,6 +559,8 @@ public sealed class ProcessPersistenceStoreTests
             ProcessStepInstanceId.New(),
             "test-step",
             "test-role",
+            "test-role",
+            "Test role",
             ProcessLaunchExecutorKinds.Agent,
             Guid.NewGuid().ToString("D"),
             "Test executor",

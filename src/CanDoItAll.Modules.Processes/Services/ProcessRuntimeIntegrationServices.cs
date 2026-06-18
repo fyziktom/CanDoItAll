@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
@@ -71,6 +72,13 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         var profileAssignmentByStep = request.LiveRunProfile?.Assignments
             .ToDictionary(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase) ??
             new Dictionary<string, ProcessTemplateLiveRunAssignmentDocument>(StringComparer.OrdinalIgnoreCase);
+        var overrideByStepKey = request.ExecutorOverrides
+            .Where(item => !string.IsNullOrWhiteSpace(item.StepKey))
+            .GroupBy(item => item.StepKey.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Last(),
+                StringComparer.OrdinalIgnoreCase);
         var bindings = new List<ProcessLaunchExecutorBinding>();
         var findings = new List<ProcessLaunchReadinessFinding>();
 
@@ -87,10 +95,11 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             }
 
             profileAssignmentByStep.TryGetValue(planStep.StepKey, out var profileAssignment);
+            overrideByStepKey.TryGetValue(planStep.StepKey, out var executorOverride);
             var roleKey = ResolveRoleKey(templateStep, profileAssignment);
             var role = roleByKey.GetValueOrDefault(roleKey);
             var roleQuery = ResolveRoleQuery(roleKey, role);
-            var requestedExecutorKind = ResolveExecutorKind(profileAssignment, role);
+            var requestedExecutorKind = ResolveExecutorKind(profileAssignment, role, executorOverride);
             if (!ProcessLaunchExecutorKinds.CanResolveAsAgent(requestedExecutorKind))
             {
                 findings.Add(new ProcessLaunchReadinessFinding(
@@ -102,15 +111,29 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 continue;
             }
 
-            var candidate = SelectAgent(roleQuery, agents, providerById, providerProfileService);
+            var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role);
+            var candidate = executorOverride is null
+                ? SelectAgent(readinessRequest, agents, providerById, providerProfileService)
+                : ResolveOverrideAgent(executorOverride, agents, providerById, providerProfileService, findings, planStep.StepKey, roleKey);
             if (candidate is null)
             {
-                findings.Add(new ProcessLaunchReadinessFinding(
-                    ProcessLaunchReadinessSeverity.Error,
-                    "process.launch.agent_missing",
-                    FormatMissingAgentMessage(roleQuery, planStep.StepKey),
-                    planStep.StepKey,
-                    roleKey));
+                if (executorOverride is null)
+                {
+                    findings.Add(new ProcessLaunchReadinessFinding(
+                        ProcessLaunchReadinessSeverity.Error,
+                        "process.launch.agent_missing",
+                        FormatMissingAgentMessage(roleQuery, planStep.StepKey),
+                        planStep.StepKey,
+                        roleKey));
+                }
+
+                continue;
+            }
+
+            var readiness = AgentProcessReadinessEvaluator.Evaluate(candidate.Agent, readinessRequest);
+            if (!readiness.IsExecutionReady)
+            {
+                AddReadinessFindings(findings, readiness, planStep.StepKey, roleKey);
                 continue;
             }
 
@@ -120,8 +143,8 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 ProcessLaunchExecutorKinds.Agent,
                 candidate.Agent.Id.ToString("D"),
                 candidate.Agent.Name,
-                ComputeHash($"{planStep.StepKey}|{roleKey}|{candidate.Agent.Id:D}|{candidate.Provider.Id:D}|{candidate.Provider.IsEnabled}"),
-                ResolveAssignmentReason(profileAssignment, candidate, roleQuery, requestedExecutorKind)));
+                readiness.ReadinessHash,
+                ResolveAssignmentReason(profileAssignment, executorOverride, candidate, roleQuery, requestedExecutorKind)));
         }
 
         if (findings.Count == 0)
@@ -152,8 +175,14 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
     private static string ResolveExecutorKind(
         ProcessTemplateLiveRunAssignmentDocument? assignment,
-        ProcessTemplateDefinitionRoleUsageDocument? role)
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        ProcessLaunchExecutorOverride? executorOverride)
     {
+        if (!string.IsNullOrWhiteSpace(executorOverride?.ExecutorKind))
+        {
+            return executorOverride.ExecutorKind.Trim();
+        }
+
         if (!string.IsNullOrWhiteSpace(assignment?.ExecutorKind))
         {
             return assignment.ExecutorKind.Trim();
@@ -200,34 +229,35 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
     private static string ResolveAssignmentReason(
         ProcessTemplateLiveRunAssignmentDocument? profileAssignment,
+        ProcessLaunchExecutorOverride? executorOverride,
         AgentProviderCandidate candidate,
         ProcessRoleQuery roleQuery,
         string requestedExecutorKind)
     {
+        if (!string.IsNullOrWhiteSpace(executorOverride?.AssignmentReason))
+        {
+            return $"{executorOverride.AssignmentReason.Trim()} {candidate.ReadinessSummary}";
+        }
+
         if (!string.IsNullOrWhiteSpace(profileAssignment?.BindingReason))
         {
-            return profileAssignment.BindingReason.Trim();
+            return $"{profileAssignment.BindingReason.Trim()} {candidate.ReadinessSummary}";
         }
 
         if (string.Equals(requestedExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase))
         {
-            return $"Resolved active agent '{candidate.Agent.Name}' by role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}.";
+            return $"Resolved active agent '{candidate.Agent.Name}' by role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}. {candidate.ReadinessSummary}";
         }
 
-        return $"Resolved active agent '{candidate.Agent.Name}' by hybrid executor intent '{requestedExecutorKind}' for role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}.";
+        return $"Resolved active agent '{candidate.Agent.Name}' by hybrid executor intent '{requestedExecutorKind}' for role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}. {candidate.ReadinessSummary}";
     }
 
     private static AgentProviderCandidate? SelectAgent(
-        ProcessRoleQuery roleQuery,
+        AgentProcessRoleReadinessRequest readinessRequest,
         IReadOnlyList<AgentDefinition> agents,
         IReadOnlyDictionary<Guid, ProviderProfile> providerById,
         IProviderProfileService providerProfileService)
     {
-        var roleTokens = roleQuery.MatchKeys
-            .SelectMany(ExtractTokens)
-            .Where(token => !IgnoredRoleTokens.Contains(token))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
         var matches = new List<AgentRoleMatch>();
 
         foreach (var agent in agents
@@ -242,26 +272,16 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 continue;
             }
 
-            var exactMatch = CalculateBestExactRoleMatch(agent, roleQuery.MatchKeys);
-            var exactScore = exactMatch.Score;
-            if (exactScore > 0)
+            var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, readinessRequest);
+            if (readiness.IsExecutionReady && readiness.HasRoleFit)
             {
                 matches.Add(new AgentRoleMatch(
                     agent,
                     provider,
-                    1_000 + exactScore,
-                    $"exact process role metadata for '{exactMatch.MatchKey}'"));
-                continue;
-            }
-
-            var roleMatch = CalculateSemanticRoleMatch(agent, roleTokens);
-            if (roleMatch.Score > 0)
-            {
-                matches.Add(new AgentRoleMatch(
-                    agent,
-                    provider,
-                    roleMatch.Score,
-                    roleMatch.Summary));
+                    readiness.Score,
+                    readiness.MatchSummary,
+                    readiness.ReadinessHash,
+                    readiness.ReadinessSummary));
             }
         }
 
@@ -276,7 +296,112 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 bestMatch.Agent,
                 bestMatch.Provider,
                 bestMatch.Score,
-                bestMatch.Summary);
+                bestMatch.Summary,
+                bestMatch.ReadinessHash,
+                bestMatch.ReadinessSummary);
+    }
+
+    private static AgentProviderCandidate? ResolveOverrideAgent(
+        ProcessLaunchExecutorOverride executorOverride,
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService,
+        List<ProcessLaunchReadinessFinding> findings,
+        string stepKey,
+        string roleKey)
+    {
+        if (!Guid.TryParse(executorOverride.ExecutorId, out var agentId) || agentId == Guid.Empty)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.override_agent_invalid",
+                $"Step '{stepKey}' role '{roleKey}' selected invalid agent id '{executorOverride.ExecutorId}'.",
+                stepKey,
+                roleKey));
+            return null;
+        }
+
+        var agent = agents.FirstOrDefault(candidate => candidate.Id == agentId);
+        if (agent is null || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.override_agent_unavailable",
+                $"Step '{stepKey}' role '{roleKey}' selected unavailable agent '{executorOverride.ExecutorDisplayName}'.",
+                stepKey,
+                roleKey));
+            return null;
+        }
+
+        if (agent.ProviderProfileId is not { } providerId ||
+            !providerById.TryGetValue(providerId, out var provider) ||
+            !provider.IsEnabled ||
+            !providerProfileService.ResolveFeatureMatrix(provider).SupportsStructuredOutput)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.override_provider_unavailable",
+                $"Step '{stepKey}' role '{roleKey}' selected agent '{agent.Name}' without an enabled structured-output-capable provider.",
+                stepKey,
+                roleKey));
+            return null;
+        }
+
+        return new AgentProviderCandidate(
+            agent,
+            provider,
+            0,
+            "manual launch review selection",
+            string.Empty,
+            string.Empty);
+    }
+
+    private static AgentProcessRoleReadinessRequest CreateReadinessRequest(
+        string stepKey,
+        ProcessTemplateDefinitionStepDocument templateStep,
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        return new AgentProcessRoleReadinessRequest(
+            stepKey,
+            templateStep.Title,
+            roleKey,
+            role?.RoleResourceKey ?? string.Empty,
+            role?.DisplayName ?? roleKey,
+            NormalizeOperations(templateStep.AllowedOperations),
+            NormalizeOptional(templateStep.OperationTargetScope));
+    }
+
+    private static void AddReadinessFindings(
+        List<ProcessLaunchReadinessFinding> findings,
+        AgentProcessRoleReadinessResult readiness,
+        string stepKey,
+        string roleKey)
+    {
+        foreach (var finding in readiness.Findings.Where(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error))
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                finding.Code,
+                finding.Message,
+                stepKey,
+                roleKey));
+        }
+    }
+
+    private static IReadOnlyList<string> NormalizeOperations(IEnumerable<string> operations)
+    {
+        return operations
+            .Where(operation => !string.IsNullOrWhiteSpace(operation))
+            .Select(operation => operation.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(operation => operation, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static string NormalizeOptional(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
     }
 
     private static ExactRoleMatch CalculateBestExactRoleMatch(
@@ -613,11 +738,34 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
     private static readonly HashSet<string> IgnoredRoleTokens = new(StringComparer.OrdinalIgnoreCase)
     {
+        "a",
+        "add",
         "agent",
+        "an",
+        "and",
+        "application",
+        "app",
+        "bounded",
+        "change",
+        "code",
+        "create",
+        "focused",
+        "feature",
+        "function",
+        "in",
+        "of",
+        "or",
+        "project",
         "process",
         "role",
         "runtime",
-        "step"
+        "solution",
+        "step",
+        "subprocess",
+        "the",
+        "through",
+        "to",
+        "with"
     };
 
     private static readonly HashSet<string> TechnologyRoleTokens = new(StringComparer.OrdinalIgnoreCase)
@@ -637,16 +785,17 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     private static readonly HashSet<string> ArchitectureTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
     {
         "architect",
-        "architecture",
-        "solution"
+        "architecture"
     };
 
     private static readonly HashSet<string> EngineeringTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
     {
         "developer",
         "engineer",
+        "implement",
         "implementation",
-        "programming"
+        "programming",
+        "scaffold"
     };
 
     private static readonly HashSet<string> QualityTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
@@ -708,9 +857,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         "delivery",
         "evidence",
         "governance",
-        "lead",
         "manager",
-        "owner",
         "release"
     ];
 
@@ -727,9 +874,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     [
         "coordination",
         "coordinator",
-        "lead",
-        "manager",
-        "owner"
+        "manager"
     ];
 
     private static readonly string[] ProductRoleAliases =
@@ -745,10 +890,11 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     private static readonly string[] OwnerRoleAliases =
     [
         "business",
-        "delivery",
-        "manager",
         "owner",
         "planning",
+        "product",
+        "requirements",
+        "scope",
         "strategy"
     ];
 
@@ -788,7 +934,9 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         AgentDefinition Agent,
         ProviderProfile Provider,
         int Score,
-        string Summary);
+        string Summary,
+        string ReadinessHash,
+        string ReadinessSummary);
 
     private sealed record ProcessRoleQuery(
         string BindingRoleKey,
@@ -812,7 +960,9 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         AgentDefinition Agent,
         ProviderProfile Provider,
         int MatchScore,
-        string MatchSummary);
+        string MatchSummary,
+        string ReadinessHash,
+        string ReadinessSummary);
 }
 
 internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefBuilder
@@ -840,7 +990,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         Project node id: {request.LaunchRequest.ProjectNodeId ?? "not scoped"}
 
         AgentFramework evidence write rule:
-        Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Include the written managed artifact paths in evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
+        Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths in evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
 
         AgentFramework subprocess adapter guidance:
         {subprocessGuidance}
@@ -881,8 +1031,13 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
 
 internal sealed class AgentFrameworkProcessExecutionAdapter(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    IProcessRuntimeStepAssignmentStore assignmentStore) : IProcessExecutionAdapter
+    IProcessRuntimeStepAssignmentStore assignmentStore,
+    IProcessRuntimeStateStore stateStore) : IProcessExecutionAdapter
 {
+    private static readonly Regex ProcessRunIdPattern = new(
+        @"(?<![0-9a-fA-F])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![0-9a-fA-F])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
@@ -902,6 +1057,17 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             return Failed("process.adapter.assignment_missing", $"No runtime assignment exists for step '{stepId}'.", stepId.ToString());
         }
 
+        if (await TryResolveExistingPendingChildRunAsync(
+                assignment,
+                assignmentStore,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } existingPendingChildRunId)
+        {
+            throw new ProcessRuntimeDispatchDeferredException(
+                $"Step '{assignment.StepKey}' is waiting for active child process run '{existingPendingChildRunId}'.",
+                existingPendingChildRunId);
+        }
+
         if (!string.Equals(assignment.ExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase) ||
             !Guid.TryParse(assignment.ExecutorId, out var agentId))
         {
@@ -911,11 +1077,30 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
                 assignment.ExecutorId);
         }
 
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
+        var agent = agents.FirstOrDefault(candidate => candidate.Id == agentId);
+        if (agent is null)
+        {
+            return NeedsManager(
+                "process.adapter.executor_agent_missing",
+                $"Step '{assignment.StepKey}' is assigned to missing agent '{agentId}'.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:{agentId}");
+        }
+
+        var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, CreateRuntimeReadinessRequest(assignment));
+        if (!readiness.IsExecutionReady || !readiness.HasRoleFit)
+        {
+            return NeedsManager(
+                "process.adapter.executor_readiness_failed",
+                $"Step '{assignment.StepKey}' cannot run with assigned agent '{agent.Name}': {readiness.ReadinessSummary}",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:{agentId}:{readiness.ReadinessHash}");
+        }
+
         try
         {
             var metadataJson = BuildProcessExecutionMetadata(assignment);
-            var result = await workspaceFactory
-                .GetOrganizationWorkspaceService()
+            var result = await workspaceService
                 .ExecuteRunAsync(
                     new ExecutionRunRequest(
                         agentId,
@@ -948,7 +1133,22 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
                     validation.RawOutputHash);
             }
 
+            if (await TryResolvePendingChildRunAsync(
+                    assignment,
+                    validation.Output,
+                    stateStore,
+                    cancellationToken).ConfigureAwait(false) is { } pendingChildRunId)
+            {
+                throw new ProcessRuntimeDispatchDeferredException(
+                    $"Step '{assignment.StepKey}' is waiting for active child process run '{pendingChildRunId}'.",
+                    pendingChildRunId);
+            }
+
             return ToAdapterResult(assignment, validation.Output, validation.RawOutputHash);
+        }
+        catch (ProcessRuntimeDispatchDeferredException)
+        {
+            throw;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -966,9 +1166,10 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             ? string.Empty
             : assignment.OperationTargetScope.Trim();
         var allowsProductMutation = AllowsProductMutation(allowedOperations, targetScope);
+        var allowsBrowserProof = AllowsBrowserRuntimeProof(allowedOperations);
         var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = true,
+            [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = allowsBrowserProof,
             [ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey] = allowedOperations,
             [ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey] = targetScope,
             [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = allowsProductMutation
@@ -1062,6 +1263,11 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool AllowsBrowserRuntimeProof(IReadOnlyList<string> allowedOperations)
+    {
+        return allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase);
+    }
+
     private static bool UsesExternalProductTarget(string targetScope)
     {
         return string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) ||
@@ -1090,9 +1296,180 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
         "OutputRootAlias",
         "ProductRoot",
         "ProductRootAlias",
-        "RepositoryRoot",
         "WorkspaceAlias"
     };
+
+    internal static async ValueTask<ProcessRunId?> TryResolvePendingChildRunAsync(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IProcessRuntimeStateStore stateStore,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(assignment);
+        ArgumentNullException.ThrowIfNull(output);
+        ArgumentNullException.ThrowIfNull(stateStore);
+
+        if (output.Status is not (ProcessStepOutcomeStatus.Blocked or ProcessStepOutcomeStatus.WaitingApproval) ||
+            !CanWaitOnControlledChildRun(assignment))
+        {
+            return null;
+        }
+
+        var currentState = await stateStore.LoadAsync(assignment.RunId, cancellationToken).ConfigureAwait(false);
+        if (currentState is null)
+        {
+            return null;
+        }
+
+        foreach (var candidateRunId in ExtractReferencedRunIds(output))
+        {
+            var pendingRunId = await TryResolveNonTerminalProcessTreeRunAsync(
+                assignment.RunId,
+                currentState,
+                candidateRunId,
+                stateStore,
+                cancellationToken).ConfigureAwait(false);
+            if (pendingRunId is not null)
+            {
+                return pendingRunId;
+            }
+        }
+
+        return null;
+    }
+
+    internal static async ValueTask<ProcessRunId?> TryResolveExistingPendingChildRunAsync(
+        ProcessRuntimeStepAssignment assignment,
+        IProcessRuntimeStepAssignmentStore assignmentStore,
+        IProcessRuntimeStateStore stateStore,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(assignment);
+        ArgumentNullException.ThrowIfNull(assignmentStore);
+        ArgumentNullException.ThrowIfNull(stateStore);
+
+        if (!CanWaitOnControlledChildRun(assignment))
+        {
+            return null;
+        }
+
+        var currentState = await stateStore.LoadAsync(assignment.RunId, cancellationToken).ConfigureAwait(false);
+        if (currentState is null)
+        {
+            return null;
+        }
+
+        var childAssignments = await assignmentStore
+            .FindByLaunchVariablesAsync(
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["ParentProcessRunId"] = assignment.RunId.ToString(),
+                    ["ParentProcessStepId"] = assignment.StepInstanceId.ToString()
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var candidateRunId in childAssignments
+            .OrderByDescending(childAssignment => childAssignment.CreatedAtUtc)
+            .Select(childAssignment => childAssignment.RunId)
+            .Distinct())
+        {
+            var pendingRunId = await TryResolveNonTerminalProcessTreeRunAsync(
+                assignment.RunId,
+                currentState,
+                candidateRunId,
+                stateStore,
+                cancellationToken).ConfigureAwait(false);
+            if (pendingRunId is not null)
+            {
+                return pendingRunId;
+            }
+        }
+
+        return null;
+    }
+
+    private static async ValueTask<ProcessRunId?> TryResolveNonTerminalProcessTreeRunAsync(
+        ProcessRunId currentRunId,
+        ProcessRuntimeStateSnapshot currentState,
+        ProcessRunId candidateRunId,
+        IProcessRuntimeStateStore stateStore,
+        CancellationToken cancellationToken)
+    {
+        if (candidateRunId == currentRunId)
+        {
+            return null;
+        }
+
+        var candidateState = await stateStore.LoadAsync(candidateRunId, cancellationToken).ConfigureAwait(false);
+        if (candidateState is null ||
+            ProcessRuntimeTerminalStates.IsRunTerminal(candidateState.Status) ||
+            !IsSameProcessTree(currentState, candidateState))
+        {
+            return null;
+        }
+
+        return candidateRunId;
+    }
+
+    private static bool CanWaitOnControlledChildRun(ProcessRuntimeStepAssignment assignment)
+    {
+        return assignment.AllowedOperations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase) ||
+            string.Equals(assignment.OperationTargetScope, ProcessOperationContractNames.ExternalActionControlled, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSameProcessTree(
+        ProcessRuntimeStateSnapshot currentState,
+        ProcessRuntimeStateSnapshot candidateState)
+    {
+        return candidateState.RootRunId == currentState.RootRunId ||
+            candidateState.RootRunId == currentState.RunId ||
+            candidateState.RunId == currentState.RootRunId;
+    }
+
+    private static IReadOnlyList<ProcessRunId> ExtractReferencedRunIds(ProcessStepOutcomeResult output)
+    {
+        var runIds = new List<ProcessRunId>();
+        foreach (var text in EnumerateOutcomeText(output))
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            foreach (Match match in ProcessRunIdPattern.Matches(text))
+            {
+                if (Guid.TryParse(match.Value, out var runGuid))
+                {
+                    var runId = new ProcessRunId(runGuid);
+                    if (!runIds.Contains(runId))
+                    {
+                        runIds.Add(runId);
+                    }
+                }
+            }
+        }
+
+        return runIds;
+    }
+
+    private static IEnumerable<string?> EnumerateOutcomeText(ProcessStepOutcomeResult output)
+    {
+        yield return output.Reason;
+        yield return output.BranchOutcomeKey;
+        yield return output.BranchOutcomeTitle;
+        yield return output.HumanReadableSummaryMarkdown;
+
+        foreach (var evidenceRef in output.EvidenceRefs)
+        {
+            yield return evidenceRef;
+        }
+
+        foreach (var nextAction in output.NextActions)
+        {
+            yield return nextAction;
+        }
+    }
 
     private static class ProcessLaunchVariableNames
     {
@@ -1118,6 +1495,40 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             ProcessStepOutcomeStatus.Failed => StrategyOutcome.Failed,
             _ => StrategyOutcome.Failed
         };
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateProductMutationCompletion(assignment, output) is { } productMutationIssue)
+        {
+            var requestedArtifactSlots = assignment.ProducedArtifactSlotIds.Count > 0
+                ? assignment.ProducedArtifactSlotIds
+                : assignment.RequiredArtifactSlotIds;
+            return new ProcessExecutionAdapterResult(
+                StrategyOutcome.NeedsManager,
+                [],
+                requestedArtifactSlots
+                    .Select(slotId => new RequestedArtifactRef(
+                        slotId,
+                        ComputeHash($"{rawOutputHash}:requested:{slotId}:{productMutationIssue.Code}")))
+                    .ToArray(),
+                [
+                    new ProcessExecutionAdapterDiagnostic(
+                        new StrategyDiagnosticCode(productMutationIssue.Code),
+                        StrategyDiagnosticSensitivity.Normal,
+                        ComputeHash(productMutationIssue.Evidence),
+                        productMutationIssue.Summary,
+                        RestrictedEvidenceReference: null,
+                        productMutationIssue.RetrySafety,
+                        productMutationIssue.Idempotency)
+                ],
+                [
+                    new ManagerSignal(
+                        new ManagerSignalCode(productMutationIssue.Code),
+                        ComputeHash($"{rawOutputHash}:manager:{productMutationIssue.Code}:{productMutationIssue.Evidence}"),
+                        productMutationIssue.Summary)
+                ],
+                productMutationIssue.Summary,
+                ComputeHash($"{rawOutputHash}:{productMutationIssue.Code}:{productMutationIssue.Evidence}"));
+        }
+
         IReadOnlyList<ProducedArtifactRef> artifacts = outcome == StrategyOutcome.Succeeded
             ? assignment.ProducedArtifactSlotIds
                 .Select(slotId => new ProducedArtifactRef(
@@ -1154,6 +1565,114 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             rawOutputHash);
     }
 
+    private static ProductMutationCompletionIssue? ValidateProductMutationCompletion(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            !AllowsProductMutation(NormalizeOperations(assignment.AllowedOperations), assignment.OperationTargetScope))
+        {
+            return null;
+        }
+
+        if (output.EvidenceRefs.Count == 0 ||
+            output.EvidenceRefs.All(string.IsNullOrWhiteSpace))
+        {
+            return new ProductMutationCompletionIssue(
+                "process.adapter.product_output_evidence_missing",
+                $"Step '{assignment.StepKey}' claimed completion for a product-mutating scope but returned no evidence references.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:evidence-missing",
+                ProcessDiagnosticRetrySafety.SafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Idempotent);
+        }
+
+        if (!TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+        {
+            return null;
+        }
+
+        var inspection = InspectProductRoot(productRoot);
+        if (inspection.HasProductFiles)
+        {
+            return null;
+        }
+
+        return new ProductMutationCompletionIssue(
+            "process.adapter.product_output_missing",
+            inspection.Summary.Length == 0
+                ? $"Step '{assignment.StepKey}' claimed completion but the configured product output root '{productRoot}' contains no product files."
+                : $"Step '{assignment.StepKey}' claimed completion but the configured product output root '{productRoot}' is not usable: {inspection.Summary}",
+            productRoot,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static bool TryResolveInspectableProductRoot(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out string productRoot)
+    {
+        productRoot = FirstNonEmpty(
+            ResolveLaunchVariable(launchVariables, "OutputRoot"),
+            ResolveLaunchVariable(launchVariables, "ProductRoot"),
+            ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"));
+        if (string.IsNullOrWhiteSpace(productRoot) ||
+            productRoot.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase) ||
+            !Path.IsPathFullyQualified(productRoot))
+        {
+            productRoot = string.Empty;
+            return false;
+        }
+
+        productRoot = Path.GetFullPath(productRoot);
+        return true;
+    }
+
+    private static ProductRootInspection InspectProductRoot(string productRoot)
+    {
+        try
+        {
+            if (!Directory.Exists(productRoot))
+            {
+                return new ProductRootInspection(false, "the directory does not exist");
+            }
+
+            return Directory
+                .EnumerateFiles(productRoot, "*", SearchOption.AllDirectories)
+                .Any(file => IsProductFile(productRoot, file))
+                ? new ProductRootInspection(true, string.Empty)
+                : new ProductRootInspection(false, "no product files were found");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DirectoryNotFoundException or ArgumentException or NotSupportedException)
+        {
+            return new ProductRootInspection(false, exception.Message);
+        }
+    }
+
+    private static bool IsProductFile(string productRoot, string file)
+    {
+        var relativePath = Path.GetRelativePath(productRoot, file);
+        var segments = relativePath.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Any(IsIgnoredProductPathSegment))
+        {
+            return false;
+        }
+
+        var fileName = Path.GetFileName(file);
+        return !string.Equals(fileName, ".gitkeep", StringComparison.OrdinalIgnoreCase) &&
+               !string.Equals(fileName, ".DS_Store", StringComparison.OrdinalIgnoreCase) &&
+               !string.Equals(fileName, "Thumbs.db", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsIgnoredProductPathSegment(string segment)
+        => string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(segment, ".vs", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(segment, "node_modules", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(segment, "packages", StringComparison.OrdinalIgnoreCase);
+
     private static ProcessExecutionAdapterResult Failed(
         string code,
         string summary,
@@ -1178,6 +1697,48 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             ComputeHash($"{code}:{evidence}"));
     }
 
+    private static ProcessExecutionAdapterResult NeedsManager(
+        string code,
+        string summary,
+        string evidence)
+    {
+        var evidenceHash = ComputeHash(evidence);
+        return new ProcessExecutionAdapterResult(
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new ProcessExecutionAdapterDiagnostic(
+                    new StrategyDiagnosticCode(code),
+                    StrategyDiagnosticSensitivity.Normal,
+                    evidenceHash,
+                    summary,
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode(code),
+                    evidenceHash,
+                    summary)
+            ],
+            summary,
+            ComputeHash($"{code}:{evidence}"));
+    }
+
+    private static AgentProcessRoleReadinessRequest CreateRuntimeReadinessRequest(ProcessRuntimeStepAssignment assignment)
+    {
+        return new AgentProcessRoleReadinessRequest(
+            assignment.StepKey,
+            assignment.StepKey,
+            assignment.RoleKey,
+            assignment.RoleResourceKey,
+            assignment.RoleDisplayName,
+            NormalizeOperations(assignment.AllowedOperations),
+            assignment.OperationTargetScope);
+    }
+
     private static string FormatValidationErrors(IReadOnlyList<AgentOutputValidationError> errors)
     {
         if (errors.Count == 0)
@@ -1193,4 +1754,196 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
         return "sha256:" + Convert.ToHexString(hash).ToLowerInvariant();
     }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private sealed record ProductMutationCompletionIssue(
+        string Code,
+        string Summary,
+        string Evidence,
+        ProcessDiagnosticRetrySafety RetrySafety,
+        ProcessDiagnosticIdempotencyClassification Idempotency);
+
+    private sealed record ProductRootInspection(
+        bool HasProductFiles,
+        string Summary);
+}
+
+internal sealed class AgentFrameworkProcessExecutionObservationReader(
+    IAgentFrameworkWorkspaceService workspaceService) : IProcessExecutionObservationReader
+{
+    public async ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
+        ProcessExecutionObservationQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        if (query.RunIds.Count == 0)
+        {
+            return [];
+        }
+
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
+        var agentNameById = agents.ToDictionary(agent => agent.Id, agent => agent.Name);
+        var observations = new List<ProcessExecutionObservation>();
+
+        foreach (var runId in query.RunIds.Distinct())
+        {
+            var executionRuns = await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    ProcessRunId: runId.ToString(),
+                    Take: Math.Max(1, query.TakePerRun),
+                    UpdatedFromUtc: query.FromUtc,
+                    UpdatedToUtc: query.ToUtc),
+                cancellationToken).ConfigureAwait(false);
+
+            foreach (var executionRun in executionRuns)
+            {
+                if (!TryParseProcessIdentity(executionRun, out var processRunId, out var stepInstanceId))
+                {
+                    continue;
+                }
+
+                ExecutionRunDetail? detail = null;
+                try
+                {
+                    detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
+                }
+                catch (InvalidOperationException)
+                {
+                }
+
+                var detailRun = detail?.Run ?? executionRun;
+                var agentName = agentNameById.GetValueOrDefault(detailRun.AgentId);
+                observations.Add(new ProcessExecutionObservation(
+                    detailRun.Id,
+                    processRunId,
+                    stepInstanceId,
+                    detailRun.AgentId,
+                    FirstNonEmpty(agentName, detailRun.RequestedBy, detailRun.AgentId.ToString("D")),
+                    detailRun.ProviderName,
+                    detailRun.Model,
+                    detailRun.State.ToString(),
+                    detailRun.Outcome?.ToString() ?? string.Empty,
+                    detailRun.CreatedAtUtc,
+                    detailRun.UpdatedAtUtc,
+                    detailRun.StartedAtUtc,
+                    detailRun.CompletedAtUtc,
+                    detailRun.InputSummary,
+                    detailRun.ResultSummary,
+                    MapActivities(detail),
+                    MapTools(detail),
+                    MapArtifacts(detail),
+                    ResolveLastError(detail)));
+            }
+        }
+
+        return observations
+            .OrderByDescending(observation => observation.UpdatedAtUtc)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProcessExecutionActivityObservation> MapActivities(ExecutionRunDetail? detail)
+        => detail?.ExecutionLog
+            .OrderByDescending(entry => entry.CreatedAtUtc)
+            .Take(8)
+            .OrderBy(entry => entry.CreatedAtUtc)
+            .Select(entry => new ProcessExecutionActivityObservation(
+                entry.CreatedAtUtc,
+                entry.State.ToString(),
+                entry.Phase,
+                entry.Message))
+            .ToArray() ?? [];
+
+    private static IReadOnlyList<ProcessExecutionToolObservation> MapTools(ExecutionRunDetail? detail)
+        => detail?.ToolReceipts
+            .OrderByDescending(tool => tool.CompletedAtUtc)
+            .Take(8)
+            .OrderBy(tool => tool.StartedAtUtc)
+            .Select(tool => new ProcessExecutionToolObservation(
+                tool.ToolName,
+                tool.RuntimeToolProviderKey,
+                tool.RequestSummary,
+                tool.ExitSummary,
+                tool.StartedAtUtc,
+                tool.CompletedAtUtc))
+            .ToArray() ?? [];
+
+    private static IReadOnlyList<ProcessExecutionArtifactObservation> MapArtifacts(ExecutionRunDetail? detail)
+        => detail?.Artifacts
+            .OrderByDescending(artifact => artifact.CreatedAtUtc)
+            .Take(8)
+            .OrderBy(artifact => artifact.CreatedAtUtc)
+            .Select(artifact => new ProcessExecutionArtifactObservation(
+                artifact.ArtifactKind,
+                artifact.DisplayName,
+                artifact.RelativePath,
+                artifact.Summary,
+                artifact.CreatedAtUtc))
+            .ToArray() ?? [];
+
+    private static string ResolveLastError(ExecutionRunDetail? detail)
+    {
+        if (detail is null)
+        {
+            return string.Empty;
+        }
+
+        return detail.ExecutionLog
+            .OrderByDescending(entry => entry.CreatedAtUtc)
+            .FirstOrDefault(entry =>
+                entry.State == ExecutionState.Failed ||
+                entry.Phase.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+                entry.Message.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+                entry.Message.Contains("exception", StringComparison.OrdinalIgnoreCase))
+            ?.Message ?? string.Empty;
+    }
+
+    private static bool TryParseProcessIdentity(
+        ExecutionRunRecord executionRun,
+        out ProcessRunId runId,
+        out ProcessStepInstanceId stepInstanceId)
+    {
+        runId = default;
+        stepInstanceId = default;
+
+        return Guid.TryParse(executionRun.ProcessRunId, out var parsedRunId) &&
+               parsedRunId != Guid.Empty &&
+               Guid.TryParse(executionRun.ProcessStepId, out var parsedStepId) &&
+               parsedStepId != Guid.Empty &&
+               TryCreateProcessRunId(parsedRunId, out runId) &&
+               TryCreateStepInstanceId(parsedStepId, out stepInstanceId);
+    }
+
+    private static bool TryCreateProcessRunId(Guid value, out ProcessRunId runId)
+    {
+        try
+        {
+            runId = new ProcessRunId(value);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            runId = default;
+            return false;
+        }
+    }
+
+    private static bool TryCreateStepInstanceId(Guid value, out ProcessStepInstanceId stepInstanceId)
+    {
+        try
+        {
+            stepInstanceId = new ProcessStepInstanceId(value);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            stepInstanceId = default;
+            return false;
+        }
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 }

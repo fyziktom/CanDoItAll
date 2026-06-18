@@ -27,7 +27,9 @@
 }
 
 .live-processes-dashboard {
+    align-items: stretch;
     min-height: 0;
+    width: 100%;
 }
 
 .live-processes-summary {
@@ -50,12 +52,213 @@
     padding: 0.7rem 0.85rem;
 }
 
+.live-processes-alert--success {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+
+.live-processes-tabs-frame,
 .live-processes-tabs {
+    align-self: stretch;
+    flex: 1 1 auto;
+    width: 100%;
     min-height: 0;
+    min-width: 0;
+}
+
+.live-processes-tabs-frame ::deep .rz-tabs {
+    width: 100%;
+}
+
+.live-processes-tabs-frame ::deep .rz-tabs-nav,
+.live-processes-tabs ::deep .rz-tabs-nav,
+.live-processes-tabs ::deep [role="tablist"] {
+    display: flex;
+    width: 100%;
+}
+
+.live-processes-tabs-frame ::deep .rz-tabs-nav > *,
+.live-processes-tabs ::deep .rz-tabs-nav > *,
+.live-processes-tabs ::deep [role="tab"] {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+}
+
+.live-processes-tabs-frame ::deep .rz-tab-panel,
+.live-processes-tabs ::deep .rz-tab-panel {
+    width: 100%;
 }
 
 .live-processes-filter-strip {
     width: 100%;
+}
+
+.live-processes-activity-strip {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.live-processes-attention-panel {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.live-processes-attention-panel:empty {
+    display: none;
+}
+
+.live-processes-activity-grid,
+.live-processes-attention-grid,
+.live-processes-agent-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    min-width: 0;
+}
+
+.live-processes-activity-card,
+.live-processes-attention-card,
+.live-processes-agent-card {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 0.5rem;
+    display: grid;
+    gap: 0.65rem;
+    min-width: 0;
+    padding: 0.8rem;
+}
+
+.live-processes-activity-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.live-processes-attention-card {
+    border-color: rgba(245, 158, 11, 0.52);
+    grid-template-columns: minmax(0, 1fr) auto;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
+}
+
+.live-processes-activity-card--active {
+    border-color: rgba(16, 185, 129, 0.42);
+}
+
+.live-processes-activity-card--attention {
+    border-color: rgba(245, 158, 11, 0.52);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
+}
+
+.live-processes-activity-card--failed {
+    border-color: rgba(220, 38, 38, 0.46);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
+}
+
+.live-processes-activity-card__body,
+.live-processes-attention-card__body,
+.live-processes-agent-card__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.live-processes-activity-card__title,
+.live-processes-attention-card__title,
+.live-processes-agent-card__name {
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 750;
+    line-height: 1.3;
+}
+
+.live-processes-activity-card__summary,
+.live-processes-attention-card__summary,
+.live-processes-agent-card__summary {
+    color: #475569;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.live-processes-activity-card__time,
+.live-processes-agent-card__role {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 650;
+    margin: 0;
+}
+
+.live-processes-activity-card__actions {
+    align-self: start;
+}
+
+.live-processes-attention-card__actions {
+    align-self: start;
+    justify-content: flex-end;
+}
+
+.live-processes-agent-section {
+    min-width: 0;
+}
+
+.live-processes-agent-card {
+    position: relative;
+}
+
+.live-processes-agent-card__header {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.live-processes-agent-card__avatar-row {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.live-processes-agent-card__badges {
+    padding-right: 0;
+}
+
+.live-processes-agent-card__actions {
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.live-processes-agent-card__open {
+    flex: 0 0 auto;
+}
+
+.live-processes-agent-detail__activity {
+    color: #334155;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.live-processes-agent-detail__error {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    border-radius: 0.5rem;
+    color: #9f1239;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0.65rem 0.75rem;
+}
+
+.live-processes-agent-detail__row {
+    color: #475569;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0.5rem 0 0;
 }
 
 .live-processes-run-card {
@@ -116,4 +319,16 @@
     border: 1px solid rgba(148, 163, 184, 0.28);
     border-radius: 0.5rem;
     padding: 0.75rem;
+}
+
+@media (max-width: 640px) {
+    .live-processes-activity-card,
+    .live-processes-attention-card {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .live-processes-activity-card__actions,
+    .live-processes-attention-card__actions {
+        justify-content: flex-start;
+    }
 }

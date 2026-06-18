@@ -75,7 +75,16 @@ public sealed record ProcessLaunchStepView(
     string ExecutorDisplayName,
     bool IsBlocked,
     string? BlockedReason,
-    ProcessRuntimeBranchGate? BranchGate);
+    ProcessRuntimeBranchGate? BranchGate)
+{
+    public IReadOnlyList<string> AllowedOperations { get; init; } = [];
+
+    public string OperationTargetScope { get; init; } = string.Empty;
+
+    public string RoleResourceKey { get; init; } = string.Empty;
+
+    public string RoleDisplayName { get; init; } = string.Empty;
+}
 
 public sealed record ProcessLaunchReadinessFinding(
     ProcessLaunchReadinessSeverity Severity,
@@ -95,7 +104,10 @@ public sealed record ProcessLaunchExecutorResolutionRequest(
     ProcessTemplateDefinitionDocument Definition,
     ProcessInstancePlan Plan,
     ProcessTemplateLiveRunProfileDocument? LiveRunProfile,
-    IReadOnlyDictionary<string, string> Variables);
+    IReadOnlyDictionary<string, string> Variables)
+{
+    public IReadOnlyList<ProcessLaunchExecutorOverride> ExecutorOverrides { get; init; } = [];
+}
 
 public sealed record ProcessLaunchExecutorResolution(
     IReadOnlyList<ProcessLaunchExecutorBinding> Bindings,

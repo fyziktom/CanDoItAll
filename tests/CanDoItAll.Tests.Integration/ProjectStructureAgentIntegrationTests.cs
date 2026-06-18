@@ -275,11 +275,25 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         var assignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(result.RunId.Value));
         var assignment = Assert.Single(assignments, item => item.StepKey == "feature-intake");
+        var currentRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId.Value);
+        var currentArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(result.RunId.Value));
         Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
         Assert.Equal(deliveryNode.Title, assignment.LaunchVariables["ProjectNodeTitle"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["ProductRoot"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["ExternalTargetRoot"]);
+        Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["CurrentProcessRunId"]);
+        Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["ProcessRunId"]);
+        Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["processRunId"]);
+        Assert.Equal(currentRunNodeId, assignment.LaunchVariables["CurrentProcessRunNodeId"]);
+        Assert.Equal(currentRunNodeId, assignment.LaunchVariables["ProcessRunNodeId"]);
+        Assert.Equal(currentArtifactRoot, assignment.LaunchVariables["CurrentManagedArtifactRoot"]);
+        Assert.Equal(currentArtifactRoot, assignment.LaunchVariables["ManagedArtifactRoot"]);
+        Assert.Equal(currentArtifactRoot, assignment.LaunchVariables["managedArtifactRoot"]);
+        var peerReviewAssignment = assignments.Single(item => item.StepKey == "peer-review");
+        Assert.Equal("ExternalProductTargetReadOnly", peerReviewAssignment.OperationTargetScope);
+        Assert.Contains("RunValidation", peerReviewAssignment.AllowedOperations);
+        Assert.DoesNotContain("MutateProductTarget", peerReviewAssignment.AllowedOperations);
         Assert.Equal("ExternalActionControlled", assignments.Single(item => item.StepKey == "record-runtime-commands").OperationTargetScope);
         Assert.Contains("ExecuteExternalAction", assignments.Single(item => item.StepKey == "record-runtime-commands").AllowedOperations);
         Assert.Contains("ExecuteExternalAction", assignments.Single(item => item.StepKey == "capture-ui-screenshots").AllowedOperations);
@@ -438,6 +452,32 @@ public sealed class ProjectStructureAgentIntegrationTests
                 null,
                 "delivery",
                 MetadataJson: """{ "outputRoot": "C:\\temp\\CanDoItAll\\TetrisGame" }"""));
+        var architectureNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Main Architecture",
+                string.Empty,
+                string.Empty,
+                $"project:{projectId:D}",
+                520,
+                220,
+                null,
+                null,
+                "architecture"));
+        await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Blazor WASM PWA app shape",
+                "Frontend-only web app",
+                "Blazor WebAssembly PWA with no backend. Single client app, static-host friendly, offline-friendly shell, and local-first scope.",
+                architectureNode.Id,
+                700,
+                180,
+                null,
+                null,
+                "architecture"));
         var parentDefinitionId = ProcessDefinitionCatalogProjectionService
             .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
             .Value;
@@ -516,7 +556,12 @@ public sealed class ProjectStructureAgentIntegrationTests
         var reviewAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "review-architecture-design");
         Assert.Contains("Producer step: draft-architecture-design - Draft .NET architecture design", reviewAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains($"artifacts/process-runs/{subprocess.RunId.Value:D}/steps/draft-architecture-design.md", reviewAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("Do not block only because a slot-id directory is absent", reviewAssignment.Prompt, StringComparison.Ordinal);
+        var classifyAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "classify-dotnet-application");
+        Assert.Equal("Blazor WebAssembly PWA", classifyAssignment.LaunchVariables["DotNetAppArchetype"]);
+        Assert.Contains("AppTemplate: blazorwasm", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("AllowedTemplateSwitches: --pwa", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("project-structure-grounded greenfield target", classifyAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("absence of .sln, .slnx, or .csproj files", classifyAssignment.Prompt, StringComparison.Ordinal);
         var parentProcessRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(parent.RunId.Value);
         Assert.All(childAssignments, assignment =>
         {
@@ -525,6 +570,14 @@ public sealed class ProjectStructureAgentIntegrationTests
             Assert.Equal(parentProcessRunNodeId, assignment.LaunchVariables["ProcessRunNodeId"]);
             Assert.Equal(parentProcessRunNodeId, assignment.LaunchVariables["ParentProcessRunNodeId"]);
             Assert.Equal(parentProcessRunNodeId, assignment.LaunchVariables["TargetProcessRunNodeId"]);
+            Assert.Equal(subprocess.RunId!.Value.ToString("D"), assignment.LaunchVariables["CurrentProcessRunId"]);
+            Assert.Equal(subprocess.RunId.Value.ToString("D"), assignment.LaunchVariables["ProcessRunId"]);
+            Assert.Equal(subprocess.RunId.Value.ToString("D"), assignment.LaunchVariables["processRunId"]);
+            Assert.Equal(ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(subprocess.RunId.Value), assignment.LaunchVariables["CurrentProcessRunNodeId"]);
+            Assert.Equal(ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(subprocess.RunId.Value)), assignment.LaunchVariables["CurrentManagedArtifactRoot"]);
+            Assert.Equal(ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(subprocess.RunId.Value)), assignment.LaunchVariables["ManagedArtifactRoot"]);
+            Assert.Equal(ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(subprocess.RunId.Value)), assignment.LaunchVariables["managedArtifactRoot"]);
+            Assert.Equal(ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(parent.RunId.Value)), assignment.LaunchVariables["ParentManagedArtifactRoot"]);
             Assert.Equal(parentAssignment.StepInstanceId.ToString(), assignment.LaunchVariables["ParentProcessStepId"]);
             Assert.Equal("architecture-review", assignment.LaunchVariables["ParentProcessStepKey"]);
             Assert.Equal("dotnet-architecture-design-review", assignment.LaunchVariables["SubprocessDefinitionKey"]);
@@ -742,6 +795,16 @@ public sealed class ProjectStructureAgentIntegrationTests
         var launchPlan = Assert.IsType<ProcessLaunchPlanView>(result.LaunchPlan);
         Assert.Equal("software-delivery", launchPlan.DefinitionKey);
         Assert.Null(launchPlan.LiveRunProfileKey);
+        var architectureReview = Assert.Single(launchPlan.Steps, step => step.StepKey == "architecture-review");
+        var implementation = Assert.Single(launchPlan.Steps, step => step.StepKey == "implementation");
+        Assert.Equal("solution-architect", architectureReview.RoleKey);
+        Assert.Equal("solution-architect", architectureReview.RoleResourceKey);
+        Assert.Equal("Solution architect", architectureReview.RoleDisplayName);
+        Assert.DoesNotContain("Delivery Manager", architectureReview.ExecutorDisplayName, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("lead-engineer", implementation.RoleKey);
+        Assert.Equal("lead-engineer", implementation.RoleResourceKey);
+        Assert.Equal("Lead engineer", implementation.RoleDisplayName);
+        Assert.DoesNotContain("Delivery Manager", implementation.ExecutorDisplayName, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
             launchPlan.ReadinessFindings,
             finding => string.Equals(finding.Code, "process.launch.executor_kind_unsupported", StringComparison.Ordinal));
@@ -757,8 +820,26 @@ public sealed class ProjectStructureAgentIntegrationTests
             Assert.Equal(ProcessLaunchExecutorKinds.Agent, assignment.ExecutorKind);
             Assert.False(string.IsNullOrWhiteSpace(assignment.ExecutorId));
         });
-        Assert.Contains(assignments, assignment => assignment.StepKey == "record-runtime-commands");
+        var runtimeCommandParentAssignment = Assert.Single(assignments, assignment => assignment.StepKey == "record-runtime-commands");
         Assert.Contains(assignments, assignment => assignment.StepKey == "capture-ui-screenshots");
+
+        var runtimeCommandSubprocess = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            result.RunId.Value.ToString("D"),
+            runtimeCommandParentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-runtime-command-writeback",
+                RunHrMatch: true,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        var runtimeCommandAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(runtimeCommandSubprocess.RunId!.Value));
+        var resolveRunCommands = Assert.Single(runtimeCommandAssignments, assignment => assignment.StepKey == "resolve-dotnet-run-commands");
+        Assert.Equal("runtime-command-recorder", resolveRunCommands.RoleKey);
+        Assert.Equal("delivery-manager", resolveRunCommands.RoleResourceKey);
+        Assert.Equal("Runtime command recorder", resolveRunCommands.RoleDisplayName);
+        Assert.Contains("Delivery Manager", resolveRunCommands.ExecutorDisplayName, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -850,6 +931,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             Workload = AgentWorkloadKind.Management,
             ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
             ConfigurationJson = "{}",
+            WorkspaceToolAccess = WorkspaceAccess(AgentWorkspaceToolProfileKind.BusinessAnalysis),
             IsTemplate = false,
             Permissions = AgentPermissionsPolicy.Default,
             Tags =
@@ -857,6 +939,111 @@ public sealed class ProjectStructureAgentIntegrationTests
                 "business",
                 "strategy",
                 "requirements"
+            ]
+        });
+        await workspaceService.SaveAgentAsync(new AgentEditorModel
+        {
+            Name = "Delivery Manager Structured",
+            RoleTitle = "Delivery Manager",
+            Summary = "Coordinates delivery governance, release readiness, and process evidence.",
+            Instructions = "Coordinate delivery steps and report blockers.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = structuredProviderId,
+            Workload = AgentWorkloadKind.Management,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            ConfigurationJson = "{}",
+            WorkspaceToolAccess = WorkspaceAccess(AgentWorkspaceToolProfileKind.BusinessAnalysis),
+            IsTemplate = false,
+            Permissions = AgentPermissionsPolicy.Default,
+            Tags =
+            [
+                "delivery-manager",
+                "release-manager",
+                "delivery",
+                "manager"
+            ]
+        });
+        await workspaceService.SaveAgentAsync(new AgentEditorModel
+        {
+            Name = ".NET Architect Structured",
+            RoleTitle = ".NET Solution Architect",
+            Summary = "Reviews .NET application architecture, Blazor boundaries, and implementation readiness.",
+            Instructions = "Review architecture and source-of-truth boundaries.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = structuredProviderId,
+            Workload = AgentWorkloadKind.Programming,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            ConfigurationJson = "{}",
+            WorkspaceToolAccess = WorkspaceAccess(AgentWorkspaceToolProfileKind.ArchitectureReview),
+            IsTemplate = false,
+            Permissions = AgentPermissionsPolicy.Default,
+            Tags =
+            [
+                "solution-architect",
+                "architecture",
+                "dotnet"
+            ]
+        });
+        await workspaceService.SaveAgentAsync(new AgentEditorModel
+        {
+            Name = ".NET Developer Structured",
+            RoleTitle = ".NET Lead Engineer",
+            Summary = "Implements .NET and Blazor changes with build, test, runtime, and scaffold access.",
+            Instructions = "Implement and validate .NET changes.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = structuredProviderId,
+            Workload = AgentWorkloadKind.Programming,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            ConfigurationJson = "{}",
+            WorkspaceToolAccess = WorkspaceAccess(AgentWorkspaceToolProfileKind.SoftwareDevelopment),
+            IsTemplate = false,
+            Permissions = AgentPermissionsPolicy.Default,
+            Tags =
+            [
+                "lead-engineer",
+                "software-engineer",
+                "dotnet-developer"
+            ]
+        });
+        await workspaceService.SaveAgentAsync(new AgentEditorModel
+        {
+            Name = "QA Lead Structured",
+            RoleTitle = "QA Lead",
+            Summary = "Validates .NET test evidence, runtime proof, and repair readiness.",
+            Instructions = "Review validation proof and quality risks.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = structuredProviderId,
+            Workload = AgentWorkloadKind.Qa,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            ConfigurationJson = "{}",
+            WorkspaceToolAccess = WorkspaceAccess(AgentWorkspaceToolProfileKind.QualityValidation),
+            IsTemplate = false,
+            Permissions = AgentPermissionsPolicy.Default,
+            Tags =
+            [
+                "qa-lead",
+                "quality",
+                "validation"
+            ]
+        });
+        await workspaceService.SaveAgentAsync(new AgentEditorModel
+        {
+            Name = "Security Reviewer Structured",
+            RoleTitle = "Security Reviewer",
+            Summary = "Reviews security posture, trust boundaries, and validation evidence.",
+            Instructions = "Review security risks and release posture.",
+            Status = AgentLifecycleStatus.Active,
+            ProviderProfileId = structuredProviderId,
+            Workload = AgentWorkloadKind.Research,
+            ChatHistoryMode = AgentChatHistoryMode.ProviderDefault,
+            ConfigurationJson = "{}",
+            WorkspaceToolAccess = WorkspaceAccess(AgentWorkspaceToolProfileKind.SecurityReview),
+            IsTemplate = false,
+            Permissions = AgentPermissionsPolicy.Default,
+            Tags =
+            [
+                "security-reviewer",
+                "security"
             ]
         });
 
@@ -1785,6 +1972,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         }
 
         return stream.ToArray();
+    }
+
+    private static AgentWorkspaceToolAccessSettings WorkspaceAccess(AgentWorkspaceToolProfileKind profile)
+    {
+        return AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
     }
 
     private static byte[] BuildXmindJsonPackage()

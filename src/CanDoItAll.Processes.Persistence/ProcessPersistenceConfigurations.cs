@@ -61,6 +61,8 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.HasKey(assignment => new { assignment.RunId, assignment.StepInstanceId });
         builder.Property(assignment => assignment.StepKey).HasMaxLength(256).IsRequired();
         builder.Property(assignment => assignment.RoleKey).HasMaxLength(256).IsRequired();
+        builder.Property(assignment => assignment.RoleResourceKey).HasMaxLength(256).IsRequired();
+        builder.Property(assignment => assignment.RoleDisplayName).HasMaxLength(512).IsRequired();
         builder.Property(assignment => assignment.ExecutorKind).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.ExecutorId).HasMaxLength(256).IsRequired();
         builder.Property(assignment => assignment.ExecutorDisplayName).HasMaxLength(512).IsRequired();

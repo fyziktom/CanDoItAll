@@ -22,9 +22,20 @@ public sealed class ProcessLaunchApplicationService(
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessLaunchArtifactInitializer artifactInitializer,
     IProcessStepBriefBuilder stepBriefBuilder,
-    ProcessRuntimeDispatchApplicationService dispatchService,
+    IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeProjectionCatchupService projectionCatchupService)
 {
+    private const string ProcessRunNodePrefix = "process-run:";
+    private const string ProcessRunIdVariableName = "ProcessRunId";
+    private const string ProcessRunNodeIdVariableName = "ProcessRunNodeId";
+    private const string CurrentProcessRunIdVariableName = "CurrentProcessRunId";
+    private const string CurrentProcessRunNodeIdVariableName = "CurrentProcessRunNodeId";
+    private const string CurrentManagedArtifactRootVariableName = "CurrentManagedArtifactRoot";
+    private const string ManagedArtifactRootVariableName = "ManagedArtifactRoot";
+    private const string LegacyProcessRunIdVariableName = "processRunId";
+    private const string LegacyManagedArtifactRootVariableName = "managedArtifactRoot";
+    private const string ParentManagedArtifactRootVariableName = "ParentManagedArtifactRoot";
+
     public async Task<ProcessLaunchResult> PreviewAsync(
         ProcessLaunchRequest request,
         CancellationToken cancellationToken = default)
@@ -150,11 +161,9 @@ public sealed class ProcessLaunchApplicationService(
         var stage = ProcessLaunchStage.Running;
         if (request.Execute)
         {
-            var dispatch = await dispatchService.ExecuteReadyAsync(
-                activeState.RunId,
-                request.RequestedBy,
+            await dispatchQueue.EnqueueAsync(
+                new ProcessRuntimeDispatchQueueRequest(activeState.RunId, request.RequestedBy),
                 cancellationToken).ConfigureAwait(false);
-            stage = dispatch.Stage;
         }
 
         return new ProcessLaunchResult(
@@ -298,7 +307,10 @@ public sealed class ProcessLaunchApplicationService(
                 selected.Definition,
                 plan,
                 selected.LiveRunProfile,
-                request.Variables),
+                request.Variables)
+            {
+                ExecutorOverrides = request.ExecutorOverrides
+            },
             cancellationToken).ConfigureAwait(false);
         var assignments = BuildAssignments(
             request,
@@ -456,17 +468,12 @@ public sealed class ProcessLaunchApplicationService(
         var executorByStepKey = executorResolution.Bindings.ToDictionary(
             binding => binding.StepKey,
             StringComparer.OrdinalIgnoreCase);
-        var overrideByStepKey = request.ExecutorOverrides
-            .Where(item => !string.IsNullOrWhiteSpace(item.StepKey))
-            .GroupBy(item => item.StepKey.Trim(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Last(),
-                StringComparer.OrdinalIgnoreCase);
         var stepsByKey = selection.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
+        var roleByKey = selection.Definition.RoleUsages.ToDictionary(role => role.Key, StringComparer.OrdinalIgnoreCase);
         var launchVariables = NormalizeLaunchVariables(request.Variables);
         var runId = ProcessRunId.New();
         var managedArtifactRoot = BuildManagedProcessArtifactRoot(runId);
+        var effectiveLaunchVariables = EnrichRunLaunchVariables(launchVariables, runId, managedArtifactRoot);
         var assignments = new List<ProcessRuntimeStepAssignment>();
 
         foreach (var planStep in plan.Steps.Where(step => step.IsExecutable))
@@ -477,26 +484,19 @@ public sealed class ProcessLaunchApplicationService(
             }
 
             executorByStepKey.TryGetValue(planStep.StepKey, out var binding);
-            if (overrideByStepKey.TryGetValue(planStep.StepKey, out var executorOverride))
-            {
-                binding = new ProcessLaunchExecutorBinding(
-                    planStep.StepKey,
-                    NormalizeOptional(executorOverride.RoleKey, binding?.RoleKey ?? ResolvePrimaryRoleKey(templateStep)),
-                    NormalizeOptional(executorOverride.ExecutorKind, binding?.ExecutorKind ?? string.Empty),
-                    NormalizeOptional(executorOverride.ExecutorId, binding?.ExecutorId ?? string.Empty),
-                    NormalizeOptional(executorOverride.ExecutorDisplayName, binding?.ExecutorDisplayName ?? string.Empty),
-                    ComputeHash($"override:{planStep.StepKey}:{executorOverride.ExecutorKind}:{executorOverride.ExecutorId}"),
-                    NormalizeOptional(executorOverride.AssignmentReason, "Executor selected during launch review."));
-            }
 
             var requiredSlots = ResolveRequiredSlots(templateStep, kernelBuild);
             var producedSlots = ResolveProducedSlots(templateStep, kernelBuild);
+            var roleKey = binding?.RoleKey ?? ResolvePrimaryRoleKey(templateStep);
+            roleByKey.TryGetValue(roleKey, out var role);
             assignments.Add(new ProcessRuntimeStepAssignment(
                 runId,
                 plan.Header.PlanId,
                 planStep.StepInstanceId,
                 planStep.StepKey,
-                binding?.RoleKey ?? ResolvePrimaryRoleKey(templateStep),
+                roleKey,
+                role?.RoleResourceKey ?? string.Empty,
+                role?.DisplayName ?? roleKey,
                 binding?.ExecutorKind ?? string.Empty,
                 binding?.ExecutorId ?? string.Empty,
                 binding?.ExecutorDisplayName ?? string.Empty,
@@ -509,14 +509,15 @@ public sealed class ProcessLaunchApplicationService(
                     producedSlots,
                     kernelBuild.ArtifactSlotByStepExpectation,
                     runId,
-                    managedArtifactRoot)),
+                    managedArtifactRoot,
+                    effectiveLaunchVariables)),
                 binding?.ReadinessHash ?? ComputeHash($"missing:{planStep.StepKey}"),
                 binding?.AssignmentReason ?? "No executor binding was resolved.",
                 producedSlots,
                 requiredSlots,
                 NormalizeAllowedOperations(templateStep.AllowedOperations),
                 NormalizeOperationTargetScope(templateStep.OperationTargetScope),
-                launchVariables,
+                effectiveLaunchVariables,
                 ResolveBranchGate(templateStep),
                 nowUtc));
         }
@@ -586,11 +587,18 @@ public sealed class ProcessLaunchApplicationService(
     {
         var assignmentByStepKey = assignments.ToDictionary(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase);
         var templateStepByKey = selection.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
+        var roleByKey = selection.Definition.RoleUsages.ToDictionary(role => role.Key, StringComparer.OrdinalIgnoreCase);
         var stepViews = plan.Steps
             .Select(step =>
             {
                 assignmentByStepKey.TryGetValue(step.StepKey, out var assignment);
                 templateStepByKey.TryGetValue(step.StepKey, out var templateStep);
+                ProcessTemplateDefinitionRoleUsageDocument? role = null;
+                if (!string.IsNullOrWhiteSpace(assignment?.RoleKey))
+                {
+                    roleByKey.TryGetValue(assignment.RoleKey, out role);
+                }
+
                 var blockingFinding = findings.FirstOrDefault(finding =>
                     finding.Severity == ProcessLaunchReadinessSeverity.Error &&
                     string.Equals(finding.StepKey, step.StepKey, StringComparison.OrdinalIgnoreCase));
@@ -604,7 +612,13 @@ public sealed class ProcessLaunchApplicationService(
                     assignment?.ExecutorDisplayName ?? string.Empty,
                     blockingFinding is not null,
                     blockingFinding?.Message,
-                    assignment?.BranchGate);
+                    assignment?.BranchGate)
+                {
+                    AllowedOperations = templateStep is null ? [] : NormalizeAllowedOperations(templateStep.AllowedOperations),
+                    OperationTargetScope = templateStep is null ? string.Empty : NormalizeOperationTargetScope(templateStep.OperationTargetScope),
+                    RoleResourceKey = FirstNonEmpty(assignment?.RoleResourceKey, role?.RoleResourceKey),
+                    RoleDisplayName = FirstNonEmpty(assignment?.RoleDisplayName, role?.DisplayName, assignment?.RoleKey)
+                };
             })
             .ToArray();
 
@@ -729,9 +743,62 @@ public sealed class ProcessLaunchApplicationService(
         return normalized;
     }
 
+    private static IReadOnlyDictionary<string, string> EnrichRunLaunchVariables(
+        IReadOnlyDictionary<string, string> variables,
+        ProcessRunId runId,
+        string managedArtifactRoot)
+    {
+        var enriched = new Dictionary<string, string>(variables, StringComparer.Ordinal);
+        var runIdText = runId.Value.ToString("D");
+        var runNodeId = BuildProcessRunNodeKey(runId.Value);
+
+        PreservePreviousValue(
+            enriched,
+            LegacyManagedArtifactRootVariableName,
+            ParentManagedArtifactRootVariableName,
+            managedArtifactRoot);
+
+        enriched[CurrentProcessRunIdVariableName] = runIdText;
+        enriched[CurrentProcessRunNodeIdVariableName] = runNodeId;
+        enriched[CurrentManagedArtifactRootVariableName] = managedArtifactRoot;
+        enriched[ProcessRunIdVariableName] = runIdText;
+        enriched[LegacyProcessRunIdVariableName] = runIdText;
+        enriched[ManagedArtifactRootVariableName] = managedArtifactRoot;
+        enriched[LegacyManagedArtifactRootVariableName] = managedArtifactRoot;
+
+        if (!enriched.TryGetValue(ProcessRunNodeIdVariableName, out var processRunNodeId) ||
+            string.IsNullOrWhiteSpace(processRunNodeId))
+        {
+            enriched[ProcessRunNodeIdVariableName] = runNodeId;
+        }
+
+        return enriched;
+    }
+
+    private static void PreservePreviousValue(
+        IDictionary<string, string> variables,
+        string sourceKey,
+        string targetKey,
+        string replacementValue)
+    {
+        if (!variables.TryGetValue(sourceKey, out var value) ||
+            string.IsNullOrWhiteSpace(value) ||
+            string.Equals(value.Trim(), replacementValue, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        variables.TryAdd(targetKey, value.Trim());
+    }
+
     public static string BuildManagedProcessArtifactRoot(ProcessRunId runId)
     {
         return $"artifacts/process-runs/{runId}";
+    }
+
+    private static string BuildProcessRunNodeKey(Guid runId)
+    {
+        return $"{ProcessRunNodePrefix}{runId:D}";
     }
 
     private static RuntimeCommandContext CreateContext(string requestedBy, DateTimeOffset occurredAtUtc)
@@ -782,6 +849,9 @@ public sealed class ProcessLaunchApplicationService(
     {
         return value.Offset == TimeSpan.Zero ? value : value.ToUniversalTime();
     }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
     private static string SanitizeActorId(string value)
     {

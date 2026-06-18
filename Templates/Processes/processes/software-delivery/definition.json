@@ -287,7 +287,7 @@
       "InputContractSummary": "Scope packet, project-structure context, requested .NET deliverable, and acceptance criteria.",
       "OutputContractSummary": "Observed child architecture run with app-type classification, reviewed design decision, implementation-ready handoff, mandatory implementation constraints, and unresolved architecture risks.",
       "EvidenceContractSummary": "Child run status, .NET app classification, architecture decision, review findings, implementation constraints, implementation start criteria, and UI/no-UI applicability.",
-      "DecisionRightsSummary": "Delivery manager coordinates the child run; architecture authority remains inside the subprocess review and cannot mutate product files.",
+      "DecisionRightsSummary": "Solution architect owns the visible architecture subprocess assignment and reviewed handoff; delivery manager remains an explicit coordination reviewer.",
       "ExceptionPolicySummary": "Block when the child architecture subprocess blocks, fails, or returns missing app type, design review, or implementation-ready handoff evidence.",
       "TargetLeadHours": 14,
       "DependsOnStepKey": "feature-intake",
@@ -305,18 +305,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "solution-architect",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Delivery manager launches and observes the architecture subprocess without taking architecture authority."
+          "RebindPolicySummary": "Architecture subprocess ownership stays with a role-compatible technical authority that can review design evidence without implementing code."
         },
         {
-          "RoleKey": "solution-architect",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Architecture role reviews subprocess evidence without implementing code."
+          "RebindPolicySummary": "Delivery manager reviews subprocess sequencing and escalation without taking architecture authority."
         }
       ],
       "ArtifactExpectations": [
@@ -384,7 +384,7 @@
       "Key": "implementation",
       "Title": "Run .NET implementation slice subprocess",
       "Subtitle": "Observed implementation and validation slice",
-      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from feature-intake and architecture artifacts. The child implementation slice owns solution setup, feature/function implementation, repair subprocesses, tests, targeted proof, and accepted handoff evidence. This parent step records child-run evidence and does not mutate product files directly.",
+      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from feature-intake and architecture artifacts. The MVP slice must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must include the smallest observable product-specific path a user can exercise. The child implementation slice owns solution setup, feature/function implementation, repair subprocesses, tests, targeted proof, and accepted handoff evidence. This parent step records child-run evidence and does not mutate product files directly. This parent step must not launch the app, navigate a browser, wait on browser state, capture screenshots, or perform viewport/runtime proof directly; those actions belong to child targeted validation and later runtime/screenshot writeback steps that include LaunchRuntime and CaptureRuntimeProof.",
       "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -393,8 +393,8 @@
       "InputContractSummary": "Approved .NET architecture path, app classification, scope packet, unresolved technical questions, and implementation-slice start criteria.",
       "OutputContractSummary": "Observed child implementation slice with reviewable change set, test evidence, blockers, rollout inputs, accepted parent-ready handoff, or explicit repair escalation evidence.",
       "EvidenceContractSummary": "Child run status, change-set projection, validation outputs, accepted handoff evidence, repair escalation evidence, output-placement notes, migration steps when applicable, touched-surface inventory, and blockers.",
-      "DecisionRightsSummary": "Parent delivery manager owns subprocess sequencing and escalation; implementation changes remain inside child implementation roles.",
-      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, lacks accepted handoff evidence, or returns slice-repair-escalation. Do not treat a completed child run with an escalation/no-go packet as accepted implementation proof.",
+      "DecisionRightsSummary": "Lead engineer owns the visible implementation subprocess assignment and accepted handoff; delivery manager remains an explicit coordination reviewer.",
+      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, lacks accepted handoff evidence, or returns slice-repair-escalation. Do not treat a completed child run with an escalation/no-go packet as accepted implementation proof. If accepted child evidence is missing, record a blocker or repair escalation instead of attempting browser proof from this parent step.",
       "TargetLeadHours": 36,
       "DependsOnStepKey": "architecture-review",
       "DependsOnBranchOutcomeKey": "",
@@ -415,18 +415,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "lead-engineer",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Delivery manager launches and observes child implementation without editing product code."
+          "RebindPolicySummary": "Implementation subprocess ownership stays with a role-compatible engineering agent that can own technical handoff evidence."
         },
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Engineering role reviews child implementation evidence and owns follow-up repair when assigned."
+          "RebindPolicySummary": "Delivery manager reviews child implementation sequencing and escalation without editing product code."
         }
       ],
       "ArtifactExpectations": [
@@ -590,6 +590,7 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
+        "RunValidation",
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],

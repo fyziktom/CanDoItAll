@@ -7,3 +7,8 @@ Read the project structure, repository files, requested work, and upstream scope
 - Outputs: Typed .NET application classification with product root, test root, runtime surfaces, and UI/no-UI applicability.
 - Evidence: Project context, app type, route/runtime inventory, contradictions, and assumptions.
 - Operation target scope: `ExternalProductTargetReadOnly`
+
+## Greenfield Classification
+- When `ProductRoot`, `OutputRoot`, or `ExternalTargetRoot` is grounded by project structure and that root is missing or empty, treat the absence of `.sln`, `.slnx`, or `.csproj` files as greenfield repository state, not by itself as a blocker.
+- If `DotNetScaffoldContract`, `DotNetAppArchetype`, or `ProjectStructureContextSummary` identifies the intended app type and layout, classify the target from those typed launch facts and record that implementation must scaffold later in a product-mutable setup step.
+- Block only when the product root, app type, or source-of-truth ownership is missing, contradictory, or unsafe to infer from project structure and launch variables.

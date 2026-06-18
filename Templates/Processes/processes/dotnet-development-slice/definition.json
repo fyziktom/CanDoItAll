@@ -58,7 +58,7 @@
   "TailoringRules": [
     "Skip the generic .NET solution setup subprocess only when the repository already has a correct solution skeleton and the skip records explicit proof.",
     "Use the app archetype, test framework, validation type, and product root from the current project structure or upstream architecture notes; escalate when those inputs conflict or are missing.",
-    "When the parent scope is a full app or full deliverable, narrow this development slice to the first reviewable MVP behavior and pass that concrete behavior into the feature/function child subprocess.",
+    "When the parent scope is a full app or full deliverable, narrow this development slice to the first reviewable MVP behavior and pass that concrete behavior into the feature/function child subprocess. The first MVP behavior must not be scaffold-only, setup-only, naming-only, or readiness-only; scaffolding is prerequisite evidence, not the accepted product behavior.",
     "Split large features into multiple instances of this subprocess instead of widening one child run indefinitely.",
     "Keep parent approval and release gates in the parent process; this subprocess owns implementation proof only."
   ],
@@ -96,7 +96,7 @@
     {
       "Key": "software-engineer",
       "RoleResourceKey": "software-engineer",
-      "DisplayName": "Implementation engineer",
+      "DisplayName": ".NET implementation engineer",
       "Purpose": "Implement the bounded change and maintain tests.",
       "StaffingIntent": "A .NET-capable implementer with repository access.",
       "PreferredExecutorKind": "agent",
@@ -130,7 +130,7 @@
       "Key": "slice-intake",
       "Title": "Capture implementation slice boundary",
       "Subtitle": "Small enough to finish",
-      "Notes": "Restate the parent scope as one bounded implementation slice with assumptions, exclusions, and validation hooks. If the parent asks for a full app or broad deliverable, select the first reviewable MVP behavior from upstream project-structure and architecture facts. This is an intake step: do not run restore, build, test, app startup, or browser validation here.",
+      "Notes": "Restate the parent scope as one bounded implementation slice with assumptions, exclusions, and validation hooks. If the parent asks for a full app or broad deliverable, select the first reviewable MVP behavior from upstream project-structure and architecture facts. That MVP behavior must not be scaffold-only, setup-only, naming-only, or readiness-only; it must include an observable product-specific path a user can exercise. This is an intake step: do not run restore, build, test, app startup, or browser validation here.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -139,8 +139,8 @@
       "InputContractSummary": "Parent scope packet, repository context, and requested behavior.",
       "OutputContractSummary": "Slice boundary with acceptance criteria, product-root intent, setup needs, and excluded follow-up work.",
       "EvidenceContractSummary": "Scope summary, assumptions, product-root classification, setup/implementation handoff, and validation plan outline.",
-      "DecisionRightsSummary": "Slice manager can narrow execution scope but cannot silently discard parent acceptance criteria.",
-      "ExceptionPolicySummary": "Block when the slice cannot be made small enough for atomic validation or when the required product root, architecture, app archetype, or validation boundary is contradictory or missing.",
+      "DecisionRightsSummary": "Slice manager can narrow execution scope but cannot silently discard parent acceptance criteria or downgrade a requested product to scaffold-only readiness.",
+      "ExceptionPolicySummary": "Block when the slice cannot be made small enough for atomic validation, when the selected scope is only scaffold/setup/readiness work, or when the required product root, architecture, app archetype, or validation boundary is contradictory or missing.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -280,7 +280,7 @@
       "InputContractSummary": "Slice scope, architecture decision, and target solution naming contract.",
       "OutputContractSummary": "Observed child run that creates or validates the solution skeleton and test project.",
       "EvidenceContractSummary": "Child run status, build proof, and setup handoff packet.",
-      "DecisionRightsSummary": "Slice manager may skip only when an equivalent solution skeleton already exists and evidence is recorded.",
+      "DecisionRightsSummary": "Implementation engineer may skip only when an equivalent solution skeleton already exists and evidence is recorded.",
       "ExceptionPolicySummary": "Block the slice when the child setup run blocks, fails, or reports missing scaffold proof.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "slice-architecture-check",
@@ -298,11 +298,11 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "software-engineer",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Rebind only to a manager-capable operator that can coordinate parent and child run evidence."
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer that can coordinate setup evidence and child run output."
         }
       ],
       "ArtifactExpectations": [
@@ -348,7 +348,7 @@
       "Key": "implement-code-change",
       "Title": "Implement bounded code change through subprocess",
       "Subtitle": "Observed feature run",
-      "Notes": "Launch the feature/function implementation subprocess for the bounded behavior in this slice. Before launch, carry forward the concrete MVP behavior, product root, app archetype, setup handoff, acceptance criteria, validation hooks, and exclusions from the slice artifacts so the child receives one implementable request. Observe the child run status, change-set artifact, validation evidence, accepted handoff artifacts, repair escalation artifacts, blockers, and manager-directed rework without duplicating child runtime state in this parent step.",
+      "Notes": "Launch the feature/function implementation subprocess for the bounded behavior in this slice. Before launch, carry forward the concrete MVP behavior, product root, app archetype, setup handoff, acceptance criteria, validation hooks, and exclusions from the slice artifacts so the child receives one implementable request. Do not launch this child when the slice scope only asks for scaffold readiness, solution setup, naming, or generic app-shell existence. Observe the child run status, change-set artifact, validation evidence, accepted handoff artifacts, repair escalation artifacts, blockers, and manager-directed rework without duplicating child runtime state in this parent step.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-feature-function-implementation",
       "SubprocessDefinitionSnapshotName": ".NET feature/function implementation subprocess",
@@ -359,7 +359,7 @@
       "InputContractSummary": "Slice scope, architecture decision, solution skeleton evidence, and one bounded feature or function request derived from the parent scope when needed.",
       "OutputContractSummary": "Observed child run that returns a reviewable code change, focused validation evidence, blockers, and residual risks.",
       "EvidenceContractSummary": "Child run status, implementation change set, validation evidence, accepted handoff evidence, repair escalation evidence, manager rework directives, and unresolved blockers.",
-      "DecisionRightsSummary": "Slice manager can request targeted child-run repair but cannot widen behavior beyond the slice boundary.",
+      "DecisionRightsSummary": "Implementation engineer can request targeted child-run repair but cannot widen behavior beyond the slice boundary.",
       "ExceptionPolicySummary": "Block the slice when the child implementation run blocks, fails, lacks accepted handoff evidence, or reports feature-repair-escalation. Do not treat a completed child run with a repair escalation packet as accepted implementation proof.",
       "TargetLeadHours": 12,
       "DependsOnStepKey": "prepare-solution-skeleton",
@@ -381,11 +381,11 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "software-engineer",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Rebind only to a manager-capable operator that can observe child implementation runs and request targeted rework."
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer that can observe child implementation runs and request targeted rework."
         }
       ],
       "ArtifactExpectations": [
@@ -616,7 +616,7 @@
       "InputContractSummary": "Slice validation failure, implementation change set, architecture decision, and bounded repair request.",
       "OutputContractSummary": "Observed child repair run with change set, validation proof, accepted handoff, or repair escalation evidence.",
       "EvidenceContractSummary": "Child repair run status, changed files, validation evidence, accepted handoff evidence, repair escalation evidence, and unresolved blockers.",
-      "DecisionRightsSummary": "Slice manager can request bounded repair but cannot widen the slice beyond the parent-approved boundary.",
+      "DecisionRightsSummary": "Implementation engineer can request bounded repair but cannot widen the slice beyond the parent-approved boundary.",
       "ExceptionPolicySummary": "Block when the child repair run blocks, fails, lacks accepted handoff evidence, or reports feature-repair-escalation.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "add-tests-and-proof",
@@ -638,11 +638,11 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "software-engineer",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Rebind only to a manager-capable operator that can observe child repair runs and request targeted rework."
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer that can observe child repair runs and request targeted rework."
         }
       ],
       "ArtifactExpectations": [

@@ -94,7 +94,7 @@
       "Key": "resolve-dotnet-run-commands",
       "Title": "Resolve .NET run and test commands",
       "Subtitle": "Run app and run tests",
-      "Notes": "Read current project structure, architecture handoff, implementation evidence, and QA proof to determine the product root, app type, runtime project, test project, working directory, environment variables, ports, and stop behavior. Produce a manifest with planned runtime-capable project-structure node payloads for Run app and Run tests. Run app must plan an Environment node with subtype dotnet-runtime, dotnet-watch, or dotnet-release when the app is runnable. Run tests, build, and utility commands must plan a Script node with subtype console or powershell and script metadata for command, arguments, and working directory. Do not plan runnable commands as ProjectBlock + delivery nodes. Do not call project-structure mutation tools in this resolve step. If the delivery target is a class library or otherwise non-runnable, the planned Run app payload must still carry a not-applicable reason rather than being omitted.",
+      "Notes": "Read current project structure, architecture handoff, implementation evidence, and QA proof to determine the product root, app type, runtime project, test project, working directory, environment variables, ports, and stop behavior. Treat the step brief Process run id, Managed artifact root, CurrentProcessRunId, CurrentProcessRunNodeId, CurrentManagedArtifactRoot, ParentProcessRunId, ProcessRunNodeId, ParentProcessRunNodeId, and TargetProcessRunNodeId as typed launch context: Current* identifies this subprocess and ProcessRunNodeId/ParentProcessRunNodeId/TargetProcessRunNodeId identify the parent process-run node that will receive durable Run command nodes. Produce a manifest with planned runtime-capable project-structure node payloads for Run app and Run tests. Run app must plan an Environment node with subtype dotnet-runtime, dotnet-watch, or dotnet-release when the app is runnable. Run tests, build, and utility commands must plan a Script node with subtype console or powershell and script metadata for command, arguments, and working directory. Do not plan runnable commands as ProjectBlock + delivery nodes. Do not call project-structure mutation tools in this resolve step. If the delivery target is a class library or otherwise non-runnable, the planned Run app payload must still carry a not-applicable reason rather than being omitted. Do not block only because the parent process-run node is projection-backed or not returned by a direct persisted-node read; record the target node id from launch variables and let the writeback step verify or create durable project-structure receipts.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -104,7 +104,7 @@
       "OutputContractSummary": "Typed manifest for planned runtime-capable Run app and Run tests project-structure node payloads.",
       "EvidenceContractSummary": "App type, command strings, working directories, ports, environment notes, and no-run-app rationale when applicable.",
       "DecisionRightsSummary": "Recorder may block when commands cannot be resolved from current run evidence.",
-      "ExceptionPolicySummary": "Block on missing product root, missing test command, contradictory runtime target, or absent process run node.",
+      "ExceptionPolicySummary": "Block on missing product root, missing test command, contradictory runtime target, or no target process-run node id in ProcessRunNodeId, ParentProcessRunNodeId, or TargetProcessRunNodeId. Do not block in this resolve step solely because a process-run node is projection-backed or unreadable through one project-structure read path.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -134,7 +134,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by screenshot capture, QA reruns, release handoff, and future process-run replay.",
-          "ValidationRequirementSummary": "Must include process run node id, product root, app type, planned Run command parent title, planned Run app title and command or not-applicable reason, planned Run tests title and command, working directories, environment/port notes, stop/cleanup guidance, and confirmation that no project-structure mutation was attempted in this resolve step."
+          "ValidationRequirementSummary": "Must include target process-run node id, current subprocess run id, current subprocess managed artifact root, product root, app type, planned Run command parent title, planned Run app title and command or not-applicable reason, planned Run tests title and command, working directories, environment/port notes, stop/cleanup guidance, and confirmation that no project-structure mutation was attempted in this resolve step."
         }
       ],
       "ArtifactInputs": [],

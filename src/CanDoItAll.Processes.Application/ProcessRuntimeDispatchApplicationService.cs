@@ -26,6 +26,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     ProcessRuntimeProjectionCatchupService projectionCatchupService)
 {
     private const int MaximumDispatchIterations = 200;
+    private const int MaximumStepDispatchAttempts = 20;
     private const string DispatcherActorId = "process-runtime-dispatcher";
     private const string ClaimReleaseFailureExceptionDataKey = "ProcessDispatchClaimReleaseFailure";
     private static readonly TimeSpan DispatchLease = TimeSpan.FromMinutes(30);
@@ -133,6 +134,45 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                         continue;
                     }
 
+                    if (workItem.AttemptNumber > MaximumStepDispatchAttempts)
+                    {
+                        var overBudgetResult = CreateOverBudgetResult(workItem);
+                        var overBudgetCommit = await engine.SubmitStrategyResultAsync(
+                            runningCommit.State,
+                            CreateContext(requestedBy, iteration, "attempt-budget"),
+                            new SubmitStrategyResultCommand(
+                                workItem.StepInstanceId,
+                                ownerId,
+                                claimToken,
+                                new StrategyResultIdempotencyKey(overBudgetResult.IdempotencyKey),
+                                overBudgetResult),
+                            CancellationToken.None).ConfigureAwait(false);
+                        if (!overBudgetCommit.Succeeded)
+                        {
+                            diagnostics.AddRange(overBudgetCommit.Diagnostics.Select(diagnostic => diagnostic.Message));
+                            var releaseDiagnostic = await ReleaseClaimBestEffortAsync(
+                                runId,
+                                workItem.StepInstanceId,
+                                ownerId,
+                                claimToken,
+                                requestedBy,
+                                iteration,
+                                CancellationToken.None).ConfigureAwait(false);
+                            if (releaseDiagnostic is not null)
+                            {
+                                diagnostics.Add(releaseDiagnostic);
+                            }
+
+                            continue;
+                        }
+
+                        resultSubmitted = true;
+                        diagnostics.Add($"Step '{workItem.StepInstanceId}' exceeded the dispatch retry limit of {MaximumStepDispatchAttempts} attempts.");
+                        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+                        state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? overBudgetCommit.State;
+                        continue;
+                    }
+
                     var strategyFactory = await strategyFactoryResolver.ResolveAsync(
                         workItem.StrategyBinding,
                         cancellationToken).ConfigureAwait(false);
@@ -183,6 +223,27 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                         cancellationToken).ConfigureAwait(false);
 
                     state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? resultCommit.State;
+                }
+                catch (ProcessRuntimeDispatchDeferredException exception) when (claimCreated && !resultSubmitted)
+                {
+                    diagnostics.Add(exception.Message);
+                    var releaseDiagnostic = await ReleaseClaimBestEffortAsync(
+                        runId,
+                        workItem.StepInstanceId,
+                        ownerId,
+                        claimToken,
+                        requestedBy,
+                        iteration,
+                        CancellationToken.None).ConfigureAwait(false);
+                    if (releaseDiagnostic is not null)
+                    {
+                        diagnostics.Add(releaseDiagnostic);
+                    }
+
+                    await projectionCatchupService.CatchUpAsync(CancellationToken.None).ConfigureAwait(false);
+
+                    var deferredState = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? state;
+                    return new ProcessRuntimeDispatchResult(runId, ProcessLaunchStage.Running, deferredState.Status, diagnostics);
                 }
                 catch (Exception exception) when (claimCreated && !resultSubmitted)
                 {
@@ -367,12 +428,14 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             assignment => assignment.StepInstanceId,
             assignment => assignment.StepKey);
         var skippedSourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var skippedStepIds = new HashSet<ProcessStepInstanceId>();
         foreach (var step in steps)
         {
             if (step.Status == ProcessRuntimeStepStatus.Skipped &&
                 stepKeyById.TryGetValue(step.StepInstanceId, out var stepKey))
             {
                 skippedSourceKeys.Add(stepKey);
+                skippedStepIds.Add(step.StepInstanceId);
             }
         }
 
@@ -391,8 +454,22 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                 }
 
                 var assignment = assignments.FirstOrDefault(candidate => candidate.StepInstanceId == step.StepInstanceId);
-                if (assignment?.BranchGate is null ||
-                    !skippedSourceKeys.Contains(assignment.BranchGate.SourceStepKey))
+                var skipEvidence = string.Empty;
+                if (assignment?.BranchGate is not null &&
+                    skippedSourceKeys.Contains(assignment.BranchGate.SourceStepKey))
+                {
+                    skipEvidence = $"{assignment.BranchGate.SourceStepKey}:source-skipped:{assignment.StepKey}";
+                }
+                else
+                {
+                    var skippedDependency = step.DependencyStepIds.FirstOrDefault(skippedStepIds.Contains);
+                    if (skippedDependency != default)
+                    {
+                        skipEvidence = $"{skippedDependency}:dependency-skipped:{assignment?.StepKey ?? step.StepInstanceId.ToString()}";
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(skipEvidence))
                 {
                     continue;
                 }
@@ -402,14 +479,19 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     Status = ProcessRuntimeStepStatus.Skipped,
                     ActiveClaimToken = null
                 };
-                skippedSourceKeys.Add(assignment.StepKey);
+                skippedStepIds.Add(step.StepInstanceId);
+                if (assignment is not null)
+                {
+                    skippedSourceKeys.Add(assignment.StepKey);
+                }
+
                 changed = true;
                 changedInPass = true;
                 events.Add(CreateEvent(
                     state,
                     context,
                     ProcessRuntimeEventTypes.StepSkipped,
-                    ComputeHash($"{assignment.BranchGate.SourceStepKey}:source-skipped:{assignment.StepKey}")));
+                    ComputeHash(skipEvidence)));
             }
         }
 
@@ -503,6 +585,37 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         return current;
     }
 
+    private static StrategyResultEnvelope CreateOverBudgetResult(DispatchWorkItem workItem)
+    {
+        var summary = $"Step '{workItem.StepInstanceId}' exceeded the dispatch retry limit of {MaximumStepDispatchAttempts} attempts and requires manager review before another retry.";
+        var stableKey = $"process-runtime:dispatch-attempt-budget:{workItem.RunId}:{workItem.StepInstanceId}:{MaximumStepDispatchAttempts}";
+        var resultHash = ComputeHash($"{stableKey}:{workItem.AttemptNumber}");
+        return new StrategyResultEnvelope(
+            workItem.StrategyBinding.StrategyId,
+            workItem.StrategyBinding.StrategyVersion,
+            CreateDeterministicGuid(stableKey),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.runtime.dispatch_attempt_budget_exceeded"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    resultHash,
+                    summary,
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.runtime.dispatch_attempt_budget_exceeded"),
+                    resultHash,
+                    summary)
+            ],
+            resultHash);
+    }
+
     private static RuntimeCommandContext CreateContext(
         string requestedBy,
         int iteration,
@@ -572,5 +685,11 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
         return "sha256:" + Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private static Guid CreateDeterministicGuid(string value)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return new Guid(bytes.AsSpan(0, 16));
     }
 }

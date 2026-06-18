@@ -751,6 +751,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("workspace_dotnet_run", "LaunchRuntime")]
     [InlineData("workspace_dotnet_stop", "LaunchRuntime")]
     [InlineData(ToolContractCatalog.BrowserClick, "CaptureRuntimeProof")]
+    [InlineData(ToolContractCatalog.BrowserWaitFor, "CaptureRuntimeProof")]
     [InlineData("processes_step_transition", "ExecuteExternalAction")]
     public void ProcessToolOperationAuthorizer_denies_governed_step_with_missing_operation_contract(
         string toolName,
@@ -1704,6 +1705,9 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserClick));
 
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserTakeScreenshot));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserWaitFor));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.BrowserWaitFor));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserWaitFor));
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetStop));
         Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary));
     }
@@ -1789,6 +1793,11 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Contains(browserClick.OperationRequirements, requirement =>
             requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
 
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserWaitFor, out var browserWaitFor));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, browserWaitFor.OperationRequirementKind);
+        Assert.Contains(browserWaitFor.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
+
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceDotNetStop, out var dotnetStop));
         Assert.Equal(ToolCapabilityOperationRequirementKind.Static, dotnetStop.OperationRequirementKind);
         Assert.Contains(dotnetStop.OperationRequirements, requirement =>
@@ -1819,6 +1828,12 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserTakeScreenshot, out var screenshot));
         Assert.Equal(ToolCapabilityBrowserProofRole.EvidenceCapture, screenshot.BrowserProofRole);
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserWaitFor, out var browserWaitFor));
+        Assert.Equal(ToolCapabilityBrowserProofRole.Observation, browserWaitFor.BrowserProofRole);
+        Assert.False(browserWaitFor.CanMutateProduct);
+        Assert.True(browserWaitFor.CanReadExternalTarget);
+        Assert.Contains(ProcessOperationContractNames.ExternalProductTargetReadOnly, browserWaitFor.TargetScopeRequirements);
 
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceDotNetStop, out var dotnetStop));
         Assert.Equal(ToolCapabilitySideEffectKind.RuntimeLaunch, dotnetStop.SideEffectKind);
@@ -2196,6 +2211,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(ToolContractCatalog.BrowserClick)]
     [InlineData(ToolContractCatalog.BrowserPressKey)]
     [InlineData(ToolContractCatalog.BrowserType)]
+    [InlineData(ToolContractCatalog.BrowserWaitFor)]
     public async Task EvaluateAsync_denies_browser_tools_without_capture_runtime_proof_operation(string toolName)
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2224,6 +2240,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(ToolContractCatalog.BrowserClick)]
     [InlineData(ToolContractCatalog.BrowserPressKey)]
     [InlineData(ToolContractCatalog.BrowserType)]
+    [InlineData(ToolContractCatalog.BrowserWaitFor)]
     public async Task EvaluateAsync_allows_browser_tools_with_capture_runtime_proof_operation(string toolName)
     {
         var policy = new DefaultAgentToolInvocationPolicy();

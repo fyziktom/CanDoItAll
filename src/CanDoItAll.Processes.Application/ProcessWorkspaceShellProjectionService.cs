@@ -243,6 +243,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             events,
             incidents,
             managerMessages,
+            result.ActiveAgents,
             stats,
             BuildMetricPoints(events),
             BuildToolUsage(events),
@@ -577,6 +578,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
     private static bool IsAttentionEventType(string eventType)
         => eventType.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Released", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||

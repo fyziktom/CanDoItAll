@@ -1,0 +1,272 @@
+- generic [ref=e377] [box=0,0,1440,1000]:
+  - complementary [ref=e378] [box=16,8,76,984]:
+    - generic [ref=e379] [box=27,19,54,962]:
+      - generic [ref=e380] [box=27,19,54,40]:
+        - generic [ref=e381] [box=27,19,10,40]:
+          - generic [ref=e382] [box=12,19,40,40]: CD
+          - generic [ref=e383] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e384] [box=45,21,36,36]:
+          - generic [ref=e385] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e386] [box=27,67,54,803]:
+        - button "Dashboard" [ref=e388] [box=27,71,44,44]:
+          - generic [ref=e390] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e392] [box=27,121,44,44]:
+          - generic [ref=e394] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e396] [box=27,171,44,44]:
+          - generic [ref=e398] [box=39,183,20,20]: forum
+          - generic [ref=e399] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e401] [box=27,221,44,44]:
+          - generic [ref=e403] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e405] [box=27,271,44,44]:
+          - generic [ref=e407] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e409] [box=27,321,44,44]:
+          - generic [ref=e411] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e413] [box=27,371,44,44]:
+          - generic [ref=e415] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e417] [box=27,421,44,44]:
+          - generic [ref=e419] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e421] [box=27,471,44,44]:
+          - generic [ref=e423] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e425] [box=27,521,44,44]:
+          - generic [ref=e427] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e429] [box=27,571,44,44]:
+          - generic [ref=e431] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e433] [box=27,621,44,44]:
+          - generic [ref=e435] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e437] [box=27,671,44,44]:
+          - generic [ref=e439] [box=39,683,20,20]: construction
+        - button "Validation Center" [ref=e441] [box=27,721,44,44]:
+          - generic [ref=e443] [box=39,733,20,20]: fact_check
+        - button "More pages" [ref=e445] [box=32,771,44,44]:
+          - generic [ref=e447] [box=44,783,20,20]: expand_less
+      - generic [ref=e449] [box=27,887,54,94]:
+        - button "Settings" [ref=e451] [box=27,887,54,44]:
+          - generic [ref=e453] [box=44,899,20,20]: settings
+          - generic [ref=e454] [box=54,909,1,1]: Settings
+        - button "Switch Database" [ref=e456] [box=27,937,54,44]:
+          - generic [ref=e458] [box=44,949,20,20]: storage
+          - generic [ref=e459] [box=54,959,1,1]: Switch Database
+  - main [ref=e460] [box=100,8,1324,984]:
+    - generic [ref=e461] [box=100,8,1324,30]:
+      - generic [ref=e465] [box=104,8,776,30]:
+        - button "Dashboard" [ref=e467] [box=113,13,85,20]:
+          - generic [ref=e468] [box=113,15,59,16]: Dashboard
+          - generic [ref=e470] [box=178,13,20,20]: push_pin
+        - button "Live Processes" [ref=e472] [box=222,15,77,16]:
+          - generic [ref=e473] [box=222,15,77,16]: Live Processes
+      - generic [ref=e475] [box=900,10,524,26]:
+        - generic [ref=e476] [box=900,10,241,26]:
+          - generic [ref=e477] [box=911,16,136,13]: Delivery Workspace
+          - generic [ref=e478] [box=1052,15,77,16]: Live Processes
+        - generic [ref=e479] [box=1149,10,117,26]: Interactive Server
+        - generic [ref=e480] [box=1274,10,86,26]: Live items 0
+        - generic [ref=e481] [box=1368,10,56,26]: Tabs 2
+    - generic [ref=e483] [box=100,46,1324,946]:
+      - generic [ref=e484] [box=100,46,1324,946]:
+        - generic [ref=e487] [box=117,63,1290,36]:
+          - generic [ref=e488] [box=117,70,1198,22]:
+            - paragraph [ref=e489] [box=117,73,85,16]: Processes
+            - heading "Live processes" [level=1] [ref=e490] [box=210,71,107,20]
+            - generic [ref=e493] [box=324,70,64,22]: 2 active
+            - generic [ref=e496] [box=396,70,82,22]: 0 attention
+            - generic [ref=e499] [box=486,70,62,22]: 0 failed
+            - generic [ref=e502] [box=556,70,55,22]: Ready
+          - generic [ref=e503] [box=1327,63,80,36]:
+            - button "Refresh" [ref=e505] [box=1327,63,36,36]:
+              - generic [ref=e506] [box=1335,71,20,20]: refresh
+              - generic [ref=e507] [box=1345,81,1,1]: refresh
+            - button "Definitions" [ref=e509] [box=1371,63,36,36]:
+              - generic [ref=e510] [box=1379,71,20,20]: account_tree
+              - generic [ref=e511] [box=1389,81,1,1]: account tree
+        - generic [ref=e513] [box=100,132,1324,860]:
+          - status [ref=e514] [box=100,132,359,45]:
+            - generic [ref=e515] [box=115,145,20,20]: check_circle
+            - generic [ref=e516] [box=143,144,302,21]: Process started. Live run projection is loading.
+          - generic [ref=e518] [box=113,202,584,22]:
+            - generic [ref=e521] [box=113,202,97,22]: 24 definitions
+            - generic [ref=e524] [box=218,202,64,22]: 2 active
+            - generic [ref=e527] [box=290,202,82,22]: 0 attention
+            - generic [ref=e530] [box=379,202,62,22]: 0 failed
+            - generic [ref=e533] [box=450,202,164,22]: 17.06.2026 15:16 last event
+            - generic [ref=e536] [box=622,202,75,22]: 0 backlog
+          - generic [ref=e538] [box=100,249,1324,743]:
+            - tablist "Tabs" [ref=e539] [box=100,249,1324,47]:
+              - tab "Activity 2" [selected] [ref=e540] [box=104,250,206,46]:
+                - generic [ref=e541] [box=121,264,80,20]: monitoring
+                - generic [ref=e542] [box=209,262,52,24]: Activity
+                - generic [ref=e543] [box=269,264,24,19]: "2"
+              - tab "Agents 0" [ref=e544] [box=318,249,143,46]:
+                - generic [ref=e545] [box=335,263,20,20]: smart_toy
+                - generic [ref=e546] [box=363,261,49,24]: Agents
+                - generic [ref=e547] [box=420,263,24,19]: "0"
+              - tab "Graphs" [ref=e548] [box=469,249,112,46]:
+                - generic [ref=e549] [box=486,263,20,20]: bar_chart
+                - generic [ref=e550] [box=514,261,50,24]: Graphs
+              - tab "Tool analytics 0" [ref=e551] [box=589,249,188,46]:
+                - generic [ref=e552] [box=606,263,20,20]: analytics
+                - generic [ref=e553] [box=634,261,94,24]: Tool analytics
+                - generic [ref=e554] [box=736,263,24,19]: "0"
+            - tabpanel "Activity 2" [ref=e556] [box=100,295,1324,697]:
+              - generic [ref=e557] [box=117,312,1275,2131]:
+                - generic [ref=e559] [box=138,333,1233,62]:
+                  - generic [ref=e560] [box=138,333,271,62]:
+                    - generic [ref=e561] [box=138,333,39,16]: History
+                    - combobox "History" [ref=e562] [box=138,353,271,42]
+                  - generic [ref=e563] [box=421,333,271,62]:
+                    - generic [ref=e564] [box=421,333,33,16]: Status
+                    - combobox "Status" [ref=e565] [box=421,353,271,42]
+                  - generic [ref=e566] [box=705,333,494,62]:
+                    - generic [ref=e567] [box=705,333,21,16]: Run
+                    - combobox "Run" [ref=e568] [box=705,353,494,42]
+                  - generic [ref=e569] [box=1210,357,161,38]:
+                    - button "Previous event page" [disabled] [ref=e570] [box=1210,357,46,38]
+                    - generic [ref=e573] [box=1262,363,57,26]: Page 1
+                    - button "Next event page" [disabled] [ref=e574] [box=1325,357,46,38]
+                - generic [ref=e577] [box=117,428,671,220]:
+                  - generic [ref=e578] [box=117,428,671,77]:
+                    - generic [ref=e579] [box=117,428,671,43]
+                    - generic [ref=e582] [box=117,479,671,26]: Last hour
+                  - generic [ref=e583] [box=117,517,671,131]:
+                    - article [ref=e584] [box=117,517,329,131]
+                    - article [ref=e599] [box=458,517,329,131]
+                - generic [ref=e614] [box=117,660,1275,1783]:
+                  - generic [ref=e615] [box=117,660,568,1783]:
+                    - article [ref=e616] [box=117,660,350,110]
+                    - article [ref=e629] [box=117,778,350,110]
+                    - article [ref=e642] [box=117,897,365,110]
+                  - generic [ref=e655] [box=697,660,695,1783]:
+                    - generic [ref=e656] [box=718,681,653,77]
+                    - generic [ref=e661] [box=718,774,653,1648]
+      - dialog "Run c9b825b9" [ref=e815] [box=12,30,1416,940]:
+        - generic [ref=e817] [box=29,43,1382,76]:
+          - generic [ref=e818] [box=29,43,148,76]:
+            - generic [ref=e819] [box=29,43,106,16]: Live process
+            - heading "Run c9b825b9" [level=2] [ref=e821] [box=29,63,124,28]
+            - paragraph [ref=e822] [box=29,95,148,24]: Active / 17.06.2026 15:16
+          - button "Close" [ref=e824] [box=1319,43,92,42]:
+            - generic [ref=e825] [box=1332,54,20,20]: close
+            - generic [ref=e826] [box=1360,52,38,24]: Close
+        - generic [ref=e828] [box=29,146,1367,1801]:
+          - generic [ref=e829] [box=29,146,520,22]:
+            - generic [ref=e832] [box=29,146,56,22]: Active
+            - generic [ref=e835] [box=93,146,71,22]: 18 recent
+            - generic [ref=e838] [box=172,146,89,22]: 0 incident(s)
+            - generic [ref=e841] [box=269,146,68,22]: 0 agents
+            - generic [ref=e844] [box=345,146,88,22]: 1 stale claim
+            - generic [ref=e847] [box=440,146,108,22]: 17.06.2026 15:16
+          - article [ref=e850] [box=29,180,666,186]:
+            - generic [ref=e851] [box=43,194,638,44]:
+              - generic [ref=e852] [box=43,194,120,44]:
+                - generic [ref=e853] [box=43,194,120,19]: Delivery Manager
+                - generic [ref=e854] [box=43,220,120,18]: delivery-manager
+              - generic [ref=e855] [box=585,194,96,26]: Lease expired
+            - paragraph [ref=e856] [box=43,248,638,20]: Delivery Manager is Running on prepare-solution-skeleton as delivery-manager. Lease expired 17.06.2026 15:46.
+            - generic [ref=e857] [box=43,278,638,26]:
+              - generic [ref=e858] [box=43,278,100,26]: Run c9b825b9
+              - generic [ref=e859] [box=149,278,164,26]: prepare-solution-skeleton
+              - generic [ref=e860] [box=319,278,154,26]: claimed 17.06.2026 15:16
+              - generic [ref=e861] [box=479,278,141,26]: lease 17.06.2026 15:46
+            - button "Open process control" [ref=e862] [box=43,314,638,38]:
+              - generic [ref=e863] [box=352,323,20,20]: open_in_new
+              - generic [ref=e864] [box=361,333,1,1]: open in new
+          - generic [ref=e865] [box=29,378,1367,1569]:
+            - generic [ref=e866] [box=29,378,448,1569]:
+              - paragraph [ref=e867] [box=50,399,406,15]: Recent events
+              - generic [ref=e868] [box=50,414,406,84]:
+                - generic [ref=e869] [box=63,427,380,26]:
+                  - generic [ref=e870] [box=63,427,92,26]: StepRunning
+                  - generic [ref=e871] [box=161,432,83,16]: 17.06.2026 15:16
+                - paragraph [ref=e872] [box=63,461,380,24]: StepRunning
+              - generic [ref=e873] [box=50,498,406,84]:
+                - generic [ref=e874] [box=63,511,380,26]:
+                  - generic [ref=e875] [box=63,511,90,26]: StepClaimed
+                  - generic [ref=e876] [box=159,516,83,16]: 17.06.2026 15:16
+                - paragraph [ref=e877] [box=63,545,380,24]: StepClaimed
+              - generic [ref=e878] [box=50,582,406,84]:
+                - generic [ref=e879] [box=63,595,380,26]:
+                  - generic [ref=e880] [box=63,595,142,26]: DispatchClaimCreated
+                  - generic [ref=e881] [box=211,600,83,16]: 17.06.2026 15:16
+                - paragraph [ref=e882] [box=63,629,380,24]: DispatchClaimCreated
+              - generic [ref=e883] [box=50,666,406,84]:
+                - generic [ref=e884] [box=63,679,380,26]:
+                  - generic [ref=e885] [box=63,679,79,26]: StepReady
+                  - generic [ref=e886] [box=148,684,83,16]: 17.06.2026 15:16
+                - paragraph [ref=e887] [box=63,713,380,24]: StepReady
+              - generic [ref=e888] [box=50,750,406,84]:
+                - generic [ref=e889] [box=63,763,380,26]:
+                  - generic [ref=e890] [box=63,763,160,26]: DispatchClaimCompleted
+                  - generic [ref=e891] [box=229,768,83,16]: 17.06.2026 15:16
+                - paragraph [ref=e892] [box=63,797,380,24]: DispatchClaimCompleted
+              - generic [ref=e893] [box=50,834,406,84]:
+                - generic [ref=e894] [box=63,847,380,26]:
+                  - generic [ref=e895] [box=63,847,106,26]: StepCompleted
+                  - generic [ref=e896] [box=175,852,83,16]: 17.06.2026 15:16
+                - paragraph [ref=e897] [box=63,881,380,24]: StepCompleted
+              - generic [ref=e898] [box=50,918,406,84]:
+                - generic [ref=e899] [box=63,931,380,26]:
+                  - generic [ref=e900] [box=63,931,92,26]: StepRunning
+                  - generic [ref=e901] [box=161,936,83,16]: 17.06.2026 15:15
+                - paragraph [ref=e902] [box=63,965,380,24]: StepRunning
+              - generic [ref=e903] [box=50,1002,406,84]:
+                - generic [ref=e904] [box=63,1015,380,26]:
+                  - generic [ref=e905] [box=63,1015,90,26]: StepClaimed
+                  - generic [ref=e906] [box=159,1020,83,16]: 17.06.2026 15:15
+                - paragraph [ref=e907] [box=63,1049,380,24]: StepClaimed
+              - generic [ref=e908] [box=50,1086,406,84]:
+                - generic [ref=e909] [box=63,1099,380,26]:
+                  - generic [ref=e910] [box=63,1099,142,26]: DispatchClaimCreated
+                  - generic [ref=e911] [box=211,1104,83,16]: 17.06.2026 15:15
+                - paragraph [ref=e912] [box=63,1133,380,24]: DispatchClaimCreated
+              - generic [ref=e913] [box=50,1170,406,84]:
+                - generic [ref=e914] [box=63,1183,380,26]:
+                  - generic [ref=e915] [box=63,1183,79,26]: StepReady
+                  - generic [ref=e916] [box=148,1188,83,16]: 17.06.2026 15:15
+                - paragraph [ref=e917] [box=63,1217,380,24]: StepReady
+              - generic [ref=e918] [box=50,1254,406,84]:
+                - generic [ref=e919] [box=63,1267,380,26]:
+                  - generic [ref=e920] [box=63,1267,160,26]: DispatchClaimCompleted
+                  - generic [ref=e921] [box=229,1272,83,16]: 17.06.2026 15:15
+                - paragraph [ref=e922] [box=63,1301,380,24]: DispatchClaimCompleted
+              - generic [ref=e923] [box=50,1338,406,84]:
+                - generic [ref=e924] [box=63,1351,380,26]:
+                  - generic [ref=e925] [box=63,1351,106,26]: StepCompleted
+                  - generic [ref=e926] [box=175,1356,83,16]: 17.06.2026 15:15
+                - paragraph [ref=e927] [box=63,1385,380,24]: StepCompleted
+              - generic [ref=e928] [box=50,1422,406,84]:
+                - generic [ref=e929] [box=63,1435,380,26]:
+                  - generic [ref=e930] [box=63,1435,92,26]: StepRunning
+                  - generic [ref=e931] [box=161,1440,83,16]: 17.06.2026 15:14
+                - paragraph [ref=e932] [box=63,1469,380,24]: StepRunning
+              - generic [ref=e933] [box=50,1506,406,84]:
+                - generic [ref=e934] [box=63,1519,380,26]:
+                  - generic [ref=e935] [box=63,1519,90,26]: StepClaimed
+                  - generic [ref=e936] [box=159,1524,83,16]: 17.06.2026 15:14
+                - paragraph [ref=e937] [box=63,1553,380,24]: StepClaimed
+              - generic [ref=e938] [box=50,1590,406,84]:
+                - generic [ref=e939] [box=63,1603,380,26]:
+                  - generic [ref=e940] [box=63,1603,142,26]: DispatchClaimCreated
+                  - generic [ref=e941] [box=211,1608,83,16]: 17.06.2026 15:14
+                - paragraph [ref=e942] [box=63,1637,380,24]: DispatchClaimCreated
+              - generic [ref=e943] [box=50,1674,406,84]:
+                - generic [ref=e944] [box=63,1687,380,26]:
+                  - generic [ref=e945] [box=63,1687,79,26]: StepReady
+                  - generic [ref=e946] [box=148,1692,83,16]: 17.06.2026 15:14
+                - paragraph [ref=e947] [box=63,1721,380,24]: StepReady
+              - generic [ref=e948] [box=50,1758,406,84]:
+                - generic [ref=e949] [box=63,1771,380,26]:
+                  - generic [ref=e950] [box=63,1771,136,26]: ProcessRunActivated
+                  - generic [ref=e951] [box=205,1776,83,16]: 17.06.2026 15:14
+                - paragraph [ref=e952] [box=63,1805,380,24]: ProcessRunActivated
+              - generic [ref=e953] [box=50,1842,406,84]:
+                - generic [ref=e954] [box=63,1855,380,26]:
+                  - generic [ref=e955] [box=63,1855,127,26]: ProcessRunCreated
+                  - generic [ref=e956] [box=196,1860,83,16]: 17.06.2026 15:14
+                - paragraph [ref=e957] [box=63,1889,380,24]: ProcessRunCreated
+            - generic [ref=e958] [box=489,378,448,1569]:
+              - paragraph [ref=e959] [box=510,399,406,15]: Incidents
+              - paragraph [ref=e960] [box=510,426,406,24]: No incidents are attached to this run.
+            - generic [ref=e961] [box=948,378,448,1569]:
+              - paragraph [ref=e962] [box=969,399,406,15]: Manager messages
+              - paragraph [ref=e963] [box=969,426,406,24]: No manager messages are attached to this run.
+        - button "Close" [ref=e966] [box=1339,911,64,42]:
+          - generic [ref=e967] [box=1352,920,38,24]: Close

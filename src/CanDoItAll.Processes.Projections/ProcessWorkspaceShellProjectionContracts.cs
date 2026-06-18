@@ -454,6 +454,75 @@ public sealed record ProcessRuntimeToolUsageProjection(
     DateTimeOffset LastUsedAtUtc,
     string Summary);
 
+public sealed record ProcessRuntimeActiveAgentProjection(
+    Guid RunId,
+    Guid StepInstanceId,
+    string RunLabel,
+    string StepKey,
+    string RoleKey,
+    string ExecutorKind,
+    string ExecutorId,
+    string ExecutorDisplayName,
+    string Status,
+    bool IsWorking,
+    bool IsLeaseExpired,
+    DateTimeOffset UpdatedAtUtc,
+    DateTimeOffset? ClaimedAtUtc,
+    DateTimeOffset? LeaseExpiresAtUtc,
+    string Summary)
+{
+    public Guid? ExecutionRunId { get; init; }
+
+    public Guid? AgentId { get; init; }
+
+    public string AgentName { get; init; } = string.Empty;
+
+    public string ProviderName { get; init; } = string.Empty;
+
+    public string Model { get; init; } = string.Empty;
+
+    public string ExecutionState { get; init; } = string.Empty;
+
+    public string ExecutionOutcome { get; init; } = string.Empty;
+
+    public DateTimeOffset? ExecutionStartedAtUtc { get; init; }
+
+    public DateTimeOffset? ExecutionUpdatedAtUtc { get; init; }
+
+    public string CurrentActivity { get; init; } = string.Empty;
+
+    public string LastError { get; init; } = string.Empty;
+
+    public string ObservationSource { get; init; } = string.Empty;
+
+    public IReadOnlyList<ProcessRuntimeActiveAgentActivityProjection> RecentActivities { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeActiveAgentToolProjection> RecentTools { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeActiveAgentArtifactProjection> Artifacts { get; init; } = [];
+}
+
+public sealed record ProcessRuntimeActiveAgentActivityProjection(
+    DateTimeOffset CreatedAtUtc,
+    string State,
+    string Phase,
+    string Message);
+
+public sealed record ProcessRuntimeActiveAgentToolProjection(
+    string ToolName,
+    string RuntimeToolProviderKey,
+    string RequestSummary,
+    string ExitSummary,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset CompletedAtUtc);
+
+public sealed record ProcessRuntimeActiveAgentArtifactProjection(
+    string ArtifactKind,
+    string DisplayName,
+    string RelativePath,
+    string Summary,
+    DateTimeOffset CreatedAtUtc);
+
 public sealed record ProcessRuntimeWorkspaceProjection(
     ProcessRuntimeHistoryWindow HistoryWindow,
     int EventPage,
@@ -465,6 +534,7 @@ public sealed record ProcessRuntimeWorkspaceProjection(
     IReadOnlyList<ProcessTimelineEventProjection> Events,
     IReadOnlyList<ProcessIncidentProjection> Incidents,
     IReadOnlyList<ProcessManagerMessageProjection> ManagerMessages,
+    IReadOnlyList<ProcessRuntimeActiveAgentProjection> ActiveAgents,
     ProcessRuntimeStatsProjection Stats,
     IReadOnlyList<ProcessRuntimeMetricPointProjection> MetricPoints,
     IReadOnlyList<ProcessRuntimeToolUsageProjection> ToolUsage,
@@ -483,6 +553,7 @@ public sealed record ProcessRuntimeWorkspaceProjection(
         Events: [],
         Incidents: [],
         ManagerMessages: [],
+        ActiveAgents: [],
         ProcessRuntimeStatsProjection.Empty,
         MetricPoints: [],
         ToolUsage: [],

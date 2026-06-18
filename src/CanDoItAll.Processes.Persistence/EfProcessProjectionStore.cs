@@ -99,7 +99,29 @@ public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbConte
             dbContext.ProjectionHistory.Add(ProcessPersistenceMappers.ToHistoryEntity(history));
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException)
+        {
+            dbContext.ChangeTracker.Clear();
+            var wasInsertedConcurrently = await dbContext.ProjectionHistory
+                .AsNoTracking()
+                .AnyAsync(
+                    item =>
+                        item.ProjectorName == history.ProjectorName.Value &&
+                        item.ProjectionKey == history.ProjectionKey.Value &&
+                        item.GlobalSequence == history.GlobalSequence,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (wasInsertedConcurrently)
+            {
+                return;
+            }
+
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<ProcessProjectionHistoryRecord>> ReadHistoryAsync(

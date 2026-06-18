@@ -43,6 +43,7 @@ public static class ToolContractCatalog
     public const string BrowserPressKey = "browser_press_key";
     public const string BrowserType = "browser_type";
     public const string BrowserDrag = "browser_drag";
+    public const string BrowserWaitFor = "browser_wait_for";
 
     public static IReadOnlyList<string> WorkspaceToolNames { get; } =
     [
@@ -89,7 +90,8 @@ public static class ToolContractCatalog
         BrowserSelectOption,
         BrowserPressKey,
         BrowserType,
-        BrowserDrag
+        BrowserDrag,
+        BrowserWaitFor
     ];
 
     public static IReadOnlyList<string> BrowserEvidenceToolNames { get; } =
@@ -121,7 +123,8 @@ public static class ToolContractCatalog
         BrowserPressKey,
         BrowserType,
         BrowserDrag,
-        BrowserEvaluate
+        BrowserEvaluate,
+        BrowserWaitFor
     ];
 
     public static IReadOnlyList<string> DotNetValidationToolNames { get; } =

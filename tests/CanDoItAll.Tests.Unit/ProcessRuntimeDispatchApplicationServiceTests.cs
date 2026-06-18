@@ -76,6 +76,66 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCompleted);
     }
 
+    [Fact]
+    public async Task ExecuteReady_skips_dependency_descendants_when_branch_path_was_skipped_and_closes_run()
+    {
+        var releaseApprovalAfterRepairStepId = ProcessStepInstanceId.New();
+        var executeReleaseAfterRepairStepId = ProcessStepInstanceId.New();
+        var postReleaseAfterRepairStepId = ProcessStepInstanceId.New();
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                NewStep(ValidationStepId, ProcessRuntimeStepStatus.Completed),
+                NewStep(RecheckStepId, ProcessRuntimeStepStatus.Completed),
+                NewStep(HandoffStepId, ProcessRuntimeStepStatus.Completed),
+                NewStep(releaseApprovalAfterRepairStepId, ProcessRuntimeStepStatus.Skipped),
+                NewStep(executeReleaseAfterRepairStepId, ProcessRuntimeStepStatus.Pending, dependencies: [releaseApprovalAfterRepairStepId]),
+                NewStep(postReleaseAfterRepairStepId, ProcessRuntimeStepStatus.Pending, dependencies: [executeReleaseAfterRepairStepId])
+            ],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(NewPlan(
+            [
+                (ValidationStepId, "qa-validation"),
+                (RecheckStepId, "qa-recheck"),
+                (HandoffStepId, "post-release-learning"),
+                (releaseApprovalAfterRepairStepId, "release-approval-after-repair"),
+                (executeReleaseAfterRepairStepId, "execute-release-rollout-after-repair"),
+                (postReleaseAfterRepairStepId, "post-release-learning-after-repair")
+            ])),
+            new InMemoryAssignmentStore(
+            [
+                NewAssignment(ValidationStepId, "qa-validation"),
+                NewAssignment(RecheckStepId, "qa-recheck"),
+                NewAssignment(HandoffStepId, "post-release-learning"),
+                NewAssignment(releaseApprovalAfterRepairStepId, "release-approval-after-repair", new ProcessRuntimeBranchGate("qa-recheck", "quality-accepted")),
+                NewAssignment(executeReleaseAfterRepairStepId, "execute-release-rollout-after-repair"),
+                NewAssignment(postReleaseAfterRepairStepId, "post-release-learning-after-repair")
+            ]),
+            new ThrowingStrategyFactoryResolver(),
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Skipped, FindStep(stateStore.State, executeReleaseAfterRepairStepId).Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Skipped, FindStep(stateStore.State, postReleaseAfterRepairStepId).Status);
+        Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCompleted);
+    }
+
     [Theory]
     [InlineData("business-market-sizing")]
     [InlineData("multistep-data-analysis")]
@@ -120,17 +180,97 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.DoesNotContain(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.PayloadHash.Contains("Tetris", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task ExecuteReady_defers_ready_step_without_blocking_when_strategy_reports_active_child_run()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var childRunId = ProcessRunId.New();
+        var plan = NewSingleStepPlan(stepId, "architecture-review");
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Pending)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            new InMemoryAssignmentStore([]),
+            new DeferredStrategyFactoryResolver(childRunId),
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Running, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Contains(childRunId.ToString(), StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, FindStep(stateStore.State, stepId).Status);
+        Assert.Contains(stateStore.State.Claims, claim => claim.StepInstanceId == stepId && claim.Status == DispatchClaimStatus.Released);
+        Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.DispatchClaimReleased);
+        Assert.DoesNotContain(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+    [Fact]
+    public async Task ExecuteReady_blocks_over_budget_ready_step_without_invoking_strategy()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var plan = NewSingleStepPlan(stepId, "implementation");
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Ready, attemptNumber: 20)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            new InMemoryAssignmentStore([]),
+            new ThrowingStrategyFactoryResolver(),
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Running, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Contains("retry limit", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Contains(stateStore.State.AppliedResults, receipt => receipt.Outcome == StrategyOutcome.NeedsManager);
+    }
+
     private static ProcessRuntimeStepState NewStep(
         ProcessStepInstanceId stepId,
-        ProcessRuntimeStepStatus status)
+        ProcessRuntimeStepStatus status,
+        int attemptNumber = 0,
+        IReadOnlyList<ProcessStepInstanceId>? dependencies = null)
     {
         return new ProcessRuntimeStepState(
             stepId,
             ProcessStepDefinitionId.New(),
             status,
             true,
-            0,
-            new HashSet<ProcessStepInstanceId>(),
+            attemptNumber,
+            dependencies?.ToHashSet() ?? new HashSet<ProcessStepInstanceId>(),
             new HashSet<ArtifactSlotId>(),
             null,
             null);
@@ -142,6 +282,16 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         => state.Steps.Single(step => step.StepInstanceId == stepId);
 
     private static ProcessInstancePlan NewPlan()
+        => NewPlan(
+        [
+            (ValidationStepId, "targeted-validation"),
+            (RecheckStepId, "targeted-recheck"),
+            (HandoffStepId, "feature-handoff"),
+            (HandoffAfterRepairStepId, "feature-handoff-after-repair"),
+            (EscalationStepId, "feature-repair-escalation")
+        ]);
+
+    private static ProcessInstancePlan NewPlan(IReadOnlyList<(ProcessStepInstanceId StepId, string StepKey)> steps)
     {
         return new ProcessInstancePlan(
             new ProcessInstancePlanHeader(PlanId, PlanId, null, null, "processes.instance-plan.v1", Now, 0),
@@ -156,13 +306,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 []),
             new DriverStackSnapshot([]),
             new StrategyBindingSet([Binding], [], [], []),
-            [
-                NewPlanStep(ValidationStepId, "targeted-validation"),
-                NewPlanStep(RecheckStepId, "targeted-recheck"),
-                NewPlanStep(HandoffStepId, "feature-handoff"),
-                NewPlanStep(HandoffAfterRepairStepId, "feature-handoff-after-repair"),
-                NewPlanStep(EscalationStepId, "feature-repair-escalation")
-            ],
+            steps.Select(step => NewPlanStep(step.StepId, step.StepKey)).ToArray(),
             new ArtifactPlan([], []),
             new BranchRouteTable([]),
             [],
@@ -217,6 +361,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             stepId,
             stepKey,
             "role",
+            "role",
+            "Role",
             ProcessLaunchExecutorKinds.Agent,
             "agent",
             "Agent",
@@ -327,6 +473,17 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
+    private sealed class DeferredStrategyFactoryResolver(ProcessRunId childRunId) : IProcessRuntimeStrategyFactoryResolver
+    {
+        public ValueTask<IProcessStrategyFactory> ResolveAsync(
+            ProcessStrategyBindingSnapshot binding,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IProcessStrategyFactory>(new DeferredStrategyFactory(binding, childRunId));
+        }
+    }
+
     private sealed class RecordingStrategyFactory(
         ProcessStrategyBindingSnapshot binding,
         string resultKey,
@@ -344,6 +501,25 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult<IProcessStrategy>(new RecordingStrategy(resultKey, executionContexts));
+        }
+    }
+
+    private sealed class DeferredStrategyFactory(
+        ProcessStrategyBindingSnapshot binding,
+        ProcessRunId childRunId) : IProcessStrategyFactory
+    {
+        public ProcessStrategyDescriptor Descriptor { get; } = new(
+            binding.StrategyId,
+            binding.StrategyVersion,
+            ProcessStrategyKind.StepExecution,
+            new HashSet<CapabilityTag>());
+
+        public ValueTask<IProcessStrategy> CreateAsync(
+            ProcessStrategyBindingSnapshot binding,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IProcessStrategy>(new DeferredStrategy(childRunId));
         }
     }
 
@@ -367,6 +543,19 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [],
                 [],
                 $"sha256:{resultKey}"));
+        }
+    }
+
+    private sealed class DeferredStrategy(ProcessRunId childRunId) : IProcessStrategy
+    {
+        public ValueTask<StrategyResultEnvelope> ExecuteAsync(
+            ProcessStrategyExecutionContext context,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new ProcessRuntimeDispatchDeferredException(
+                $"Step '{context.StepId}' is waiting for active child process run '{childRunId}'.",
+                childRunId);
         }
     }
 

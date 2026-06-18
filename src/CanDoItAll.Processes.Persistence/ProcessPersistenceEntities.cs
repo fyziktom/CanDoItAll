@@ -64,6 +64,10 @@ public sealed class ProcessRuntimeStepAssignmentEntity
 
     public string RoleKey { get; set; } = string.Empty;
 
+    public string RoleResourceKey { get; set; } = string.Empty;
+
+    public string RoleDisplayName { get; set; } = string.Empty;
+
     public string ExecutorKind { get; set; } = string.Empty;
 
     public string ExecutorId { get; set; } = string.Empty;

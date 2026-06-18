@@ -72,7 +72,7 @@
     {
       "Key": "software-engineer",
       "RoleResourceKey": "software-engineer",
-      "DisplayName": "Generic .NET scaffold engineer",
+      "DisplayName": ".NET scaffold engineer",
       "Purpose": "Create the requested .NET solution, app project, test project, and references from the scaffold contract without assuming a UI stack, service shape, or default test framework.",
       "StaffingIntent": "A general .NET-capable implementer with access to repository files and build tools; must choose app and test templates only from current-run project structure or upstream artifacts.",
       "PreferredExecutorKind": "agent",
@@ -168,7 +168,7 @@
     {
       "Order": 1,
       "Key": "create-dotnet-project",
-      "Title": "Create solution and .NET app project",
+      "Title": "Create .NET solution and app project",
       "Subtitle": "Solution skeleton",
       "Notes": "Create the solution file and requested .NET app project with the agreed names, paths, archetype, and template. Use workspace_create_directory for the grounded product root and productRoot/src when they do not exist. Use workspace_dotnet_new with template sln for the solution at the product root, inspect the resulting .slnx or .sln file, then scaffold the app under productRoot/src with the template named by current-run requirements. Do not create the test project, add feature code, run dotnet build/test/run, start a browser, or default to a UI template or guessed external-target paths in this step.",
       "StepKind": "Work",
@@ -244,7 +244,7 @@
     {
       "Order": 2,
       "Key": "add-test-project",
-      "Title": "Add test project and reference",
+      "Title": "Add .NET test project and reference",
       "Subtitle": "Test lane from the start",
       "Notes": "Create the test project using the test framework grounded by the parent contract or existing repository convention, add it to the solution, and reference the application project where appropriate. Do not default to a specific test framework when the current run names another one. Do not implement feature tests, run dotnet build/test/run, start a browser, or perform runtime proof in this step; those belong to validation or feature implementation steps.",
       "StepKind": "Work",

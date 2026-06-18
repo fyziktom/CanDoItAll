@@ -19,6 +19,10 @@ public sealed class EfProcessRuntimeEventStore(ProcessPersistenceDbContext dbCon
             return;
         }
 
+        using var rootSequenceLock = await ProcessRuntimeRootSequenceLocks
+            .AcquireAsync(events.Select(runtimeEvent => runtimeEvent.RootRunId.Value), cancellationToken)
+            .ConfigureAwait(false);
+
         var rootSequences = new Dictionary<Guid, long>(events.Count);
         foreach (var runtimeEvent in events)
         {

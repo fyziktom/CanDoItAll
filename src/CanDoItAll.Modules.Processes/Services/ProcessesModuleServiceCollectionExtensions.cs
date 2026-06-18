@@ -66,10 +66,16 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessRuntimeProjectionCatchupService>();
         services.TryAddScoped<IProcessStepBriefBuilder, AgentFrameworkProcessStepBriefBuilder>();
         services.TryAddScoped<IProcessExecutionAdapter, AgentFrameworkProcessExecutionAdapter>();
+        services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
         services.TryAddScoped<IProcessLaunchDriverCatalogProvider, StandardProcessLaunchDriverCatalogProvider>();
         services.TryAddScoped<IProcessLaunchExecutorResolver, AgentFrameworkProcessLaunchExecutorResolver>();
         services.TryAddScoped<IProcessLaunchArtifactInitializer, WorkspaceProcessLaunchArtifactInitializer>();
         services.TryAddScoped<IProcessRuntimeStrategyFactoryResolver, StandardProcessRuntimeStrategyFactoryResolver>();
+        services.Configure<ProcessRuntimeDispatchQueueOptions>(
+            configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
+        services.TryAddSingleton<ProcessRuntimeDispatchQueue>();
+        services.TryAddSingleton<IProcessRuntimeDispatchQueue>(serviceProvider => serviceProvider.GetRequiredService<ProcessRuntimeDispatchQueue>());
+        services.AddHostedService<ProcessRuntimeDispatchQueueWorker>();
         services.TryAddScoped<ProcessLaunchApplicationService>();
         services.TryAddScoped<ProcessRuntimeDispatchApplicationService>();
         services.TryAddScoped<ProcessRuntimeProjectionQueryService>();

@@ -1,0 +1,226 @@
+- generic [ref=e643] [box=0,0,1440,950]:
+  - complementary [ref=e644] [box=16,8,76,934]:
+    - generic [ref=e645] [box=27,19,54,912]:
+      - generic [ref=e646] [box=27,19,54,40]:
+        - generic [ref=e647] [box=27,19,10,40]:
+          - generic [ref=e648] [box=12,19,40,40]: CD
+          - generic [ref=e649] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e650] [box=45,21,36,36]:
+          - generic [ref=e651] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e652] [box=27,67,54,753]:
+        - button "Dashboard" [ref=e654] [box=27,71,44,44]:
+          - generic [ref=e656] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e658] [box=27,121,44,44]:
+          - generic [ref=e660] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e662] [box=27,171,44,44]:
+          - generic [ref=e664] [box=39,183,20,20]: forum
+          - generic [ref=e665] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e667] [box=27,221,44,44]:
+          - generic [ref=e669] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e671] [box=27,271,44,44]:
+          - generic [ref=e673] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e675] [box=27,321,44,44]:
+          - generic [ref=e677] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e679] [box=27,371,44,44]:
+          - generic [ref=e681] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e683] [box=27,421,44,44]:
+          - generic [ref=e685] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e687] [box=27,471,44,44]:
+          - generic [ref=e689] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e691] [box=27,521,44,44]:
+          - generic [ref=e693] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e695] [box=27,571,44,44]:
+          - generic [ref=e697] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e699] [box=27,621,44,44]:
+          - generic [ref=e701] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e703] [box=27,671,44,44]:
+          - generic [ref=e705] [box=39,683,20,20]: construction
+        - button "More pages" [ref=e707] [box=32,721,44,44]:
+          - generic [ref=e709] [box=44,733,20,20]: expand_less
+      - generic [ref=e711] [box=27,837,54,94]:
+        - button "Settings" [ref=e713] [box=27,837,54,44]:
+          - generic [ref=e715] [box=44,849,20,20]: settings
+          - generic [ref=e716] [box=54,859,1,1]: Settings
+        - button "Switch Database" [ref=e718] [box=27,887,54,44]:
+          - generic [ref=e720] [box=44,899,20,20]: storage
+          - generic [ref=e721] [box=54,909,1,1]: Switch Database
+  - main [ref=e722] [box=100,8,1324,934]:
+    - generic [ref=e723] [box=100,8,1324,30]:
+      - generic [ref=e727] [box=104,8,667,30]:
+        - button "Dashboard" [ref=e729] [box=113,13,85,20]:
+          - generic [ref=e730] [box=113,15,59,16]: Dashboard
+          - generic [ref=e732] [box=178,13,20,20]: push_pin
+        - button "Dashboard" [ref=e734] [box=222,13,85,20]:
+          - generic [ref=e735] [box=222,15,59,16]: Dashboard
+          - generic [ref=e737] [box=287,13,20,20]: push_pin
+        - button "Live Processes" [ref=e739] [box=331,15,77,16]:
+          - generic [ref=e740] [box=331,15,77,16]: Live Processes
+        - button "TetrisGame · Live Processes" [ref=e742] [box=432,15,144,16]:
+          - generic [ref=e743] [box=432,15,144,16]: TetrisGame · Live Processes
+      - generic [ref=e745] [box=791,10,633,26]:
+        - generic [ref=e746] [box=791,10,207,26]:
+          - generic [ref=e747] [box=802,16,136,13]: Delivery Workspace
+          - generic [ref=e748] [box=944,15,43,16]: Projects
+        - generic [ref=e749] [box=1006,10,83,26]: TetrisGame
+        - generic [ref=e750] [box=1096,10,44,26]: WIP
+        - generic [ref=e751] [box=1148,10,117,26]: Interactive Server
+        - generic [ref=e752] [box=1273,10,86,26]: Live items 0
+        - generic [ref=e753] [box=1368,10,56,26]: Tabs 4
+    - generic [ref=e755] [box=100,46,1324,896]:
+      - generic [ref=e756] [box=100,46,1324,896]:
+        - generic [ref=e759] [box=117,63,1290,36]:
+          - generic [ref=e760] [box=117,70,1198,22]:
+            - paragraph [ref=e761] [box=117,73,85,16]: Processes
+            - heading "Project live processes" [level=1] [ref=e762] [box=210,71,160,20]
+            - generic [ref=e765] [box=378,70,69,22]: 13 active
+            - generic [ref=e768] [box=455,70,80,22]: 1 attention
+            - generic [ref=e771] [box=543,70,62,22]: 0 failed
+            - generic [ref=e774] [box=613,70,55,22]: Ready
+          - generic [ref=e775] [box=1327,63,80,36]:
+            - button "Refresh" [ref=e777] [box=1327,63,36,36]:
+              - generic [ref=e778] [box=1335,71,20,20]: refresh
+              - generic [ref=e794] [box=1345,81,1,1]: refresh
+            - button "Definitions" [ref=e781] [box=1371,63,36,36]:
+              - generic [ref=e782] [box=1379,71,20,20]: account_tree
+              - generic [ref=e783] [box=1389,81,1,1]: account tree
+        - generic [ref=e785] [box=100,132,1324,810]:
+          - generic [ref=e796] [box=113,145,590,22]:
+            - generic [ref=e799] [box=113,145,97,22]: 24 definitions
+            - generic [ref=e802] [box=218,145,69,22]: 13 active
+            - generic [ref=e805] [box=294,145,80,22]: 1 attention
+            - generic [ref=e808] [box=382,145,62,22]: 0 failed
+            - generic [ref=e811] [box=453,145,168,22]: 17.06.2026 22:38 last event
+            - generic [ref=e814] [box=628,145,75,22]: 0 backlog
+          - generic [ref=e816] [box=100,192,1324,750]:
+            - tablist "Tabs" [ref=e817] [box=100,192,1324,47]:
+              - tab "Activity 13" [ref=e818] [box=104,192,211,46]:
+                - generic [ref=e819] [box=121,205,80,20]: monitoring
+                - generic [ref=e820] [box=209,203,52,24]: Activity
+                - generic [ref=e821] [box=269,206,29,19]: "13"
+              - tab "Agents 1" [selected] [ref=e822] [box=323,193,143,46]:
+                - generic [ref=e823] [box=340,206,20,20]: smart_toy
+                - generic [ref=e824] [box=368,204,49,24]: Agents
+                - generic [ref=e825] [box=425,207,24,19]: "1"
+              - tab "Graphs" [ref=e826] [box=474,192,112,46]:
+                - generic [ref=e827] [box=491,205,20,20]: bar_chart
+                - generic [ref=e828] [box=519,203,50,24]: Graphs
+              - tab "Tool analytics 0" [ref=e829] [box=594,192,188,46]:
+                - generic [ref=e830] [box=611,205,20,20]: analytics
+                - generic [ref=e831] [box=639,203,94,24]: Tool analytics
+                - generic [ref=e832] [box=741,206,24,19]: "0"
+            - tabpanel "Agents 1" [ref=e1317] [box=100,238,1324,704]:
+              - generic [ref=e1318] [box=117,255,1275,401]:
+                - generic [ref=e1319] [box=117,255,1275,187]:
+                  - paragraph [ref=e1320] [box=138,276,1233,15]: Manager context
+                  - heading "Open run agent context" [level=2] [ref=e1321] [box=138,291,1233,24]
+                  - paragraph [ref=e1322] [box=138,323,1233,24]: processes:project:3324868f66e2478abb8f14f32a5db1e9:run:c4357c0c1b2b408c879f288234d4b41e
+                  - paragraph [ref=e1323] [box=138,355,1233,24]: "Cause: StepBlocked. Next action: open the selected run and review manager messages."
+                  - generic [ref=e1324] [box=138,395,1233,26]:
+                    - generic [ref=e1325] [box=138,395,71,26]: Available
+                    - generic [ref=e1326] [box=217,395,109,26]: 1 working agent
+                - article [ref=e1329] [box=117,454,831,202]:
+                  - generic [ref=e1330] [box=131,468,803,56]:
+                    - generic [ref=e1331] [box=131,468,294,56]:
+                      - img "Programming Workspace Analyst" [ref=e1332] [box=131,468,56,56]
+                      - generic [ref=e1333] [box=199,474,226,44]:
+                        - generic [ref=e1334] [box=199,474,226,19]: Programming Workspace Analyst
+                        - generic [ref=e1335] [box=199,500,226,18]: product-owner
+                    - generic [ref=e1336] [box=831,468,103,26]: WaitingOnTool
+                  - paragraph [ref=e1337] [box=131,534,803,20]: "Tool: Invoking tool 'workspace_create_directory' with path=\"artifacts/process-runs/c4357c0c-1b2b-408c-879f-288234d4b41e/feature-intake\"."
+                  - generic [ref=e1338] [box=131,564,803,26]:
+                    - generic [ref=e1339] [box=131,564,97,26]: Run c4357c0c
+                    - generic [ref=e1340] [box=234,564,99,26]: feature-intake
+                    - generic [ref=e1341] [box=339,564,75,26]: Execution
+                    - generic [ref=e1342] [box=420,564,94,26]: run 0c7a39ac
+                    - generic [ref=e1343] [box=520,564,158,26]: claimed 17.06.2026 22:38
+                  - generic [ref=e1344] [box=131,600,803,42]:
+                    - button "Open active agent details" [active] [ref=e1345] [box=131,600,102,42]:
+                      - generic [ref=e1346] [box=144,611,20,20]: info
+                      - generic [ref=e1347] [box=172,609,48,24]: Details
+                    - button "Open process control" [ref=e1348] [box=238,602,46,38]:
+                      - generic [ref=e1349] [box=251,611,20,20]: open_in_new
+                      - generic [ref=e1350] [box=261,621,1,1]: open in new
+      - dialog "Programming Workspace Analyst" [ref=e1353] [box=16,29,1408,893]:
+        - generic [ref=e1355] [box=33,42,1374,76]:
+          - generic [ref=e1356] [box=33,42,297,76]:
+            - generic [ref=e1357] [box=33,42,110,16]: Active agent
+            - heading "Programming Workspace Analyst" [level=2] [ref=e1359] [box=33,62,288,28]
+            - paragraph [ref=e1360] [box=33,94,297,24]: product-owner / feature-intake / WaitingOnTool
+          - button "Close" [ref=e1362] [box=1315,42,92,42]:
+            - generic [ref=e1363] [box=1328,53,20,20]: close
+            - generic [ref=e1364] [box=1356,51,38,24]: Close
+        - generic [ref=e1366] [box=33,145,1359,1215]:
+          - generic [ref=e1367] [box=33,145,1359,56]:
+            - img "Programming Workspace Analyst" [ref=e1368] [box=33,145,56,56]
+            - generic [ref=e1369] [box=101,145,1291,56]:
+              - generic [ref=e1370] [box=101,145,399,26]:
+                - generic [ref=e1371] [box=101,145,103,26]: WaitingOnTool
+                - generic [ref=e1372] [box=210,145,75,26]: Execution
+                - generic [ref=e1373] [box=291,145,104,26]: product-owner
+                - generic [ref=e1374] [box=401,145,99,26]: feature-intake
+              - paragraph [ref=e1375] [box=101,179,865,22]: "Tool: Invoking tool 'workspace_create_directory' with path=\"artifacts/process-runs/c4357c0c-1b2b-408c-879f-288234d4b41e/feature-intake\"."
+          - generic [ref=e1376] [box=33,213,836,22]:
+            - generic [ref=e1379] [box=33,213,247,22]: c4357c0c-1b2b-408c-879f-288234d4b41e
+            - generic [ref=e1382] [box=288,213,242,22]: aab35fc8-e661-4531-a8ab-bf632cce7909
+            - generic [ref=e1385] [box=539,213,245,22]: 0c7a39ac-4438-45e9-9eeb-6fa9b1bc1738
+            - generic [ref=e1388] [box=792,213,77,22]: 2 min ago
+          - generic [ref=e1389] [box=33,247,1359,1113]:
+            - generic [ref=e1390] [box=33,247,445,1113]:
+              - paragraph [ref=e1391] [box=54,268,403,15]: Execution
+              - paragraph [ref=e1392] [box=54,291,403,20]: AgentFramework execution run
+              - paragraph [ref=e1393] [box=54,318,403,20]: OpenAI default / gpt-5.4-mini
+            - generic [ref=e1394] [box=490,247,445,1113]:
+              - paragraph [ref=e1395] [box=511,268,403,15]: Recent activity
+              - generic [ref=e1396] [box=511,283,403,132]:
+                - generic [ref=e1397] [box=524,296,377,26]:
+                  - generic [ref=e1398] [box=524,296,45,26]: Tool
+                  - generic [ref=e1399] [box=575,301,87,16]: 17.06.2026 22:42
+                - paragraph [ref=e1400] [box=524,330,377,72]: Invoking tool 'workspace_create_directory' with path="artifacts/process-runs/c4357c0c-1b2b-408c-879f-288234d4b41e/feature-intake".
+              - generic [ref=e1401] [box=511,415,403,156]:
+                - generic [ref=e1402] [box=524,428,377,26]:
+                  - generic [ref=e1403] [box=524,428,45,26]: Tool
+                  - generic [ref=e1404] [box=575,433,87,16]: 17.06.2026 22:42
+                - paragraph [ref=e1405] [box=524,462,377,96]: "Invoking tool 'project_structure_read' with projectId=\"3324868f-66e2-478a-bb8f-14f32a5db1e9\", request=\"{\"nodeIds\":[\"custom:39435c5b45a942288807992ab53f6321\"],\"includeMetadata\":true,\"includeNotes\":true,\"includeLinks\":true,\"t...#07f07a6cd9ef\"."
+              - generic [ref=e1406] [box=511,571,403,108]:
+                - generic [ref=e1407] [box=524,584,377,26]:
+                  - generic [ref=e1408] [box=524,584,43,26]: Run
+                  - generic [ref=e1409] [box=573,589,87,16]: 17.06.2026 22:42
+                - paragraph [ref=e1410] [box=524,618,377,48]: Executing the run through Microsoft Agent Framework streaming.
+              - generic [ref=e1411] [box=511,679,403,108]:
+                - generic [ref=e1412] [box=524,692,377,26]:
+                  - generic [ref=e1413] [box=524,692,63,26]: Session
+                  - generic [ref=e1414] [box=593,697,87,16]: 17.06.2026 22:42
+                - paragraph [ref=e1415] [box=524,726,377,48]: Creating a new Microsoft Agent Framework session and hydrating it from the sandbox transcript.
+              - generic [ref=e1416] [box=511,787,403,108]:
+                - generic [ref=e1417] [box=524,800,377,26]:
+                  - generic [ref=e1418] [box=524,800,122,26]: Model parameters
+                  - generic [ref=e1419] [box=652,805,85,16]: 17.06.2026 22:41
+                - paragraph [ref=e1420] [box=524,834,377,48]: The runtime will omit temperature for model 'gpt-5.4-mini' and use the provider default.
+              - generic [ref=e1421] [box=511,895,403,132]:
+                - generic [ref=e1422] [box=524,908,377,26]:
+                  - generic [ref=e1423] [box=524,908,103,26]: Finalizer policy
+                  - generic [ref=e1424] [box=633,913,85,16]: 17.06.2026 22:41
+                - paragraph [ref=e1425] [box=524,942,377,72]: Attached Shadow finalizer tool 'submit_process_step_outcome' for structured output contract 'process_step_outcome_result'.
+              - generic [ref=e1426] [box=511,1027,403,180]:
+                - generic [ref=e1427] [box=524,1040,377,26]:
+                  - generic [ref=e1428] [box=524,1040,88,26]: Compaction
+                  - generic [ref=e1429] [box=618,1045,85,16]: 17.06.2026 22:41
+                - paragraph [ref=e1430] [box=524,1074,377,120]: Skipped Microsoft Agent Framework compaction for governed process automation even though the agent requested compaction. Process-step prompts carry required artifact paths and tool-evidence rules, so they must not be summarized before the run starts.
+              - generic [ref=e1431] [box=511,1207,403,132]:
+                - generic [ref=e1432] [box=524,1220,377,26]:
+                  - generic [ref=e1433] [box=524,1220,132,26]: Capability boundary
+                  - generic [ref=e1434] [box=662,1225,85,16]: 17.06.2026 22:41
+                - paragraph [ref=e1435] [box=524,1254,377,72]: Skipping browser MCP capability 'Playwright Local MCP' because this governed process step does not require browser proof.
+            - generic [ref=e1436] [box=947,247,445,1113]:
+              - paragraph [ref=e1437] [box=968,268,403,15]: Tools and artifacts
+              - generic [ref=e1438] [box=968,283,403,156]:
+                - generic [ref=e1439] [box=981,296,377,26]:
+                  - generic [ref=e1440] [box=981,296,172,26]: workspace_create_directory
+                  - generic [ref=e1441] [box=1159,301,87,16]: 17.06.2026 22:42
+                - paragraph [ref=e1442] [box=981,330,377,96]: "Succeeded: Created directory 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/c4357c0c-1b2b-408c-879f-288234d4b41e/feature-intake'."
+        - generic [ref=e1444] [box=41,863,1358,42]:
+          - button "Process" [ref=e1445] [box=1219,863,107,42]:
+            - generic [ref=e1446] [box=1232,874,20,20]: open_in_new
+            - generic [ref=e1447] [box=1260,872,53,24]: Process
+          - button "Close" [ref=e1448] [box=1335,863,64,42]:
+            - generic [ref=e1449] [box=1348,872,38,24]: Close

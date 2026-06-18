@@ -124,6 +124,78 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Full_app_templates_reject_scaffold_only_mvp_slices()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var softwareDelivery = loader.LoadDefinition("software-delivery");
+        var developmentSlice = loader.LoadDefinition("dotnet-development-slice");
+        var featureImplementation = loader.LoadDefinition("dotnet-feature-function-implementation");
+
+        var deliveryImplementation = Assert.Single(softwareDelivery.Steps, step => string.Equals(step.Key, "implementation", StringComparison.Ordinal));
+        var sliceIntake = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "slice-intake", StringComparison.Ordinal));
+        var sliceImplementation = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "implement-code-change", StringComparison.Ordinal));
+        var featureIntake = Assert.Single(featureImplementation.Steps, step => string.Equals(step.Key, "feature-slice-intake", StringComparison.Ordinal));
+
+        var deliveryImplementationDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "software-delivery",
+            "steps",
+            "implementation.md"));
+        var sliceIntakeDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-development-slice",
+            "steps",
+            "slice-intake.md"));
+        var sliceImplementationDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-development-slice",
+            "steps",
+            "implement-code-change.md"));
+        var featureIntakeDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-feature-function-implementation",
+            "steps",
+            "feature-slice-intake.md"));
+
+        Assert.Contains("must not be scaffold-only", deliveryImplementation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not be scaffold-only", deliveryImplementationDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not be scaffold-only", sliceIntake.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not be scaffold-only", sliceIntakeDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not launch this child", sliceImplementation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not launch the child", sliceImplementationDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not be scaffold-only", featureIntake.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a valid derived behavior", featureIntakeDoc, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Dotnet_development_slice_uses_engineer_for_technical_subprocess_steps()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-development-slice");
+
+        var setup = Assert.Single(definition.Steps, step => string.Equals(step.Key, "prepare-solution-skeleton", StringComparison.Ordinal));
+        var implementation = Assert.Single(definition.Steps, step => string.Equals(step.Key, "implement-code-change", StringComparison.Ordinal));
+        var repair = Assert.Single(definition.Steps, step => string.Equals(step.Key, "slice-repair-code-change", StringComparison.Ordinal));
+
+        AssertResponsibleRole(setup, "software-engineer");
+        AssertResponsibleRole(implementation, "software-engineer");
+        AssertResponsibleRole(repair, "software-engineer");
+    }
+
+    [Fact]
     public void Software_delivery_quality_repair_can_verify_runtime_browser_repairs()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -144,6 +216,19 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, qualityRepair.AllowedOperations);
         Assert.Contains("runtime or browser proof", qualityRepairDoc, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Capture current-run managed artifacts", qualityRepairDoc, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Software_delivery_peer_review_can_run_read_only_validation()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("software-delivery");
+
+        var peerReview = Assert.Single(definition.Steps, step => string.Equals(step.Key, "peer-review", StringComparison.Ordinal));
+
+        Assert.Equal(ProcessOperationContractNames.ExternalProductTargetReadOnly, peerReview.OperationTargetScope);
+        Assert.Contains(ProcessOperationContractNames.RunValidation, peerReview.AllowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, peerReview.AllowedOperations);
     }
 
     [Fact]
@@ -185,6 +270,15 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         }
 
         throw new InvalidOperationException("Could not find repository root.");
+    }
+
+    private static void AssertResponsibleRole(ProcessTemplateDefinitionStepDocument step, string expectedRoleKey)
+    {
+        var responsible = Assert.Single(
+            step.RoleAssignments,
+            assignment => string.Equals(assignment.ResponsibilityKind, "Responsible", StringComparison.Ordinal));
+
+        Assert.Equal(expectedRoleKey, responsible.RoleKey);
     }
 
     private static CultureScope UseCulture(string cultureName)

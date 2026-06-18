@@ -1,14 +1,19 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
 
 public sealed class ProcessRuntimeProjectionQueryService(
     IProcessProjectionStore projectionStore,
     ProcessProjectionJsonCodec jsonCodec,
-    IProcessProjectionClock clock)
+    IProcessProjectionClock clock,
+    IProcessRuntimeStateStore? runtimeStateStore = null,
+    IProcessRuntimeStepAssignmentStore? assignmentStore = null,
+    IProcessExecutionObservationReader? executionObservationReader = null)
 {
     private const int LiveSnapshotReadLimit = 500;
+    private static readonly TimeSpan ActiveExecutionStaleAfter = TimeSpan.FromMinutes(30);
 
     public async Task<ProcessLiveProcessesResult> GetLiveProcessesAsync(
         ProcessLiveProcessesQuery query,
@@ -30,7 +35,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         foreach (var snapshot in snapshots)
         {
             var run = jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(snapshot);
-            if (!run.IsActive && run.LastEventAtUtc < windowStartUtc)
+            if (run.LastEventAtUtc < windowStartUtc)
             {
                 continue;
             }
@@ -127,6 +132,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 Skip: checked(query.EventPage * query.EventPageSize)),
             cancellationToken).ConfigureAwait(false);
         var events = history.Events.Take(query.EventPageSize).ToArray();
+        var activeAgents = await LoadActiveAgentsAsync(liveProcesses.Runs, nowUtc, cancellationToken).ConfigureAwait(false);
         var freshness = CombineFreshness(liveProcesses.Freshness, history.Freshness, selectedRun?.Freshness);
 
         return new ProcessRuntimeWorkspaceResult(
@@ -134,6 +140,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
             selectedRun,
             events,
             history.Events.Count > query.EventPageSize,
+            activeAgents,
             freshness);
     }
 
@@ -231,4 +238,270 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
         return latest;
     }
+
+    private async Task<IReadOnlyList<ProcessRuntimeActiveAgentProjection>> LoadActiveAgentsAsync(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        {
+            return [];
+        }
+
+        var activeAgents = new List<ProcessRuntimeActiveAgentProjection>();
+        var observedStepKeys = new HashSet<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId)>();
+        var assignmentsByRun = new Dictionary<ProcessRunId, IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>>();
+        var runById = runs.ToDictionary(run => run.RunId);
+
+        foreach (var run in runs)
+        {
+            var assignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            assignmentsByRun[run.RunId] = assignments
+                .GroupBy(assignment => assignment.StepInstanceId)
+                .ToDictionary(group => group.Key, group => group.First());
+        }
+
+        if (executionObservationReader is not null)
+        {
+            var windowStartUtc = runs.Count == 0
+                ? nowUtc - ActiveExecutionStaleAfter
+                : runs.Min(run => run.FirstEventAtUtc).AddMinutes(-5);
+            var observations = await executionObservationReader.ListAsync(
+                new ProcessExecutionObservationQuery(
+                    runs.Select(run => run.RunId).Distinct().ToArray(),
+                    windowStartUtc,
+                    nowUtc,
+                    TakePerRun: 25),
+                cancellationToken).ConfigureAwait(false);
+
+            foreach (var observation in observations
+                         .Where(observation => runById.ContainsKey(observation.RunId))
+                         .OrderByDescending(observation => observation.UpdatedAtUtc))
+            {
+                assignmentsByRun.TryGetValue(observation.RunId, out var assignmentsByStep);
+                ProcessRuntimeStepAssignment? assignment = null;
+                assignmentsByStep?.TryGetValue(observation.StepInstanceId, out assignment);
+                var run = runById[observation.RunId];
+                var isTerminal = IsExecutionTerminal(observation.State);
+                var isStale = !isTerminal && observation.UpdatedAtUtc < nowUtc - ActiveExecutionStaleAfter;
+                if (isTerminal || isStale)
+                {
+                    continue;
+                }
+
+                observedStepKeys.Add((observation.RunId, observation.StepInstanceId));
+                activeAgents.Add(CreateObservedAgentProjection(
+                    run,
+                    assignment,
+                    observation,
+                    isWorking: !isTerminal && !isStale,
+                    isStale));
+            }
+        }
+
+        foreach (var run in runs)
+        {
+            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                continue;
+            }
+
+            if (!assignmentsByRun.TryGetValue(run.RunId, out var assignmentsByStep))
+            {
+                continue;
+            }
+
+            foreach (var step in state.Steps.Where(IsAgentActiveStep))
+            {
+                if (observedStepKeys.Contains((run.RunId, step.StepInstanceId)))
+                {
+                    continue;
+                }
+
+                if (!assignmentsByStep.TryGetValue(step.StepInstanceId, out var assignment))
+                {
+                    continue;
+                }
+
+                if (executionObservationReader is not null)
+                {
+                    continue;
+                }
+
+                var claim = step.ActiveClaimToken is { } activeClaimToken
+                    ? state.Claims.FirstOrDefault(item => item.ClaimToken == activeClaimToken)
+                    : null;
+                var isLeaseExpired = claim is not null && claim.ExpiresAtUtc < nowUtc;
+                var isWorking = !isLeaseExpired &&
+                    step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
+                activeAgents.Add(new ProcessRuntimeActiveAgentProjection(
+                    run.RunId.Value,
+                    step.StepInstanceId.Value,
+                    BuildRunLabel(run),
+                    assignment.StepKey,
+                    assignment.RoleKey,
+                    assignment.ExecutorKind,
+                    assignment.ExecutorId,
+                    assignment.ExecutorDisplayName,
+                    step.Status.ToString(),
+                    isWorking,
+                    isLeaseExpired,
+                    state.UpdatedAtUtc,
+                    claim?.CreatedAtUtc,
+                    claim?.ExpiresAtUtc,
+                    BuildActiveAgentSummary(assignment, step, claim, isLeaseExpired, executionObservationReader is not null))
+                {
+                    AgentId = Guid.TryParse(assignment.ExecutorId, out var parsedAgentId) ? parsedAgentId : null,
+                    AgentName = assignment.ExecutorDisplayName,
+                    ObservationSource = executionObservationReader is null
+                        ? "Runtime claim"
+                        : "Runtime claim without AgentFramework execution evidence",
+                    CurrentActivity = executionObservationReader is null
+                        ? $"{assignment.StepKey} is {step.Status}."
+                        : $"No AgentFramework execution run was observed for step {assignment.StepKey}."
+                });
+            }
+        }
+
+        return activeAgents
+            .OrderByDescending(agent => agent.IsWorking)
+            .ThenByDescending(agent => string.Equals(agent.Status, nameof(ProcessRuntimeStepStatus.Running), StringComparison.Ordinal))
+            .ThenByDescending(agent => agent.UpdatedAtUtc)
+            .ThenBy(agent => agent.ExecutorDisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool IsAgentActiveStep(ProcessRuntimeStepState step)
+        => step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
+
+    private static string BuildRunLabel(ProcessLiveProcessSnapshot run)
+        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+
+    private static string BuildActiveAgentSummary(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeStepState step,
+        DispatchClaimState? claim,
+        bool isLeaseExpired,
+        bool executionObservationExpected)
+    {
+        var claimSummary = claim is null
+            ? "No active dispatch lease is attached."
+            : isLeaseExpired
+                ? $"Lease expired {claim.ExpiresAtUtc.LocalDateTime:g}."
+                : $"Lease expires {claim.ExpiresAtUtc.LocalDateTime:g}.";
+        var evidenceSummary = executionObservationExpected
+            ? " AgentFramework execution-run evidence is missing for this active claim."
+            : string.Empty;
+        return $"{assignment.ExecutorDisplayName} is {step.Status} on {assignment.StepKey} as {assignment.RoleKey}. {claimSummary}{evidenceSummary}";
+    }
+
+    private static ProcessRuntimeActiveAgentProjection CreateObservedAgentProjection(
+        ProcessLiveProcessSnapshot run,
+        ProcessRuntimeStepAssignment? assignment,
+        ProcessExecutionObservation observation,
+        bool isWorking,
+        bool isStale)
+    {
+        var stepKey = string.IsNullOrWhiteSpace(assignment?.StepKey)
+            ? observation.StepInstanceId.ToString()
+            : assignment.StepKey;
+        var roleKey = string.IsNullOrWhiteSpace(assignment?.RoleKey)
+            ? "agent"
+            : assignment.RoleKey;
+        var displayName = FirstNonEmpty(observation.AgentName, assignment?.ExecutorDisplayName, observation.AgentId.ToString("D"));
+        var currentActivity = ResolveCurrentActivity(observation);
+
+        return new ProcessRuntimeActiveAgentProjection(
+            run.RunId.Value,
+            observation.StepInstanceId.Value,
+            BuildRunLabel(run),
+            stepKey,
+            roleKey,
+            ProcessLaunchExecutorKinds.Agent,
+            observation.AgentId.ToString("D"),
+            displayName,
+            observation.State,
+            isWorking,
+            isStale,
+            observation.UpdatedAtUtc,
+            observation.StartedAtUtc ?? observation.CreatedAtUtc,
+            LeaseExpiresAtUtc: null,
+            BuildObservedAgentSummary(displayName, stepKey, roleKey, observation, isStale, currentActivity))
+        {
+            ExecutionRunId = observation.ExecutionRunId,
+            AgentId = observation.AgentId,
+            AgentName = displayName,
+            ProviderName = observation.ProviderName,
+            Model = observation.Model,
+            ExecutionState = observation.State,
+            ExecutionOutcome = observation.Outcome,
+            ExecutionStartedAtUtc = observation.StartedAtUtc ?? observation.CreatedAtUtc,
+            ExecutionUpdatedAtUtc = observation.UpdatedAtUtc,
+            CurrentActivity = currentActivity,
+            LastError = observation.LastError,
+            ObservationSource = "AgentFramework execution run",
+            RecentActivities = observation.RecentActivities
+                .Select(activity => new ProcessRuntimeActiveAgentActivityProjection(
+                    activity.CreatedAtUtc,
+                    activity.State,
+                    activity.Phase,
+                    activity.Message))
+                .ToArray(),
+            RecentTools = observation.RecentTools
+                .Select(tool => new ProcessRuntimeActiveAgentToolProjection(
+                    tool.ToolName,
+                    tool.RuntimeToolProviderKey,
+                    tool.RequestSummary,
+                    tool.ExitSummary,
+                    tool.StartedAtUtc,
+                    tool.CompletedAtUtc))
+                .ToArray(),
+            Artifacts = observation.Artifacts
+                .Select(artifact => new ProcessRuntimeActiveAgentArtifactProjection(
+                    artifact.ArtifactKind,
+                    artifact.DisplayName,
+                    artifact.RelativePath,
+                    artifact.Summary,
+                    artifact.CreatedAtUtc))
+                .ToArray()
+        };
+    }
+
+    private static string ResolveCurrentActivity(ProcessExecutionObservation observation)
+    {
+        var latestActivity = observation.RecentActivities
+            .OrderByDescending(activity => activity.CreatedAtUtc)
+            .FirstOrDefault();
+        if (latestActivity is not null && !string.IsNullOrWhiteSpace(latestActivity.Message))
+        {
+            return $"{latestActivity.Phase}: {latestActivity.Message}";
+        }
+
+        return FirstNonEmpty(
+            observation.ResultSummary,
+            observation.InputSummary,
+            $"{observation.State} execution run {observation.ExecutionRunId:D}.");
+    }
+
+    private static string BuildObservedAgentSummary(
+        string displayName,
+        string stepKey,
+        string roleKey,
+        ProcessExecutionObservation observation,
+        bool isStale,
+        string currentActivity)
+    {
+        var staleText = isStale ? " Signal is stale." : string.Empty;
+        var outcomeText = string.IsNullOrWhiteSpace(observation.Outcome) ? string.Empty : $" Outcome: {observation.Outcome}.";
+        return $"{displayName} is {observation.State} on {stepKey} as {roleKey}.{outcomeText} {currentActivity}{staleText}".Trim();
+    }
+
+    private static bool IsExecutionTerminal(string state)
+        => string.Equals(state, "Completed", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(state, "Failed", StringComparison.OrdinalIgnoreCase);
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 }

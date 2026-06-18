@@ -18,7 +18,8 @@ public sealed record ProcessStepBriefBuildRequest(
     IReadOnlyList<ArtifactSlotId> ProducedSlots,
     IReadOnlyDictionary<(string StepKey, string ExpectationKey), ArtifactSlotId> ArtifactSlotByStepExpectation,
     ProcessRunId RunId,
-    string ManagedArtifactRoot);
+    string ManagedArtifactRoot,
+    IReadOnlyDictionary<string, string> LaunchVariables);
 
 public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
 {
@@ -27,7 +28,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         ArgumentNullException.ThrowIfNull(request);
 
         var step = request.Step;
-        var variables = FormatLaunchVariables(request.LaunchRequest.Variables);
+        var variables = FormatLaunchVariables(request.LaunchVariables);
         var branchOutcomes = FormatBranchOutcomes(step);
         var requiredArtifacts = BuildRequiredArtifactContext(request);
         var producedArtifacts = BuildProducedArtifactContext(request);
@@ -47,6 +48,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         Requested by: {request.LaunchRequest.RequestedBy}
         Process run id: {request.RunId}
         Managed artifact root: {request.ManagedArtifactRoot}
+        Managed artifact path rule: paths under the managed artifact root are workspace-managed relative refs. Use them exactly as shown for managed evidence reads and writes; never prefix them with external-target aliases or absolute output roots.
 
         Launch variables:
         {variables}

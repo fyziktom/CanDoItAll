@@ -208,6 +208,7 @@ public static class ToolCapabilityRegistry
             Validation(ToolContractCatalog.BrowserPressKey, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
             Validation(ToolContractCatalog.BrowserType, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
             Validation(ToolContractCatalog.BrowserDrag, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+            Validation(ToolContractCatalog.BrowserWaitFor, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
             Read(AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, ToolCapabilitySideEffectKind.None),
             Read(AgentFinalizerPolicies.SubmitCodeReviewResultToolName, ToolCapabilitySideEffectKind.None),
             Read(AgentFinalizerPolicies.SubmitArchitectureReviewResultToolName, ToolCapabilitySideEffectKind.None),
@@ -535,7 +536,8 @@ public static class ToolCapabilityRegistry
             ToolContractCatalog.BrowserSnapshot or ToolContractCatalog.BrowserTakeScreenshot => ToolCapabilityBrowserProofRole.EvidenceCapture,
             ToolContractCatalog.BrowserConsoleMessages or
                 ToolContractCatalog.BrowserEvaluate or
-                ToolContractCatalog.BrowserNetworkRequests => ToolCapabilityBrowserProofRole.Observation,
+                ToolContractCatalog.BrowserNetworkRequests or
+                ToolContractCatalog.BrowserWaitFor => ToolCapabilityBrowserProofRole.Observation,
             _ => ToolCapabilityBrowserProofRole.None
         };
     }

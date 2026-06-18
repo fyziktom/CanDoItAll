@@ -58,7 +58,7 @@
   ],
   "TailoringRules": [
     "Use one subprocess run per bounded function, endpoint, component, or feature behavior.",
-    "When a full deliverable parent scope already supplies product root, app archetype, architecture constraints, and validation hooks, derive the first reviewable MVP behavior instead of blocking only because the parent request is broader than one feature.",
+    "When a full deliverable parent scope already supplies product root, app archetype, architecture constraints, and validation hooks, derive the first reviewable MVP behavior instead of blocking only because the parent request is broader than one feature. The derived behavior must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof.",
     "Split UI, persistence, and integration-heavy work into separate child runs when focused proof would otherwise become vague.",
     "Managers may request missing artifacts or targeted repair from assigned agents before escalation, but must keep the dispatcher generic."
   ],
@@ -96,7 +96,7 @@
     {
       "Key": "software-engineer",
       "RoleResourceKey": "software-engineer",
-      "DisplayName": "Feature implementer",
+      "DisplayName": ".NET feature implementer",
       "Purpose": "Make the minimal code change and produce a reviewable change-set summary.",
       "StaffingIntent": "A .NET-capable implementer with repository read/write and build/test tools.",
       "PreferredExecutorKind": "agent",
@@ -130,7 +130,7 @@
       "Key": "feature-slice-intake",
       "Title": "Capture feature or function boundary",
       "Subtitle": "One behavior only",
-      "Notes": "Restate the requested function or feature as one observable behavior with repository target, acceptance criteria, exclusions, and expected proof. If the parent request is a full app or broad deliverable, derive the first reviewable MVP behavior from upstream scope, architecture, setup evidence, product root, app archetype, and validation hooks, then record excluded follow-up behavior. Reject only when no safe behavior can be chosen without inventing requirements.",
+      "Notes": "Restate the requested function or feature as one observable behavior with repository target, acceptance criteria, exclusions, and expected proof. If the parent request is a full app or broad deliverable, derive the first reviewable MVP behavior from upstream scope, architecture, setup evidence, product root, app archetype, and validation hooks, then record excluded follow-up behavior. The derived behavior must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must contain an observable product-specific interaction. Reject only when no safe behavior can be chosen without inventing requirements.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -139,8 +139,8 @@
       "InputContractSummary": "Parent slice scope, repository or project target, existing solution evidence, and requested behavior.",
       "OutputContractSummary": "Feature scope packet with acceptance criteria, exclusions, and proof expectations.",
       "EvidenceContractSummary": "Bounded behavior statement, affected surface, assumptions, and excluded follow-up work.",
-      "DecisionRightsSummary": "Feature manager can narrow the requested behavior but cannot drop accepted parent criteria without recording the change.",
-      "ExceptionPolicySummary": "Block only when upstream evidence is contradictory, the product root/app archetype/validation boundary is missing, or no single behavior can be selected without inventing requirements.",
+      "DecisionRightsSummary": "Feature manager can narrow the requested behavior but cannot drop accepted parent criteria or downgrade the requested product to scaffold-only readiness.",
+      "ExceptionPolicySummary": "Block only when upstream evidence is contradictory, the product root/app archetype/validation boundary is missing, the selected behavior is scaffold/setup/app-shell/build-only work, or no single behavior can be selected without inventing requirements.",
       "TargetLeadHours": 1,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -378,7 +378,7 @@
     {
       "Order": 3,
       "Key": "code-change",
-      "Title": "Implement the feature or function",
+      "Title": "Implement the .NET feature or function",
       "Subtitle": "Minimal code path",
       "Notes": "Make the smallest production and test changes that satisfy the validation contract. Follow existing project conventions, keep state changes explicit, and avoid introducing fallback behavior that hides errors. Keep generated tests deterministic and bounded: avoid loops that depend only on mutable product state without a maximum iteration guard and an assertion that each state transition succeeded. Use a workspace_dotnet_test timeout of 300 seconds or less for focused generated-app tests unless a current diagnostic proves the test suite needs more time. This implementation step does not own runtime launch, browser navigation, screenshots, or viewport proof; those belong to targeted-validation because this step lacks LaunchRuntime and CaptureRuntimeProof. Do not block this step only because browser proof is missing when code changes, build, and focused tests are complete.",
       "StepKind": "Work",
@@ -655,7 +655,7 @@
     {
       "Order": 6,
       "Key": "feature-repair",
-      "Title": "Repair focused validation findings",
+      "Title": "Repair .NET focused validation findings",
       "Subtitle": "Targeted implementation rework",
       "Notes": "Repair only the concrete defects, failed proof, launch issue, or missing artifacts identified by targeted validation. Stay inside the accepted feature scope and rerun the smallest useful validation command before handing back to QA recheck.",
       "StepKind": "Work",

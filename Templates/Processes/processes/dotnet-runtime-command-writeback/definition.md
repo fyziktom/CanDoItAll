@@ -17,7 +17,7 @@ Every step declares explicit operations and target scope so role permissions rem
 - Step kind: Start
 - Operation target scope: ExternalProductTargetReadOnly
 - Depends on: None
-- Outputs: Typed manifest for planned runtime-capable Run app and Run tests project-structure node payloads. Do not create project-structure nodes in this resolve step.
+- Outputs: Typed manifest for planned runtime-capable Run app and Run tests project-structure node payloads. Use `Current*` launch variables for this subprocess and `ProcessRunNodeId`/`ParentProcessRunNodeId`/`TargetProcessRunNodeId` as the parent process-run writeback target. Do not create project-structure nodes in this resolve step.
 - Evidence: App type, command strings, working directories, ports, environment notes, and no-run-app rationale when applicable.
 
 ### 2. Write Run command project nodes (`write-run-command-nodes`)

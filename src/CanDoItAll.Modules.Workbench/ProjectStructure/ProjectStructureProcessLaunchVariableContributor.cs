@@ -21,12 +21,18 @@ public sealed record ProjectStructureProcessLaunchVariableContext(
     ProcessRuntimeStepAssignment? ParentAssignment,
     bool IsSubprocess);
 
-internal sealed partial class DotNetSolutionSetupLaunchVariableContributor : IProjectStructureProcessLaunchVariableContributor
+internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectStructureProcessLaunchVariableContributor
 {
-    private const string DefinitionKey = "dotnet-solution-setup";
     private const string DefaultTargetFramework = "net10.0";
     private const string DefaultTestTemplate = "xunit";
     private const string DefaultTestFramework = "xUnit";
+    private static readonly HashSet<string> SupportedDefinitionKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "dotnet-architecture-design-review",
+        "dotnet-development-slice",
+        "dotnet-feature-function-implementation",
+        "dotnet-solution-setup"
+    };
 
     public void Enrich(ProjectStructureProcessLaunchVariableContext context, IDictionary<string, string> variables)
     {
@@ -34,7 +40,8 @@ internal sealed partial class DotNetSolutionSetupLaunchVariableContributor : IPr
         ArgumentNullException.ThrowIfNull(variables);
 
         if (!context.IsSubprocess ||
-            !string.Equals(context.DefinitionKey, DefinitionKey, StringComparison.OrdinalIgnoreCase))
+            string.IsNullOrWhiteSpace(context.DefinitionKey) ||
+            !SupportedDefinitionKeys.Contains(context.DefinitionKey))
         {
             return;
         }

@@ -534,13 +534,17 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>();
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.LaunchStarted, true));
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
         Assert.NotNull(cut.Find("[data-testid='live-processes-page']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-command-strip']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-started-notification']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']"));
+        Assert.Contains(".NET Developer", cut.Markup, StringComparison.Ordinal);
     }
 
     private static TestContext CreateContext(out RecordingProcessWorkspaceProjectionClient client)
@@ -835,6 +839,24 @@ public sealed class ProcessWorkspaceShellTests
                         Now.AddMinutes(-2),
                         ProcessProjectedSensitivity.Normal,
                         RestrictedDiagnosticReference: null)
+                ],
+                [
+                    new ProcessRuntimeActiveAgentProjection(
+                        selectedRunId.Value,
+                        Guid.Parse("99999999-9999-9999-9999-999999999999"),
+                        $"Run {selectedRunId.Value.ToString("N")[..8]}",
+                        "implementation",
+                        "lead-engineer",
+                        "agent",
+                        "agent-dotnet-developer",
+                        ".NET Developer",
+                        "Running",
+                        IsWorking: true,
+                        IsLeaseExpired: false,
+                        Now.AddMinutes(-1),
+                        Now.AddMinutes(-30),
+                        Now.AddMinutes(20),
+                        ".NET Developer is Running on implementation as lead-engineer.")
                 ],
                 new ProcessRuntimeStatsProjection(
                     ObservedRunCount: runs.Length,

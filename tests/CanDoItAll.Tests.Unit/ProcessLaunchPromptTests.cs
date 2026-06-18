@@ -16,6 +16,8 @@ public sealed class ProcessLaunchPromptTests
 
         Assert.Contains("Process run id: d9450dd1-4920-457c-92a4-48d1ec648181", prompt, StringComparison.Ordinal);
         Assert.Contains("Managed artifact root: artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181", prompt, StringComparison.Ordinal);
+        Assert.Contains("Managed artifact path rule: paths under the managed artifact root are workspace-managed relative refs.", prompt, StringComparison.Ordinal);
+        Assert.Contains("never prefix them with external-target aliases or absolute output roots", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Project id:", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Project node id:", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("process_step_outcome_result", prompt, StringComparison.Ordinal);
@@ -87,6 +89,8 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("BranchName, RepositoryRoot, SessionId", prompt, StringComparison.Ordinal);
         Assert.Contains("ChildManagedArtifactRoot", prompt, StringComparison.Ordinal);
         Assert.Contains("Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle", prompt, StringComparison.Ordinal);
+        Assert.Contains("Managed artifact refs are workspace-managed relative paths", prompt, StringComparison.Ordinal);
+        Assert.Contains("never convert them to external-target paths", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -177,7 +181,8 @@ public sealed class ProcessLaunchPromptTests
             producedSlots ?? new[] { ArtifactSlotId.New() },
             artifactSlotByStepExpectation ?? new Dictionary<(string StepKey, string ExpectationKey), ArtifactSlotId>(),
             runId,
-            ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(runId)));
+            ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(runId),
+            variables ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)));
     }
 
     private static ProcessTemplateDefinitionStepDocument CreatePromptStep(string notes)

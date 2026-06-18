@@ -99,6 +99,8 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             PlanId = assignment.PlanId.Value,
             StepKey = assignment.StepKey,
             RoleKey = assignment.RoleKey,
+            RoleResourceKey = assignment.RoleResourceKey,
+            RoleDisplayName = assignment.RoleDisplayName,
             ExecutorKind = assignment.ExecutorKind,
             ExecutorId = assignment.ExecutorId,
             ExecutorDisplayName = assignment.ExecutorDisplayName,
@@ -123,6 +125,8 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         entity.PlanId = assignment.PlanId.Value;
         entity.StepKey = assignment.StepKey;
         entity.RoleKey = assignment.RoleKey;
+        entity.RoleResourceKey = assignment.RoleResourceKey;
+        entity.RoleDisplayName = assignment.RoleDisplayName;
         entity.ExecutorKind = assignment.ExecutorKind;
         entity.ExecutorId = assignment.ExecutorId;
         entity.ExecutorDisplayName = assignment.ExecutorDisplayName;
@@ -152,6 +156,8 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             new ProcessStepInstanceId(entity.StepInstanceId),
             entity.StepKey,
             entity.RoleKey,
+            entity.RoleResourceKey,
+            entity.RoleDisplayName,
             entity.ExecutorKind,
             entity.ExecutorId,
             entity.ExecutorDisplayName,

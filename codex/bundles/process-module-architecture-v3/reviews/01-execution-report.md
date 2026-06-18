@@ -939,3 +939,25 @@ Entry gate: Pass. SB29 was complete, the v3 performance guardrails/checklist exi
 Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, changed-file hashes recorded, focused builds/tests passed, and final performance/static scans were clean for critical findings.
 Progression: Future performance work should add BenchmarkDotNet or production telemetry only if catalog sizes or dashboard refresh frequency grow enough to require measured throughput evidence.
 ```
+
+## SB31 Project-Structure Launch Staffing Readiness And Runtime Sequence Repair
+
+Proof artifacts:
+
+```text
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/manifest.md
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/semantic-invariants.md
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/changed-file-hashes.txt
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/runtime-smoke-tetris-start-response.json
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/transcripts/test-unit-process-launch-executor-resolver.txt
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/transcripts/test-components-project-structure-assignment-dialog.txt
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/transcripts/test-integration-project-structure-agent.txt
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/transcripts/build-solution.txt
+bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/transcripts/git-diff-check.txt
+```
+
+Result:
+
+```text
+SB31 repaired the user-reported project-structure launch failure and staffing bug. A PostgreSQL migration repairs stale process_runtime_events GlobalSequence identity sequences. Agent/process readiness is now evaluated through a shared typed evaluator that checks role-family fit, enabled structured-output provider readiness, workspace tool rights, allowed operations, and target scope. Automatic HR matching and manual project-structure overrides both route through this readiness gate, so Delivery Manager can coordinate subprocess/governance steps but cannot bypass readiness for .NET mutable implementation work. Project-structure assignment candidates now use the same readiness model. The .NET architecture/development launch-variable path now carries typed greenfield scaffold contracts, and architecture classification treats an empty grounded product/output root as greenfield repository state rather than an automatic blocker. Focused unit tests passed 3/3, component assignment-dialog tests passed 5/5, full ProjectStructureAgentIntegrationTests passed 26/26, full solution build passed with 0 warnings and 0 errors, and a live dev-DB Tetris process launch created run 1adde2cb-d093-4a4c-9173-dd286ca466c2 with readiness OK and no duplicate GlobalSequence failure.
+```

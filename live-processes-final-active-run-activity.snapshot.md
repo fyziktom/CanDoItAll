@@ -1,0 +1,125 @@
+- generic [ref=e613] [box=0,0,1425,950]:
+  - complementary [ref=e614] [box=16,8,76,934]:
+    - generic [ref=e615] [box=27,19,54,912]:
+      - generic [ref=e616] [box=27,19,54,40]:
+        - generic [ref=e617] [box=27,19,10,40]:
+          - generic [ref=e618] [box=12,19,40,40]: CD
+          - generic [ref=e619] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e620] [box=45,21,36,36]:
+          - generic [ref=e621] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e622] [box=27,67,54,753]:
+        - button "Dashboard" [ref=e624] [box=27,71,44,44]:
+          - generic [ref=e626] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e628] [box=27,121,44,44]:
+          - generic [ref=e630] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e632] [box=27,171,44,44]:
+          - generic [ref=e634] [box=39,183,20,20]: forum
+          - generic [ref=e635] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e637] [box=27,221,44,44]:
+          - generic [ref=e639] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e641] [box=27,271,44,44]:
+          - generic [ref=e643] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e645] [box=27,321,44,44]:
+          - generic [ref=e647] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e649] [box=27,371,44,44]:
+          - generic [ref=e651] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e653] [box=27,421,44,44]:
+          - generic [ref=e655] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e657] [box=27,471,44,44]:
+          - generic [ref=e659] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e661] [box=27,521,44,44]:
+          - generic [ref=e663] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e665] [box=27,571,44,44]:
+          - generic [ref=e667] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e669] [box=27,621,44,44]:
+          - generic [ref=e671] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e673] [box=27,671,44,44]:
+          - generic [ref=e675] [box=39,683,20,20]: construction
+        - button "More pages" [ref=e677] [box=32,721,44,44]:
+          - generic [ref=e679] [box=44,733,20,20]: expand_less
+      - generic [ref=e681] [box=27,837,54,94]:
+        - button "Settings" [ref=e683] [box=27,837,54,44]:
+          - generic [ref=e685] [box=44,849,20,20]: settings
+          - generic [ref=e686] [box=54,859,1,1]: Settings
+        - button "Switch Database" [ref=e688] [box=27,887,54,44]:
+          - generic [ref=e690] [box=44,899,20,20]: storage
+          - generic [ref=e691] [box=54,909,1,1]: Switch Database
+  - main [ref=e692] [box=100,8,1309,934]:
+    - generic [ref=e693] [box=100,8,1309,30]:
+      - generic [ref=e697] [box=104,8,652,30]:
+        - button "Dashboard" [ref=e699] [box=113,13,85,20]:
+          - generic [ref=e700] [box=113,15,59,16]: Dashboard
+          - generic [ref=e702] [box=178,13,20,20]: push_pin
+        - button "Dashboard" [ref=e704] [box=222,13,85,20]:
+          - generic [ref=e705] [box=222,15,59,16]: Dashboard
+          - generic [ref=e707] [box=287,13,20,20]: push_pin
+        - button "Live Processes" [ref=e709] [box=331,15,77,16]:
+          - generic [ref=e710] [box=331,15,77,16]: Live Processes
+        - button "TetrisGame · Live Processes" [ref=e712] [box=432,15,144,16]:
+          - generic [ref=e713] [box=432,15,144,16]: TetrisGame · Live Processes
+      - generic [ref=e715] [box=776,10,633,26]:
+        - generic [ref=e716] [box=776,10,207,26]:
+          - generic [ref=e717] [box=787,16,136,13]: Delivery Workspace
+          - generic [ref=e718] [box=929,15,43,16]: Projects
+        - generic [ref=e719] [box=991,10,83,26]: TetrisGame
+        - generic [ref=e720] [box=1081,10,44,26]: WIP
+        - generic [ref=e721] [box=1133,10,117,26]: Interactive Server
+        - generic [ref=e722] [box=1258,10,86,26]: Live items 0
+        - generic [ref=e723] [box=1353,10,56,26]: Tabs 4
+    - generic [ref=e726] [box=100,46,1309,896]:
+      - generic [ref=e729] [box=117,63,1275,36]:
+        - generic [ref=e730] [box=117,70,1183,22]:
+          - paragraph [ref=e731] [box=117,73,85,16]: Processes
+          - heading "Project live processes" [active] [level=1] [ref=e732] [box=210,71,160,20]
+          - generic [ref=e735] [box=378,70,69,22]: 12 active
+          - generic [ref=e738] [box=455,70,80,22]: 1 attention
+          - generic [ref=e741] [box=543,70,62,22]: 0 failed
+          - generic [ref=e744] [box=613,70,55,22]: Ready
+        - generic [ref=e745] [box=1312,63,80,36]:
+          - button "Refresh" [ref=e747] [box=1312,63,36,36]:
+            - generic [ref=e748] [box=1320,71,20,20]: refresh
+            - generic [ref=e749] [box=1330,81,1,1]: refresh
+          - button "Definitions" [ref=e751] [box=1356,63,36,36]:
+            - generic [ref=e752] [box=1364,71,20,20]: account_tree
+            - generic [ref=e753] [box=1374,81,1,1]: account tree
+      - generic [ref=e755] [box=100,132,1309,810]:
+        - generic [ref=e757] [box=113,145,591,22]:
+          - generic [ref=e760] [box=113,145,97,22]: 24 definitions
+          - generic [ref=e763] [box=218,145,69,22]: 12 active
+          - generic [ref=e766] [box=294,145,80,22]: 1 attention
+          - generic [ref=e769] [box=382,145,62,22]: 0 failed
+          - generic [ref=e772] [box=453,145,168,22]: 17.06.2026 22:34 last event
+          - generic [ref=e775] [box=629,145,75,22]: 0 backlog
+        - generic [ref=e777] [box=100,192,1309,750]:
+          - tablist "Tabs" [ref=e778] [box=100,192,1309,47]:
+            - tab "Activity 12" [selected] [ref=e779] [box=104,193,211,46]:
+              - generic [ref=e780] [box=121,206,80,20]: monitoring
+              - generic [ref=e781] [box=209,204,52,24]: Activity
+              - generic [ref=e782] [box=269,207,29,19]: "12"
+            - tab "Agents 2" [ref=e783] [box=323,192,143,46]:
+              - generic [ref=e784] [box=340,205,20,20]: smart_toy
+              - generic [ref=e785] [box=368,203,49,24]: Agents
+              - generic [ref=e786] [box=425,206,24,19]: "2"
+            - tab "Graphs" [ref=e787] [box=474,192,112,46]:
+              - generic [ref=e788] [box=491,205,20,20]: bar_chart
+              - generic [ref=e789] [box=519,203,50,24]: Graphs
+            - tab "Tool analytics 0" [ref=e790] [box=594,192,188,46]:
+              - generic [ref=e791] [box=611,205,20,20]: analytics
+              - generic [ref=e792] [box=639,203,94,24]: Tool analytics
+              - generic [ref=e793] [box=741,206,24,19]: "0"
+          - tabpanel "Activity 12" [ref=e795] [box=100,238,1309,704]:
+            - generic [ref=e796] [box=117,255,1260,3215]:
+              - generic [ref=e798] [box=138,276,1218,62]:
+                - generic [ref=e799] [box=138,276,268,62]
+                - generic [ref=e802] [box=418,276,268,62]
+                - generic [ref=e805] [box=697,276,486,62]
+                - generic [ref=e808] [box=1195,299,161,38]
+              - generic [ref=e816] [box=117,370,463,550]:
+                - generic [ref=e817] [box=117,370,463,77]
+                - generic [ref=e822] [box=117,459,463,461]
+              - generic [ref=e875] [box=117,932,680,996]:
+                - generic [ref=e876] [box=117,932,680,77]
+                - generic [ref=e881] [box=117,1021,680,907]
+              - generic [ref=e1052] [box=117,1940,1260,1530]:
+                - generic [ref=e1053] [box=117,1940,562,1530]
+                - generic [ref=e1223] [box=691,1940,686,1530]

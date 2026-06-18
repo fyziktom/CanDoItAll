@@ -1,0 +1,353 @@
+- generic [ref=e1164] [box=117,454,687,2338]:
+  - article [ref=e1165] [box=117,454,337,286]:
+    - generic [ref=e1166] [box=131,468,310,69]:
+      - generic [ref=e1167] [box=131,468,234,63]:
+        - img "Programming Workspace Analyst" [ref=e1168] [box=131,471,56,56]
+        - generic [ref=e1169] [box=199,468,166,63]:
+          - generic [ref=e1170] [box=199,468,166,37]: Programming Workspace Analyst
+          - generic [ref=e1171] [box=199,512,166,18]: product-owner
+      - generic [ref=e1172] [box=376,468,64,42]: Preparing
+    - paragraph [ref=e1173] [box=131,547,310,45]: "Session: Creating a new Microsoft Agent Framework session and hydrating it from the sandbox transcript."
+    - generic [ref=e1174] [box=131,603,310,64]:
+      - generic [ref=e1175] [box=131,604,99,26]: Run 8b8c0e06
+      - generic [ref=e1176] [box=236,604,99,26]: feature-intake
+      - generic [ref=e1177] [box=341,604,75,26]: Execution
+      - generic [ref=e1178] [box=131,639,98,26]: run 44608b56
+      - generic [ref=e1179] [box=235,639,158,26]: claimed 17.06.2026 22:22
+    - generic [ref=e1180] [box=131,677,310,48]:
+      - button "Open active agent details" [ref=e1181] [box=131,681,102,42]:
+        - generic [ref=e1182] [box=144,692,20,20]: info
+        - generic [ref=e1183] [box=172,690,48,24]: Details
+      - button "Open process control" [ref=e1184] [box=238,683,46,38]:
+        - generic [ref=e1185] [box=251,692,20,20]: open_in_new
+        - generic [ref=e1186] [box=261,701,1,1]: open in new
+  - article [ref=e1187] [box=466,454,337,286]:
+    - generic [ref=e1188] [box=480,468,310,56]:
+      - generic [ref=e1189] [box=480,468,212,56]:
+        - img ".NET QA Review Lead" [ref=e1190] [box=480,468,56,56]
+        - generic [ref=e1191] [box=548,474,144,44]:
+          - generic [ref=e1192] [box=548,474,144,19]: .NET QA Review Lead
+          - generic [ref=e1193] [box=548,500,144,18]: delivery-manager
+      - generic [ref=e1194] [box=722,468,68,26]: Running
+    - paragraph [ref=e1195] [box=480,534,310,39]: No AgentFramework execution run was observed for step architecture-handoff.
+    - generic [ref=e1196] [box=480,583,310,90]:
+      - generic [ref=e1197] [box=480,583,99,26]: Run 33c550ad
+      - generic [ref=e1198] [box=585,583,135,26]: architecture-handoff
+      - generic [ref=e1199] [box=480,615,75,26]: Execution
+      - generic [ref=e1200] [box=561,615,156,26]: claimed 17.06.2026 22:19
+      - generic [ref=e1201] [box=480,647,143,26]: lease 17.06.2026 22:49
+    - generic [ref=e1202] [box=480,684,310,42]:
+      - button "Open active agent details" [ref=e1203] [box=480,684,102,42]:
+        - generic [ref=e1204] [box=493,695,20,20]: info
+        - generic [ref=e1205] [box=521,693,48,24]: Details
+      - button "Open process control" [ref=e1206] [box=588,686,46,38]:
+        - generic [ref=e1207] [box=601,695,20,20]: open_in_new
+        - generic [ref=e1208] [box=610,704,1,1]: open in new
+  - article [ref=e1209] [box=117,752,337,292]:
+    - generic [ref=e1210] [box=131,765,310,63]:
+      - generic [ref=e1211] [box=131,765,239,63]:
+        - img "Programming Workspace Analyst" [ref=e1212] [box=131,769,56,56]
+        - generic [ref=e1213] [box=199,765,171,63]:
+          - generic [ref=e1214] [box=199,765,171,37]: Programming Workspace Analyst
+          - generic [ref=e1215] [box=199,810,171,18]: software-engineer
+      - generic [ref=e1216] [box=381,765,59,42]: Running
+    - paragraph [ref=e1217] [box=131,838,310,39]: No AgentFramework execution run was observed for step create-dotnet-project.
+    - generic [ref=e1218] [box=131,888,310,90]:
+      - generic [ref=e1219] [box=131,888,97,26]: Run 5571c969
+      - generic [ref=e1220] [box=234,888,140,26]: create-dotnet-project
+      - generic [ref=e1221] [box=131,920,75,26]: Execution
+      - generic [ref=e1222] [box=212,920,158,26]: claimed 17.06.2026 22:02
+      - generic [ref=e1223] [box=131,952,143,26]: lease 17.06.2026 22:32
+    - generic [ref=e1224] [box=131,988,310,42]:
+      - button "Open active agent details" [ref=e1225] [box=131,988,102,42]:
+        - generic [ref=e1226] [box=144,999,20,20]: info
+        - generic [ref=e1227] [box=172,997,48,24]: Details
+      - button "Open process control" [ref=e1228] [box=238,990,46,38]:
+        - generic [ref=e1229] [box=251,999,20,20]: open_in_new
+        - generic [ref=e1230] [box=261,1009,1,1]: open in new
+  - article [ref=e1231] [box=466,752,337,292]:
+    - generic [ref=e1232] [box=480,765,310,63]:
+      - generic [ref=e1233] [box=480,765,234,63]:
+        - img ".NET Application Developer" [ref=e1234] [box=480,769,56,56]
+        - generic [ref=e1235] [box=548,765,166,63]:
+          - generic [ref=e1236] [box=548,765,166,37]: .NET Application Developer
+          - generic [ref=e1237] [box=548,810,166,18]: software-engineer
+      - generic [ref=e1238] [box=726,765,64,42]: Running
+    - paragraph [ref=e1239] [box=480,838,310,39]: No AgentFramework execution run was observed for step prepare-solution-skeleton.
+    - generic [ref=e1240] [box=480,888,310,90]:
+      - generic [ref=e1241] [box=480,888,100,26]: Run 737505da
+      - generic [ref=e1242] [box=586,888,164,26]: prepare-solution-skeleton
+      - generic [ref=e1243] [box=480,920,75,26]: Execution
+      - generic [ref=e1244] [box=561,920,156,26]: claimed 17.06.2026 22:01
+      - generic [ref=e1245] [box=480,952,141,26]: lease 17.06.2026 22:31
+    - generic [ref=e1246] [box=480,988,310,42]:
+      - button "Open active agent details" [ref=e1247] [box=480,988,102,42]:
+        - generic [ref=e1248] [box=493,999,20,20]: info
+        - generic [ref=e1249] [box=521,997,48,24]: Details
+      - button "Open process control" [ref=e1250] [box=588,990,46,38]:
+        - generic [ref=e1251] [box=601,999,20,20]: open_in_new
+        - generic [ref=e1252] [box=610,1009,1,1]: open in new
+  - article [ref=e1253] [box=117,1056,337,292]:
+    - generic [ref=e1254] [box=131,1070,310,71]:
+      - generic [ref=e1255] [box=131,1070,234,63]:
+        - img ".NET Application Developer" [ref=e1256] [box=131,1073,56,56]
+        - generic [ref=e1257] [box=199,1070,166,63]:
+          - generic [ref=e1258] [box=199,1070,166,37]: .NET Application Developer
+          - generic [ref=e1259] [box=199,1114,166,18]: software-engineer
+      - generic [ref=e1260] [box=377,1070,64,42]: Running
+    - paragraph [ref=e1261] [box=131,1151,310,47]: No AgentFramework execution run was observed for step code-change.
+    - generic [ref=e1262] [box=131,1208,310,66]:
+      - generic [ref=e1263] [box=131,1210,95,26]: Run d77f1ea8
+      - generic [ref=e1264] [box=232,1210,93,26]: code-change
+      - generic [ref=e1265] [box=331,1210,75,26]: Execution
+      - generic [ref=e1266] [box=131,1246,156,26]: claimed 17.06.2026 22:01
+      - generic [ref=e1267] [box=293,1246,141,26]: lease 17.06.2026 22:31
+    - generic [ref=e1268] [box=131,1285,310,50]:
+      - button "Open active agent details" [ref=e1269] [box=131,1289,102,42]:
+        - generic [ref=e1270] [box=144,1300,20,20]: info
+        - generic [ref=e1271] [box=172,1298,48,24]: Details
+      - button "Open process control" [ref=e1272] [box=238,1291,46,38]:
+        - generic [ref=e1273] [box=251,1300,20,20]: open_in_new
+        - generic [ref=e1274] [box=261,1309,1,1]: open in new
+  - article [ref=e1275] [box=466,1056,337,292]:
+    - generic [ref=e1276] [box=480,1070,310,63]:
+      - generic [ref=e1277] [box=480,1070,220,63]:
+        - img "Programming Workspace Analyst" [ref=e1278] [box=480,1073,56,56]
+        - generic [ref=e1279] [box=548,1070,152,63]:
+          - generic [ref=e1280] [box=548,1070,152,37]: Programming Workspace Analyst
+          - generic [ref=e1281] [box=548,1114,152,18]: software-engineer
+      - generic [ref=e1282] [box=713,1070,78,42]: Lease expired
+    - paragraph [ref=e1283] [box=480,1143,310,39]: No AgentFramework execution run was observed for step create-dotnet-project.
+    - generic [ref=e1284] [box=480,1192,310,90]:
+      - generic [ref=e1285] [box=480,1192,94,26]: Run fd2ca8a1
+      - generic [ref=e1286] [box=581,1192,140,26]: create-dotnet-project
+      - generic [ref=e1287] [box=480,1224,75,26]: Execution
+      - generic [ref=e1288] [box=561,1224,156,26]: claimed 17.06.2026 21:43
+      - generic [ref=e1289] [box=480,1256,141,26]: lease 17.06.2026 22:13
+    - generic [ref=e1290] [box=480,1293,310,42]:
+      - button "Open active agent details" [ref=e1291] [box=480,1293,102,42]:
+        - generic [ref=e1292] [box=493,1304,20,20]: info
+        - generic [ref=e1293] [box=521,1302,48,24]: Details
+      - button "Open process control" [ref=e1294] [box=588,1295,46,38]:
+        - generic [ref=e1295] [box=601,1304,20,20]: open_in_new
+        - generic [ref=e1296] [box=610,1313,1,1]: open in new
+  - article [ref=e1297] [box=117,1360,337,292]:
+    - generic [ref=e1298] [box=131,1374,310,63]:
+      - generic [ref=e1299] [box=131,1374,220,63]:
+        - img "Programming Workspace Analyst" [ref=e1300] [box=131,1378,56,56]
+        - generic [ref=e1301] [box=199,1374,152,63]:
+          - generic [ref=e1302] [box=199,1374,152,37]: Programming Workspace Analyst
+          - generic [ref=e1303] [box=199,1419,152,18]: software-engineer
+      - generic [ref=e1304] [box=363,1374,78,42]: Lease expired
+    - paragraph [ref=e1305] [box=131,1447,310,39]: No AgentFramework execution run was observed for step create-dotnet-project.
+    - generic [ref=e1306] [box=131,1497,310,90]:
+      - generic [ref=e1307] [box=131,1497,92,26]: Run cf69fbfa
+      - generic [ref=e1308] [box=229,1497,140,26]: create-dotnet-project
+      - generic [ref=e1309] [box=131,1529,75,26]: Execution
+      - generic [ref=e1310] [box=212,1529,156,26]: claimed 17.06.2026 21:43
+      - generic [ref=e1311] [box=131,1561,141,26]: lease 17.06.2026 22:13
+    - generic [ref=e1312] [box=131,1597,310,42]:
+      - button "Open active agent details" [ref=e1313] [box=131,1597,102,42]:
+        - generic [ref=e1314] [box=144,1608,20,20]: info
+        - generic [ref=e1315] [box=172,1606,48,24]: Details
+      - button "Open process control" [ref=e1316] [box=238,1599,46,38]:
+        - generic [ref=e1317] [box=251,1608,20,20]: open_in_new
+        - generic [ref=e1318] [box=261,1618,1,1]: open in new
+  - article [ref=e1319] [box=466,1360,337,292]:
+    - generic [ref=e1320] [box=480,1374,310,71]:
+      - generic [ref=e1321] [box=480,1374,188,56]:
+        - img "Delivery Manager" [ref=e1322] [box=480,1374,56,56]
+        - generic [ref=e1323] [box=548,1380,120,44]:
+          - generic [ref=e1324] [box=548,1380,120,19]: Delivery Manager
+          - generic [ref=e1325] [box=548,1406,120,18]: delivery-manager
+      - generic [ref=e1326] [box=708,1374,82,26]: Completed
+    - paragraph [ref=e1327] [box=480,1455,310,34]: "Completed: Execution run response persisted."
+    - generic [ref=e1328] [box=480,1500,310,73]:
+      - generic [ref=e1329] [box=480,1503,100,26]: Run 0d60e704
+      - generic [ref=e1330] [box=587,1503,93,26]: slice-handoff
+      - generic [ref=e1331] [box=686,1503,75,26]: Execution
+      - generic [ref=e1332] [box=480,1542,93,26]: run f81c0b42
+      - generic [ref=e1333] [box=579,1542,158,26]: claimed 17.06.2026 22:00
+    - generic [ref=e1334] [box=480,1582,310,57]:
+      - button "Open active agent details" [ref=e1335] [box=480,1590,102,42]:
+        - generic [ref=e1336] [box=493,1601,20,20]: info
+        - generic [ref=e1337] [box=521,1599,48,24]: Details
+      - button "Open process control" [ref=e1338] [box=588,1592,46,38]:
+        - generic [ref=e1339] [box=601,1601,20,20]: open_in_new
+        - generic [ref=e1340] [box=610,1610,1,1]: open in new
+  - article [ref=e1341] [box=117,1665,337,286]:
+    - generic [ref=e1342] [box=131,1679,310,61]:
+      - generic [ref=e1343] [box=131,1679,213,56]:
+        - img "Delivery QA Observer" [ref=e1344] [box=131,1679,56,56]
+        - generic [ref=e1345] [box=199,1685,145,44]:
+          - generic [ref=e1346] [box=199,1685,145,19]: Delivery QA Observer
+          - generic [ref=e1347] [box=199,1711,145,18]: qa-lead
+      - generic [ref=e1348] [box=359,1679,82,26]: Completed
+    - paragraph [ref=e1349] [box=131,1750,310,24]: "Completed: Execution run response persisted."
+    - generic [ref=e1350] [box=131,1785,310,95]:
+      - generic [ref=e1351] [box=131,1785,100,26]: Run 0d60e704
+      - generic [ref=e1352] [box=237,1785,133,26]: add-tests-and-proof
+      - generic [ref=e1353] [box=131,1819,75,26]: Execution
+      - generic [ref=e1354] [box=212,1819,89,26]: run a1311971
+      - generic [ref=e1355] [box=131,1853,156,26]: claimed 17.06.2026 21:50
+    - generic [ref=e1356] [box=131,1890,310,47]:
+      - button "Open active agent details" [ref=e1357] [box=131,1892,102,42]:
+        - generic [ref=e1358] [box=144,1903,20,20]: info
+        - generic [ref=e1359] [box=172,1901,48,24]: Details
+      - button "Open process control" [ref=e1360] [box=238,1894,46,38]:
+        - generic [ref=e1361] [box=251,1903,20,20]: open_in_new
+        - generic [ref=e1362] [box=261,1913,1,1]: open in new
+  - article [ref=e1363] [box=466,1665,337,286]:
+    - generic [ref=e1364] [box=480,1679,310,56]:
+      - generic [ref=e1365] [box=480,1679,213,56]:
+        - img "Delivery QA Observer" [ref=e1366] [box=480,1679,56,56]
+        - generic [ref=e1367] [box=548,1685,145,44]:
+          - generic [ref=e1368] [box=548,1685,145,19]: Delivery QA Observer
+          - generic [ref=e1369] [box=548,1711,145,18]: qa-lead
+      - generic [ref=e1370] [box=736,1679,54,26]: Failed
+    - paragraph [ref=e1371] [box=480,1745,310,39]: "startup-recovery: Execution interrupted because the CanDoItAll host restarted before the run completed."
+    - generic [ref=e1372] [box=480,1794,310,90]:
+      - generic [ref=e1373] [box=480,1794,100,26]: Run 0d60e704
+      - generic [ref=e1374] [box=587,1794,133,26]: add-tests-and-proof
+      - generic [ref=e1375] [box=480,1826,75,26]: Execution
+      - generic [ref=e1376] [box=561,1826,91,26]: run a5c0f5f5
+      - generic [ref=e1377] [box=480,1858,156,26]: claimed 17.06.2026 21:20
+    - generic [ref=e1378] [box=480,1895,310,42]:
+      - button "Open active agent details" [ref=e1379] [box=480,1895,102,42]:
+        - generic [ref=e1380] [box=493,1906,20,20]: info
+        - generic [ref=e1381] [box=521,1904,48,24]: Details
+      - button "Open process control" [ref=e1382] [box=588,1897,46,38]:
+        - generic [ref=e1383] [box=601,1906,20,20]: open_in_new
+        - generic [ref=e1384] [box=610,1915,1,1]: open in new
+  - article [ref=e1385] [box=117,1963,337,266]:
+    - generic [ref=e1386] [box=131,1976,310,56]:
+      - generic [ref=e1387] [box=131,1976,188,56]:
+        - img "Delivery Manager" [ref=e1388] [box=131,1976,56,56]
+        - generic [ref=e1389] [box=199,1982,120,44]:
+          - generic [ref=e1390] [box=199,1982,120,19]: Delivery Manager
+          - generic [ref=e1391] [box=199,2008,120,18]: delivery-manager
+      - generic [ref=e1392] [box=359,1976,82,26]: Completed
+    - paragraph [ref=e1393] [box=131,2043,310,20]: "Completed: Execution run response persisted."
+    - generic [ref=e1394] [box=131,2073,310,90]:
+      - generic [ref=e1395] [box=131,2073,100,26]: Run 0d60e704
+      - generic [ref=e1396] [box=237,2073,156,26]: implement-code-change
+      - generic [ref=e1397] [box=131,2105,75,26]: Execution
+      - generic [ref=e1398] [box=212,2105,92,26]: run a9d6faf2
+      - generic [ref=e1399] [box=131,2137,154,26]: claimed 17.06.2026 21:19
+    - generic [ref=e1400] [box=131,2173,310,42]:
+      - button "Open active agent details" [ref=e1401] [box=131,2173,102,42]:
+        - generic [ref=e1402] [box=144,2184,20,20]: info
+        - generic [ref=e1403] [box=172,2182,48,24]: Details
+      - button "Open process control" [ref=e1404] [box=238,2175,46,38]:
+        - generic [ref=e1405] [box=251,2184,20,20]: open_in_new
+        - generic [ref=e1406] [box=261,2194,1,1]: open in new
+  - article [ref=e1407] [box=466,1963,337,266]:
+    - generic [ref=e1408] [box=480,1976,310,56]:
+      - generic [ref=e1409] [box=480,1976,188,56]:
+        - img "Delivery Manager" [ref=e1410] [box=480,1976,56,56]
+        - generic [ref=e1411] [box=548,1982,120,44]:
+          - generic [ref=e1412] [box=548,1982,120,19]: Delivery Manager
+          - generic [ref=e1413] [box=548,2008,120,18]: delivery-manager
+      - generic [ref=e1414] [box=708,1976,82,26]: Completed
+    - paragraph [ref=e1415] [box=480,2043,310,20]: "Completed: Execution run response persisted."
+    - generic [ref=e1416] [box=480,2073,310,90]:
+      - generic [ref=e1417] [box=480,2073,100,26]: Run 0d60e704
+      - generic [ref=e1418] [box=587,2073,156,26]: implement-code-change
+      - generic [ref=e1419] [box=480,2105,75,26]: Execution
+      - generic [ref=e1420] [box=561,2105,96,26]: run c4dbf9b5
+      - generic [ref=e1421] [box=480,2137,158,26]: claimed 17.06.2026 20:36
+    - generic [ref=e1422] [box=480,2173,310,42]:
+      - button "Open active agent details" [ref=e1423] [box=480,2173,102,42]:
+        - generic [ref=e1424] [box=493,2184,20,20]: info
+        - generic [ref=e1425] [box=521,2182,48,24]: Details
+      - button "Open process control" [ref=e1426] [box=588,2175,46,38]:
+        - generic [ref=e1427] [box=601,2184,20,20]: open_in_new
+        - generic [ref=e1428] [box=610,2194,1,1]: open in new
+  - article [ref=e1429] [box=117,2241,337,266]:
+    - generic [ref=e1430] [box=131,2255,310,56]:
+      - generic [ref=e1431] [box=131,2255,188,56]:
+        - img "Delivery Manager" [ref=e1432] [box=131,2255,56,56]
+        - generic [ref=e1433] [box=199,2261,120,44]:
+          - generic [ref=e1434] [box=199,2261,120,19]: Delivery Manager
+          - generic [ref=e1435] [box=199,2287,120,18]: delivery-manager
+      - generic [ref=e1436] [box=359,2255,82,26]: Completed
+    - paragraph [ref=e1437] [box=131,2321,310,20]: "Completed: Execution run response persisted."
+    - generic [ref=e1438] [box=131,2351,310,90]:
+      - generic [ref=e1439] [box=131,2351,100,26]: Run 0d60e704
+      - generic [ref=e1440] [box=237,2351,164,26]: prepare-solution-skeleton
+      - generic [ref=e1441] [box=131,2383,75,26]: Execution
+      - generic [ref=e1442] [box=212,2383,96,26]: run e73a0437
+      - generic [ref=e1443] [box=131,2415,158,26]: claimed 17.06.2026 20:35
+    - generic [ref=e1444] [box=131,2451,310,42]:
+      - button "Open active agent details" [ref=e1445] [box=131,2451,102,42]:
+        - generic [ref=e1446] [box=144,2462,20,20]: info
+        - generic [ref=e1447] [box=172,2460,48,24]: Details
+      - button "Open process control" [ref=e1448] [box=238,2453,46,38]:
+        - generic [ref=e1449] [box=251,2462,20,20]: open_in_new
+        - generic [ref=e1450] [box=261,2472,1,1]: open in new
+  - article [ref=e1451] [box=466,2241,337,266]:
+    - generic [ref=e1452] [box=480,2255,310,56]:
+      - generic [ref=e1453] [box=480,2255,188,56]:
+        - img "Delivery Manager" [ref=e1454] [box=480,2255,56,56]
+        - generic [ref=e1455] [box=548,2261,120,44]:
+          - generic [ref=e1456] [box=548,2261,120,19]: Delivery Manager
+          - generic [ref=e1457] [box=548,2287,120,18]: delivery-manager
+      - generic [ref=e1458] [box=708,2255,82,26]: Completed
+    - paragraph [ref=e1459] [box=480,2321,310,20]: "Completed: Execution run response persisted."
+    - generic [ref=e1460] [box=480,2351,310,90]:
+      - generic [ref=e1461] [box=480,2351,100,26]: Run 0d60e704
+      - generic [ref=e1462] [box=587,2351,164,26]: prepare-solution-skeleton
+      - generic [ref=e1463] [box=480,2383,75,26]: Execution
+      - generic [ref=e1464] [box=561,2383,94,26]: run c1909dc7
+      - generic [ref=e1465] [box=480,2415,158,26]: claimed 17.06.2026 20:29
+    - generic [ref=e1466] [box=480,2451,310,42]:
+      - button "Open active agent details" [ref=e1467] [box=480,2451,102,42]:
+        - generic [ref=e1468] [box=493,2462,20,20]: info
+        - generic [ref=e1469] [box=521,2460,48,24]: Details
+      - button "Open process control" [ref=e1470] [box=588,2453,46,38]:
+        - generic [ref=e1471] [box=601,2462,20,20]: open_in_new
+        - generic [ref=e1472] [box=610,2472,1,1]: open in new
+  - article [ref=e1473] [box=117,2519,337,273]:
+    - generic [ref=e1474] [box=131,2533,310,63]:
+      - generic [ref=e1475] [box=131,2533,218,63]:
+        - img ".NET Solution Architect" [ref=e1476] [box=131,2536,56,56]
+        - generic [ref=e1477] [box=199,2533,150,63]:
+          - generic [ref=e1478] [box=199,2533,150,37]: .NET Solution Architect
+          - generic [ref=e1479] [box=199,2578,150,18]: solution-architect
+      - generic [ref=e1480] [box=361,2533,80,42]: Completed
+    - paragraph [ref=e1481] [box=131,2606,310,20]: "Completed: Execution run response persisted."
+    - generic [ref=e1482] [box=131,2636,310,90]:
+      - generic [ref=e1483] [box=131,2636,100,26]: Run 0d60e704
+      - generic [ref=e1484] [box=237,2636,151,26]: slice-architecture-check
+      - generic [ref=e1485] [box=131,2668,75,26]: Execution
+      - generic [ref=e1486] [box=212,2668,98,26]: run d9906230
+      - generic [ref=e1487] [box=131,2700,158,26]: claimed 17.06.2026 20:28
+    - generic [ref=e1488] [box=131,2736,310,42]:
+      - button "Open active agent details" [ref=e1489] [box=131,2736,102,42]:
+        - generic [ref=e1490] [box=144,2747,20,20]: info
+        - generic [ref=e1491] [box=172,2745,48,24]: Details
+      - button "Open process control" [ref=e1492] [box=238,2738,46,38]:
+        - generic [ref=e1493] [box=251,2747,20,20]: open_in_new
+        - generic [ref=e1494] [box=261,2757,1,1]: open in new
+  - article [ref=e1495] [box=466,2519,337,273]:
+    - generic [ref=e1496] [box=480,2533,310,66]:
+      - generic [ref=e1497] [box=480,2533,188,56]:
+        - img "Delivery Manager" [ref=e1498] [box=480,2533,56,56]
+        - generic [ref=e1499] [box=548,2539,120,44]:
+          - generic [ref=e1500] [box=548,2539,120,19]: Delivery Manager
+          - generic [ref=e1501] [box=548,2565,120,18]: delivery-manager
+      - generic [ref=e1502] [box=708,2533,82,26]: Completed
+    - paragraph [ref=e1503] [box=480,2609,310,29]: "Completed: Execution run response persisted."
+    - generic [ref=e1504] [box=480,2649,310,68]:
+      - generic [ref=e1505] [box=480,2651,100,26]: Run 0d60e704
+      - generic [ref=e1506] [box=587,2651,84,26]: slice-intake
+      - generic [ref=e1507] [box=676,2651,75,26]: Execution
+      - generic [ref=e1508] [box=480,2688,94,26]: run 66c6ea1b
+      - generic [ref=e1509] [box=580,2688,157,26]: claimed 17.06.2026 20:27
+    - generic [ref=e1510] [box=480,2727,310,52]:
+      - button "Open active agent details" [ref=e1511] [box=480,2731,102,42]:
+        - generic [ref=e1512] [box=493,2742,20,20]: info
+        - generic [ref=e1513] [box=521,2740,48,24]: Details
+      - button "Open process control" [ref=e1514] [box=588,2733,46,38]:
+        - generic [ref=e1515] [box=601,2742,20,20]: open_in_new
+        - generic [ref=e1516] [box=610,2752,1,1]: open in new
