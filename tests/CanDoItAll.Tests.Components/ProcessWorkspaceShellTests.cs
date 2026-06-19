@@ -545,19 +545,55 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-started-notification']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='live-processes-run-progress']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-history-chart']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-family-card']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-card']"));
+        Assert.Contains("Tool history", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='live-processes-request-rework']"));
-        Assert.NotNull(cut.Find("[data-testid='live-processes-operator-note']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-attention-decision']"));
         Assert.Contains("Approve rework", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Approve rework to return implement-code-change", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(".NET Developer", cut.Markup, StringComparison.Ordinal);
 
-        cut.Find("[data-testid='live-processes-operator-note']").Change("Reuse the approved architecture and keep the Tetris output folder.");
-        cut.Find("[data-testid='live-processes-request-rework']").Click();
+        cut.Find("[data-testid='live-processes-attention-open-details']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-run-detail-hero']")));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-run-detail-manager-summary']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-run-detail-decision']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-dialog-operator-note']"));
+        Assert.Contains("Manager summary", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='live-processes-dialog-operator-note']").Change("Reuse the approved architecture and keep the Tetris output folder.");
+        cut.Find("[data-testid='live-processes-dialog-request-rework']").Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(client.LastOperatorActionCommand));
         Assert.Contains("Manager-approved rework for step 'implement-code-change'", client.LastOperatorActionCommand!.Reason, StringComparison.Ordinal);
         Assert.Contains("Operator note:", client.LastOperatorActionCommand.Reason, StringComparison.Ordinal);
         Assert.Contains("Tetris output folder", client.LastOperatorActionCommand.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Live_processes_dashboard_mock_scenario_supplies_dense_operations_projection()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            .Add(component => component.MockScenarioQuery, "operations"));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-mock-notification']")));
+        cut.WaitForAssertion(() => Assert.True(cut.FindAll("[data-testid='live-processes-activity-card']").Count >= 5));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-history-chart']"));
+        Assert.True(cut.FindAll("[data-testid='live-processes-tool-family-card']").Count >= 4);
+        Assert.Contains("Mock scenario: multi-team delivery", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("External verification", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Agent Alpha", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='live-processes-attention-open-details']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-run-detail-decision']")));
+        cut.Find("[data-testid='live-processes-dialog-request-rework']").Click();
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Vendor onboarding is blocked", cut.Markup, StringComparison.Ordinal));
+        Assert.Contains("Request rework accepted", context.Services.GetRequiredService<NotificationService>().Messages.Last().Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -583,6 +619,8 @@ public sealed class ProcessWorkspaceShellTests
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
+        context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
         client = new RecordingProcessWorkspaceProjectionClient();
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);
         return context;

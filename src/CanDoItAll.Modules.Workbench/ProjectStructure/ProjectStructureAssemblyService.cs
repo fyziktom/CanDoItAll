@@ -172,18 +172,25 @@ public sealed class ProjectStructureAssemblyService(
             await contributor.ContributeAsync(context, cancellationToken);
         }
 
-        return new ProjectStructureAssemblySnapshot(
-            canonicalNodes
-                .Concat(context.Nodes)
-                .OrderBy(item => item.PositionY)
-                .ThenBy(item => item.PositionX)
-                .ToList(),
-            FilterLegacyCanonicalHierarchyLinks(persistedUserLinks, canonicalNodes)
-                .Concat(BuildCanonicalHierarchyLinks(projectId, canonicalNodes, context.AssembledAtUtc))
-                .Concat(context.Links)
-                .OrderBy(item => item.SourceNodeKey)
-                .ThenBy(item => item.TargetNodeKey)
-                .ToList());
+        var nodes = canonicalNodes
+            .Concat(context.Nodes)
+            .OrderBy(item => item.PositionY)
+            .ThenBy(item => item.PositionX)
+            .ToList();
+        var nodeKeys = nodes
+            .Select(item => item.NodeKey)
+            .ToHashSet(StringComparer.Ordinal);
+        var links = FilterLegacyCanonicalHierarchyLinks(persistedUserLinks, canonicalNodes)
+            .Concat(BuildCanonicalHierarchyLinks(projectId, canonicalNodes, context.AssembledAtUtc))
+            .Concat(context.Links)
+            .Where(link =>
+                nodeKeys.Contains(link.SourceNodeKey) &&
+                nodeKeys.Contains(link.TargetNodeKey))
+            .OrderBy(item => item.SourceNodeKey)
+            .ThenBy(item => item.TargetNodeKey)
+            .ToList();
+
+        return new ProjectStructureAssemblySnapshot(nodes, links);
     }
 
     public async Task<ProjectObjectRecord?> FindNodeAsync(

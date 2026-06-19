@@ -78,6 +78,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessTemplateCatalogProjectionService>();
         services.TryAddScoped<ProcessWorkspaceShellProjectionService>();
         services.TryAddSingleton<IProcessWorkspaceProjectionClient, ProcessWorkspaceProjectionClient>();
+        services.TryAddSingleton<ProcessWorkspaceMockProjectionFactory>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());
         services.AddSingleton<ProcessModuleRewriteState>(ProcessModuleRewriteState.Enabled);
         return services;

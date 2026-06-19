@@ -384,7 +384,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "leave `keepAlive` false unless this same step immediately needs browser tools")
-                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds");
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "one run-app proof node, one run-tests proof node, and one manager summary node");
         }
 
         if (string.Equals(seededCapability.Key, "concrete-deliverable-delivery-inline-skill", StringComparison.OrdinalIgnoreCase))
@@ -397,7 +398,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not cite files, paths, examples, source artifacts, or tool results as evidence")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For documents, render/export/open the produced file")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For spreadsheets, inspect workbook structure")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim completion with chat-only evidence");
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim completion with chat-only evidence")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "one run-app proof node, one run-tests proof node, and one manager summary node");
         }
 
         if (string.Equals(seededCapability.Key, "dotnet-app-delivery-inline-skill", StringComparison.OrdinalIgnoreCase))
@@ -421,7 +423,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "waitForHttp: false")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Leave `keepAlive` false for startup proof")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds");
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "one run-app proof node, one run-tests proof node, and one manager summary node");
         }
 
         if (string.Equals(seededCapability.Key, "workspace-list-files", StringComparison.OrdinalIgnoreCase) ||

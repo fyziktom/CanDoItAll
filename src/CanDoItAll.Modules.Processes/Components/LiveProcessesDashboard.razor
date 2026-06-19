@@ -5,7 +5,9 @@
 @using CanDoItAll.Processes.Projections
 @using CanDoItAll.Processes.Runtime
 @inject IProcessWorkspaceProjectionClient ProjectionClient
+@inject ProcessWorkspaceMockProjectionFactory MockProjectionFactory
 @inject NavigationManager Navigation
+@inject NotificationService Notifications
 
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -66,15 +68,6 @@
                     <span>@errorMessage</span>
                 </div>
             }
-            else if (LaunchStarted)
-            {
-                <div class="live-processes-alert live-processes-alert--success"
-                     role="status"
-                     data-testid="live-processes-started-notification">
-                    <Icon Name="check_circle" />
-                    <span>Process started. Live run projection is loading.</span>
-                </div>
-            }
             else if (!string.IsNullOrWhiteSpace(operatorActionError))
             {
                 <div class="live-processes-alert"
@@ -91,6 +84,24 @@
                      data-testid="live-processes-operator-action-message">
                     <Icon Name="check_circle" />
                     <span>@operatorActionMessage</span>
+                </div>
+            }
+            else if (IsMockProjection)
+            {
+                <div class="live-processes-alert live-processes-alert--mock"
+                     role="status"
+                     data-testid="live-processes-mock-notification">
+                    <Icon Name="science" />
+                    <span>Mock projection scenario is active. Runtime actions are simulated for UX tuning.</span>
+                </div>
+            }
+            else if (LaunchStarted)
+            {
+                <div class="live-processes-alert live-processes-alert--success"
+                     role="status"
+                     data-testid="live-processes-started-notification">
+                    <Icon Name="check_circle" />
+                    <span>Process started. Live run projection is loading.</span>
                 </div>
             }
 
@@ -159,7 +170,7 @@
                             @RenderGraphsTab()
                         </TabsItem>
 
-                        <TabsItem Text="Tool analytics"
+                        <TabsItem Text="Tool history"
                                   Icon="analytics"
                                   BadgeText="@shell.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture)">
                             @RenderToolAnalyticsTab()
@@ -242,6 +253,36 @@
         ProcessProjectedRunStatus.Cancelled
     ];
 
+    private enum LiveProcessToolFamily
+    {
+        Browser,
+        DotNet,
+        ProjectStructure,
+        Workspace,
+        ProcessRuntime,
+        AgentRuntime,
+        Storage,
+        Other
+    }
+
+    private sealed record LiveRunProgressModel(
+        int Percent,
+        string Label,
+        string Tone,
+        string CssClass,
+        string Tooltip);
+
+    private sealed record ToolFamilySummary(
+        LiveProcessToolFamily Family,
+        string Label,
+        string Icon,
+        string Tone,
+        string CssClass,
+        int ToolCount,
+        int CallCount,
+        DateTimeOffset LastUsedAtUtc,
+        IReadOnlyList<ProcessRuntimeToolUsageProjection> Tools);
+
     private static readonly CdaChartOptions RuntimeActivityChartOptions = new()
     {
         Type = CdaChartType.Area,
@@ -283,6 +324,9 @@
     [Parameter]
     public bool LaunchStarted { get; set; }
 
+    [Parameter]
+    public string? MockScenarioQuery { get; set; }
+
     private ProcessWorkspaceShellProjection? shell;
     private bool isLoading;
     private string? errorMessage;
@@ -300,8 +344,12 @@
     private string? operatorActionMessage;
     private string? operatorActionError;
     private readonly Dictionary<Guid, string> operatorActionNotes = new();
+    private readonly HashSet<Guid> mockResolvedOperatorActionStepIds = [];
 
     private string PageTitleText => ProjectId.HasValue ? "Project live processes" : "Live processes";
+
+    private bool IsMockProjection
+        => !string.IsNullOrWhiteSpace(MockScenarioQuery);
 
     private string DefinitionCountText
         => shell is null
@@ -381,8 +429,9 @@
         }
     }
 
-    private Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, Guid? runId)
-        => ProjectionClient.GetShellAsync(new ProcessWorkspaceShellRequest(
+    private async Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, Guid? runId)
+    {
+        var request = new ProcessWorkspaceShellRequest(
             ResolveScope(),
             new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
             new ProcessDefinitionCatalogQueryProjection(
@@ -401,7 +450,20 @@
                 runtimeHistoryWindow,
                 runtimeEventPage,
                 RuntimeEventPageSize,
-                runId)));
+                runId));
+
+        var baseline = await ProjectionClient.GetShellAsync(request).ConfigureAwait(false);
+        if (!MockProjectionFactory.TryParseScenario(MockScenarioQuery, out var scenario))
+        {
+            return baseline;
+        }
+
+        return MockProjectionFactory.CreateShell(
+            baseline,
+            request,
+            scenario,
+            mockResolvedOperatorActionStepIds);
+    }
 
     private ProcessWorkspaceShellScope ResolveScope()
         => ProjectId.HasValue
@@ -455,6 +517,9 @@
             .ThenByDescending(run => run.LastEventAtUtc)
             .Take(6)
             .ToArray();
+
+    private IReadOnlyList<ToolFamilySummary> ToolFamilySummaries
+        => BuildToolFamilySummaries(shell?.Runtime.ToolUsage ?? []);
 
     private RenderFragment RenderActivityTab() => @<Stack GapScale="LayoutGap.Medium"
                                                           data-testid="live-processes-activity">
@@ -519,12 +584,28 @@
         </Grid>
     </Stack>;
 
-    private RenderFragment RenderToolAnalyticsTab() => @<Grid Gap="LayoutGap.Medium"
-                                                              ColumnTemplateXl="minmax(0,0.8fr) minmax(0,1.2fr)"
-                                                              data-testid="live-processes-tool-analytics">
-        @RenderToolUsageLedger()
-        @RenderEventLedger()
-    </Grid>;
+    private RenderFragment RenderToolAnalyticsTab() => @<Stack GapScale="LayoutGap.Medium"
+                                                               data-testid="live-processes-tool-analytics">
+        @RenderRuntimeToolbar("live-processes-tool-history-toolbar")
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,1.2fr) minmax(22rem,0.8fr)">
+            <div class="live-processes-tool-chart"
+                 data-testid="live-processes-tool-history-chart">
+                <CdaChart Title="Tool history"
+                          Description="Runtime tool activity grouped by tool or event family."
+                          Series="@RuntimeToolUsageSeries"
+                          Options="@RuntimeToolUsageChartOptions"
+                          Height="300"
+                          EmptyText="No runtime tool activity is present in this scope." />
+            </div>
+            @RenderToolFamilyCards()
+        </Grid>
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,1.05fr) minmax(0,0.95fr)">
+            @RenderToolUsageLedger()
+            @RenderEventLedger()
+        </Grid>
+    </Stack>;
 
     private IReadOnlyList<CdaChartSeries> RuntimeActivitySeries
     {
@@ -662,9 +743,12 @@
                 </Stack>
                 <StatusBadge Tone="warning" Text="@FormatHistoryWindow(shell!.Runtime.HistoryWindow)" />
             </Split>
-            <div class="live-processes-attention-grid">
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnsXl="2"
+                  Columns2Xl="2">
                 @foreach (var run in AttentionRuns)
                 {
+                    var action = ResolvePrimaryOperatorAction(run);
                     <article class="live-processes-attention-card" data-testid="live-processes-attention-card">
                         <div class="live-processes-attention-card__body">
                             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
@@ -680,22 +764,17 @@
                             </Cluster>
                             <h3 class="live-processes-attention-card__title">@BuildRunTitle(run)</h3>
                             <p class="live-processes-attention-card__summary">@BuildAttentionSummary(run)</p>
-                            @if (ResolvePrimaryOperatorAction(run) is { } cardAction)
+                            @if (action is not null)
                             {
                                 <div class="live-processes-attention-card__decision"
                                      data-testid="live-processes-attention-decision">
-                                    <p>@cardAction.RequiredOperatorDecision</p>
-                                    <TextArea Value="@GetOperatorActionNote(cardAction)"
-                                              Change="@((string? value) => SetOperatorActionNote(cardAction, value))"
-                                              Rows="3"
-                                              Placeholder="Optional note for the manager or next agent"
-                                              class="live-processes-operator-action-row__note"
-                                              data-testid="live-processes-operator-note" />
+                                    <Icon Name="priority_high" />
+                                    <p>@FirstNonEmpty(action.RequiredOperatorDecision, action.Summary)</p>
                                 </div>
                             }
                         </div>
                         <Cluster Gap="LayoutGap.XSmall" Class="live-processes-attention-card__actions">
-                            @if (ResolvePrimaryOperatorAction(run) is { } action)
+                            @if (action is not null)
                             {
                                 <Button Icon="replay"
                                         Text="@action.Label"
@@ -703,7 +782,7 @@
                                         Size="ButtonSize.Small"
                                         Disabled="@IsOperatorActionBusy(action)"
                                         IsBusy="@IsOperatorActionBusy(action)"
-                                        Click="@(() => ExecuteOperatorActionAsync(action))"
+                                        Click="@(() => OpenRunDetailDialogAsync(run))"
                                         data-testid="live-processes-request-rework" />
                             }
                             <Button Icon="info"
@@ -721,7 +800,7 @@
                         </Cluster>
                     </article>
                 }
-            </div>
+            </Grid>
         }
     </section>;
 
@@ -757,65 +836,103 @@
         }
         else
         {
-            <div class="live-processes-activity-grid">
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnsXl="3"
+                  Columns2Xl="3">
                 @foreach (var run in ActivityCardRuns)
                 {
                     @RenderActivityCard(run)
                 }
-            </div>
+            </Grid>
         }
     </section>;
 
     private RenderFragment RenderActivityCard(ProcessLiveProcessSnapshot run) => @<article class="@ResolveActivityCardClass(run)"
                                                                                           data-testid="live-processes-activity-card">
+        @{
+            var progress = BuildRunProgress(run);
+            var activeAgents = ResolveActiveAgents(run.RunId.Value);
+            var primaryAgent = ResolvePrimaryAgent(activeAgents);
+            var action = ResolvePrimaryOperatorAction(run);
+        }
         <div class="live-processes-activity-card__body">
-            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
-                <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
-                @if (run.Incidents.Count > 0)
-                {
-                    <StatusBadge Tone="warning" Text="@FormatCount(run.Incidents.Count, "incident", "incidents")" />
-                }
-                @if (CountWorkingAgents(ResolveActiveAgents(run.RunId.Value)) > 0)
-                {
-                    <StatusBadge Tone="info" Text="@FormatCount(CountWorkingAgents(ResolveActiveAgents(run.RunId.Value)), "agent", "agents")" />
-                }
-                @if (CountStaleAgentClaims(ResolveActiveAgents(run.RunId.Value)) > 0)
-                {
-                    <StatusBadge Tone="warning" Text="@FormatCount(CountStaleAgentClaims(ResolveActiveAgents(run.RunId.Value)), "stale claim", "stale claims")" />
-                }
-                @if (run.WaitingOnChildRuns.Count > 0)
-                {
-                    <StatusBadge Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" />
-                }
-                @if (run.CurrentStep is not null)
-                {
-                    <StatusBadge Tone="neutral" Text="@run.CurrentStep.StepKey" />
-                }
-            </Cluster>
+            <Split Gap="LayoutGap.Small">
+                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                    <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                    @if (run.Incidents.Count > 0)
+                    {
+                        <StatusBadge Tone="warning" Text="@FormatCount(run.Incidents.Count, "incident", "incidents")" />
+                    }
+                    @if (CountWorkingAgents(activeAgents) > 0)
+                    {
+                        <StatusBadge Tone="info" Text="@FormatCount(CountWorkingAgents(activeAgents), "agent", "agents")" />
+                    }
+                    @if (CountStaleAgentClaims(activeAgents) > 0)
+                    {
+                        <StatusBadge Tone="warning" Text="@FormatCount(CountStaleAgentClaims(activeAgents), "stale claim", "stale claims")" />
+                    }
+                    @if (run.WaitingOnChildRuns.Count > 0)
+                    {
+                        <StatusBadge Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" />
+                    }
+                </Cluster>
+                <span class="live-processes-activity-card__percent">@($"{progress.Percent}%")</span>
+            </Split>
             <h3 class="live-processes-activity-card__title">@BuildRunTitle(run)</h3>
+            <div class="live-processes-activity-card__fields">
+                <span>
+                    <Icon Name="route" />
+                    <span class="live-processes-activity-card__field-body">
+                        <strong>Current step</strong>
+                        <span>@ResolveCurrentStepText(run)</span>
+                    </span>
+                </span>
+                <span>
+                    <Icon Name="person" />
+                    <span class="live-processes-activity-card__field-body">
+                        <strong>Assigned agent</strong>
+                        <span>@(primaryAgent is null ? "Unassigned" : ResolveAgentDisplayName(primaryAgent))</span>
+                    </span>
+                </span>
+            </div>
             <p class="live-processes-activity-card__summary">@BuildRunCardSummary(run)</p>
+            <div class="live-processes-run-progress"
+                 data-testid="live-processes-run-progress"
+                 title="@progress.Tooltip">
+                <span class="live-processes-run-progress__label">@progress.Label</span>
+                <span class="live-processes-run-progress__value">@($"{progress.Percent}%")</span>
+                <ProgressBar Value="@progress.Percent" Max="100" Unit="%" />
+            </div>
+            <div class="live-processes-activity-card__metrics">
+                <span>@FormatDuration(run.LastEventAtUtc - run.FirstEventAtUtc)</span>
+                <span>@FormatCount(run.RecentEvents.Count, "event", "events")</span>
+                <span>@FormatCount(activeAgents.Count, "agent", "agents")</span>
+            </div>
             <p class="live-processes-activity-card__time">@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</p>
         </div>
         <Cluster Gap="LayoutGap.XSmall" Class="live-processes-activity-card__actions">
-            @if (ResolvePrimaryOperatorAction(run) is { } action)
+            @if (action is not null)
             {
                 <Button Icon="replay"
+                        Text="@action.Label"
                         ButtonStyle="ButtonStyle.Primary"
                         Size="ButtonSize.Small"
                         title="@action.Label"
                         aria-label="@action.Label"
                         Disabled="@IsOperatorActionBusy(action)"
                         IsBusy="@IsOperatorActionBusy(action)"
-                        Click="@(() => ExecuteOperatorActionAsync(action))"
+                        Click="@(() => OpenRunDetailDialogAsync(run))"
                         data-testid="live-processes-activity-request-rework" />
             }
             <Button Icon="open_in_new"
+                    Text="Details"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
                     title="Open run details"
                     aria-label="Open run details"
                     Click="@(() => OpenRunDetailDialogAsync(run))" />
             <Button Icon="forum"
+                    Text="Control"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
                     title="Open process control"
@@ -836,6 +953,7 @@
         {
             @foreach (var run in VisibleRuns)
             {
+                var progress = BuildRunProgress(run);
                 <article class="live-processes-run-card @(run.RunId.Value == selectedRuntimeRunId ? "live-processes-run-card--selected" : string.Empty)"
                          data-testid="live-processes-run-card">
                     <button type="button"
@@ -846,6 +964,11 @@
                             <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
                         </span>
                         <span class="live-processes-run-card__summary">@BuildRunCardSummary(run)</span>
+                        <span class="live-processes-run-card__progress"
+                              title="@progress.Tooltip">
+                            <span class="live-processes-run-card__progress-label">@progress.Label</span>
+                            <ProgressBar Value="@progress.Percent" Max="100" Unit="%" />
+                        </span>
                         <span class="live-processes-run-card__badges">
                             <StatusBadge Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" />
                             <StatusBadge Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" />
@@ -978,42 +1101,179 @@
         }
     </SurfaceCard>;
 
+    private RenderFragment RenderToolFamilyCards() => @<SurfaceCard Soft="true"
+                                                                    data-testid="live-processes-tool-family-summary">
+        @{
+            var toolFamilies = ToolFamilySummaries;
+        }
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool types" />
+                <h2 class="text-base font-semibold text-slate-900">@FormatCount(toolFamilies.Count, "family", "families")</h2>
+            </Stack>
+            <StatusBadge Tone="info" Text="@FormatCount(shell!.Runtime.Stats.ToolCallCount, "call", "calls")" />
+        </Split>
+        @if (toolFamilies.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No tool families are present in this history window.</p>
+        }
+        else
+        {
+            <Grid Gap="LayoutGap.Small"
+                  ColumnsXl="2"
+                  Columns2Xl="2"
+                  Class="mt-4">
+                @foreach (var family in toolFamilies)
+                {
+                    var peakCalls = Math.Max(1, toolFamilies.Max(item => item.CallCount));
+                    var percent = Math.Clamp((int)Math.Round(family.CallCount * 100d / peakCalls, MidpointRounding.AwayFromZero), 6, 100);
+                    <article class="live-processes-tool-family-card @family.CssClass"
+                             data-testid="live-processes-tool-family-card">
+                        <span class="live-processes-tool-family-card__icon">
+                            <Icon Name="@family.Icon" />
+                        </span>
+                        <span class="live-processes-tool-family-card__body">
+                            <span class="live-processes-tool-family-card__title">@family.Label</span>
+                            <span class="live-processes-tool-family-card__summary">
+                                @FormatCount(family.CallCount, "call", "calls") across @FormatCount(family.ToolCount, "tool", "tools")
+                            </span>
+                            <ProgressBar Value="@percent" Max="100" Unit="%" />
+                        </span>
+                        <StatusBadge Tone="@family.Tone" Text="@family.LastUsedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" />
+                    </article>
+                }
+            </Grid>
+        }
+    </SurfaceCard>;
+
     private RenderFragment RenderToolUsageLedger() => @<SurfaceCard Soft="true"
                                                                     data-testid="live-processes-tool-ledger">
-        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool usage" />
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool cards" />
+                <h2 class="text-base font-semibold text-slate-900">@FormatCount(shell!.Runtime.ToolUsage.Count, "tool", "tools")</h2>
+            </Stack>
+            <StatusBadge Tone="neutral" Text="@FormatHistoryWindow(shell!.Runtime.HistoryWindow)" />
+        </Split>
         @if (shell!.Runtime.ToolUsage.Count == 0)
         {
             <p class="mt-3 text-sm leading-6 text-slate-500">No runtime tool usage is present in this history window.</p>
         }
         else
         {
-            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+            <Grid Gap="LayoutGap.Small"
+                  ColumnsXl="2"
+                  Columns2Xl="2"
+                  Class="mt-4">
                 @foreach (var tool in shell.Runtime.ToolUsage)
                 {
-                    <div class="live-processes-event-row" data-testid="live-processes-tool-row">
-                        <Split Gap="LayoutGap.Small">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-900">@tool.ToolName</p>
-                                <p class="mt-1 text-xs text-slate-500">@tool.Summary</p>
+                    var family = ResolveToolFamilySummary(tool);
+                    <article class="live-processes-tool-card @family.CssClass"
+                             data-testid="live-processes-tool-card">
+                        <div class="live-processes-tool-card__header">
+                            <span class="live-processes-tool-card__icon">
+                                <Icon Name="@family.Icon" />
+                            </span>
+                            <div class="live-processes-tool-card__identity">
+                                <p class="live-processes-tool-card__name">@tool.ToolName</p>
+                                <p class="live-processes-tool-card__summary">@tool.Summary</p>
                             </div>
-                            <StatusBadge Tone="warning" Text="@($"{tool.CallCount} calls")" />
-                        </Split>
-                    </div>
+                            <StatusBadge Tone="@family.Tone" Text="@family.Label" />
+                        </div>
+                        <div class="live-processes-tool-card__meta">
+                            <span>@FormatCount(tool.CallCount, "call", "calls")</span>
+                            <span>@tool.LastUsedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </div>
+                    </article>
                 }
-            </Stack>
+            </Grid>
         }
     </SurfaceCard>;
 
     private RenderFragment RenderRunDetailDialog(ProcessLiveProcessSnapshot run) => @<Stack GapScale="LayoutGap.Medium"
                                                                                            data-testid="live-processes-run-detail-dialog-content">
+        @{
+            var progress = BuildRunProgress(run);
+            var activeAgents = ResolveActiveAgents(run.RunId.Value);
+            var managerSummary = ResolveManagerSummary(run);
+        }
+        <SurfaceCard Soft="true"
+                     Class="@($"live-processes-run-detail-hero {progress.CssClass}")"
+                     data-testid="live-processes-run-detail-hero">
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnTemplateXl="minmax(0,1.35fr) minmax(20rem,0.65fr)"
+                  ColumnTemplate2Xl="minmax(0,1.35fr) minmax(20rem,0.65fr)">
+                <div class="live-processes-run-detail-hero__main">
+                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                        <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                        <StatusBadge Tone="@progress.Tone" Text="@progress.Label" />
+                        @if (run.OperatorActions.Count > 0)
+                        {
+                            <StatusBadge Tone="warning" Text="@FormatCount(run.OperatorActions.Count, "operator action", "operator actions")" />
+                        }
+                        @if (run.WaitingOnChildRuns.Count > 0)
+                        {
+                            <StatusBadge Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" />
+                        }
+                    </Cluster>
+                    <h2>@BuildRunTitle(run)</h2>
+                    <p>@BuildRunCardSummary(run)</p>
+                    <div class="live-processes-run-progress live-processes-run-progress--detail"
+                         title="@progress.Tooltip">
+                        <span class="live-processes-run-progress__label">@progress.Label</span>
+                        <span class="live-processes-run-progress__value">@($"{progress.Percent}%")</span>
+                        <ProgressBar Value="@progress.Percent" Max="100" Unit="%" />
+                    </div>
+                </div>
+                <div class="live-processes-run-detail-hero__aside"
+                     data-testid="live-processes-run-detail-manager-summary">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager summary" />
+                    <p>@managerSummary</p>
+                    @if (ResolvePrimaryOperatorAction(run) is { } primaryAction)
+                    {
+                        <div class="live-processes-run-detail-decision"
+                             data-testid="live-processes-run-detail-decision">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operator decision" />
+                            <p>@FirstNonEmpty(primaryAction.RequiredOperatorDecision, primaryAction.Summary)</p>
+                            <TextArea Value="@GetOperatorActionNote(primaryAction)"
+                                      Change="@((string? value) => SetOperatorActionNote(primaryAction, value))"
+                                      Rows="4"
+                                      Placeholder="Optional note for the manager or next agent"
+                                      class="live-processes-operator-action-row__note"
+                                      data-testid="live-processes-dialog-operator-note" />
+                            <Cluster Gap="LayoutGap.Small" Class="live-processes-run-detail-decision__actions">
+                                <Button Icon="replay"
+                                        Text="@primaryAction.Label"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@IsOperatorActionBusy(primaryAction)"
+                                        IsBusy="@IsOperatorActionBusy(primaryAction)"
+                                        Click="@(() => ExecuteOperatorActionAsync(primaryAction))"
+                                        data-testid="live-processes-dialog-request-rework" />
+                                <Button Icon="science"
+                                        Text="Run tests"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => OpenProcessControlAsync(primaryAction.RunId))" />
+                            </Cluster>
+                        </div>
+                    }
+                    <div class="live-processes-run-detail-hero__metrics">
+                        <span>@FormatDuration(run.LastEventAtUtc - run.FirstEventAtUtc)</span>
+                        <span>@FormatCount(run.RecentEvents.Count, "event", "events")</span>
+                        <span>@FormatCount(activeAgents.Count, "agent", "agents")</span>
+                    </div>
+                </div>
+            </Grid>
+        </SurfaceCard>
         <CompactStatStrip>
             <CompactStat Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" TooltipText="Projected run status." />
             <CompactStat Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" TooltipText="Recent events kept in the live run snapshot." />
             <CompactStat Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" TooltipText="Manager incidents projected for this run." />
-            <CompactStat Tone="info" Text="@FormatCount(CountWorkingAgents(ResolveActiveAgents(run.RunId.Value)), "agent", "agents")" TooltipText="Agents currently claimed or running on this run with a valid lease." />
-            @if (CountStaleAgentClaims(ResolveActiveAgents(run.RunId.Value)) > 0)
+            <CompactStat Tone="info" Text="@FormatCount(CountWorkingAgents(activeAgents), "agent", "agents")" TooltipText="Agents currently claimed or running on this run with a valid lease." />
+            @if (CountStaleAgentClaims(activeAgents) > 0)
             {
-                <CompactStat Tone="warning" Text="@FormatCount(CountStaleAgentClaims(ResolveActiveAgents(run.RunId.Value)), "stale claim", "stale claims")" TooltipText="Claimed or running steps whose dispatch lease has expired." />
+                <CompactStat Tone="warning" Text="@FormatCount(CountStaleAgentClaims(activeAgents), "stale claim", "stale claims")" TooltipText="Claimed or running steps whose dispatch lease has expired." />
             }
             @if (run.WaitingOnChildRuns.Count > 0)
             {
@@ -1025,8 +1285,11 @@
             }
             <CompactStat Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" TooltipText="Latest runtime event time." />
         </CompactStatStrip>
-        @RenderOperatorActions(run)
-        @RenderActiveAgentGrid(ResolveActiveAgents(run.RunId.Value), "live-processes-run-detail-active-agents")
+        @if (run.OperatorActions.Count > 1)
+        {
+            @RenderOperatorActions(run)
+        }
+        @RenderActiveAgentGrid(activeAgents, "live-processes-run-detail-active-agents")
         @if (run.CurrentStep is not null)
         {
             @RenderCurrentStep(run.CurrentStep)
@@ -1477,38 +1740,91 @@
 
         try
         {
-            var result = await ProjectionClient.ExecuteRuntimeOperatorActionAsync(new ProcessRuntimeOperatorActionCommand(
-                new ProcessRunId(action.RunId),
-                new ProcessStepInstanceId(action.StepInstanceId),
-                action.Kind,
-                "live-processes",
-                BuildOperatorActionReason(action)));
+            var result = await ExecuteOperatorActionCommandAsync(action);
             if (!result.Succeeded)
             {
                 operatorActionError = result.Diagnostics.Count == 0
                     ? $"{action.Label} was rejected by the runtime."
                     : string.Join(" ", result.Diagnostics);
+                NotifyOperatorAction(
+                    NotificationSeverity.Error,
+                    $"{action.Label} rejected",
+                    operatorActionError);
                 return;
             }
 
             operatorActionMessage = $"{action.Label} accepted for {action.StepKey}. Dispatch has been queued.";
+            NotifyOperatorAction(
+                NotificationSeverity.Success,
+                $"{action.Label} accepted",
+                $"{action.StepKey} is queued for dispatch.");
             operatorActionNotes.Remove(action.StepInstanceId);
             selectedRuntimeRunId = action.RunId;
             runtimeEventPage = 0;
             await LoadAsync(forceRefresh: true);
             if (runDetailDialogOpen)
             {
-                runDetailSnapshot = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == action.RunId);
+                var refreshedRun = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == action.RunId);
+                if (refreshedRun is null || !RequiresOperatorAttention(refreshedRun))
+                {
+                    await CloseRunDetailDialogAsync();
+                }
+                else
+                {
+                    runDetailSnapshot = refreshedRun;
+                }
             }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             operatorActionError = exception.Message;
+            NotifyOperatorAction(
+                NotificationSeverity.Error,
+                $"{action.Label} failed",
+                operatorActionError);
         }
         finally
         {
             busyOperatorActionStepId = null;
         }
+    }
+
+    private async Task<ProcessRuntimeOperatorActionResult> ExecuteOperatorActionCommandAsync(
+        ProcessRuntimeOperatorActionProjection action)
+    {
+        if (IsMockProjection)
+        {
+            mockResolvedOperatorActionStepIds.Add(action.StepInstanceId);
+            return new ProcessRuntimeOperatorActionResult(
+                new ProcessRunId(action.RunId),
+                new ProcessStepInstanceId(action.StepInstanceId),
+                action.Kind,
+                ProcessRuntimeTransitionOutcome.Applied,
+                ProcessRuntimeStatus.Active,
+                []);
+        }
+
+        return await ProjectionClient.ExecuteRuntimeOperatorActionAsync(new ProcessRuntimeOperatorActionCommand(
+            new ProcessRunId(action.RunId),
+            new ProcessStepInstanceId(action.StepInstanceId),
+            action.Kind,
+            "live-processes",
+            BuildOperatorActionReason(action)));
+    }
+
+    private void NotifyOperatorAction(
+        NotificationSeverity severity,
+        string summary,
+        string detail)
+    {
+        Notifications.Notify(new NotificationMessage
+        {
+            Severity = severity,
+            Summary = summary,
+            Detail = detail,
+            Duration = severity == NotificationSeverity.Error ? 14_000 : 9_000,
+            TestId = "live-processes-operator-action-toast"
+        });
     }
 
     private IReadOnlyList<ProcessRuntimeActiveAgentProjection> ResolveActiveAgents(Guid runId)
@@ -1532,6 +1848,36 @@
             .ThenByDescending(action => string.Equals(action.StepStatus, nameof(ProcessRuntimeStepStatus.Blocked), StringComparison.Ordinal))
             .ThenBy(action => action.StepKey, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
+
+    private static ProcessRuntimeActiveAgentProjection? ResolvePrimaryAgent(
+        IReadOnlyList<ProcessRuntimeActiveAgentProjection> activeAgents)
+        => activeAgents
+            .OrderByDescending(agent => agent.IsWorking && !agent.IsLeaseExpired)
+            .ThenByDescending(agent => string.Equals(agent.Status, nameof(ProcessRuntimeStepStatus.Running), StringComparison.Ordinal))
+            .ThenBy(agent => agent.StepKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+    private static string ResolveCurrentStepText(ProcessLiveProcessSnapshot run)
+    {
+        if (run.CurrentStep is not null)
+        {
+            return $"{run.CurrentStep.StepKey} / {run.CurrentStep.StepStatus}";
+        }
+
+        var childWait = run.WaitingOnChildRuns.FirstOrDefault();
+        if (childWait is not null)
+        {
+            return $"{childWait.ParentStepKey} / waiting on child";
+        }
+
+        var action = ResolvePrimaryOperatorAction(run);
+        if (action is not null)
+        {
+            return $"{action.StepKey} / {action.StepStatus}";
+        }
+
+        return "No current step";
+    }
 
     private bool IsOperatorActionBusy(ProcessRuntimeOperatorActionProjection action)
         => busyOperatorActionStepId == action.StepInstanceId;
@@ -1745,6 +2091,212 @@
         return string.Concat(words.Select(word => char.ToUpperInvariant(word[0])));
     }
 
+    private static LiveRunProgressModel BuildRunProgress(ProcessLiveProcessSnapshot run)
+    {
+        var eventBoost = Math.Min(18, run.RecentEvents.Count * 3);
+        var hasOperatorAction = run.OperatorActions.Any(action => action.IsEnabled);
+
+        return run.Status switch
+        {
+            ProcessProjectedRunStatus.Completed => new LiveRunProgressModel(
+                100,
+                "Completed",
+                "success",
+                "live-processes-run-state--success",
+                "The run has reached a completed terminal state."),
+            ProcessProjectedRunStatus.Cancelled => new LiveRunProgressModel(
+                100,
+                "Cancelled",
+                "neutral",
+                "live-processes-run-state--neutral",
+                "The run was cancelled and is no longer active."),
+            ProcessProjectedRunStatus.Failed => new LiveRunProgressModel(
+                100,
+                "Failed",
+                "danger",
+                "live-processes-run-state--danger",
+                "The run failed and needs inspection before retry."),
+            ProcessProjectedRunStatus.NeedsAttention when hasOperatorAction => new LiveRunProgressModel(
+                Math.Clamp(68 + eventBoost, 68, 92),
+                "Blocked decision",
+                "warning",
+                "live-processes-run-state--warning",
+                "An actionable operator decision is available for this run."),
+            ProcessProjectedRunStatus.NeedsAttention => new LiveRunProgressModel(
+                Math.Clamp(58 + eventBoost, 58, 86),
+                "Needs attention",
+                "warning",
+                "live-processes-run-state--warning",
+                "The run has incidents or manager messages that need review."),
+            ProcessProjectedRunStatus.Active when run.WaitingOnChildRuns.Count > 0 => new LiveRunProgressModel(
+                Math.Clamp(48 + eventBoost, 48, 78),
+                "Waiting child",
+                "info",
+                "live-processes-run-state--info",
+                "The root run is active and waiting on a child process run."),
+            ProcessProjectedRunStatus.Active when run.CurrentStep is not null => new LiveRunProgressModel(
+                Math.Clamp(52 + eventBoost, 52, 84),
+                "Current step",
+                "success",
+                "live-processes-run-state--success",
+                $"The current step is {run.CurrentStep.StepKey}."),
+            ProcessProjectedRunStatus.Active => new LiveRunProgressModel(
+                Math.Clamp(38 + eventBoost, 38, 74),
+                "Active",
+                "success",
+                "live-processes-run-state--success",
+                "The run is active in the current projection window."),
+            _ => new LiveRunProgressModel(
+                Math.Clamp(12 + eventBoost, 12, 48),
+                "Observed",
+                "neutral",
+                "live-processes-run-state--neutral",
+                "The run has projection activity but no stronger status signal.")
+        };
+    }
+
+    private string ResolveManagerSummary(ProcessLiveProcessSnapshot run)
+    {
+        if (ResolvePrimaryOperatorAction(run) is { } action)
+        {
+            return FirstNonEmpty(
+                action.RequiredOperatorDecision,
+                action.ProblemSummary,
+                action.Summary,
+                "Operator review is required before the run can continue.");
+        }
+
+        if (ResolveManagerMessages(run.RunId).FirstOrDefault() is { } managerMessage)
+        {
+            return $"{managerMessage.Kind}: {EnsureSentence(managerMessage.Summary)}";
+        }
+
+        if (run.Incidents.OrderByDescending(item => item.RaisedAtUtc).FirstOrDefault() is { } incident)
+        {
+            return EnsureSentence(incident.SafeSummary);
+        }
+
+        return run.CurrentStep is null
+            ? "No manager message is attached to this run."
+            : EnsureSentence(run.CurrentStep.Summary);
+    }
+
+    private static IReadOnlyList<ToolFamilySummary> BuildToolFamilySummaries(
+        IReadOnlyList<ProcessRuntimeToolUsageProjection> tools)
+    {
+        if (tools.Count == 0)
+        {
+            return [];
+        }
+
+        return tools
+            .GroupBy(ResolveToolFamily)
+            .Select(group => CreateToolFamilySummary(
+                group.Key,
+                group
+                    .OrderByDescending(tool => tool.CallCount)
+                    .ThenBy(tool => tool.ToolName, StringComparer.OrdinalIgnoreCase)
+                    .ToArray()))
+            .OrderByDescending(summary => summary.CallCount)
+            .ThenBy(summary => summary.Label, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static ToolFamilySummary ResolveToolFamilySummary(ProcessRuntimeToolUsageProjection tool)
+        => CreateToolFamilySummary(ResolveToolFamily(tool), [tool]);
+
+    private static ToolFamilySummary CreateToolFamilySummary(
+        LiveProcessToolFamily family,
+        IReadOnlyList<ProcessRuntimeToolUsageProjection> tools)
+    {
+        var metadata = ResolveToolFamilyMetadata(family);
+        return new ToolFamilySummary(
+            family,
+            metadata.Label,
+            metadata.Icon,
+            metadata.Tone,
+            metadata.CssClass,
+            tools.Count,
+            tools.Sum(tool => tool.CallCount),
+            tools.Max(tool => tool.LastUsedAtUtc),
+            tools);
+    }
+
+    private static LiveProcessToolFamily ResolveToolFamily(ProcessRuntimeToolUsageProjection tool)
+    {
+        var normalized = $"{tool.ToolName} {tool.Summary}".ToLowerInvariant();
+        if (normalized.Contains("browser", StringComparison.Ordinal) ||
+            normalized.Contains("playwright", StringComparison.Ordinal) ||
+            normalized.Contains("screenshot", StringComparison.Ordinal) ||
+            normalized.Contains("snapshot", StringComparison.Ordinal) ||
+            normalized.Contains("console", StringComparison.Ordinal))
+        {
+            return LiveProcessToolFamily.Browser;
+        }
+
+        if (normalized.Contains("project_structure", StringComparison.Ordinal) ||
+            normalized.Contains("project structure", StringComparison.Ordinal))
+        {
+            return LiveProcessToolFamily.ProjectStructure;
+        }
+
+        if (normalized.Contains("dotnet", StringComparison.Ordinal) ||
+            normalized.Contains("msbuild", StringComparison.Ordinal) ||
+            normalized.Contains("restore", StringComparison.Ordinal) ||
+            normalized.Contains("build", StringComparison.Ordinal) ||
+            normalized.Contains("test", StringComparison.Ordinal))
+        {
+            return LiveProcessToolFamily.DotNet;
+        }
+
+        if (normalized.Contains("workspace", StringComparison.Ordinal) ||
+            normalized.Contains("pwsh", StringComparison.Ordinal) ||
+            normalized.Contains("shell", StringComparison.Ordinal) ||
+            normalized.Contains("file", StringComparison.Ordinal) ||
+            normalized.Contains("directory", StringComparison.Ordinal))
+        {
+            return LiveProcessToolFamily.Workspace;
+        }
+
+        if (normalized.Contains("agent", StringComparison.Ordinal) ||
+            normalized.Contains("model", StringComparison.Ordinal) ||
+            normalized.Contains("prompt", StringComparison.Ordinal) ||
+            normalized.Contains("completion", StringComparison.Ordinal))
+        {
+            return LiveProcessToolFamily.AgentRuntime;
+        }
+
+        if (normalized.Contains("storage", StringComparison.Ordinal) ||
+            normalized.Contains("artifact", StringComparison.Ordinal) ||
+            normalized.Contains("evidence", StringComparison.Ordinal))
+        {
+            return LiveProcessToolFamily.Storage;
+        }
+
+        if (normalized.Contains("process", StringComparison.Ordinal) ||
+            normalized.Contains("step", StringComparison.Ordinal) ||
+            normalized.Contains("manager", StringComparison.Ordinal))
+        {
+            return LiveProcessToolFamily.ProcessRuntime;
+        }
+
+        return LiveProcessToolFamily.Other;
+    }
+
+    private static (string Label, string Icon, string Tone, string CssClass) ResolveToolFamilyMetadata(
+        LiveProcessToolFamily family)
+        => family switch
+        {
+            LiveProcessToolFamily.Browser => ("Browser", "travel_explore", "info", "live-processes-tool-card--browser"),
+            LiveProcessToolFamily.DotNet => (".NET", "terminal", "success", "live-processes-tool-card--dotnet"),
+            LiveProcessToolFamily.ProjectStructure => ("Project structure", "account_tree", "accent", "live-processes-tool-card--structure"),
+            LiveProcessToolFamily.Workspace => ("Workspace", "folder_open", "neutral", "live-processes-tool-card--workspace"),
+            LiveProcessToolFamily.ProcessRuntime => ("Process runtime", "schema", "warning", "live-processes-tool-card--runtime"),
+            LiveProcessToolFamily.AgentRuntime => ("Agent runtime", "smart_toy", "info", "live-processes-tool-card--agent"),
+            LiveProcessToolFamily.Storage => ("Artifacts", "inventory_2", "neutral", "live-processes-tool-card--storage"),
+            _ => ("Other", "extension", "neutral", "live-processes-tool-card--other")
+        };
+
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
@@ -1796,6 +2348,9 @@
             ? $"{duration.TotalHours:N1} h"
             : $"{duration.TotalMinutes:N1} min";
     }
+
+    private static string FormatDuration(TimeSpan duration)
+        => FormatDuration(checked((long)Math.Max(0, duration.TotalMilliseconds)));
 
     private static string TrimLabel(string value, int maxLength)
     {

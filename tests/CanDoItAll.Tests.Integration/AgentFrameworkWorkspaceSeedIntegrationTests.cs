@@ -544,6 +544,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Workspace command timeout arguments are seconds", instructions, StringComparison.Ordinal);
         Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as current-run evidence", instructions, StringComparison.Ordinal);
         Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
+        Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -571,6 +572,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", instructions, StringComparison.Ordinal);
         Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
         Assert.Contains("store accepted screenshots as ImageAsset nodes or record the exact project-structure asset handoff", instructions, StringComparison.Ordinal);
+        Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -591,6 +593,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", instructions, StringComparison.Ordinal);
         Assert.Contains("cleanup.json", instructions, StringComparison.Ordinal);
+        Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
     }
 
     [Fact]

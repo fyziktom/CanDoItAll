@@ -67,12 +67,12 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         await using var processDbContext = await processDbContextFactory
             .CreateDbContextAsync(cancellationToken)
             .ConfigureAwait(false);
-        var runIds = linkedRunIds.ToArray();
-        var runtimeStates = runIds.Length == 0
+        var linkedRunIdArray = linkedRunIds.ToArray();
+        var linkedRuntimeStates = linkedRunIdArray.Length == 0
             ? []
             : await processDbContext.RuntimeStates
                 .AsNoTracking()
-                .Where(item => runIds.Contains(item.RunId))
+                .Where(item => linkedRunIdArray.Contains(item.RunId))
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .Select(item => new ProjectStructureProcessRuntimeState(
                     item.RunId,
@@ -81,6 +81,28 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     item.Status,
                     item.UpdatedAtUtc))
                 .ToListAsync(cancellationToken);
+        var projectedRunIds = linkedRuntimeStates
+            .Select(item => item.RootRunId)
+            .Distinct()
+            .ToArray();
+        var runtimeStates = projectedRunIds.Length == 0
+            ? []
+            : await processDbContext.RuntimeStates
+                .AsNoTracking()
+                .Where(item => projectedRunIds.Contains(item.RunId))
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .Select(item => new ProjectStructureProcessRuntimeState(
+                    item.RunId,
+                    item.RootRunId,
+                    item.PlanId,
+                    item.Status,
+                    item.UpdatedAtUtc))
+                .ToListAsync(cancellationToken);
+        var projectedRunNodeKeyByLinkedRunNodeKey = linkedRuntimeStates
+            .ToDictionary(
+                item => ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(item.RunId),
+                item => ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(item.RootRunId),
+                StringComparer.Ordinal);
         var planIds = runtimeStates
             .Select(item => item.PlanId)
             .Distinct()
@@ -95,11 +117,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     item.DefinitionId,
                     item.CreatedAtUtc))
                 .ToDictionaryAsync(item => item.PlanId, cancellationToken);
-        var stepStatsByRunId = runIds.Length == 0
+        var projectedRunIdArray = runtimeStates
+            .Select(item => item.RunId)
+            .ToArray();
+        var stepStatsByRunId = projectedRunIdArray.Length == 0
             ? new Dictionary<Guid, ProcessRunProjectionStats>()
             : await processDbContext.RuntimeSteps
                 .AsNoTracking()
-                .Where(item => runIds.Contains(item.RunId))
+                .Where(item => projectedRunIdArray.Contains(item.RunId))
                 .GroupBy(item => item.RunId)
                 .Select(group => new ProcessRunProjectionStats(
                     group.Key,
@@ -122,7 +147,9 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         }
 
         var preferredDefinitionParentByNodeKey = BuildPreferredDefinitionParentMap(userAuthoredLinks);
-        var preferredRunParentByNodeKey = BuildPreferredRunParentMap(userAuthoredLinks);
+        var preferredRunParentByNodeKey = BuildPreferredRunParentMap(
+            userAuthoredLinks,
+            projectedRunNodeKeyByLinkedRunNodeKey);
 
         foreach (var definition in linkedDefinitionIds
             .OrderBy(definitionId => ResolveDefinitionSortName(definitionId, catalogItemsByDefinitionId), StringComparer.OrdinalIgnoreCase)
@@ -267,15 +294,29 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     }
 
     private static IReadOnlyDictionary<string, string> BuildPreferredRunParentMap(
-        IReadOnlyList<ProjectStructureProcessLink> userAuthoredLinks)
+        IReadOnlyList<ProjectStructureProcessLink> userAuthoredLinks,
+        IReadOnlyDictionary<string, string> projectedRunNodeKeyByLinkedRunNodeKey)
     {
         return userAuthoredLinks
             .Where(link =>
                 link.LinkKind == ProjectObjectLinkKind.Uses &&
                 TryResolveProcessRunId(link.TargetNodeKey).HasValue &&
                 !string.IsNullOrWhiteSpace(link.SourceNodeKey))
-            .OrderByDescending(link => ProjectStructureProcessNodeKeys.TryParseProcessRunNodeKey(link.SourceNodeKey, out _) ? 1 : 0)
-            .ThenByDescending(link => link.CreatedAtUtc)
+            .Select(link =>
+            {
+                var projectedTargetNodeKey = projectedRunNodeKeyByLinkedRunNodeKey.TryGetValue(link.TargetNodeKey, out var mappedTargetNodeKey)
+                    ? mappedTargetNodeKey
+                    : link.TargetNodeKey;
+                return new ProjectStructureProcessLink(
+                    link.SourceNodeKey,
+                    projectedTargetNodeKey,
+                    link.LinkKind,
+                    link.CreatedAtUtc);
+            })
+            .Where(link =>
+                !ProjectStructureProcessNodeKeys.TryParseProcessRunNodeKey(link.SourceNodeKey, out _) &&
+                !string.Equals(link.SourceNodeKey, link.TargetNodeKey, StringComparison.Ordinal))
+            .OrderByDescending(link => link.CreatedAtUtc)
             .ThenBy(link => link.SourceNodeKey, StringComparer.Ordinal)
             .GroupBy(link => link.TargetNodeKey, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().SourceNodeKey, StringComparer.Ordinal);

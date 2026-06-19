@@ -764,20 +764,17 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(new ProcessRunId(subprocess.RunId.Value), matchingChildRunId);
 
         var surface = await workbench.GetStructureAsync(projectId);
-        var childProcessRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(subprocess.RunId.Value);
-        var childRunNode = Assert.Single(surface.Nodes, item => string.Equals(item.Id, childProcessRunNodeId, StringComparison.Ordinal));
-        Assert.Equal(ProjectObjectType.ProcessRun, childRunNode.ObjectType);
-        Assert.Equal(parentProcessRunNodeId, childRunNode.ParentId);
+        var parentRunNode = Assert.Single(surface.Nodes, item => string.Equals(item.Id, parentProcessRunNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ProcessRun, parentRunNode.ObjectType);
+        Assert.Equal(deliveryNode.Id, parentRunNode.ParentId);
         Assert.Contains(surface.Links, item =>
             item.IsUserAuthored &&
             string.Equals(item.SourceId, deliveryNode.Id, StringComparison.Ordinal) &&
-            string.Equals(item.TargetId, childProcessRunNodeId, StringComparison.Ordinal) &&
+            string.Equals(item.TargetId, parentProcessRunNodeId, StringComparison.Ordinal) &&
             item.Kind == ProjectObjectLinkKind.Uses);
-        Assert.Contains(surface.Links, item =>
-            item.IsUserAuthored &&
-            string.Equals(item.SourceId, parentProcessRunNodeId, StringComparison.Ordinal) &&
-            string.Equals(item.TargetId, childProcessRunNodeId, StringComparison.Ordinal) &&
-            item.Kind == ProjectObjectLinkKind.Uses);
+        var childProcessRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(subprocess.RunId.Value);
+        Assert.DoesNotContain(surface.Nodes, item => string.Equals(item.Id, childProcessRunNodeId, StringComparison.Ordinal));
+        Assert.DoesNotContain(surface.Links, item => string.Equals(item.TargetId, childProcessRunNodeId, StringComparison.Ordinal));
     }
 
     [Fact]

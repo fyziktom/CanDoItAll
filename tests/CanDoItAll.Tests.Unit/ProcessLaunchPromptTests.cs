@@ -97,6 +97,9 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Managed artifact refs are workspace-managed relative paths", prompt, StringComparison.Ordinal);
         Assert.Contains("keep the managed relative ref in evidenceRefs", prompt, StringComparison.Ordinal);
         Assert.Contains("never convert them to external-target paths", prompt, StringComparison.Ordinal);
+        Assert.Contains("Project-structure evidence hygiene:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not create project-structure nodes for every subprocess, intermediate screenshot, log, or step detail", prompt, StringComparison.Ordinal);
+        Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

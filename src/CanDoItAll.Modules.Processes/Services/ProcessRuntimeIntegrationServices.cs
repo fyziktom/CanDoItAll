@@ -1151,6 +1151,9 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         AgentFramework evidence write rule:
         Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths from this brief in evidenceRefs; if a workspace tool echoes a longer scoped storage path for the same artifact, keep the managed relative ref in evidenceRefs and use the scoped echo only as extra context. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
 
+        Project-structure evidence hygiene:
+        Do not create project-structure nodes for every subprocess, intermediate screenshot, log, or step detail. Keep subprocess detail in managed artifacts and live-process history. For multi-team app delivery, the visible project structure should contain one root process run plus only the durable handoff nodes the process asks for: the final accepted screenshot ImageAsset, one run-app proof node, one run-tests proof node, and one manager summary node describing what was built, how it works, and current validation state.
+
         AgentFramework subprocess adapter guidance:
         {subprocessGuidance}
         """;
