@@ -1,7 +1,9 @@
 using System.IO.Compression;
 using System.Net;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
@@ -10,10 +12,12 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -97,6 +101,88 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("ok", result);
         Assert.NotNull(preservedLease);
         Assert.Equal(initialLease.LeaseToken, preservedLease!.LeaseToken);
+    }
+
+    [Fact]
+    public async Task LeaseService_RunWithProjectMutationLeaseAsync_releases_temporary_lease_after_callback_cancellation()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+
+        var projectId = Guid.NewGuid();
+        using var cancellation = new CancellationTokenSource();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            leaseService.RunWithProjectMutationLeaseAsync(
+                projectId,
+                null,
+                DefaultAgent,
+                "Cancelled temporary mutation",
+                token =>
+                {
+                    cancellation.Cancel();
+                    token.ThrowIfCancellationRequested();
+                    return Task.FromResult("unreachable");
+                },
+                cancellation.Token));
+
+        var activeLease = await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            projectId.ToString(),
+            CancellationToken.None);
+
+        Assert.Null(activeLease);
+    }
+
+    [Fact]
+    public async Task LeaseService_RunWithProjectMutationLeaseAsync_waits_once_for_near_expiry_competing_lease()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = Guid.NewGuid();
+        var competingLease = await leaseService.AcquireAsync(
+            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString(), "Competing short mutation", 1),
+            DefaultAgent);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var leaseRecord = await dbContext.Set<ProjectStructureLeaseRecord>()
+                .SingleAsync(item => item.LeaseToken == competingLease.LeaseToken);
+
+            var now = DateTimeOffset.UtcNow;
+            leaseRecord.RenewedAtUtc = now;
+            leaseRecord.ExpiresAtUtc = now.AddMilliseconds(750);
+            await dbContext.SaveChangesAsync();
+        }
+
+        var nextAgent = DefaultAgent with
+        {
+            AgentId = "next-agent",
+            AgentName = "Next Agent",
+            MachineName = "next-machine"
+        };
+
+        var elapsed = Stopwatch.StartNew();
+        var result = await leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            null,
+            nextAgent,
+            "Wait for near-expiry competing mutation",
+            _ => Task.FromResult("ok"));
+        elapsed.Stop();
+
+        var activeLease = await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            projectId.ToString(),
+            CancellationToken.None);
+
+        Assert.Equal("ok", result);
+        Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(500));
+        Assert.Null(activeLease);
     }
 
     [Fact]
@@ -305,6 +391,43 @@ public sealed class ProjectStructureAgentIntegrationTests
         var artifactRoot = workspaceFiles.StatPath($"artifacts/process-runs/{result.RunId.Value:D}");
         Assert.True(artifactRoot.Succeeded, artifactRoot.Message);
         Assert.Equal("directory", artifactRoot.PathKind);
+    }
+
+    [Fact]
+    public async Task ProcessLaunchApplicationService_LaunchAsync_promotes_typed_project_scope_into_assignment_variables()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+
+        var projectId = await CreateProjectAsync(projects, "Direct project scoped process launch");
+        const string projectNodeId = "custom:bd8169fc3fa944dbafd13998fb167fe8";
+
+        var result = await launchService.LaunchAsync(
+            new ProcessLaunchRequest(
+                DefinitionKey: "software-delivery",
+                ProcessDefinitionId: null,
+                LiveRunProfileKey: null,
+                projectId,
+                projectNodeId,
+                RequestedBy: "integration-test",
+                Variables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["OutputRoot"] = @"C:\temp\CanDoItAll\TetrisGame"
+                },
+                RunReadiness: false,
+                Execute: false));
+
+        Assert.True(result.RunId.HasValue);
+        var assignments = await assignmentStore.LoadByRunAsync(result.RunId.Value);
+        Assert.NotEmpty(assignments);
+        Assert.All(assignments, assignment =>
+        {
+            Assert.Equal(projectId.ToString("D"), assignment.LaunchVariables["ProjectId"]);
+            Assert.Equal(projectNodeId, assignment.LaunchVariables["ProjectNodeId"]);
+        });
     }
 
     [Fact]
@@ -609,6 +732,23 @@ public sealed class ProjectStructureAgentIntegrationTests
         var retryLaunchPlan = Assert.IsType<ProcessLaunchPlanView>(retry.LaunchPlan);
         Assert.Equal("dotnet-architecture-design-review", retryLaunchPlan.DefinitionKey);
 
+        var runNodeScopedRetry = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-architecture-design-review",
+                ParentProjectNodeId: ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(parent.RunId.Value),
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        Assert.Equal(subprocess.RunId, runNodeScopedRetry.RunId);
+        Assert.Equal(deliveryNode.Id, runNodeScopedRetry.ProjectNodeId);
+        Assert.Contains(runNodeScopedRetry.Warnings, warning => warning.Contains("Ignored subprocess parent project node", StringComparison.Ordinal));
+        Assert.Contains(runNodeScopedRetry.Warnings, warning => warning.Contains("Reused existing process run", StringComparison.Ordinal));
+
         var matchingChildAssignments = await assignmentStore.FindByLaunchVariablesAsync(
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
@@ -638,6 +778,221 @@ public sealed class ProjectStructureAgentIntegrationTests
             string.Equals(item.SourceId, parentProcessRunNodeId, StringComparison.Ordinal) &&
             string.Equals(item.TargetId, childProcessRunNodeId, StringComparison.Ordinal) &&
             item.Kind == ProjectObjectLinkKind.Uses);
+    }
+
+    [Fact]
+    public async Task StartProcessSubprocessAsync_starts_new_child_after_previous_child_was_cancelled()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+        var operatorService = scope.ServiceProvider.GetRequiredService<ProcessRuntimeOperatorApplicationService>();
+
+        var projectId = await CreateProjectAsync(projects, "Process subprocess retry after terminal child");
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Deliver Tetris",
+                "Blazor delivery target",
+                "Create a Tetris app.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: """{ "outputRoot": "C:\\temp\\CanDoItAll\\TetrisGame" }"""));
+        var parentDefinitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+
+        await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(parentDefinitionId),
+            DefaultAgent);
+
+        var parent = await agentService.StartProcessNodeAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
+        var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "architecture-review");
+
+        var firstChild = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-architecture-design-review",
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        Assert.NotNull(firstChild.RunId);
+
+        var cancellation = await operatorService.RequestCancellationAsync(
+            new ProcessRuntimeRunCancellationCommand(
+                new ProcessRunId(firstChild.RunId.Value),
+                "integration-test",
+                "Force a terminal child state so subprocess launch retry behavior can be verified."));
+        Assert.True(cancellation.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, cancellation.Status);
+
+        var retryChild = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-architecture-design-review",
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        Assert.NotNull(retryChild.RunId);
+        Assert.NotEqual(firstChild.RunId, retryChild.RunId);
+        Assert.DoesNotContain(retryChild.Warnings, warning => warning.Contains("Reused existing process run", StringComparison.Ordinal));
+
+        var matchingChildAssignments = await assignmentStore.FindByLaunchVariablesAsync(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProjectId"] = projectId.ToString("D"),
+                ["ProjectNodeId"] = deliveryNode.Id,
+                ["ParentProcessRunId"] = parent.RunId.Value.ToString("D"),
+                ["ParentProcessStepId"] = parentAssignment.StepInstanceId.ToString(),
+                ["SubprocessDefinitionKey"] = "dotnet-architecture-design-review"
+            });
+        var matchingChildRunIds = matchingChildAssignments
+            .Select(assignment => assignment.RunId)
+            .Distinct()
+            .ToArray();
+        Assert.Equal(2, matchingChildRunIds.Length);
+    }
+
+    [Fact]
+    public async Task StartProcessSubprocessAsync_starts_new_child_after_previous_child_was_blocked()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ProcessPersistenceDbContext>();
+
+        var projectId = await CreateProjectAsync(projects, "Process subprocess retry after blocked child");
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Deliver Tetris",
+                "Blazor delivery target",
+                "Create a Tetris app.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery",
+                MetadataJson: """{ "outputRoot": "C:\\temp\\CanDoItAll\\TetrisGame" }"""));
+        var parentDefinitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+
+        await agentService.LinkProcessDefinitionAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessDefinitionLinkInput(parentDefinitionId),
+            DefaultAgent);
+
+        var parent = await agentService.StartProcessNodeAsync(
+            projectId,
+            deliveryNode.Id,
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
+        var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "architecture-review");
+
+        var firstChild = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-architecture-design-review",
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+        Assert.NotNull(firstChild.RunId);
+
+        var childState = await dbContext.RuntimeStates
+            .SingleAsync(state => state.RunId == firstChild.RunId.Value);
+        childState.Status = ProcessRuntimeStatus.Blocked;
+        childState.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        childState.ConcurrencyToken = Guid.NewGuid();
+        var childSteps = await dbContext.RuntimeSteps
+            .Where(step => step.RunId == firstChild.RunId.Value)
+            .ToArrayAsync();
+        foreach (var childStep in childSteps)
+        {
+            if (ProcessRuntimeTerminalStates.IsStepTerminal(childStep.Status))
+            {
+                continue;
+            }
+
+            childStep.Status = ProcessRuntimeStepStatus.Blocked;
+            childStep.ActiveClaimToken = null;
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var retryChild = await agentService.StartProcessSubprocessAsync(
+            projectId,
+            parent.RunId.Value.ToString("D"),
+            parentAssignment.StepInstanceId.ToString(),
+            new ProjectStructureProcessSubprocessLaunchInput(
+                DefinitionKey: "dotnet-architecture-design-review",
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"),
+            DefaultAgent);
+
+        Assert.NotNull(retryChild.RunId);
+        Assert.NotEqual(firstChild.RunId, retryChild.RunId);
+        Assert.DoesNotContain(retryChild.Warnings, warning => warning.Contains("Reused existing process run", StringComparison.Ordinal));
+
+        var matchingChildAssignments = await assignmentStore.FindByLaunchVariablesAsync(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["ProjectId"] = projectId.ToString("D"),
+                ["ProjectNodeId"] = deliveryNode.Id,
+                ["ParentProcessRunId"] = parent.RunId.Value.ToString("D"),
+                ["ParentProcessStepId"] = parentAssignment.StepInstanceId.ToString(),
+                ["SubprocessDefinitionKey"] = "dotnet-architecture-design-review"
+            });
+        var matchingChildRunIds = matchingChildAssignments
+            .Select(assignment => assignment.RunId)
+            .Distinct()
+            .ToArray();
+        Assert.Equal(2, matchingChildRunIds.Length);
     }
 
     [Fact]

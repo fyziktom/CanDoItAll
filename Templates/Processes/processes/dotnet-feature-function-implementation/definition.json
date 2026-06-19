@@ -130,7 +130,7 @@
       "Key": "feature-slice-intake",
       "Title": "Capture feature or function boundary",
       "Subtitle": "One behavior only",
-      "Notes": "Restate the requested function or feature as one observable behavior with repository target, acceptance criteria, exclusions, and expected proof. If the parent request is a full app or broad deliverable, derive the first reviewable MVP behavior from upstream scope, architecture, setup evidence, product root, app archetype, and validation hooks, then record excluded follow-up behavior. The derived behavior must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must contain an observable product-specific interaction. Reject only when no safe behavior can be chosen without inventing requirements.",
+      "Notes": "Restate the requested function or feature as one observable behavior with repository target, acceptance criteria, exclusions, and expected proof. If the parent request is a repair request, treat the parent repair target as the feature boundary. Do not derive a new MVP behavior; preserve the failed acceptance criteria, failing command or browser metrics, upstream child/parent artifact refs, and the smallest proof that would close the defect. Exclusions must not exclude the failing requirement that triggered repair. If the parent request is a full app or broad deliverable, derive the first reviewable MVP behavior from upstream scope, architecture, setup evidence, product root, app archetype, and validation hooks, then record excluded follow-up behavior. The derived behavior must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must contain an observable product-specific interaction. Reject only when no safe behavior can be chosen without inventing requirements.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -138,9 +138,9 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Parent slice scope, repository or project target, existing solution evidence, and requested behavior.",
       "OutputContractSummary": "Feature scope packet with acceptance criteria, exclusions, and proof expectations.",
-      "EvidenceContractSummary": "Bounded behavior statement, affected surface, assumptions, and excluded follow-up work.",
+      "EvidenceContractSummary": "Bounded behavior statement, affected surface, assumptions, excluded follow-up work, and inherited repair target details when launched for repair.",
       "DecisionRightsSummary": "Feature manager can narrow the requested behavior but cannot drop accepted parent criteria or downgrade the requested product to scaffold-only readiness.",
-      "ExceptionPolicySummary": "Block only when upstream evidence is contradictory, the product root/app archetype/validation boundary is missing, the selected behavior is scaffold/setup/app-shell/build-only work, or no single behavior can be selected without inventing requirements.",
+      "ExceptionPolicySummary": "Block only when upstream evidence is contradictory, the product root/app archetype/validation boundary is missing, the selected behavior is scaffold/setup/app-shell/build-only work, a repair launch lacks a concrete repair target, or no single behavior can be selected without inventing requirements.",
       "TargetLeadHours": 1,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -170,7 +170,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation, validation, and parent process handoff.",
-          "ValidationRequirementSummary": "Must identify one behavior, acceptance criteria, exclusions, target repository surface, proof commands, and any broader parent-scope items intentionally deferred to follow-up slices."
+          "ValidationRequirementSummary": "Must identify one behavior, acceptance criteria, exclusions, target repository surface, proof commands, and any broader parent-scope items intentionally deferred to follow-up slices. For repair launches, the packet must preserve the inherited repair target and must not replace it with a fresh MVP behavior."
         },
         {
           "Key": "feature-acceptance-criteria",
@@ -182,7 +182,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by test contract and validation steps.",
-          "ValidationRequirementSummary": "Must be concrete enough that validation can pass or fail without interpreting intent."
+          "ValidationRequirementSummary": "Must be concrete enough that validation can pass or fail without interpreting intent. For repair launches, it must include the exact failed criteria or metric from the parent repair target."
         }
       ],
       "ArtifactInputs": [],
@@ -206,7 +206,7 @@
       "Key": "implementation-approach",
       "Title": "Decide implementation approach",
       "Subtitle": "Fit the local architecture",
-      "Notes": "Identify existing patterns, canonical data ownership, UI/application/domain/infrastructure boundaries, required services, and the smallest file set likely to change.",
+      "Notes": "Identify existing patterns, canonical data ownership, UI/application/domain/infrastructure boundaries, required services, and the smallest file set likely to change. For repair runs, plan against the inherited repair target instead of broadening scope; name the failing proof, the product surfaces likely responsible, and the focused verification that must pass before handoff.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -472,7 +472,7 @@
       "Key": "targeted-validation",
       "Title": "Run focused validation",
       "Subtitle": "Pass or request rework",
-      "Notes": "Run the agreed validation commands and browser proof. Keep focused validation bounded: use a workspace_dotnet_test timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and choose the feature-repair-required branch instead of waiting on a broad unbounded run. For UI proof, launch or verify the app first, use the returned URL, then collect browser snapshot, console messages, and screenshot. If proof fails because an artifact is missing, the app cannot launch, or the implementation is incomplete, choose feature-repair-required and route the defect to the owning implementation role. Use blocked status only for an unrecoverable environment, permission, or process-contract problem that cannot be repaired inside this subprocess.",
+      "Notes": "Run the agreed validation commands and browser proof. For repair-sourced runs, the focused proof must include the inherited repair target; do not accept a different behavior while the triggering defect remains untested or failing. Keep focused validation bounded: use a workspace_dotnet_test timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and choose the feature-repair-required branch instead of waiting on a broad unbounded run. For UI proof, launch or verify the app first, use the returned URL, then collect browser snapshot, console messages, and screenshot. If proof fails because an artifact is missing, the app cannot launch, or the implementation is incomplete, choose feature-repair-required and route the defect to the owning implementation role. Use blocked status only for an unrecoverable environment, permission, or process-contract problem that cannot be repaired inside this subprocess.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -750,7 +750,7 @@
       "Key": "targeted-recheck",
       "Title": "Re-run focused validation after repair",
       "Subtitle": "Repair proof",
-      "Notes": "Re-run the failing proof and the smallest regression commands needed to verify the repair. Select feature-accepted only when the repaired evidence satisfies the accepted behavior. Select feature-repair-escalation when the same blocker remains, a new release-blocking issue appears, or another repair would exceed the subprocess scope.",
+      "Notes": "Re-run the failing proof and the smallest regression commands needed to verify the repair. If the failed proof involved app launch, runtime rendering, browser behavior, screenshots, console output, or visible UI acceptance criteria, this is not a build/test-only step: launch or verify the app with a trusted runtime receipt, navigate only to the confirmed URL, capture browser snapshot or browser evaluation output, console messages, and screenshot, exercise the repaired visible behavior enough to prove the original failure is gone, and stop any runtime started by this step with cleanup evidence. Select feature-accepted only when the repaired evidence satisfies the accepted behavior and any inherited repair target. Select feature-repair-escalation only after the required proof was executed and still fails, remains unmapped, or another repair would exceed the subprocess scope. Do not choose feature-repair-escalation solely because this step skipped browser or runtime proof it had the tools and contract to run; return Blocked only when the proof tool, launch capability, product root, or runtime environment is unavailable. For repair-sourced runs, include the before/after metric or assertion from the parent repair target in the artifact.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -758,9 +758,9 @@
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Original validation failure, repair change set, and validation contract.",
       "OutputContractSummary": "Recheck evidence plus an explicit feature-accepted or feature-repair-escalation branch.",
-      "EvidenceContractSummary": "Rerun commands, exit codes, browser proof when applicable, and acceptance-criteria mapping after repair.",
+      "EvidenceContractSummary": "Rerun commands, exit codes, browser/runtime proof whenever the failed proof or acceptance criteria involved UI/runtime behavior, cleanup receipt for any runtime started by this step, before/after repair target assessment, and acceptance-criteria mapping after repair.",
       "DecisionRightsSummary": "Validation owner can accept repaired evidence or escalate unresolved repair findings; QA still does not mutate product files.",
-      "ExceptionPolicySummary": "Select feature-repair-escalation when proof remains failing, missing, detached, or unmapped after repair. Block only for environment, permission, or process-contract failures that prevent recheck execution.",
+      "ExceptionPolicySummary": "Select feature-repair-escalation when required proof was executed and remains failing, detached, or unmapped after repair. Block only for environment, permission, unavailable proof tool, launch capability, product-root, or process-contract failures that prevent recheck execution.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "feature-repair",
       "DependsOnBranchOutcomeKey": "",
@@ -806,7 +806,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent QA and release readiness.",
-          "ValidationRequirementSummary": "Must include rerun commands, exit codes, relevant output, UI proof when applicable, and unresolved gaps after repair."
+          "ValidationRequirementSummary": "Must include rerun commands, exit codes, relevant output, live UI/browser/runtime proof when the failed proof or acceptance criteria involved UI/runtime behavior, cleanup receipt for any runtime started by this step, and unresolved gaps after repair. Missing live proof is not a valid escalation reason when this step had the tool capability and product root needed to run it."
         }
       ],
       "ArtifactInputs": [

@@ -31,7 +31,8 @@ public enum ProcessProjectedSensitivity
 
 public enum ProcessRuntimeOperatorActionKind
 {
-    RequestRework
+    RequestRework,
+    CancelRun
 }
 
 public sealed record ProcessLiveRunEventProjection(
@@ -57,7 +58,38 @@ public sealed record ProcessLiveProcessSnapshot(
     IReadOnlyList<ProcessIncidentProjection> Incidents)
 {
     public IReadOnlyList<ProcessRuntimeOperatorActionProjection> OperatorActions { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeChildRunWaitProjection> WaitingOnChildRuns { get; init; } = [];
+
+    public ProcessRuntimeCurrentStepProjection? CurrentStep { get; init; }
 }
+
+public sealed record ProcessRuntimeCurrentStepProjection(
+    Guid RunId,
+    Guid StepInstanceId,
+    string StepKey,
+    string StepStatus,
+    string RoleKey,
+    string RoleDisplayName,
+    string ExecutorDisplayName,
+    int AttemptNumber,
+    bool IsWorking,
+    bool IsLeaseExpired,
+    DateTimeOffset UpdatedAtUtc,
+    DateTimeOffset? ClaimedAtUtc,
+    DateTimeOffset? LeaseExpiresAtUtc,
+    string Summary);
+
+public sealed record ProcessRuntimeChildRunWaitProjection(
+    Guid ParentRunId,
+    Guid ParentStepInstanceId,
+    string ParentStepKey,
+    string ParentStepStatus,
+    Guid ChildRunId,
+    string ChildRunStatus,
+    string? ChildStepKey,
+    string? ChildStepStatus,
+    string Summary);
 
 public sealed record ProcessRuntimeOperatorActionProjection(
     Guid RunId,

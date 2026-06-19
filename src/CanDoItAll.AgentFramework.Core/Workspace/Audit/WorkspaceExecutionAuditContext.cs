@@ -35,6 +35,7 @@ public static class WorkspaceExecutionAuditContext
             ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run),
             ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run),
             ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
+            ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
             ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run));
         return new Scope(previous);
     }
@@ -61,6 +62,7 @@ public static class WorkspaceExecutionAuditContext
         bool ProcessAllowsProductMutation,
         IReadOnlyList<string> ProcessStepAllowedOperations,
         string ProcessStepTargetScope,
+        WorkspaceScopeDescriptor? ContextWorkspaceScope,
         ProjectStructureAgentIdentityDescriptor? ProjectStructureLaunchAgent);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable

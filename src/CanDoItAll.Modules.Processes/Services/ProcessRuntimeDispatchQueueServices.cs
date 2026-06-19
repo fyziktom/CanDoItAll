@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
@@ -20,6 +21,7 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
     private readonly Channel<ProcessRuntimeDispatchQueueRequest> recoveryChannel = Channel.CreateUnbounded<ProcessRuntimeDispatchQueueRequest>();
     private readonly ConcurrentDictionary<ProcessRunId, byte> immediateQueuedRunIds = new();
     private readonly ConcurrentDictionary<ProcessRunId, byte> recoveryQueuedRunIds = new();
+    private readonly ConcurrentDictionary<ProcessRunId, byte> activeRunIds = new();
 
     public ValueTask EnqueueAsync(
         ProcessRuntimeDispatchQueueRequest request,
@@ -65,6 +67,12 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
         return false;
     }
 
+    public bool TryMarkActive(ProcessRunId runId)
+        => activeRunIds.TryAdd(runId, 0);
+
+    public void MarkInactive(ProcessRunId runId)
+        => activeRunIds.TryRemove(runId, out _);
+
 }
 
 internal sealed class ProcessRuntimeDispatchQueueOptions
@@ -93,7 +101,6 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
         var nextRecoveryAtUtc = DateTimeOffset.MinValue;
         var activeImmediateDispatches = new Dictionary<Task, ProcessRunId>();
         var activeRecoveryDispatches = new Dictionary<Task, ProcessRunId>();
-        var activeRunIds = new HashSet<ProcessRunId>();
         if (recoveryEnabled)
         {
             await EnqueueRecoverableRunsAsync(readyRecoveryStartedAtUtc, stoppingToken).ConfigureAwait(false);
@@ -103,8 +110,8 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
         {
             try
             {
-                await ObserveCompletedDispatchesAsync(activeImmediateDispatches, activeRunIds).ConfigureAwait(false);
-                await ObserveCompletedDispatchesAsync(activeRecoveryDispatches, activeRunIds).ConfigureAwait(false);
+                await ObserveCompletedDispatchesAsync(activeImmediateDispatches).ConfigureAwait(false);
+                await ObserveCompletedDispatchesAsync(activeRecoveryDispatches).ConfigureAwait(false);
 
                 var nowUtc = DateTimeOffset.UtcNow;
                 if (recoveryEnabled && nowUtc >= nextRecoveryAtUtc)
@@ -116,13 +123,13 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                 while (activeImmediateDispatches.Count < MaxImmediateDispatches &&
                        queue.TryDequeueImmediate(out var request))
                 {
-                    TryStartDispatch(activeImmediateDispatches, activeRunIds, request, stoppingToken);
+                    TryStartDispatch(activeImmediateDispatches, request, stoppingToken);
                 }
 
                 while (activeRecoveryDispatches.Count < MaxRecoveryDispatches &&
                        queue.TryDequeueRecovery(out var request))
                 {
-                    TryStartDispatch(activeRecoveryDispatches, activeRunIds, request, stoppingToken);
+                    TryStartDispatch(activeRecoveryDispatches, request, stoppingToken);
                 }
 
                 if (activeImmediateDispatches.Count > 0 || activeRecoveryDispatches.Count > 0)
@@ -136,8 +143,7 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                         await ObserveDispatchCompletionAsync(
                             completed,
                             activeImmediateDispatches,
-                            activeRecoveryDispatches,
-                            activeRunIds).ConfigureAwait(false);
+                            activeRecoveryDispatches).ConfigureAwait(false);
                     }
 
                     continue;
@@ -156,17 +162,16 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
             }
         }
 
-        await ObserveCompletedDispatchesAsync(activeImmediateDispatches, activeRunIds).ConfigureAwait(false);
-        await ObserveCompletedDispatchesAsync(activeRecoveryDispatches, activeRunIds).ConfigureAwait(false);
+        await ObserveCompletedDispatchesAsync(activeImmediateDispatches).ConfigureAwait(false);
+        await ObserveCompletedDispatchesAsync(activeRecoveryDispatches).ConfigureAwait(false);
     }
 
     private void TryStartDispatch(
         Dictionary<Task, ProcessRunId> activeDispatches,
-        HashSet<ProcessRunId> activeRunIds,
         ProcessRuntimeDispatchQueueRequest request,
         CancellationToken cancellationToken)
     {
-        if (!activeRunIds.Add(request.RunId))
+        if (!queue.TryMarkActive(request.RunId))
         {
             logger.LogDebug(
                 "Skipping queued process dispatch for run {RunId} because another dispatch is already active.",
@@ -177,9 +182,8 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
         activeDispatches.Add(DispatchAsync(request, cancellationToken), request.RunId);
     }
 
-    private static async Task ObserveCompletedDispatchesAsync(
-        Dictionary<Task, ProcessRunId> activeDispatches,
-        HashSet<ProcessRunId> activeRunIds)
+    private async Task ObserveCompletedDispatchesAsync(
+        Dictionary<Task, ProcessRunId> activeDispatches)
     {
         var completedTasks = activeDispatches
             .Keys
@@ -187,16 +191,15 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
             .ToArray();
         foreach (var completedTask in completedTasks)
         {
-            await ObserveDispatchCompletionAsync(completedTask, activeDispatches, activeRunIds)
+            await ObserveDispatchCompletionAsync(completedTask, activeDispatches)
                 .ConfigureAwait(false);
         }
     }
 
-    private static async Task ObserveDispatchCompletionAsync(
+    private async Task ObserveDispatchCompletionAsync(
         Task dispatchTask,
         Dictionary<Task, ProcessRunId> firstActiveDispatches,
-        Dictionary<Task, ProcessRunId> secondActiveDispatches,
-        HashSet<ProcessRunId> activeRunIds)
+        Dictionary<Task, ProcessRunId> secondActiveDispatches)
     {
         if (!firstActiveDispatches.Remove(dispatchTask, out var runId))
         {
@@ -205,20 +208,19 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
 
         if (runId != default)
         {
-            activeRunIds.Remove(runId);
+            queue.MarkInactive(runId);
         }
 
         await ObserveDispatchTaskAsync(dispatchTask).ConfigureAwait(false);
     }
 
-    private static async Task ObserveDispatchCompletionAsync(
+    private async Task ObserveDispatchCompletionAsync(
         Task dispatchTask,
-        Dictionary<Task, ProcessRunId> activeDispatches,
-        HashSet<ProcessRunId> activeRunIds)
+        Dictionary<Task, ProcessRunId> activeDispatches)
     {
         if (activeDispatches.Remove(dispatchTask, out var runId))
         {
-            activeRunIds.Remove(runId);
+            queue.MarkInactive(runId);
         }
 
         await ObserveDispatchTaskAsync(dispatchTask).ConfigureAwait(false);
@@ -248,36 +250,31 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                 .ExecuteReadyAsync(request.RunId, NormalizeRequestedBy(request.RequestedBy), cancellationToken)
                 .ConfigureAwait(false);
             await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-            if (ProcessRuntimeTerminalStates.IsRunTerminal(result.Status))
+            LogDispatchResult(request, result);
+            if (ProcessRuntimeChildRunParentQuery.IsStoppedChildStatus(result.Status))
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ProcessPersistenceDbContext>();
-                if (result.Status == ProcessRuntimeStatus.Completed)
+                var releasedParentRunIds = await ReleaseActiveParentClaimsForStoppedChildAsync(
+                    scope.ServiceProvider,
+                    request.RunId.Value,
+                    NormalizeRequestedBy(request.RequestedBy),
+                    cancellationToken).ConfigureAwait(false);
+                foreach (var releasedParentRunId in releasedParentRunIds)
                 {
-                    var operatorService = scope.ServiceProvider.GetRequiredService<ProcessRuntimeOperatorApplicationService>();
-                    var parentSteps = await ProcessRuntimeChildRunParentQuery
-                        .LoadActiveParentStepsAsync(dbContext, request.RunId.Value, cancellationToken)
-                        .ConfigureAwait(false);
-                    foreach (var parentStep in parentSteps)
-                    {
-                        var rework = await operatorService.ExecuteAsync(
-                            new ProcessRuntimeOperatorActionCommand(
-                                new ProcessRunId(parentStep.RunId),
-                                new ProcessStepInstanceId(parentStep.StepInstanceId),
-                                ProcessRuntimeOperatorActionKind.RequestRework,
-                                NormalizeRequestedBy(request.RequestedBy),
-                                $"Child process run '{request.RunId}' completed; parent subprocess step can re-evaluate child evidence."),
-                            cancellationToken).ConfigureAwait(false);
-                        if (!rework.Succeeded)
-                        {
-                            logger.LogWarning(
-                                "Process background dispatch could not requeue parent step {StepInstanceId} for parent run {ParentRunId} after completed child run {ChildRunId}. Diagnostics={Diagnostics}",
-                                parentStep.StepInstanceId,
-                                parentStep.RunId,
-                                request.RunId.Value,
-                                string.Join("; ", rework.Diagnostics));
-                        }
-                    }
+                    await queue.EnqueueAsync(
+                        new ProcessRuntimeDispatchQueueRequest(
+                            new ProcessRunId(releasedParentRunId),
+                            NormalizeRequestedBy(request.RequestedBy)),
+                        cancellationToken).ConfigureAwait(false);
                 }
+
+                await ReworkActiveParentStepsForStoppedChildAsync(
+                    scope.ServiceProvider,
+                    dbContext,
+                    request.RunId.Value,
+                    result.Status,
+                    NormalizeRequestedBy(request.RequestedBy),
+                    cancellationToken).ConfigureAwait(false);
 
                 var parentRunIds = await ProcessRuntimeChildRunParentQuery
                     .LoadActiveParentRunIdsAsync(dbContext, request.RunId.Value, cancellationToken)
@@ -300,12 +297,14 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                 }
             }
 
-            logger.LogInformation(
-                "Process background dispatch completed for run {RunId}. Stage={Stage} Status={Status} Diagnostics={DiagnosticCount}",
-                request.RunId.Value,
-                result.Stage,
-                result.Status,
-                result.Diagnostics.Count);
+            if (result.Diagnostics.Count == 0)
+            {
+                logger.LogInformation(
+                    "Process background dispatch completed for run {RunId}. Stage={Stage} Status={Status} Diagnostics=0",
+                    request.RunId.Value,
+                    result.Stage,
+                    result.Status);
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -320,12 +319,289 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
         }
     }
 
+    private async Task<IReadOnlyList<Guid>> ReleaseActiveParentClaimsForStoppedChildAsync(
+        IServiceProvider serviceProvider,
+        Guid childRunId,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        var dbContext = serviceProvider.GetRequiredService<ProcessPersistenceDbContext>();
+        var candidates = await ProcessRuntimeChildRunParentQuery
+            .LoadActiveParentClaimsAsync(dbContext, childRunId, cancellationToken)
+            .ConfigureAwait(false);
+        if (candidates.Count == 0)
+        {
+            return [];
+        }
+
+        var stateStore = serviceProvider.GetRequiredService<IProcessRuntimeStateStore>();
+        var unitOfWork = serviceProvider.GetRequiredService<IProcessRuntimeUnitOfWork>();
+        var projectionCatchupService = serviceProvider.GetRequiredService<ProcessRuntimeProjectionCatchupService>();
+        var releasedRunIds = new HashSet<Guid>();
+        foreach (var candidate in candidates)
+        {
+            if (await TryReleaseActiveParentClaimAsync(
+                stateStore,
+                unitOfWork,
+                candidate,
+                childRunId,
+                requestedBy,
+                cancellationToken).ConfigureAwait(false))
+            {
+                releasedRunIds.Add(candidate.RunId);
+            }
+        }
+
+        if (releasedRunIds.Count > 0)
+        {
+            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return releasedRunIds
+            .OrderBy(runId => runId)
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<Guid>> ReworkActiveParentStepsForStoppedChildAsync(
+        IServiceProvider serviceProvider,
+        ProcessPersistenceDbContext dbContext,
+        Guid childRunId,
+        ProcessRuntimeStatus childStatus,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        var operatorService = serviceProvider.GetRequiredService<ProcessRuntimeOperatorApplicationService>();
+        var parentSteps = await ProcessRuntimeChildRunParentQuery
+            .LoadActiveParentStepsAsync(dbContext, childRunId, cancellationToken)
+            .ConfigureAwait(false);
+        if (parentSteps.Count == 0)
+        {
+            return [];
+        }
+
+        var reworkedParentRunIds = new HashSet<Guid>();
+        foreach (var parentStep in parentSteps)
+        {
+            var rework = await operatorService.ExecuteAsync(
+                new ProcessRuntimeOperatorActionCommand(
+                    new ProcessRunId(parentStep.RunId),
+                    new ProcessStepInstanceId(parentStep.StepInstanceId),
+                    ProcessRuntimeOperatorActionKind.RequestRework,
+                    NormalizeRequestedBy(requestedBy),
+                    $"Child process run '{childRunId:D}' stopped with status '{childStatus}'. Treat that child as historical evidence, not an active wait. If required child evidence is already available, complete from that evidence. If required child evidence is missing and this subprocess step can execute external action, call the subprocess launch tool again so the launch service can create or reuse a non-stopped child run. Do not return Blocked only because the stopped child exists."),
+                cancellationToken).ConfigureAwait(false);
+            if (rework.Succeeded)
+            {
+                reworkedParentRunIds.Add(parentStep.RunId);
+                continue;
+            }
+
+            logger.LogWarning(
+                "Process background dispatch could not requeue parent step {StepInstanceId} for parent run {ParentRunId} after stopped child run {ChildRunId} with status {ChildStatus}. Diagnostics={Diagnostics}",
+                parentStep.StepInstanceId,
+                parentStep.RunId,
+                childRunId,
+                childStatus,
+                string.Join("; ", rework.Diagnostics));
+        }
+
+        return reworkedParentRunIds
+            .OrderBy(runId => runId)
+            .ToArray();
+    }
+
+    private async Task<bool> TryReleaseActiveParentClaimAsync(
+        IProcessRuntimeStateStore stateStore,
+        IProcessRuntimeUnitOfWork unitOfWork,
+        ProcessRuntimeChildRunParentQuery.ParentClaim candidate,
+        Guid childRunId,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                var state = await stateStore
+                    .LoadAsync(new ProcessRunId(candidate.RunId), cancellationToken)
+                    .ConfigureAwait(false);
+                if (state is null || ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+                {
+                    return false;
+                }
+
+                var releaseCommit = await engine.ReleaseClaimAsync(
+                    state,
+                    CreateStoppedChildRecoveryContext(requestedBy, childRunId),
+                    new ReleaseDispatchClaimCommand(
+                        new ProcessStepInstanceId(candidate.StepInstanceId),
+                        new DispatcherOwnerId(candidate.OwnerId),
+                        new DispatchClaimToken(candidate.ClaimToken)),
+                    cancellationToken).ConfigureAwait(false);
+                if (!releaseCommit.Succeeded)
+                {
+                    logger.LogWarning(
+                        "Stopped child run {ChildRunId} could not release active parent claim {ClaimToken} for parent run {ParentRunId}, step {ParentStepId}. Diagnostics={Diagnostics}",
+                        childRunId,
+                        candidate.ClaimToken,
+                        candidate.RunId,
+                        candidate.StepInstanceId,
+                        string.Join("; ", releaseCommit.Diagnostics.Select(diagnostic => diagnostic.Message)));
+                    return false;
+                }
+
+                logger.LogInformation(
+                    "Stopped child run {ChildRunId} released active parent claim {ClaimToken} for parent run {ParentRunId}, step {ParentStepId}.",
+                    childRunId,
+                    candidate.ClaimToken,
+                    candidate.RunId,
+                    candidate.StepInstanceId);
+                return true;
+            }
+            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < 3)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        logger.LogWarning(
+            "Stopped child run {ChildRunId} could not release active parent claim {ClaimToken} for parent run {ParentRunId}, step {ParentStepId} after concurrency retries.",
+            childRunId,
+            candidate.ClaimToken,
+            candidate.RunId,
+            candidate.StepInstanceId);
+        return false;
+    }
+
+    private static RuntimeCommandContext CreateStoppedChildRecoveryContext(
+        string requestedBy,
+        Guid childRunId)
+    {
+        return new RuntimeCommandContext(
+            RuntimeCommandId.New(),
+            new ProcessEventActor(ProcessEventActorKind.System, new ProcessActorId(NormalizeRequestedBy(requestedBy))),
+            new ProcessCorrelationId($"stopped-child-{childRunId:N}-{Guid.NewGuid():N}"),
+            DateTimeOffset.UtcNow);
+    }
+
+    private void LogDispatchResult(
+        ProcessRuntimeDispatchQueueRequest request,
+        ProcessRuntimeDispatchResult result)
+    {
+        if (result.Diagnostics.Count == 0)
+        {
+            return;
+        }
+
+        var diagnostics = string.Join(" | ", result.Diagnostics.Select(FormatDiagnostic));
+        if (ShouldLogDispatchDiagnosticsAsWarning(result))
+        {
+            logger.LogWarning(
+                "Process background dispatch completed for run {RunId}. Stage={Stage} Status={Status} Diagnostics={Diagnostics}",
+                request.RunId.Value,
+                result.Stage,
+                result.Status,
+                diagnostics);
+            return;
+        }
+
+        logger.LogInformation(
+            "Process background dispatch completed for run {RunId}. Stage={Stage} Status={Status} Diagnostics={Diagnostics}",
+            request.RunId.Value,
+            result.Stage,
+            result.Status,
+            diagnostics);
+    }
+
+    internal static bool ShouldLogDispatchDiagnosticsAsWarning(ProcessRuntimeDispatchResult result)
+    {
+        if (result.Diagnostics.Count == 0)
+        {
+            return false;
+        }
+
+        if (result.Status == ProcessRuntimeStatus.Completed &&
+            result.Diagnostics.All(IsRoutineDispatchDiagnostic))
+        {
+            return false;
+        }
+
+        if (ProcessRuntimeTerminalStates.IsRunTerminal(result.Status))
+        {
+            return true;
+        }
+
+        return !result.Diagnostics.All(IsRoutineDispatchDiagnostic);
+    }
+
+    private static bool IsRoutineDispatchDiagnostic(string diagnostic)
+    {
+        if (string.IsNullOrWhiteSpace(diagnostic))
+        {
+            return false;
+        }
+
+        return diagnostic.Contains("changed concurrently while", StringComparison.OrdinalIgnoreCase) ||
+               diagnostic.Contains("is waiting for active child process run", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatDiagnostic(string diagnostic)
+    {
+        var normalized = string.IsNullOrWhiteSpace(diagnostic)
+            ? "empty diagnostic"
+            : diagnostic.ReplaceLineEndings(" ").Trim();
+        return normalized.Length <= 500
+            ? normalized
+            : normalized[..500];
+    }
+
     private async Task EnqueueRecoverableRunsAsync(
         DateTimeOffset readyUpdatedAfterUtc,
         CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ProcessPersistenceDbContext>();
+        var terminalChildRunIds = await ProcessRuntimeChildRunParentQuery
+            .LoadTerminalChildRunIdsWithParentLinksAsync(dbContext, cancellationToken)
+            .ConfigureAwait(false);
+        foreach (var terminalChildRunId in terminalChildRunIds)
+        {
+            var childStatus = await ProcessRuntimeChildRunParentQuery
+                .LoadStoppedChildStatusAsync(dbContext, terminalChildRunId, cancellationToken)
+                .ConfigureAwait(false);
+            if (childStatus is null)
+            {
+                continue;
+            }
+
+            var releasedParentRunIds = await ReleaseActiveParentClaimsForStoppedChildAsync(
+                scope.ServiceProvider,
+                terminalChildRunId,
+                RecoveryRequestedBy,
+                cancellationToken).ConfigureAwait(false);
+            foreach (var releasedParentRunId in releasedParentRunIds)
+            {
+                await queue.EnqueueAsync(
+                    new ProcessRuntimeDispatchQueueRequest(new ProcessRunId(releasedParentRunId), RecoveryRequestedBy, IsRecovery: true),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            var reworkedParentRunIds = await ReworkActiveParentStepsForStoppedChildAsync(
+                scope.ServiceProvider,
+                dbContext,
+                terminalChildRunId,
+                childStatus.Value,
+                RecoveryRequestedBy,
+                cancellationToken).ConfigureAwait(false);
+            foreach (var reworkedParentRunId in reworkedParentRunIds)
+            {
+                await queue.EnqueueAsync(
+                    new ProcessRuntimeDispatchQueueRequest(new ProcessRunId(reworkedParentRunId), RecoveryRequestedBy, IsRecovery: true),
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         var activeRunIds = await ProcessRuntimeDispatchRecoveryRunQuery
             .LoadRecoverableRunIdsAsync(
                 dbContext,
@@ -351,6 +627,30 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
 internal static class ProcessRuntimeChildRunParentQuery
 {
     public sealed record ParentStep(Guid RunId, Guid StepInstanceId);
+    public sealed record ParentClaim(Guid RunId, Guid StepInstanceId, Guid ClaimToken, string OwnerId);
+
+    public static bool IsStoppedChildStatus(ProcessRuntimeStatus status)
+    {
+        return ProcessRuntimeTerminalStates.IsRunTerminal(status) || status == ProcessRuntimeStatus.Blocked;
+    }
+
+    public static async Task<ProcessRuntimeStatus?> LoadStoppedChildStatusAsync(
+        ProcessPersistenceDbContext dbContext,
+        Guid childRunId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var status = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state => state.RunId == childRunId)
+            .Select(state => (ProcessRuntimeStatus?)state.Status)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return status is not null && IsStoppedChildStatus(status.Value)
+            ? status
+            : null;
+    }
 
     public static async Task<IReadOnlyList<Guid>> LoadActiveParentRunIdsAsync(
         ProcessPersistenceDbContext dbContext,
@@ -457,6 +757,140 @@ internal static class ProcessRuntimeChildRunParentQuery
             .ToArray();
     }
 
+    public static async Task<IReadOnlyList<ParentClaim>> LoadActiveParentClaimsAsync(
+        ProcessPersistenceDbContext dbContext,
+        Guid childRunId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var childTerminalAtUtc = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                state.RunId == childRunId &&
+                (state.Status == ProcessRuntimeStatus.Completed ||
+                 state.Status == ProcessRuntimeStatus.Failed ||
+                 state.Status == ProcessRuntimeStatus.Cancelled ||
+                 state.Status == ProcessRuntimeStatus.Blocked))
+            .Select(state => (DateTimeOffset?)state.UpdatedAtUtc)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (childTerminalAtUtc is null)
+        {
+            return [];
+        }
+
+        var requestedParentSteps = await LoadRequestedParentStepsAsync(
+            dbContext,
+            childRunId,
+            cancellationToken).ConfigureAwait(false);
+        if (requestedParentSteps.Count == 0)
+        {
+            return [];
+        }
+
+        var parentRunIds = requestedParentSteps
+            .Select(parentStep => parentStep.RunId)
+            .Distinct()
+            .ToArray();
+        var parentStepIds = requestedParentSteps
+            .Select(parentStep => parentStep.StepInstanceId)
+            .Distinct()
+            .ToArray();
+
+        var candidates = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                parentRunIds.Contains(state.RunId) &&
+                state.Status == ProcessRuntimeStatus.Active)
+            .Join(
+                dbContext.RuntimeSteps.AsNoTracking(),
+                state => state.RunId,
+                step => step.RunId,
+                (state, step) => new { state.RunId, Step = step })
+            .Where(item =>
+                parentStepIds.Contains(item.Step.StepInstanceId) &&
+                item.Step.IsExecutable &&
+                item.Step.ActiveClaimToken != null &&
+                (item.Step.Status == ProcessRuntimeStepStatus.Claimed ||
+                 item.Step.Status == ProcessRuntimeStepStatus.Running))
+            .Join(
+                dbContext.DispatchClaims.AsNoTracking(),
+                item => item.RunId,
+                claim => claim.RunId,
+                (item, claim) => new { item.RunId, item.Step, Claim = claim })
+            .Where(item =>
+                item.Step.ActiveClaimToken == item.Claim.ClaimToken &&
+                item.Claim.CreatedAtUtc < childTerminalAtUtc.Value &&
+                (item.Claim.Status == DispatchClaimStatus.Claimed ||
+                 item.Claim.Status == DispatchClaimStatus.LeaseRenewed ||
+                 item.Claim.Status == DispatchClaimStatus.Reclaimed))
+            .Select(item => new ParentClaim(
+                item.RunId,
+                item.Step.StepInstanceId,
+                item.Claim.ClaimToken,
+                item.Claim.OwnerId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return candidates
+            .Distinct()
+            .OrderBy(parentClaim => parentClaim.RunId)
+            .ThenBy(parentClaim => parentClaim.StepInstanceId)
+            .ToArray();
+    }
+
+    public static async Task<IReadOnlyList<Guid>> LoadTerminalChildRunIdsWithParentLinksAsync(
+        ProcessPersistenceDbContext dbContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var parentRunKeySnippet = JsonSerializer.Serialize("ParentProcessRunId");
+        return await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                state.Status == ProcessRuntimeStatus.Completed ||
+                state.Status == ProcessRuntimeStatus.Failed ||
+                state.Status == ProcessRuntimeStatus.Cancelled ||
+                state.Status == ProcessRuntimeStatus.Blocked)
+            .Join(
+                dbContext.RuntimeStepAssignments.AsNoTracking(),
+                state => state.RunId,
+                assignment => assignment.RunId,
+                (state, assignment) => new { state.RunId, assignment.LaunchVariablesJson })
+            .Where(item => item.LaunchVariablesJson.Contains(parentRunKeySnippet))
+            .Select(item => item.RunId)
+            .Distinct()
+            .OrderBy(runId => runId)
+            .Take(250)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<IReadOnlyList<ParentStep>> LoadRequestedParentStepsAsync(
+        ProcessPersistenceDbContext dbContext,
+        Guid childRunId,
+        CancellationToken cancellationToken)
+    {
+        var parentRunKeySnippet = JsonSerializer.Serialize("ParentProcessRunId");
+        var childLaunchVariables = await dbContext.RuntimeStepAssignments
+            .AsNoTracking()
+            .Where(assignment =>
+                assignment.RunId == childRunId &&
+                assignment.LaunchVariablesJson.Contains(parentRunKeySnippet))
+            .Select(assignment => assignment.LaunchVariablesJson)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return childLaunchVariables
+            .Select(TryReadParentStep)
+            .Where(parentStep => parentStep is not null)
+            .Select(parentStep => parentStep!)
+            .Distinct()
+            .ToArray();
+    }
+
     private static Guid? TryReadParentRunId(string launchVariablesJson)
     {
         if (string.IsNullOrWhiteSpace(launchVariablesJson))
@@ -551,9 +985,13 @@ internal static class ProcessRuntimeDispatchRecoveryRunQuery
             .Take(MaxDispatchableCandidateRows)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
+        var schedulablePendingCandidateRows = await LoadSchedulablePendingCandidateRowsAsync(
+            dbContext,
+            cancellationToken).ConfigureAwait(false);
 
         var activeChildParentSteps = await LoadActiveChildParentStepsAsync(dbContext, cancellationToken).ConfigureAwait(false);
         var dispatchableRunIds = dispatchableCandidateRows
+            .Concat(schedulablePendingCandidateRows)
             .GroupBy(candidate => candidate.RunId)
             .OrderByDescending(group => group.Max(candidate => candidate.UpdatedAtUtc))
             .Where(group => group.Any(candidate => !activeChildParentSteps.Contains((candidate.RunId, candidate.StepInstanceId))))
@@ -593,6 +1031,92 @@ internal static class ProcessRuntimeDispatchRecoveryRunQuery
         return runIds;
     }
 
+    private static async Task<IReadOnlyList<DispatchableCandidate>> LoadSchedulablePendingCandidateRowsAsync(
+        ProcessPersistenceDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var pendingCandidateRows = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state => state.Status == ProcessRuntimeStatus.Active || state.Status == ProcessRuntimeStatus.Created)
+            .Join(
+                dbContext.RuntimeSteps.AsNoTracking(),
+                state => state.RunId,
+                step => step.RunId,
+                (state, step) => new { state.RunId, state.UpdatedAtUtc, Step = step })
+            .Where(item =>
+                item.Step.IsExecutable &&
+                item.Step.Status == ProcessRuntimeStepStatus.Pending &&
+                item.Step.ActiveClaimToken == null)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenBy(item => item.Step.AttemptNumber)
+            .ThenBy(item => item.Step.StepInstanceId)
+            .Select(item => new PendingStepCandidate(
+                item.RunId,
+                item.Step.StepInstanceId,
+                item.UpdatedAtUtc,
+                item.Step.DependencyStepIds,
+                item.Step.RequiredArtifactSlotIds))
+            .Take(MaxDispatchableCandidateRows)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (pendingCandidateRows.Length == 0)
+        {
+            return [];
+        }
+
+        var candidateRunIds = pendingCandidateRows
+            .Select(candidate => candidate.RunId)
+            .Distinct()
+            .ToArray();
+        var stepRows = await dbContext.RuntimeSteps
+            .AsNoTracking()
+            .Where(step => candidateRunIds.Contains(step.RunId))
+            .Select(step => new RuntimeStepStatusRow(
+                step.RunId,
+                step.StepInstanceId,
+                step.Status))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var availableSlots = await dbContext.AvailableArtifactSlots
+            .AsNoTracking()
+            .Where(slot => candidateRunIds.Contains(slot.RunId))
+            .Select(slot => new AvailableArtifactSlotRow(slot.RunId, slot.SlotId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var stepsByRun = stepRows
+            .GroupBy(step => step.RunId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToDictionary(step => step.StepInstanceId, step => step.Status));
+        var slotsByRun = availableSlots
+            .GroupBy(slot => slot.RunId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(slot => slot.SlotId).ToHashSet());
+        var candidates = new List<DispatchableCandidate>();
+        foreach (var pendingCandidate in pendingCandidateRows)
+        {
+            if (!stepsByRun.TryGetValue(pendingCandidate.RunId, out var stepStatuses))
+            {
+                continue;
+            }
+
+            slotsByRun.TryGetValue(pendingCandidate.RunId, out var runAvailableSlots);
+            runAvailableSlots ??= [];
+            if (DependenciesSatisfied(pendingCandidate.DependencyStepIds, stepStatuses) &&
+                RequiredArtifactsAvailable(pendingCandidate.RequiredArtifactSlotIds, runAvailableSlots))
+            {
+                candidates.Add(new DispatchableCandidate(
+                    pendingCandidate.RunId,
+                    pendingCandidate.StepInstanceId,
+                    pendingCandidate.UpdatedAtUtc));
+            }
+        }
+
+        return candidates;
+    }
+
     private static async Task<HashSet<(Guid RunId, Guid StepInstanceId)>> LoadActiveChildParentStepsAsync(
         ProcessPersistenceDbContext dbContext,
         CancellationToken cancellationToken)
@@ -610,6 +1134,7 @@ internal static class ProcessRuntimeDispatchRecoveryRunQuery
                 item.Status != ProcessRuntimeStatus.Completed &&
                 item.Status != ProcessRuntimeStatus.Failed &&
                 item.Status != ProcessRuntimeStatus.Cancelled &&
+                item.Status != ProcessRuntimeStatus.Blocked &&
                 item.LaunchVariablesJson.Contains(parentRunKeySnippet) &&
                 item.LaunchVariablesJson.Contains(parentStepKeySnippet))
             .Select(item => item.LaunchVariablesJson)
@@ -657,10 +1182,71 @@ internal static class ProcessRuntimeDispatchRecoveryRunQuery
         }
     }
 
+    private static bool DependenciesSatisfied(
+        string dependencyStepIds,
+        IReadOnlyDictionary<Guid, ProcessRuntimeStepStatus> stepStatuses)
+    {
+        foreach (var dependencyId in SplitGuids(dependencyStepIds))
+        {
+            if (!stepStatuses.TryGetValue(dependencyId, out var dependencyStatus) ||
+                !ProcessRuntimeTerminalStates.IsStepTerminal(dependencyStatus) ||
+                dependencyStatus is ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool RequiredArtifactsAvailable(
+        string requiredArtifactSlotIds,
+        IReadOnlySet<Guid> availableSlots)
+    {
+        foreach (var slotId in SplitGuids(requiredArtifactSlotIds))
+        {
+            if (!availableSlots.Contains(slotId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static IEnumerable<Guid> SplitGuids(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            yield break;
+        }
+
+        foreach (var part in value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            yield return Guid.Parse(part);
+        }
+    }
+
     private sealed record DispatchableCandidate(
         Guid RunId,
         Guid StepInstanceId,
         DateTimeOffset UpdatedAtUtc);
+
+    private sealed record PendingStepCandidate(
+        Guid RunId,
+        Guid StepInstanceId,
+        DateTimeOffset UpdatedAtUtc,
+        string DependencyStepIds,
+        string RequiredArtifactSlotIds);
+
+    private sealed record RuntimeStepStatusRow(
+        Guid RunId,
+        Guid StepInstanceId,
+        ProcessRuntimeStepStatus Status);
+
+    private sealed record AvailableArtifactSlotRow(
+        Guid RunId,
+        Guid SlotId);
 
     private static void AddUnique(
         List<Guid> target,

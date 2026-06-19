@@ -262,9 +262,17 @@ public sealed class ProjectStructureProcessNodeService(
             dependencies.ProjectWorkbenchService,
             projectId,
             cancellationToken).ConfigureAwait(false);
-        var projectNodeId = FirstNonEmpty(
-            request.ParentProjectNodeId,
-            ResolveLaunchVariable(parentAssignment.LaunchVariables, ProjectNodeIdVariableName));
+        var assignmentProjectNodeId = NormalizeOptional(ResolveLaunchVariable(parentAssignment.LaunchVariables, ProjectNodeIdVariableName));
+        var requestedProjectNodeId = NormalizeOptional(request.ParentProjectNodeId);
+        var projectNodeId = assignmentProjectNodeId ?? requestedProjectNodeId ?? string.Empty;
+        var preLaunchWarnings = new List<string>();
+        if (!string.IsNullOrWhiteSpace(assignmentProjectNodeId) &&
+            !string.IsNullOrWhiteSpace(requestedProjectNodeId) &&
+            !string.Equals(assignmentProjectNodeId, requestedProjectNodeId, StringComparison.Ordinal))
+        {
+            preLaunchWarnings.Add($"Ignored subprocess parent project node '{requestedProjectNodeId}' because parent process step '{parentAssignment.StepKey}' is scoped to project node '{assignmentProjectNodeId}'.");
+        }
+
         if (string.IsNullOrWhiteSpace(projectNodeId))
         {
             throw new ProjectStructureAgentException(
@@ -328,7 +336,9 @@ public sealed class ProjectStructureProcessNodeService(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var warnings = launch.Warnings.ToList();
+        var warnings = preLaunchWarnings
+            .Concat(launch.Warnings)
+            .ToList();
         if (launch.RunId is { } runId)
         {
             var childRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId.Value);

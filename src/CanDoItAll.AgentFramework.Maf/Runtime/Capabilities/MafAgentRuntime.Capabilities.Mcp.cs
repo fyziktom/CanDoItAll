@@ -88,7 +88,8 @@ public sealed partial class MafAgentRuntime
         private static object? CompactBrowserMcpToolResultForModelContext(
             string toolName,
             AIFunctionArguments arguments,
-            object? result)
+            object? result,
+            IReadOnlyList<string>? importedArtifactPaths = null)
         {
             if (!IsBrowserMcpToolName(toolName))
             {
@@ -108,6 +109,14 @@ public sealed partial class MafAgentRuntime
             {
                 summary.Append(" Saved artifact: ");
                 summary.Append(fileName.Trim());
+                summary.Append('.');
+            }
+
+            if (importedArtifactPaths is { Count: > 0 })
+            {
+                summary.Append(" Managed artifact");
+                summary.Append(importedArtifactPaths.Count == 1 ? ": " : "s: ");
+                summary.Append(string.Join(", ", importedArtifactPaths));
                 summary.Append('.');
             }
 
@@ -702,9 +711,17 @@ public sealed partial class MafAgentRuntime
                 BrowserMcpArtifactPathService.EnsureWritableArtifactDirectories(workspaceRoot, workspaceScope, fileName);
 
                 var result = await base.InvokeCoreAsync(arguments, cancellationToken).ConfigureAwait(false);
-                BrowserMcpArtifactPathService.TryMirrorToScopedArtifactPath(workspaceRoot, workspaceScope, fileName, out _);
+                var importResult = BrowserMcpArtifactPathService.TryImportAfterInvocation(
+                    workspaceRoot,
+                    workspaceScope,
+                    fileName,
+                    WorkspaceExecutionAuditContext.Current?.ProcessRunId);
 
-                return CompactBrowserMcpToolResultForModelContext(Name, arguments, result);
+                return CompactBrowserMcpToolResultForModelContext(
+                    Name,
+                    arguments,
+                    result,
+                    importResult.ImportedRelativePaths);
             }
         }
 

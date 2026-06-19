@@ -153,6 +153,22 @@ public sealed record ProcessRuntimeCommitResult(
     }
 }
 
+public sealed class ProcessRuntimeOptimisticConcurrencyException : Exception
+{
+    public ProcessRuntimeOptimisticConcurrencyException(
+        ProcessRunId runId,
+        DateTimeOffset originalUpdatedAtUtc)
+        : base($"Runtime state '{runId}' changed before command commit '{originalUpdatedAtUtc:O}'.")
+    {
+        RunId = runId;
+        OriginalUpdatedAtUtc = originalUpdatedAtUtc;
+    }
+
+    public ProcessRunId RunId { get; }
+
+    public DateTimeOffset OriginalUpdatedAtUtc { get; }
+}
+
 public static class ProcessRuntimeTerminalStates
 {
     public static bool IsRunTerminal(ProcessRuntimeStatus status)

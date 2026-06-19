@@ -107,7 +107,7 @@ public sealed class ProcessPersistenceStoreTests
             eventType: ProcessRuntimeEventTypes.StepFailed,
             updatedAtUtc: Now.AddMinutes(2));
 
-        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() =>
+        await Assert.ThrowsAsync<ProcessRuntimeOptimisticConcurrencyException>(() =>
             unitOfWork.CommitAsync(stale with { OriginalState = original }));
 
         Assert.Equal(2, await dbContext.RuntimeEvents.CountAsync());

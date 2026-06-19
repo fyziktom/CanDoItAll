@@ -41,7 +41,7 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessRuntimeMutation.Rejected(state, "Runtime.StepNotRunning", "Strategy result requires a running step.");
         }
 
-        var nextStepStatus = ToStepStatus(command.Result.Outcome);
+        var nextStepStatus = ToStepStatus(command.Result);
         var receipt = new StrategyResultReceipt(
             step.StepInstanceId,
             command.Result.StrategyId,
@@ -89,27 +89,9 @@ public sealed partial class ProcessRuntimeEngine
     {
         ValidateArguments(state, context);
 
-        if (state.Status == ProcessRuntimeStatus.CancelRequested)
-        {
-            return Duplicate(state);
-        }
-
         if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
         {
             return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
-        }
-
-        var hasOpenClaims = HasOpenClaims(state);
-        var nextStatus = hasOpenClaims ? ProcessRuntimeStatus.CancelRequested : ProcessRuntimeStatus.Cancelled;
-        if (hasOpenClaims)
-        {
-            var requested = state with
-            {
-                Status = nextStatus,
-                UpdatedAtUtc = context.OccurredAtUtc
-            };
-
-            return Applied(requested, context, ProcessRuntimeEventTypes.ProcessRunCancelRequested, state.RunId.ToString());
         }
 
         var steps = new List<ProcessRuntimeStepState>(state.Steps.Count);
@@ -124,16 +106,21 @@ public sealed partial class ProcessRuntimeEngine
                 });
         }
 
+        var claims = new List<DispatchClaimState>(state.Claims.Count);
+        foreach (var claim in state.Claims)
+        {
+            claims.Add(claim.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed
+                ? claim with { Status = DispatchClaimStatus.Cancelled }
+                : claim);
+        }
+
         var next = state with
         {
-            Status = nextStatus,
+            Status = ProcessRuntimeStatus.Cancelled,
             Steps = steps,
+            Claims = claims,
             UpdatedAtUtc = context.OccurredAtUtc
         };
-        var eventType = nextStatus == ProcessRuntimeStatus.Cancelled
-            ? ProcessRuntimeEventTypes.ProcessRunCancelled
-            : ProcessRuntimeEventTypes.ProcessRunCancelRequested;
-
-        return Applied(next, context, eventType, state.RunId.ToString());
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
     }
 }

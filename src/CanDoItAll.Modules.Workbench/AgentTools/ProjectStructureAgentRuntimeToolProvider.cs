@@ -2134,7 +2134,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 WorkspaceExecutionAuditContext.Current is not { } auditScope ||
                 string.IsNullOrWhiteSpace(auditScope.ProcessRunId) ||
                 string.IsNullOrWhiteSpace(auditScope.ProcessStepId) ||
-                !TryResolveProjectScopeId(context.Tags, out var projectId))
+                !TryResolveScopedProcessProjectId(context, auditScope, out var projectId))
             {
                 return null;
             }
@@ -2154,6 +2154,27 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     canRead,
                     canWrite,
                     MapScopedProcessAgentContext(auditScope.ProjectStructureLaunchAgent));
+        }
+
+        private static bool TryResolveScopedProcessProjectId(
+            AgentRuntimeToolProviderContext context,
+            WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState auditScope,
+            out Guid projectId)
+        {
+            if (TryResolveProjectScopeId(context.Tags, out projectId))
+            {
+                return true;
+            }
+
+            if (auditScope.ContextWorkspaceScope is { Kind: WorkspaceScopeKind.Project } scope &&
+                Guid.TryParse(scope.Key, out projectId) &&
+                projectId != Guid.Empty)
+            {
+                return true;
+            }
+
+            projectId = Guid.Empty;
+            return false;
         }
 
         private static ProjectStructureAgentContext? MapScopedProcessAgentContext(ProjectStructureAgentIdentityDescriptor? descriptor)

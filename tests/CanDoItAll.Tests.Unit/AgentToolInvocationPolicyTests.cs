@@ -1285,6 +1285,222 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_broad_managed_workspace_search_for_read_only_external_target_process_run()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_search",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["query"] = "TetrisGame.slnx",
+                ["relativePath"] = "."
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processAllowsProductMutation: false,
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("Broad managed-workspace root discovery is denied", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_native_absolute_external_target_path_for_governed_process_run()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_list_files",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["relativePath"] = @"C:\programovani\dotnet\output"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not native absolute paths", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("external-target/C/programovani/dotnet/output", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_native_absolute_managed_workspace_search_for_external_target_process_run()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_search",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["query"] = "TetrisGame",
+                ["relativePath"] = @"C:\Users\lucys\AppData\Local\CanDoItAll\workspace"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processAllowsProductMutation: false,
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("outside the current-run external-target roots", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_native_absolute_project_media_file_read_for_external_target_process_run()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = @"C:\Users\lucys\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\3324868f66e2478abb8f14f32a5db1e9\office365-category-email-summary-c6c320f4b49d4790bdf7e71ab2a10fc3.md"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processAllowsProductMutation: false,
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_native_absolute_managed_workspace_evidence_file_read_for_external_target_process_run()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = @"C:\Users\lucys\AppData\Local\CanDoItAll\workspace\project-structure-context-brief.md"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processAllowsProductMutation: false,
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_native_absolute_managed_workspace_helper_file_read_for_external_target_process_run()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = @"C:\Users\lucys\AppData\Local\CanDoItAll\workspace\tools\launch_app.ps1"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processAllowsProductMutation: false,
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_broad_process_run_artifact_discovery_for_external_target_process_run()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_search",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["query"] = "TetrisGame",
+                ["relativePath"] = "artifacts/process-runs"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processAllowsProductMutation: false,
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("Broad process-run artifact discovery", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_specific_child_process_run_artifact_search_for_external_target_process_run()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_search",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["query"] = "architecture-decision",
+                ["relativePath"] = "artifacts/scopes/organization/demo/process-runs/child-run-001"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processAllowsProductMutation: false,
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_managed_helper_root_read_for_external_target_process_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2493,6 +2709,78 @@ public sealed class AgentToolInvocationPolicyTests
                 "ExecuteExternalAction"
             ],
             processStepTargetScope: "ExternalActionControlled");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_project_structure_node_process_start_with_execute_external_action_only()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadProjectStructure",
+                "ExecuteExternalAction"
+            ],
+            processStepTargetScope: "ExternalActionControlled");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains(ProcessOperationContractNames.StartProjectNodeProcess, decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_project_structure_subprocess_launch_with_execute_external_action()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadProjectStructure",
+                "ExecuteExternalAction"
+            ],
+            processStepTargetScope: "ExternalActionControlled");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_project_structure_approval_request_with_escalate_or_decide()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "EscalateOrDecide"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 

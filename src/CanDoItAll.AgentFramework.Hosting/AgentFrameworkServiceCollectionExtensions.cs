@@ -49,6 +49,7 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<IAgentExecutionCheckpointBridge>()));
         services.TryAddSingleton<BufferedAgentExecutionEventSink>();
         services.TryAddSingleton<IAgentExecutionEventSink>(serviceProvider => serviceProvider.GetRequiredService<BufferedAgentExecutionEventSink>());
+        services.TryAddSingleton<IAgentExecutionCancellationRegistry, AgentExecutionCancellationRegistry>();
         services.AddAgentFrameworkA2AHosting();
         services.AddAgentFrameworkVoice();
         services.TryAddSingleton<MafAgentRuntime>(serviceProvider => new MafAgentRuntime(normalizedWorkspaceRoot, serviceProvider, resolvedScope));

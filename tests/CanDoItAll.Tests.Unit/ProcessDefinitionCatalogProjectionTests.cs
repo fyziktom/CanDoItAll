@@ -181,6 +181,48 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Dotnet_repair_subprocesses_preserve_inherited_repair_target()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var developmentSlice = loader.LoadDefinition("dotnet-development-slice");
+        var featureImplementation = loader.LoadDefinition("dotnet-feature-function-implementation");
+
+        var sliceValidation = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "add-tests-and-proof", StringComparison.Ordinal));
+        var sliceRepair = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "slice-repair-code-change", StringComparison.Ordinal));
+        var sliceRecheck = Assert.Single(developmentSlice.Steps, step => string.Equals(step.Key, "add-tests-recheck", StringComparison.Ordinal));
+        var featureIntake = Assert.Single(featureImplementation.Steps, step => string.Equals(step.Key, "feature-slice-intake", StringComparison.Ordinal));
+        var targetedValidation = Assert.Single(featureImplementation.Steps, step => string.Equals(step.Key, "targeted-validation", StringComparison.Ordinal));
+        var targetedRecheck = Assert.Single(featureImplementation.Steps, step => string.Equals(step.Key, "targeted-recheck", StringComparison.Ordinal));
+
+        var sliceRepairDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-development-slice",
+            "steps",
+            "slice-repair-code-change.md"));
+        var featureIntakeDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-feature-function-implementation",
+            "steps",
+            "feature-slice-intake.md"));
+
+        Assert.Contains("repair target packet", sliceValidation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not ask the child subprocess to select a fresh MVP behavior", sliceRepair.Notes, StringComparison.Ordinal);
+        Assert.Contains("original repair target", sliceRecheck.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not derive a new MVP behavior", featureIntake.Notes, StringComparison.Ordinal);
+        Assert.Contains("inherited repair target", targetedValidation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("before/after metric", targetedRecheck.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not ask the child subprocess to select a fresh MVP behavior", sliceRepairDoc, StringComparison.Ordinal);
+        Assert.Contains("If the parent request is a repair request", featureIntakeDoc, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Dotnet_development_slice_uses_engineer_for_technical_subprocess_steps()
     {
         var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));

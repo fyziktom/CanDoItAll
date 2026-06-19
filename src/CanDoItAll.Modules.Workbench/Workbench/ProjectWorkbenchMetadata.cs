@@ -381,6 +381,7 @@ public sealed class ProjectScriptMetadata
     public string Command { get; set; } = string.Empty;
 
     [ProjectStructurePreviewField("Arguments", 40)]
+    [JsonConverter(typeof(ProjectCommandLineArgumentsJsonConverter))]
     public string Arguments { get; set; } = string.Empty;
 
     [ProjectStructurePreviewField("Working directory", 50)]
@@ -388,6 +389,47 @@ public sealed class ProjectScriptMetadata
 
     [ProjectStructurePreviewField("Terminal route", 60)]
     public string TerminalRoute { get; set; } = string.Empty;
+}
+
+internal sealed class ProjectCommandLineArgumentsJsonConverter : JsonConverter<string>
+{
+    public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => reader.TokenType switch
+        {
+            JsonTokenType.String => reader.GetString() ?? string.Empty,
+            JsonTokenType.Null => string.Empty,
+            JsonTokenType.StartArray => ReadArgumentArray(ref reader),
+            _ => throw new JsonException("Script arguments must be a string or an array of string tokens.")
+        };
+
+    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+        => writer.WriteStringValue(value ?? string.Empty);
+
+    private static string ReadArgumentArray(ref Utf8JsonReader reader)
+    {
+        var arguments = new List<string>();
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndArray)
+            {
+                return string.Join(' ', arguments.Select(QuotePowerShellArgument));
+            }
+
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException("Script argument arrays must contain only strings.");
+            }
+
+            arguments.Add(reader.GetString() ?? string.Empty);
+        }
+
+        throw new JsonException("Script argument array was not closed.");
+    }
+
+    private static string QuotePowerShellArgument(string value)
+        => string.IsNullOrEmpty(value)
+            ? "''"
+            : $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
 }
 
 public sealed class ProjectEnvironmentMetadata

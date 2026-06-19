@@ -9,10 +9,18 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
+using CanDoItAll.Processes.Persistence;
+using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -1141,7 +1149,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         Project node id: {request.LaunchRequest.ProjectNodeId ?? "not scoped"}
 
         AgentFramework evidence write rule:
-        Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths in evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
+        Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths from this brief in evidenceRefs; if a workspace tool echoes a longer scoped storage path for the same artifact, keep the managed relative ref in evidenceRefs and use the scoped echo only as extra context. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
 
         AgentFramework subprocess adapter guidance:
         {subprocessGuidance}
@@ -1166,7 +1174,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
             : step.SubprocessDefinitionSnapshotName.Trim();
         var launchInstruction = !hasSubprocessKey
             ? "This step is marked as a subprocess but has no child process definition key. Return Blocked unless upstream evidence already supplies the missing child run."
-            : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ProcessOperationContractNames.ExecuteExternalAction} is allowed. Do not mark Completed until the child run receipt and required child evidence are available, or return Blocked with the missing evidence.";
+            : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ProcessOperationContractNames.ExecuteExternalAction} is allowed. Do not mark Completed until the child run receipt and required child evidence are available. If required evidence is missing from a stopped child run and launch is allowed, call the launch tool again to create or reuse a non-stopped child run. Return Blocked only for a concrete missing tool, input, policy, environment, or irrecoverable evidence problem.";
 
         return $"""
         - Child process definition key: {subprocessKey}
@@ -1174,8 +1182,10 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         - Governed launch tool: {SubprocessLaunchToolName}
         - Completion rule: {launchInstruction}
         - Live-run profile rule: leave LiveRunProfileKey empty unless the launch variables explicitly provide a valid process live-run profile key for this child definition. BranchName, RepositoryRoot, SessionId, parent DefinitionKey, and child DefinitionKey are not live-run profile keys.
+        - Scope rule: use the parent step's assigned project node. Leave ParentProjectNodeId empty unless the parent launch context has no project node. Do not pass ProcessRunNodeId as ParentProjectNodeId.
         - Retry rule: repeated launch-tool calls for the same parent run, parent step, project node, and child definition return the existing child run instead of creating another child.
-        - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, and ExpectedChildEvidenceRefs. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root.
+        - Stopped-child rule: a Completed, Failed, Cancelled, or Blocked child run is not an active wait. Inspect stopped-child evidence, then either complete from valid evidence or relaunch when required evidence is missing and launch is allowed. Do not return Blocked only because a stopped child run exists.
+        - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, and ExpectedChildEvidenceRefs. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root. ExpectedChildEvidenceRefs are preferred lookup candidates, not an all-or-nothing checklist; if one expected ref is missing, inspect sibling files under ChildManagedArtifactRoot and child step directories before blocking.
         """;
     }
 }
@@ -1187,6 +1197,9 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
 {
     private static readonly Regex ProcessRunIdPattern = new(
         @"(?<![0-9a-fA-F])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![0-9a-fA-F])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex ManagedArtifactPathSegmentInvalidCharactersPattern = new(
+        "[^A-Za-z0-9._-]+",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
@@ -1272,6 +1285,16 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
                         StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult),
                     cancellationToken)
                 .ConfigureAwait(false);
+
+            if (await TryResolveExistingPendingChildRunAsync(
+                    assignment,
+                    assignmentStore,
+                    stateStore,
+                    cancellationToken).ConfigureAwait(false) is { } pendingChildRunAfterExecution)
+            {
+                throw CreatePendingChildRunDeferredException(assignment, pendingChildRunAfterExecution);
+            }
+
             var validation = AgentOutputJson.DeserializeAndValidate(
                 result.ResponseText,
                 new ProcessStepOutcomeValidator());
@@ -1290,9 +1313,7 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
                     stateStore,
                     cancellationToken).ConfigureAwait(false) is { } pendingChildRunId)
             {
-                throw new ProcessRuntimeDispatchDeferredException(
-                    $"Step '{assignment.StepKey}' is waiting for active child process run '{pendingChildRunId}'.",
-                    pendingChildRunId);
+                throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
             }
 
             return ToAdapterResult(assignment, validation.Output, validation.RawOutputHash);
@@ -1301,8 +1322,24 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
         {
             throw;
         }
+        catch (AgentExecutionCancelledException exception)
+        {
+            return Canceled(
+                "process.adapter.agent_execution_cancelled",
+                $"Agent execution was cancelled for step '{assignment.StepKey}': {exception.Message}",
+                $"{exception.ExecutionRunId:N}:{exception.ProcessRunId}:{exception.Message}");
+        }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (await TryResolveExistingPendingChildRunAsync(
+                    assignment,
+                    assignmentStore,
+                    stateStore,
+                    CancellationToken.None).ConfigureAwait(false) is { } pendingChildRunId)
+            {
+                throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
+            }
+
             return Failed(
                 "process.adapter.agent_execution_failed",
                 $"Agent execution failed for step '{assignment.StepKey}': {exception.Message}",
@@ -1514,6 +1551,15 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
         return null;
     }
 
+    private static ProcessRuntimeDispatchDeferredException CreatePendingChildRunDeferredException(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRunId pendingChildRunId)
+    {
+        return new ProcessRuntimeDispatchDeferredException(
+            $"Step '{assignment.StepKey}' is waiting for active child process run '{pendingChildRunId}'.",
+            pendingChildRunId);
+    }
+
     internal static async ValueTask<ProcessRunId?> TryResolveExistingPendingChildRunAsync(
         ProcessRuntimeStepAssignment assignment,
         IProcessRuntimeStepAssignmentStore assignmentStore,
@@ -1579,7 +1625,7 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
 
         var candidateState = await stateStore.LoadAsync(candidateRunId, cancellationToken).ConfigureAwait(false);
         if (candidateState is null ||
-            ProcessRuntimeTerminalStates.IsRunTerminal(candidateState.Status) ||
+            ProcessRuntimeChildRunParentQuery.IsStoppedChildStatus(candidateState.Status) ||
             !IsSameProcessTree(currentState, candidateState))
         {
             return null;
@@ -1658,7 +1704,7 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
         public const string SessionId = "SessionId";
     }
 
-    private static ProcessExecutionAdapterResult ToAdapterResult(
+    internal static ProcessExecutionAdapterResult ToAdapterResult(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         string rawOutputHash)
@@ -1674,35 +1720,13 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
         if (outcome == StrategyOutcome.Succeeded &&
             ValidateProductMutationCompletion(assignment, output) is { } productMutationIssue)
         {
-            var requestedArtifactSlots = assignment.ProducedArtifactSlotIds.Count > 0
-                ? assignment.ProducedArtifactSlotIds
-                : assignment.RequiredArtifactSlotIds;
-            return new ProcessExecutionAdapterResult(
-                StrategyOutcome.NeedsManager,
-                [],
-                requestedArtifactSlots
-                    .Select(slotId => new RequestedArtifactRef(
-                        slotId,
-                        ComputeHash($"{rawOutputHash}:requested:{slotId}:{productMutationIssue.Code}")))
-                    .ToArray(),
-                [
-                    new ProcessExecutionAdapterDiagnostic(
-                        new StrategyDiagnosticCode(productMutationIssue.Code),
-                        StrategyDiagnosticSensitivity.Normal,
-                        ComputeHash(productMutationIssue.Evidence),
-                        productMutationIssue.Summary,
-                        RestrictedEvidenceReference: null,
-                        productMutationIssue.RetrySafety,
-                        productMutationIssue.Idempotency)
-                ],
-                [
-                    new ManagerSignal(
-                        new ManagerSignalCode(productMutationIssue.Code),
-                        ComputeHash($"{rawOutputHash}:manager:{productMutationIssue.Code}:{productMutationIssue.Evidence}"),
-                        productMutationIssue.Summary)
-                ],
-                productMutationIssue.Summary,
-                ComputeHash($"{rawOutputHash}:{productMutationIssue.Code}:{productMutationIssue.Evidence}"));
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, productMutationIssue);
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateManagedArtifactCompletion(assignment, output) is { } managedArtifactIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, managedArtifactIssue);
         }
 
         IReadOnlyList<ProducedArtifactRef> artifacts = outcome == StrategyOutcome.Succeeded
@@ -1741,7 +1765,7 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             rawOutputHash);
     }
 
-    private static ProductMutationCompletionIssue? ValidateProductMutationCompletion(
+    private static ProcessCompletionIssue? ValidateProductMutationCompletion(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
     {
@@ -1754,10 +1778,11 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
         if (output.EvidenceRefs.Count == 0 ||
             output.EvidenceRefs.All(string.IsNullOrWhiteSpace))
         {
-            return new ProductMutationCompletionIssue(
+            return new ProcessCompletionIssue(
                 "process.adapter.product_output_evidence_missing",
                 $"Step '{assignment.StepKey}' claimed completion for a product-mutating scope but returned no evidence references.",
                 $"{assignment.RunId}:{assignment.StepInstanceId}:evidence-missing",
+                [],
                 ProcessDiagnosticRetrySafety.SafeToRetry,
                 ProcessDiagnosticIdempotencyClassification.Idempotent);
         }
@@ -1773,14 +1798,164 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             return null;
         }
 
-        return new ProductMutationCompletionIssue(
+        return new ProcessCompletionIssue(
             "process.adapter.product_output_missing",
             inspection.Summary.Length == 0
                 ? $"Step '{assignment.StepKey}' claimed completion but the configured product output root '{productRoot}' contains no product files."
                 : $"Step '{assignment.StepKey}' claimed completion but the configured product output root '{productRoot}' is not usable: {inspection.Summary}",
             productRoot,
+            [],
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue? ValidateManagedArtifactCompletion(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            assignment.ProducedArtifactSlotIds.Count == 0)
+        {
+            return null;
+        }
+
+        var evidenceRefs = output.EvidenceRefs
+            .Where(evidenceRef => !string.IsNullOrWhiteSpace(evidenceRef))
+            .Select(NormalizeManagedArtifactRef)
+            .Where(evidenceRef => evidenceRef.Length > 0)
+            .ToArray();
+        var missingSlotIds = assignment.ProducedArtifactSlotIds
+            .Where(slotId => !HasManagedArtifactEvidence(assignment, slotId, evidenceRefs))
+            .Distinct()
+            .ToArray();
+        if (missingSlotIds.Length == 0)
+        {
+            return null;
+        }
+
+        var expectedRefs = missingSlotIds
+            .SelectMany(slotId => EnumerateManagedArtifactEvidenceRefs(assignment, slotId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return new ProcessCompletionIssue(
+            "process.adapter.produced_artifact_evidence_missing",
+            $"Step '{assignment.StepKey}' claimed completion but did not return a managed artifact evidence ref for produced slot(s): {string.Join(", ", missingSlotIds)}. Expected one of: {string.Join("; ", expectedRefs)}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:produced-artifact-evidence-missing:{string.Join(",", missingSlotIds)}:{string.Join("|", output.EvidenceRefs)}",
+            missingSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static bool HasManagedArtifactEvidence(
+        ProcessRuntimeStepAssignment assignment,
+        ArtifactSlotId slotId,
+        IReadOnlyList<string> evidenceRefs)
+    {
+        if (evidenceRefs.Count == 0)
+        {
+            return false;
+        }
+
+        var stepPath = NormalizeManagedArtifactRef(BuildManagedStepArtifactPath(assignment));
+        var slotRoot = NormalizeManagedArtifactRef(BuildManagedSlotArtifactRoot(assignment, slotId));
+        var stepRoot = NormalizeManagedArtifactRef(BuildManagedStepArtifactRoot(assignment));
+        var stepRootPrefix = stepRoot + "/";
+        return evidenceRefs.Any(evidenceRef =>
+            string.Equals(evidenceRef, stepPath, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(evidenceRef, slotRoot, StringComparison.OrdinalIgnoreCase) ||
+            evidenceRef.StartsWith(stepRootPrefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IEnumerable<string> EnumerateManagedArtifactEvidenceRefs(
+        ProcessRuntimeStepAssignment assignment,
+        ArtifactSlotId slotId)
+    {
+        yield return BuildManagedStepArtifactPath(assignment);
+        yield return BuildManagedSlotArtifactRoot(assignment, slotId);
+        yield return BuildManagedStepArtifactRoot(assignment) + "/";
+    }
+
+    private static string BuildManagedStepArtifactPath(ProcessRuntimeStepAssignment assignment)
+        => $"{BuildManagedArtifactRoot(assignment)}/steps/{SanitizeManagedArtifactPathSegment(assignment.StepKey)}.md";
+
+    private static string BuildManagedSlotArtifactRoot(
+        ProcessRuntimeStepAssignment assignment,
+        ArtifactSlotId slotId)
+        => $"{BuildManagedArtifactRoot(assignment)}/{slotId}";
+
+    private static string BuildManagedStepArtifactRoot(ProcessRuntimeStepAssignment assignment)
+        => $"{BuildManagedArtifactRoot(assignment)}/{SanitizeManagedArtifactPathSegment(assignment.StepKey)}";
+
+    private static string BuildManagedArtifactRoot(ProcessRuntimeStepAssignment assignment)
+        => $"artifacts/process-runs/{assignment.RunId.Value:D}";
+
+    private static string NormalizeManagedArtifactRef(string value)
+    {
+        var normalized = value.Trim().Replace('\\', '/');
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        normalized = normalized.TrimEnd('/');
+        if (normalized.StartsWith("artifacts/scopes/", StringComparison.OrdinalIgnoreCase))
+        {
+            var processRunsIndex = normalized.IndexOf("/process-runs/", StringComparison.OrdinalIgnoreCase);
+            if (processRunsIndex >= 0)
+            {
+                return "artifacts" + normalized[processRunsIndex..];
+            }
+        }
+
+        return normalized;
+    }
+
+    private static string SanitizeManagedArtifactPathSegment(string value)
+    {
+        var sanitized = ManagedArtifactPathSegmentInvalidCharactersPattern
+            .Replace(value.Trim(), "-")
+            .Trim('-', '.', '_');
+        return string.IsNullOrWhiteSpace(sanitized)
+            ? "step"
+            : sanitized;
+    }
+
+    private static ProcessExecutionAdapterResult NeedsManagerForCompletionIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string rawOutputHash,
+        ProcessCompletionIssue issue)
+    {
+        var requestedArtifactSlots = issue.RequestedArtifactSlotIds.Count > 0
+            ? issue.RequestedArtifactSlotIds
+            : assignment.ProducedArtifactSlotIds.Count > 0
+                ? assignment.ProducedArtifactSlotIds
+                : assignment.RequiredArtifactSlotIds;
+        return new ProcessExecutionAdapterResult(
+            StrategyOutcome.NeedsManager,
+            [],
+            requestedArtifactSlots
+                .Select(slotId => new RequestedArtifactRef(
+                    slotId,
+                    ComputeHash($"{rawOutputHash}:requested:{slotId}:{issue.Code}")))
+                .ToArray(),
+            [
+                new ProcessExecutionAdapterDiagnostic(
+                    new StrategyDiagnosticCode(issue.Code),
+                    StrategyDiagnosticSensitivity.Normal,
+                    ComputeHash(issue.Evidence),
+                    issue.Summary,
+                    RestrictedEvidenceReference: null,
+                    issue.RetrySafety,
+                    issue.Idempotency)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode(issue.Code),
+                    ComputeHash($"{rawOutputHash}:manager:{issue.Code}:{issue.Evidence}"),
+                    issue.Summary)
+            ],
+            issue.Summary,
+            ComputeHash($"{rawOutputHash}:{issue.Code}:{issue.Evidence}"));
     }
 
     private static bool TryResolveInspectableProductRoot(
@@ -1873,6 +2048,31 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
             ComputeHash($"{code}:{evidence}"));
     }
 
+    private static ProcessExecutionAdapterResult Canceled(
+        string code,
+        string summary,
+        string evidence)
+    {
+        var evidenceHash = ComputeHash(evidence);
+        return new ProcessExecutionAdapterResult(
+            StrategyOutcome.Canceled,
+            [],
+            [],
+            [
+                new ProcessExecutionAdapterDiagnostic(
+                    new StrategyDiagnosticCode(code),
+                    StrategyDiagnosticSensitivity.Normal,
+                    evidenceHash,
+                    summary,
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            summary,
+            ComputeHash($"{code}:{evidence}"));
+    }
+
     private static ProcessExecutionAdapterResult NeedsManager(
         string code,
         string summary,
@@ -1934,10 +2134,11 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
-    private sealed record ProductMutationCompletionIssue(
+    private sealed record ProcessCompletionIssue(
         string Code,
         string Summary,
         string Evidence,
+        IReadOnlyList<ArtifactSlotId> RequestedArtifactSlotIds,
         ProcessDiagnosticRetrySafety RetrySafety,
         ProcessDiagnosticIdempotencyClassification Idempotency);
 
@@ -2122,4 +2323,701 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+}
+
+internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
+    IProcessProjectionClock clock,
+    IProcessRuntimeStateStore stateStore,
+    IProcessRuntimeStepAssignmentStore assignmentStore,
+    IProcessRuntimeUnitOfWork unitOfWork,
+    IProcessRuntimeDispatchQueue dispatchQueue,
+    ProcessRuntimeProjectionCatchupService projectionCatchupService,
+    ILogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator> logger)
+{
+    private const int MaximumConcurrencyRetries = 3;
+    private static readonly TimeSpan ConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
+
+    public async Task<bool> ReleaseRecoveredExecutionClaimAsync(
+        Guid executionRunId,
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        string requestedBy,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRequestedBy = NormalizeRequestedBy(requestedBy);
+        for (var attempt = 1; attempt <= MaximumConcurrencyRetries; attempt++)
+        {
+            try
+            {
+                return await TryReleaseRecoveredExecutionClaimAsync(
+                    executionRunId,
+                    runId,
+                    stepInstanceId,
+                    normalizedRequestedBy,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumConcurrencyRetries)
+            {
+                await Task.Delay(ConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return false;
+    }
+
+    public static bool IsRecoverableExecutionFailure(ExecutionState state, RunOutcome? outcome)
+        => state == ExecutionState.Failed &&
+           outcome is RunOutcome.Cancelled or RunOutcome.Failed;
+
+    public static bool IsRecoverableExecutionCompletion(ExecutionState state, RunOutcome? outcome)
+        => state == ExecutionState.Completed &&
+           outcome == RunOutcome.Succeeded;
+
+    public async Task<bool> SubmitRecoveredExecutionResultAsync(
+        ExecutionRunRecord executionRun,
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        string requestedBy,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(executionRun);
+
+        var normalizedRequestedBy = NormalizeRequestedBy(requestedBy);
+        for (var attempt = 1; attempt <= MaximumConcurrencyRetries; attempt++)
+        {
+            try
+            {
+                return await TrySubmitRecoveredExecutionResultAsync(
+                    executionRun,
+                    runId,
+                    stepInstanceId,
+                    normalizedRequestedBy,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumConcurrencyRetries)
+            {
+                await Task.Delay(ConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return false;
+    }
+
+    private async Task<bool> TryReleaseRecoveredExecutionClaimAsync(
+        Guid executionRunId,
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+        if (state is null || ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+        {
+            return false;
+        }
+
+        var step = state.Steps.FirstOrDefault(candidate => candidate.StepInstanceId == stepInstanceId);
+        if (step is null ||
+            step.ActiveClaimToken is not { } claimToken ||
+            step.Status is not (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running))
+        {
+            return false;
+        }
+
+        var claim = state.Claims.FirstOrDefault(candidate =>
+            candidate.StepInstanceId == stepInstanceId &&
+            candidate.ClaimToken == claimToken &&
+            candidate.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed);
+        if (claim is null)
+        {
+            return false;
+        }
+
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var releaseCommit = await engine.ReleaseClaimAsync(
+            state,
+            CreateContext(requestedBy),
+            new ReleaseDispatchClaimCommand(stepInstanceId, claim.OwnerId, claim.ClaimToken),
+            cancellationToken).ConfigureAwait(false);
+        if (!releaseCommit.Succeeded)
+        {
+            logger.LogWarning(
+                "Process execution recovery could not release claim {ClaimToken} for run {RunId}, step {StepInstanceId}. Diagnostics={Diagnostics}",
+                claim.ClaimToken,
+                runId.Value,
+                stepInstanceId.Value,
+                string.Join("; ", releaseCommit.Diagnostics.Select(diagnostic => diagnostic.Message)));
+            return false;
+        }
+
+        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+        await dispatchQueue.EnqueueAsync(
+            new ProcessRuntimeDispatchQueueRequest(runId, requestedBy),
+            cancellationToken).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "Process execution recovery released claim {ClaimToken} for interrupted execution run {ExecutionRunId}. ProcessRunId={RunId} StepInstanceId={StepInstanceId}",
+            claim.ClaimToken,
+            executionRunId,
+            runId.Value,
+            stepInstanceId.Value);
+        return true;
+    }
+
+    private async Task<bool> TrySubmitRecoveredExecutionResultAsync(
+        ExecutionRunRecord executionRun,
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        if (!IsRecoverableExecutionCompletion(executionRun.State, executionRun.Outcome))
+        {
+            return false;
+        }
+
+        var assignment = await assignmentStore.LoadAsync(runId, stepInstanceId, cancellationToken).ConfigureAwait(false);
+        if (assignment is null)
+        {
+            logger.LogWarning(
+                "Completed AgentFramework execution run {ExecutionRunId} could not be reconciled because process assignment {RunId}/{StepInstanceId} was not found.",
+                executionRun.Id,
+                runId.Value,
+                stepInstanceId.Value);
+            return false;
+        }
+
+        var validation = AgentOutputJson.DeserializeAndValidate(
+            executionRun.ResultSummary,
+            new ProcessStepOutcomeValidator());
+        if (!validation.Succeeded || validation.Output is null)
+        {
+            logger.LogWarning(
+                "Completed AgentFramework execution run {ExecutionRunId} could not be reconciled because its process step output was invalid. RawOutputHash={RawOutputHash} Errors={Errors}",
+                executionRun.Id,
+                validation.RawOutputHash,
+                string.Join("; ", validation.Validation.Errors.Select(error => $"{error.Code}: {error.Message}")));
+            return false;
+        }
+
+        var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+        if (state is null || ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+        {
+            return false;
+        }
+
+        var step = state.Steps.FirstOrDefault(candidate => candidate.StepInstanceId == stepInstanceId);
+        if (step is null ||
+            step.ActiveClaimToken is not { } claimToken ||
+            step.Status is not (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running))
+        {
+            return false;
+        }
+
+        var claim = state.Claims.FirstOrDefault(candidate =>
+            candidate.StepInstanceId == stepInstanceId &&
+            candidate.ClaimToken == claimToken &&
+            candidate.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed);
+        if (claim is null)
+        {
+            return false;
+        }
+
+        var context = CreateContext(
+            requestedBy,
+            NormalizeRecoveredResultTimestamp(executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc, claim.ExpiresAtUtc));
+        var adapterResult = AgentFrameworkProcessExecutionAdapter.ToAdapterResult(
+            assignment,
+            validation.Output,
+            validation.RawOutputHash);
+        var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var commit = await engine.SubmitStrategyResultAsync(
+            state,
+            context,
+            new SubmitStrategyResultCommand(
+                stepInstanceId,
+                claim.OwnerId,
+                claim.ClaimToken,
+                new StrategyResultIdempotencyKey(result.IdempotencyKey),
+                result),
+            cancellationToken).ConfigureAwait(false);
+        if (!commit.Succeeded)
+        {
+            logger.LogWarning(
+                "Completed AgentFramework execution run {ExecutionRunId} could not submit process result for run {RunId}, step {StepInstanceId}. Diagnostics={Diagnostics}",
+                executionRun.Id,
+                runId.Value,
+                stepInstanceId.Value,
+                string.Join("; ", commit.Diagnostics.Select(diagnostic => diagnostic.Message)));
+            return false;
+        }
+
+        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+        await dispatchQueue.EnqueueAsync(
+            new ProcessRuntimeDispatchQueueRequest(runId, requestedBy),
+            cancellationToken).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "Recovered completed AgentFramework execution run {ExecutionRunId} into process run {RunId}, step {StepInstanceId}. Outcome={Outcome}",
+            executionRun.Id,
+            runId.Value,
+            stepInstanceId.Value,
+            adapterResult.Outcome);
+        return true;
+    }
+
+    private static StrategyResultEnvelope CreateRecoveredStrategyResult(
+        ExecutionRunRecord executionRun,
+        ProcessExecutionAdapterResult adapterResult)
+    {
+        var strategy = StandardProcessAdapterDescriptors.WorkflowAdapter.Strategy;
+        var idempotencyKey = CreateDeterministicGuid($"agent-framework-process-result:{executionRun.Id:N}");
+        return new StrategyResultEnvelope(
+            strategy.StrategyId,
+            strategy.StrategyVersion,
+            idempotencyKey,
+            adapterResult.Outcome,
+            adapterResult.ProducedArtifacts,
+            adapterResult.RequestedArtifacts,
+            adapterResult.Diagnostics
+                .Select(diagnostic => new StrategyDiagnosticRef(
+                    diagnostic.Code,
+                    diagnostic.Sensitivity,
+                    diagnostic.EvidenceHash,
+                    diagnostic.SafeSummary,
+                    diagnostic.RestrictedEvidenceReference,
+                    diagnostic.RetrySafety,
+                    diagnostic.Idempotency))
+                .ToArray(),
+            adapterResult.ManagerSignals,
+            adapterResult.ResultHash);
+    }
+
+    private static DateTimeOffset NormalizeRecoveredResultTimestamp(
+        DateTimeOffset executionCompletedAtUtc,
+        DateTimeOffset claimExpiresAtUtc)
+    {
+        var completedAtUtc = NormalizeUtc(executionCompletedAtUtc);
+        var expiresAtUtc = NormalizeUtc(claimExpiresAtUtc);
+        return completedAtUtc < expiresAtUtc
+            ? completedAtUtc
+            : expiresAtUtc.AddTicks(-1);
+    }
+
+    private RuntimeCommandContext CreateContext(
+        string requestedBy,
+        DateTimeOffset occurredAtUtc)
+    {
+        return new RuntimeCommandContext(
+            RuntimeCommandId.New(),
+            new ProcessEventActor(ProcessEventActorKind.System, new ProcessActorId(requestedBy)),
+            new ProcessCorrelationId($"{requestedBy}-{Guid.NewGuid():N}"),
+            NormalizeUtc(occurredAtUtc));
+    }
+
+    private RuntimeCommandContext CreateContext(string requestedBy)
+    {
+        return CreateContext(requestedBy, clock.GetUtcNow());
+    }
+
+    private static Guid CreateDeterministicGuid(string value)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        Span<byte> bytes = stackalloc byte[16];
+        hash.AsSpan(0, 16).CopyTo(bytes);
+        bytes[7] = (byte)((bytes[7] & 0x0F) | 0x40);
+        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+        return new Guid(bytes);
+    }
+
+    private static string NormalizeRequestedBy(string requestedBy)
+        => string.IsNullOrWhiteSpace(requestedBy)
+            ? "agent-execution-recovery"
+            : requestedBy.Trim();
+
+    private static DateTimeOffset NormalizeUtc(DateTimeOffset value)
+        => value.Offset == TimeSpan.Zero ? value : value.ToUniversalTime();
+}
+
+internal sealed class AgentFrameworkProcessExecutionRecoveryObserver(
+    AgentFrameworkProcessExecutionClaimRecoveryCoordinator recoveryCoordinator) : IAgentExecutionRecoveryObserver
+{
+    private const string RecoveryRequestedBy = "agent-execution-recovery";
+
+    public async Task OnExecutionRecoveredAsync(
+        AgentExecutionRecoveryObservation observation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+
+        if (!AgentFrameworkProcessExecutionClaimRecoveryCoordinator.IsRecoverableExecutionFailure(observation.State, observation.Outcome) ||
+            !Guid.TryParse(observation.ProcessRunId, out var processRunGuid) ||
+            !Guid.TryParse(observation.ProcessStepId, out var processStepGuid))
+        {
+            return;
+        }
+
+        await recoveryCoordinator.ReleaseRecoveredExecutionClaimAsync(
+            observation.ExecutionRunId,
+            new ProcessRunId(processRunGuid),
+            new ProcessStepInstanceId(processStepGuid),
+            RecoveryRequestedBy,
+            cancellationToken).ConfigureAwait(false);
+    }
+}
+
+internal sealed class AgentFrameworkProcessRuntimeCancellationObserver(
+    IAgentExecutionCancellationRegistry cancellationRegistry,
+    ISandboxWorkspaceExecutionRunStore executionRunStore,
+    ILogger<AgentFrameworkProcessRuntimeCancellationObserver> logger) : IProcessRuntimeRunCancellationObserver
+{
+    private const string CancellationPhase = "process-cancellation";
+    private const string CancellationSummary = "Execution run cancelled because the owning process run was cancelled.";
+
+    public async ValueTask<ProcessRuntimeRunCancellationObservationResult> OnRunsCancelledAsync(
+        ProcessRuntimeRunCancellationObservation observation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+
+        var processRunIds = observation.CancelledRunIds
+            .Select(runId => runId.Value.ToString("D"))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (processRunIds.Length == 0)
+        {
+            return ProcessRuntimeRunCancellationObservationResult.Empty;
+        }
+
+        var signaledCount = cancellationRegistry.RequestCancellationByProcessRunIds(
+            processRunIds,
+            observation.RequestedBy,
+            observation.Reason);
+        var repairedCount = await MarkExecutionRunRecordsCancelledAsync(
+            processRunIds,
+            observation.CancelledAtUtc,
+            cancellationToken).ConfigureAwait(false);
+        var diagnostics = new List<string>();
+        if (signaledCount > 0)
+        {
+            diagnostics.Add($"Signaled cancellation to {signaledCount} active AgentFramework execution run(s).");
+        }
+
+        if (repairedCount > 0)
+        {
+            diagnostics.Add($"Marked {repairedCount} AgentFramework execution run record(s) cancelled for the cancelled process run(s).");
+        }
+
+        if (signaledCount > 0 || repairedCount > 0)
+        {
+            logger.LogInformation(
+                "Process cancellation signaled {SignaledCount} active AgentFramework execution run(s) and marked {RepairedCount} record(s) cancelled. ProcessRunIds={ProcessRunIds}",
+                signaledCount,
+                repairedCount,
+                string.Join(", ", processRunIds));
+        }
+
+        return diagnostics.Count == 0
+            ? ProcessRuntimeRunCancellationObservationResult.Empty
+            : new ProcessRuntimeRunCancellationObservationResult(diagnostics);
+    }
+
+    private async Task<int> MarkExecutionRunRecordsCancelledAsync(
+        IReadOnlyList<string> processRunIds,
+        DateTimeOffset cancelledAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var processRunIdSet = processRunIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken).ConfigureAwait(false);
+        var activeRuns = executionRuns
+            .Where(run =>
+                processRunIdSet.Contains(run.ProcessRunId) &&
+                IsActiveExecutionRun(run))
+            .OrderBy(run => run.CreatedAtUtc)
+            .ToArray();
+        var repairedCount = 0;
+        foreach (var executionRun in activeRuns)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
+            if (detail is null || !IsActiveExecutionRun(detail.Run))
+            {
+                continue;
+            }
+
+            var cancelledRun = detail.Run with
+            {
+                State = ExecutionState.Failed,
+                Outcome = RunOutcome.Cancelled,
+                ResultSummary = CancellationSummary,
+                UpdatedAtUtc = cancelledAtUtc,
+                CompletedAtUtc = cancelledAtUtc,
+                RuntimeSessionKey = string.Empty,
+                SerializedSessionStateJson = null,
+                PendingApprovals = [],
+                Revision = detail.Run.Revision + 1L
+            };
+            var cancelledSession = detail.ChatSession is null
+                ? null
+                : detail.ChatSession with
+                {
+                    UpdatedAtUtc = cancelledAtUtc,
+                    Compatibility = null,
+                    LatestExecutionRunId = cancelledRun.Id
+                };
+            var cancelledDetail = new ExecutionRunDetail(
+                cancelledRun,
+                cancelledSession,
+                AppendCancellationLog(detail.ExecutionLog, cancelledRun, cancelledAtUtc),
+                detail.Metrics)
+            {
+                UsageObservations = detail.UsageObservations,
+                Approvals = detail.Approvals,
+                Artifacts = detail.Artifacts,
+                Checkpoints = detail.Checkpoints,
+                ToolReceipts = detail.ToolReceipts
+            };
+
+            await executionRunStore.SaveExecutionRunDetailAsync(cancelledDetail, cancellationToken).ConfigureAwait(false);
+            repairedCount++;
+        }
+
+        return repairedCount;
+    }
+
+    private static bool IsActiveExecutionRun(ExecutionRunRecord run)
+    {
+        return run.State is not ExecutionState.Completed and not ExecutionState.Failed;
+    }
+
+    private static IReadOnlyList<ExecutionLogEntry> AppendCancellationLog(
+        IReadOnlyList<ExecutionLogEntry> executionLog,
+        ExecutionRunRecord run,
+        DateTimeOffset cancelledAtUtc)
+    {
+        var entry = new ExecutionLogEntry(
+            Id: Guid.NewGuid(),
+            AgentId: run.AgentId,
+            ChatSessionId: run.ChatSessionId,
+            CreatedAtUtc: cancelledAtUtc,
+            State: ExecutionState.Failed,
+            Phase: CancellationPhase,
+            Message: CancellationSummary)
+        {
+            ExecutionRunId = run.Id
+        };
+
+        var entries = new List<ExecutionLogEntry>(executionLog.Count + 1)
+        {
+            entry
+        };
+        entries.AddRange(executionLog.Where(item => item.Id != entry.Id));
+        return entries;
+    }
+}
+
+internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
+    ProcessPersistenceDbContext dbContext,
+    IAgentFrameworkWorkspaceService workspaceService,
+    AgentFrameworkProcessExecutionClaimRecoveryCoordinator recoveryCoordinator)
+{
+    private const int ExecutionTakePerClaim = 10;
+    private const int MaxCandidateClaims = 250;
+    private const string RecoveryRequestedBy = "agent-execution-reconciliation";
+    private static readonly TimeSpan ExecutionCreationSkew = TimeSpan.FromSeconds(30);
+
+    public async Task<int> ReconcileAsync(CancellationToken cancellationToken = default)
+    {
+        var candidates = await LoadActiveClaimCandidatesAsync(dbContext, cancellationToken).ConfigureAwait(false);
+        var recoveredCount = 0;
+        foreach (var candidate in candidates)
+        {
+            var executionRun = await FindRecoverableExecutionAsync(candidate, cancellationToken).ConfigureAwait(false);
+            if (executionRun is null)
+            {
+                continue;
+            }
+
+            var runId = new ProcessRunId(candidate.RunId);
+            var stepInstanceId = new ProcessStepInstanceId(candidate.StepInstanceId);
+            var recovered = AgentFrameworkProcessExecutionClaimRecoveryCoordinator.IsRecoverableExecutionCompletion(
+                executionRun.State,
+                executionRun.Outcome)
+                ? await recoveryCoordinator.SubmitRecoveredExecutionResultAsync(
+                    executionRun,
+                    runId,
+                    stepInstanceId,
+                    RecoveryRequestedBy,
+                    cancellationToken).ConfigureAwait(false)
+                : await recoveryCoordinator.ReleaseRecoveredExecutionClaimAsync(
+                    executionRun.Id,
+                    runId,
+                    stepInstanceId,
+                    RecoveryRequestedBy,
+                    cancellationToken).ConfigureAwait(false);
+
+            if (recovered)
+            {
+                recoveredCount++;
+            }
+        }
+
+        return recoveredCount;
+    }
+
+    internal static async Task<IReadOnlyList<ActiveProcessClaimCandidate>> LoadActiveClaimCandidatesAsync(
+        ProcessPersistenceDbContext dbContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        return await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state => state.Status == ProcessRuntimeStatus.Active)
+            .Join(
+                dbContext.RuntimeSteps.AsNoTracking(),
+                state => state.RunId,
+                step => step.RunId,
+                (state, step) => new { state.RunId, Step = step })
+            .Where(item =>
+                item.Step.ActiveClaimToken != null &&
+                (item.Step.Status == ProcessRuntimeStepStatus.Claimed ||
+                 item.Step.Status == ProcessRuntimeStepStatus.Running))
+            .Join(
+                dbContext.DispatchClaims.AsNoTracking(),
+                item => item.RunId,
+                claim => claim.RunId,
+                (item, claim) => new { item.RunId, item.Step, Claim = claim })
+            .Where(item =>
+                item.Step.ActiveClaimToken == item.Claim.ClaimToken &&
+                (item.Claim.Status == DispatchClaimStatus.Claimed ||
+                 item.Claim.Status == DispatchClaimStatus.LeaseRenewed ||
+                 item.Claim.Status == DispatchClaimStatus.Reclaimed))
+            .OrderBy(item => item.Claim.ExpiresAtUtc)
+            .Select(item => new ActiveProcessClaimCandidate(
+                item.RunId,
+                item.Step.StepInstanceId,
+                item.Claim.ClaimToken,
+                item.Claim.OwnerId,
+                item.Claim.CreatedAtUtc,
+                item.Claim.ExpiresAtUtc))
+            .Take(MaxCandidateClaims)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    internal static ExecutionRunRecord? SelectRecoverableExecution(
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        ActiveProcessClaimCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(executionRuns);
+
+        var runId = candidate.RunId.ToString("D");
+        var stepId = candidate.StepInstanceId.ToString("D");
+        var earliestCreatedAtUtc = candidate.CreatedAtUtc - ExecutionCreationSkew;
+        var latestExecution = executionRuns
+            .Where(executionRun =>
+                executionRun.CreatedAtUtc >= earliestCreatedAtUtc &&
+                string.Equals(executionRun.ProcessRunId, runId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(executionRun.ProcessStepId, stepId, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(executionRun => executionRun.CreatedAtUtc)
+            .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
+            .FirstOrDefault();
+
+        return latestExecution is not null &&
+               (AgentFrameworkProcessExecutionClaimRecoveryCoordinator.IsRecoverableExecutionFailure(
+                    latestExecution.State,
+                    latestExecution.Outcome) ||
+                AgentFrameworkProcessExecutionClaimRecoveryCoordinator.IsRecoverableExecutionCompletion(
+                    latestExecution.State,
+                    latestExecution.Outcome))
+            ? latestExecution
+            : null;
+    }
+
+    private async Task<ExecutionRunRecord?> FindRecoverableExecutionAsync(
+        ActiveProcessClaimCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+            new ExecutionRunQuery(
+                Take: ExecutionTakePerClaim,
+                ProcessRunId: candidate.RunId.ToString("D"),
+                ProcessStepId: candidate.StepInstanceId.ToString("D"),
+                CreatedFromUtc: candidate.CreatedAtUtc - ExecutionCreationSkew),
+            cancellationToken).ConfigureAwait(false);
+
+        return SelectRecoverableExecution(executionRuns, candidate);
+    }
+
+    internal sealed record ActiveProcessClaimCandidate(
+        Guid RunId,
+        Guid StepInstanceId,
+        Guid ClaimToken,
+        string OwnerId,
+        DateTimeOffset CreatedAtUtc,
+        DateTimeOffset ExpiresAtUtc);
+}
+
+internal sealed class AgentFrameworkProcessExecutionClaimRecoveryWorker(
+    IServiceScopeFactory scopeFactory,
+    IOptions<ProcessRuntimeDispatchQueueOptions> options,
+    ILogger<AgentFrameworkProcessExecutionClaimRecoveryWorker> logger) : BackgroundService
+{
+    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan ReconciliationInterval = TimeSpan.FromSeconds(15);
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (!options.Value.EnableRecovery)
+        {
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(StartupDelay, stoppingToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await using var scope = scopeFactory.CreateAsyncScope();
+                var reconciler = scope.ServiceProvider.GetRequiredService<AgentFrameworkProcessExecutionClaimRecoveryReconciler>();
+                var recoveredCount = await reconciler.ReconcileAsync(stoppingToken).ConfigureAwait(false);
+                if (recoveredCount > 0)
+                {
+                    logger.LogInformation(
+                        "Process execution claim recovery reconciled {RecoveredCount} interrupted claim(s).",
+                        recoveredCount);
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Process execution claim recovery reconciliation failed.");
+            }
+
+            try
+            {
+                await Task.Delay(ReconciliationInterval, stoppingToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+        }
+    }
 }

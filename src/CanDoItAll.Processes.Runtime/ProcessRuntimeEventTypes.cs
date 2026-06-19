@@ -16,6 +16,8 @@ public static class ProcessRuntimeEventTypes
 
     public static ProcessEventType ProcessRunFailed { get; } = new("ProcessRunFailed");
 
+    public static ProcessEventType ProcessRunBlocked { get; } = new("ProcessRunBlocked");
+
     public static ProcessEventType ProcessRunReactivated { get; } = new("ProcessRunReactivated");
 
     public static ProcessEventType StepReady { get; } = new("StepReady");

@@ -23,6 +23,8 @@ public sealed class ProcessLaunchPromptTests
         Assert.DoesNotContain("process_step_outcome_result", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Do not write evidence under output/", prompt, StringComparison.Ordinal);
+        Assert.Contains("Write refs (choose at least one concrete managed ref for this slot):", prompt, StringComparison.Ordinal);
+        Assert.Contains("include each written concrete artifact ref in evidenceRefs before returning Completed", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -85,11 +87,15 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Return only JSON matching the process_step_outcome_result structured output contract.", prompt, StringComparison.Ordinal);
         Assert.Contains("Governed launch tool: project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not mark Completed until the child run receipt", prompt, StringComparison.Ordinal);
+        Assert.Contains("Stopped-child rule:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not return Blocked only because a stopped child run exists", prompt, StringComparison.Ordinal);
         Assert.Contains("leave LiveRunProfileKey empty", prompt, StringComparison.Ordinal);
         Assert.Contains("BranchName, RepositoryRoot, SessionId", prompt, StringComparison.Ordinal);
         Assert.Contains("ChildManagedArtifactRoot", prompt, StringComparison.Ordinal);
         Assert.Contains("Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle", prompt, StringComparison.Ordinal);
+        Assert.Contains("ExpectedChildEvidenceRefs are preferred lookup candidates", prompt, StringComparison.Ordinal);
         Assert.Contains("Managed artifact refs are workspace-managed relative paths", prompt, StringComparison.Ordinal);
+        Assert.Contains("keep the managed relative ref in evidenceRefs", prompt, StringComparison.Ordinal);
         Assert.Contains("never convert them to external-target paths", prompt, StringComparison.Ordinal);
     }
 
@@ -144,8 +150,9 @@ public sealed class ProcessLaunchPromptTests
 
         Assert.Contains("Producer step: draft-architecture-design - Draft architecture design", prompt, StringComparison.Ordinal);
         Assert.Contains("Artifact expectation: architecture-design - Architecture design draft (Decision)", prompt, StringComparison.Ordinal);
+        Assert.Contains("Artifact refs to inspect (alternatives for this same slot):", prompt, StringComparison.Ordinal);
         Assert.Contains("artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181/steps/draft-architecture-design.md", prompt, StringComparison.Ordinal);
-        Assert.Contains("Runtime rule: this slot is available only after the producer completed.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Use the first existing readable ref for this slot", prompt, StringComparison.Ordinal);
         Assert.Contains("Must describe boundaries and testability.", prompt, StringComparison.Ordinal);
     }
 

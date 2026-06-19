@@ -251,8 +251,27 @@ public static class ToolCapabilityRegistry
 
         capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureReadTools.Select(toolName =>
             Read(toolName, ToolCapabilitySideEffectKind.WorkspaceRead)));
-        capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Select(toolName =>
-            Mutation(toolName, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction))));
+        capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools
+            .Where(toolName =>
+                !string.Equals(toolName, AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(toolName, AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(toolName, AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch, StringComparison.OrdinalIgnoreCase))
+            .Select(toolName =>
+                Mutation(toolName, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction))));
+        capabilities.Add(Mutation(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
+            ToolCapabilitySideEffectKind.ProjectStructureMutation,
+            StaticRequirement(ProcessOperationContractNames.StartProjectNodeProcess)));
+        capabilities.Add(Mutation(
+            AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
+            ToolCapabilitySideEffectKind.ProjectStructureMutation,
+            StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)));
+        capabilities.Add(Mutation(
+            AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
+            ToolCapabilitySideEffectKind.ProjectStructureMutation,
+            StaticRequirement(
+                ProcessOperationContractNames.EscalateOrDecide,
+                ProcessOperationContractNames.ExecuteExternalAction)));
 
         return capabilities.ToDictionary(
             capability => ToolContractCatalog.NormalizeToolName(capability.Name),
@@ -470,6 +489,10 @@ public static class ToolCapabilityRegistry
             [
                 ProcessOperationContractNames.ExternalActionControlled
             ],
+            ProcessOperationContractNames.StartProjectNodeProcess =>
+            [
+                ProcessOperationContractNames.ExternalActionControlled
+            ],
             _ => []
         };
     }
@@ -489,7 +512,8 @@ public static class ToolCapabilityRegistry
     {
         return requirementKind == ToolCapabilityOperationRequirementKind.WorkspaceScript ||
                sideEffectKind == ToolCapabilitySideEffectKind.ExternalAction ||
-               HasOperationRequirement(requirements, ProcessOperationContractNames.ExecuteExternalAction);
+               HasOperationRequirement(requirements, ProcessOperationContractNames.ExecuteExternalAction) ||
+               HasOperationRequirement(requirements, ProcessOperationContractNames.StartProjectNodeProcess);
     }
 
     private static bool CanReadExternalTarget(

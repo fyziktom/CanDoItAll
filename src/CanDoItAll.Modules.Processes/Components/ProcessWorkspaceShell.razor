@@ -1560,6 +1560,10 @@
                         <span class="processes-runtime-run-card__badges">
                             <StatusBadge Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" />
                             <StatusBadge Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" />
+                            @if (run.WaitingOnChildRuns.Count > 0)
+                            {
+                                <StatusBadge Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" />
+                            }
                             <StatusBadge Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" />
                         </span>
                     </button>
@@ -1699,8 +1703,24 @@
             <CompactStat Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" TooltipText="Projected run status." />
             <CompactStat Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" TooltipText="Recent events kept in the live run snapshot." />
             <CompactStat Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" TooltipText="Manager incidents projected for this run." />
+            @if (run.WaitingOnChildRuns.Count > 0)
+            {
+                <CompactStat Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" TooltipText="Parent steps waiting on active child process runs." />
+            }
+            @if (run.CurrentStep is not null)
+            {
+                <CompactStat Tone="neutral" Text="@run.CurrentStep.StepKey" TooltipText="@run.CurrentStep.Summary" />
+            }
             <CompactStat Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" TooltipText="Latest runtime event time." />
         </CompactStatStrip>
+        @if (run.CurrentStep is not null)
+        {
+            @RenderCurrentStep(run.CurrentStep)
+        }
+        @if (run.WaitingOnChildRuns.Count > 0)
+        {
+            @RenderChildRunWaits(run)
+        }
         <Grid Gap="LayoutGap.Medium" ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
             <SurfaceCard Soft="true">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recent events" />
@@ -1739,6 +1759,72 @@
             </SurfaceCard>
         </Grid>
     </Stack>;
+
+    private RenderFragment RenderChildRunWaits(ProcessLiveProcessSnapshot run) => @<SurfaceCard Soft="true"
+                                                                                                 data-testid="processes-child-run-waits">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Child runs" />
+                <h3 class="text-base font-semibold text-slate-900">@FormatCount(run.WaitingOnChildRuns.Count, "wait", "waits")</h3>
+            </Stack>
+            <StatusBadge Tone="info" Text="Subprocess" />
+        </Split>
+        @if (run.WaitingOnChildRuns.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No parent step is waiting on an active child process run.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var wait in run.WaitingOnChildRuns)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-child-run-wait-row">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                    <StatusBadge Tone="neutral" Text="@wait.ParentStepKey" />
+                                    <StatusBadge Tone="info" Text="@($"child {wait.ChildRunId.ToString("N")[..8]}")" />
+                                    @if (!string.IsNullOrWhiteSpace(wait.ChildStepStatus))
+                                    {
+                                        <StatusBadge Tone="warning" Text="@wait.ChildStepStatus" />
+                                    }
+                                </Cluster>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">@wait.Summary</p>
+                            </div>
+                            <Button Icon="open_in_new"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    title="Open child run"
+                                    aria-label="Open child run"
+                                    Click="@(() => OpenChildRunAsync(wait.ChildRunId))" />
+                        </Split>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private static RenderFragment RenderCurrentStep(ProcessRuntimeCurrentStepProjection step) => @<SurfaceCard Soft="true"
+                                                                                                  data-testid="processes-current-step">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current step" />
+                <h3 class="text-base font-semibold text-slate-900">@step.StepKey</h3>
+            </Stack>
+            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                <StatusBadge Tone="info" Text="@step.StepStatus" />
+                @if (step.IsLeaseExpired)
+                {
+                    <StatusBadge Tone="warning" Text="Lease expired" />
+                }
+                else if (step.IsWorking)
+                {
+                    <StatusBadge Tone="success" Text="Working" />
+                }
+            </Cluster>
+        </Split>
+        <p class="mt-3 text-sm leading-6 text-slate-700">@step.Summary</p>
+    </SurfaceCard>;
 
     private RenderFragment RenderEventDetailDialog(ProcessTimelineEventProjection runtimeEvent) => @<Stack GapScale="LayoutGap.Medium"
                                                                                                           data-testid="processes-runtime-event-detail-content">
@@ -1812,6 +1898,20 @@
     {
         runDetailSnapshot = run;
         runDetailDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenChildRunAsync(Guid runId)
+    {
+        selectedRuntimeRunId = runId;
+        runDetailSnapshot = CurrentShell.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == runId);
+        if (runDetailSnapshot is null)
+        {
+            Navigation.NavigateTo(ProjectId.HasValue
+                ? $"/projects/{ProjectId.Value:D}/processes/live?runId={runId:D}"
+                : $"/processes/live?runId={runId:D}");
+        }
+
         return Task.CompletedTask;
     }
 
@@ -2129,6 +2229,17 @@
             return $"Cause: {EnsureSentence(incident.SafeSummary)}";
         }
 
+        var childWait = run.WaitingOnChildRuns.FirstOrDefault();
+        if (childWait is not null)
+        {
+            return $"Waiting: {EnsureSentence(childWait.Summary)}";
+        }
+
+        if (run.CurrentStep is not null)
+        {
+            return $"Current: {EnsureSentence(run.CurrentStep.Summary)}";
+        }
+
         var runtimeEvent = ResolveRunCardEvent(run.RecentEvents);
         return runtimeEvent is null
             ? "No recent runtime events are attached to this run."
@@ -2178,6 +2289,9 @@
            eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||
            eventType.Contains("Incident", StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatCount(int count, string singular, string plural)
+        => $"{count.ToString(CultureInfo.InvariantCulture)} {(count == 1 ? singular : plural)}";
 
     private static string ResolveExecutionTone(ExecutionState state)
         => state switch

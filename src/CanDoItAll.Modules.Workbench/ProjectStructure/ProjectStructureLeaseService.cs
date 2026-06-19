@@ -8,6 +8,9 @@ public sealed class ProjectStructureLeaseService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock)
 {
+    private static readonly TimeSpan MutationLeaseConflictRetryWindow = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan MutationLeaseConflictRetryPadding = TimeSpan.FromMilliseconds(250);
+
     public async Task<ProjectStructureLeaseSnapshot> AcquireAsync(
         ProjectStructureLeaseAcquireRequest request,
         ProjectStructureAgentContext agent,
@@ -207,10 +210,7 @@ public sealed class ProjectStructureLeaseService(
             return await callback(cancellationToken);
         }
 
-        var acquiredLease = await AcquireAsync(
-            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, scopeKey, reason, 5),
-            agent,
-            cancellationToken);
+        var acquiredLease = await AcquireMutationLeaseWithShortConflictRetryAsync(scopeKey, agent, reason, cancellationToken);
 
         try
         {
@@ -221,8 +221,37 @@ public sealed class ProjectStructureLeaseService(
             await ReleaseAsync(
                 new ProjectStructureLeaseReleaseRequest(ProjectStructureLeaseScopeKind.Project, scopeKey, acquiredLease.LeaseToken),
                 agent,
-                cancellationToken);
+                CancellationToken.None);
         }
+    }
+
+    private async Task<ProjectStructureLeaseSnapshot> AcquireMutationLeaseWithShortConflictRetryAsync(
+        string scopeKey,
+        ProjectStructureAgentContext agent,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var request = new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, scopeKey, reason, 5);
+
+        try
+        {
+            return await AcquireAsync(request, agent, cancellationToken);
+        }
+        catch (ProjectStructureLeaseConflictException exception) when (ShouldRetryShortMutationLeaseConflict(exception.Conflict))
+        {
+            var delay = exception.Conflict.ExpiresAtUtc - clock.GetUtcNow() + MutationLeaseConflictRetryPadding;
+            if (delay > TimeSpan.Zero)
+            {
+                await Task.Delay(delay, cancellationToken);
+            }
+
+            return await AcquireAsync(request, agent, cancellationToken);
+        }
+    }
+
+    private bool ShouldRetryShortMutationLeaseConflict(ProjectStructureLeaseConflict conflict)
+    {
+        return conflict.ExpiresAtUtc - clock.GetUtcNow() <= MutationLeaseConflictRetryWindow;
     }
 
     private static void ValidateScope(ProjectStructureLeaseScopeKind scopeKind, string scopeKey)

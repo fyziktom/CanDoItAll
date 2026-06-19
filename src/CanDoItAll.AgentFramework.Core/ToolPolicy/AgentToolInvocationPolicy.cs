@@ -159,6 +159,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static readonly Regex ConsecutiveSlashRegex = new(
         "/{2,}",
         RegexOptions.CultureInvariant);
+    private static readonly Regex WindowsNativeAbsolutePathRegex = new(
+        "^[A-Za-z]:[\\\\/]",
+        RegexOptions.CultureInvariant);
     private static readonly HashSet<string> ExternalTargetManagedWorkspaceIsolationTools = new(StringComparer.OrdinalIgnoreCase)
     {
         ToolContractCatalog.WorkspaceListFiles,
@@ -1312,7 +1315,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        if (allowedAliases.Count == 0)
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
+        if (readableAliases.Length == 0)
         {
             return null;
         }
@@ -1343,7 +1352,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        if (allowedAliases.Count == 0)
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
+        if (readableAliases.Length == 0)
         {
             return null;
         }
@@ -1426,7 +1441,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        if (allowedAliases.Count == 0)
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
+        if (readableAliases.Length == 0)
         {
             return null;
         }
@@ -1443,6 +1464,25 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         foreach (var pathArgument in pathArguments)
         {
+            var rawPath = NormalizeToolArgument(pathArgument.Value);
+            if (BroadManagedWorkspaceDiscoveryTools.Contains(context.ToolName) &&
+                IsBroadManagedWorkspacePath(rawPath))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    "This governed run has a grounded external product target. Broad managed-workspace root discovery is denied because it can pull stale source or helper files from unrelated runs; list or search the grounded external-target alias or current-run artifact folders instead.");
+            }
+
+            var nativeAbsolutePathDecision = EvaluateNativeAbsoluteWorkspaceToolPath(
+                context,
+                signature,
+                rawPath,
+                readableAliases);
+            if (nativeAbsolutePathDecision is not null)
+            {
+                return nativeAbsolutePathDecision;
+            }
+
             var normalizedPath = NormalizeManagedWorkspacePath(pathArgument.Value);
             if (string.IsNullOrWhiteSpace(normalizedPath) ||
                 IsExternalTargetAliasPath(normalizedPath))
@@ -1463,6 +1503,14 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
                     $"This governed run has a grounded external product target. Broad managed evidence discovery at '{normalizedPath}' is denied because it can pull stale artifacts from unrelated runs; list or search the grounded external-target alias or current-run artifact root '{BuildCurrentRunManagedArtifactRoot(context)}' instead.");
+            }
+
+            if (BroadManagedWorkspaceDiscoveryTools.Contains(context.ToolName) &&
+                IsBroadManagedProcessRunDiscoveryPath(normalizedPath))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed run has a grounded external product target. Broad process-run artifact discovery at '{normalizedPath}' is denied because it can pull stale artifacts from unrelated runs; list or search a specific current-run or child-run artifact folder instead.");
             }
 
             if (IsManagedOutputPath(normalizedPath) &&
@@ -1495,6 +1543,45 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateNativeAbsoluteWorkspaceToolPath(
+        ToolInvocationPolicyContext context,
+        string signature,
+        string rawPath,
+        IReadOnlyList<string> readableAliases)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath) ||
+            IsExternalTargetAliasPath(rawPath) ||
+            !IsNativeAbsolutePath(rawPath))
+        {
+            return null;
+        }
+
+        var normalizedAlias = NormalizeExternalTargetAlias(rawPath);
+        if (string.IsNullOrWhiteSpace(normalizedAlias))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed run has a grounded external product target. Native absolute path '{rawPath}' is outside the workspace-tool boundary; use a grounded external-target alias or a relative current-run artifact path.");
+        }
+
+        if (IsExplicitManagedWorkspaceFileRead(context, rawPath) ||
+            IsExplicitManagedProjectMediaRead(context, rawPath))
+        {
+            return null;
+        }
+
+        if (IsAllowedExternalTargetAlias(normalizedAlias, readableAliases))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed run has a grounded external product target. Workspace tools must use grounded external-target aliases, not native absolute paths. Use '{normalizedAlias}' instead of '{rawPath}'.");
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"This governed run has a grounded external product target. Native absolute path '{rawPath}' resolves to '{normalizedAlias}', which is outside the current-run external-target roots; use the grounded external-target alias or current-run artifact folders instead.");
     }
 
     private static ToolInvocationPolicyDecision? EvaluateReadOnlyExternalTargetMutation(
@@ -1807,6 +1894,22 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                segments.Length == 1;
     }
 
+    private static bool IsBroadManagedProcessRunDiscoveryPath(string normalizedPath)
+    {
+        var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 2 &&
+            string.Equals(segments[0], "artifacts", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(segments[1], "process-runs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return segments.Length == 5 &&
+               string.Equals(segments[0], "artifacts", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[1], "scopes", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[4], "process-runs", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsShallowSharedManagedEvidencePath(string normalizedPath)
     {
         var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -1831,6 +1934,95 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     {
         var dotIndex = segment.LastIndexOf('.');
         return dotIndex > 0 && dotIndex < segment.Length - 1;
+    }
+
+    private static bool IsNativeAbsolutePath(string path)
+    {
+        return WindowsNativeAbsolutePathRegex.IsMatch(path) ||
+               path.StartsWith(@"\\", StringComparison.Ordinal) ||
+               path.StartsWith("//", StringComparison.Ordinal);
+    }
+
+    private static bool IsExplicitManagedProjectMediaRead(
+        ToolInvocationPolicyContext context,
+        string path)
+    {
+        if (!string.Equals(context.ToolName, ToolContractCatalog.WorkspaceReadFile, StringComparison.OrdinalIgnoreCase) ||
+            context.Classification != ToolInvocationClassification.Read)
+        {
+            return false;
+        }
+
+        var normalizedPath = NormalizeManagedWorkspacePath(path);
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            return false;
+        }
+
+        const string relativePrefix = "managed-files/project-media/files/";
+        const string absoluteMarker = "/managed-files/project-media/files/";
+        var payload = normalizedPath.StartsWith(relativePrefix, StringComparison.OrdinalIgnoreCase)
+            ? normalizedPath[relativePrefix.Length..]
+            : ExtractAfterMarker(normalizedPath, absoluteMarker);
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return false;
+        }
+
+        var segments = payload.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length >= 2 && HasFileExtension(segments[^1]);
+    }
+
+    private static bool IsExplicitManagedWorkspaceFileRead(
+        ToolInvocationPolicyContext context,
+        string path)
+    {
+        if (!string.Equals(context.ToolName, ToolContractCatalog.WorkspaceReadFile, StringComparison.OrdinalIgnoreCase) ||
+            context.Classification != ToolInvocationClassification.Read)
+        {
+            return false;
+        }
+
+        var normalizedPath = NormalizeManagedWorkspacePath(path);
+        var payload = ExtractAfterMarker(normalizedPath, "/workspace/");
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return false;
+        }
+
+        payload = NormalizeManagedWorkspacePath(payload);
+        if (IsBroadManagedWorkspacePath(payload) ||
+            IsDeniedExternalRunManagedPath(payload))
+        {
+            return false;
+        }
+
+        var segments = payload.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 0 ||
+            !HasFileExtension(segments[^1]))
+        {
+            return false;
+        }
+
+        return IsAllowedExternalRunManagedPath(payload) ||
+               (segments.Length == 1 && IsManagedEvidenceFileName(segments[0]));
+    }
+
+    private static bool IsManagedEvidenceFileName(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        return extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".json", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".txt", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".yml", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".log", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ExtractAfterMarker(string value, string marker)
+    {
+        var index = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        return index < 0 ? string.Empty : value[(index + marker.Length)..];
     }
 
     private static string BuildCurrentRunManagedArtifactRoot(ToolInvocationPolicyContext context)

@@ -168,8 +168,8 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         - Slot {slotId}
           Producer step: {sourceStep.Key} - {sourceStep.Title}
           Artifact expectation: {expectationKey} - {expectationTitle} ({artifactKind})
-          Artifact refs to inspect: {BuildStepArtifactPath(request.ManagedArtifactRoot, sourceStep.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, sourceStep.Key)}
-          Runtime rule: this slot is available only after the producer completed.
+          Artifact refs to inspect (alternatives for this same slot): {BuildStepArtifactPath(request.ManagedArtifactRoot, sourceStep.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, sourceStep.Key)}
+          Runtime rule: this slot is available only after the producer completed. Use the first existing readable ref for this slot; do not block only because one alternative ref is missing when another listed ref exists.
           Validation: {validation}
         """;
     }
@@ -201,8 +201,8 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         {
             lines.Add($"""
             - Slot {slotId}
-              Write refs: {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}
-              Completion rule: include the written managed artifact reference before returning a completed result.
+              Write refs (choose at least one concrete managed ref for this slot): {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}
+              Completion rule: write at least one listed managed ref for the slot and include each written concrete artifact ref in evidenceRefs before returning Completed.
             """);
         }
 
@@ -227,8 +227,8 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         return $"""
         - Slot {slotId}
           Artifact expectation: {expectation.Key} - {title} ({artifactKind})
-          Write refs: {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, request.Step.Key)}
-          Completion rule: include the written managed artifact reference before returning a completed result.
+          Write refs (choose at least one concrete managed ref for this slot): {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, request.Step.Key)}
+          Completion rule: write at least one listed managed ref for the slot and include each written concrete artifact ref in evidenceRefs before returning Completed. If writing under the step directory, include the exact file path, not only the directory.
           Validation: {validation}
         """;
     }
@@ -250,12 +250,14 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
             : step.SubprocessDefinitionSnapshotName.Trim();
         var completionRule = string.IsNullOrWhiteSpace(step.SubprocessProcessKey)
             ? "This step is marked as a subprocess but has no child process definition key. Return a blocked result unless upstream evidence already supplies the missing child run."
-            : "Complete only after the child process result and required child artifacts are available through the configured subprocess driver.";
+            : "Complete only after the child process result and required child artifacts are available through the configured subprocess driver. A stopped child run is historical evidence, not an active wait; inspect it, then complete from valid evidence or relaunch the child when evidence is missing and launch is allowed.";
 
         return $"""
         - Child process definition key: {subprocessKey}
         - Child definition snapshot name: {snapshotName}
+        - Scope rule: use the parent step's assigned project node. Leave ParentProjectNodeId empty unless the parent launch context has no project node. Do not pass ProcessRunNodeId as ParentProjectNodeId.
         - Completion rule: {completionRule}
+        - Stopped-child rule: do not return blocked only because a previous child run is Completed, Failed, Cancelled, or Blocked.
         """;
     }
 

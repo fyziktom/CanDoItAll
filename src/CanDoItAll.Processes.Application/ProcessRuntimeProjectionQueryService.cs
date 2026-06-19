@@ -44,7 +44,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs.Add(run);
         }
 
+        runs = (await ReconcileLiveActivityAsync(runs, nowUtc, cancellationToken).ConfigureAwait(false)).ToList();
         runs = (await EnrichOperatorActionsAsync(runs, nowUtc, cancellationToken).ConfigureAwait(false)).ToList();
+        runs = (await EnrichCurrentStepsAsync(runs, nowUtc, cancellationToken).ConfigureAwait(false)).ToList();
+        runs = (await EnrichChildRunWaitsAsync(runs, cancellationToken).ConfigureAwait(false)).ToList();
 
         runs.Sort(static (left, right) =>
         {
@@ -247,7 +250,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
-        var activeRuns = runs.Where(run => run.IsActive).ToArray();
+        var activeRuns = runs.Where(CanHaveActiveAgents).ToArray();
         if (runtimeStateStore is null || assignmentStore is null || activeRuns.Length == 0)
         {
             return [];
@@ -381,6 +384,41 @@ public sealed class ProcessRuntimeProjectionQueryService(
             .ToArray();
     }
 
+    private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> ReconcileLiveActivityAsync(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        if (runtimeStateStore is null || runs.Count == 0)
+        {
+            return runs;
+        }
+
+        var reconciled = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            if (run.Status != ProcessProjectedRunStatus.NeedsAttention)
+            {
+                reconciled.Add(run);
+                continue;
+            }
+
+            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                reconciled.Add(run);
+                continue;
+            }
+
+            var isActive = HasOpenNonExpiredClaims(state, nowUtc);
+            reconciled.Add(run.IsActive == isActive
+                ? run
+                : run with { IsActive = isActive });
+        }
+
+        return reconciled;
+    }
+
     private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichOperatorActionsAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
         DateTimeOffset nowUtc,
@@ -443,8 +481,215 @@ public sealed class ProcessRuntimeProjectionQueryService(
         return enriched;
     }
 
+    private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichCurrentStepsAsync(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        {
+            return runs;
+        }
+
+        var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            if (!CanHaveRuntimeDetails(run))
+            {
+                enriched.Add(ClearCurrentStep(run));
+                continue;
+            }
+
+            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            if (state is null)
+            {
+                enriched.Add(ClearCurrentStep(run));
+                continue;
+            }
+
+            var assignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var assignmentsByStep = assignments
+                .GroupBy(assignment => assignment.StepInstanceId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var currentStep = ResolveCurrentStep(state);
+            if (currentStep is null)
+            {
+                enriched.Add(ClearCurrentStep(run));
+                continue;
+            }
+
+            assignmentsByStep.TryGetValue(currentStep.StepInstanceId, out var assignment);
+            enriched.Add(run with
+            {
+                CurrentStep = CreateCurrentStepProjection(run, state, currentStep, assignment, nowUtc)
+            });
+        }
+
+        return enriched;
+    }
+
+    private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichChildRunWaitsAsync(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        CancellationToken cancellationToken)
+    {
+        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        {
+            return runs;
+        }
+
+        var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            if (!CanHaveRuntimeDetails(run))
+            {
+                enriched.Add(ClearChildRunWaits(run));
+                continue;
+            }
+
+            var parentState = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            if (parentState is null)
+            {
+                enriched.Add(ClearChildRunWaits(run));
+                continue;
+            }
+
+            var parentAssignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var parentAssignmentsByStep = parentAssignments
+                .GroupBy(assignment => assignment.StepInstanceId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var childAssignments = await assignmentStore.FindByLaunchVariablesAsync(
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["ParentProcessRunId"] = run.RunId.Value.ToString("D")
+                },
+                cancellationToken).ConfigureAwait(false);
+            if (childAssignments.Count == 0)
+            {
+                enriched.Add(ClearChildRunWaits(run));
+                continue;
+            }
+
+            var childAssignmentsByParentStep = childAssignments
+                .Select(assignment => new
+                {
+                    Assignment = assignment,
+                    ParentStepId = TryReadStepId(assignment.LaunchVariables, "ParentProcessStepId")
+                })
+                .Where(item => item.ParentStepId is not null)
+                .GroupBy(item => item.ParentStepId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(item => item.Assignment).ToArray() as IReadOnlyList<ProcessRuntimeStepAssignment>);
+            if (childAssignmentsByParentStep.Count == 0)
+            {
+                enriched.Add(ClearChildRunWaits(run));
+                continue;
+            }
+
+            var waits = new List<ProcessRuntimeChildRunWaitProjection>();
+            foreach (var parentStep in parentState.Steps.Where(IsChildWaitParentStepCandidate))
+            {
+                if (!parentAssignmentsByStep.TryGetValue(parentStep.StepInstanceId, out var parentAssignment) ||
+                    !childAssignmentsByParentStep.TryGetValue(parentStep.StepInstanceId, out var linkedChildAssignments))
+                {
+                    continue;
+                }
+
+                foreach (var childGroup in linkedChildAssignments.GroupBy(assignment => assignment.RunId))
+                {
+                    if (childGroup.Key == run.RunId)
+                    {
+                        continue;
+                    }
+
+                    var childState = await runtimeStateStore.LoadAsync(childGroup.Key, cancellationToken).ConfigureAwait(false);
+                    if (childState is null ||
+                        ProcessRuntimeTerminalStates.IsRunTerminal(childState.Status) ||
+                        childState.Status == ProcessRuntimeStatus.Blocked)
+                    {
+                        continue;
+                    }
+
+                    var childAssignmentsByStep = childGroup
+                        .GroupBy(assignment => assignment.StepInstanceId)
+                        .ToDictionary(group => group.Key, group => group.First());
+                    var childStep = ResolveCurrentStep(childState);
+                    ProcessRuntimeStepAssignment? childAssignment = null;
+                    if (childStep is not null)
+                    {
+                        childAssignmentsByStep.TryGetValue(childStep.StepInstanceId, out childAssignment);
+                    }
+
+                    waits.Add(new ProcessRuntimeChildRunWaitProjection(
+                        run.RunId.Value,
+                        parentStep.StepInstanceId.Value,
+                        parentAssignment.StepKey,
+                        parentStep.Status.ToString(),
+                        childState.RunId.Value,
+                        childState.Status.ToString(),
+                        childStep is null
+                            ? null
+                            : FirstNonEmpty(childAssignment?.StepKey, childStep.StepInstanceId.Value.ToString("D")),
+                        childStep?.Status.ToString(),
+                        BuildChildRunWaitSummary(parentAssignment, parentStep, childState, childStep, childAssignment)));
+                }
+            }
+
+            enriched.Add(run with
+            {
+                WaitingOnChildRuns = waits
+                    .OrderBy(wait => wait.ParentStepKey, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(wait => wait.ChildRunId)
+                    .ToArray()
+            });
+        }
+
+        return enriched;
+    }
+
+    private static ProcessLiveProcessSnapshot ClearCurrentStep(ProcessLiveProcessSnapshot run)
+        => run.CurrentStep is null
+            ? run
+            : run with { CurrentStep = null };
+
+    private static ProcessLiveProcessSnapshot ClearChildRunWaits(ProcessLiveProcessSnapshot run)
+        => run.WaitingOnChildRuns is { Count: 0 }
+            ? run
+            : run with { WaitingOnChildRuns = [] };
+
     private static bool CanHaveOperatorActions(ProcessLiveProcessSnapshot run)
-        => run.IsActive || run.Status is ProcessProjectedRunStatus.Failed;
+        => CanHaveRuntimeDetails(run) || run.Status is ProcessProjectedRunStatus.Failed;
+
+    private static bool CanHaveRuntimeDetails(ProcessLiveProcessSnapshot run)
+        => run.IsActive || run.Status is ProcessProjectedRunStatus.NeedsAttention;
+
+    private static bool CanHaveActiveAgents(ProcessLiveProcessSnapshot run)
+        => run.IsActive || run.Status is ProcessProjectedRunStatus.NeedsAttention;
+
+    private static bool IsChildWaitParentStepCandidate(ProcessRuntimeStepState step)
+        => step.IsExecutable &&
+           !ProcessRuntimeTerminalStates.IsStepTerminal(step.Status) &&
+           step.Status is (ProcessRuntimeStepStatus.Waiting or
+               ProcessRuntimeStepStatus.Blocked or
+               ProcessRuntimeStepStatus.Ready or
+               ProcessRuntimeStepStatus.Claimed or
+               ProcessRuntimeStepStatus.Running);
+
+    private static bool IsCurrentStepCandidate(ProcessRuntimeStepState step)
+    {
+        if (!step.IsExecutable || ProcessRuntimeTerminalStates.IsStepTerminal(step.Status))
+        {
+            return false;
+        }
+
+        return step.Status is ProcessRuntimeStepStatus.Running or
+               ProcessRuntimeStepStatus.Claimed or
+               ProcessRuntimeStepStatus.Waiting or
+               ProcessRuntimeStepStatus.Ready or
+               ProcessRuntimeStepStatus.Pending ||
+               step.AttemptNumber > 0 &&
+               step.Status is (ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Blocked);
+    }
 
     private static bool IsOperatorReworkCandidate(
         ProcessRuntimeStateSnapshot state,
@@ -726,6 +971,43 @@ public sealed class ProcessRuntimeProjectionQueryService(
         };
     }
 
+    private static ProcessRuntimeCurrentStepProjection CreateCurrentStepProjection(
+        ProcessLiveProcessSnapshot run,
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step,
+        ProcessRuntimeStepAssignment? assignment,
+        DateTimeOffset nowUtc)
+    {
+        var stepKey = FirstNonEmpty(assignment?.StepKey, step.StepInstanceId.Value.ToString("D"));
+        var roleKey = FirstNonEmpty(assignment?.RoleKey, "unassigned");
+        var roleDisplayName = FirstNonEmpty(assignment?.RoleDisplayName, roleKey);
+        var executorDisplayName = FirstNonEmpty(assignment?.ExecutorDisplayName, "Unassigned executor");
+        var claim = step.ActiveClaimToken is { } activeClaimToken
+            ? state.Claims.FirstOrDefault(item => item.ClaimToken == activeClaimToken)
+            : null;
+        var isLeaseExpired = claim is not null && claim.ExpiresAtUtc < nowUtc;
+        var isClaimOpen = claim?.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed;
+        var isWorking = isClaimOpen &&
+            !isLeaseExpired &&
+            step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
+
+        return new ProcessRuntimeCurrentStepProjection(
+            run.RunId.Value,
+            step.StepInstanceId.Value,
+            stepKey,
+            step.Status.ToString(),
+            roleKey,
+            roleDisplayName,
+            executorDisplayName,
+            step.AttemptNumber,
+            isWorking,
+            isLeaseExpired,
+            state.UpdatedAtUtc,
+            claim?.CreatedAtUtc,
+            claim?.ExpiresAtUtc,
+            BuildCurrentStepSummary(stepKey, step, roleDisplayName, executorDisplayName, claim, isLeaseExpired));
+    }
+
     private static string ResolveCurrentActivity(ProcessExecutionObservation observation)
     {
         var latestActivity = observation.RecentActivities
@@ -753,6 +1035,76 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var staleText = isStale ? " Signal is stale." : string.Empty;
         var outcomeText = string.IsNullOrWhiteSpace(observation.Outcome) ? string.Empty : $" Outcome: {observation.Outcome}.";
         return $"{displayName} is {observation.State} on {stepKey} as {roleKey}.{outcomeText} {currentActivity}{staleText}".Trim();
+    }
+
+    private static ProcessStepInstanceId? TryReadStepId(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string key)
+    {
+        return launchVariables.TryGetValue(key, out var value) &&
+               Guid.TryParse(value, out var stepId)
+            ? new ProcessStepInstanceId(stepId)
+            : null;
+    }
+
+    private static ProcessRuntimeStepState? ResolveCurrentStep(ProcessRuntimeStateSnapshot state)
+        => state.Steps
+            .Where(IsCurrentStepCandidate)
+            .OrderBy(step => ResolveCurrentStepPriority(step))
+            .ThenByDescending(step => step.AttemptNumber)
+            .ThenBy(step => step.StepInstanceId.Value)
+            .FirstOrDefault();
+
+    private static int ResolveCurrentStepPriority(ProcessRuntimeStepState step)
+        => step.Status switch
+        {
+            ProcessRuntimeStepStatus.Running => 0,
+            ProcessRuntimeStepStatus.Claimed => 1,
+            ProcessRuntimeStepStatus.Waiting => 2,
+            ProcessRuntimeStepStatus.Failed when step.AttemptNumber > 0 => 3,
+            ProcessRuntimeStepStatus.Blocked when step.AttemptNumber > 0 => 4,
+            ProcessRuntimeStepStatus.Ready => 5,
+            ProcessRuntimeStepStatus.Pending => 6,
+            ProcessRuntimeStepStatus.Failed => 7,
+            ProcessRuntimeStepStatus.Blocked => 8,
+            _ => 9
+        };
+
+    private static string BuildCurrentStepSummary(
+        string stepKey,
+        ProcessRuntimeStepState step,
+        string roleDisplayName,
+        string executorDisplayName,
+        DispatchClaimState? claim,
+        bool isLeaseExpired)
+    {
+        var attemptText = step.AttemptNumber <= 0
+            ? "before a dispatch attempt"
+            : $"on attempt {step.AttemptNumber.ToString(CultureInfo.InvariantCulture)}";
+        var claimSummary = claim is null
+            ? "No active dispatch lease is attached."
+            : isLeaseExpired
+                ? $"Lease expired {claim.ExpiresAtUtc.LocalDateTime:g}."
+                : $"Lease expires {claim.ExpiresAtUtc.LocalDateTime:g}.";
+
+        return $"{stepKey} is {step.Status} {attemptText}. Role: {roleDisplayName}. Executor: {executorDisplayName}. {claimSummary}";
+    }
+
+    private static string BuildChildRunWaitSummary(
+        ProcessRuntimeStepAssignment parentAssignment,
+        ProcessRuntimeStepState parentStep,
+        ProcessRuntimeStateSnapshot childState,
+        ProcessRuntimeStepState? childStep,
+        ProcessRuntimeStepAssignment? childAssignment)
+    {
+        var childRunLabel = childState.RunId.Value.ToString("N")[..8];
+        if (childStep is null)
+        {
+            return $"{parentAssignment.StepKey} is {parentStep.Status} while waiting on child run {childRunLabel}; child run is {childState.Status}.";
+        }
+
+        var childStepKey = FirstNonEmpty(childAssignment?.StepKey, childStep.StepInstanceId.Value.ToString("D"));
+        return $"{parentAssignment.StepKey} is {parentStep.Status} while waiting on child run {childRunLabel}; child step {childStepKey} is {childStep.Status}.";
     }
 
     private static bool IsExecutionTerminal(string state)

@@ -8,14 +8,18 @@ namespace CanDoItAll.Processes.Application;
 public sealed class ProcessRuntimeOperatorApplicationService(
     IProcessProjectionClock clock,
     IProcessRuntimeStateStore stateStore,
+    IProcessRuntimeRunHierarchyStore runHierarchyStore,
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeUnitOfWork unitOfWork,
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
-    IEnumerable<IProcessRuntimeStepAssignmentRepairService> assignmentRepairServices)
+    IEnumerable<IProcessRuntimeStepAssignmentRepairService> assignmentRepairServices,
+    IEnumerable<IProcessRuntimeRunCancellationObserver>? cancellationObservers = null)
 {
     private const string OperatorActorId = "process-runtime-operator";
     private const string ReworkInstructionHeading = "Operator rework instruction";
+    private readonly IReadOnlyList<IProcessRuntimeRunCancellationObserver> cancellationObservers =
+        (cancellationObservers ?? []).ToArray();
 
     public async Task<ProcessRuntimeOperatorActionResult> ExecuteAsync(
         ProcessRuntimeOperatorActionCommand command,
@@ -28,6 +32,134 @@ public sealed class ProcessRuntimeOperatorApplicationService(
             ProcessRuntimeOperatorActionKind.RequestRework => await RequestReworkAsync(command, cancellationToken).ConfigureAwait(false),
             _ => throw new ArgumentOutOfRangeException(nameof(command), command.Kind, "Unsupported process runtime operator action.")
         };
+    }
+
+    public async Task<ProcessRuntimeRunCancellationResult> RequestCancellationAsync(
+        ProcessRuntimeRunCancellationCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var state = await stateStore.LoadAsync(command.RunId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Process run '{command.RunId}' was not found.");
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var cascadeDiagnostics = new List<string>();
+        var cancelledDescendantRunIds = new List<ProcessRunId>();
+        var cancelledRunIds = new List<ProcessRunId>();
+        if (state.RunId == state.RootRunId)
+        {
+            var descendantRunIds = await runHierarchyStore
+                .FindCancellableDescendantRunIdsAsync(state.RunId, cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var descendantRunId in descendantRunIds)
+            {
+                var descendantState = await stateStore.LoadAsync(descendantRunId, cancellationToken).ConfigureAwait(false);
+                if (descendantState is null)
+                {
+                    cascadeDiagnostics.Add($"Descendant process run '{descendantRunId.Value:D}' disappeared before cancellation.");
+                    continue;
+                }
+
+                try
+                {
+                    var descendantCommit = await engine.RequestCancellationAsync(
+                        descendantState,
+                        CreateContext(command.RequestedBy),
+                        cancellationToken).ConfigureAwait(false);
+                    if (descendantCommit.Succeeded)
+                    {
+                        cancelledDescendantRunIds.Add(descendantRunId);
+                        cancelledRunIds.Add(descendantRunId);
+                        continue;
+                    }
+
+                    cascadeDiagnostics.AddRange(descendantCommit.Diagnostics.Select(diagnostic =>
+                        $"Descendant process run '{descendantRunId.Value:D}' was not cancelled: {diagnostic.Message}"));
+                }
+                catch (ProcessRuntimeOptimisticConcurrencyException exception)
+                {
+                    cascadeDiagnostics.Add(
+                        $"Descendant process run '{descendantRunId.Value:D}' changed while cancellation was being applied: {exception.Message}");
+                }
+            }
+
+            state = await stateStore.LoadAsync(command.RunId, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Process run '{command.RunId}' was not found.");
+        }
+
+        var commit = await engine.RequestCancellationAsync(
+            state,
+            CreateContext(command.RequestedBy),
+            cancellationToken).ConfigureAwait(false);
+
+        if (commit.Succeeded)
+        {
+            cancelledRunIds.Add(command.RunId);
+            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (cancelledDescendantRunIds.Count > 0)
+        {
+            var descendants = string.Join(", ", cancelledDescendantRunIds.Select(runId => runId.Value.ToString("D")));
+            cascadeDiagnostics.Insert(0, $"Cancellation cascaded to {cancelledDescendantRunIds.Count} descendant process run(s): {descendants}.");
+        }
+
+        if (cancelledRunIds.Count > 0)
+        {
+            cascadeDiagnostics.AddRange(await NotifyCancellationObserversAsync(
+                    command,
+                    cancelledRunIds,
+                    cancellationToken)
+                .ConfigureAwait(false));
+        }
+
+        return new ProcessRuntimeRunCancellationResult(
+            command.RunId,
+            ProcessRuntimeOperatorActionKind.CancelRun,
+            commit.Outcome,
+            commit.State.Status,
+            cascadeDiagnostics
+                .Concat(commit.Diagnostics.Select(diagnostic => diagnostic.Message))
+                .ToArray());
+    }
+
+    private async ValueTask<IReadOnlyList<string>> NotifyCancellationObserversAsync(
+        ProcessRuntimeRunCancellationCommand command,
+        IReadOnlyList<ProcessRunId> cancelledRunIds,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationObservers.Count == 0)
+        {
+            return [];
+        }
+
+        var diagnostics = new List<string>();
+        var observation = new ProcessRuntimeRunCancellationObservation(
+            command.RunId,
+            cancelledRunIds.Distinct().ToArray(),
+            NormalizeRequestedBy(command.RequestedBy),
+            NormalizeReason(command.Reason),
+            NormalizeUtc(clock.GetUtcNow()));
+
+        foreach (var observer in cancellationObservers)
+        {
+            try
+            {
+                var result = await observer.OnRunsCancelledAsync(observation, cancellationToken).ConfigureAwait(false);
+                diagnostics.AddRange(result.Diagnostics);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                diagnostics.Add(
+                    $"Cancellation observer '{observer.GetType().FullName}' failed after cancelling process run(s): {exception.Message}");
+            }
+        }
+
+        return diagnostics;
     }
 
     private async Task<ProcessRuntimeOperatorActionResult> RequestReworkAsync(

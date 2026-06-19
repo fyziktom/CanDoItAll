@@ -6,6 +6,7 @@ This step owns the feature validation branch decision:
 
 - Select `feature-accepted` only when the focused proof satisfies the accepted behavior.
 - Select `feature-repair-required` when proof fails, artifacts are missing, the app cannot launch, implementation is incomplete, or evidence does not map to the accepted behavior.
+- For repair-sourced runs, the focused proof must include the inherited repair target. Do not accept a different behavior while the triggering defect remains untested or failing.
 - Return a completed process-step outcome with the selected branch outcome. Do not return `Blocked` only because product proof failed and can be repaired by the implementation role.
 - Return `Blocked` only when an environment, permission, unavailable tool, or process-contract issue prevents validation or prevents repair from being requested inside this subprocess.
 

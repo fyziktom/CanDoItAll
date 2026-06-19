@@ -37,6 +37,15 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Contains(ProcessOperationContractNames.ReadProjectStructure, allowedOperations);
         Assert.Contains(ProcessOperationContractNames.ExecuteExternalAction, allowedOperations);
         Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var auditScope = Assert.IsType<WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState>(
+                WorkspaceExecutionAuditContext.Current);
+            Assert.NotNull(auditScope.ContextWorkspaceScope);
+            Assert.Equal(WorkspaceScopeKind.Project, auditScope.ContextWorkspaceScope!.Kind);
+            Assert.Equal(projectId.ToString("D"), auditScope.ContextWorkspaceScope.Key);
+        }
     }
 
     [Fact]

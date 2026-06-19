@@ -6,6 +6,8 @@ internal static class BrowserMcpArtifactPathService
 {
     private const string ArtifactsRoot = "artifacts";
     private const string ScopedArtifactsRoot = "artifacts/scopes";
+    private const string PlaywrightMcpRoot = ".playwright-mcp";
+    private const string BrowserArtifactFolder = "browser";
 
     public static void EnsureWritableArtifactDirectories(
         string workspaceRoot,
@@ -27,6 +29,49 @@ internal static class BrowserMcpArtifactPathService
 
             Directory.CreateDirectory(directory);
         }
+    }
+
+    public static BrowserMcpArtifactImportResult TryImportAfterInvocation(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        string? fileName,
+        string? processRunId)
+    {
+        var importedPaths = new List<string>();
+        if (TryMirrorToScopedArtifactPath(workspaceRoot, workspaceScope, fileName, out var scopedRelativePath) &&
+            !string.IsNullOrWhiteSpace(scopedRelativePath))
+        {
+            importedPaths.Add(scopedRelativePath);
+        }
+
+        if (!TryNormalizePlaywrightRelativePath(fileName, out var normalizedFileName) ||
+            !TryNormalizeProcessRunId(processRunId, out var normalizedProcessRunId) ||
+            !TryResolveWorkspacePath(workspaceRoot, normalizedFileName, out var providerNativeFullPath) ||
+            !File.Exists(providerNativeFullPath))
+        {
+            return new BrowserMcpArtifactImportResult(importedPaths);
+        }
+
+        var browserArtifactRelativePath = BuildProcessRunBrowserArtifactPath(normalizedProcessRunId, normalizedFileName);
+        if (TryCopyWorkspaceFile(workspaceRoot, providerNativeFullPath, browserArtifactRelativePath))
+        {
+            importedPaths.Add(browserArtifactRelativePath);
+        }
+
+        if (!workspaceScope.IsDefaultSandbox)
+        {
+            var scopedBrowserArtifactRelativePath = WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(
+                workspaceScope.ArtifactRootRelativePath,
+                RemoveRoot(browserArtifactRelativePath, ArtifactsRoot)));
+            if (TryCopyWorkspaceFile(workspaceRoot, providerNativeFullPath, scopedBrowserArtifactRelativePath))
+            {
+                importedPaths.Add(scopedBrowserArtifactRelativePath);
+            }
+        }
+
+        return new BrowserMcpArtifactImportResult(importedPaths
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray());
     }
 
     public static bool TryMirrorToScopedArtifactPath(
@@ -79,7 +124,9 @@ internal static class BrowserMcpArtifactPathService
     {
         if (!TryNormalizeArtifactRelativePath(fileName, out var normalizedFileName))
         {
-            return [];
+            return TryNormalizePlaywrightRelativePath(fileName, out var normalizedPlaywrightPath)
+                ? [normalizedPlaywrightPath]
+                : [];
         }
 
         if (workspaceScope.IsDefaultSandbox ||
@@ -123,6 +170,92 @@ internal static class BrowserMcpArtifactPathService
             return false;
         }
 
+        return true;
+    }
+
+    private static bool TryNormalizeProcessRunId(
+        string? processRunId,
+        out string normalizedProcessRunId)
+    {
+        normalizedProcessRunId = string.Empty;
+        if (string.IsNullOrWhiteSpace(processRunId))
+        {
+            return false;
+        }
+
+        normalizedProcessRunId = WorkspaceScopeDescriptor.NormalizeRelativePath(processRunId);
+        if (string.IsNullOrWhiteSpace(normalizedProcessRunId) ||
+            normalizedProcessRunId.Contains('/', StringComparison.Ordinal) ||
+            string.Equals(normalizedProcessRunId, "..", StringComparison.Ordinal))
+        {
+            normalizedProcessRunId = string.Empty;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryNormalizePlaywrightRelativePath(
+        string? fileName,
+        out string normalizedFileName)
+    {
+        normalizedFileName = string.Empty;
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return false;
+        }
+
+        normalizedFileName = WorkspaceScopeDescriptor.NormalizeRelativePath(fileName);
+        if (string.IsNullOrWhiteSpace(normalizedFileName) ||
+            Path.IsPathRooted(normalizedFileName) ||
+            !MatchesRoot(normalizedFileName, PlaywrightMcpRoot))
+        {
+            normalizedFileName = string.Empty;
+            return false;
+        }
+
+        var segments = normalizedFileName.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Any(segment => string.Equals(segment, "..", StringComparison.Ordinal)) ||
+            segments.Length < 2)
+        {
+            normalizedFileName = string.Empty;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string BuildProcessRunBrowserArtifactPath(
+        string processRunId,
+        string normalizedProviderNativePath)
+    {
+        var suffix = RemoveRoot(normalizedProviderNativePath, PlaywrightMcpRoot);
+        return WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(
+            ArtifactsRoot,
+            "process-runs",
+            processRunId,
+            BrowserArtifactFolder,
+            suffix));
+    }
+
+    private static bool TryCopyWorkspaceFile(
+        string workspaceRoot,
+        string sourceFullPath,
+        string destinationRelativePath)
+    {
+        if (!TryResolveWorkspacePath(workspaceRoot, destinationRelativePath, out var destinationFullPath))
+        {
+            return false;
+        }
+
+        var destinationDirectory = Path.GetDirectoryName(destinationFullPath);
+        if (string.IsNullOrWhiteSpace(destinationDirectory))
+        {
+            return false;
+        }
+
+        Directory.CreateDirectory(destinationDirectory);
+        File.Copy(sourceFullPath, destinationFullPath, overwrite: true);
         return true;
     }
 
@@ -174,4 +307,9 @@ internal static class BrowserMcpArtifactPathService
                fullPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
                fullPath.StartsWith(normalizedRoot + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
+}
+
+internal sealed record BrowserMcpArtifactImportResult(IReadOnlyList<string> ImportedRelativePaths)
+{
+    public bool Imported => ImportedRelativePaths.Count > 0;
 }

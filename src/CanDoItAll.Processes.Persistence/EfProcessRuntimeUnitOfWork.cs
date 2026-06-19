@@ -8,6 +8,7 @@ namespace CanDoItAll.Processes.Persistence;
 public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbContext) :
     IProcessRuntimeUnitOfWork,
     IProcessRuntimeStateStore,
+    IProcessRuntimeRunHierarchyStore,
     IProcessIdempotencyStore
 {
     public async Task<ProcessRuntimeStateSnapshot?> LoadAsync(
@@ -19,6 +20,25 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             trackChanges: false,
             cancellationToken).ConfigureAwait(false);
         return entity is null ? null : ProcessPersistenceMappers.ToSnapshot(entity);
+    }
+
+    public async Task<IReadOnlyList<ProcessRunId>> FindCancellableDescendantRunIdsAsync(
+        ProcessRunId rootRunId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                state.RootRunId == rootRunId.Value &&
+                state.RunId != rootRunId.Value &&
+                state.Status != ProcessRuntimeStatus.Completed &&
+                state.Status != ProcessRuntimeStatus.Failed &&
+                state.Status != ProcessRuntimeStatus.Cancelled &&
+                state.Status != ProcessRuntimeStatus.CancelRequested)
+            .OrderByDescending(state => state.UpdatedAtUtc)
+            .Select(state => new ProcessRunId(state.RunId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<ProcessRuntimeCommitResult> CommitAsync(
@@ -47,6 +67,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
 
         ValidateAtomicMutation(request.Mutation);
 
+        dbContext.ChangeTracker.Clear();
         var existing = await LoadStateEntityAsync(
             request.Mutation.State.RunId.Value,
             trackChanges: true,
@@ -75,6 +96,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         });
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        dbContext.ChangeTracker.Clear();
         return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
     }
 
@@ -223,8 +245,9 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             existing.ResultReceipts.Count != originalState.AppliedResults.Count ||
             existing.AvailableArtifactSlots.Count != originalState.AvailableArtifactSlots.Count)
         {
-            throw new DbUpdateConcurrencyException(
-                $"Runtime state '{originalState.RunId}' changed before command commit '{originalState.UpdatedAtUtc:O}'.");
+            throw new ProcessRuntimeOptimisticConcurrencyException(
+                originalState.RunId,
+                originalState.UpdatedAtUtc);
         }
     }
 

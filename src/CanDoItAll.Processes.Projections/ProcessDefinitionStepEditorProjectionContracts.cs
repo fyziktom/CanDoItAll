@@ -26,6 +26,7 @@ public enum ProcessDefinitionStepOperationKind
     LaunchRuntime,
     CaptureRuntimeProof,
     ExecuteExternalAction,
+    StartProjectNodeProcess,
     RecoverArtifactsOnly,
     EscalateOrDecide
 }

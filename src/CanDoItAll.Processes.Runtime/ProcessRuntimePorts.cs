@@ -10,6 +10,13 @@ public interface IProcessRuntimeStateStore
         CancellationToken cancellationToken = default);
 }
 
+public interface IProcessRuntimeRunHierarchyStore
+{
+    Task<IReadOnlyList<ProcessRunId>> FindCancellableDescendantRunIdsAsync(
+        ProcessRunId rootRunId,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IProcessRuntimeUnitOfWork
 {
     Task<ProcessRuntimeCommitResult> CommitAsync(

@@ -344,7 +344,7 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
-    public async Task Cancellation_with_open_claim_only_requests_cancel_until_claim_drains()
+    public async Task Cancellation_with_open_claim_terminally_cancels_run_step_and_claim()
     {
         var unitOfWork = new RecordingUnitOfWork();
         var engine = new ProcessRuntimeEngine(unitOfWork);
@@ -370,9 +370,11 @@ public sealed class ProcessRuntimeEngineTests
         var result = await engine.RequestCancellationAsync(state, Context());
 
         Assert.True(result.Succeeded);
-        Assert.Equal(ProcessRuntimeStatus.CancelRequested, result.State.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Running, result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
-        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCancelRequested);
+        Assert.Equal(ProcessRuntimeStatus.Cancelled, result.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Cancelled, result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
+        Assert.Null(result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).ActiveClaimToken);
+        Assert.Equal(DispatchClaimStatus.Cancelled, result.State.Claims.Single().Status);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCancelled);
     }
 
     [Fact]

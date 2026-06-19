@@ -1,5 +1,7 @@
 using System.Reflection;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -10,6 +12,16 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessRuntimeIntegrationAdapterTests
 {
+    private static readonly ProcessStrategyBindingSnapshot Binding = new(
+        new DriverId("driver.runtime"),
+        new StrategyId("strategy.execute"),
+        "1.0.0",
+        "factory.1.0.0",
+        "runtime.1",
+        "runtime.1",
+        "sha256:binding",
+        []);
+
     [Fact]
     public void Product_mutation_completion_requires_evidence_refs()
     {
@@ -72,13 +84,14 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         try
         {
             File.WriteAllText(Path.Combine(outputRoot, "TetrisGame.csproj"), "<Project />");
+            var assignment = CreateProductMutationAssignment(outputRoot);
             var result = ToAdapterResult(
-                CreateProductMutationAssignment(outputRoot),
+                assignment,
                 new ProcessStepOutcomeResult
                 {
                     Status = ProcessStepOutcomeStatus.Completed,
                     Reason = "Implemented the app.",
-                    EvidenceRefs = ["artifacts/process-runs/run-001/steps/implementation.md"],
+                    EvidenceRefs = [BuildStepArtifactRef(assignment)],
                     NextActions = []
                 });
 
@@ -90,6 +103,65 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             DeleteDirectory(outputRoot);
         }
+    }
+
+    [Fact]
+    public void Managed_artifact_completion_requires_evidence_for_produced_slot()
+    {
+        var assignment = CreateManagedArtifactAssignment("review-architecture-design");
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Reviewed the architecture.",
+                EvidenceRefs = [$"artifacts/process-runs/{assignment.RunId.Value:D}/steps/other-step.md"],
+                NextActions = []
+            });
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.produced_artifact_evidence_missing");
+        Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.produced_artifact_evidence_missing");
+        Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+        Assert.Empty(result.ProducedArtifacts);
+    }
+
+    [Fact]
+    public void Managed_artifact_completion_accepts_step_directory_evidence()
+    {
+        var assignment = CreateManagedArtifactAssignment("review-architecture-design");
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Reviewed the architecture.",
+                EvidenceRefs = [BuildStepDirectoryArtifactRef(assignment, "architecture-review-findings.md")],
+                NextActions = []
+            });
+
+        Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+        Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Managed_artifact_completion_accepts_scoped_workspace_step_evidence()
+    {
+        var assignment = CreateManagedArtifactAssignment("review-architecture-design");
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Reviewed the architecture.",
+                EvidenceRefs = [$"artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{assignment.RunId.Value:D}/steps/{assignment.StepKey}.md"],
+                NextActions = []
+            });
+
+        Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+        Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+        Assert.Empty(result.Diagnostics);
     }
 
     [Fact]
@@ -350,6 +422,54 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.Equal(childRunId, pendingRunId);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_defers_when_agent_execution_fails_after_child_run_was_created()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            ".NET architecture specialist",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var parentAssignment = CreateControlledExternalActionAssignment(parentRunId, agent.Id);
+        var childAssignment = CreateChildAssignment(
+            childRunId,
+            parentRunId,
+            parentAssignment.StepInstanceId,
+            parentAssignment.StepKey);
+        var assignmentStore = new InMemoryAssignmentStore(parentAssignment);
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("Provider runtime failed after provider activity."),
+            () => assignmentStore.Add(childAssignment));
+        var adapter = new AgentFrameworkProcessExecutionAdapter(
+            new FakeWorkspaceFactory(workspace),
+            assignmentStore,
+            new InMemoryRuntimeStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Active)));
+
+        var exception = await Assert.ThrowsAsync<ProcessRuntimeDispatchDeferredException>(() =>
+            adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    parentRunId,
+                    parentAssignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    [])).AsTask());
+
+        Assert.Equal(childRunId, exception.DeferredRunId);
+        Assert.True(workspace.ExecuteRunCalled);
+    }
+
     private static ProcessExecutionAdapterResult ToAdapterResult(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
@@ -410,7 +530,42 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             DateTimeOffset.UtcNow);
     }
 
-    private static ProcessRuntimeStepAssignment CreateControlledExternalActionAssignment(ProcessRunId runId)
+    private static ProcessRuntimeStepAssignment CreateManagedArtifactAssignment(string stepKey)
+    {
+        return new ProcessRuntimeStepAssignment(
+            ProcessRunId.New(),
+            ProcessInstancePlanId.New(),
+            ProcessStepInstanceId.New(),
+            stepKey,
+            "solution-architect",
+            "solution-architect",
+            "Solution architect",
+            ProcessLaunchExecutorKinds.Agent,
+            Guid.NewGuid().ToString("D"),
+            ".NET Solution Architect",
+            "Produce managed process evidence.",
+            "sha256:readiness",
+            "Resolved from role fit.",
+            [ArtifactSlotId.New()],
+            [],
+            [ProcessOperationContractNames.WriteManagedProcessArtifacts],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            BranchGate: null,
+            DateTimeOffset.UtcNow);
+    }
+
+    private static string BuildStepArtifactRef(ProcessRuntimeStepAssignment assignment)
+        => $"artifacts/process-runs/{assignment.RunId.Value:D}/steps/{assignment.StepKey}.md";
+
+    private static string BuildStepDirectoryArtifactRef(
+        ProcessRuntimeStepAssignment assignment,
+        string fileName)
+        => $"artifacts/process-runs/{assignment.RunId.Value:D}/{assignment.StepKey}/{fileName}";
+
+    private static ProcessRuntimeStepAssignment CreateControlledExternalActionAssignment(
+        ProcessRunId runId,
+        Guid? agentId = null)
     {
         return new ProcessRuntimeStepAssignment(
             runId,
@@ -421,7 +576,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             "solution-architect",
             "Solution architect",
             ProcessLaunchExecutorKinds.Agent,
-            Guid.NewGuid().ToString("D"),
+            (agentId ?? Guid.NewGuid()).ToString("D"),
             ".NET Solution Architect",
             "Launch and observe the governed architecture subprocess.",
             "sha256:readiness",
@@ -540,6 +695,168 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             now);
     }
 
+    private sealed class FakeWorkspaceFactory(IAgentFrameworkWorkspaceService workspaceService) : ICanDoItAllAgentWorkspaceFactory
+    {
+        public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService()
+            => workspaceService;
+
+        public IAgentFrameworkWorkspaceService GetWorkspaceService(WorkspaceScopeDescriptor scope)
+            => workspaceService;
+
+        public WorkspaceScopeDescriptor GetOrganizationScope()
+            => WorkspaceScopeDescriptor.Organization("unit-test");
+
+        public string GetWorkspaceRoot()
+            => Path.GetTempPath();
+    }
+
+    private sealed class ThrowingWorkspaceService(
+        AgentDefinition agent,
+        Exception executeException,
+        Action? beforeThrow = null) : IAgentFrameworkWorkspaceService
+    {
+        public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
+        {
+            add { }
+            remove { }
+        }
+
+        public bool ExecuteRunCalled { get; private set; }
+
+        public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(
+            bool includeTemplates = true,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<AgentDefinition>>([agent]);
+
+        public Task<ExecutionRunResult> ExecuteRunAsync(
+            ExecutionRunRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ExecuteRunCalled = true;
+            beforeThrow?.Invoke();
+            throw executeException;
+        }
+
+        public Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(
+            Guid teamId,
+            IReadOnlyList<Guid> agentIds,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+            Guid providerId,
+            ProviderTestChatRequest request,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+            Guid providerId,
+            OllamaModelfileRequest request,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(
+            Guid agentId,
+            Guid? preferredSessionId = null,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
+            Guid agentId,
+            Guid? chatSessionId = null,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatSessionRecord> RenameChatSessionAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            string title,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(
+            Guid executionRunId,
+            bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatRuntimeSnapshot> GetChatRuntimeSnapshotAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentRunMetric>> ListMetricsAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveMemoryAsync(MemoryEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(ExecutionRunQuery query, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        private static InvalidOperationException Unused()
+            => new("This fake workspace method is not used by the adapter test.");
+    }
+
     private sealed class InMemoryRuntimeStateStore(params ProcessRuntimeStateSnapshot[] states) : IProcessRuntimeStateStore
     {
         private readonly IReadOnlyDictionary<ProcessRunId, ProcessRuntimeStateSnapshot> stateByRunId =
@@ -554,8 +871,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         }
     }
 
-    private sealed class InMemoryAssignmentStore(params ProcessRuntimeStepAssignment[] assignments) : IProcessRuntimeStepAssignmentStore
+    private sealed class InMemoryAssignmentStore(params ProcessRuntimeStepAssignment[] initialAssignments) : IProcessRuntimeStepAssignmentStore
     {
+        private readonly List<ProcessRuntimeStepAssignment> assignments = [.. initialAssignments];
+
+        public void Add(ProcessRuntimeStepAssignment assignment)
+        {
+            assignments.Add(assignment);
+        }
+
         public ValueTask SaveAsync(
             IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
             CancellationToken cancellationToken = default)

@@ -531,6 +531,19 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 return $"{selectedAgentCount.ToString(CultureInfo.InvariantCulture)} active agent(s) are working on run {selectedRun.RunId.Value.ToString("N")[..8]}; no operator action is currently required.";
             }
 
+            if (selectedLiveRun?.CurrentStep is { } selectedCurrentStep)
+            {
+                return $"Current step: {EnsureSentence(selectedCurrentStep.Summary)} No operator action is currently required unless the lease expires or the step reports a blocker.";
+            }
+
+            var selectedChildWait = selectedLiveRun is null
+                ? null
+                : NormalizeChildRunWaits(selectedLiveRun).FirstOrDefault();
+            if (selectedChildWait is not null)
+            {
+                return $"Waiting on child process: {EnsureSentence(selectedChildWait.Summary)} Open child run {selectedChildWait.ChildRunId.ToString("N")[..8]} for the current blocker or active step.";
+            }
+
             return $"Run {selectedRun.RunId.Value.ToString("N")[..8]} has no current operator action in the selected history window.";
         }
 
@@ -566,6 +579,25 @@ public sealed class ProcessWorkspaceShellProjectionService(
             return $"Cause: {EnsureSentence(cause)} Next action: {nextAction}";
         }
 
+        var childWaitRun = runs
+            .Where(run => NormalizeChildRunWaits(run).Count > 0)
+            .OrderByDescending(run => run.LastEventAtUtc)
+            .FirstOrDefault();
+        if (childWaitRun is not null)
+        {
+            var childWait = NormalizeChildRunWaits(childWaitRun)[0];
+            return $"Waiting on child process: {EnsureSentence(childWait.Summary)} Open child run {childWait.ChildRunId.ToString("N")[..8]} for the current blocker or active step.";
+        }
+
+        var activeCurrentStepRun = runs
+            .Where(run => run.CurrentStep?.IsWorking == true)
+            .OrderByDescending(run => run.CurrentStep!.UpdatedAtUtc)
+            .FirstOrDefault();
+        if (activeCurrentStepRun?.CurrentStep is { } activeCurrentStep)
+        {
+            return $"Active step: {EnsureSentence(activeCurrentStep.Summary)} No operator action is currently required unless the lease expires or the step reports a blocker.";
+        }
+
         var latestAttentionEvent = events
             .Where(runtimeEvent => IsAttentionEventType(runtimeEvent.EventType))
             .OrderByDescending(item => item.OccurredAtUtc)
@@ -596,6 +628,9 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 _ when runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal) => NormalizeEventType(runtimeEvent.EventType),
                 _ => runtimeEvent.Summary
             };
+
+    private static IReadOnlyList<ProcessRuntimeChildRunWaitProjection> NormalizeChildRunWaits(ProcessLiveProcessSnapshot run)
+        => run.WaitingOnChildRuns ?? [];
 
     private static string BuildToolUsageSummary(string toolName, int count, DateTimeOffset lastUsedAtUtc)
         => $"{count.ToString(CultureInfo.InvariantCulture)} event(s), latest {lastUsedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}.";

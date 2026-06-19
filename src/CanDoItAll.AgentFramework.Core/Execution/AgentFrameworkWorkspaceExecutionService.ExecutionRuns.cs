@@ -144,8 +144,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         var startedAt = DateTimeOffset.UtcNow;
         AgentRuntimeResponse? lastRuntimeResponse = null;
+        IAgentExecutionCancellationRegistration? executionCancellation = null;
         try
         {
+            executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
+            var runtimeCancellationToken = executionCancellation.Token;
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
             AgentRuntimeResponse runtimeResponse;
             using (WorkspaceExecutionAuditContext.BeginScope(run))
@@ -159,7 +162,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     approved,
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
-                    cancellationToken,
+                    runtimeCancellationToken,
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: structuredOutput,
                     executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
@@ -184,7 +187,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                         structuredOutput,
                         handoffOptions,
-                        cancellationToken);
+                        runtimeCancellationToken);
 
                     runtimeSession = continuation.Session;
                     runtimeResponse = continuation.Response;
@@ -199,7 +202,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run,
                     structuredOutput,
                     runtimeResponse,
-                    cancellationToken);
+                    runtimeCancellationToken);
                 lastRuntimeResponse = runtimeResponse;
 
                 var assistantMessage = session is null
@@ -303,13 +306,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         catch (Exception exception)
         {
+            var wasCancelled = WasRequestedThroughExecutionRegistry(exception, executionCancellation, cancellationToken);
+            var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
+            var resultSummary = wasCancelled
+                ? "Execution run cancelled because the owning process run was cancelled."
+                : $"Execution run continuation failed: {exception.Message}";
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
                     AgentId: agent.Id,
                     ChatSessionId: run.ChatSessionId,
                     CreatedAtUtc: DateTimeOffset.UtcNow,
-                    Outcome: RunOutcome.Failed,
+                    Outcome: outcome,
                     ProviderName: provider.Name,
                     Model: ResolveModel(agent, provider),
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
@@ -330,8 +338,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
                 CompletedAtUtc = DateTimeOffset.UtcNow,
                 State = ExecutionState.Failed,
-                Outcome = RunOutcome.Failed,
-                ResultSummary = CreateExecutionSummary($"Execution run continuation failed: {exception.Message}"),
+                Outcome = outcome,
+                ResultSummary = CreateExecutionSummary(resultSummary),
                 PendingApprovals = []
             };
 
@@ -365,11 +373,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 agent.Id,
                 run.ChatSessionId,
                 ExecutionState.Failed,
-                "Failed",
-                $"Execution run approval continuation failed: {exception.Message}",
+                wasCancelled ? "Cancelled" : "Failed",
+                wasCancelled
+                    ? resultSummary
+                    : $"Execution run approval continuation failed: {exception.Message}",
                 cancellationToken);
 
+            if (wasCancelled)
+            {
+                throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
+            }
+
             throw;
+        }
+        finally
+        {
+            executionCancellation?.Dispose();
         }
     }
 
@@ -618,8 +637,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         var startedAt = DateTimeOffset.UtcNow;
         AgentRuntimeResponse? lastRuntimeResponse = null;
+        IAgentExecutionCancellationRegistration? executionCancellation = null;
         try
         {
+            executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
+            var runtimeCancellationToken = executionCancellation.Token;
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
             AgentRuntimeResponse runtimeResponse;
             using (WorkspaceExecutionAuditContext.BeginScope(run))
@@ -633,7 +655,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     prompt,
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
                     (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
-                    cancellationToken,
+                    runtimeCancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
                     executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput, handoffOptions));
@@ -658,7 +680,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
                         request.StructuredOutput,
                         handoffOptions,
-                        cancellationToken);
+                        runtimeCancellationToken);
 
                     runtimeSession = continuation.Session;
                     runtimeResponse = continuation.Response;
@@ -673,7 +695,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run,
                     request.StructuredOutput,
                     runtimeResponse,
-                    cancellationToken);
+                    runtimeCancellationToken);
                 lastRuntimeResponse = runtimeResponse;
 
                 var assistantMessage = session is null
@@ -777,13 +799,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         catch (Exception exception)
         {
+            var wasCancelled = WasRequestedThroughExecutionRegistry(exception, executionCancellation, cancellationToken);
+            var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
+            var resultSummary = wasCancelled
+                ? "Execution run cancelled because the owning process run was cancelled."
+                : exception.Message;
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
                     AgentId: agent.Id,
                     ChatSessionId: run.ChatSessionId,
                     CreatedAtUtc: DateTimeOffset.UtcNow,
-                    Outcome: RunOutcome.Failed,
+                    Outcome: outcome,
                     ProviderName: provider.Name,
                     Model: ResolveModel(agent, provider),
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
@@ -803,8 +830,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
                 CompletedAtUtc = DateTimeOffset.UtcNow,
                 State = ExecutionState.Failed,
-                Outcome = RunOutcome.Failed,
-                ResultSummary = CreateExecutionSummary(exception.Message),
+                Outcome = outcome,
+                ResultSummary = CreateExecutionSummary(resultSummary),
                 PendingApprovals = []
             };
 
@@ -838,9 +865,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 agent.Id,
                 run.ChatSessionId,
                 ExecutionState.Failed,
-                "Failed",
-                $"Execution run failed for {provider.Name}: {exception.Message}",
+                wasCancelled ? "Cancelled" : "Failed",
+                wasCancelled
+                    ? resultSummary
+                    : $"Execution run failed for {provider.Name}: {exception.Message}",
                 cancellationToken);
+
+            if (wasCancelled)
+            {
+                throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
+            }
 
             throw session is not null
                 ? new AgentChatRunFailedException(
@@ -857,6 +891,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     provider.Name,
                     ResolveModel(agent, provider),
                     exception);
+        }
+        finally
+        {
+            executionCancellation?.Dispose();
         }
     }
 
@@ -888,6 +926,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return ProviderPricingCalculator.TryCalculate(metric, provider, out var cost)
             ? metric with { CostUsd = cost.TotalUsd }
             : metric;
+    }
+
+    private static bool WasRequestedThroughExecutionRegistry(
+        Exception exception,
+        IAgentExecutionCancellationRegistration? executionCancellation,
+        CancellationToken callerCancellationToken)
+    {
+        return exception is OperationCanceledException &&
+               executionCancellation?.IsCancellationRequested == true &&
+               !callerCancellationToken.IsCancellationRequested;
     }
 
     private static ExecutionRunRecord UpdateRunFromResponse(

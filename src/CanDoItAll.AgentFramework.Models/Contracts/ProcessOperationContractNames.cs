@@ -12,6 +12,7 @@ public static class ProcessOperationContractNames
     public const string LaunchRuntime = "LaunchRuntime";
     public const string CaptureRuntimeProof = "CaptureRuntimeProof";
     public const string ExecuteExternalAction = "ExecuteExternalAction";
+    public const string StartProjectNodeProcess = "StartProjectNodeProcess";
     public const string RecoverArtifactsOnly = "RecoverArtifactsOnly";
     public const string EscalateOrDecide = "EscalateOrDecide";
 
@@ -34,6 +35,7 @@ public static class ProcessOperationContractNames
         LaunchRuntime,
         CaptureRuntimeProof,
         ExecuteExternalAction,
+        StartProjectNodeProcess,
         RecoverArtifactsOnly,
         EscalateOrDecide
     ];

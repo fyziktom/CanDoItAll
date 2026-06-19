@@ -15,6 +15,7 @@ internal static class ProcessesApi
             [
                 "POST /api/processes/launch",
                 "POST /api/processes/runs/{runId}/dispatch",
+                "POST /api/processes/runs/{runId}/cancel",
                 "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
                 "GET /api/processes/live",
                 "GET /api/processes/runs/{runId}",
@@ -83,6 +84,39 @@ internal static class ProcessesApi
             }
         })
         .WithName("DispatchProcessRun");
+
+        processes.MapPost("/runs/{runId:guid}/cancel", async (
+                Guid runId,
+                ProcessRuntimeCancelApiRequest request,
+                ProcessRuntimeOperatorApplicationService operatorService,
+                ProcessRuntimeProjectionCatchupService projectionCatchupService,
+                CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await operatorService
+                    .RequestCancellationAsync(
+                        new ProcessRuntimeRunCancellationCommand(
+                            new ProcessRunId(runId),
+                            string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
+                            request.Reason),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+
+                return Results.Ok(new ProcessRuntimeCancelApiResponse(
+                    result.RunId.Value,
+                    result.Kind.ToString(),
+                    result.Outcome.ToString(),
+                    result.Status.ToString(),
+                    result.Diagnostics));
+            }
+            catch (InvalidOperationException exception)
+            {
+                return ApiEndpointResults.NotFound(exception.Message, "process.run_not_found");
+            }
+        })
+        .WithName("CancelProcessRun");
 
         processes.MapPost("/runs/{runId:guid}/steps/{stepInstanceId:guid}/rework", async (
                 Guid runId,
@@ -267,7 +301,9 @@ internal static class ProcessesApi
             run.FirstEventAtUtc,
             run.LastEventAtUtc,
             MapFreshness(run.Freshness),
-            run.RecentEvents.Select(MapLiveEvent).ToArray());
+            run.RecentEvents.Select(MapLiveEvent).ToArray(),
+            MapCurrentStep(run.CurrentStep),
+            NormalizeChildRunWaits(run).Select(MapChildRunWait).ToArray());
     }
 
     private static ProcessRunDetailApiView MapRunDetail(ProcessRunDetailProjection detail)
@@ -295,6 +331,44 @@ internal static class ProcessesApi
             runtimeEvent.Summary,
             runtimeEvent.RestrictedDiagnosticReference);
     }
+
+    private static ProcessChildRunWaitApiView MapChildRunWait(ProcessRuntimeChildRunWaitProjection wait)
+    {
+        return new ProcessChildRunWaitApiView(
+            wait.ParentRunId,
+            wait.ParentStepInstanceId,
+            wait.ParentStepKey,
+            wait.ParentStepStatus,
+            wait.ChildRunId,
+            wait.ChildRunStatus,
+            wait.ChildStepKey,
+            wait.ChildStepStatus,
+            wait.Summary);
+    }
+
+    private static ProcessCurrentStepApiView? MapCurrentStep(ProcessRuntimeCurrentStepProjection? step)
+    {
+        return step is null
+            ? null
+            : new ProcessCurrentStepApiView(
+                step.RunId,
+                step.StepInstanceId,
+                step.StepKey,
+                step.StepStatus,
+                step.RoleKey,
+                step.RoleDisplayName,
+                step.ExecutorDisplayName,
+                step.AttemptNumber,
+                step.IsWorking,
+                step.IsLeaseExpired,
+                step.UpdatedAtUtc,
+                step.ClaimedAtUtc,
+                step.LeaseExpiresAtUtc,
+                step.Summary);
+    }
+
+    private static IReadOnlyList<ProcessRuntimeChildRunWaitProjection> NormalizeChildRunWaits(ProcessLiveProcessSnapshot run)
+        => run.WaitingOnChildRuns ?? [];
 
     private static ProcessTimelineEventApiView MapTimelineEvent(ProcessTimelineEventProjection runtimeEvent)
     {
@@ -342,6 +416,10 @@ internal sealed record ProcessLaunchApiRequest(
     bool Execute = false);
 
 internal sealed record ProcessDispatchApiRequest(string RequestedBy = "process-api");
+
+internal sealed record ProcessRuntimeCancelApiRequest(
+    string RequestedBy = "process-api",
+    string Reason = "Operator requested process run cancellation.");
 
 internal sealed record ProcessRuntimeReworkApiRequest(
     string RequestedBy = "process-api",
@@ -405,6 +483,13 @@ internal sealed record ProcessRuntimeReworkApiResponse(
     string Status,
     IReadOnlyList<string> Diagnostics);
 
+internal sealed record ProcessRuntimeCancelApiResponse(
+    Guid RunId,
+    string Kind,
+    string Outcome,
+    string Status,
+    IReadOnlyList<string> Diagnostics);
+
 internal sealed record ProcessLiveApiResponse(
     IReadOnlyList<ProcessLiveRunApiView> Runs,
     ProcessProjectionFreshnessApiView? Freshness);
@@ -417,7 +502,36 @@ internal sealed record ProcessLiveRunApiView(
     DateTimeOffset FirstEventAtUtc,
     DateTimeOffset LastEventAtUtc,
     ProcessProjectionFreshnessApiView? Freshness,
-    IReadOnlyList<ProcessLiveEventApiView> RecentEvents);
+    IReadOnlyList<ProcessLiveEventApiView> RecentEvents,
+    ProcessCurrentStepApiView? CurrentStep,
+    IReadOnlyList<ProcessChildRunWaitApiView> WaitingOnChildRuns);
+
+internal sealed record ProcessCurrentStepApiView(
+    Guid RunId,
+    Guid StepInstanceId,
+    string StepKey,
+    string StepStatus,
+    string RoleKey,
+    string RoleDisplayName,
+    string ExecutorDisplayName,
+    int AttemptNumber,
+    bool IsWorking,
+    bool IsLeaseExpired,
+    DateTimeOffset UpdatedAtUtc,
+    DateTimeOffset? ClaimedAtUtc,
+    DateTimeOffset? LeaseExpiresAtUtc,
+    string Summary);
+
+internal sealed record ProcessChildRunWaitApiView(
+    Guid ParentRunId,
+    Guid ParentStepInstanceId,
+    string ParentStepKey,
+    string ParentStepStatus,
+    Guid ChildRunId,
+    string ChildRunStatus,
+    string? ChildStepKey,
+    string? ChildStepStatus,
+    string Summary);
 
 internal sealed record ProcessRunDetailApiView(
     Guid RootRunId,

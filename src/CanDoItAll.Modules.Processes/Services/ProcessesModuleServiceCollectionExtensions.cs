@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -34,6 +36,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<EfProcessRuntimeUnitOfWork>();
         services.TryAddScoped<IProcessRuntimeUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeStateStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
+        services.TryAddScoped<IProcessRuntimeRunHierarchyStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessIdempotencyStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<EfProcessRuntimeEventStore>();
         services.TryAddScoped<IProcessRuntimeEventStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeEventStore>());
@@ -48,6 +51,10 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessStepBriefBuilder, AgentFrameworkProcessStepBriefBuilder>();
         services.TryAddScoped<IProcessExecutionAdapter, AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
+        services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>();
+        services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryReconciler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentExecutionRecoveryObserver, AgentFrameworkProcessExecutionRecoveryObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeRunCancellationObserver, AgentFrameworkProcessRuntimeCancellationObserver>());
         services.TryAddScoped<IProcessLaunchDriverCatalogProvider, StandardProcessLaunchDriverCatalogProvider>();
         services.TryAddScoped<IProcessLaunchExecutorResolver, AgentFrameworkProcessLaunchExecutorResolver>();
         services.TryAddScoped<IProcessRuntimeStepAssignmentRepairService, AgentFrameworkProcessRuntimeStepAssignmentRepairService>();
@@ -57,7 +64,8 @@ public static class ProcessesModuleServiceCollectionExtensions
             configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
         services.TryAddSingleton<ProcessRuntimeDispatchQueue>();
         services.TryAddSingleton<IProcessRuntimeDispatchQueue>(serviceProvider => serviceProvider.GetRequiredService<ProcessRuntimeDispatchQueue>());
-        services.AddHostedService<ProcessRuntimeDispatchQueueWorker>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeDispatchQueueWorker>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AgentFrameworkProcessExecutionClaimRecoveryWorker>());
         services.TryAddScoped<ProcessLaunchApplicationService>();
         services.TryAddScoped<ProcessRuntimeDispatchApplicationService>();
         services.TryAddScoped<ProcessRuntimeOperatorApplicationService>();

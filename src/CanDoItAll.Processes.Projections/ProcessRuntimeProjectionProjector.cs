@@ -193,6 +193,7 @@ public sealed class ProcessRuntimeProjectionProjector(
             ProcessRuntimeProjectionEventTypeNames.ProcessRunCompleted => ProcessProjectedRunStatus.Completed,
             ProcessRuntimeProjectionEventTypeNames.ProcessRunFailed => ProcessProjectedRunStatus.Failed,
             ProcessRuntimeProjectionEventTypeNames.ProcessRunCancelled => ProcessProjectedRunStatus.Cancelled,
+            ProcessRuntimeProjectionEventTypeNames.ProcessRunBlocked => ProcessProjectedRunStatus.NeedsAttention,
             ProcessRuntimeProjectionEventTypeNames.StepReady => ProcessProjectedRunStatus.Active,
             ProcessRuntimeProjectionEventTypeNames.StepWaiting => ProcessProjectedRunStatus.Active,
             ProcessRuntimeProjectionEventTypeNames.StepBlocked => ProcessProjectedRunStatus.NeedsAttention,
@@ -220,6 +221,8 @@ public static class ProcessRuntimeProjectionEventTypeNames
     public const string ProcessRunCompleted = "ProcessRunCompleted";
 
     public const string ProcessRunFailed = "ProcessRunFailed";
+
+    public const string ProcessRunBlocked = "ProcessRunBlocked";
 
     public const string ProcessRunCancelled = "ProcessRunCancelled";
 

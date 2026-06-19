@@ -7,16 +7,36 @@ namespace CanDoItAll.Processes.Runtime;
 
 public sealed partial class ProcessRuntimeEngine
 {
-    private static ProcessRuntimeStepStatus ToStepStatus(StrategyOutcome outcome)
+    private static ProcessRuntimeStepStatus ToStepStatus(StrategyResultEnvelope result)
     {
-        return outcome switch
+        if (IsAutomaticallyRetryableManagerResult(result))
+        {
+            return ProcessRuntimeStepStatus.Ready;
+        }
+
+        return result.Outcome switch
         {
             StrategyOutcome.Succeeded => ProcessRuntimeStepStatus.Completed,
             StrategyOutcome.Failed => ProcessRuntimeStepStatus.Failed,
             StrategyOutcome.Waiting or StrategyOutcome.NeedsManager => ProcessRuntimeStepStatus.Blocked,
             StrategyOutcome.Canceled => ProcessRuntimeStepStatus.Cancelled,
-            _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown strategy outcome.")
+            _ => throw new ArgumentOutOfRangeException(nameof(result), result.Outcome, "Unknown strategy outcome.")
         };
+    }
+
+    private static bool IsAutomaticallyRetryableManagerResult(StrategyResultEnvelope result)
+    {
+        return result.Outcome == StrategyOutcome.NeedsManager &&
+               result.Diagnostics.Count > 0 &&
+               result.Diagnostics.All(IsAutomaticallyRetryableDiagnostic) &&
+               result.ManagerSignals.Any(signal => signal.Code.Value.StartsWith("process.adapter.", StringComparison.Ordinal));
+    }
+
+    private static bool IsAutomaticallyRetryableDiagnostic(StrategyDiagnosticRef diagnostic)
+    {
+        return diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.SafeToRetry &&
+               diagnostic.Idempotency == ProcessDiagnosticIdempotencyClassification.Idempotent &&
+               diagnostic.Code.Value.StartsWith("process.adapter.", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<ProcessRuntimeEventEnvelope> BuildResultEvents(
@@ -53,6 +73,7 @@ public sealed partial class ProcessRuntimeEngine
         {
             ProcessRuntimeStepStatus.Completed => ProcessRuntimeEventTypes.StepCompleted,
             ProcessRuntimeStepStatus.Failed => ProcessRuntimeEventTypes.StepFailed,
+            ProcessRuntimeStepStatus.Ready => ProcessRuntimeEventTypes.StepReady,
             ProcessRuntimeStepStatus.Blocked => ProcessRuntimeEventTypes.StepBlocked,
             ProcessRuntimeStepStatus.Cancelled => ProcessRuntimeEventTypes.StepCancelled,
             _ => ProcessRuntimeEventTypes.StepBlocked

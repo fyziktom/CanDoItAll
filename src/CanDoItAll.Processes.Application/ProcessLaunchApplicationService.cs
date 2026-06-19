@@ -32,9 +32,13 @@ public sealed class ProcessLaunchApplicationService(
     private const string CurrentProcessRunNodeIdVariableName = "CurrentProcessRunNodeId";
     private const string CurrentManagedArtifactRootVariableName = "CurrentManagedArtifactRoot";
     private const string ManagedArtifactRootVariableName = "ManagedArtifactRoot";
+    private const string ProjectIdVariableName = "ProjectId";
+    private const string ProjectNodeIdVariableName = "ProjectNodeId";
     private const string LegacyProcessRunIdVariableName = "processRunId";
     private const string LegacyManagedArtifactRootVariableName = "managedArtifactRoot";
     private const string ParentManagedArtifactRootVariableName = "ParentManagedArtifactRoot";
+    private const int MaximumLaunchLifecycleConcurrencyRetries = 3;
+    private static readonly TimeSpan LaunchLifecycleConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
 
     public async Task<ProcessLaunchResult> PreviewAsync(
         ProcessLaunchRequest request,
@@ -142,16 +146,22 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         var engine = new ProcessRuntimeEngine(unitOfWork);
-        var activeCommit = await engine.ActivateAsync(
-            createCommit.State,
-            CreateContext(request.RequestedBy, nowUtc.AddMilliseconds(1)),
+        var activeCommit = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
+            initialState.RunId,
+            reloadedState => engine.ActivateAsync(
+                reloadedState,
+                CreateContext(request.RequestedBy, NormalizeUtc(clock.GetUtcNow())),
+                cancellationToken),
             cancellationToken).ConfigureAwait(false);
         var activeState = activeCommit.State;
         if (activeCommit.Succeeded)
         {
-            var scheduled = await engine.ScheduleReadyAsync(
-                activeCommit.State,
-                CreateContext(request.RequestedBy, nowUtc.AddMilliseconds(2)),
+            var scheduled = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
+                initialState.RunId,
+                reloadedState => engine.ScheduleReadyAsync(
+                    reloadedState,
+                    CreateContext(request.RequestedBy, NormalizeUtc(clock.GetUtcNow())),
+                    cancellationToken),
                 cancellationToken).ConfigureAwait(false);
             activeState = scheduled.State;
         }
@@ -218,6 +228,11 @@ public sealed class ProcessLaunchApplicationService(
             if (state is null)
             {
                 throw new InvalidOperationException($"Existing launch lookup found assignments for missing process run '{runGroup.Key}'.");
+            }
+
+            if (state.Status is ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled or ProcessRuntimeStatus.Blocked)
+            {
+                continue;
             }
 
             var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
@@ -470,7 +485,9 @@ public sealed class ProcessLaunchApplicationService(
             StringComparer.OrdinalIgnoreCase);
         var stepsByKey = selection.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
         var roleByKey = selection.Definition.RoleUsages.ToDictionary(role => role.Key, StringComparer.OrdinalIgnoreCase);
-        var launchVariables = NormalizeLaunchVariables(request.Variables);
+        var launchVariables = EnrichLaunchScopeVariables(
+            NormalizeLaunchVariables(request.Variables),
+            request);
         var runId = ProcessRunId.New();
         var managedArtifactRoot = BuildManagedProcessArtifactRoot(runId);
         var effectiveLaunchVariables = EnrichRunLaunchVariables(launchVariables, runId, managedArtifactRoot);
@@ -743,6 +760,40 @@ public sealed class ProcessLaunchApplicationService(
         return normalized;
     }
 
+    private static IReadOnlyDictionary<string, string> EnrichLaunchScopeVariables(
+        IReadOnlyDictionary<string, string> variables,
+        ProcessLaunchRequest request)
+    {
+        var enriched = new Dictionary<string, string>(variables, StringComparer.Ordinal);
+        if (request.ProjectId is { } projectId && projectId != Guid.Empty)
+        {
+            SetCanonicalLaunchVariable(enriched, ProjectIdVariableName, projectId.ToString("D"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProjectNodeId))
+        {
+            SetCanonicalLaunchVariable(enriched, ProjectNodeIdVariableName, request.ProjectNodeId.Trim());
+        }
+
+        return enriched;
+    }
+
+    private static void SetCanonicalLaunchVariable(
+        IDictionary<string, string> variables,
+        string key,
+        string value)
+    {
+        foreach (var existingKey in variables.Keys
+            .Where(candidate => string.Equals(candidate, key, StringComparison.OrdinalIgnoreCase) &&
+                                !string.Equals(candidate, key, StringComparison.Ordinal))
+            .ToArray())
+        {
+            variables.Remove(existingKey);
+        }
+
+        variables[key] = value;
+    }
+
     private static IReadOnlyDictionary<string, string> EnrichRunLaunchVariables(
         IReadOnlyDictionary<string, string> variables,
         ProcessRunId runId,
@@ -848,6 +899,30 @@ public sealed class ProcessLaunchApplicationService(
     private static DateTimeOffset NormalizeUtc(DateTimeOffset value)
     {
         return value.Offset == TimeSpan.Zero ? value : value.ToUniversalTime();
+    }
+
+    private async Task<ProcessRuntimeCommitResult> ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
+        ProcessRunId runId,
+        Func<ProcessRuntimeStateSnapshot, Task<ProcessRuntimeCommitResult>> execute,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; attempt <= MaximumLaunchLifecycleConcurrencyRetries; attempt++)
+        {
+            try
+            {
+                var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false)
+                    ?? throw new InvalidOperationException($"Process run '{runId}' was not found.");
+                return await execute(state).ConfigureAwait(false);
+            }
+            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumLaunchLifecycleConcurrencyRetries)
+            {
+                await Task.Delay(LaunchLifecycleConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        var latestState = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Process run '{runId}' was not found.");
+        return await execute(latestState).ConfigureAwait(false);
     }
 
     private static string FirstNonEmpty(params string?[] values)

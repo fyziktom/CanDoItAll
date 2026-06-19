@@ -1057,7 +1057,7 @@
       "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready evidence for runtime-capable Run app and Run tests nodes.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1132,7 +1132,7 @@
       "Key": "capture-ui-screenshots",
       "Title": "Capture and store .NET UI screenshots",
       "Subtitle": "Screenshots under process run node",
-      "Notes": "Launch and observe the .NET UI screenshot writeback subprocess after runtime command nodes exist. UI targets must capture screenshots and store accepted image assets under a Screenshots parent node below the current process run node. Backend-only or no-UI targets must produce explicit no-UI evidence.",
+      "Notes": "Launch and observe the .NET UI screenshot writeback subprocess after runtime command nodes exist. UI targets must capture screenshots and store accepted image assets under a Screenshots parent node below the current process run node. Backend-only or no-UI targets must produce explicit no-UI evidence. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
@@ -1144,7 +1144,7 @@
       "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1183,7 +1183,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
-          "ValidationRequirementSummary": "Must point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
+          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md in final evidenceRefs, point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
           "SubprocessChildStepKey": "screenshot-handoff",
           "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
         }
@@ -1622,7 +1622,7 @@
       "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready evidence for runtime-capable Run app and Run tests nodes.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1701,7 +1701,7 @@
       "Key": "capture-ui-screenshots-after-repair",
       "Title": "Capture and store repaired .NET UI screenshots",
       "Subtitle": "Screenshots under process run node",
-      "Notes": "Launch and observe UI screenshot writeback after repaired runtime command nodes exist. UI targets must store repaired screenshots under Screenshots below the process run node; no-UI targets must carry explicit no-UI evidence.",
+      "Notes": "Launch and observe UI screenshot writeback after repaired runtime command nodes exist. UI targets must store repaired screenshots under Screenshots below the process run node; no-UI targets must carry explicit no-UI evidence. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
@@ -1713,7 +1713,7 @@
       "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1752,7 +1752,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
-          "ValidationRequirementSummary": "Must point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
+          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md in final evidenceRefs, point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
           "SubprocessChildStepKey": "screenshot-handoff",
           "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
         }
@@ -1986,7 +1986,7 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
-        "processes/software-delivery/steps/release-approval.md"
+        "processes/software-delivery/steps/release-approval-after-repair.md"
       ],
       "AllowedOperations": [
         "ReadProcessContext",
