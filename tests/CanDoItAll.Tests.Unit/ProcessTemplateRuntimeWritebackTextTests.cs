@@ -9,11 +9,15 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
         var resolve = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "dotnet-runtime-command-writeback", "steps", "resolve-dotnet-run-commands.md"));
         var write = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "dotnet-runtime-command-writeback", "steps", "write-run-command-nodes.md"));
         var handoff = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "dotnet-runtime-command-writeback", "steps", "runtime-command-handoff.md"));
+        var definitionJson = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "dotnet-runtime-command-writeback", "definition.json"));
 
         Assert.Contains("ProjectStructureRuntimeLauncher", resolve, StringComparison.Ordinal);
         Assert.Contains("launcher-compatible", write, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("return `Blocked` with the missing field", write, StringComparison.Ordinal);
         Assert.Contains("launcher-compatibility receipts", handoff, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("metadata.environment.projectPath", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("metadata.environment.workingDirectory", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("ProjectStructureRuntimeLauncher.Resolve", definitionJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -24,9 +28,11 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
         var recordRuntimeCommandsAfterRepair = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "software-delivery", "steps", "record-runtime-commands-after-repair.md"));
         var captureScreenshots = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "software-delivery", "steps", "capture-ui-screenshots.md"));
         var captureScreenshotsAfterRepair = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "software-delivery", "steps", "capture-ui-screenshots-after-repair.md"));
+        var definitionJson = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "software-delivery", "definition.json"));
 
         Assert.Contains("launcher-compatible metadata receipts", recordRuntimeCommands, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("launcher-compatible metadata receipts", recordRuntimeCommandsAfterRepair, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("launcher-compatible metadata receipts", definitionJson, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("verify the runtime command handoff includes a launcher-compatible Run app node", captureScreenshots, StringComparison.Ordinal);
         Assert.Contains("verify the repaired runtime command handoff includes a launcher-compatible Run app node", captureScreenshotsAfterRepair, StringComparison.Ordinal);
         Assert.Contains("why screenshots cannot be captured", captureScreenshots, StringComparison.Ordinal);

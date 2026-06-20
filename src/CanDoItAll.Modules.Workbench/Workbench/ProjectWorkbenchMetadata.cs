@@ -446,13 +446,16 @@ public sealed class ProjectEnvironmentMetadata
     [ProjectStructurePreviewField("Project path", 40)]
     public string ProjectPath { get; set; } = string.Empty;
 
-    [ProjectStructurePreviewField("Launch profile", 50)]
+    [ProjectStructurePreviewField("Working directory", 50)]
+    public string WorkingDirectory { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Launch profile", 60)]
     public string LaunchProfileName { get; set; } = string.Empty;
 
-    [ProjectStructurePreviewField("Runtime protocol", 60)]
+    [ProjectStructurePreviewField("Runtime protocol", 70)]
     public ProjectRuntimeProtocol RuntimeProtocol { get; set; } = ProjectRuntimeProtocol.Https;
 
-    [ProjectStructurePreviewField("Localhost URL", 70)]
+    [ProjectStructurePreviewField("Localhost URL", 80)]
     public string LocalhostUrl { get; set; } = string.Empty;
 }
 

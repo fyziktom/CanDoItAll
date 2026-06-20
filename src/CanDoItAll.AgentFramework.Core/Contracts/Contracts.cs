@@ -78,6 +78,17 @@ public interface ISandboxWorkspaceChatQueryStore
         CancellationToken cancellationToken = default);
 }
 
+public interface ISandboxWorkspaceChatSessionStore
+{
+    Task<ChatSessionRecord> CreateChatSessionAsync(
+        ChatSessionRecord session,
+        CancellationToken cancellationToken = default);
+
+    Task<ChatSessionRecord> UpdateChatSessionAsync(
+        ChatSessionRecord session,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed record AgentImportResult(
     AgentDefinition Agent,
     IReadOnlyList<ChatSessionRecord> Sessions,

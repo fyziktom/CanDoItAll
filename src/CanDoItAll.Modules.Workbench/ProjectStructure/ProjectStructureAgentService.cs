@@ -175,6 +175,12 @@ public sealed class ProjectStructureAgentService(
             "create-structure-node",
             async cancellationToken =>
             {
+                var objectSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype);
+                var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                    request.ObjectType,
+                    objectSubtype,
+                    request.Notes,
+                    request.MetadataJson);
                 var createdNode = await projectWorkbenchService.CreateObjectAsync(
                     projectId,
                     new ProjectObjectCreateRequest(
@@ -187,9 +193,9 @@ public sealed class ProjectStructureAgentService(
                         request.Y,
                         request.StartUtc,
                         request.EndUtc,
-                        ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
+                        objectSubtype,
                         request.Media,
-                        request.MetadataJson,
+                        metadataJson,
                         request.DurationSeconds),
                     cancellationToken);
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
@@ -221,6 +227,11 @@ public sealed class ProjectStructureAgentService(
                 var metadataJson = string.IsNullOrWhiteSpace(request.MetadataJson)
                     ? string.IsNullOrWhiteSpace(existingNode.MetadataJson) ? "{}" : existingNode.MetadataJson
                     : request.MetadataJson;
+                metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                    targetObjectType,
+                    targetObjectSubtype,
+                    request.Notes,
+                    metadataJson);
 
                 ProjectStructureNode? updatedNode;
                 var requiresReclassification = targetObjectType != existingNode.ObjectType ||
@@ -325,10 +336,17 @@ public sealed class ProjectStructureAgentService(
             "update-node-metadata",
             async cancellationToken =>
             {
+                var existingNode = await GetNodeAsync(projectId, nodeId, cancellationToken);
+                var notes = request.Notes ?? existingNode.Notes;
+                var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                    existingNode.ObjectType,
+                    existingNode.ObjectSubtype,
+                    notes,
+                    request.MetadataJson);
                 var updatedNode = await projectWorkbenchService.UpdateObjectMetadataAsync(
                     projectId,
                     nodeId,
-                    request.MetadataJson,
+                    metadataJson,
                     request.Notes,
                     request.Status,
                     cancellationToken: cancellationToken);

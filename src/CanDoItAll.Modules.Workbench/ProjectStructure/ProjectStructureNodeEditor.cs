@@ -163,6 +163,7 @@ internal static class ProjectStructureNodeEditor
                 metadata.Environment.PythonProvider = ResolveNullableEnum(inputValues, submittedKeys, "pythonProvider", metadata.Environment.PythonProvider);
                 metadata.Environment.EnvironmentName = ResolveString(inputValues, submittedKeys, "environmentName", metadata.Environment.EnvironmentName);
                 metadata.Environment.ProjectPath = ResolveString(inputValues, submittedKeys, "projectPath", metadata.Environment.ProjectPath);
+                metadata.Environment.WorkingDirectory = ResolveString(inputValues, submittedKeys, "workingDirectory", metadata.Environment.WorkingDirectory);
                 metadata.Environment.LaunchProfileName = ResolveString(inputValues, submittedKeys, "launchProfileName", metadata.Environment.LaunchProfileName);
                 metadata.Environment.RuntimeProtocol = ResolveEnum(inputValues, submittedKeys, "runtimeProtocol", metadata.Environment.RuntimeProtocol);
                 metadata.Environment.LocalhostUrl = ResolveString(inputValues, submittedKeys, "localhostUrl", metadata.Environment.LocalhostUrl);
@@ -230,7 +231,9 @@ internal static class ProjectStructureNodeEditor
         {
             return node.ObjectType == ProjectObjectType.Infrastructure
                 ? metadata.Infrastructure?.WorkingDirectory ?? string.Empty
-                : metadata.Script?.WorkingDirectory ?? string.Empty;
+                : node.ObjectType == ProjectObjectType.Environment
+                    ? metadata.Environment?.WorkingDirectory ?? string.Empty
+                    : metadata.Script?.WorkingDirectory ?? string.Empty;
         }
 
         return key switch
@@ -278,6 +281,7 @@ internal static class ProjectStructureNodeEditor
             "pythonProvider" => ToCamelCaseToken(metadata.Environment?.PythonProvider),
             "environmentName" => metadata.Environment?.EnvironmentName ?? string.Empty,
             "projectPath" => metadata.Environment?.ProjectPath ?? string.Empty,
+            "workingDirectory" => metadata.Environment?.WorkingDirectory ?? string.Empty,
             "launchProfileName" => metadata.Environment?.LaunchProfileName ?? string.Empty,
             "runtimeProtocol" => ToCamelCaseToken(metadata.Environment?.RuntimeProtocol),
             "localhostUrl" => metadata.Environment?.LocalhostUrl ?? string.Empty,

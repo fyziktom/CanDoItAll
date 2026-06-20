@@ -308,9 +308,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var wasCancelled = WasRequestedThroughExecutionRegistry(exception, executionCancellation, cancellationToken);
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
+            var failureDisplay = wasCancelled
+                ? null
+                : AgentProviderFailureDisplayFormatter.Format(provider, exception);
             var resultSummary = wasCancelled
                 ? "Execution run cancelled because the owning process run was cancelled."
-                : $"Execution run continuation failed: {exception.Message}";
+                : failureDisplay!.Message;
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -376,7 +379,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 wasCancelled ? "Cancelled" : "Failed",
                 wasCancelled
                     ? resultSummary
-                    : $"Execution run approval continuation failed: {exception.Message}",
+                    : $"Execution run approval continuation failed for {provider.Name}: {failureDisplay!.Message}",
                 cancellationToken);
 
             if (wasCancelled)
@@ -384,7 +387,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
             }
 
-            throw;
+            throw session is not null
+                ? new AgentChatRunFailedException(
+                    agent.Id,
+                    run.Id,
+                    session.Id,
+                    provider.Name,
+                    ResolveModel(agent, provider),
+                    exception,
+                    failureDisplay!.Message)
+                : new AgentRunFailedException(
+                    agent.Id,
+                    run.Id,
+                    run.ChatSessionId,
+                    provider.Name,
+                    ResolveModel(agent, provider),
+                    exception,
+                    failureDisplay!.Message);
         }
         finally
         {
@@ -801,9 +820,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var wasCancelled = WasRequestedThroughExecutionRegistry(exception, executionCancellation, cancellationToken);
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
+            var failureDisplay = wasCancelled
+                ? null
+                : AgentProviderFailureDisplayFormatter.Format(provider, exception);
             var resultSummary = wasCancelled
                 ? "Execution run cancelled because the owning process run was cancelled."
-                : exception.Message;
+                : failureDisplay!.Message;
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -868,7 +890,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 wasCancelled ? "Cancelled" : "Failed",
                 wasCancelled
                     ? resultSummary
-                    : $"Execution run failed for {provider.Name}: {exception.Message}",
+                    : $"Execution run failed for {provider.Name}: {failureDisplay!.Message}",
                 cancellationToken);
 
             if (wasCancelled)
@@ -883,14 +905,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     session.Id,
                     provider.Name,
                     ResolveModel(agent, provider),
-                    exception)
+                    exception,
+                    failureDisplay!.Message)
                 : new AgentRunFailedException(
                     agent.Id,
                     run.Id,
                     run.ChatSessionId,
                     provider.Name,
                     ResolveModel(agent, provider),
-                    exception);
+                    exception,
+                    failureDisplay!.Message);
         }
         finally
         {

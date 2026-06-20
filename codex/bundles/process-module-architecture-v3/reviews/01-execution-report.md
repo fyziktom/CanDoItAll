@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB19 are complete and validated. Post-review UI parity repairs are complete, the combined SB20-SB28 runtime completion repair closes the project-scoped launch/runtime/dispatch gap with a real dev-DB TetrisGame process run, SB29 completes the current generic runtime-dispatcher leak repair, and SB30 completes targeted Process hot-path performance hardening.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB19 are complete and validated. Post-review UI parity repairs are complete, the combined SB20-SB28 runtime completion repair closes the project-scoped launch/runtime/dispatch gap with a real dev-DB TetrisGame process run, SB29 completes the current generic runtime-dispatcher leak repair, SB30 completes targeted Process hot-path performance hardening, SB31/SB32 complete project-structure launch staffing and Live Processes repairs, and SB33 completes provider quota messaging, .NET runtime node launchability, and contextual agent chat load repair.
 
 ## Changes Made In This Task
 
@@ -44,6 +44,7 @@ Architecture bundle v3 prepared. Execution started on 2026-06-15 after user appr
 - Executed SB19 template library browser, preview, and selective import: typed template catalog projections, generated canonical JSON/Markdown/Mermaid/structure previews, process/role/artifact import commands, target-step validation for artifact imports, imported component source metadata, template library panel UI, focused unit/component tests, Playwright proof with console/network summary, static scans, and CodeAnalytics dependency proof were added.
 - Executed the post-review SB20-SB28 runtime completion repair: project-structure process launch now reaches the rebuilt Process launch/runtime/dispatch application path, runtime assignments carry operation contracts and launch variables, Blazor process templates require governed `workspace_dotnet_stop` cleanup, validation-capable agents receive the new stop tool, and a real TetrisGame process run completed through QA, repair, revalidation, result recording, and cleanup proof while keeping Process core/runtime/dispatch generic.
 - Executed SB29 generic runtime-dispatcher leak repair: extracted step brief construction behind `IProcessStepBriefBuilder`, moved AgentFramework/project-structure subprocess prompt details into `CanDoItAll.Modules.Processes`, kept `GenericProcessStepBriefBuilder` domain-neutral, renamed generic adapter vocabulary from `ProjectContext` to `ScopedContext`, and validated dispatch across business analysis, multistep data analysis, claims quality review, and marketing planning scenarios.
+- Executed SB33 provider/runtime-node/chat-load repair: provider quota and billing failures are normalized into clear redacted messages, `.NET runtime` project-structure nodes now resolve through typed metadata and safe legacy note hydration, runtime command templates require launcher-compatible metadata receipts, and contextual agent chat uses split chat/session/run projections before opening the window immediately with busy state.
 
 ## Repository Evidence
 
@@ -960,4 +961,35 @@ Result:
 
 ```text
 SB31 repaired the user-reported project-structure launch failure and staffing bug. A PostgreSQL migration repairs stale process_runtime_events GlobalSequence identity sequences. Agent/process readiness is now evaluated through a shared typed evaluator that checks role-family fit, enabled structured-output provider readiness, workspace tool rights, allowed operations, and target scope. Automatic HR matching and manual project-structure overrides both route through this readiness gate, so Delivery Manager can coordinate subprocess/governance steps but cannot bypass readiness for .NET mutable implementation work. Project-structure assignment candidates now use the same readiness model. The .NET architecture/development launch-variable path now carries typed greenfield scaffold contracts, and architecture classification treats an empty grounded product/output root as greenfield repository state rather than an automatic blocker. Focused unit tests passed 3/3, component assignment-dialog tests passed 5/5, full ProjectStructureAgentIntegrationTests passed 26/26, full solution build passed with 0 warnings and 0 errors, and a live dev-DB Tetris process launch created run 1adde2cb-d093-4a4c-9173-dd286ca466c2 with readiness OK and no duplicate GlobalSequence failure.
+```
+
+## SB33 Provider Failure, Runtime Node, And Agent Chat Load Repair
+
+Proof artifacts:
+
+```text
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/manifest.md
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/semantic-invariants.md
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/changed-file-hashes.txt
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/validation.md
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/performance-analysis.md
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/api/live-api-before-sb33.json
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/transcripts/unit-tests.txt
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/transcripts/integration-tests.txt
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/transcripts/web-build.txt
+bundle://proof/SB33-provider-runtime-node-and-agent-chat-load-repair/transcripts/git-diff-check.txt
+```
+
+Result:
+
+```text
+SB33 repaired the post-SB32 operator experience issues. OpenAI-family quota, credit, and billing failures are classified as quota/billing failures and surfaced through redacted user-facing run messages, persisted run summaries, and execution logs. `.NET runtime` nodes now carry `metadata.environment.workingDirectory`, hydrate concrete note-only `dotnet run --project` evidence when safe, and resolve launch plans like the existing PowerShell/script runtime nodes. Runtime command templates now require `ProjectStructureRuntimeLauncher.Resolve` compatibility receipts. Contextual agent chat list/create/rename/bootstrap paths use split chat/session/run stores and the Blazor floating chat shell opens immediately with busy state. Live 5032 API evidence showed the old chat-session/workspace calls at about 15 seconds while project-structure reads were below 100 ms; the running instance was not restarted for after-deploy timing. Focused unit validation passed 18/18, split-storage integration validation passed 1/1, web build passed with 0 warnings and 0 errors, and git diff check found no whitespace errors.
+```
+
+Subbundle Gate Results for SB33:
+
+```text
+Entry gate: Pass. SB31/SB32 follow-up proof existed, the running 5032 instance reproduced the slow chat and non-launchable runtime-node symptoms, and the touched source references were active product code.
+Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, changed-file hashes recorded, focused unit/integration/web-build validation passed, and API evidence records the before-deploy bottleneck plus remaining restart validation gap.
+Progression: Restart the development instance on the new build before measuring live after-deploy chat latency or testing the double-click Run action against the existing TetrisGame node.
 ```

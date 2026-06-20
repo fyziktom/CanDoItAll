@@ -8,6 +8,24 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid agentId,
         CancellationToken cancellationToken = default)
     {
+        if (store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+        {
+            var summaries = await chatQueryStore.ListChatSessionSummariesAsync(agentId, cancellationToken);
+            var sessions = new List<ChatSessionRecord>(summaries.Count);
+            foreach (var summary in summaries)
+            {
+                if (await chatQueryStore.GetChatSessionAsync(summary.Id, cancellationToken) is { } session &&
+                    session.AgentId == agentId)
+                {
+                    sessions.Add(session);
+                }
+            }
+
+            return sessions
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ToList();
+        }
+
         var executionState = await store.LoadExecutionAsync(cancellationToken);
         return executionState.ChatSessions
             .Where(item => item.AgentId == agentId)
@@ -22,9 +40,38 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         if (chatSessionId.HasValue)
         {
+            if (store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+            {
+                var catalog = await store.LoadCatalogAsync(cancellationToken);
+                EnsureAgentExists(catalog, agentId);
+                return EnsureAgentOwnsSession(
+                    await chatQueryStore.GetChatSessionAsync(chatSessionId.Value, cancellationToken),
+                    agentId,
+                    chatSessionId.Value);
+            }
+
             var document = await store.LoadAsync(cancellationToken);
             EnsureAgentExists(document.ToCatalog(), agentId);
             return EnsureAgentOwnsSession(document.ToExecutionState(), agentId, chatSessionId.Value);
+        }
+
+        if (store is ISandboxWorkspaceChatSessionStore chatSessionStore)
+        {
+            var catalog = await store.LoadCatalogAsync(cancellationToken);
+            EnsureAgentExists(catalog, agentId);
+            var now = DateTimeOffset.UtcNow;
+            return await chatSessionStore.CreateChatSessionAsync(
+                new ChatSessionRecord(
+                    Id: Guid.NewGuid(),
+                    AgentId: agentId,
+                    Title: "New exploration thread",
+                    CreatedAtUtc: now,
+                    UpdatedAtUtc: now,
+                    RuntimeSessionKey: string.Empty,
+                    SerializedSessionStateJson: null,
+                    Messages: [],
+                    PendingApprovals: []),
+                cancellationToken);
         }
 
         ChatSessionRecord? createdSession = null;
@@ -63,6 +110,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         CancellationToken cancellationToken = default)
     {
         var normalizedTitle = NormalizeChatSessionTitle(title);
+        if (store is ISandboxWorkspaceChatQueryStore chatQueryStore &&
+            store is ISandboxWorkspaceChatSessionStore chatSessionStore)
+        {
+            var catalog = await store.LoadCatalogAsync(cancellationToken);
+            EnsureAgentExists(catalog, agentId);
+            var session = EnsureAgentOwnsSession(
+                await chatQueryStore.GetChatSessionAsync(chatSessionId, cancellationToken),
+                agentId,
+                chatSessionId);
+
+            return await chatSessionStore.UpdateChatSessionAsync(
+                session with
+                {
+                    Title = normalizedTitle,
+                    UpdatedAtUtc = DateTimeOffset.UtcNow
+                },
+                cancellationToken);
+        }
+
         ChatSessionRecord? renamedSession = null;
         await store.UpdateWorkspaceAsync(document =>
         {

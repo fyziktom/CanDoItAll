@@ -45,7 +45,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             : null;
 
         var latestRun = await LoadLatestChatRunSummaryAsync(agentId, selectedSessionId, cancellationToken);
-        var selectedRun = await LoadLatestChatRunAsync(agentId, selectedSessionId, cancellationToken);
+        var selectedRun = await LoadLatestChatRunAsync(agentId, selectedSessionId, selectedSession, cancellationToken);
         return new ChatAgentWorkspaceSnapshot(agentId, sessionSummaries, selectedSession, selectedSessionId, latestRun)
         {
             SelectedRun = selectedRun
@@ -164,11 +164,32 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private async Task<ExecutionRunRecord?> LoadLatestChatRunAsync(
         Guid agentId,
         Guid? chatSessionId,
+        ChatSessionRecord? selectedSession,
         CancellationToken cancellationToken)
     {
         if (!chatSessionId.HasValue)
         {
             return null;
+        }
+
+        if (store is ISandboxWorkspaceExecutionRunStore executionRunStore)
+        {
+            var latestRunId = selectedSession?.LatestExecutionRunId;
+            if (!latestRunId.HasValue &&
+                store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+            {
+                latestRunId = (await chatQueryStore.ListChatRunSummariesAsync(agentId, chatSessionId, cancellationToken))
+                    .FirstOrDefault()
+                    ?.ExecutionRunId;
+            }
+
+            if (latestRunId.HasValue &&
+                await executionRunStore.GetExecutionRunDetailAsync(latestRunId.Value, cancellationToken) is { } detail &&
+                detail.Run.AgentId == agentId &&
+                detail.Run.ChatSessionId == chatSessionId.Value)
+            {
+                return detail.Run;
+            }
         }
 
         var executionState = await store.LoadExecutionAsync(cancellationToken);

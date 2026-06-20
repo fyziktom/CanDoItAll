@@ -10,8 +10,9 @@ public sealed class AgentChatRunFailedException : InvalidOperationException
         Guid chatSessionId,
         string providerName,
         string modelName,
-        Exception innerException)
-        : base($"The prompt was saved to the thread, but the run failed: {innerException.Message}", innerException)
+        Exception innerException,
+        string? displayMessage = null)
+        : base($"The prompt was saved to the thread, but the run failed: {displayMessage ?? innerException.Message}", innerException)
     {
         AgentId = agentId;
         ExecutionRunId = executionRunId;

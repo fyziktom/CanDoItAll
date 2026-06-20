@@ -169,6 +169,49 @@ public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
     }
 
     [Fact]
+    public async Task ChatSessionStore_creates_and_updates_split_session_projection()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var workspaceScope = workspaceFactory.GetOrganizationScope();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false)).First();
+        var store = new FileSandboxWorkspaceStore(application.ActiveProfile.WorkspaceRootPath, workspaceScope);
+        var chatSessionStore = (ISandboxWorkspaceChatSessionStore)store;
+        var chatQueryStore = (ISandboxWorkspaceChatQueryStore)store;
+        var now = DateTimeOffset.UtcNow;
+        var session = new ChatSessionRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agent.Id,
+            Title: "Projection test",
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            Messages: [],
+            PendingApprovals: []);
+
+        var createdSession = await chatSessionStore.CreateChatSessionAsync(session);
+        var createdSummaries = await chatQueryStore.ListChatSessionSummariesAsync(agent.Id);
+
+        Assert.Equal(session.Id, createdSession.Id);
+        Assert.Contains(createdSummaries, summary => summary.Id == session.Id && summary.Title == "Projection test");
+
+        var renamedSession = await chatSessionStore.UpdateChatSessionAsync(createdSession with
+        {
+            Title = "Projection test renamed",
+            UpdatedAtUtc = now.AddMinutes(1)
+        });
+        var loadedSession = await chatQueryStore.GetChatSessionAsync(session.Id);
+        var renamedSummaries = await chatQueryStore.ListChatSessionSummariesAsync(agent.Id);
+
+        Assert.Equal("Projection test renamed", renamedSession.Title);
+        Assert.Equal("Projection test renamed", loadedSession?.Title);
+        Assert.Contains(renamedSummaries, summary => summary.Id == session.Id && summary.Title == "Projection test renamed");
+    }
+
+    [Fact]
     public async Task SaveExecutionRunDetailAsync_does_not_load_unrelated_run_slices_in_split_storage()
     {
         await using var application = await TestApplication.CreateAsync();

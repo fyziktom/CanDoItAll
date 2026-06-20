@@ -10,8 +10,9 @@ public sealed class AgentRunFailedException : InvalidOperationException
         Guid? chatSessionId,
         string providerName,
         string modelName,
-        Exception innerException)
-        : base($"The run failed: {innerException.Message}", innerException)
+        Exception innerException,
+        string? displayMessage = null)
+        : base($"The run failed: {displayMessage ?? innerException.Message}", innerException)
     {
         AgentId = agentId;
         ExecutionRunId = executionRunId;

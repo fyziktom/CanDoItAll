@@ -158,7 +158,7 @@
       "Key": "write-run-command-nodes",
       "Title": "Write Run command project nodes",
       "Subtitle": "Process-run runtime receipts",
-      "Notes": "Create or reuse an organizational runtime command group under the current process run node, then create or update child nodes Run app and Run tests as runtime-capable project-structure nodes. Prefer ProcessRunNodeId, ParentProcessRunNodeId, or TargetProcessRunNodeId from launch variables as the parent node id; do not fall back to ProjectNodeId or project root when one of those process-run nodes is present in project structure. If a grouping node is needed, use a non-runnable operations organizer such as ProjectBlock + operations; do not create a ProjectBlock + delivery node named like a runnable command. Run app must be an Environment node with subtype dotnet-runtime, dotnet-watch, or dotnet-release when the target is runnable, with environment metadata such as project path, launch profile, protocol, and localhost URL when known. Run tests, build, and utility commands must be Script nodes with subtype console or powershell, with script metadata for command, arguments, and working directory. Do not create runnable command nodes as ProjectBlock + delivery or any other delivery block. Each child node must include command, working directory, app type, source evidence, and any required environment or cleanup notes. Use project-structure write tools only through this externally controlled step; do not mutate product files.",
+      "Notes": "Create or reuse an organizational runtime command group under the current process run node, then create or update child nodes Run app and Run tests as runtime-capable project-structure nodes. Prefer ProcessRunNodeId, ParentProcessRunNodeId, or TargetProcessRunNodeId from launch variables as the parent node id; do not fall back to ProjectNodeId or project root when one of those process-run nodes is present in project structure. If a grouping node is needed, use a non-runnable operations organizer such as ProjectBlock + operations; do not create a ProjectBlock + delivery node named like a runnable command. Run app must be an Environment node with subtype dotnet-runtime, dotnet-watch, or dotnet-release when the target is runnable, with metadata.environment.projectPath populated as an absolute project file/folder path or paired with metadata.environment.workingDirectory when projectPath is relative. Include launch profile, protocol, and localhost URL when known. Run tests, build, and utility commands must be Script nodes with subtype console or powershell, with script metadata for command, arguments, and working directory. Do not create runnable command nodes as ProjectBlock + delivery or any other delivery block. Each child node must include command, working directory, app type, source evidence, and any required environment or cleanup notes. After writing each runnable node, read back or inspect the node metadata and record a launcher-compatibility receipt: object type, subtype, project path or command, arguments, working directory, and whether ProjectStructureRuntimeLauncher.Resolve can create a launch plan. If a runnable Run app or Run tests node cannot be made launcher-compatible, return Blocked with the missing field and why instead of returning Completed with a non-working node. Use project-structure write tools only through this externally controlled step; do not mutate product files.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -166,7 +166,7 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": ".NET run command manifest and current process run project-structure node.",
       "OutputContractSummary": "Runtime-capable Run app and Run tests nodes under the process run node, plus a grouping node only when needed for organization.",
-      "EvidenceContractSummary": "Project-structure write receipts, node ids, commands, and unresolved blockers.",
+      "EvidenceContractSummary": "Project-structure write receipts, node ids, commands, launcher-compatibility receipts, and unresolved blockers.",
       "DecisionRightsSummary": "Recorder can complete only after durable project-structure receipts exist.",
       "ExceptionPolicySummary": "Artifact recovery: block when required Run command node receipts are missing, invalid, or not materialized before branch routing. Block with exact missing tool or failed write receipt if project-structure nodes cannot be created.",
       "TargetLeadHours": 2,
@@ -210,7 +210,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by screenshots, QA reruns, release, and later delivery replay.",
-          "ValidationRequirementSummary": "Must include Run command parent node id, Run app child node id, Run tests child node id, project id, process run node id, commands, working directories, write receipt ids, and blocker status."
+          "ValidationRequirementSummary": "Must include Run command parent node id, Run app child node id, Run tests child node id, project id, process run node id, commands, working directories, write receipt ids, launcher-compatibility receipts from typed metadata, and blocker status."
         }
       ],
       "ArtifactInputs": [
@@ -240,7 +240,7 @@
       "Key": "runtime-command-handoff",
       "Title": "Hand off runtime command nodes",
       "Subtitle": "Run command evidence index",
-      "Notes": "Summarize the Run command parent, Run app node, Run tests node, command values, command applicability, and any unresolved blockers for parent release approval and screenshot capture. This step writes managed artifacts only.",
+      "Notes": "Summarize the Run command parent, Run app node, Run tests node, command values, command applicability, launcher-compatibility receipts, and any unresolved blockers for parent release approval and screenshot capture. This step writes managed artifacts only. If a runnable command node was not launcher-compatible, the handoff must state what field or tool access is missing and why the parent should request repair instead of treating the node as accepted runtime proof.",
       "StepKind": "End",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -248,7 +248,7 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Run command node receipts and command manifest.",
       "OutputContractSummary": "Parent-ready runtime command handoff.",
-      "EvidenceContractSummary": "Node ids, commands, command applicability, receipts, and blockers.",
+      "EvidenceContractSummary": "Node ids, commands, command applicability, launcher-compatibility receipts, and blockers.",
       "DecisionRightsSummary": "Delivery manager may close only when Run app and Run tests node status is explicit.",
       "ExceptionPolicySummary": "Do not close without receipts for Run command, Run app, and Run tests nodes.",
       "TargetLeadHours": 2,
@@ -285,7 +285,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent release approval and later run analysis.",
-          "ValidationRequirementSummary": "Must reference the Run command parent node, Run app node, Run tests node, command manifest, storage receipts, and unresolved blockers or not-applicable reasons."
+          "ValidationRequirementSummary": "Must reference the Run command parent node, Run app node, Run tests node, command manifest, storage receipts, launcher-compatibility receipts, and unresolved blockers or not-applicable reasons."
         }
       ],
       "ArtifactInputs": [

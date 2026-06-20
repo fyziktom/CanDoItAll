@@ -361,6 +361,7 @@ internal static partial class ProjectStructureCanvasCatalog
         [
             Field("environmentKind", "Kind", "select", "Choose environment", true, [Option(ToCamelCase(kind.ToString()), ResolveEnvironmentKindLabel(kind))]),
             Field("projectPath", "Project path", "text", "C:\\repositories\\CanDoItAll\\src\\CanDoItAll.Web\\CanDoItAll.Web.csproj", true),
+            Field("workingDirectory", "Working directory", "text", "C:\\repositories\\CanDoItAll"),
             Field("launchProfileName", "Launch profile", "text", "https"),
             Field("runtimeProtocol", "Protocol", "select", "Choose protocol", false, RuntimeProtocolOptions),
             Field("localhostUrl", "Localhost URL", "url", "https://localhost:5001")

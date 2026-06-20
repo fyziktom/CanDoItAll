@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
-public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceExecutionRunStore
+public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore
 {
     private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
 
@@ -383,6 +383,65 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         }
     }
 
+    public async Task<ChatSessionRecord> CreateChatSessionAsync(
+        ChatSessionRecord session,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+
+            var catalog = await LoadCatalogCoreAsync(cancellationToken);
+            ValidateChatSession(catalog, session);
+
+            var existingSession = await chatProjectionStore.GetChatSessionAsync(session.Id, cancellationToken);
+            if (existingSession is not null)
+            {
+                throw new InvalidOperationException($"Chat session '{session.Id:N}' already exists.");
+            }
+
+            return await SaveChatSessionCoreAsync(previousSession: null, session, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<ChatSessionRecord> UpdateChatSessionAsync(
+        ChatSessionRecord session,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+
+            var catalog = await LoadCatalogCoreAsync(cancellationToken);
+            ValidateChatSession(catalog, session);
+
+            var existingSession = await chatProjectionStore.GetChatSessionAsync(session.Id, cancellationToken)
+                                  ?? throw new InvalidOperationException($"Chat session '{session.Id:N}' was not found.");
+            if (existingSession.AgentId != session.AgentId)
+            {
+                throw new InvalidOperationException($"Chat session '{session.Id:N}' cannot be moved to a different agent.");
+            }
+
+            return await SaveChatSessionCoreAsync(existingSession, session, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     private async Task<SandboxWorkspaceDocument> UpdateWorkspaceCoreAsync(
         Func<SandboxWorkspaceDocument, SandboxWorkspaceDocument> update,
         long? expectedRevision,
@@ -661,6 +720,44 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
     private Task SaveWorkspaceIndexCoreAsync(WorkspaceStorageIndex index, CancellationToken cancellationToken)
         => jsonStore.WriteJsonAtomicallyAsync(layout.WorkspaceIndexPath, index, cancellationToken);
 
+    private async Task<ChatSessionRecord> SaveChatSessionCoreAsync(
+        ChatSessionRecord? previousSession,
+        ChatSessionRecord session,
+        CancellationToken cancellationToken)
+    {
+        var normalizedSession = NormalizeChatSession(session);
+        var sessionExistedBefore = previousSession is not null;
+        var changed = await jsonStore.WriteJsonIfChangedAsync(
+            layout.SessionPath(normalizedSession.Id),
+            normalizedSession,
+            cancellationToken);
+
+        var currentIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
+        var nextIndex = currentIndex with
+        {
+            Revision = changed ? currentIndex.Revision + 1L : currentIndex.Revision,
+            UpdatedAtUtc = changed ? DateTimeOffset.UtcNow : currentIndex.UpdatedAtUtc,
+            SessionCount = currentIndex.SessionCount + (sessionExistedBefore ? 0 : 1)
+        };
+
+        if (changed || !File.Exists(layout.ExecutionIndexPath) || jsonStore.RequiresSave(currentIndex, nextIndex))
+        {
+            await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionIndexPath, nextIndex, cancellationToken);
+        }
+
+        var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
+        var nextWorkspaceIndex = new WorkspaceStorageIndex(
+            Revision: changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
+            UpdatedAtUtc: nextIndex.UpdatedAtUtc);
+        if (changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
+        {
+            await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
+        }
+
+        await chatProjectionStore.SaveSessionAsync(previousSession, normalizedSession, nextIndex, cancellationToken);
+        return normalizedSession;
+    }
+
     private async Task<long> ResolveCurrentRevisionAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(layout.CatalogPath) &&
@@ -783,6 +880,38 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
                 throw new InvalidOperationException(
                     $"{label} '{record.RecordId:N}' does not match the chat session linked to execution run '{detail.Run.Id:N}'.");
             }
+        }
+    }
+
+    private static ChatSessionRecord NormalizeChatSession(ChatSessionRecord session)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return session with
+        {
+            Title = string.IsNullOrWhiteSpace(session.Title) ? "New exploration thread" : session.Title.Trim(),
+            CreatedAtUtc = session.CreatedAtUtc == default ? now : session.CreatedAtUtc,
+            UpdatedAtUtc = session.UpdatedAtUtc == default ? now : session.UpdatedAtUtc,
+            Messages = session.Messages ?? []
+        };
+    }
+
+    private static void ValidateChatSession(
+        SandboxWorkspaceCatalog catalog,
+        ChatSessionRecord session)
+    {
+        if (session.Id == Guid.Empty)
+        {
+            throw new InvalidOperationException("Chat session id is required.");
+        }
+
+        if (session.AgentId == Guid.Empty)
+        {
+            throw new InvalidOperationException("Chat session agent id is required.");
+        }
+
+        if (!catalog.Agents.Any(agent => agent.Id == session.AgentId))
+        {
+            throw new InvalidOperationException($"Chat session '{session.Id:N}' references missing agent '{session.AgentId:N}'.");
         }
     }
 

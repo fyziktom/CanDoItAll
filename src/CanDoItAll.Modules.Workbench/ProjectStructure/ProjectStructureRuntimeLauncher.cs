@@ -47,6 +47,7 @@ public sealed class ProjectStructureRuntimeLauncher(
         }
 
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
+        ProjectStructureDotNetRuntimeMetadataHydrator.Hydrate(node.ObjectType, node.ObjectSubtype, node.Notes, metadata);
         return node.ObjectType switch
         {
             ProjectObjectType.Script => ResolveScriptPlan(node.ObjectSubtype, metadata.Script),
@@ -250,12 +251,23 @@ public sealed class ProjectStructureRuntimeLauncher(
             return Fail("Runtime launch requires a project path.");
         }
 
-        if (TryResolveWorkspacePath(metadata.ProjectPath, "Project path", out var projectPath) is { } projectPathFailure)
+        string? resolvedWorkingDirectory = null;
+        if (!string.IsNullOrWhiteSpace(metadata.WorkingDirectory))
+        {
+            if (TryResolveWorkspacePath(metadata.WorkingDirectory, "Runtime working directory", out var explicitWorkingDirectory) is { } workingDirectoryFailure)
+            {
+                return workingDirectoryFailure;
+            }
+
+            resolvedWorkingDirectory = explicitWorkingDirectory;
+        }
+
+        if (TryResolveWorkspacePath(metadata.ProjectPath, "Project path", out var projectPath, resolvedWorkingDirectory) is { } projectPathFailure)
         {
             return projectPathFailure;
         }
 
-        var workingDirectory = ResolveWorkingDirectoryFromProjectPath(projectPath);
+        var workingDirectory = resolvedWorkingDirectory ?? ResolveWorkingDirectoryFromProjectPath(projectPath);
         var commandParts = new List<string> { "dotnet" };
         if (isWatch)
         {
