@@ -73,14 +73,14 @@
 
 @if (PendingDeletePrompt is not null)
 {
-    <ProjectStructureOverlayDialog AriaLabel="@($"Delete {PendingDeletePrompt.Title}")"
-                                   Kicker="Delete node"
+    <ProjectStructureOverlayDialog AriaLabel="@ResolveDeletePromptAriaLabel(PendingDeletePrompt)"
+                                   Kicker="@(PendingDeletePrompt.IsBulk ? "Delete selection" : "Delete node")"
                                    Title="@PendingDeletePrompt.Title"
                                    Summary="@PendingDeletePrompt.ImpactCopy"
                                    DialogClass="project-structure-summary-dialog"
                                    Close="CancelDelete">
         <Actions>
-            <Button Text="Delete"
+            <Button Text="@(PendingDeletePrompt.IsBulk ? "Delete selected" : "Delete")"
                     ButtonStyle="ButtonStyle.Danger"
                     Click="ConfirmDelete" />
             <Button Text="Cancel"
@@ -247,4 +247,9 @@
 
     [Parameter, EditorRequired]
     public Func<ProjectLlmActionKind, string> ResolveTranscriptActionLabel { get; set; } = default!;
+
+    private static string ResolveDeletePromptAriaLabel(ProjectStructureDeletePrompt prompt)
+        => prompt.IsBulk
+            ? $"Delete {prompt.NodeIds.Count} selected nodes"
+            : $"Delete {prompt.Title}";
 }

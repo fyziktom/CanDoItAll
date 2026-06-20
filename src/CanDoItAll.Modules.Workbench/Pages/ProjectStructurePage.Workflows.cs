@@ -144,8 +144,8 @@ public partial class ProjectStructurePage
         var prompt = BuildDeletePrompt(targetNode);
         if (!prompt.RequiresConfirmation)
         {
-            var deleted = await DeleteSelectedNodeAsync(
-                targetNode,
+            var deleted = await DeleteSelectedNodesAsync(
+                [targetNode],
                 $"{targetNode.Title} was deleted.",
                 "The selected node could not be deleted.");
             if (!deleted)
@@ -159,6 +159,24 @@ public partial class ProjectStructurePage
         pendingDeletePrompt = prompt;
     }
 
+    private async Task DeleteNodesAsync(IReadOnlyCollection<string> nodeIds)
+    {
+        var targetNodes = ResolveDeleteTargetNodes(nodeIds);
+        if (targetNodes.Count == 0)
+        {
+            return;
+        }
+
+        if (targetNodes.Count == 1)
+        {
+            await DeleteNodeAsync(targetNodes[0].Id);
+            return;
+        }
+
+        pendingDeletePrompt = BuildDeletePrompt(targetNodes);
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task ConfirmDeleteAsync()
     {
         if (pendingDeletePrompt is null)
@@ -166,11 +184,11 @@ public partial class ProjectStructurePage
             return;
         }
 
-        var nodeId = pendingDeletePrompt.NodeId;
+        var nodeIds = ResolvePendingDeleteNodeIds(pendingDeletePrompt);
         pendingDeletePrompt = null;
         reconnectNodeId = null;
-        var targetNode = ResolveNode(nodeId);
-        if (targetNode is null)
+        var targetNodes = ResolveDeleteTargetNodes(nodeIds);
+        if (targetNodes.Count == 0)
         {
             workflowFeedback = "The selected node could not be found anymore.";
             workflowFeedbackTone = "warn";
@@ -178,32 +196,41 @@ public partial class ProjectStructurePage
             return;
         }
 
-        await DeleteSelectedNodeAsync(
-            targetNode,
-            "The selected branch was deleted.",
-            "The selected branch could not be deleted.");
+        var isBulk = targetNodes.Count > 1;
+        await DeleteSelectedNodesAsync(
+            targetNodes,
+            isBulk ? $"{targetNodes.Count} selected branches were deleted." : "The selected branch was deleted.",
+            isBulk ? "The selected branches could not be deleted." : "The selected branch could not be deleted.");
     }
 
     private void CancelDelete()
         => pendingDeletePrompt = null;
 
-    private async Task<bool> DeleteSelectedNodeAsync(
-        ProjectStructureNode targetNode,
+    private async Task<bool> DeleteSelectedNodesAsync(
+        IReadOnlyList<ProjectStructureNode> targetNodes,
         string successMessage,
         string failureMessage)
     {
-        var deletedCount = await ProjectWorkbenchService.DeleteObjectAsync(ProjectId, targetNode.Id);
-        if (deletedCount > 0)
+        var deletedAny = false;
+        foreach (var requestedNode in targetNodes)
         {
-            await ReloadSurfaceAsync();
-            workflowFeedback = successMessage;
-            workflowFeedbackTone = "mint";
-            return true;
+            var targetNode = ResolveNode(requestedNode.Id) ?? requestedNode;
+            var deletedCount = await ProjectWorkbenchService.DeleteObjectAsync(ProjectId, targetNode.Id);
+            if (deletedCount > 0)
+            {
+                deletedAny = true;
+                continue;
+            }
+
+            if (await TryDetachProjectedNodeAsync(targetNode))
+            {
+                deletedAny = true;
+            }
         }
 
-        if (await TryDetachProjectedNodeAsync(targetNode))
+        if (deletedAny)
         {
-            await ReloadSurfaceAsync(targetNode.ParentId);
+            await ReloadSurfaceAsync();
             workflowFeedback = successMessage;
             workflowFeedbackTone = "mint";
             return true;
@@ -214,6 +241,59 @@ public partial class ProjectStructurePage
         await InvokeAsync(StateHasChanged);
         return false;
     }
+
+    private IReadOnlyList<ProjectStructureNode> ResolveDeleteTargetNodes(IReadOnlyCollection<string> nodeIds)
+    {
+        if (surface is null || nodeIds.Count == 0)
+        {
+            return [];
+        }
+
+        var nodesById = surface.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var targets = nodeIds
+            .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
+            .Distinct(StringComparer.Ordinal)
+            .Select(nodeId => nodesById.GetValueOrDefault(nodeId))
+            .Where(node => node is not null)
+            .Cast<ProjectStructureNode>()
+            .ToList();
+        if (targets.Count < 2)
+        {
+            return targets;
+        }
+
+        var selectedIds = targets
+            .Select(node => node.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        return targets
+            .Where(node => !HasSelectedDeleteAncestor(node, selectedIds, nodesById))
+            .ToList();
+    }
+
+    private static bool HasSelectedDeleteAncestor(
+        ProjectStructureNode node,
+        IReadOnlySet<string> selectedIds,
+        IReadOnlyDictionary<string, ProjectStructureNode> nodesById)
+    {
+        var visitedIds = new HashSet<string>(StringComparer.Ordinal);
+        var parentId = node.ParentId;
+        while (!string.IsNullOrWhiteSpace(parentId) && visitedIds.Add(parentId))
+        {
+            if (selectedIds.Contains(parentId))
+            {
+                return true;
+            }
+
+            parentId = nodesById.TryGetValue(parentId, out var parent)
+                ? parent.ParentId
+                : null;
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<string> ResolvePendingDeleteNodeIds(ProjectStructureDeletePrompt prompt)
+        => prompt.NodeIds.Count > 0 ? prompt.NodeIds : [prompt.NodeId];
 
     private async Task<bool> TryDetachProjectedNodeAsync(ProjectStructureNode targetNode)
     {
@@ -736,6 +816,47 @@ public partial class ProjectStructurePage
             impactCopy);
     }
 
+    private ProjectStructureDeletePrompt BuildDeletePrompt(IReadOnlyList<ProjectStructureNode> nodes)
+    {
+        if (nodes.Count == 1)
+        {
+            return BuildDeletePrompt(nodes[0]);
+        }
+
+        var nodeIds = nodes
+            .Select(node => node.Id)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var affectedNodeIds = CollectDeleteSubtreeNodeIds(nodeIds);
+        var descendantCount = Math.Max(0, affectedNodeIds.Count - nodeIds.Count);
+        var dependencyLinkCount = CountDependencyLinks(affectedNodeIds);
+        var linkedNodeCount = CountLinkedNodes(affectedNodeIds);
+        var impactParts = new List<string>
+        {
+            descendantCount > 0
+                ? $"This will delete {nodeIds.Count} selected root nodes and {affectedNodeIds.Count} total nodes including child items."
+                : $"This will delete {nodeIds.Count} selected nodes."
+        };
+
+        if (dependencyLinkCount > 0)
+        {
+            impactParts.Add(
+                linkedNodeCount > 0
+                    ? $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")} touching {linkedNodeCount} connected node{(linkedNodeCount == 1 ? string.Empty : "s")} outside the selection."
+                    : $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")} inside the selected branches.");
+        }
+
+        return new ProjectStructureDeletePrompt(
+            nodeIds[0],
+            $"{nodeIds.Count} selected nodes",
+            descendantCount,
+            RequiresConfirmation: true,
+            string.Join(" ", impactParts))
+        {
+            NodeIds = nodeIds
+        };
+    }
+
     private int CountDescendants(string nodeId)
     {
         if (surface is null)
@@ -796,6 +917,66 @@ public partial class ProjectStructurePage
             link.Kind == ProjectObjectLinkKind.DependsOn &&
             (string.Equals(link.SourceId, nodeId, StringComparison.Ordinal) ||
              string.Equals(link.TargetId, nodeId, StringComparison.Ordinal)));
+    }
+
+    private HashSet<string> CollectDeleteSubtreeNodeIds(IReadOnlyCollection<string> rootNodeIds)
+    {
+        var collectedIds = new HashSet<string>(rootNodeIds, StringComparer.Ordinal);
+        if (surface is null || rootNodeIds.Count == 0)
+        {
+            return collectedIds;
+        }
+
+        var childrenByParent = surface.Nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
+            .GroupBy(node => node.ParentId!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Select(child => child.Id).ToList(), StringComparer.Ordinal);
+        var queue = new Queue<string>(rootNodeIds);
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (!childrenByParent.TryGetValue(current, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                if (collectedIds.Add(child))
+                {
+                    queue.Enqueue(child);
+                }
+            }
+        }
+
+        return collectedIds;
+    }
+
+    private int CountLinkedNodes(IReadOnlySet<string> nodeIds)
+    {
+        if (surface is null || nodeIds.Count == 0)
+        {
+            return 0;
+        }
+
+        return surface.Links
+            .Where(link => nodeIds.Contains(link.SourceId) || nodeIds.Contains(link.TargetId))
+            .Select(link => nodeIds.Contains(link.SourceId) ? link.TargetId : link.SourceId)
+            .Where(otherNodeId => !string.IsNullOrWhiteSpace(otherNodeId) && !nodeIds.Contains(otherNodeId))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+    }
+
+    private int CountDependencyLinks(IReadOnlySet<string> nodeIds)
+    {
+        if (surface is null || nodeIds.Count == 0)
+        {
+            return 0;
+        }
+
+        return surface.Links.Count(link =>
+            link.Kind == ProjectObjectLinkKind.DependsOn &&
+            (nodeIds.Contains(link.SourceId) || nodeIds.Contains(link.TargetId)));
     }
 
     private ProjectStructureNode? ResolveNode(string? nodeId)

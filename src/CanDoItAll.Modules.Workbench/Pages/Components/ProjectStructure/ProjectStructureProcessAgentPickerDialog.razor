@@ -1,0 +1,305 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@inject DialogService DialogService
+
+<Stack GapScale="LayoutGap.Large"
+       data-testid="project-structure-process-assignment-agent-picker-content"
+       Class="project-structure-agent-picker">
+    <SurfaceCard Soft="true"
+                 Class="project-structure-agent-picker__summary">
+        <Stack Orientation="Orientation.Horizontal"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               GapScale="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.XSmall">
+                <span>Process role</span>
+                <strong>@Role.DisplayName</strong>
+                <small>@ResolveDirectorySummary()</small>
+            </Stack>
+            <Badge Tone="@ResolveRoleTone()"
+                   Text="@(Role.IsResolved ? "Resolved" : "Needs agent")" />
+        </Stack>
+    </SurfaceCard>
+
+    @if (DirectoryCandidates.Count == 0)
+    {
+        <SurfaceCard Soft="true"
+                     Class="project-structure-agent-picker__empty"
+                     data-testid="project-structure-process-assignment-agent-picker-empty">
+            <Icon Name="person_search" />
+            <strong>No compatible active agents</strong>
+            <span>Enable or provision an agent that matches this process role before launch.</span>
+        </SurfaceCard>
+    }
+    else
+    {
+        <Grid ColumnTemplate="repeat(3,minmax(0,1fr))"
+              Gap="LayoutGap.Medium"
+              data-testid="project-structure-process-assignment-agent-picker-candidates">
+            @foreach (var candidate in DirectoryCandidates)
+            {
+                var candidateTestId = $"project-structure-process-assignment-agent-picker-candidate-{candidate.CandidateId:D}";
+                <SurfaceCard Soft="@candidate.IsSelected"
+                             Class="@ResolveCandidateCardClass(candidate)"
+                             data-testid="@($"{candidateTestId}-card")">
+                    <Stack FillHeight="true"
+                           GapScale="LayoutGap.Medium">
+                        <Stack Orientation="Orientation.Horizontal"
+                               AlignItems="AlignItems.Center"
+                               GapScale="LayoutGap.Medium">
+                            <Avatar Alt="@candidate.DisplayName"
+                                    ImageUrl="@ResolveCandidateImageUrl(candidate)"
+                                    FallbackText="@BuildInitials(candidate.DisplayName)"
+                                    DefaultImageSeed="@candidate.DisplayName"
+                                    Size="AvatarSize.Large"
+                                    Shape="AvatarShape.Rounded" />
+                            <Stack GapScale="LayoutGap.XSmall"
+                                   Class="project-structure-agent-picker__candidate-title">
+                                <strong>@candidate.DisplayName</strong>
+                                <small>@ResolveAgentRole(candidate)</small>
+                            </Stack>
+                        </Stack>
+
+                        <p>@ResolveCandidateSummary(candidate)</p>
+
+                        <Stack Orientation="Orientation.Horizontal"
+                               Wrap="FlexWrap.Wrap"
+                               GapScale="LayoutGap.XSmall"
+                               Class="project-structure-agent-picker__badges">
+                            <TooltipTarget Text="@BuildModelTooltip(candidate)"
+                                           Position="TooltipPosition.Bottom"
+                                           TestId="@($"{candidateTestId}-model-tooltip")">
+                                <Badge Tone="BadgeTone.Info"
+                                       Text="model" />
+                            </TooltipTarget>
+                            <TooltipTarget Text="@BuildListTooltip(ResolveToolNames(candidate), "No tools configured for this agent.")"
+                                           Position="TooltipPosition.Bottom"
+                                           TestId="@($"{candidateTestId}-tools-tooltip")">
+                                <Badge Tone="BadgeTone.Default"
+                                       Text="tools" />
+                            </TooltipTarget>
+                            <TooltipTarget Text="@BuildListTooltip(ResolveSkillNames(candidate), "No skills configured for this agent.")"
+                                           Position="TooltipPosition.Bottom"
+                                           TestId="@($"{candidateTestId}-skills-tooltip")">
+                                <Badge Tone="BadgeTone.Promo"
+                                       Text="skills" />
+                            </TooltipTarget>
+                            @if (candidate.IsRecommended)
+                            {
+                                <Badge Tone="BadgeTone.Success"
+                                       Text="compatible" />
+                            }
+                        </Stack>
+
+                        <Stack Orientation="Orientation.Horizontal"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               GapScale="LayoutGap.Small"
+                               Class="project-structure-agent-picker__actions">
+                            <Button Text="Details"
+                                    Icon="info"
+                                    Variant="Variant.Text"
+                                    ButtonStyle="ButtonStyle.Base"
+                                    Size="ButtonSize.Small"
+                                    data-testid="@($"{candidateTestId}-details")"
+                                    Click="@(() => OpenCandidateDetailsAsync(candidate))" />
+                            @if (candidate.IsSelected)
+                            {
+                                <Badge Tone="BadgeTone.Success"
+                                       Text="Selected" />
+                            }
+                            else
+                            {
+                                <Button Text="Select agent"
+                                        Icon="check"
+                                        ButtonStyle="ButtonStyle.Info"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(!candidate.IsResolvable)"
+                                        data-testid="@($"{candidateTestId}-select")"
+                                        Click="@(() => SelectAsync(candidate))" />
+                            }
+                        </Stack>
+                    </Stack>
+                </SurfaceCard>
+            }
+        </Grid>
+    }
+
+    <Stack Orientation="Orientation.Horizontal"
+           JustifyContent="JustifyContent.End"
+           GapScale="LayoutGap.Small">
+        <Button Text="Close"
+                Variant="Variant.Outlined"
+                ButtonStyle="ButtonStyle.Base"
+                data-testid="project-structure-process-assignment-agent-picker-close"
+                Click="CancelAsync" />
+    </Stack>
+</Stack>
+
+@code {
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    [Parameter, EditorRequired]
+    public ProjectStructureProcessStartRoleState Role { get; set; } = default!;
+
+    private IReadOnlyList<ProjectStructureProcessStartCandidateState> DirectoryCandidates
+        => (Role.DirectoryCandidates.Count > 0 ? Role.DirectoryCandidates : Role.Candidates)
+            .Where(candidate => candidate.IsResolvable)
+            .OrderByDescending(candidate => candidate.IsSelected)
+            .ThenByDescending(candidate => candidate.IsRecommended)
+            .ThenByDescending(ResolveScore)
+            .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private Task SelectAsync(ProjectStructureProcessStartCandidateState candidate)
+    {
+        if (!candidate.IsResolvable)
+        {
+            return Task.CompletedTask;
+        }
+
+        return DialogReference is null
+            ? DialogService.CloseAsync(candidate.CandidateId)
+            : DialogReference.CloseAsync(candidate.CandidateId);
+    }
+
+    private Task CancelAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync()
+            : DialogReference.CloseAsync();
+
+    private Task OpenCandidateDetailsAsync(ProjectStructureProcessStartCandidateState candidate)
+    {
+        _ = DialogService.OpenAsync<ProjectStructureProcessAgentDetailsDialog>(
+            candidate.DisplayName,
+            new Dictionary<string, object?>
+            {
+                [nameof(ProjectStructureProcessAgentDetailsDialog.Role)] = Role,
+                [nameof(ProjectStructureProcessAgentDetailsDialog.Candidate)] = candidate
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Process assignment",
+                Subtitle = $"Readonly agent details for {Role.DisplayName}.",
+                Size = ModalSize.Wide,
+                DenseChrome = true,
+                TestId = "project-structure-process-assignment-agent-details-dialog",
+                AriaLabel = "Process assignment agent details"
+            });
+        return Task.CompletedTask;
+    }
+
+    private string ResolveDirectorySummary()
+    {
+        var count = DirectoryCandidates.Count;
+        return count == 1
+            ? "1 compatible active agent is available."
+            : $"{count:N0} compatible active agents are available.";
+    }
+
+    private BadgeTone ResolveRoleTone()
+        => Role.IsResolved ? BadgeTone.Success : BadgeTone.Warn;
+
+    private static string ResolveCandidateCardClass(ProjectStructureProcessStartCandidateState candidate)
+        => CssClassBuilder.Join(
+            "project-structure-agent-picker__candidate",
+            candidate.IsSelected ? "is-selected" : null);
+
+    private static string ResolveAgentRole(ProjectStructureProcessStartCandidateState candidate)
+        => string.IsNullOrWhiteSpace(candidate.AgentRoleTitle)
+            ? candidate.ExecutorKind
+            : candidate.AgentRoleTitle;
+
+    private static string ResolveCandidateSummary(ProjectStructureProcessStartCandidateState candidate)
+    {
+        if (!string.IsNullOrWhiteSpace(candidate.AgentSummary))
+        {
+            return Trim(candidate.AgentSummary, 150);
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.RecommendationSummary))
+        {
+            return Trim(candidate.RecommendationSummary, 150);
+        }
+
+        return "Compatible active agent for this process role.";
+    }
+
+    private static string BuildModelTooltip(ProjectStructureProcessStartCandidateState candidate)
+    {
+        var provider = string.IsNullOrWhiteSpace(candidate.AgentProviderName)
+            ? "Provider not configured"
+            : candidate.AgentProviderName.Trim();
+        var model = string.IsNullOrWhiteSpace(candidate.AgentModel)
+            ? "Model not configured"
+            : candidate.AgentModel.Trim();
+
+        return $"{provider} / {model}";
+    }
+
+    private static string BuildListTooltip(IReadOnlyList<string> values, string emptyText)
+    {
+        var names = values
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (names.Count == 0)
+        {
+            return emptyText;
+        }
+
+        var visible = names.Take(10).ToList();
+        var suffix = names.Count > visible.Count ? $" (+{names.Count - visible.Count} more)" : string.Empty;
+        return string.Join(", ", visible) + suffix;
+    }
+
+    private static IReadOnlyList<string> ResolveToolNames(ProjectStructureProcessStartCandidateState candidate)
+        => candidate.ToolNames?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList()
+           ?? [];
+
+    private static IReadOnlyList<string> ResolveSkillNames(ProjectStructureProcessStartCandidateState candidate)
+        => candidate.SkillNames?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList()
+           ?? [];
+
+    private static string? ResolveCandidateImageUrl(ProjectStructureProcessStartCandidateState candidate)
+        => string.IsNullOrWhiteSpace(candidate.AgentAvatarImageUrl)
+            ? null
+            : candidate.AgentAvatarImageUrl;
+
+    private static decimal ResolveScore(ProjectStructureProcessStartCandidateState candidate)
+    {
+        var token = candidate.ScoreLabel.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return decimal.TryParse(
+            token,
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var score)
+            ? score
+            : 0m;
+    }
+
+    private static string BuildInitials(string value)
+    {
+        var segments = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToList();
+
+        return segments.Count == 0
+            ? "AI"
+            : string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
+    }
+
+    private static string Trim(string value, int maxLength)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..(maxLength - 3)] + "...";
+    }
+}

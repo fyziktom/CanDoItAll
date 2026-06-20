@@ -164,6 +164,13 @@ public partial class ProjectStructurePage
 
     private async Task ExecuteOutlineContextActionAsync(ProjectStructureSupportPanelContextActionRequest request)
     {
+        if (string.Equals(request.ActionId, "delete", StringComparison.OrdinalIgnoreCase) &&
+            request.TargetNodeIds is { Count: > 1 } targetNodeIds)
+        {
+            await DeleteNodesAsync(targetNodeIds);
+            return;
+        }
+
         var node = ResolveNode(request.NodeId);
         if (node is null)
         {

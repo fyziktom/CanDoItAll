@@ -8,4 +8,5 @@ public sealed record ProjectStructureSupportPanelContextAction(
 
 public sealed record ProjectStructureSupportPanelContextActionRequest(
     string NodeId,
-    string ActionId);
+    string ActionId,
+    IReadOnlyList<string>? TargetNodeIds = null);

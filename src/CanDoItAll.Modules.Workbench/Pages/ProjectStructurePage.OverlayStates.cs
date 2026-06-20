@@ -207,6 +207,7 @@ public sealed record ProjectStructureProcessStartRoleState(
 {
     public string StepKey { get; init; } = string.Empty;
     public string RoleKey { get; init; } = string.Empty;
+    public IReadOnlyList<ProjectStructureProcessStartCandidateState> DirectoryCandidates { get; init; } = [];
 
     public bool HasBlockingGap => IsRequired && !IsResolved;
 }
@@ -312,7 +313,12 @@ public sealed record ProjectStructureDeletePrompt(
     string Title,
     int DescendantCount,
     bool RequiresConfirmation,
-    string ImpactCopy);
+    string ImpactCopy)
+{
+    public IReadOnlyList<string> NodeIds { get; init; } = string.IsNullOrWhiteSpace(NodeId) ? [] : [NodeId];
+
+    public bool IsBulk => NodeIds.Count > 1;
+}
 
 public sealed record ProjectStructureSummaryDialogState(
     string RootNodeId,

@@ -147,6 +147,43 @@ public sealed class ProviderPricingTests
     }
 
     [Fact]
+    public void Usage_summary_counts_observed_usage_across_runtime_repair_and_finalizer_phases()
+    {
+        var provider = CreateProvider(
+            "Provider A",
+            [new ProviderModelTokenPrice("model-a", 1.00m, 0.10m, 4.00m)]);
+        var runtimeUsage = CreateUsageObservation(
+            ProviderUsageObservationStatus.Observed,
+            inputTokens: 1_000_000,
+            cachedInputTokens: 250_000,
+            outputTokens: 500_000,
+            sourcePhase: ProviderUsageSourcePhases.AgentRuntime);
+        var repairUsage = CreateUsageObservation(
+            ProviderUsageObservationStatus.Observed,
+            inputTokens: 10_000,
+            cachedInputTokens: 1_000,
+            outputTokens: 2_000,
+            sourcePhase: ProviderUsageSourcePhases.StructuredOutputRepair);
+        var finalizerUsage = CreateUsageObservation(
+            ProviderUsageObservationStatus.ObservedFromMetric,
+            inputTokens: 5_000,
+            cachedInputTokens: 0,
+            outputTokens: 1_000,
+            sourcePhase: ProviderUsageSourcePhases.FinalizerRecovery);
+
+        var summary = ProviderPricingCalculator.SummarizeUsage([runtimeUsage, repairUsage, finalizerUsage], [provider]);
+
+        Assert.Equal(3, summary.ObservationCount);
+        Assert.Equal(3, summary.KnownObservationCount);
+        Assert.Equal(0, summary.UnknownObservationCount);
+        Assert.Equal(1_015_000, summary.InputTokens);
+        Assert.Equal(251_000, summary.CachedInputTokens);
+        Assert.Equal(503_000, summary.OutputTokens);
+        Assert.Equal(1_518_000, summary.TotalTokens);
+        Assert.Equal(2.8011m, summary.KnownCostUsd);
+    }
+
+    [Fact]
     public void Pricing_metadata_round_trips_without_breaking_flat_configuration_state()
     {
         var json = ProviderPricingMetadata.Write(
@@ -323,7 +360,8 @@ public sealed class ProviderPricingTests
         ProviderUsageObservationStatus status,
         int inputTokens,
         int cachedInputTokens,
-        int outputTokens)
+        int outputTokens,
+        string sourcePhase = ProviderUsageSourcePhases.AgentRuntime)
     {
         return new ProviderUsageObservation(
             Id: Guid.NewGuid(),
@@ -332,7 +370,7 @@ public sealed class ProviderPricingTests
             ProviderKind: ProviderKind.OpenAi,
             Model: "model-a",
             TransportKind: ProviderTransportKind.Responses,
-            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            SourcePhase: sourcePhase,
             UsageStatus: status,
             InputTokens: inputTokens,
             CachedInputTokens: cachedInputTokens,

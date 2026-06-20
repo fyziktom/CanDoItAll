@@ -422,7 +422,7 @@
                                     data-testid="@($"project-structure-process-assignment-candidate-add-agent-{activeRole.LaunchPlanRoleId:D}")">
                                 <span><Icon Name="add" /></span>
                                 <strong>Assign another agent</strong>
-                                <small>Open the AI agent directory</small>
+                                <small>Show compatible active agents</small>
                             </button>
                         </div>
                     </section>
@@ -604,7 +604,48 @@
     private Task AssignAgentAsync(Guid launchPlanRoleId)
     {
         SelectRole(launchPlanRoleId);
-        return AssignProcessStartAgent.InvokeAsync(launchPlanRoleId);
+        _ = OpenAgentPickerAsync(launchPlanRoleId);
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenAgentPickerAsync(Guid launchPlanRoleId)
+    {
+        await AssignProcessStartAgent.InvokeAsync(launchPlanRoleId);
+        var role = Dialog.Roles.FirstOrDefault(item => item.LaunchPlanRoleId == launchPlanRoleId);
+        if (role is null)
+        {
+            return;
+        }
+
+        var result = await DialogService.OpenAsync<ProjectStructureProcessAgentPickerDialog>(
+            "Assign another agent",
+            new Dictionary<string, object?>
+            {
+                [nameof(ProjectStructureProcessAgentPickerDialog.Role)] = role
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Process assignment",
+                Subtitle = $"Compatible active agents for {role.DisplayName}.",
+                Size = ModalSize.Wide,
+                DenseChrome = true,
+                TestId = "project-structure-process-assignment-agent-picker-dialog",
+                AriaLabel = "Assign another process role agent",
+                ChromeCloseResult = null
+            });
+
+        if (result is not Guid candidateId)
+        {
+            return;
+        }
+
+        var candidate = ResolveCandidateById(role, candidateId);
+        if (candidate is null)
+        {
+            return;
+        }
+
+        await ConfirmAndSelectCandidateAsync(role, candidate);
     }
 
     private Task RequestSelectCandidateAsync(
@@ -696,6 +737,13 @@
 
     private ProjectStructureProcessStartCandidateState? ResolveSelectedCandidate(ProjectStructureProcessStartRoleState role)
         => role.Candidates.FirstOrDefault(candidate => candidate.IsSelected);
+
+    private ProjectStructureProcessStartCandidateState? ResolveCandidateById(
+        ProjectStructureProcessStartRoleState role,
+        Guid candidateId)
+        => role.DirectoryCandidates
+            .Concat(role.Candidates)
+            .FirstOrDefault(candidate => candidate.CandidateId == candidateId);
 
     private ProjectStructureProcessStartCandidateState? ResolveSuggestedCandidate(ProjectStructureProcessStartRoleState role)
         => role.Candidates

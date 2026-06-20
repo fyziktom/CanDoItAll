@@ -51,6 +51,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessStepBriefBuilder, AgentFrameworkProcessStepBriefBuilder>();
         services.TryAddScoped<IProcessExecutionAdapter, AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
+        services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, AgentFrameworkProcessRuntimeUsageTelemetryReader>();
         services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>();
         services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryReconciler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentExecutionRecoveryObserver, AgentFrameworkProcessExecutionRecoveryObserver>());

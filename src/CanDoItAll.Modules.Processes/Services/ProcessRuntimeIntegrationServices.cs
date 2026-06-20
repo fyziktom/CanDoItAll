@@ -2328,6 +2328,204 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 }
 
+internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
+    IAgentFrameworkWorkspaceService workspaceService) : IProcessRuntimeUsageTelemetryReader
+{
+    public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
+        ProcessRuntimeUsageTelemetryQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        if (query.RunIds.Count == 0)
+        {
+            return [];
+        }
+
+        var runIdSet = query.RunIds.ToHashSet();
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        var observations = new List<ProcessRuntimeUsageObservation>();
+
+        foreach (var runId in runIdSet)
+        {
+            var executionRuns = await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    ProcessRunId: runId.ToString(),
+                    Take: Math.Max(1, query.TakePerRun)),
+                cancellationToken).ConfigureAwait(false);
+
+            foreach (var executionRun in executionRuns)
+            {
+                ExecutionRunDetail? detail = null;
+                try
+                {
+                    detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
+                }
+                catch (InvalidOperationException)
+                {
+                }
+
+                if (detail is null)
+                {
+                    continue;
+                }
+
+                foreach (var usageObservation in detail.UsageObservations)
+                {
+                    if (usageObservation.CreatedAtUtc < query.FromUtc ||
+                        usageObservation.CreatedAtUtc > query.ToUtc ||
+                        !TryResolveProcessRunId(usageObservation, detail.Run, out var processRunId) ||
+                        !runIdSet.Contains(processRunId))
+                    {
+                        continue;
+                    }
+
+                    observations.Add(MapUsageObservation(usageObservation, detail.Run, processRunId, providers));
+                }
+            }
+        }
+
+        return observations
+            .OrderBy(observation => observation.CreatedAtUtc)
+            .ThenBy(observation => observation.UsageObservationId)
+            .ToArray();
+    }
+
+    private static ProcessRuntimeUsageObservation MapUsageObservation(
+        ProviderUsageObservation usageObservation,
+        ExecutionRunRecord executionRun,
+        ProcessRunId processRunId,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        var isKnownUsage = ProviderPricingCalculator.IsKnownUsageStatus(usageObservation.UsageStatus);
+        var actualCostUsd = isKnownUsage &&
+            ProviderPricingCalculator.TryResolveObservationCost(usageObservation, providers, out var knownCostUsd)
+                ? knownCostUsd
+                : 0m;
+        var estimatedCostUsd = usageObservation.UsageStatus == ProviderUsageObservationStatus.EstimatedFromMetric
+            ? ResolveEstimatedCost(usageObservation, providers)
+            : 0m;
+
+        return new ProcessRuntimeUsageObservation(
+            usageObservation.Id,
+            executionRun.Id,
+            processRunId,
+            TryResolveStepInstanceId(usageObservation, executionRun),
+            usageObservation.CreatedAtUtc,
+            usageObservation.ProviderName,
+            usageObservation.Model,
+            usageObservation.SourcePhase,
+            usageObservation.UsageStatus.ToString(),
+            isKnownUsage,
+            Math.Max(0, usageObservation.InputTokens),
+            Math.Clamp(usageObservation.CachedInputTokens, 0, Math.Max(0, usageObservation.InputTokens)),
+            Math.Max(0, usageObservation.OutputTokens),
+            Math.Max(0, usageObservation.ReasoningTokens),
+            Math.Max(0, usageObservation.TotalTokens),
+            decimal.Round(estimatedCostUsd, 6, MidpointRounding.AwayFromZero),
+            decimal.Round(actualCostUsd, 6, MidpointRounding.AwayFromZero));
+    }
+
+    private static decimal ResolveEstimatedCost(
+        ProviderUsageObservation usageObservation,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        if (usageObservation.ProviderCostUsd is > 0m)
+        {
+            return usageObservation.ProviderCostUsd.Value;
+        }
+
+        if (usageObservation.CalculatedCostUsd is > 0m)
+        {
+            return usageObservation.CalculatedCostUsd.Value;
+        }
+
+        var provider = providers.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, usageObservation.ProviderName, StringComparison.OrdinalIgnoreCase));
+        if (provider is not null &&
+            ProviderPricingCalculator.TryCalculate(
+                provider.Name,
+                usageObservation.Model,
+                usageObservation.InputTokens,
+                usageObservation.CachedInputTokens,
+                usageObservation.OutputTokens,
+                provider.ModelPrices,
+                out var cost))
+        {
+            return cost.TotalUsd;
+        }
+
+        return 0m;
+    }
+
+    private static bool TryResolveProcessRunId(
+        ProviderUsageObservation usageObservation,
+        ExecutionRunRecord executionRun,
+        out ProcessRunId processRunId)
+    {
+        if (TryCreateProcessRunId(usageObservation.ProcessRunId, out processRunId))
+        {
+            return true;
+        }
+
+        return TryCreateProcessRunId(executionRun.ProcessRunId, out processRunId);
+    }
+
+    private static ProcessStepInstanceId? TryResolveStepInstanceId(
+        ProviderUsageObservation usageObservation,
+        ExecutionRunRecord executionRun)
+    {
+        if (TryCreateStepInstanceId(usageObservation.ProcessStepId, out var observationStepId))
+        {
+            return observationStepId;
+        }
+
+        return TryCreateStepInstanceId(executionRun.ProcessStepId, out var executionStepId)
+            ? executionStepId
+            : null;
+    }
+
+    private static bool TryCreateProcessRunId(string value, out ProcessRunId processRunId)
+    {
+        processRunId = default;
+        if (!Guid.TryParse(value, out var parsed) || parsed == Guid.Empty)
+        {
+            return false;
+        }
+
+        try
+        {
+            processRunId = new ProcessRunId(parsed);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            processRunId = default;
+            return false;
+        }
+    }
+
+    private static bool TryCreateStepInstanceId(string value, out ProcessStepInstanceId stepInstanceId)
+    {
+        stepInstanceId = default;
+        if (!Guid.TryParse(value, out var parsed) || parsed == Guid.Empty)
+        {
+            return false;
+        }
+
+        try
+        {
+            stepInstanceId = new ProcessStepInstanceId(parsed);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            stepInstanceId = default;
+            return false;
+        }
+    }
+}
+
 internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     IProcessProjectionClock clock,
     IProcessRuntimeStateStore stateStore,

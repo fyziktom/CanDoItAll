@@ -13,7 +13,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
     ProcessDefinitionStepEditorProjectionService definitionStepEditorProjectionService,
     ProcessTemplateCatalogProjectionService templateCatalogProjectionService,
     ProcessRuntimeProjectionQueryService? runtimeProjectionQueryService = null,
-    ProcessRuntimeProjectionCatchupService? projectionCatchupService = null)
+    ProcessRuntimeProjectionCatchupService? projectionCatchupService = null,
+    IProcessRuntimeUsageTelemetryReader? runtimeUsageTelemetryReader = null)
 {
     private const string WorkspaceContextPrefix = "processes:workspace";
     private const string ProjectContextPrefix = "processes:project";
@@ -186,7 +187,45 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return CreateRuntimeWorkspace(runtimeQuery, result);
+        var usageObservations = await LoadRuntimeUsageObservationsAsync(
+                runtimeQuery,
+                result,
+                observedAtUtc,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return CreateRuntimeWorkspace(runtimeQuery, result, usageObservations);
+    }
+
+    private async Task<IReadOnlyList<ProcessRuntimeUsageObservation>> LoadRuntimeUsageObservationsAsync(
+        ProcessRuntimeWorkspaceQueryProjection runtimeQuery,
+        ProcessRuntimeWorkspaceResult result,
+        DateTimeOffset observedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (runtimeUsageTelemetryReader is null || result.Runs.Count == 0)
+        {
+            return [];
+        }
+
+        var runIds = result.Runs
+            .SelectMany(run => new[] { run.RootRunId, run.RunId })
+            .Distinct()
+            .ToArray();
+        if (runIds.Length == 0)
+        {
+            return [];
+        }
+
+        var historyWindow = ResolveHistoryWindow(runtimeQuery.HistoryWindow);
+        return await runtimeUsageTelemetryReader.ListAsync(
+                new ProcessRuntimeUsageTelemetryQuery(
+                    runIds,
+                    observedAtUtc.Subtract(historyWindow),
+                    observedAtUtc,
+                    TakePerRun: 10_000),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static ProcessRuntimeWorkspaceQueryProjection NormalizeRuntimeQuery(ProcessWorkspaceShellRequest request)
@@ -221,7 +260,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
     private static ProcessRuntimeWorkspaceProjection CreateRuntimeWorkspace(
         ProcessRuntimeWorkspaceQueryProjection query,
-        ProcessRuntimeWorkspaceResult result)
+        ProcessRuntimeWorkspaceResult result,
+        IReadOnlyList<ProcessRuntimeUsageObservation> usageObservations)
     {
         var events = result.Events;
         var selectedRunId = result.SelectedRun?.RunId.Value ?? query.SelectedRunId;
@@ -230,7 +270,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             .OrderByDescending(incident => incident.RaisedAtUtc)
             .ToArray();
         var managerMessages = BuildManagerMessages(events);
-        var stats = BuildRuntimeStats(result.Runs, events);
+        var stats = BuildRuntimeStats(result.Runs, events, usageObservations);
 
         return new ProcessRuntimeWorkspaceProjection(
             query.HistoryWindow,
@@ -245,7 +285,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             managerMessages,
             result.ActiveAgents,
             stats,
-            BuildMetricPoints(events),
+            BuildMetricPoints(events, usageObservations),
             BuildToolUsage(events),
             result.Freshness,
             BuildRuntimeSummary(result.Runs, events),
@@ -283,7 +323,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
     private static ProcessRuntimeStatsProjection BuildRuntimeStats(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
-        IReadOnlyList<ProcessTimelineEventProjection> events)
+        IReadOnlyList<ProcessTimelineEventProjection> events,
+        IReadOnlyList<ProcessRuntimeUsageObservation> usageObservations)
     {
         var durationMs = events.Count < 2
             ? 0
@@ -298,17 +339,18 @@ public sealed class ProcessWorkspaceShellProjectionService(
             events.Count(IsManagerEvent),
             events.Count(IsToolUsageEvent),
             durationMs,
-            InputTokens: 0,
-            CachedInputTokens: 0,
-            OutputTokens: 0,
-            EstimatedCost: 0m,
-            ActualCost: 0m);
+            InputTokens: usageObservations.Sum(observation => observation.InputTokens),
+            CachedInputTokens: usageObservations.Sum(observation => observation.CachedInputTokens),
+            OutputTokens: usageObservations.Sum(observation => observation.OutputTokens),
+            EstimatedCost: decimal.Round(usageObservations.Sum(observation => observation.EstimatedCostUsd), 6, MidpointRounding.AwayFromZero),
+            ActualCost: decimal.Round(usageObservations.Sum(observation => observation.ActualCostUsd), 6, MidpointRounding.AwayFromZero));
     }
 
     private static IReadOnlyList<ProcessRuntimeMetricPointProjection> BuildMetricPoints(
-        IReadOnlyList<ProcessTimelineEventProjection> events)
+        IReadOnlyList<ProcessTimelineEventProjection> events,
+        IReadOnlyList<ProcessRuntimeUsageObservation> usageObservations)
     {
-        if (events.Count == 0)
+        if (events.Count == 0 && usageObservations.Count == 0)
         {
             return [];
         }
@@ -324,6 +366,18 @@ public sealed class ProcessWorkspaceShellProjectionService(
             }
 
             accumulator.Add(runtimeEvent);
+        }
+
+        foreach (var usageObservation in usageObservations)
+        {
+            var bucket = TruncateToMinute(usageObservation.CreatedAtUtc);
+            if (!buckets.TryGetValue(bucket, out var accumulator))
+            {
+                accumulator = new RuntimeMetricAccumulator(bucket);
+                buckets.Add(bucket, accumulator);
+            }
+
+            accumulator.Add(usageObservation);
         }
 
         var points = new List<ProcessRuntimeMetricPointProjection>(buckets.Count);
@@ -392,6 +446,16 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
         public int ToolCallCount { get; private set; }
 
+        public int InputTokens { get; private set; }
+
+        public int CachedInputTokens { get; private set; }
+
+        public int OutputTokens { get; private set; }
+
+        public decimal EstimatedCost { get; private set; }
+
+        public decimal ActualCost { get; private set; }
+
         public void Add(ProcessTimelineEventProjection runtimeEvent)
         {
             if (EventCount == 0 || runtimeEvent.OccurredAtUtc < firstEventAtUtc)
@@ -416,6 +480,15 @@ public sealed class ProcessWorkspaceShellProjectionService(
             }
         }
 
+        public void Add(ProcessRuntimeUsageObservation usageObservation)
+        {
+            InputTokens += usageObservation.InputTokens;
+            CachedInputTokens += usageObservation.CachedInputTokens;
+            OutputTokens += usageObservation.OutputTokens;
+            EstimatedCost += usageObservation.EstimatedCostUsd;
+            ActualCost += usageObservation.ActualCostUsd;
+        }
+
         public ProcessRuntimeMetricPointProjection ToProjection()
         {
             var durationMs = EventCount < 2
@@ -428,11 +501,11 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 ManagerEventCount,
                 ToolCallCount,
                 durationMs,
-                InputTokens: 0,
-                CachedInputTokens: 0,
-                OutputTokens: 0,
-                EstimatedCost: 0m,
-                ActualCost: 0m);
+                InputTokens,
+                CachedInputTokens,
+                OutputTokens,
+                EstimatedCost: decimal.Round(EstimatedCost, 6, MidpointRounding.AwayFromZero),
+                ActualCost: decimal.Round(ActualCost, 6, MidpointRounding.AwayFromZero));
         }
     }
 

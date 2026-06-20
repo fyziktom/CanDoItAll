@@ -334,6 +334,46 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_prefers_software_architect_over_business_strategist_for_dotnet_architecture()
+    {
+        var providerId = Guid.Parse("25b46f25-e394-4c8e-88d5-f59c7393f17e");
+        var businessStrategist = CreateAgent(
+            providerId,
+            Guid.Parse("7e01b68d-e14a-45b0-9e1d-92571f79d778"),
+            "Business Strategist",
+            "Business planning specialist",
+            "Creates grounded business plans, operating assumptions, risk views, and cross-functional handoffs for non-code processes.",
+            AgentWorkloadKind.Management,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["business", "strategy", "planning"]);
+        var architectAgent = CreateAgent(
+            providerId,
+            Guid.Parse("6e2c83ef-d4fd-46f2-b917-c9d0c503eb04"),
+            ".NET Solution Architect",
+            ".NET architecture specialist",
+            "Designs maintainable C#, ASP.NET Core, and Blazor project structures with explicit boundaries and validation plans.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            ["dotnet", "architecture", "blazor"]);
+        var workspace = new ResolverWorkspaceService([businessStrategist, architectAgent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            CreateTechnicalSubprocessDefinition(),
+            CreatePlan("architecture-review"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal("architecture-review", binding.StepKey);
+        Assert.Equal("solution-architect", binding.RoleKey);
+        Assert.Equal(architectAgent.Id.ToString("D"), binding.ExecutorId);
+        Assert.NotEqual(businessStrategist.Id.ToString("D"), binding.ExecutorId);
+    }
+
+    [Fact]
     public async Task Runtime_assignment_repair_rebinds_stale_qa_reviewer_to_dotnet_architect()
     {
         var providerId = Guid.Parse("f14f722f-6562-4fa4-a29a-68fe7f6892ef");

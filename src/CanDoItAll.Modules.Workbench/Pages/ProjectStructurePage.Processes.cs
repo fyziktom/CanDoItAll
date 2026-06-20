@@ -16,6 +16,7 @@ public partial class ProjectStructurePage
 {
     private const string ProjectStructureHrManagerName = "HR Staffing Manager";
     private static readonly TimeSpan ProcessStartPreviewTimeout = TimeSpan.FromSeconds(45);
+    private const int ProcessStartInlineCandidateLimit = 8;
     private static readonly string[] OutputRootMetadataKeys =
     [
         "outputRoot",
@@ -424,7 +425,7 @@ public partial class ProjectStructurePage
 
         processStartDialog = processStartDialog with
         {
-            StatusMessage = "Available active agents are listed as candidates inside each role panel.",
+            StatusMessage = "Agent picker opened with compatible active agents from the directory.",
             Error = string.Empty
         };
         return InvokeAsync(StateHasChanged);
@@ -757,6 +758,7 @@ public partial class ProjectStructurePage
             steps = launchPlan.Steps.ToList();
         }
 
+        var roles = steps.Select(MapProcessStartRoleState).ToList();
         return dialog with
         {
             LaunchPlanId = launchPlan.PlanId.Value,
@@ -768,21 +770,16 @@ public partial class ProjectStructurePage
                 : statusMessage,
             StageActivatedAtUtc = DateTimeOffset.UtcNow,
             AssignmentsReviewed = false,
-            Roles = steps.Select(MapProcessStartRoleState).ToList(),
-            Estimate = new ProjectStructureProcessEstimateSummary(
-                EstimatedCostUsd: 0,
-                EstimatedElapsedMinutes: Math.Max(15, steps.Count * 30),
-                EstimatedTouchMinutes: Math.Max(10, steps.Count * 20),
-                "Template",
-                launchPlan.DefinitionName,
-                $"{steps.Count} executable assignment(s) resolved from process template '{launchPlan.DefinitionKey}'."),
+            Roles = roles,
+            Estimate = BuildProcessStartEstimate(launchPlan, steps, roles),
             Error = error
         };
     }
 
     private ProjectStructureProcessStartRoleState MapProcessStartRoleState(ProcessLaunchStepView step)
     {
-        var candidates = BuildProcessStartCandidates(step);
+        var directoryCandidates = BuildProcessStartDirectoryCandidates(step);
+        var candidates = BuildProcessStartCandidates(step, directoryCandidates);
         var selected = candidates.FirstOrDefault(candidate => candidate.IsSelected);
         var isResolved = !step.IsBlocked && selected?.IsResolvable == true;
         return new ProjectStructureProcessStartRoleState(
@@ -799,39 +796,31 @@ public partial class ProjectStructurePage
             candidates)
         {
             StepKey = step.StepKey,
-            RoleKey = step.RoleKey
+            RoleKey = step.RoleKey,
+            DirectoryCandidates = directoryCandidates
         };
     }
 
-    private IReadOnlyList<ProjectStructureProcessStartCandidateState> BuildProcessStartCandidates(ProcessLaunchStepView step)
+    private IReadOnlyList<ProjectStructureProcessStartCandidateState> BuildProcessStartCandidates(
+        ProcessLaunchStepView step,
+        IReadOnlyList<ProjectStructureProcessStartCandidateState> directoryCandidates)
     {
         var candidates = new List<ProjectStructureProcessStartCandidateState>();
-        var selectedAgentId = Guid.TryParse(step.ExecutorId, out var parsedAgentId)
-            ? parsedAgentId
-            : (Guid?)null;
+        var selectedCandidate = directoryCandidates.FirstOrDefault(candidate => candidate.IsSelected);
 
-        if (selectedAgentId.HasValue)
+        if (selectedCandidate is not null)
         {
-            candidates.Add(CreateCandidateState(
-                step,
-                selectedAgentId.Value,
-                isSelected: true,
-                isRecommended: true));
+            candidates.Add(selectedCandidate);
         }
 
-        foreach (var metadata in processStartAgentMetadataById.Values
-            .Where(agent => !selectedAgentId.HasValue || agent.AgentId != selectedAgentId.Value)
-            .Select(agent => new { Agent = agent, Readiness = EvaluateAgentForStep(agent, step) })
-            .Where(item => item.Readiness.IsExecutionReady && item.Readiness.HasRoleFit)
-            .OrderByDescending(item => item.Readiness.Score)
-            .ThenBy(item => item.Agent.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .Take(8))
+        foreach (var candidate in directoryCandidates
+            .Where(candidate => selectedCandidate is null || candidate.CandidateId != selectedCandidate.CandidateId)
+            .OrderByDescending(candidate => candidate.IsRecommended)
+            .ThenByDescending(ResolveCandidateScore)
+            .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Take(ProcessStartInlineCandidateLimit))
         {
-            candidates.Add(CreateCandidateState(
-                step,
-                metadata.Agent.AgentId,
-                isSelected: false,
-                isRecommended: true));
+            candidates.Add(candidate);
         }
 
         if (candidates.Count == 0)
@@ -850,6 +839,38 @@ public partial class ProjectStructurePage
                 step.BlockedReason ?? "No active agent with an enabled provider was found for this role.",
                 "Provision or enable an agent before launch.",
                 "process-launch/gap"));
+        }
+
+        return candidates;
+    }
+
+    private IReadOnlyList<ProjectStructureProcessStartCandidateState> BuildProcessStartDirectoryCandidates(ProcessLaunchStepView step)
+    {
+        var selectedAgentId = Guid.TryParse(step.ExecutorId, out var parsedAgentId)
+            ? parsedAgentId
+            : (Guid?)null;
+        var candidates = processStartAgentMetadataById.Values
+            .Select(agent => new { Agent = agent, Readiness = EvaluateAgentForStep(agent, step) })
+            .Where(item => item.Readiness.IsExecutionReady && item.Readiness.HasRoleFit)
+            .OrderByDescending(item => item.Readiness.Score)
+            .ThenBy(item => item.Agent.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(item => CreateCandidateState(
+                step,
+                item.Agent.AgentId,
+                isSelected: selectedAgentId.HasValue && item.Agent.AgentId == selectedAgentId.Value,
+                isRecommended: true))
+            .ToList();
+
+        if (selectedAgentId.HasValue &&
+            candidates.All(candidate => candidate.CandidateId != selectedAgentId.Value))
+        {
+            candidates.Insert(
+                0,
+                CreateCandidateState(
+                    step,
+                    selectedAgentId.Value,
+                    isSelected: true,
+                    isRecommended: true));
         }
 
         return candidates;
@@ -935,13 +956,18 @@ public partial class ProjectStructurePage
         ProjectStructureProcessStartRoleState role,
         Guid candidateId)
     {
-        var selectedCandidate = role.Candidates.FirstOrDefault(candidate => candidate.CandidateId == candidateId);
+        var selectedCandidate = role.DirectoryCandidates
+            .Concat(role.Candidates)
+            .FirstOrDefault(candidate => candidate.CandidateId == candidateId);
         if (selectedCandidate is null || !selectedCandidate.IsResolvable)
         {
             return role;
         }
 
-        var candidates = role.Candidates
+        var candidates = EnsureCandidatePresent(role.Candidates, selectedCandidate)
+            .Select(candidate => candidate with { IsSelected = candidate.CandidateId == candidateId })
+            .ToList();
+        var directoryCandidates = EnsureCandidatePresent(role.DirectoryCandidates, selectedCandidate)
             .Select(candidate => candidate with { IsSelected = candidate.CandidateId == candidateId })
             .ToList();
         return role with
@@ -949,8 +975,61 @@ public partial class ProjectStructurePage
             IsResolved = true,
             RequiresProvisioning = selectedCandidate.RequiresProvisioning,
             SelectionSummary = $"Selected {selectedCandidate.DisplayName}.",
-            Candidates = candidates
+            Candidates = candidates,
+            DirectoryCandidates = directoryCandidates
         };
+    }
+
+    private static IReadOnlyList<ProjectStructureProcessStartCandidateState> EnsureCandidatePresent(
+        IReadOnlyList<ProjectStructureProcessStartCandidateState> candidates,
+        ProjectStructureProcessStartCandidateState selectedCandidate)
+    {
+        if (candidates.Any(candidate => candidate.CandidateId == selectedCandidate.CandidateId))
+        {
+            return candidates;
+        }
+
+        return [selectedCandidate, .. candidates];
+    }
+
+    private ProjectStructureProcessEstimateSummary BuildProcessStartEstimate(
+        ProcessLaunchPlanView launchPlan,
+        IReadOnlyList<ProcessLaunchStepView> steps,
+        IReadOnlyList<ProjectStructureProcessStartRoleState> roles)
+    {
+        var assignments = roles
+            .Select(role =>
+            {
+                var selectedCandidate = role.Candidates.FirstOrDefault(candidate => candidate.IsSelected);
+                if (selectedCandidate?.TechnicalAgentId is not { } agentId ||
+                    !processStartAgentMetadataById.TryGetValue(agentId, out var metadata))
+                {
+                    return new ProjectStructureProcessStartEstimateAssignment(null, string.Empty, null);
+                }
+
+                return new ProjectStructureProcessStartEstimateAssignment(
+                    agentId,
+                    FirstNonEmpty(selectedCandidate.AgentModel, metadata.Model),
+                    metadata.ProviderProfile);
+            })
+            .ToList();
+
+        return ProjectStructureProcessStartEstimateCalculator.Calculate(
+            launchPlan.DefinitionKey,
+            steps.Count,
+            assignments);
+    }
+
+    private static decimal ResolveCandidateScore(ProjectStructureProcessStartCandidateState candidate)
+    {
+        var token = candidate.ScoreLabel.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return decimal.TryParse(
+            token,
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var score)
+            ? score
+            : 0m;
     }
 
     private async Task TryLinkStartedProcessRunAsync(string sourceNodeId, ProcessRunId runId)
@@ -1227,7 +1306,8 @@ public partial class ProjectStructurePage
         string AvatarImageUrl,
         IReadOnlyList<string> ToolNames,
         IReadOnlyList<string> SkillNames,
-        IReadOnlyList<string> Tags)
+        IReadOnlyList<string> Tags,
+        ProviderProfile? ProviderProfile)
     {
         public static ProjectStructureProcessStartAgentMetadata FromAgent(
             AgentDefinition agent,
@@ -1262,7 +1342,8 @@ public partial class ProjectStructurePage
                 agent.AvatarImageUrl ?? string.Empty,
                 toolNames,
                 skillNames,
-                agent.Tags);
+                agent.Tags,
+                provider);
         }
 
         private static string ResolveCapabilityDisplayName(AgentCapabilityAssignment capability)

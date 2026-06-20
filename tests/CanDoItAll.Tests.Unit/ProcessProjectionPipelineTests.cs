@@ -1027,6 +1027,93 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Shell_projection_aggregates_usage_telemetry_into_stats_and_metric_buckets()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5).AddSeconds(10)),
+            latestKnownGlobalSequence: 2);
+        await ProjectAsync(
+            store,
+            StoredEvent(2, runId, ProcessRuntimeEventTypes.ManagerIncidentRaised, Now.AddMinutes(-4).AddSeconds(5)),
+            latestKnownGlobalSequence: 2);
+        var usageReader = new InMemoryUsageTelemetryReader(
+            new ProcessRuntimeUsageObservation(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                runId,
+                StepInstanceId: null,
+                Now.AddMinutes(-5).AddSeconds(20),
+                "OpenAI default",
+                "gpt-test",
+                "agent-runtime",
+                "Observed",
+                IsKnownUsage: true,
+                InputTokens: 100,
+                CachedInputTokens: 10,
+                OutputTokens: 20,
+                ReasoningTokens: 0,
+                TotalTokens: 120,
+                EstimatedCostUsd: 0m,
+                ActualCostUsd: 0.123456m),
+            new ProcessRuntimeUsageObservation(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                runId,
+                StepInstanceId: null,
+                Now.AddMinutes(-4).AddSeconds(15),
+                "OpenAI default",
+                "gpt-test",
+                "legacy-agent-run-metric",
+                "EstimatedFromMetric",
+                IsKnownUsage: false,
+                InputTokens: 50,
+                CachedInputTokens: 0,
+                OutputTokens: 5,
+                ReasoningTokens: 0,
+                TotalTokens: 55,
+                EstimatedCostUsd: 0.045m,
+                ActualCostUsd: 0m));
+        var clock = new FixedProcessProjectionClock(Now);
+        var templateLoader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(templateLoader, clock),
+            new ProcessDefinitionEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionStepEditorProjectionService(templateLoader, clock),
+            new ProcessTemplateCatalogProjectionService(templateLoader, clock),
+            new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, clock),
+            runtimeUsageTelemetryReader: usageReader);
+
+        var shell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(ProcessId: null, RunId: null, LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(ProcessRuntimeHistoryWindow.OneDay, EventPage: 0, EventPageSize: 25, SelectedRunId: null)));
+
+        Assert.Equal(150, shell.Runtime.Stats.InputTokens);
+        Assert.Equal(10, shell.Runtime.Stats.CachedInputTokens);
+        Assert.Equal(25, shell.Runtime.Stats.OutputTokens);
+        Assert.Equal(0.045m, shell.Runtime.Stats.EstimatedCost);
+        Assert.Equal(0.123456m, shell.Runtime.Stats.ActualCost);
+        Assert.Equal(2, shell.Runtime.MetricPoints.Count);
+        Assert.Equal(100, shell.Runtime.MetricPoints[0].InputTokens);
+        Assert.Equal(20, shell.Runtime.MetricPoints[0].OutputTokens);
+        Assert.Equal(0.123456m, shell.Runtime.MetricPoints[0].ActualCost);
+        Assert.Equal(50, shell.Runtime.MetricPoints[1].InputTokens);
+        Assert.Equal(5, shell.Runtime.MetricPoints[1].OutputTokens);
+        Assert.Equal(0.045m, shell.Runtime.MetricPoints[1].EstimatedCost);
+        Assert.Equal(1, usageReader.CallCount);
+    }
+
+    [Fact]
     public async Task Shell_projection_selected_active_run_attention_summary_does_not_borrow_unselected_blocker()
     {
         await using var dbContext = CreateDbContext();
@@ -1409,6 +1496,28 @@ public sealed class ProcessProjectionPipelineTests
                     observation.UpdatedAtUtc >= query.FromUtc &&
                     observation.UpdatedAtUtc <= query.ToUtc)
                 .OrderByDescending(observation => observation.UpdatedAtUtc)
+                .Take(query.TakePerRun * Math.Max(1, query.RunIds.Count))
+                .ToArray();
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class InMemoryUsageTelemetryReader(params ProcessRuntimeUsageObservation[] observations) : IProcessRuntimeUsageTelemetryReader
+    {
+        public int CallCount { get; private set; }
+
+        public ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
+            ProcessRuntimeUsageTelemetryQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            var runIds = query.RunIds.ToHashSet();
+            IReadOnlyList<ProcessRuntimeUsageObservation> result = observations
+                .Where(observation =>
+                    runIds.Contains(observation.RunId) &&
+                    observation.CreatedAtUtc >= query.FromUtc &&
+                    observation.CreatedAtUtc <= query.ToUtc)
+                .OrderBy(observation => observation.CreatedAtUtc)
                 .Take(query.TakePerRun * Math.Max(1, query.RunIds.Count))
                 .ToArray();
             return ValueTask.FromResult(result);

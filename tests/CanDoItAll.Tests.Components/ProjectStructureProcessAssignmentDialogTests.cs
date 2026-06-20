@@ -52,10 +52,19 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
     }
 
     [Fact]
-    public void Assignment_dialog_invokes_manual_agent_assignment_for_role()
+    public void Assignment_dialog_opens_agent_picker_dialog_for_role()
     {
         using var context = CreateContext();
-        var unresolvedRole = CreateRole("Blazor application developer", isResolved: false);
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var alternateCandidate = CreateCandidate(
+            "Blazor Agent",
+            isSelected: false,
+            isRecommended: true,
+            score: "388.0 score");
+        var unresolvedRole = CreateRole("Blazor application developer", isResolved: false) with
+        {
+            DirectoryCandidates = [alternateCandidate]
+        };
         var state = CreateDialogState([unresolvedRole]);
         Guid? requestedRoleId = null;
 
@@ -69,7 +78,14 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
 
         cut.Find($"[data-testid='project-structure-process-assignment-assign-agent-{unresolvedRole.LaunchPlanRoleId:D}']").Click();
 
-        Assert.Equal(unresolvedRole.LaunchPlanRoleId, requestedRoleId);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(unresolvedRole.LaunchPlanRoleId, requestedRoleId);
+            var dialog = Assert.Single(dialogService.Dialogs);
+            Assert.Equal("project-structure-process-assignment-agent-picker-dialog", dialog.Options.TestId);
+            Assert.Equal(typeof(ProjectStructureProcessAgentPickerDialog), dialog.ComponentType);
+            Assert.Equal(unresolvedRole, dialog.Parameters[nameof(ProjectStructureProcessAgentPickerDialog.Role)]);
+        });
     }
 
     [Fact]
@@ -98,15 +114,10 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             selectedCandidate,
             higherScoreCandidate);
         var state = CreateDialogState([role]);
-        Guid? requestedRoleId = null;
+        var dialogService = context.Services.GetRequiredService<DialogService>();
 
         var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
-            .Add(component => component.Dialog, state)
-            .Add(
-                component => component.AssignProcessStartAgent,
-                EventCallback.Factory.Create<Guid>(
-                    new object(),
-                    roleId => requestedRoleId = roleId)));
+            .Add(component => component.Dialog, state));
 
         cut.Find($"[data-testid='project-structure-process-assignment-role-row-{role.LaunchPlanRoleId:D}']").Click();
 
@@ -119,7 +130,66 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
 
         cut.Find($"[data-testid='project-structure-process-assignment-candidate-add-agent-{role.LaunchPlanRoleId:D}']").Click();
 
-        Assert.Equal(role.LaunchPlanRoleId, requestedRoleId);
+        cut.WaitForAssertion(() =>
+        {
+            var dialog = Assert.Single(dialogService.Dialogs);
+            Assert.Equal("project-structure-process-assignment-agent-picker-dialog", dialog.Options.TestId);
+            Assert.Equal(typeof(ProjectStructureProcessAgentPickerDialog), dialog.ComponentType);
+        });
+    }
+
+    [Fact]
+    public void Assignment_dialog_selects_directory_candidate_returned_from_agent_picker()
+    {
+        using var context = CreateContext();
+        var dialogService = context.Services.GetRequiredService<DialogService>();
+        var selectedCandidate = CreateCandidate(
+            "Selected Release Manager",
+            isSelected: true,
+            isRecommended: true,
+            score: "410.0 score");
+        var directoryOnlyCandidate = CreateCandidate(
+            "Architecture Agent",
+            isSelected: false,
+            isRecommended: true,
+            score: "503.0 score");
+        var role = CreateRole(
+            "Feature implementation manager",
+            isResolved: true,
+            selectedCandidate) with
+        {
+            DirectoryCandidates = [selectedCandidate, directoryOnlyCandidate]
+        };
+        var state = CreateDialogState([role]);
+        ProjectStructureProcessStartCandidateSelection? selection = null;
+
+        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+            .Add(component => component.Dialog, state)
+            .Add(
+                component => component.SelectProcessStartCandidate,
+                EventCallback.Factory.Create<ProjectStructureProcessStartCandidateSelection>(
+                    new object(),
+                    value => selection = value)));
+
+        cut.Find($"[data-testid='project-structure-process-assignment-change-agent-{role.LaunchPlanRoleId:D}']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            var picker = Assert.Single(dialogService.Dialogs);
+            Assert.Equal(typeof(ProjectStructureProcessAgentPickerDialog), picker.ComponentType);
+        });
+
+        dialogService.Close(directoryOnlyCandidate.CandidateId);
+
+        cut.WaitForAssertion(() =>
+        {
+            var confirmation = Assert.Single(dialogService.Dialogs);
+            Assert.Equal("project-structure-process-assignment-agent-switch-confirmation-dialog", confirmation.Options.TestId);
+        });
+        dialogService.Close(true);
+
+        cut.WaitForAssertion(() => Assert.NotNull(selection));
+        Assert.Equal(role.LaunchPlanRoleId, selection!.LaunchPlanRoleId);
+        Assert.Equal(directoryOnlyCandidate.CandidateId, selection.CandidateId);
     }
 
     [Fact]
@@ -237,7 +307,10 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             false,
             selectedCandidate is null ? "No confirmed match yet." : $"{selectedCandidate.DisplayName} / AiResource",
             selectedCandidate is null ? "Manual correction is required." : "Selected: candidate is ready for approval and execution.",
-            candidates);
+            candidates)
+        {
+            DirectoryCandidates = candidates
+        };
     }
 
     private static ProjectStructureProcessStartCandidateState CreateCandidate(

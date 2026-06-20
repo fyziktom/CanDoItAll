@@ -70,6 +70,7 @@
     private sealed record OutlineContextMenuState(
         string NodeId,
         string NodeTitle,
+        IReadOnlyList<string> TargetNodeIds,
         double ClientX,
         double ClientY,
         IReadOnlyList<ProjectStructureSupportPanelContextAction> Actions);
@@ -131,9 +132,18 @@
             return;
         }
 
+        var targetNodeIds = ResolveContextTargetNodeIds(node.Id);
         var actions = ResolveContextActions(node)
             .Where(action => !string.IsNullOrWhiteSpace(action.ActionId) && !string.IsNullOrWhiteSpace(action.Label))
             .ToList();
+        if (targetNodeIds.Count > 1)
+        {
+            actions = actions
+                .Where(action => string.Equals(action.ActionId, "delete", StringComparison.OrdinalIgnoreCase))
+                .Select(action => action with { Label = "Delete selected" })
+                .ToList();
+        }
+
         if (actions.Count == 0)
         {
             outlineContextMenu = null;
@@ -142,11 +152,15 @@
 
         outlineContextMenu = new OutlineContextMenuState(
             node.Id,
-            node.Title,
+            targetNodeIds.Count == 1 ? node.Title : $"{targetNodeIds.Count} selected nodes",
+            targetNodeIds,
             request.ClientX,
             request.ClientY,
             actions);
-        await OnSelectNode.InvokeAsync(node.Id);
+        if (targetNodeIds.Count == 1)
+        {
+            await OnSelectNode.InvokeAsync(node.Id);
+        }
     }
 
     private void CloseOutlineContextMenu()
@@ -159,9 +173,26 @@
             return;
         }
 
-        var request = new ProjectStructureSupportPanelContextActionRequest(outlineContextMenu.NodeId, actionId);
+        var request = new ProjectStructureSupportPanelContextActionRequest(
+            outlineContextMenu.NodeId,
+            actionId,
+            outlineContextMenu.TargetNodeIds);
         outlineContextMenu = null;
         await OnExecuteNodeContextAction.InvokeAsync(request);
+    }
+
+    private IReadOnlyList<string> ResolveContextTargetNodeIds(string nodeId)
+    {
+        if (SelectedNodeIds.Count > 1 &&
+            SelectedNodeIds.Contains(nodeId, StringComparer.Ordinal))
+        {
+            return SelectedNodeIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+        }
+
+        return [nodeId];
     }
 
     private static string BuildOutlineContextMenuStyle(OutlineContextMenuState state)

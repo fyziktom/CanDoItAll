@@ -9,11 +9,43 @@ public interface IProcessExecutionObservationReader
         CancellationToken cancellationToken = default);
 }
 
+public interface IProcessRuntimeUsageTelemetryReader
+{
+    ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
+        ProcessRuntimeUsageTelemetryQuery query,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed record ProcessExecutionObservationQuery(
     IReadOnlyList<ProcessRunId> RunIds,
     DateTimeOffset FromUtc,
     DateTimeOffset ToUtc,
     int TakePerRun);
+
+public sealed record ProcessRuntimeUsageTelemetryQuery(
+    IReadOnlyList<ProcessRunId> RunIds,
+    DateTimeOffset FromUtc,
+    DateTimeOffset ToUtc,
+    int TakePerRun);
+
+public sealed record ProcessRuntimeUsageObservation(
+    Guid UsageObservationId,
+    Guid ExecutionRunId,
+    ProcessRunId RunId,
+    ProcessStepInstanceId? StepInstanceId,
+    DateTimeOffset CreatedAtUtc,
+    string ProviderName,
+    string Model,
+    string SourcePhase,
+    string UsageStatus,
+    bool IsKnownUsage,
+    int InputTokens,
+    int CachedInputTokens,
+    int OutputTokens,
+    int ReasoningTokens,
+    int TotalTokens,
+    decimal EstimatedCostUsd,
+    decimal ActualCostUsd);
 
 public sealed record ProcessExecutionObservation(
     Guid ExecutionRunId,
