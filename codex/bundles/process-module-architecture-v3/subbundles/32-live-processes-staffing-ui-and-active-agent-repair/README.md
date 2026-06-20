@@ -8,11 +8,17 @@
 
 Repair the remaining project-structure staffing and Live Processes operator experience gaps so technical subprocess roles do not appear staffed by Delivery Manager, starting a reviewed process closes the HR dialog with visible feedback, selected Live Processes time windows are honored, active process/agent cards are understandable, and attention/escalation details are visible from the first Live Processes tab.
 
-## Source Inputs
+## Covered Inputs
 
 - User follow-up on 2026-06-17: `bundle://inputs/live-processes-staffing-followup-20260617.md`.
 - SB31 readiness repair proof: `bundle://proof/SB31-project-structure-launch-staffing-readiness-and-runtime-sequence-repair/manifest.md`.
 - Original Live Processes UI reference branch: `repo://../CanDoItAll-maf-processes-refactor/src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor`.
+
+## Prerequisites
+
+- SB31 project-structure launch, staffing readiness, and runtime sequence repair is completed and trusted.
+- Live Processes UI and projection references exist in active source.
+- Focused unit, component, and browser validation can be run against the current Process module.
 
 ## Exact Source References
 
@@ -27,6 +33,14 @@ Repair the remaining project-structure staffing and Live Processes operator expe
 - `repo://tests/CanDoItAll.Tests.Unit/ProcessLaunchExecutorResolverTests.cs`
 - `repo://tests/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs`
 
+## Deliverables
+
+- Technical owner defaults for architecture and implementation subprocess roles.
+- HR dialog closure and visible start feedback after project-structure process start.
+- Correct Live Processes time-window filtering for stale active and historical runs.
+- Active-agent projections and first-tab attention/escalation cards.
+- Desktop-width Live Processes tab layout and detail context repair.
+
 ## Implementation Steps
 
 - Change the parent software-delivery architecture subprocess step to use `solution-architect` as the visible responsible technical owner and Delivery Manager as reviewer/coordinator.
@@ -38,6 +52,19 @@ Repair the remaining project-structure staffing and Live Processes operator expe
 - Restore first-tab activity cards for attention/escalation/run status, and make the active agent tab show real cards instead of the manager-context placeholder.
 - Expand run detail content with active agents, incidents, recent events, and operator next-action context.
 - Make Live Processes tabs stretch to available width through component CSS.
+
+## Dependency Impact
+
+- SB33 and later post-bundle repairs depend on SB32 for accurate Live Processes state, staffing visibility, and process-start feedback.
+- Generic Process core remains independent of project-structure and AgentFramework UI concepts.
+- Project-structure process start flows consume the repaired staffing/readiness semantics without bypassing SB31 readiness checks.
+
+## Validation Depth
+
+- Focused unit validation for launch executor role assignment and projection query time-window behavior.
+- Focused component validation for Process shell and Live Processes UI states.
+- Browser validation for desktop and narrow Live Processes states, including open detail context.
+- Build validation for touched Process/UI projects.
 
 ## Do Not Do
 
@@ -69,6 +96,15 @@ Repair the remaining project-structure staffing and Live Processes operator expe
 - Focused test/build transcripts under `proof/SB32-live-processes-staffing-ui-and-active-agent-repair/transcripts/`.
 - Browser screenshots and validation snapshots under `proof/SB32-live-processes-staffing-ui-and-active-agent-repair/`.
 
+## Browser Validation Logging
+
+- Required because SB32 changed Live Processes and project-structure start UI behavior.
+- Evidence must include route, viewport, user actions, screenshots or snapshots, console/network summary, and pass/fail result.
+
 ## Progression Gate
 
-Direct resolve/rework/approval actions on Live Processes require a current-branch application service over the manager runtime ports. The old `IProcessEscalationService` from `maf-processes-refactor` is not present in this refactor, and the current branch does not register persisted incident/recovery stores. SB32 therefore restores the operator-visible cards, detail context, active-agent evidence, time-window correctness, process-control navigation, and technical role assignment semantics without adding fake UI commands.
+- Direct resolve/rework/approval actions on Live Processes require a current-branch application service over the manager runtime ports. The old `IProcessEscalationService` from `maf-processes-refactor` is not present in this refactor, and the current branch does not register persisted incident/recovery stores. SB32 therefore restores the operator-visible cards, detail context, active-agent evidence, time-window correctness, process-control navigation, and technical role assignment semantics without adding fake UI commands.
+
+## Suggested Agent Prompt
+
+Execute SB32 from `codex/bundles/process-module-architecture-v3/subbundles/32-live-processes-staffing-ui-and-active-agent-repair`. Keep the generic Process core isolated while repairing technical role assignment, project-structure start feedback, Live Processes time windows, active-agent cards, and attention detail context. Validate with focused unit/component/build checks plus browser proof for desktop and narrow Live Processes states.

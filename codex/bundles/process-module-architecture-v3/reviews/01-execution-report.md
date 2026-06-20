@@ -2,7 +2,7 @@
 
 ## Status
 
-Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB19 are complete and validated. Post-review UI parity repairs are complete, the combined SB20-SB28 runtime completion repair closes the project-scoped launch/runtime/dispatch gap with a real dev-DB TetrisGame process run, SB29 completes the current generic runtime-dispatcher leak repair, SB30 completes targeted Process hot-path performance hardening, SB31/SB32 complete project-structure launch staffing and Live Processes repairs, and SB33 completes provider quota messaging, .NET runtime node launchability, and contextual agent chat load repair.
+Architecture bundle v3 prepared. Execution started on 2026-06-15 after user approval. SB01 through SB19 are complete and validated. Post-review UI parity repairs are complete, the combined SB20-SB28 runtime completion repair closes the project-scoped launch/runtime/dispatch gap with a real dev-DB TetrisGame process run, SB29 completes the current generic runtime-dispatcher leak repair, SB30 completes targeted Process hot-path performance hardening, SB31/SB32 complete project-structure launch staffing and Live Processes repairs, SB33 completes provider quota messaging, .NET runtime node launchability, and contextual agent chat load repair, and SB34 completes post-SB33 runtime reliability/performance hardening plus fresh TetrisGame e2e validation.
 
 ## Changes Made In This Task
 
@@ -992,4 +992,40 @@ Subbundle Gate Results for SB33:
 Entry gate: Pass. SB31/SB32 follow-up proof existed, the running 5032 instance reproduced the slow chat and non-launchable runtime-node symptoms, and the touched source references were active product code.
 Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, changed-file hashes recorded, focused unit/integration/web-build validation passed, and API evidence records the before-deploy bottleneck plus remaining restart validation gap.
 Progression: Restart the development instance on the new build before measuring live after-deploy chat latency or testing the double-click Run action against the existing TetrisGame node.
+```
+
+## SB34 Post-SB33 Runtime Reliability, Performance, And E2E Review
+
+Proof artifacts:
+
+```text
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/manifest.md
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/semantic-invariants.md
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/changed-file-hashes.txt
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/validation.md
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/performance-analysis.md
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/e2e/README.md
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/api-tetris-process-start-execute.json
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/api-tetris-final-run-hierarchy-summary.txt
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/transcripts/test-focused-runtime-hardening.txt
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/transcripts/build-processes-module.txt
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/transcripts/static-performance-and-genericity-scan.txt
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/transcripts/tetris-output-build.txt
+bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/transcripts/tetris-output-test.txt
+```
+
+Result:
+
+```text
+SB34 repaired the immediate post-SB33 runtime risk found in the active implementation. Process dispatch now uses bounded immediate/recovery queues with explicit capacity options, canceled enqueue writes release their run-id dedupe marker, and duplicate pending run IDs remain suppressed until dequeue. Queue/options ownership moved out of the worker file, and the AgentFramework Process adapter now uses generated regex methods instead of compiled regex fields. Focused runtime hardening tests passed 68/68, the Process module Release build passed with 0 warnings and 0 errors, and static scans found no critical modified-scope guardrail regression.
+
+The fresh TetrisGame e2e run recreated the cleared Main App target through public project-structure APIs, linked process definition 3458e5d8-36b4-1861-83b1-522604c8e302, and completed root run cb18af52-506f-4677-bfb2-088514aa4f16 on the restarted Release instance. The generated output recorded in bundle://proof/SB34-post-sb33-runtime-reliability-performance-and-e2e-review/tetris-output-folder-tree.txt builds with 0 warnings and 0 errors, generated tests pass 8/8, the project lease was released, and runtime cleanup left no TetrisGame process running.
+```
+
+Subbundle Gate Results for SB34:
+
+```text
+Entry gate: Pass. SB30-SB33 proof existed, prepared-stage validation was repaired and passing, CodeAnalytics/direct scans identified active runtime queue and adapter risks, and the user-cleared TetrisGame state was available for fresh e2e validation.
+Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, changed-file hashes recorded, focused tests/build/static scans passed, and fresh TetrisGame e2e plus generated build/test/cleanup proof is recorded.
+Progression: Keep ProcessRuntimeIntegrationServices split-up as a follow-up architecture task; SB34 records its size and LINQ/list/dictionary pressure but intentionally limits code changes to the concrete stuck-run/backpressure/regex risks proven in this pass.
 ```

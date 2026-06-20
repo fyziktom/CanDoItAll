@@ -159,3 +159,7 @@ flowchart TD
 
 29. SB29 Generic Runtime Dispatcher Leak Repair: completed after runtime completion to remove current AgentFramework/project-structure vocabulary from generic launch orchestration and driver contracts.
 30. SB30 Performance Hot Path Hardening: completed after SB29 to apply the .NET performance guardrails to active catalog projection, runtime dashboard aggregation, and process harness regex paths.
+31. SB31 Project-Structure Launch Staffing Readiness And Runtime Sequence Repair: completed after SB30 to repair project-structure launch, staffing readiness, and runtime event sequence behavior.
+32. SB32 Live Processes Staffing UI And Active Agent Repair: completed after SB31 to repair technical role assignment, Live Processes time windows, active-agent cards, and operator-visible context.
+33. SB33 Provider Runtime Node And Agent Chat Load Repair: completed after SB32 to repair provider failure display, .NET runtime-node launchability, and contextual chat load latency.
+34. SB34 Post-SB33 Runtime Reliability, Performance, And E2E Review: in progress after SB33 to repair bundle gate metadata, harden dispatch queue backpressure/dedupe behavior, convert remaining Process adapter regexes to generated regex methods, and rerun TetrisGame e2e on the updated build.

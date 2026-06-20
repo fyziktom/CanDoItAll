@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Threading.Channels;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
@@ -14,73 +12,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.Processes;
-
-internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
-{
-    private readonly Channel<ProcessRuntimeDispatchQueueRequest> immediateChannel = Channel.CreateUnbounded<ProcessRuntimeDispatchQueueRequest>();
-    private readonly Channel<ProcessRuntimeDispatchQueueRequest> recoveryChannel = Channel.CreateUnbounded<ProcessRuntimeDispatchQueueRequest>();
-    private readonly ConcurrentDictionary<ProcessRunId, byte> immediateQueuedRunIds = new();
-    private readonly ConcurrentDictionary<ProcessRunId, byte> recoveryQueuedRunIds = new();
-    private readonly ConcurrentDictionary<ProcessRunId, byte> activeRunIds = new();
-
-    public ValueTask EnqueueAsync(
-        ProcessRuntimeDispatchQueueRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var queuedRunIds = request.IsRecovery
-            ? recoveryQueuedRunIds
-            : immediateQueuedRunIds;
-        if (!queuedRunIds.TryAdd(request.RunId, 0))
-        {
-            return ValueTask.CompletedTask;
-        }
-
-        var channel = request.IsRecovery
-            ? recoveryChannel
-            : immediateChannel;
-        return channel.Writer.WriteAsync(request, cancellationToken);
-    }
-
-    public bool TryDequeueImmediate(out ProcessRuntimeDispatchQueueRequest request)
-    {
-        if (immediateChannel.Reader.TryRead(out request!))
-        {
-            immediateQueuedRunIds.TryRemove(request.RunId, out _);
-            return true;
-        }
-
-        request = default!;
-        return false;
-    }
-
-    public bool TryDequeueRecovery(out ProcessRuntimeDispatchQueueRequest request)
-    {
-        if (recoveryChannel.Reader.TryRead(out request!))
-        {
-            recoveryQueuedRunIds.TryRemove(request.RunId, out _);
-            return true;
-        }
-
-        request = default!;
-        return false;
-    }
-
-    public bool TryMarkActive(ProcessRunId runId)
-        => activeRunIds.TryAdd(runId, 0);
-
-    public void MarkInactive(ProcessRunId runId)
-        => activeRunIds.TryRemove(runId, out _);
-
-}
-
-internal sealed class ProcessRuntimeDispatchQueueOptions
-{
-    public const string ConfigurationSectionName = "Processes:RuntimeDispatchQueue";
-
-    public bool EnableRecovery { get; set; } = true;
-}
 
 internal sealed class ProcessRuntimeDispatchQueueWorker(
     ProcessRuntimeDispatchQueue queue,

@@ -1193,18 +1193,11 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
     }
 }
 
-internal sealed class AgentFrameworkProcessExecutionAdapter(
+internal sealed partial class AgentFrameworkProcessExecutionAdapter(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeStateStore stateStore) : IProcessExecutionAdapter
 {
-    private static readonly Regex ProcessRunIdPattern = new(
-        @"(?<![0-9a-fA-F])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![0-9a-fA-F])",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex ManagedArtifactPathSegmentInvalidCharactersPattern = new(
-        "[^A-Za-z0-9._-]+",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
@@ -1662,7 +1655,7 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
                 continue;
             }
 
-            foreach (Match match in ProcessRunIdPattern.Matches(text))
+            foreach (Match match in ProcessRunIdRegex().Matches(text))
             {
                 if (Guid.TryParse(match.Value, out var runGuid))
                 {
@@ -1915,7 +1908,7 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
 
     private static string SanitizeManagedArtifactPathSegment(string value)
     {
-        var sanitized = ManagedArtifactPathSegmentInvalidCharactersPattern
+        var sanitized = ManagedArtifactPathSegmentInvalidCharactersRegex()
             .Replace(value.Trim(), "-")
             .Trim('-', '.', '_');
         return string.IsNullOrWhiteSpace(sanitized)
@@ -2136,6 +2129,14 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    [GeneratedRegex(
+        @"(?<![0-9a-fA-F])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?![0-9a-fA-F])",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex ProcessRunIdRegex();
+
+    [GeneratedRegex("[^A-Za-z0-9._-]+", RegexOptions.CultureInvariant)]
+    private static partial Regex ManagedArtifactPathSegmentInvalidCharactersRegex();
 
     private sealed record ProcessCompletionIssue(
         string Code,

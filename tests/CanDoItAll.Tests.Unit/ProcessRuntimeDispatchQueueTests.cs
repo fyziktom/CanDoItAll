@@ -26,6 +26,67 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
+    public async Task Queue_releases_dedupe_marker_when_enqueue_is_cancelled()
+    {
+        var queue = new ProcessRuntimeDispatchQueue(new ProcessRuntimeDispatchQueueOptions
+        {
+            ImmediateQueueCapacity = 1,
+            RecoveryQueueCapacity = 1
+        });
+        var firstRunId = ProcessRunId.New();
+        var cancelledRunId = ProcessRunId.New();
+
+        await queue.EnqueueAsync(new ProcessRuntimeDispatchQueueRequest(firstRunId, "unit-test"));
+
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await queue.EnqueueAsync(
+                new ProcessRuntimeDispatchQueueRequest(cancelledRunId, "unit-test"),
+                cancelled.Token));
+
+        Assert.True(queue.TryDequeueImmediate(out var firstRequest));
+        Assert.Equal(firstRunId, firstRequest.RunId);
+
+        await queue.EnqueueAsync(new ProcessRuntimeDispatchQueueRequest(cancelledRunId, "unit-test"));
+
+        Assert.True(queue.TryDequeueImmediate(out var retriedRequest));
+        Assert.Equal(cancelledRunId, retriedRequest.RunId);
+    }
+
+    [Fact]
+    public async Task Queue_deduplicates_pending_run_until_dequeued()
+    {
+        var queue = new ProcessRuntimeDispatchQueue();
+        var runId = ProcessRunId.New();
+
+        await queue.EnqueueAsync(new ProcessRuntimeDispatchQueueRequest(runId, "unit-test"));
+        await queue.EnqueueAsync(new ProcessRuntimeDispatchQueueRequest(runId, "unit-test"));
+
+        Assert.True(queue.TryDequeueImmediate(out var request));
+        Assert.Equal(runId, request.RunId);
+        Assert.False(queue.TryDequeueImmediate(out _));
+
+        await queue.EnqueueAsync(new ProcessRuntimeDispatchQueueRequest(runId, "unit-test"));
+
+        Assert.True(queue.TryDequeueImmediate(out var requeuedRequest));
+        Assert.Equal(runId, requeuedRequest.RunId);
+    }
+
+    [Fact]
+    public void Queue_rejects_non_positive_capacity()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() => new ProcessRuntimeDispatchQueue(
+            new ProcessRuntimeDispatchQueueOptions
+            {
+                ImmediateQueueCapacity = 0
+            }));
+
+        Assert.Contains(nameof(ProcessRuntimeDispatchQueueOptions.ImmediateQueueCapacity), exception.Message);
+    }
+
+    [Fact]
     public void Dispatch_diagnostics_treat_routine_coordination_as_information()
     {
         var result = new ProcessRuntimeDispatchResult(

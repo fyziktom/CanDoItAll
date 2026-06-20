@@ -1,0 +1,6 @@
+
+ProcessId      : 60368
+Name           : CanDoItAll.Web.exe
+CommandLine    : "C:\repositories\CanDoItAll\src\CanDoItAll.Web\bin\Release\net10.0\CanDoItAll.Web.exe"
+ExecutablePath : C:\repositories\CanDoItAll\src\CanDoItAll.Web\bin\Release\net10.0\CanDoItAll.Web.exe
+

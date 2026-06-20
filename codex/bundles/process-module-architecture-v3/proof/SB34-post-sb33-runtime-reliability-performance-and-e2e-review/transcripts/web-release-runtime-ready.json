@@ -1,0 +1,16 @@
+{
+  "isReady": true,
+  "environmentName": "Development",
+  "summary": "Ready",
+  "watchIteration": null,
+  "hotReloadGeneration": 0,
+  "runtimePid": 60368,
+  "ownerKind": null,
+  "ownerId": null,
+  "serverInstanceId": null,
+  "startedAtUtc": "2026-06-20T11:16:22.3885416-04:00",
+  "lastChangedAtUtc": "2026-06-20T11:16:25.7390175-04:00",
+  "activeUrls": [
+    "https://localhost"
+  ]
+}
