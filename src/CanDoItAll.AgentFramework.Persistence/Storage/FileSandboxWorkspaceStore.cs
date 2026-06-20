@@ -227,6 +227,28 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         }
     }
 
+    public async Task<ExecutionRunRecord?> GetExecutionRunAsync(
+        Guid executionRunId,
+        CancellationToken cancellationToken = default)
+    {
+        if (CanReadExecutionDetailsWithoutWorkspaceLock())
+        {
+            return await executionSliceStore.LoadRunAsync(executionRunId, cancellationToken);
+        }
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+            return await executionSliceStore.LoadRunAsync(executionRunId, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     public async Task<ExecutionRunDetail> SaveExecutionRunDetailAsync(
         ExecutionRunDetail detail,
         CancellationToken cancellationToken = default)

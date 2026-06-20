@@ -51,6 +51,19 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return runs;
     }
 
+    public async Task<ExecutionRunRecord?> LoadRunAsync(
+        Guid executionRunId,
+        CancellationToken cancellationToken)
+    {
+        if (ExecutionStorageExists())
+        {
+            return await jsonStore.ReadJsonAsync<ExecutionRunRecord>(layout.RunPath(executionRunId), cancellationToken);
+        }
+
+        return (await TryLoadLegacyExecutionStateAsync(cancellationToken))?.ExecutionRuns
+            .FirstOrDefault(item => item.Id == executionRunId);
+    }
+
     public Task<SandboxWorkspaceExecutionState?> TryLoadLegacyExecutionStateAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(layout.LegacyExecutionPath))

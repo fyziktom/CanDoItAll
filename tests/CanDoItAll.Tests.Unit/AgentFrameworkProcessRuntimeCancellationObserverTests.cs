@@ -88,6 +88,14 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
                 details.Values.Select(item => item.Run).ToArray());
         }
 
+        public Task<ExecutionRunRecord?> GetExecutionRunAsync(
+            Guid executionRunId,
+            CancellationToken cancellationToken = default)
+        {
+            details.TryGetValue(executionRunId, out var saved);
+            return Task.FromResult(saved?.Run);
+        }
+
         public Task<ExecutionRunDetail?> GetExecutionRunDetailAsync(
             Guid executionRunId,
             CancellationToken cancellationToken = default)

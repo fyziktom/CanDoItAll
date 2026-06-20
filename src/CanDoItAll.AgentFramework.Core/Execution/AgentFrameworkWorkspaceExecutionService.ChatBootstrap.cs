@@ -183,13 +183,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ?.ExecutionRunId;
             }
 
-            if (latestRunId.HasValue &&
-                await executionRunStore.GetExecutionRunDetailAsync(latestRunId.Value, cancellationToken) is { } detail &&
-                detail.Run.AgentId == agentId &&
-                detail.Run.ChatSessionId == chatSessionId.Value)
+            if (!latestRunId.HasValue)
             {
-                return detail.Run;
+                return null;
             }
+
+            var latestRun = await executionRunStore.GetExecutionRunAsync(latestRunId.Value, cancellationToken);
+            if (latestRun is not null &&
+                latestRun.Id == latestRunId.Value &&
+                latestRun.AgentId == agentId &&
+                latestRun.ChatSessionId == chatSessionId.Value)
+            {
+                return latestRun;
+            }
+
+            return null;
         }
 
         var executionState = await store.LoadExecutionAsync(cancellationToken);
