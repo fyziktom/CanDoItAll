@@ -538,11 +538,12 @@ public sealed class ProcessWorkspaceShellTests
         var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.LaunchStarted, true));
 
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']")));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
+        Assert.False(client.LastRequest?.RuntimeQuery?.AutoSelectRun);
         Assert.NotNull(cut.Find("[data-testid='live-processes-page']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-command-strip']"));
-        Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']"));
+        Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-started-notification']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']"));
         Assert.NotEmpty(cut.FindAll("[data-testid='live-processes-run-progress']"));
@@ -550,6 +551,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='live-processes-tool-family-card']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-tool-card']"));
         Assert.Contains("Tool history", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Process cost over time", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='live-processes-request-rework']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-attention-decision']"));
         Assert.Contains("Approve rework", cut.Markup, StringComparison.Ordinal);
@@ -879,22 +881,29 @@ public sealed class ProcessWorkspaceShellTests
         {
             var runId = new ProcessRunId(Guid.Parse("77777777-7777-7777-7777-777777777777"));
             var secondRunId = new ProcessRunId(Guid.Parse("88888888-8888-8888-8888-888888888888"));
-            var selectedRunId = request.RuntimeQuery?.SelectedRunId == secondRunId.Value
+            ProcessRunId? selectedRunId = request.RuntimeQuery?.SelectedRunId == secondRunId.Value
                 ? secondRunId
-                : runId;
+                : request.RuntimeQuery?.SelectedRunId == runId.Value
+                    ? runId
+                    : request.RuntimeQuery?.AutoSelectRun != false
+                        ? runId
+                        : null;
             var freshness = new ProcessProjectionFreshness(
                 Now,
                 SourceGlobalSequence: 12,
                 new ProcessProjectionLag(12, 12, BacklogEventCount: 0));
-            var events = CreateRuntimeEvents(selectedRunId);
-            var selectedRun = new ProcessRunDetailProjection(
-                selectedRunId,
-                selectedRunId,
-                selectedRunId == runId ? ProcessProjectedRunStatus.NeedsAttention : ProcessProjectedRunStatus.Active,
-                Now.AddMinutes(-35),
-                Now.AddMinutes(-2),
-                freshness,
-                events.Select(ToLiveRunEvent).ToArray());
+            var eventRunId = selectedRunId ?? runId;
+            var events = CreateRuntimeEvents(eventRunId);
+            var selectedRun = selectedRunId is null
+                ? null
+                : new ProcessRunDetailProjection(
+                    selectedRunId.Value,
+                    selectedRunId.Value,
+                    selectedRunId == runId ? ProcessProjectedRunStatus.NeedsAttention : ProcessProjectedRunStatus.Active,
+                    Now.AddMinutes(-35),
+                    Now.AddMinutes(-2),
+                    freshness,
+                    events.Select(ToLiveRunEvent).ToArray());
             var runs = new[]
             {
                 CreateLiveRun(runId, ProcessProjectedRunStatus.NeedsAttention, freshness, events),
@@ -909,7 +918,7 @@ public sealed class ProcessWorkspaceShellTests
                 page,
                 pageSize,
                 HasMoreEvents: false,
-                selectedRunId.Value,
+                selectedRunId?.Value,
                 selectedRun,
                 runs,
                 events,
@@ -917,8 +926,8 @@ public sealed class ProcessWorkspaceShellTests
                 [
                     new ProcessManagerMessageProjection(
                         "manager-message-test",
-                        selectedRunId,
-                        selectedRunId,
+                        eventRunId,
+                        eventRunId,
                         "Manager Incident Raised",
                         "Manager incident raised; operator review is required.",
                         Now.AddMinutes(-2),
@@ -927,9 +936,9 @@ public sealed class ProcessWorkspaceShellTests
                 ],
                 [
                     new ProcessRuntimeActiveAgentProjection(
-                        selectedRunId.Value,
+                        eventRunId.Value,
                         Guid.Parse("99999999-9999-9999-9999-999999999999"),
-                        $"Run {selectedRunId.Value.ToString("N")[..8]}",
+                        $"Run {eventRunId.Value.ToString("N")[..8]}",
                         "implementation",
                         "lead-engineer",
                         "agent",

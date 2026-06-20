@@ -62,6 +62,14 @@ public sealed record ProcessLiveProcessSnapshot(
     public IReadOnlyList<ProcessRuntimeChildRunWaitProjection> WaitingOnChildRuns { get; init; } = [];
 
     public ProcessRuntimeCurrentStepProjection? CurrentStep { get; init; }
+
+    public int ExecutableStepCount { get; init; }
+
+    public int CompletedStepCount { get; init; }
+
+    public int TerminalStepCount { get; init; }
+
+    public string ProgressLabel { get; init; } = string.Empty;
 }
 
 public sealed record ProcessRuntimeCurrentStepProjection(

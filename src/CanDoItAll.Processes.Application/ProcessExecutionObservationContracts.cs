@@ -66,7 +66,10 @@ public sealed record ProcessExecutionObservation(
     IReadOnlyList<ProcessExecutionActivityObservation> RecentActivities,
     IReadOnlyList<ProcessExecutionToolObservation> RecentTools,
     IReadOnlyList<ProcessExecutionArtifactObservation> Artifacts,
-    string LastError);
+    string LastError)
+{
+    public string AgentAvatarImageUrl { get; init; } = string.Empty;
+}
 
 public sealed record ProcessExecutionActivityObservation(
     DateTimeOffset CreatedAtUtc,

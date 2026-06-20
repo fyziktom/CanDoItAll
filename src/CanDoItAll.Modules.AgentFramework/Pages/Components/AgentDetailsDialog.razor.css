@@ -10,6 +10,36 @@
     width: 100%;
 }
 
+.agent-details-dialog__avatar-summary {
+    width: 100%;
+}
+
+.agent-details-dialog__avatar-option {
+    align-items: center;
+    background: rgb(255 255 255);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    color: rgb(15 23 42);
+    display: grid;
+    gap: 0.65rem;
+    justify-items: center;
+    min-height: 9rem;
+    padding: 0.85rem;
+    text-align: center;
+}
+
+.agent-details-dialog__avatar-option:hover,
+.agent-details-dialog__avatar-option:focus-visible {
+    border-color: rgb(59 130 246);
+    outline: none;
+}
+
+.agent-details-dialog__avatar-option--selected {
+    background: rgb(239 246 255);
+    border-color: rgb(37 99 235);
+    box-shadow: 0 0 0 3px rgb(191 219 254 / 0.7);
+}
+
 .agent-details-dialog__summary-textarea,
 .agent-details-dialog__instructions-textarea {
     display: block;

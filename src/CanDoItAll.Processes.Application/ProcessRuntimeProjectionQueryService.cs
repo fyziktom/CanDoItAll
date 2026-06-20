@@ -44,10 +44,11 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs.Add(run);
         }
 
-        runs = (await ReconcileLiveActivityAsync(runs, nowUtc, cancellationToken).ConfigureAwait(false)).ToList();
-        runs = (await EnrichOperatorActionsAsync(runs, nowUtc, cancellationToken).ConfigureAwait(false)).ToList();
-        runs = (await EnrichCurrentStepsAsync(runs, nowUtc, cancellationToken).ConfigureAwait(false)).ToList();
-        runs = (await EnrichChildRunWaitsAsync(runs, cancellationToken).ConfigureAwait(false)).ToList();
+        var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
+        runs = (await ReconcileLiveActivityAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        runs = (await EnrichOperatorActionsAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        runs = (await EnrichCurrentStepsAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        runs = (await EnrichChildRunWaitsAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
 
         runs.Sort(static (left, right) =>
         {
@@ -121,7 +122,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var liveProcesses = await GetLiveProcessesAsync(
             new ProcessLiveProcessesQuery(nowUtc, query.Window, query.TakeRuns),
             cancellationToken).ConfigureAwait(false);
-        var selectedRunId = ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId);
+        var selectedRunId = ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId, query.AutoSelectRun);
         ProcessRunDetailProjection? selectedRun = null;
         if (selectedRunId is not null)
         {
@@ -178,11 +179,17 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
     private static ProcessRunId? ResolveSelectedRunId(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
-        ProcessRunId? requestedRunId)
+        ProcessRunId? requestedRunId,
+        bool autoSelectRun)
     {
         if (requestedRunId is not null && runs.Any(run => run.RunId == requestedRunId))
         {
             return requestedRunId;
+        }
+
+        if (!autoSelectRun)
+        {
+            return null;
         }
 
         return runs
@@ -243,6 +250,59 @@ public sealed class ProcessRuntimeProjectionQueryService(
         }
 
         return latest;
+    }
+
+    private sealed class RuntimeRunEnrichmentCache(
+        IProcessRuntimeStateStore? runtimeStateStore,
+        IProcessRuntimeStepAssignmentStore? assignmentStore)
+    {
+        private readonly Dictionary<ProcessRunId, ProcessRuntimeStateSnapshot?> stateByRunId = [];
+        private readonly Dictionary<ProcessRunId, IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>> assignmentsByRunId = [];
+
+        public bool CanLoadStates => runtimeStateStore is not null;
+
+        public bool CanLoadAssignments => assignmentStore is not null;
+
+        public async ValueTask<ProcessRuntimeStateSnapshot?> LoadStateAsync(
+            ProcessRunId runId,
+            CancellationToken cancellationToken)
+        {
+            if (runtimeStateStore is null)
+            {
+                return null;
+            }
+
+            if (stateByRunId.TryGetValue(runId, out var cached))
+            {
+                return cached;
+            }
+
+            var loaded = await runtimeStateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+            stateByRunId[runId] = loaded;
+            return loaded;
+        }
+
+        public async ValueTask<IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>> LoadAssignmentsByStepAsync(
+            ProcessRunId runId,
+            CancellationToken cancellationToken)
+        {
+            if (assignmentStore is null)
+            {
+                return new Dictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment>();
+            }
+
+            if (assignmentsByRunId.TryGetValue(runId, out var cached))
+            {
+                return cached;
+            }
+
+            var assignments = await assignmentStore.LoadByRunAsync(runId, cancellationToken).ConfigureAwait(false);
+            var loaded = assignments
+                .GroupBy(assignment => assignment.StepInstanceId)
+                .ToDictionary(group => group.Key, group => group.First());
+            assignmentsByRunId[runId] = loaded;
+            return loaded;
+        }
     }
 
     private async Task<IReadOnlyList<ProcessRuntimeActiveAgentProjection>> LoadActiveAgentsAsync(
@@ -387,9 +447,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> ReconcileLiveActivityAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
         DateTimeOffset nowUtc,
+        RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
     {
-        if (runtimeStateStore is null || runs.Count == 0)
+        if (!enrichmentCache.CanLoadStates || runs.Count == 0)
         {
             return runs;
         }
@@ -403,7 +464,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 continue;
             }
 
-            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var state = await enrichmentCache.LoadStateAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             if (state is null)
             {
                 reconciled.Add(run);
@@ -422,9 +483,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichOperatorActionsAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
         DateTimeOffset nowUtc,
+        RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
     {
-        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        if (!enrichmentCache.CanLoadStates || !enrichmentCache.CanLoadAssignments || runs.Count == 0)
         {
             return runs;
         }
@@ -438,17 +500,14 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 continue;
             }
 
-            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var state = await enrichmentCache.LoadStateAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             if (state is null)
             {
                 enriched.Add(run);
                 continue;
             }
 
-            var assignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
-            var assignmentsByStep = assignments
-                .GroupBy(assignment => assignment.StepInstanceId)
-                .ToDictionary(group => group.Key, group => group.First());
+            var assignmentsByStep = await enrichmentCache.LoadAssignmentsByStepAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             var hasOpenNonExpiredClaims = HasOpenNonExpiredClaims(state, nowUtc);
             var actionableSteps = new List<(ProcessRuntimeStepState Step, DispatchClaimState? ExpiredClaim)>();
             foreach (var step in state.Steps)
@@ -484,9 +543,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichCurrentStepsAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
         DateTimeOffset nowUtc,
+        RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
     {
-        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        if (!enrichmentCache.CanLoadStates || !enrichmentCache.CanLoadAssignments || runs.Count == 0)
         {
             return runs;
         }
@@ -500,28 +560,26 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 continue;
             }
 
-            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var state = await enrichmentCache.LoadStateAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             if (state is null)
             {
                 enriched.Add(ClearCurrentStep(run));
                 continue;
             }
 
-            var assignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
-            var assignmentsByStep = assignments
-                .GroupBy(assignment => assignment.StepInstanceId)
-                .ToDictionary(group => group.Key, group => group.First());
+            var runWithProgress = ApplyStepProgress(run, state);
+            var assignmentsByStep = await enrichmentCache.LoadAssignmentsByStepAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             var currentStep = ResolveCurrentStep(state);
             if (currentStep is null)
             {
-                enriched.Add(ClearCurrentStep(run));
+                enriched.Add(ClearCurrentStep(runWithProgress));
                 continue;
             }
 
             assignmentsByStep.TryGetValue(currentStep.StepInstanceId, out var assignment);
-            enriched.Add(run with
+            enriched.Add(runWithProgress with
             {
-                CurrentStep = CreateCurrentStepProjection(run, state, currentStep, assignment, nowUtc)
+                CurrentStep = CreateCurrentStepProjection(runWithProgress, state, currentStep, assignment, nowUtc)
             });
         }
 
@@ -530,9 +588,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
     private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichChildRunWaitsAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
     {
-        if (runtimeStateStore is null || assignmentStore is null || runs.Count == 0)
+        if (!enrichmentCache.CanLoadStates || !enrichmentCache.CanLoadAssignments || assignmentStore is null || runs.Count == 0)
         {
             return runs;
         }
@@ -546,17 +605,14 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 continue;
             }
 
-            var parentState = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var parentState = await enrichmentCache.LoadStateAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             if (parentState is null)
             {
                 enriched.Add(ClearChildRunWaits(run));
                 continue;
             }
 
-            var parentAssignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
-            var parentAssignmentsByStep = parentAssignments
-                .GroupBy(assignment => assignment.StepInstanceId)
-                .ToDictionary(group => group.Key, group => group.First());
+            var parentAssignmentsByStep = await enrichmentCache.LoadAssignmentsByStepAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             var childAssignments = await assignmentStore.FindByLaunchVariablesAsync(
                 new Dictionary<string, string>(StringComparer.Ordinal)
                 {
@@ -602,7 +658,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                         continue;
                     }
 
-                    var childState = await runtimeStateStore.LoadAsync(childGroup.Key, cancellationToken).ConfigureAwait(false);
+                    var childState = await enrichmentCache.LoadStateAsync(childGroup.Key, cancellationToken).ConfigureAwait(false);
                     if (childState is null ||
                         ProcessRuntimeTerminalStates.IsRunTerminal(childState.Status) ||
                         childState.Status == ProcessRuntimeStatus.Blocked)
@@ -651,6 +707,35 @@ public sealed class ProcessRuntimeProjectionQueryService(
         => run.CurrentStep is null
             ? run
             : run with { CurrentStep = null };
+
+    private static ProcessLiveProcessSnapshot ApplyStepProgress(
+        ProcessLiveProcessSnapshot run,
+        ProcessRuntimeStateSnapshot state)
+    {
+        var executableSteps = state.Steps.Where(step => step.IsExecutable).ToArray();
+        if (executableSteps.Length == 0)
+        {
+            return run with
+            {
+                ExecutableStepCount = 0,
+                CompletedStepCount = 0,
+                TerminalStepCount = 0,
+                ProgressLabel = "No executable steps"
+            };
+        }
+
+        var completedStepCount = executableSteps.Count(step =>
+            step.Status is ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Skipped);
+        var terminalStepCount = executableSteps.Count(step => ProcessRuntimeTerminalStates.IsStepTerminal(step.Status));
+
+        return run with
+        {
+            ExecutableStepCount = executableSteps.Length,
+            CompletedStepCount = completedStepCount,
+            TerminalStepCount = terminalStepCount,
+            ProgressLabel = $"{completedStepCount.ToString(CultureInfo.InvariantCulture)} of {executableSteps.Length.ToString(CultureInfo.InvariantCulture)} executable steps complete"
+        };
+    }
 
     private static ProcessLiveProcessSnapshot ClearChildRunWaits(ProcessLiveProcessSnapshot run)
         => run.WaitingOnChildRuns is { Count: 0 }
@@ -771,9 +856,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var receipt = state.AppliedResults
             .Where(item => item.StepInstanceId == step.StepInstanceId)
             .LastOrDefault();
-        var problemSummary = BuildOperatorProblemSummary(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim);
-        var requiredDecision = BuildOperatorDecision(stepKey, step.Status, roleDisplayName, executorDisplayName, expiredClaim);
-        var recommendedInstruction = BuildRecommendedOperatorInstruction(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim);
+        var capabilityHint = BuildOperatorCapabilityHint(assignment);
+        var problemSummary = $"{BuildOperatorProblemSummary(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim)} {capabilityHint}".Trim();
+        var requiredDecision = $"{BuildOperatorDecision(stepKey, step.Status, roleDisplayName, executorDisplayName, expiredClaim)} {capabilityHint}".Trim();
+        var recommendedInstruction = $"{BuildRecommendedOperatorInstruction(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim)} {capabilityHint}".Trim();
         return new ProcessRuntimeOperatorActionProjection(
             run.RunId.Value,
             step.StepInstanceId.Value,
@@ -875,6 +961,29 @@ public sealed class ProcessRuntimeProjectionQueryService(
         return $"Manager-approved rework for step '{stepKey}'. Resolve {outcomeText}, preserve accepted upstream artifacts, produce the required evidence for role '{roleDisplayName}', and continue the process. Previous executor: {executorDisplayName}. Step status before rework: {step.Status}.";
     }
 
+    private static string BuildOperatorCapabilityHint(ProcessRuntimeStepAssignment? assignment)
+    {
+        if (assignment is null)
+        {
+            return "Why this may repeat: runtime assignment metadata is missing, so verify the step still has a valid agent binding before approving another attempt.";
+        }
+
+        var operations = assignment.AllowedOperations
+            .Where(operation => !string.IsNullOrWhiteSpace(operation))
+            .Select(operation => operation.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(operation => operation, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var operationSummary = operations.Length == 0
+            ? "the step's required operations"
+            : string.Join(", ", operations);
+        var requiredEvidence = assignment.RequiredArtifactSlotIds.Count == 0
+            ? "the step's required evidence"
+            : $"{assignment.RequiredArtifactSlotIds.Count.ToString(CultureInfo.InvariantCulture)} required artifact slot(s)";
+
+        return $"Why this may repeat: if the next attempt fails the same way, verify that {assignment.ExecutorDisplayName} has the tools, MCP servers, skills, and project access needed for {operationSummary}, and that the agent can write {requiredEvidence} before returning completed output.";
+    }
+
     private static bool IsAgentActiveStep(ProcessRuntimeStepState step)
         => step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
 
@@ -935,6 +1044,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
             ExecutionRunId = observation.ExecutionRunId,
             AgentId = observation.AgentId,
             AgentName = displayName,
+            AgentAvatarImageUrl = observation.AgentAvatarImageUrl,
             ProviderName = observation.ProviderName,
             Model = observation.Model,
             ExecutionState = observation.State,

@@ -2151,7 +2151,8 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(
 }
 
 internal sealed class AgentFrameworkProcessExecutionObservationReader(
-    IAgentFrameworkWorkspaceService workspaceService) : IProcessExecutionObservationReader
+    IAgentFrameworkWorkspaceService workspaceService,
+    ISandboxWorkspaceExecutionRunStore executionRunStore) : IProcessExecutionObservationReader
 {
     public async ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
         ProcessExecutionObservationQuery query,
@@ -2166,57 +2167,60 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
         var agentNameById = agents.ToDictionary(agent => agent.Id, agent => agent.Name);
+        var agentAvatarById = agents.ToDictionary(agent => agent.Id, agent => agent.AvatarImageUrl ?? string.Empty);
+        var requestedRunIds = query.RunIds.ToHashSet();
+        var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken).ConfigureAwait(false);
         var observations = new List<ProcessExecutionObservation>();
 
-        foreach (var runId in query.RunIds.Distinct())
+        foreach (var executionRun in executionRuns
+                     .Where(run => run.UpdatedAtUtc >= query.FromUtc && run.UpdatedAtUtc <= query.ToUtc)
+                     .OrderByDescending(run => run.UpdatedAtUtc)
+                     .GroupBy(
+                         run => run.ProcessRunId,
+                         StringComparer.OrdinalIgnoreCase)
+                     .SelectMany(group => group.Take(Math.Max(1, query.TakePerRun))))
         {
-            var executionRuns = await workspaceService.ListExecutionRunsAsync(
-                new ExecutionRunQuery(
-                    ProcessRunId: runId.ToString(),
-                    Take: Math.Max(1, query.TakePerRun),
-                    UpdatedFromUtc: query.FromUtc,
-                    UpdatedToUtc: query.ToUtc),
-                cancellationToken).ConfigureAwait(false);
-
-            foreach (var executionRun in executionRuns)
+            if (!TryParseProcessIdentity(executionRun, out var processRunId, out var stepInstanceId) ||
+                !requestedRunIds.Contains(processRunId))
             {
-                if (!TryParseProcessIdentity(executionRun, out var processRunId, out var stepInstanceId))
-                {
-                    continue;
-                }
-
-                ExecutionRunDetail? detail = null;
-                try
-                {
-                    detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
-                }
-                catch (InvalidOperationException)
-                {
-                }
-
-                var detailRun = detail?.Run ?? executionRun;
-                var agentName = agentNameById.GetValueOrDefault(detailRun.AgentId);
-                observations.Add(new ProcessExecutionObservation(
-                    detailRun.Id,
-                    processRunId,
-                    stepInstanceId,
-                    detailRun.AgentId,
-                    FirstNonEmpty(agentName, detailRun.RequestedBy, detailRun.AgentId.ToString("D")),
-                    detailRun.ProviderName,
-                    detailRun.Model,
-                    detailRun.State.ToString(),
-                    detailRun.Outcome?.ToString() ?? string.Empty,
-                    detailRun.CreatedAtUtc,
-                    detailRun.UpdatedAtUtc,
-                    detailRun.StartedAtUtc,
-                    detailRun.CompletedAtUtc,
-                    detailRun.InputSummary,
-                    detailRun.ResultSummary,
-                    MapActivities(detail),
-                    MapTools(detail),
-                    MapArtifacts(detail),
-                    ResolveLastError(detail)));
+                continue;
             }
+
+            ExecutionRunDetail? detail = null;
+            try
+            {
+                detail = await executionRunStore.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+
+            var detailRun = detail?.Run ?? executionRun;
+            var agentName = agentNameById.GetValueOrDefault(detailRun.AgentId);
+            var agentAvatarImageUrl = agentAvatarById.GetValueOrDefault(detailRun.AgentId) ?? string.Empty;
+            observations.Add(new ProcessExecutionObservation(
+                detailRun.Id,
+                processRunId,
+                stepInstanceId,
+                detailRun.AgentId,
+                FirstNonEmpty(agentName, detailRun.RequestedBy, detailRun.AgentId.ToString("D")),
+                detailRun.ProviderName,
+                detailRun.Model,
+                detailRun.State.ToString(),
+                detailRun.Outcome?.ToString() ?? string.Empty,
+                detailRun.CreatedAtUtc,
+                detailRun.UpdatedAtUtc,
+                detailRun.StartedAtUtc,
+                detailRun.CompletedAtUtc,
+                detailRun.InputSummary,
+                detailRun.ResultSummary,
+                MapActivities(detail),
+                MapTools(detail),
+                MapArtifacts(detail),
+                ResolveLastError(detail))
+            {
+                AgentAvatarImageUrl = agentAvatarImageUrl
+            });
         }
 
         return observations
@@ -2329,7 +2333,8 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
 }
 
 internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
-    IAgentFrameworkWorkspaceService workspaceService) : IProcessRuntimeUsageTelemetryReader
+    IAgentFrameworkWorkspaceService workspaceService,
+    ISandboxWorkspaceExecutionRunStore executionRunStore) : IProcessRuntimeUsageTelemetryReader
 {
     public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
         ProcessRuntimeUsageTelemetryQuery query,
@@ -2344,44 +2349,36 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
 
         var runIdSet = query.RunIds.ToHashSet();
         var providers = await workspaceService.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken).ConfigureAwait(false);
         var observations = new List<ProcessRuntimeUsageObservation>();
 
-        foreach (var runId in runIdSet)
+        foreach (var executionRun in executionRuns
+                     .Where(run => run.UpdatedAtUtc >= query.FromUtc && run.UpdatedAtUtc <= query.ToUtc)
+                     .OrderByDescending(run => run.UpdatedAtUtc))
         {
-            var executionRuns = await workspaceService.ListExecutionRunsAsync(
-                new ExecutionRunQuery(
-                    ProcessRunId: runId.ToString(),
-                    Take: Math.Max(1, query.TakePerRun)),
-                cancellationToken).ConfigureAwait(false);
-
-            foreach (var executionRun in executionRuns)
+            if (!TryCreateProcessRunId(executionRun.ProcessRunId, out var executionProcessRunId) ||
+                !runIdSet.Contains(executionProcessRunId))
             {
-                ExecutionRunDetail? detail = null;
-                try
-                {
-                    detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
-                }
-                catch (InvalidOperationException)
-                {
-                }
+                continue;
+            }
 
-                if (detail is null)
+            var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
+            if (detail is null)
+            {
+                continue;
+            }
+
+            foreach (var usageObservation in detail.UsageObservations)
+            {
+                if (usageObservation.CreatedAtUtc < query.FromUtc ||
+                    usageObservation.CreatedAtUtc > query.ToUtc ||
+                    !TryResolveProcessRunId(usageObservation, detail.Run, out var processRunId) ||
+                    !runIdSet.Contains(processRunId))
                 {
                     continue;
                 }
 
-                foreach (var usageObservation in detail.UsageObservations)
-                {
-                    if (usageObservation.CreatedAtUtc < query.FromUtc ||
-                        usageObservation.CreatedAtUtc > query.ToUtc ||
-                        !TryResolveProcessRunId(usageObservation, detail.Run, out var processRunId) ||
-                        !runIdSet.Contains(processRunId))
-                    {
-                        continue;
-                    }
-
-                    observations.Add(MapUsageObservation(usageObservation, detail.Run, processRunId, providers));
-                }
+                observations.Add(MapUsageObservation(usageObservation, detail.Run, processRunId, providers));
             }
         }
 
@@ -2393,7 +2390,7 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
 
     private static ProcessRuntimeUsageObservation MapUsageObservation(
         ProviderUsageObservation usageObservation,
-        ExecutionRunRecord executionRun,
+        ExecutionRunRecord? executionRun,
         ProcessRunId processRunId,
         IReadOnlyList<ProviderProfile> providers)
     {
@@ -2408,7 +2405,7 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
 
         return new ProcessRuntimeUsageObservation(
             usageObservation.Id,
-            executionRun.Id,
+            usageObservation.ExecutionRunId ?? executionRun?.Id ?? Guid.Empty,
             processRunId,
             TryResolveStepInstanceId(usageObservation, executionRun),
             usageObservation.CreatedAtUtc,
@@ -2460,7 +2457,7 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
 
     private static bool TryResolveProcessRunId(
         ProviderUsageObservation usageObservation,
-        ExecutionRunRecord executionRun,
+        ExecutionRunRecord? executionRun,
         out ProcessRunId processRunId)
     {
         if (TryCreateProcessRunId(usageObservation.ProcessRunId, out processRunId))
@@ -2468,19 +2465,21 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             return true;
         }
 
-        return TryCreateProcessRunId(executionRun.ProcessRunId, out processRunId);
+        return executionRun is not null &&
+               TryCreateProcessRunId(executionRun.ProcessRunId, out processRunId);
     }
 
     private static ProcessStepInstanceId? TryResolveStepInstanceId(
         ProviderUsageObservation usageObservation,
-        ExecutionRunRecord executionRun)
+        ExecutionRunRecord? executionRun)
     {
         if (TryCreateStepInstanceId(usageObservation.ProcessStepId, out var observationStepId))
         {
             return observationStepId;
         }
 
-        return TryCreateStepInstanceId(executionRun.ProcessStepId, out var executionStepId)
+        return executionRun is not null &&
+               TryCreateStepInstanceId(executionRun.ProcessStepId, out var executionStepId)
             ? executionStepId
             : null;
     }

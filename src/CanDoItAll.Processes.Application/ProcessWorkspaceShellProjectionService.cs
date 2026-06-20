@@ -182,8 +182,9 @@ public sealed class ProcessWorkspaceShellProjectionService(
                     ResolveHistoryWindow(runtimeQuery.HistoryWindow),
                     runtimeQuery.EventPage,
                     runtimeQuery.EventPageSize,
-                    TakeRuns: 100,
-                    ResolveRunId(runtimeQuery.SelectedRunId ?? request.Selection.RunId)),
+                    TakeRuns: Math.Clamp(runtimeQuery.TakeRuns, 1, 100),
+                    ResolveRunId(runtimeQuery.SelectedRunId ?? request.Selection.RunId),
+                    runtimeQuery.AutoSelectRun),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -208,11 +209,14 @@ public sealed class ProcessWorkspaceShellProjectionService(
             return [];
         }
 
-        var runIds = result.Runs
-            .SelectMany(run => new[] { run.RootRunId, run.RunId })
-            .Distinct()
-            .ToArray();
-        if (runIds.Length == 0)
+        var runIds = new HashSet<ProcessRunId>();
+        foreach (var run in result.Runs)
+        {
+            runIds.Add(run.RootRunId);
+            runIds.Add(run.RunId);
+        }
+
+        if (runIds.Count == 0)
         {
             return [];
         }
@@ -220,10 +224,10 @@ public sealed class ProcessWorkspaceShellProjectionService(
         var historyWindow = ResolveHistoryWindow(runtimeQuery.HistoryWindow);
         return await runtimeUsageTelemetryReader.ListAsync(
                 new ProcessRuntimeUsageTelemetryQuery(
-                    runIds,
+                    runIds.ToArray(),
                     observedAtUtc.Subtract(historyWindow),
                     observedAtUtc,
-                    TakePerRun: 10_000),
+                    ResolveUsageTelemetryTakePerRun(runtimeQuery.HistoryWindow)),
                 cancellationToken)
             .ConfigureAwait(false);
     }
@@ -239,9 +243,20 @@ public sealed class ProcessWorkspaceShellProjectionService(
         return query with
         {
             EventPage = Math.Max(0, query.EventPage),
-            EventPageSize = Math.Clamp(query.EventPageSize, 5, 200)
+            EventPageSize = Math.Clamp(query.EventPageSize, 5, 200),
+            TakeRuns = Math.Clamp(query.TakeRuns, 1, 100)
         };
     }
+
+    private static int ResolveUsageTelemetryTakePerRun(ProcessRuntimeHistoryWindow historyWindow)
+        => historyWindow switch
+        {
+            ProcessRuntimeHistoryWindow.LiveHour => 250,
+            ProcessRuntimeHistoryWindow.OneDay => 1_000,
+            ProcessRuntimeHistoryWindow.SevenDays => 3_000,
+            ProcessRuntimeHistoryWindow.ThirtyDays => 5_000,
+            _ => 1_000
+        };
 
     private static ProcessRunId? ResolveRunId(Guid? runId)
         => runId.HasValue && runId.Value != Guid.Empty

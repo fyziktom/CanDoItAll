@@ -45,6 +45,44 @@ else
                                 </div>
                             </Grid>
 
+                            <SurfaceCard Soft="true" Class="agent-details-dialog__avatar-summary" data-testid="agents-catalog-avatar-summary">
+                                <Stack Orientation="Orientation.Horizontal"
+                                       AlignItems="AlignItems.Center"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       GapScale="LayoutGap.Medium">
+                                    <Stack Orientation="Orientation.Horizontal"
+                                           AlignItems="AlignItems.Center"
+                                           GapScale="LayoutGap.Medium">
+                                        <Avatar Alt="@ResolveAvatarAltText()"
+                                                ImageUrl="@editorModel.AvatarImageUrl"
+                                                FallbackText="@ResolveAvatarFallbackText()"
+                                                DefaultImageSeed="@ResolveAvatarSeed()"
+                                                Size="AvatarSize.Large"
+                                                Shape="AvatarShape.Rounded" />
+                                        <Stack GapScale="LayoutGap.XSmall">
+                                            <span class="cda-field-label">Avatar</span>
+                                            <strong>@ResolveAvatarSelectionText()</strong>
+                                            <small class="text-sm text-slate-600">Stored with the technical agent identity and reused by runtime surfaces.</small>
+                                        </Stack>
+                                    </Stack>
+                                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
+                                        <Button Text="Choose avatar"
+                                                Icon="face"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="OpenAvatarSelectorAsync"
+                                                data-testid="agents-catalog-avatar-open" />
+                                        <Button Text="Use default"
+                                                Icon="restart_alt"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)"
+                                                Click="ClearAvatarAsync"
+                                                data-testid="agents-catalog-avatar-clear" />
+                                    </Cluster>
+                                </Stack>
+                            </SurfaceCard>
+
                             <div class="agent-details-dialog__full-field">
                                 <label class="cda-field-label">Summary</label>
                                 <InputTextArea @bind-Value="editorModel.Summary"
@@ -617,4 +655,69 @@ else
             </StickyActionFooter>
         </Stack>
     </EditForm>
+}
+
+@if (avatarSelectorOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Agent identity"
+            Title="Choose avatar"
+            Subtitle="@ResolveAvatarAltText()"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="agents-catalog-avatar-dialog"
+            OnClose="CloseAvatarSelectorAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <SurfaceCard Soft="true">
+                    <Stack Orientation="Orientation.Horizontal"
+                           AlignItems="AlignItems.Center"
+                           GapScale="LayoutGap.Medium">
+                        <Avatar Alt="@ResolveAvatarAltText()"
+                                ImageUrl="@editorModel.AvatarImageUrl"
+                                FallbackText="@ResolveAvatarFallbackText()"
+                                DefaultImageSeed="@ResolveAvatarSeed()"
+                                Size="AvatarSize.Large"
+                                Shape="AvatarShape.Rounded" />
+                        <Stack GapScale="LayoutGap.XSmall">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current avatar" />
+                            <strong>@ResolveAvatarSelectionText()</strong>
+                            <small class="text-sm text-slate-600">Avatar changes are saved when you save the agent.</small>
+                        </Stack>
+                    </Stack>
+                </SurfaceCard>
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplate="repeat(4,minmax(0,1fr))"
+                      data-testid="agents-catalog-avatar-options">
+                    @foreach (var option in AvatarOptions.Select((url, index) => new { Url = url, Number = index + 1 }))
+                    {
+                        <button type="button"
+                                class="@ResolveAvatarOptionClass(option.Url)"
+                                @onclick="@(() => SelectAvatar(option.Url))"
+                                data-testid="@($"agents-catalog-avatar-option-{option.Number}")">
+                            <Avatar Alt="@($"Avatar {option.Number}")"
+                                    ImageUrl="@option.Url"
+                                    FallbackText="@option.Number.ToString()"
+                                    UseDefaultImageWhenMissing="false"
+                                    Size="AvatarSize.Large"
+                                    Shape="AvatarShape.Rounded" />
+                            <span>Avatar @option.Number</span>
+                            @if (IsSelectedAvatar(option.Url))
+                            {
+                                <StatusBadge Tone="success" Text="Selected" />
+                            }
+                        </button>
+                    }
+                </Grid>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseAvatarSelectorAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
 }

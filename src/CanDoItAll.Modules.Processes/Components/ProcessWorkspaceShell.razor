@@ -498,7 +498,9 @@
                     runtimeHistoryWindow,
                     runtimeEventPage,
                     RuntimeEventPageSize,
-                    selectedRuntimeRunId ?? RunIdQuery));
+                    selectedRuntimeRunId ?? RunIdQuery,
+                    AutoSelectRun: (selectedRuntimeRunId ?? RunIdQuery).HasValue,
+                    TakeRuns: 50));
 
             shell = await ProjectionClient.GetShellAsync(request);
             selectedRuntimeRunId = shell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
@@ -1437,6 +1439,7 @@
         }
         else
         {
+            <option value="">All runs</option>
             @foreach (var run in CurrentShell.Runtime.Runs)
             {
                 <option value="@run.RunId.Value.ToString("D")">@BuildRunOptionText(run)</option>

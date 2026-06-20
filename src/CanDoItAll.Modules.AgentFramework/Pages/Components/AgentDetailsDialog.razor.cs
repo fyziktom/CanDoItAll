@@ -64,6 +64,9 @@ public partial class AgentDetailsDialog
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
     private int selectedTabIndex;
+    private bool avatarSelectorOpen;
+
+    private static IReadOnlyList<string> AvatarOptions => AvatarFallbackResolver.GetBundledAvatarUrls();
 
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
@@ -302,6 +305,51 @@ public partial class AgentDetailsDialog
         selectedTabIndex = 0;
         return Task.CompletedTask;
     }
+
+    private Task OpenAvatarSelectorAsync()
+    {
+        avatarSelectorOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseAvatarSelectorAsync()
+    {
+        avatarSelectorOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task ClearAvatarAsync()
+    {
+        editorModel.AvatarImageUrl = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void SelectAvatar(string avatarImageUrl)
+    {
+        editorModel.AvatarImageUrl = avatarImageUrl.Trim();
+    }
+
+    private bool IsSelectedAvatar(string avatarImageUrl)
+        => string.Equals(editorModel.AvatarImageUrl?.Trim(), avatarImageUrl.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private string ResolveAvatarOptionClass(string avatarImageUrl)
+        => IsSelectedAvatar(avatarImageUrl)
+            ? "agent-details-dialog__avatar-option agent-details-dialog__avatar-option--selected"
+            : "agent-details-dialog__avatar-option";
+
+    private string ResolveAvatarSelectionText()
+        => string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)
+            ? "Default generated avatar"
+            : "Custom selected avatar";
+
+    private string ResolveAvatarAltText()
+        => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");
+
+    private string ResolveAvatarFallbackText()
+        => BuildInitials(ResolveAvatarSeed());
+
+    private string ResolveAvatarSeed()
+        => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");
 
     private async Task ToggleCapabilityAsync(Guid capabilityId)
     {
@@ -812,6 +860,20 @@ public partial class AgentDetailsDialog
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private static string BuildInitials(string value)
+    {
+        var words = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToArray();
+        return words.Length == 0
+            ? "A"
+            : string.Concat(words.Select(word => char.ToUpperInvariant(word[0])));
     }
 
     private bool IsCapabilityAttached(Guid capabilityId)

@@ -31,7 +31,8 @@ public sealed record ProcessRuntimeWorkspaceQuery(
     int EventPage,
     int EventPageSize,
     int TakeRuns,
-    ProcessRunId? SelectedRunId);
+    ProcessRunId? SelectedRunId,
+    bool AutoSelectRun = true);
 
 public sealed record ProcessRuntimeWorkspaceResult(
     IReadOnlyList<ProcessLiveProcessSnapshot> Runs,

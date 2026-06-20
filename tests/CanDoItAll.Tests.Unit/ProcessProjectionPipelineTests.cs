@@ -212,6 +212,11 @@ public sealed class ProcessProjectionPipelineTests
         Assert.False(activeAgent.IsLeaseExpired);
         Assert.Equal(Now.AddMinutes(-5), activeAgent.ClaimedAtUtc);
         Assert.Equal(Now.AddMinutes(25), activeAgent.LeaseExpiresAtUtc);
+        var run = Assert.Single(workspace.Runs);
+        Assert.Equal(1, run.ExecutableStepCount);
+        Assert.Equal(0, run.CompletedStepCount);
+        Assert.Equal(0, run.TerminalStepCount);
+        Assert.Equal("0 of 1 executable steps complete", run.ProgressLabel);
     }
 
     [Fact]
@@ -784,9 +789,10 @@ public sealed class ProcessProjectionPipelineTests
         var assignments = new[]
         {
             CreateAssignment(runId, planId, runningStepId, "implementation", ".NET Developer"),
-            CreateAssignment(runId, planId, completedStepId, "peer-review", ".NET QA Review Lead"),
-            CreateAssignment(runId, planId, staleStepId, "qa-validation", "Delivery QA Observer")
+                CreateAssignment(runId, planId, completedStepId, "peer-review", ".NET QA Review Lead"),
+                CreateAssignment(runId, planId, staleStepId, "qa-validation", "Delivery QA Observer")
         };
+        const string avatarImageUrl = "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-04.jpg";
         var query = new ProcessRuntimeProjectionQueryService(
             store,
             ProcessProjectionJsonCodec.Default,
@@ -794,7 +800,7 @@ public sealed class ProcessProjectionPipelineTests
             new InMemoryRuntimeStateStore(state),
             new InMemoryAssignmentStore(assignments),
             new InMemoryObservationReader(
-                CreateObservation(runId, runningStepId, ".NET Developer", "Running", Now.AddMinutes(-1)),
+                CreateObservation(runId, runningStepId, ".NET Developer", "Running", Now.AddMinutes(-1), avatarImageUrl),
                 CreateObservation(runId, completedStepId, ".NET QA Review Lead", "Completed", Now.AddMinutes(-1)),
                 CreateObservation(runId, staleStepId, "Delivery QA Observer", "Running", Now.AddMinutes(-31))));
 
@@ -809,8 +815,40 @@ public sealed class ProcessProjectionPipelineTests
         var activeAgent = Assert.Single(workspace.ActiveAgents);
         Assert.Equal(runningStepId.Value, activeAgent.StepInstanceId);
         Assert.Equal(".NET Developer", activeAgent.ExecutorDisplayName);
+        Assert.Equal(avatarImageUrl, activeAgent.AgentAvatarImageUrl);
         Assert.True(activeAgent.IsWorking);
         Assert.Equal("AgentFramework execution run", activeAgent.ObservationSource);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_can_keep_all_runs_unselected()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var firstRunId = ProcessRunId.New();
+        var secondRunId = ProcessRunId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, firstRunId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 2);
+        await ProjectAsync(
+            store,
+            StoredEvent(2, secondRunId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-4)),
+            latestKnownGlobalSequence: 2);
+        var query = new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, new FixedProcessProjectionClock(Now));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null,
+            AutoSelectRun: false));
+
+        Assert.Null(workspace.SelectedRun);
+        Assert.Equal(2, workspace.Runs.Count);
+        Assert.Equal([1, 2], workspace.Events.Select(runtimeEvent => runtimeEvent.GlobalSequence));
     }
 
     [Fact]
@@ -1372,7 +1410,8 @@ public sealed class ProcessProjectionPipelineTests
         ProcessStepInstanceId stepId,
         string agentName,
         string state,
-        DateTimeOffset updatedAtUtc)
+        DateTimeOffset updatedAtUtc,
+        string avatarImageUrl = "")
     {
         var isTerminal = string.Equals(state, "Completed", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(state, "Failed", StringComparison.OrdinalIgnoreCase);
@@ -1401,7 +1440,10 @@ public sealed class ProcessProjectionPipelineTests
             ],
             [],
             [],
-            LastError: string.Empty);
+            LastError: string.Empty)
+        {
+            AgentAvatarImageUrl = avatarImageUrl
+        };
     }
 
     private sealed class RecordingRuntimeEventReplayStore(params ProcessStoredRuntimeEvent[] events) : IProcessRuntimeEventReplayStore

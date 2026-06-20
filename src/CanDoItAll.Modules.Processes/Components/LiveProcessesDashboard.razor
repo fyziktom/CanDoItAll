@@ -309,6 +309,20 @@
         Palette = ["#f59e0b"]
     };
 
+    private static readonly CdaChartOptions RuntimeCostChartOptions = new()
+    {
+        Type = CdaChartType.Area,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "USD",
+        TooltipPrecision = 4,
+        ValuePrecision = 4,
+        FillOpacity = 0.2,
+        ShowToolbar = false,
+        EnableZoom = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#dc2626"]
+    };
+
     [Parameter]
     public Guid? ProjectId { get; set; }
 
@@ -450,7 +464,9 @@
                 runtimeHistoryWindow,
                 runtimeEventPage,
                 RuntimeEventPageSize,
-                runId));
+                runId,
+                AutoSelectRun: runId.HasValue,
+                TakeRuns: 40));
 
         var baseline = await ProjectionClient.GetShellAsync(request).ConfigureAwait(false);
         if (!MockProjectionFactory.TryParseScenario(MockScenarioQuery, out var scenario))
@@ -524,12 +540,19 @@
     private RenderFragment RenderActivityTab() => @<Stack GapScale="LayoutGap.Medium"
                                                           data-testid="live-processes-activity">
         @RenderRuntimeToolbar("live-processes-runtime-toolbar")
-        @RenderAttentionPanel()
-        @RenderActivityCards()
         <Grid Gap="LayoutGap.Medium"
-              ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)">
-            @RenderRunCards()
-            @RenderEventLedger()
+              ColumnTemplateXl="minmax(0,1.65fr) minmax(26rem,0.7fr)"
+              Class="live-processes-activity-workspace">
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="live-processes-activity-main">
+                @RenderAttentionPanel()
+                @RenderActivityCards()
+            </Stack>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="live-processes-activity-rail">
+                @RenderRunCards()
+                @RenderEventLedger()
+            </Stack>
         </Grid>
     </Stack>;
 
@@ -561,10 +584,11 @@
     private RenderFragment RenderGraphsTab() => @<Stack GapScale="LayoutGap.Medium"
                                                         data-testid="live-processes-graphs">
         @RenderRuntimeToolbar("live-processes-graphs-toolbar")
-        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+        <Grid Gap="LayoutGap.Medium" ColumnsLg="5">
             @RenderMetricCard("Events", shell!.Runtime.Stats.EventCount.ToString(CultureInfo.InvariantCulture), "info", "Paged runtime events in the selected history window.")
             @RenderMetricCard("Manager", shell.Runtime.Stats.ManagerEventCount.ToString(CultureInfo.InvariantCulture), "warning", "Manager signals and escalations.")
             @RenderMetricCard("Tool usage", shell.Runtime.Stats.ToolCallCount.ToString(CultureInfo.InvariantCulture), "neutral", "Runtime activity grouped by event/tool category.")
+            @RenderMetricCard("Cost", FormatCurrency(ResolveRuntimeCost(shell.Runtime.Stats)), ResolveRuntimeCost(shell.Runtime.Stats) > 0 ? "success" : "neutral", "Actual or estimated provider cost in the selected history window.")
             @RenderMetricCard("Time", FormatDuration(shell.Runtime.Stats.DurationMs), "info", "Observed runtime span for the current page.")
         </Grid>
         <Grid Gap="LayoutGap.Medium"
@@ -575,6 +599,12 @@
                       Options="@RuntimeActivityChartOptions"
                       Height="320"
                       EmptyText="No runtime events match the selected filters." />
+            <CdaChart Title="Process cost over time"
+                      Description="Actual provider cost when known, otherwise estimate, filtered by the selected history window."
+                      Series="@RuntimeCostSeries"
+                      Options="@RuntimeCostChartOptions"
+                      Height="320"
+                      EmptyText="No provider cost telemetry is present in this scope." />
             <CdaChart Title="Tool usage"
                       Description="Most active event/tool categories."
                       Series="@RuntimeToolUsageSeries"
@@ -662,6 +692,29 @@
                     Type = CdaChartType.Bar,
                     Color = "#f59e0b",
                     Points = toolUsage.Select(item => new CdaChartPoint(TrimLabel(item.ToolName, 26), item.CallCount)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> RuntimeCostSeries
+    {
+        get
+        {
+            var points = shell?.Runtime.MetricPoints ?? [];
+            if (points.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Cost",
+                    Type = CdaChartType.Area,
+                    Color = "#dc2626",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ActualCost > 0 ? item.ActualCost : item.EstimatedCost)).ToArray()
                 }
             ];
         }
@@ -1022,6 +1075,7 @@
         <div class="live-processes-agent-card__header">
             <div class="live-processes-agent-card__avatar-row">
                 <Avatar Alt="@ResolveAgentDisplayName(agent)"
+                        ImageUrl="@agent.AgentAvatarImageUrl"
                         FallbackText="@ResolveAgentInitials(agent)"
                         DefaultImageSeed="@ResolveAgentAvatarSeed(agent)"
                         Size="AvatarSize.Large"
@@ -1497,6 +1551,7 @@
                                                                                                        data-testid="live-processes-agent-detail-dialog-content">
         <Grid Gap="LayoutGap.Medium" ColumnTemplateLg="auto minmax(0,1fr)">
             <Avatar Alt="@ResolveAgentDisplayName(agent)"
+                    ImageUrl="@agent.AgentAvatarImageUrl"
                     FallbackText="@ResolveAgentInitials(agent)"
                     DefaultImageSeed="@ResolveAgentAvatarSeed(agent)"
                     Size="AvatarSize.Large"
@@ -1640,6 +1695,11 @@
         if (statusFilter is null)
         {
             return requestedRunId;
+        }
+
+        if (!requestedRunId.HasValue)
+        {
+            return null;
         }
 
         if (requestedRunId.HasValue && runs.Any(run => run.RunId.Value == requestedRunId.Value && run.Status == statusFilter))
@@ -2093,6 +2153,23 @@
 
     private static LiveRunProgressModel BuildRunProgress(ProcessLiveProcessSnapshot run)
     {
+        if (run.ExecutableStepCount > 0)
+        {
+            var percent = (int)Math.Round((double)run.CompletedStepCount / run.ExecutableStepCount * 100d, MidpointRounding.AwayFromZero);
+            percent = Math.Clamp(percent, 0, 100);
+            var label = string.IsNullOrWhiteSpace(run.ProgressLabel)
+                ? $"{run.CompletedStepCount.ToString(CultureInfo.InvariantCulture)} of {run.ExecutableStepCount.ToString(CultureInfo.InvariantCulture)} steps complete"
+                : run.ProgressLabel;
+            var tooltip = $"{label}. {run.TerminalStepCount.ToString(CultureInfo.InvariantCulture)} of {run.ExecutableStepCount.ToString(CultureInfo.InvariantCulture)} executable steps are in a terminal state.";
+
+            return new LiveRunProgressModel(
+                percent,
+                label,
+                ResolveRunStatusTone(run.Status),
+                ResolveProgressCssClass(run.Status),
+                tooltip);
+        }
+
         var eventBoost = Math.Min(18, run.RecentEvents.Count * 3);
         var hasOperatorAction = run.OperatorActions.Any(action => action.IsEnabled);
 
@@ -2154,6 +2231,16 @@
                 "The run has projection activity but no stronger status signal.")
         };
     }
+
+    private static string ResolveProgressCssClass(ProcessProjectedRunStatus status)
+        => status switch
+        {
+            ProcessProjectedRunStatus.Completed => "live-processes-run-state--success",
+            ProcessProjectedRunStatus.Failed => "live-processes-run-state--danger",
+            ProcessProjectedRunStatus.NeedsAttention => "live-processes-run-state--warning",
+            ProcessProjectedRunStatus.Active => "live-processes-run-state--success",
+            _ => "live-processes-run-state--neutral"
+        };
 
     private string ResolveManagerSummary(ProcessLiveProcessSnapshot run)
     {
@@ -2351,6 +2438,14 @@
 
     private static string FormatDuration(TimeSpan duration)
         => FormatDuration(checked((long)Math.Max(0, duration.TotalMilliseconds)));
+
+    private static decimal ResolveRuntimeCost(ProcessRuntimeStatsProjection stats)
+        => stats.ActualCost > 0 ? stats.ActualCost : stats.EstimatedCost;
+
+    private static string FormatCurrency(decimal value)
+        => value <= 0
+            ? "$0.00"
+            : value.ToString("C4", CultureInfo.CurrentCulture);
 
     private static string TrimLabel(string value, int maxLength)
     {

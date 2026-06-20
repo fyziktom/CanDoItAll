@@ -403,7 +403,9 @@ public sealed record ProcessRuntimeWorkspaceQueryProjection(
     ProcessRuntimeHistoryWindow HistoryWindow,
     int EventPage,
     int EventPageSize,
-    Guid? SelectedRunId);
+    Guid? SelectedRunId,
+    bool AutoSelectRun = true,
+    int TakeRuns = 100);
 
 public sealed record ProcessRuntimeStatsProjection(
     int ObservedRunCount,
@@ -476,6 +478,8 @@ public sealed record ProcessRuntimeActiveAgentProjection(
     public Guid? AgentId { get; init; }
 
     public string AgentName { get; init; } = string.Empty;
+
+    public string AgentAvatarImageUrl { get; init; } = string.Empty;
 
     public string ProviderName { get; init; } = string.Empty;
 
