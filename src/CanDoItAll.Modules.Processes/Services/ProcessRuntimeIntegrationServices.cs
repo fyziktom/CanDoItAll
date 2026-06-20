@@ -412,532 +412,6 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
     }
 
-    private static ExactRoleMatch CalculateBestExactRoleMatch(
-        AgentDefinition agent,
-        IReadOnlyList<string> matchKeys)
-    {
-        var bestMatch = ExactRoleMatch.NoMatch;
-        foreach (var matchKey in matchKeys)
-        {
-            var exactScore = CalculateExactRoleScore(
-                agent,
-                matchKey,
-                ProcessMockAgentCatalog.CreateRoleTag(matchKey));
-            if (exactScore > bestMatch.Score)
-            {
-                bestMatch = new ExactRoleMatch(matchKey, exactScore);
-            }
-        }
-
-        return bestMatch;
-    }
-
-    private static int CalculateExactRoleScore(
-        AgentDefinition agent,
-        string roleKey,
-        string roleTag)
-    {
-        var score = 0;
-        if (agent.Tags.Contains(roleTag, StringComparer.OrdinalIgnoreCase))
-        {
-            score += 30;
-        }
-
-        if (agent.Tags.Contains(roleKey, StringComparer.OrdinalIgnoreCase))
-        {
-            score += 20;
-        }
-
-        if (string.Equals(ProcessMockAgentCatalog.ResolveRoleKey(agent), roleKey, StringComparison.OrdinalIgnoreCase))
-        {
-            score += 25;
-        }
-
-        if (ContainsNormalized(agent.RoleTitle, roleKey) || ContainsNormalized(agent.Name, roleKey))
-        {
-            score += 10;
-        }
-
-        return score;
-    }
-
-    private static AgentSemanticRoleMatch CalculateSemanticRoleMatch(
-        AgentDefinition agent,
-        IReadOnlyList<string> roleTokens)
-    {
-        if (roleTokens.Count == 0)
-        {
-            return AgentSemanticRoleMatch.NoMatch;
-        }
-
-        var terms = CollectAgentTerms(agent);
-        var primaryTerms = CollectPrimaryAgentTerms(agent);
-        if (!HasRequiredRoleFamilySignal(roleTokens, terms))
-        {
-            return AgentSemanticRoleMatch.NoMatch;
-        }
-
-        var matchedTokens = new List<string>();
-        var score = 0;
-        foreach (var roleToken in roleTokens)
-        {
-            if (!TokenMatches(terms, roleToken))
-            {
-                continue;
-            }
-
-            matchedTokens.Add(roleToken);
-            score += ScoreRoleToken(roleToken);
-            if (TokenMatches(primaryTerms, roleToken))
-            {
-                score += PrimaryMetadataMatchBonus;
-            }
-        }
-
-        score += ScoreWorkloadFit(agent.Workload, roleTokens);
-        if (score < SemanticRoleMatchMinimumScore || matchedTokens.Count == 0)
-        {
-            return AgentSemanticRoleMatch.NoMatch;
-        }
-
-        return new AgentSemanticRoleMatch(
-            score,
-            $"semantic role match on {string.Join(", ", matchedTokens)}");
-    }
-
-    private static HashSet<string> CollectAgentTerms(AgentDefinition agent)
-    {
-        var terms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        AddTerms(terms, agent.Name);
-        AddTerms(terms, agent.RoleTitle);
-        AddTerms(terms, agent.Summary);
-        AddTerms(terms, agent.Workload.ToString());
-
-        foreach (var tag in agent.Tags)
-        {
-            AddTerms(terms, tag);
-            var normalizedTag = Normalize(tag);
-            if (!string.IsNullOrWhiteSpace(normalizedTag))
-            {
-                terms.Add(normalizedTag);
-            }
-        }
-
-        foreach (var capability in agent.Capabilities)
-        {
-            AddTerms(terms, capability.CapabilityKey);
-        }
-
-        return terms;
-    }
-
-    private static HashSet<string> CollectPrimaryAgentTerms(AgentDefinition agent)
-    {
-        var terms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        AddTerms(terms, agent.Name);
-        AddTerms(terms, agent.RoleTitle);
-        return terms;
-    }
-
-    private static void AddTerms(HashSet<string> terms, string value)
-    {
-        foreach (var token in ExtractTokens(value))
-        {
-            terms.Add(token);
-        }
-    }
-
-    private static bool HasRequiredRoleFamilySignal(
-        IReadOnlyList<string> roleTokens,
-        IReadOnlySet<string> terms)
-    {
-        var hasRoleFamilyRequirement = false;
-
-        if (roleTokens.Any(IsArchitectureRoleToken))
-        {
-            hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, ArchitectureRoleAliases))
-            {
-                return false;
-            }
-        }
-
-        if (roleTokens.Any(IsEngineeringRoleToken))
-        {
-            hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, EngineeringRoleAliases))
-            {
-                return false;
-            }
-        }
-
-        if (roleTokens.Any(IsQualityRoleToken))
-        {
-            hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, QualityRoleAliases))
-            {
-                return false;
-            }
-        }
-
-        if (roleTokens.Any(IsDeliveryRoleToken))
-        {
-            hasRoleFamilyRequirement = true;
-            if (!MatchesAnyTerm(terms, DeliveryRoleAliases))
-            {
-                return false;
-            }
-        }
-
-        return hasRoleFamilyRequirement ||
-            roleTokens.Any(roleToken => TokenMatches(terms, roleToken));
-    }
-
-    private static bool TokenMatches(
-        IReadOnlySet<string> terms,
-        string roleToken)
-    {
-        foreach (var alias in ExpandRoleTokenAliases(roleToken))
-        {
-            if (terms.Contains(alias))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool MatchesAnyTerm(
-        IReadOnlySet<string> terms,
-        IReadOnlyList<string> aliases)
-        => aliases.Any(terms.Contains);
-
-    private static int ScoreRoleToken(string roleToken)
-    {
-        if (TechnologyRoleTokens.Contains(roleToken))
-        {
-            return 4;
-        }
-
-        if (SecondaryRoleTokens.Contains(roleToken))
-        {
-            return 3;
-        }
-
-        return 6;
-    }
-
-    private static int ScoreWorkloadFit(
-        AgentWorkloadKind workload,
-        IReadOnlyList<string> roleTokens)
-    {
-        if (roleTokens.Any(IsEngineeringRoleToken) && workload == AgentWorkloadKind.Programming)
-        {
-            return 5;
-        }
-
-        if (roleTokens.Any(IsQualityRoleToken) && workload == AgentWorkloadKind.Qa)
-        {
-            return 5;
-        }
-
-        if (roleTokens.Any(IsDeliveryRoleToken) && workload == AgentWorkloadKind.Management)
-        {
-            return 5;
-        }
-
-        return 0;
-    }
-
-    private static IReadOnlyList<string> ExpandRoleTokenAliases(string roleToken)
-        => roleToken switch
-        {
-            "architect" or "architecture" or "solution" => ArchitectureRoleAliases,
-            "engineer" or "developer" or "implementation" or "programming" => EngineeringRoleAliases,
-            "qa" or "quality" or "test" or "tester" or "validation" or "validate" => QualityRoleAliases,
-            "delivery" or "release" => DeliveryTokenAliases,
-            "manager" => ManagerTokenAliases,
-            "product" => ProductRoleAliases,
-            "owner" => OwnerRoleAliases,
-            "lead" => LeadRoleAliases,
-            "blazor" => BlazorRoleAliases,
-            "dotnet" or "net" => DotNetRoleAliases,
-            "pwa" or "wasm" => PwaRoleAliases,
-            _ => [roleToken]
-        };
-
-    private static bool IsArchitectureRoleToken(string token)
-        => ArchitectureTriggerTokens.Contains(token);
-
-    private static bool IsEngineeringRoleToken(string token)
-        => EngineeringTriggerTokens.Contains(token);
-
-    private static bool IsQualityRoleToken(string token)
-        => QualityTriggerTokens.Contains(token);
-
-    private static bool IsDeliveryRoleToken(string token)
-        => DeliveryTriggerTokens.Contains(token);
-
-    private static IReadOnlyList<string> ExtractTokens(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return [];
-        }
-
-        var tokens = new List<string>();
-        var builder = new StringBuilder();
-        foreach (var character in value)
-        {
-            if (char.IsLetterOrDigit(character))
-            {
-                builder.Append(char.ToLowerInvariant(character));
-                continue;
-            }
-
-            AddBuiltToken(tokens, builder);
-        }
-
-        AddBuiltToken(tokens, builder);
-        return tokens
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static void AddBuiltToken(
-        List<string> tokens,
-        StringBuilder builder)
-    {
-        if (builder.Length == 0)
-        {
-            return;
-        }
-
-        tokens.Add(builder.ToString());
-        builder.Clear();
-    }
-
-    private static bool ContainsNormalized(
-        string value,
-        string token)
-    {
-        if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(token))
-        {
-            return false;
-        }
-
-        var normalizedValue = Normalize(value);
-        var normalizedToken = Normalize(token);
-        return normalizedValue.Contains(normalizedToken, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string Normalize(string value)
-        => new(value.Where(character => char.IsLetterOrDigit(character)).ToArray());
-
-    private static string ComputeHash(string value)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-        return "sha256:" + Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    private const int SemanticRoleMatchMinimumScore = 6;
-    private const int PrimaryMetadataMatchBonus = 3;
-
-    private static readonly HashSet<string> IgnoredRoleTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "a",
-        "add",
-        "agent",
-        "an",
-        "and",
-        "application",
-        "app",
-        "bounded",
-        "change",
-        "code",
-        "create",
-        "focused",
-        "feature",
-        "function",
-        "in",
-        "of",
-        "or",
-        "project",
-        "process",
-        "role",
-        "runtime",
-        "solution",
-        "step",
-        "subprocess",
-        "the",
-        "through",
-        "to",
-        "with"
-    };
-
-    private static readonly HashSet<string> TechnologyRoleTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "blazor",
-        "dotnet",
-        "net",
-        "pwa",
-        "wasm"
-    };
-
-    private static readonly HashSet<string> SecondaryRoleTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "lead"
-    };
-
-    private static readonly HashSet<string> ArchitectureTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "architect",
-        "architecture"
-    };
-
-    private static readonly HashSet<string> EngineeringTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "developer",
-        "engineer",
-        "implement",
-        "implementation",
-        "programming",
-        "scaffold"
-    };
-
-    private static readonly HashSet<string> QualityTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "qa",
-        "quality",
-        "test",
-        "tester",
-        "validate",
-        "validation"
-    };
-
-    private static readonly HashSet<string> DeliveryTriggerTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "delivery",
-        "manager",
-        "release"
-    };
-
-    private static readonly string[] ArchitectureRoleAliases =
-    [
-        "architect",
-        "architecture",
-        "solution",
-        "design"
-    ];
-
-    private static readonly string[] EngineeringRoleAliases =
-    [
-        "application",
-        "coder",
-        "developer",
-        "engineer",
-        "frontend",
-        "fullstack",
-        "implementation",
-        "programmer",
-        "programming",
-        "software"
-    ];
-
-    private static readonly string[] QualityRoleAliases =
-    [
-        "browser",
-        "qa",
-        "quality",
-        "review",
-        "reviewer",
-        "test",
-        "tester",
-        "validate",
-        "validation"
-    ];
-
-    private static readonly string[] DeliveryRoleAliases =
-    [
-        "coordination",
-        "coordinator",
-        "delivery",
-        "evidence",
-        "governance",
-        "manager",
-        "release"
-    ];
-
-    private static readonly string[] DeliveryTokenAliases =
-    [
-        "delivery",
-        "evidence",
-        "governance",
-        "release",
-        "writeback"
-    ];
-
-    private static readonly string[] ManagerTokenAliases =
-    [
-        "coordination",
-        "coordinator",
-        "manager"
-    ];
-
-    private static readonly string[] ProductRoleAliases =
-    [
-        "business",
-        "planning",
-        "product",
-        "requirements",
-        "scope",
-        "strategy"
-    ];
-
-    private static readonly string[] OwnerRoleAliases =
-    [
-        "business",
-        "owner",
-        "planning",
-        "product",
-        "requirements",
-        "scope",
-        "strategy"
-    ];
-
-    private static readonly string[] LeadRoleAliases =
-    [
-        "lead",
-        "manager",
-        "review",
-        "reviewer"
-    ];
-
-    private static readonly string[] BlazorRoleAliases =
-    [
-        "blazor",
-        "frontend",
-        "razor",
-        "wasm",
-        "webassembly"
-    ];
-
-    private static readonly string[] DotNetRoleAliases =
-    [
-        "csharp",
-        "dotnet",
-        "net"
-    ];
-
-    private static readonly string[] PwaRoleAliases =
-    [
-        "frontend",
-        "pwa",
-        "wasm",
-        "webassembly"
-    ];
-
     private sealed record AgentRoleMatch(
         AgentDefinition Agent,
         ProviderProfile Provider,
@@ -949,20 +423,6 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     private sealed record ProcessRoleQuery(
         string BindingRoleKey,
         IReadOnlyList<string> MatchKeys);
-
-    private sealed record ExactRoleMatch(
-        string MatchKey,
-        int Score)
-    {
-        public static ExactRoleMatch NoMatch { get; } = new(string.Empty, 0);
-    }
-
-    private sealed record AgentSemanticRoleMatch(
-        int Score,
-        string Summary)
-    {
-        public static AgentSemanticRoleMatch NoMatch { get; } = new(0, string.Empty);
-    }
 
     private sealed record AgentProviderCandidate(
         AgentDefinition Agent,
@@ -1579,11 +1039,9 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
         var childAssignments = await assignmentStore
             .FindByLaunchVariablesAsync(
-                new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["ParentProcessRunId"] = assignment.RunId.ToString(),
-                    ["ParentProcessStepId"] = assignment.StepInstanceId.ToString()
-                },
+                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                    assignment.RunId,
+                    assignment.StepInstanceId),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -2152,8 +1610,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 }
 
 internal sealed class AgentFrameworkProcessExecutionObservationReader(
-    IAgentFrameworkWorkspaceService workspaceService,
-    ISandboxWorkspaceExecutionRunStore executionRunStore) : IProcessExecutionObservationReader
+    IAgentFrameworkWorkspaceService workspaceService) : IProcessExecutionObservationReader
 {
     public async ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
         ProcessExecutionObservationQuery query,
@@ -2170,11 +1627,10 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
         var agentNameById = agents.ToDictionary(agent => agent.Id, agent => agent.Name);
         var agentAvatarById = agents.ToDictionary(agent => agent.Id, agent => agent.AvatarImageUrl ?? string.Empty);
         var requestedRunIds = query.RunIds.ToHashSet();
-        var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken).ConfigureAwait(false);
+        var executionRuns = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
         var observations = new List<ProcessExecutionObservation>();
 
         foreach (var executionRun in executionRuns
-                     .Where(run => run.UpdatedAtUtc >= query.FromUtc && run.UpdatedAtUtc <= query.ToUtc)
                      .OrderByDescending(run => run.UpdatedAtUtc)
                      .GroupBy(
                          run => run.ProcessRunId,
@@ -2190,7 +1646,7 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
             ExecutionRunDetail? detail = null;
             try
             {
-                detail = await executionRunStore.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
+                detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
             }
             catch (InvalidOperationException)
             {
@@ -2227,6 +1683,28 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
         return observations
             .OrderByDescending(observation => observation.UpdatedAtUtc)
             .ToArray();
+    }
+
+    private async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+        ProcessExecutionObservationQuery query,
+        CancellationToken cancellationToken)
+    {
+        var executionRuns = new List<ExecutionRunRecord>();
+        foreach (var runId in query.RunIds.Distinct())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var runRecords = await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    Take: Math.Max(1, query.TakePerRun),
+                    ProcessRunId: runId.ToString(),
+                    UpdatedFromUtc: query.FromUtc,
+                    UpdatedToUtc: query.ToUtc),
+                cancellationToken).ConfigureAwait(false);
+            executionRuns.AddRange(runRecords);
+        }
+
+        return executionRuns;
     }
 
     private static IReadOnlyList<ProcessExecutionActivityObservation> MapActivities(ExecutionRunDetail? detail)
@@ -2334,8 +1812,7 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
 }
 
 internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
-    IAgentFrameworkWorkspaceService workspaceService,
-    ISandboxWorkspaceExecutionRunStore executionRunStore) : IProcessRuntimeUsageTelemetryReader
+    IAgentFrameworkWorkspaceService workspaceService) : IProcessRuntimeUsageTelemetryReader
 {
     public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
         ProcessRuntimeUsageTelemetryQuery query,
@@ -2350,11 +1827,10 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
 
         var runIdSet = query.RunIds.ToHashSet();
         var providers = await workspaceService.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
-        var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken).ConfigureAwait(false);
+        var executionRuns = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
         var observations = new List<ProcessRuntimeUsageObservation>();
 
         foreach (var executionRun in executionRuns
-                     .Where(run => run.UpdatedAtUtc >= query.FromUtc && run.UpdatedAtUtc <= query.ToUtc)
                      .OrderByDescending(run => run.UpdatedAtUtc))
         {
             if (!TryCreateProcessRunId(executionRun.ProcessRunId, out var executionProcessRunId) ||
@@ -2363,8 +1839,12 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
                 continue;
             }
 
-            var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
-            if (detail is null)
+            ExecutionRunDetail detail;
+            try
+            {
+                detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException)
             {
                 continue;
             }
@@ -2387,6 +1867,28 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             .OrderBy(observation => observation.CreatedAtUtc)
             .ThenBy(observation => observation.UsageObservationId)
             .ToArray();
+    }
+
+    private async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+        ProcessRuntimeUsageTelemetryQuery query,
+        CancellationToken cancellationToken)
+    {
+        var executionRuns = new List<ExecutionRunRecord>();
+        foreach (var runId in query.RunIds.Distinct())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var runRecords = await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    Take: Math.Max(1, query.TakePerRun),
+                    ProcessRunId: runId.ToString(),
+                    UpdatedFromUtc: query.FromUtc,
+                    UpdatedToUtc: query.ToUtc),
+                cancellationToken).ConfigureAwait(false);
+            executionRuns.AddRange(runRecords);
+        }
+
+        return executionRuns;
     }
 
     private static ProcessRuntimeUsageObservation MapUsageObservation(

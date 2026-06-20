@@ -279,13 +279,14 @@ public sealed class ProcessWorkspaceShellProjectionService(
         IReadOnlyList<ProcessRuntimeUsageObservation> usageObservations)
     {
         var events = result.Events;
+        var metricEvents = result.MetricEvents;
         var selectedRunId = result.SelectedRun?.RunId.Value ?? query.SelectedRunId;
         var incidents = result.Runs
             .SelectMany(run => run.Incidents)
             .OrderByDescending(incident => incident.RaisedAtUtc)
             .ToArray();
-        var managerMessages = BuildManagerMessages(events);
-        var stats = BuildRuntimeStats(result.Runs, events, usageObservations);
+        var managerMessages = BuildManagerMessages(metricEvents);
+        var stats = BuildRuntimeStats(result.Runs, metricEvents, usageObservations);
 
         return new ProcessRuntimeWorkspaceProjection(
             query.HistoryWindow,
@@ -300,11 +301,11 @@ public sealed class ProcessWorkspaceShellProjectionService(
             managerMessages,
             result.ActiveAgents,
             stats,
-            BuildMetricPoints(events, usageObservations),
-            BuildToolUsage(events),
+            BuildMetricPoints(metricEvents, usageObservations),
+            BuildToolUsage(metricEvents),
             result.Freshness,
-            BuildRuntimeSummary(result.Runs, events),
-            BuildAttentionSummary(result.Runs, incidents, events, result.SelectedRun, result.ActiveAgents));
+            BuildRuntimeSummary(result.Runs, metricEvents),
+            BuildAttentionSummary(result.Runs, incidents, metricEvents, result.SelectedRun, result.ActiveAgents));
     }
 
     private static ProcessLiveRunSummaryProjection CreateLiveRunSummary(ProcessRuntimeWorkspaceProjection runtime)

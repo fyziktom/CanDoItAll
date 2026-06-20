@@ -14,6 +14,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
     IProcessExecutionObservationReader? executionObservationReader = null)
 {
     private const int LiveSnapshotReadLimit = 500;
+    private const int RuntimeMetricEventReadLimit = 10_000;
     private static readonly TimeSpan ActiveExecutionStaleAfter = TimeSpan.FromMinutes(30);
 
     public async Task<ProcessLiveProcessesResult> GetLiveProcessesAsync(
@@ -138,14 +139,22 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 Take: query.EventPageSize + 1,
                 Skip: checked(query.EventPage * query.EventPageSize)),
             cancellationToken).ConfigureAwait(false);
+        var metricHistory = await GetRunHistoryAsync(
+            new ProcessRunHistoryQuery(
+                selectedRunId,
+                nowUtc - query.Window,
+                nowUtc,
+                Take: RuntimeMetricEventReadLimit),
+            cancellationToken).ConfigureAwait(false);
         var events = history.Events.Take(query.EventPageSize).ToArray();
         var activeAgents = await LoadActiveAgentsAsync(liveProcesses.Runs, nowUtc, cancellationToken).ConfigureAwait(false);
-        var freshness = CombineFreshness(liveProcesses.Freshness, history.Freshness, selectedRun?.Freshness);
+        var freshness = CombineFreshness(liveProcesses.Freshness, history.Freshness, metricHistory.Freshness, selectedRun?.Freshness);
 
         return new ProcessRuntimeWorkspaceResult(
             liveProcesses.Runs,
             selectedRun,
             events,
+            metricHistory.Events,
             history.Events.Count > query.EventPageSize,
             activeAgents,
             freshness);
@@ -614,10 +623,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
             var parentAssignmentsByStep = await enrichmentCache.LoadAssignmentsByStepAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             var childAssignments = await assignmentStore.FindByLaunchVariablesAsync(
-                new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["ParentProcessRunId"] = run.RunId.Value.ToString("D")
-                },
+                ProcessRuntimeLaunchVariables.CreateParentRunLookup(run.RunId),
                 cancellationToken).ConfigureAwait(false);
             if (childAssignments.Count == 0)
             {
@@ -629,7 +635,11 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 .Select(assignment => new
                 {
                     Assignment = assignment,
-                    ParentStepId = TryReadStepId(assignment.LaunchVariables, "ParentProcessStepId")
+                    ParentStepId = ProcessRuntimeLaunchVariables.TryReadParentStepId(
+                        assignment.LaunchVariables,
+                        out var parentStepId)
+                        ? parentStepId
+                        : (ProcessStepInstanceId?)null
                 })
                 .Where(item => item.ParentStepId is not null)
                 .GroupBy(item => item.ParentStepId!.Value)
@@ -1145,16 +1155,6 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var staleText = isStale ? " Signal is stale." : string.Empty;
         var outcomeText = string.IsNullOrWhiteSpace(observation.Outcome) ? string.Empty : $" Outcome: {observation.Outcome}.";
         return $"{displayName} is {observation.State} on {stepKey} as {roleKey}.{outcomeText} {currentActivity}{staleText}".Trim();
-    }
-
-    private static ProcessStepInstanceId? TryReadStepId(
-        IReadOnlyDictionary<string, string> launchVariables,
-        string key)
-    {
-        return launchVariables.TryGetValue(key, out var value) &&
-               Guid.TryParse(value, out var stepId)
-            ? new ProcessStepInstanceId(stepId)
-            : null;
     }
 
     private static ProcessRuntimeStepState? ResolveCurrentStep(ProcessRuntimeStateSnapshot state)

@@ -68,6 +68,17 @@ public partial class AgentDetailsDialog
 
     private static IReadOnlyList<string> AvatarOptions => AvatarFallbackResolver.GetBundledAvatarUrls();
 
+    private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
+    [
+        AgentWorkspaceToolProfileKind.Custom,
+        AgentWorkspaceToolProfileKind.ReadOnly,
+        AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+        AgentWorkspaceToolProfileKind.QualityValidation,
+        AgentWorkspaceToolProfileKind.ArchitectureReview,
+        AgentWorkspaceToolProfileKind.SecurityReview,
+        AgentWorkspaceToolProfileKind.BusinessAnalysis
+    ];
+
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
@@ -527,6 +538,40 @@ public partial class AgentDetailsDialog
             : $"{accessMode}; {externalRootCount} external root(s)";
     }
 
+    private static string DescribeWorkspaceExecutionScope(AgentEditorModel editor)
+    {
+        var access = editor.WorkspaceToolAccess;
+        var enabled = new List<string>();
+        if (access.CanRunValidationCommands)
+        {
+            enabled.Add("build/test/run");
+        }
+
+        if (access.CanRunLocalScripts)
+        {
+            enabled.Add("local scripts");
+        }
+
+        if (access.CanScaffoldProjects)
+        {
+            enabled.Add("project scaffolding");
+        }
+
+        if (access.CanManageWorkspacePaths)
+        {
+            enabled.Add("path management");
+        }
+
+        if (access.CanTransformArtifacts)
+        {
+            enabled.Add("artifact transforms");
+        }
+
+        return enabled.Count == 0
+            ? "Execution tools disabled"
+            : $"Enabled: {string.Join(", ", enabled)}";
+    }
+
     private static string DescribeStorageScope(AgentEditorModel editor)
     {
         if (!editor.WorkspaceToolAccess.CanReadStorage &&
@@ -671,24 +716,116 @@ public partial class AgentDetailsDialog
         }
     }
 
+    private void ChangeWorkspaceToolProfile(object? rawValue)
+    {
+        if (!Enum.TryParse<AgentWorkspaceToolProfileKind>(rawValue?.ToString(), ignoreCase: true, out var profile) ||
+            !Enum.IsDefined(profile))
+        {
+            return;
+        }
+
+        var current = editorModel.WorkspaceToolAccess;
+        var next = profile == AgentWorkspaceToolProfileKind.Custom
+            ? CloneWorkspaceToolAccess(current)
+            : AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
+        next.Profile = profile;
+        next.AllowedExternalTargetAliases = current.AllowedExternalTargetAliases.ToList();
+        next.CanReadStorage = current.CanReadStorage;
+        next.CanWriteStorage = current.CanWriteStorage;
+        next.AllowAllStorageCatalogs = current.AllowAllStorageCatalogs;
+        next.AllowedStorageCatalogIds = current.AllowedStorageCatalogIds.ToList();
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(next);
+    }
+
     private void ToggleWorkspaceFileRead(object? rawValue)
     {
         var isEnabled = rawValue is bool value && value;
+        MarkWorkspaceToolProfileCustom();
         editorModel.WorkspaceToolAccess.CanReadFiles = isEnabled;
         if (!isEnabled)
         {
             editorModel.WorkspaceToolAccess.CanWriteFiles = false;
         }
+
+        NormalizeWorkspaceToolAccess();
     }
 
     private void ToggleWorkspaceFileWrite(object? rawValue)
     {
         var isEnabled = rawValue is bool value && value;
+        MarkWorkspaceToolProfileCustom();
         editorModel.WorkspaceToolAccess.CanWriteFiles = isEnabled;
         if (isEnabled)
         {
             editorModel.WorkspaceToolAccess.CanReadFiles = true;
         }
+
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceValidationCommands(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanRunValidationCommands = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceLocalScripts(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanRunLocalScripts = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceScaffoldProjects(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanScaffoldProjects = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceManagePaths(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanManageWorkspacePaths = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceTransformArtifacts(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanTransformArtifacts = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void MarkWorkspaceToolProfileCustom()
+    {
+        editorModel.WorkspaceToolAccess.Profile = AgentWorkspaceToolProfileKind.Custom;
+    }
+
+    private void NormalizeWorkspaceToolAccess()
+    {
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
+    }
+
+    private static AgentWorkspaceToolAccessSettings CloneWorkspaceToolAccess(AgentWorkspaceToolAccessSettings source)
+    {
+        return new AgentWorkspaceToolAccessSettings
+        {
+            Profile = source.Profile,
+            CanReadFiles = source.CanReadFiles,
+            CanWriteFiles = source.CanWriteFiles,
+            CanRunValidationCommands = source.CanRunValidationCommands,
+            CanRunLocalScripts = source.CanRunLocalScripts,
+            CanScaffoldProjects = source.CanScaffoldProjects,
+            CanManageWorkspacePaths = source.CanManageWorkspacePaths,
+            CanTransformArtifacts = source.CanTransformArtifacts,
+            AllowedExternalTargetAliases = source.AllowedExternalTargetAliases.ToList(),
+            CanReadStorage = source.CanReadStorage,
+            CanWriteStorage = source.CanWriteStorage,
+            AllowAllStorageCatalogs = source.AllowAllStorageCatalogs,
+            AllowedStorageCatalogIds = source.AllowedStorageCatalogIds.ToList()
+        };
     }
 
     private void ToggleStorageRead(object? rawValue)
@@ -886,6 +1023,20 @@ public partial class AgentDetailsDialog
             CapabilityKind.McpServer => "MCP server",
             CapabilityKind.AiContext => "AI context",
             _ => kind.ToString()
+        };
+    }
+
+    private static string FormatWorkspaceToolProfile(AgentWorkspaceToolProfileKind profile)
+    {
+        return profile switch
+        {
+            AgentWorkspaceToolProfileKind.ReadOnly => "Read only",
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment => "Software development",
+            AgentWorkspaceToolProfileKind.QualityValidation => "Quality validation",
+            AgentWorkspaceToolProfileKind.ArchitectureReview => "Architecture review",
+            AgentWorkspaceToolProfileKind.SecurityReview => "Security review",
+            AgentWorkspaceToolProfileKind.BusinessAnalysis => "Business analysis",
+            _ => "Custom"
         };
     }
 

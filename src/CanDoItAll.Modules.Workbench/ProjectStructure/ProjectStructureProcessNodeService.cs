@@ -24,10 +24,10 @@ public sealed class ProjectStructureProcessNodeService(
     private const string ProjectNodeObjectSubtypeVariableName = "ProjectNodeObjectSubtype";
     private const string ProjectStructureContextSummaryVariableName = "ProjectStructureContextSummary";
     private const string ProcessRunNodeIdVariableName = "ProcessRunNodeId";
-    private const string ParentProcessRunIdVariableName = "ParentProcessRunId";
+    private const string ParentProcessRunIdVariableName = ProcessRuntimeLaunchVariables.ParentProcessRunId;
     private const string ParentProcessRunNodeIdVariableName = "ParentProcessRunNodeId";
     private const string TargetProcessRunNodeIdVariableName = "TargetProcessRunNodeId";
-    private const string ParentProcessStepIdVariableName = "ParentProcessStepId";
+    private const string ParentProcessStepIdVariableName = ProcessRuntimeLaunchVariables.ParentProcessStepId;
     private const string ParentProcessStepKeyVariableName = "ParentProcessStepKey";
     private const string SubprocessDefinitionKeyVariableName = "SubprocessDefinitionKey";
     private const string SubprocessLiveRunProfileKeyVariableName = "SubprocessLiveRunProfileKey";

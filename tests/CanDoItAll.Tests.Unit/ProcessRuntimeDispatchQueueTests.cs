@@ -249,6 +249,32 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
+    public async Task Recovery_query_ignores_malformed_pending_candidate_without_blocking_other_runs()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var recoverableRunId = Guid.NewGuid();
+        var malformedRunId = Guid.NewGuid();
+
+        AddTwoStepRuntimeState(
+            dbContext,
+            recoverableRunId,
+            now,
+            includeRequiredArtifact: true);
+        AddMalformedPendingRuntimeState(
+            dbContext,
+            malformedRunId,
+            now.AddMinutes(-1));
+
+        await dbContext.SaveChangesAsync();
+
+        var runIds = await ProcessRuntimeDispatchRecoveryRunQuery.LoadRecoverableRunIdsAsync(dbContext, now);
+
+        Assert.Contains(recoverableRunId, runIds);
+        Assert.DoesNotContain(malformedRunId, runIds);
+    }
+
+    [Fact]
     public async Task Recovery_query_includes_created_runs_with_schedulable_pending_steps()
     {
         await using var dbContext = CreateDbContext();
@@ -472,8 +498,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
 
         await dbContext.SaveChangesAsync();
@@ -511,8 +537,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
 
         await dbContext.SaveChangesAsync();
@@ -550,8 +576,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
 
         await dbContext.SaveChangesAsync();
@@ -597,8 +623,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = activeParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = activeParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = activeParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = activeParentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -606,8 +632,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = activeParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = activeParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = activeParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = activeParentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -615,8 +641,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = completedParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = completedParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = completedParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = completedParentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -624,8 +650,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = "not-a-guid",
-                ["ParentProcessStepId"] = Guid.NewGuid().ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = "not-a-guid",
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = Guid.NewGuid().ToString("D")
             });
 
         await dbContext.SaveChangesAsync();
@@ -679,8 +705,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -688,8 +714,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = waitingParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = waitingParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = waitingParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = waitingParentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -697,8 +723,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = completedParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = completedParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = completedParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = completedParentStepId.ToString("D")
             });
 
         await dbContext.SaveChangesAsync();
@@ -768,8 +794,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -777,8 +803,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = waitingParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = waitingParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = waitingParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = waitingParentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -786,8 +812,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = closedClaimParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = closedClaimParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = closedClaimParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = closedClaimParentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -795,8 +821,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = postTerminalClaimParentRunId.ToString("D"),
-                ["ParentProcessStepId"] = postTerminalClaimParentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = postTerminalClaimParentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = postTerminalClaimParentStepId.ToString("D")
             });
 
         await dbContext.SaveChangesAsync();
@@ -840,8 +866,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
 
         await dbContext.SaveChangesAsync();
@@ -900,8 +926,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -909,8 +935,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -918,8 +944,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             Guid.NewGuid(),
             new Dictionary<string, string>
             {
-                ["ParentProcessRunId"] = parentRunId.ToString("D"),
-                ["ParentProcessStepId"] = parentStepId.ToString("D")
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.ToString("D")
             });
         AddAssignment(
             dbContext,
@@ -1194,6 +1220,36 @@ public sealed class ProcessRuntimeDispatchQueueTests
             });
         }
 
+        dbContext.RuntimeStates.Add(state);
+    }
+
+    private static void AddMalformedPendingRuntimeState(
+        ProcessPersistenceDbContext dbContext,
+        Guid runId,
+        DateTimeOffset updatedAtUtc)
+    {
+        var state = new ProcessRuntimeStateEntity
+        {
+            RunId = runId,
+            RootRunId = runId,
+            PlanId = Guid.NewGuid(),
+            PlanHash = "sha256:plan",
+            Status = ProcessRuntimeStatus.Active,
+            UpdatedAtUtc = updatedAtUtc,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        state.Steps.Add(new ProcessRuntimeStepEntity
+        {
+            RunId = runId,
+            StepInstanceId = Guid.NewGuid(),
+            StepDefinitionId = Guid.NewGuid(),
+            Status = ProcessRuntimeStepStatus.Pending,
+            IsExecutable = true,
+            AttemptNumber = 0,
+            DependencyStepIds = "not-a-guid",
+            RequiredArtifactSlotIds = string.Empty,
+            ActiveClaimToken = null
+        });
         dbContext.RuntimeStates.Add(state);
     }
 

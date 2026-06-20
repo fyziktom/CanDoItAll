@@ -38,6 +38,7 @@ public sealed record ProcessRuntimeWorkspaceResult(
     IReadOnlyList<ProcessLiveProcessSnapshot> Runs,
     ProcessRunDetailProjection? SelectedRun,
     IReadOnlyList<ProcessTimelineEventProjection> Events,
+    IReadOnlyList<ProcessTimelineEventProjection> MetricEvents,
     bool HasMoreEvents,
     IReadOnlyList<ProcessRuntimeActiveAgentProjection> ActiveAgents,
     ProcessProjectionFreshness? Freshness);

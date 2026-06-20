@@ -1065,6 +1065,73 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Shell_projection_uses_full_history_window_for_metrics_when_event_ledger_is_paged()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-50)),
+            latestKnownGlobalSequence: 7);
+        await ProjectAsync(
+            store,
+            StoredEvent(2, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-49)),
+            latestKnownGlobalSequence: 7);
+        await ProjectAsync(
+            store,
+            StoredEvent(3, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-48)),
+            latestKnownGlobalSequence: 7);
+        await ProjectAsync(
+            store,
+            StoredEvent(4, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-47)),
+            latestKnownGlobalSequence: 7);
+        await ProjectAsync(
+            store,
+            StoredEvent(5, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-46)),
+            latestKnownGlobalSequence: 7);
+        await ProjectAsync(
+            store,
+            StoredEvent(6, runId, ProcessRuntimeEventTypes.ManagerIncidentRaised, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 7);
+        await ProjectAsync(
+            store,
+            StoredEvent(7, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-4)),
+            latestKnownGlobalSequence: 7);
+        var clock = new FixedProcessProjectionClock(Now);
+        var templateLoader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(templateLoader, clock),
+            new ProcessDefinitionEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionStepEditorProjectionService(templateLoader, clock),
+            new ProcessTemplateCatalogProjectionService(templateLoader, clock),
+            new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, clock));
+
+        var shell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(ProcessId: null, RunId: null, LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(ProcessRuntimeHistoryWindow.OneDay, EventPage: 0, EventPageSize: 5, SelectedRunId: null)));
+
+        Assert.Equal(5, shell.Runtime.Events.Count);
+        Assert.True(shell.Runtime.HasMoreEvents);
+        Assert.Equal(7, shell.Runtime.Stats.EventCount);
+        Assert.Equal(1, shell.Runtime.Stats.ManagerEventCount);
+        Assert.Equal(7, shell.Runtime.Stats.ToolCallCount);
+        Assert.Contains(shell.Runtime.MetricPoints, point =>
+            point.TimestampUtc == new DateTimeOffset(2026, 6, 15, 11, 56, 0, TimeSpan.Zero) &&
+            point.EventCount == 1);
+        Assert.Contains(shell.Runtime.ToolUsage, tool =>
+            tool.ToolName == "Manager Incident Raised" &&
+            tool.CallCount == 1);
+    }
+
+    [Fact]
     public async Task Shell_projection_aggregates_usage_telemetry_into_stats_and_metric_buckets()
     {
         await using var dbContext = CreateDbContext();
