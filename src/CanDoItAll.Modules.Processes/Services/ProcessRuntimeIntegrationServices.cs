@@ -2445,7 +2445,10 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
                 usageObservation.Model,
                 usageObservation.InputTokens,
                 usageObservation.CachedInputTokens,
-                usageObservation.OutputTokens,
+                ProviderPricingCalculator.ResolveBillableOutputTokens(
+                    usageObservation.InputTokens,
+                    usageObservation.OutputTokens,
+                    usageObservation.TotalTokens),
                 provider.ModelPrices,
                 out var cost))
         {

@@ -255,6 +255,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_node_delete",
                     "Deletes a project-structure node and its editable descendants. For projected process-run branches, this hides the projection from the current project structure without deleting process history. This is destructive for editable nodes: read the branch first, acquire or pass a lease when coordinating with other agents, and use only when the requested cleanup is explicit."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureNodeDeleteBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesDeleteAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_nodes_delete",
+                    "Deletes multiple project-structure nodes in one governed mutation. Provide all target node ids in request.nodeIds after reading the branch. Descendant duplicates are ignored when an ancestor is also selected. For projected process-run branches, this hides projections from the current project structure without deleting process history."),
+                AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_approval_request",
                     "Records an approval-request node in the project structure so blocked work is written back into the graph."),
@@ -1302,6 +1306,31 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     var count = await agentService.DeleteNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return new OperationCount(count);
+                },
+                cancellationToken);
+        }
+
+        private Task<OperationCount> ProjectStructureNodesDeleteAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureNodeDeleteBatchInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.nodes-delete",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    var count = await agentService.DeleteNodesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                     return new OperationCount(count);
                 },
                 cancellationToken);

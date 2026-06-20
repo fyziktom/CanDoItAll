@@ -1561,7 +1561,16 @@ else
                 await ClearSelectionBordersAsync();
                 break;
             case "delete":
-                await DeleteNodeAsync(nodeId);
+                var deleteTargetNodeIds = ResolveActionTargetNodeIds(nodeId);
+                if (deleteTargetNodeIds.Count > 1)
+                {
+                    await DeleteNodesAsync(deleteTargetNodeIds);
+                }
+                else
+                {
+                    await DeleteNodeAsync(deleteTargetNodeIds.FirstOrDefault() ?? nodeId);
+                }
+
                 break;
         }
     }

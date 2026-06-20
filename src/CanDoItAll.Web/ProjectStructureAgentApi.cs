@@ -680,6 +680,25 @@ public static class ProjectStructureAgentApi
                 (agent, cancellationToken) => agentService.DeleteNodeAsync(projectId, nodeId, request, agent, cancellationToken),
                 cancellationToken));
 
+        group.MapPost("/projects/{projectId:guid}/nodes/delete", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureNodeDeleteBatchInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.nodes-delete",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.DeleteNodesAsync(projectId, request, agent, cancellationToken),
+                cancellationToken));
+
         group.MapPost("/projects/{projectId:guid}/approvals/request", async (
             Guid projectId,
             HttpContext httpContext,

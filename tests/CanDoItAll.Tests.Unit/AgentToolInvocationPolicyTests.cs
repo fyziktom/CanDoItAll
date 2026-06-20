@@ -2107,6 +2107,7 @@ public sealed class AgentToolInvocationPolicyTests
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowDefinitionCreate,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodesDelete,
             AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
             AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
             AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreateRevision,

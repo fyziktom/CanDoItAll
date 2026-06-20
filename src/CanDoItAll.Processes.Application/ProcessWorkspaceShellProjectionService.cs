@@ -357,6 +357,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             InputTokens: usageObservations.Sum(observation => observation.InputTokens),
             CachedInputTokens: usageObservations.Sum(observation => observation.CachedInputTokens),
             OutputTokens: usageObservations.Sum(observation => observation.OutputTokens),
+            TotalTokens: usageObservations.Sum(ResolveTotalTokens),
             EstimatedCost: decimal.Round(usageObservations.Sum(observation => observation.EstimatedCostUsd), 6, MidpointRounding.AwayFromZero),
             ActualCost: decimal.Round(usageObservations.Sum(observation => observation.ActualCostUsd), 6, MidpointRounding.AwayFromZero));
     }
@@ -467,6 +468,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
         public int OutputTokens { get; private set; }
 
+        public int TotalTokens { get; private set; }
+
         public decimal EstimatedCost { get; private set; }
 
         public decimal ActualCost { get; private set; }
@@ -500,6 +503,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             InputTokens += usageObservation.InputTokens;
             CachedInputTokens += usageObservation.CachedInputTokens;
             OutputTokens += usageObservation.OutputTokens;
+            TotalTokens += ResolveTotalTokens(usageObservation);
             EstimatedCost += usageObservation.EstimatedCostUsd;
             ActualCost += usageObservation.ActualCostUsd;
         }
@@ -519,9 +523,17 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 InputTokens,
                 CachedInputTokens,
                 OutputTokens,
+                TotalTokens,
                 EstimatedCost: decimal.Round(EstimatedCost, 6, MidpointRounding.AwayFromZero),
                 ActualCost: decimal.Round(ActualCost, 6, MidpointRounding.AwayFromZero));
         }
+    }
+
+    private static int ResolveTotalTokens(ProcessRuntimeUsageObservation usageObservation)
+    {
+        return usageObservation.TotalTokens > 0
+            ? usageObservation.TotalTokens
+            : Math.Max(0, usageObservation.InputTokens) + Math.Max(0, usageObservation.OutputTokens);
     }
 
     private sealed class RuntimeToolUsageAccumulator(string toolName)

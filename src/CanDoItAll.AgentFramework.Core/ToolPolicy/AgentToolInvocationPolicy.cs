@@ -2132,6 +2132,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureNodeWorkflowStart = "project_structure_node_workflow_start";
     public const string ProjectStructureNodeWorkflowStatusGet = "project_structure_node_workflow_status_get";
     public const string ProjectStructureNodeDelete = "project_structure_node_delete";
+    public const string ProjectStructureNodesDelete = "project_structure_nodes_delete";
     public const string ProjectStructureApprovalRequest = "project_structure_approval_request";
     public const string ProjectStructureAssetCreate = "project_structure_asset_create";
     public const string ProjectStructureAssetGet = "project_structure_asset_get";
@@ -2196,6 +2197,7 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureNodeWorkflowDefinitionCreate,
         ProjectStructureNodeWorkflowStart,
         ProjectStructureNodeDelete,
+        ProjectStructureNodesDelete,
         ProjectStructureApprovalRequest,
         ProjectStructureAssetCreate,
         ProjectStructureAssetCreateRevision,

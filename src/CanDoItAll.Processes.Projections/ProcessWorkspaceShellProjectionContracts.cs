@@ -419,6 +419,7 @@ public sealed record ProcessRuntimeStatsProjection(
     int InputTokens,
     int CachedInputTokens,
     int OutputTokens,
+    int TotalTokens,
     decimal EstimatedCost,
     decimal ActualCost)
 {
@@ -434,6 +435,7 @@ public sealed record ProcessRuntimeStatsProjection(
         InputTokens: 0,
         CachedInputTokens: 0,
         OutputTokens: 0,
+        TotalTokens: 0,
         EstimatedCost: 0m,
         ActualCost: 0m);
 }
@@ -447,6 +449,7 @@ public sealed record ProcessRuntimeMetricPointProjection(
     int InputTokens,
     int CachedInputTokens,
     int OutputTokens,
+    int TotalTokens,
     decimal EstimatedCost,
     decimal ActualCost);
 

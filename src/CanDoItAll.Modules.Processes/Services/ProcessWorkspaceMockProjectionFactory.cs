@@ -80,6 +80,7 @@ public sealed class ProcessWorkspaceMockProjectionFactory(IProcessProjectionCloc
             InputTokens: 184_000,
             CachedInputTokens: 41_000,
             OutputTokens: 29_000,
+            TotalTokens: 221_000,
             EstimatedCost: 14.25m,
             ActualCost: 11.80m);
 
@@ -523,6 +524,7 @@ public sealed class ProcessWorkspaceMockProjectionFactory(IProcessProjectionCloc
                 InputTokens: 4_000 + (index * 180),
                 CachedInputTokens: 1_200,
                 OutputTokens: 700 + (index * 40),
+                TotalTokens: 4_900 + (index * 230),
                 EstimatedCost: 0.35m + (index * 0.02m),
                 ActualCost: 0.28m + (index * 0.015m)))
             .ToArray();

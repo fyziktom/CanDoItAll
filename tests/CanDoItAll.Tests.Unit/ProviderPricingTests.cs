@@ -65,6 +65,37 @@ public sealed class ProviderPricingTests
     }
 
     [Fact]
+    public void Observation_cost_uses_total_tokens_when_reasoning_is_not_in_output_tokens()
+    {
+        var provider = CreateProvider(
+            "Provider A",
+            [new ProviderModelTokenPrice("model-a", 1.00m, 0.10m, 4.00m)]);
+        var observation = new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: "Provider A",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "model-a",
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: ProviderUsageObservationStatus.Observed,
+            InputTokens: 1_000_000,
+            CachedInputTokens: 250_000,
+            OutputTokens: 500_000,
+            ReasoningTokens: 250_000,
+            TotalTokens: 1_750_000,
+            ToolCallCount: 0);
+
+        var resolved = ProviderPricingCalculator.TryResolveObservationCost(observation, [provider], out var costUsd);
+        var summary = ProviderPricingCalculator.SummarizeUsage([observation], [provider]);
+
+        Assert.True(resolved);
+        Assert.Equal(3.775m, costUsd);
+        Assert.Equal(1_750_000, summary.TotalTokens);
+        Assert.Equal(3.775m, summary.KnownCostUsd);
+    }
+
+    [Fact]
     public void Metric_cost_resolution_prices_cached_input_tokens_when_cost_is_not_persisted()
     {
         var metric = new AgentRunMetric(

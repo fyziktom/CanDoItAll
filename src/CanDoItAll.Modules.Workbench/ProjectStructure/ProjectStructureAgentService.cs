@@ -865,6 +865,47 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
+    public Task<int> DeleteNodesAsync(
+        Guid projectId,
+        ProjectStructureNodeDeleteBatchInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        var requestedNodeIds = NormalizeNodeIds(request.NodeIds);
+        if (requestedNodeIds.Count == 0)
+        {
+            throw new ProjectStructureAgentException(400, "SelectedNodesRequired", "At least one project-structure node id is required.");
+        }
+
+        return leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            request.LeaseToken,
+            agent,
+            "delete-structure-nodes",
+            async cancellationToken =>
+            {
+                var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
+                var deleteRootIds = ResolveDeleteRootNodeIds(surface.Nodes, requestedNodeIds);
+                if (deleteRootIds.Count == 0)
+                {
+                    throw new ProjectStructureAgentException(
+                        404,
+                        "SelectedNodesNotFound",
+                        "None of the selected project-structure node ids were found.",
+                        new { requestedNodeIds });
+                }
+
+                var deletedCount = 0;
+                foreach (var nodeId in deleteRootIds)
+                {
+                    deletedCount += await projectWorkbenchService.DeleteObjectAsync(projectId, nodeId, cancellationToken);
+                }
+
+                return deletedCount;
+            },
+            cancellationToken);
+    }
+
     public async Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(
         Guid projectId,
         ProjectStructureApprovalRequestCreateInput request,
@@ -1498,6 +1539,49 @@ public sealed class ProjectStructureAgentService(
             .Distinct(StringComparer.Ordinal)
             .ToList()
             ?? [];
+
+    private static IReadOnlyList<string> ResolveDeleteRootNodeIds(
+        IReadOnlyList<ProjectStructureNode> nodes,
+        IReadOnlyList<string> requestedNodeIds)
+    {
+        var nodesById = nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var selectedIds = requestedNodeIds
+            .Where(nodesById.ContainsKey)
+            .ToHashSet(StringComparer.Ordinal);
+        if (selectedIds.Count < 2)
+        {
+            return requestedNodeIds
+                .Where(selectedIds.Contains)
+                .ToList();
+        }
+
+        return requestedNodeIds
+            .Where(selectedIds.Contains)
+            .Where(nodeId => !HasSelectedAncestor(nodesById[nodeId], selectedIds, nodesById))
+            .ToList();
+    }
+
+    private static bool HasSelectedAncestor(
+        ProjectStructureNode node,
+        IReadOnlySet<string> selectedIds,
+        IReadOnlyDictionary<string, ProjectStructureNode> nodesById)
+    {
+        var visitedIds = new HashSet<string>(StringComparer.Ordinal);
+        var parentId = node.ParentId;
+        while (!string.IsNullOrWhiteSpace(parentId) && visitedIds.Add(parentId))
+        {
+            if (selectedIds.Contains(parentId))
+            {
+                return true;
+            }
+
+            parentId = nodesById.TryGetValue(parentId, out var parent)
+                ? parent.ParentId
+                : null;
+        }
+
+        return false;
+    }
 
     private static HashSet<string>? ResolveIncludedNodeIds(IReadOnlyList<ProjectStructureNode> nodes, ProjectStructureReadRequest request)
     {

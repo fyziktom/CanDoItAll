@@ -16,7 +16,8 @@ public sealed class ProjectStructureActionCatalogAdapter
         ProjectStructureNode node,
         bool canLaunchRuntime,
         bool canOpenInFileExplorer,
-        bool canOpenInNewTab)
+        bool canOpenInNewTab,
+        int selectedNodeCount = 0)
     {
         if (node.ProjectRole != ProjectStructureProjectRole.None)
         {
@@ -39,7 +40,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             BuildPriorityAction(),
             new() { ActionId = "validate", Label = "Validate", MenuLabel = "Validate", Description = "Open project validation tooling from this node.", Icon = "fact_check", Tone = "mint" },
             new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" },
-            new() { ActionId = "delete", Label = "Delete", MenuLabel = "Delete", Description = "Delete this node, with confirmation when the impact is not trivial.", Icon = "delete", Tone = "danger" }
+            BuildDeleteAction(selectedNodeCount)
         };
 
         if (canLaunchRuntime)
@@ -287,10 +288,35 @@ public sealed class ProjectStructureActionCatalogAdapter
             },
             BuildProgressAction(),
             BuildMarkerAction(),
-            BuildPriorityAction()
+            BuildPriorityAction(),
+            new CanvasWorkbenchAction
+            {
+                ActionId = "delete",
+                Label = "Delete selected",
+                MenuLabel = "Delete selected",
+                Description = "Delete the selected nodes, with confirmation when the impact is not trivial.",
+                Icon = "delete",
+                Tone = "danger"
+            }
         ];
 
         return ProjectStructureActionShortcuts.Apply(actions);
+    }
+
+    private static CanvasWorkbenchAction BuildDeleteAction(int selectedNodeCount)
+    {
+        var isMultiSelection = selectedNodeCount > 1;
+        return new CanvasWorkbenchAction
+        {
+            ActionId = "delete",
+            Label = isMultiSelection ? "Delete selected" : "Delete",
+            MenuLabel = isMultiSelection ? "Delete selected" : "Delete",
+            Description = isMultiSelection
+                ? $"Delete {selectedNodeCount} selected nodes, with confirmation when the impact is not trivial."
+                : "Delete this node, with confirmation when the impact is not trivial.",
+            Icon = "delete",
+            Tone = "danger"
+        };
     }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions(ProjectObjectType? sourceType)

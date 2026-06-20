@@ -1,11 +1,13 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
+@using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Processes.Abstractions
 @using CanDoItAll.Processes.Application
 @using CanDoItAll.Processes.Projections
 @using CanDoItAll.Processes.Runtime
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject ProcessWorkspaceMockProjectionFactory MockProjectionFactory
+@inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 @inject NotificationService Notifications
 
@@ -309,11 +311,11 @@
         Palette = ["#f59e0b"]
     };
 
-    private static readonly CdaChartOptions RuntimeCostChartOptions = new()
+    private CdaChartOptions RuntimeCostChartOptions => new()
     {
         Type = CdaChartType.Area,
         XAxisType = CdaChartAxisType.DateTime,
-        YAxisTitle = "USD",
+        YAxisTitle = CurrencyFormatter.CurrencyCode,
         TooltipPrecision = 4,
         ValuePrecision = 4,
         FillOpacity = 0.2,
@@ -2442,10 +2444,8 @@
     private static decimal ResolveRuntimeCost(ProcessRuntimeStatsProjection stats)
         => stats.ActualCost > 0 ? stats.ActualCost : stats.EstimatedCost;
 
-    private static string FormatCurrency(decimal value)
-        => value <= 0
-            ? "$0.00"
-            : value.ToString("C4", CultureInfo.CurrentCulture);
+    private string FormatCurrency(decimal value)
+        => CurrencyFormatter.Format(value);
 
     private static string TrimLabel(string value, int maxLength)
     {

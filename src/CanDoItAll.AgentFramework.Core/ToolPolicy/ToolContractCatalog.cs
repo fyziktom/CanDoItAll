@@ -202,6 +202,7 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodesDelete,
         AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetGet,

@@ -383,6 +383,10 @@ public sealed record ProjectStructureNodeParentInput(
 public sealed record ProjectStructureNodeDeleteInput(
     string? LeaseToken = null);
 
+public sealed record ProjectStructureNodeDeleteBatchInput(
+    IReadOnlyList<string> NodeIds,
+    string? LeaseToken = null);
+
 public sealed record ProjectStructureLinkInput(
     string SourceNodeId,
     string TargetNodeId,

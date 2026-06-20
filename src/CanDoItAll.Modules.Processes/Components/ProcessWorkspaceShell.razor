@@ -3,10 +3,12 @@
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Processes.Application
 @using Microsoft.Extensions.DependencyInjection
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject IServiceProvider Services
+@inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 
 <PageScaffold FillHeight="true"
@@ -1195,7 +1197,7 @@
                                                                           data-testid="processes-graph-metric-grid">
         <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
             @RenderMetricCard("Cost", FormatCurrency(CurrentShell.Runtime.Stats.ActualCost), CurrentShell.Runtime.Stats.ActualCost > 0 ? "success" : "neutral", $"{title}: actual cost projected from runtime usage data when provider metrics are linked.")
-            @RenderMetricCard("Tokens", FormatTokenCount(CurrentShell.Runtime.Stats.InputTokens + CurrentShell.Runtime.Stats.OutputTokens), CurrentShell.Runtime.Stats.InputTokens + CurrentShell.Runtime.Stats.OutputTokens > 0 ? "info" : "neutral", "Input, cached input, and output tokens for the selected history scope.")
+            @RenderMetricCard("Tokens", FormatTokenCount(ResolveRuntimeTotalTokens(CurrentShell.Runtime.Stats)), ResolveRuntimeTotalTokens(CurrentShell.Runtime.Stats) > 0 ? "info" : "neutral", "Provider-reported total tokens for the selected history scope, including hidden reasoning tokens when reported.")
             @RenderMetricCard("Time", FormatDuration(CurrentShell.Runtime.Stats.DurationMs), CurrentShell.Runtime.Stats.DurationMs > 0 ? "info" : "neutral", "Observed runtime span in the selected history page.")
             @RenderMetricCard("Tool usage", CurrentShell.Runtime.Stats.ToolCallCount.ToString(CultureInfo.InvariantCulture), CurrentShell.Runtime.Stats.ToolCallCount > 0 ? "warning" : "neutral", "Runtime dispatch, step, and manager events grouped as tool/activity usage.")
         </Grid>
@@ -1317,7 +1319,7 @@
                     Name = "Tokens",
                     Type = CdaChartType.Bar,
                     Color = "#16a34a",
-                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.InputTokens + item.OutputTokens)).ToArray()
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ResolveRuntimeTotalTokens(item))).ToArray()
                 },
                 new CdaChartSeries
                 {
@@ -2319,10 +2321,18 @@
     private static string ResolveHistoryWindowText(ProcessRuntimeHistoryWindow window)
         => FormatHistoryWindow(window);
 
-    private static string FormatCurrency(decimal value)
-        => value == 0m
-            ? "$0.00"
-            : value.ToString("C2", CultureInfo.CurrentCulture);
+    private static int ResolveRuntimeTotalTokens(ProcessRuntimeStatsProjection stats)
+        => stats.TotalTokens > 0
+            ? stats.TotalTokens
+            : Math.Max(0, stats.InputTokens) + Math.Max(0, stats.OutputTokens);
+
+    private static int ResolveRuntimeTotalTokens(ProcessRuntimeMetricPointProjection point)
+        => point.TotalTokens > 0
+            ? point.TotalTokens
+            : Math.Max(0, point.InputTokens) + Math.Max(0, point.OutputTokens);
+
+    private string FormatCurrency(decimal value)
+        => CurrencyFormatter.Format(value);
 
     private static string FormatTokenCount(int value)
         => value.ToString("N0", CultureInfo.CurrentCulture);

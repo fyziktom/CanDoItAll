@@ -761,6 +761,128 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Canvas_context_delete_targets_selected_nodes_when_clicked_node_is_selected()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Canvas multi-delete project");
+        var firstNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Delete target one",
+                string.Empty,
+                "First selected node.",
+                $"project:{projectId}",
+                420,
+                240));
+        var secondNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Delete target two",
+                string.Empty,
+                "Second selected node.",
+                $"project:{projectId}",
+                700,
+                240));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, firstNode.Id, secondNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("2 nodes selected", cut.Markup, StringComparison.Ordinal);
+            var firstCanvasNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, firstNode.Id, StringComparison.Ordinal));
+            Assert.Contains(firstCanvasNode.ContextActions, action =>
+                action.ActionId == "delete" &&
+                action.Label == "Delete selected");
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction(firstNode.Id, "delete", 0, 0));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Delete selection", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("This will delete 2 selected nodes.", cut.Markup, StringComparison.Ordinal);
+        });
+
+        FindButtonByLabel(cut, "Delete selected").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("2 selected branches were deleted.", cut.Markup, StringComparison.Ordinal));
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.DoesNotContain(persistedSurface.Nodes, node => string.Equals(node.Id, firstNode.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(persistedSurface.Nodes, node => string.Equals(node.Id, secondNode.Id, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Canvas_group_context_delete_targets_selected_nodes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Canvas group multi-delete project");
+        var firstNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Group delete target one",
+                string.Empty,
+                "First selected node.",
+                $"project:{projectId}",
+                420,
+                240));
+        var secondNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Group delete target two",
+                string.Empty,
+                "Second selected node.",
+                $"project:{projectId}",
+                700,
+                240));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, firstNode.Id, secondNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("2 nodes selected", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(canvasWorkbench.Instance.Surface.Chrome.GroupContextActions, action =>
+                action.ActionId == "delete" &&
+                action.Label == "Delete selected");
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(null, "delete", 0, 0, "canvas"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Delete selection", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("This will delete 2 selected nodes.", cut.Markup, StringComparison.Ordinal);
+        });
+
+        FindButtonByLabel(cut, "Delete selected").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("2 selected branches were deleted.", cut.Markup, StringComparison.Ordinal));
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.DoesNotContain(persistedSurface.Nodes, node => string.Equals(node.Id, firstNode.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(persistedSurface.Nodes, node => string.Equals(node.Id, secondNode.Id, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Status_marker_priority_and_progress_mutations_patch_surface_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);

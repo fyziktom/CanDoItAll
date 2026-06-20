@@ -1139,14 +1139,17 @@ public sealed class ProcessProjectionPipelineTests
         Assert.Equal(150, shell.Runtime.Stats.InputTokens);
         Assert.Equal(10, shell.Runtime.Stats.CachedInputTokens);
         Assert.Equal(25, shell.Runtime.Stats.OutputTokens);
+        Assert.Equal(175, shell.Runtime.Stats.TotalTokens);
         Assert.Equal(0.045m, shell.Runtime.Stats.EstimatedCost);
         Assert.Equal(0.123456m, shell.Runtime.Stats.ActualCost);
         Assert.Equal(2, shell.Runtime.MetricPoints.Count);
         Assert.Equal(100, shell.Runtime.MetricPoints[0].InputTokens);
         Assert.Equal(20, shell.Runtime.MetricPoints[0].OutputTokens);
+        Assert.Equal(120, shell.Runtime.MetricPoints[0].TotalTokens);
         Assert.Equal(0.123456m, shell.Runtime.MetricPoints[0].ActualCost);
         Assert.Equal(50, shell.Runtime.MetricPoints[1].InputTokens);
         Assert.Equal(5, shell.Runtime.MetricPoints[1].OutputTokens);
+        Assert.Equal(55, shell.Runtime.MetricPoints[1].TotalTokens);
         Assert.Equal(0.045m, shell.Runtime.MetricPoints[1].EstimatedCost);
         Assert.Equal(1, usageReader.CallCount);
     }

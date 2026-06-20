@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
@@ -501,6 +502,7 @@ public sealed class ProcessWorkspaceShellTests
         ActivateProcessDetailTab(cut, "processes-detail-tab-graphs", "processes-detail-panel-graphs");
         Assert.NotNull(cut.Find("[data-testid='processes-process-graphs-tab']"));
         Assert.Contains("Cost", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Tokens", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Time", cut.Markup, StringComparison.Ordinal);
 
@@ -552,6 +554,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='live-processes-tool-card']"));
         Assert.Contains("Tool history", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Process cost over time", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='live-processes-request-rework']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-attention-decision']"));
         Assert.Contains("Approve rework", cut.Markup, StringComparison.Ordinal);
@@ -621,11 +624,22 @@ public sealed class ProcessWorkspaceShellTests
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
         client = new RecordingProcessWorkspaceProjectionClient();
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);
         return context;
+    }
+
+    private sealed class StaticCurrencyFormatter(string currencyCode) : ICurrencyFormatter
+    {
+        public string CurrencyCode { get; } = currencyCode;
+
+        public string Format(decimal value)
+        {
+            return $"{CurrencyCode} {value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+        }
     }
 
     private static void ActivateProcessDetailTab(
@@ -964,6 +978,7 @@ public sealed class ProcessWorkspaceShellTests
                     InputTokens: 0,
                     CachedInputTokens: 0,
                     OutputTokens: 0,
+                    TotalTokens: 0,
                     EstimatedCost: 0m,
                     ActualCost: 0m),
                 events.Select(runtimeEvent => new ProcessRuntimeMetricPointProjection(
@@ -975,6 +990,7 @@ public sealed class ProcessWorkspaceShellTests
                     InputTokens: 0,
                     CachedInputTokens: 0,
                     OutputTokens: 0,
+                    TotalTokens: 0,
                     EstimatedCost: 0m,
                     ActualCost: 0m)).ToArray(),
                 [
