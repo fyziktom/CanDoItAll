@@ -45,7 +45,24 @@ public sealed record ProcessRuntimeUsageObservation(
     int ReasoningTokens,
     int TotalTokens,
     decimal EstimatedCostUsd,
-    decimal ActualCostUsd);
+    decimal ActualCostUsd)
+{
+    public int ContextEstimatedInputTokens { get; init; }
+
+    public int ContextInputMessageCount { get; init; }
+
+    public int ContextToolCount { get; init; }
+
+    public int ContextToolSchemaEstimatedTokens { get; init; }
+
+    public int ContextSourceCount { get; init; }
+
+    public bool ContextBudgetExceeded { get; init; }
+
+    public string ContextBudgetWarning { get; init; } = string.Empty;
+
+    public string ContextDiagnosticsJson { get; init; } = string.Empty;
+}
 
 public sealed record ProcessExecutionObservation(
     Guid ExecutionRunId,

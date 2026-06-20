@@ -107,6 +107,101 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public void Agent_runtime_options_include_process_context_intent_from_trusted_step_metadata()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.RunValidation
+            ],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            stepKey: "targeted-validation");
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson) with
+        {
+            SourceId = assignment.StepKey,
+            ProcessRunId = assignment.RunId.Value.ToString("D"),
+            ProcessStepId = assignment.StepInstanceId.Value.ToString("D")
+        };
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "CreateRuntimeExecutionOptions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null]));
+
+        Assert.NotNull(options.ContextIntent);
+        Assert.True(options.ContextIntent!.IsGovernedProcessStep);
+        Assert.Equal("process-step", options.ContextIntent.SourceKind);
+        Assert.Equal("targeted-validation", options.ContextIntent.SourceId);
+        Assert.Equal(assignment.RunId.Value.ToString("D"), options.ContextIntent.ProcessRunId);
+        Assert.Equal(assignment.StepInstanceId.Value.ToString("D"), options.ContextIntent.ProcessStepId);
+        Assert.Equal(ProcessOperationContractNames.ExternalProductTargetReadOnly, options.ContextIntent.TargetScope);
+        Assert.False(options.ContextIntent.AllowsProductMutation);
+        Assert.Contains(ProcessOperationContractNames.ReadProcessContext, options.ContextIntent.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.RunValidation, options.ContextIntent.AllowedOperations);
+    }
+
+    [Fact]
+    public void Runtime_usage_mapper_warns_when_context_manifest_exceeds_budget()
+    {
+        var run = CreateTrustedProcessRun("{}");
+        var usageObservation = new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: "OpenAI default",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "gpt-test",
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: ProviderUsageObservationStatus.Observed,
+            InputTokens: 10,
+            CachedInputTokens: 0,
+            OutputTokens: 2,
+            ReasoningTokens: 0,
+            TotalTokens: 12,
+            ToolCallCount: 0)
+        {
+            DiagnosticsJson = """
+                {
+                  "contextAssemblyManifest": {
+                    "totals": {
+                      "estimatedInputTokens": 128000,
+                      "inputMessageCount": 3,
+                      "toolCount": 64,
+                      "toolSchemaEstimatedTokens": 32000
+                    },
+                    "sources": [
+                      { "category": "workspace-tools" },
+                      { "category": "skills" }
+                    ]
+                  }
+                }
+                """
+        };
+        var readerType = typeof(ProcessesModuleServiceCollectionExtensions)
+            .Assembly
+            .GetType("CanDoItAll.Modules.Processes.AgentFrameworkProcessRuntimeUsageTelemetryReader")
+            ?? throw new InvalidOperationException("Usage telemetry reader type was not found.");
+        var method = readerType.GetMethod("MapUsageObservation", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("MapUsageObservation method was not found.");
+
+        var observation = Assert.IsType<ProcessRuntimeUsageObservation>(method.Invoke(
+            null,
+            [usageObservation, run, ProcessRunId.New(), Array.Empty<ProviderProfile>()]));
+
+        Assert.Equal(128000, observation.ContextEstimatedInputTokens);
+        Assert.Equal(64, observation.ContextToolCount);
+        Assert.Equal(32000, observation.ContextToolSchemaEstimatedTokens);
+        Assert.Equal(2, observation.ContextSourceCount);
+        Assert.True(observation.ContextBudgetExceeded);
+        Assert.Contains("EstimatedInputTokens=128000", observation.ContextBudgetWarning, StringComparison.Ordinal);
+        Assert.Contains("ToolCount=64", observation.ContextBudgetWarning, StringComparison.Ordinal);
+        Assert.Contains("ToolSchemaEstimatedTokens=32000", observation.ContextBudgetWarning, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Process_execution_metadata_does_not_trust_repository_root_as_product_target_alias()
     {
         var assignment = CreateAssignment(

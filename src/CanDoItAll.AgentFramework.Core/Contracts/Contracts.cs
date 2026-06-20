@@ -135,6 +135,10 @@ public sealed record AgentRuntimeResponse(
     public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];
 
     public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+
+    public AgentRuntimeContextAssemblyManifest? ContextAssemblyManifest { get; init; }
+
+    public IReadOnlyList<AgentContextContributionTrace> ContextContributionTraces { get; init; } = [];
 }
 
 public sealed class AgentRuntimeUsageException : Exception

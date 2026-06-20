@@ -1216,7 +1216,32 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             RequireStructuredOutputValidation: ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run),
             MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run),
             Handoff: handoffOptions,
-            ContextWorkspaceScope: ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run));
+            ContextWorkspaceScope: ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
+            ContextIntent: CreateRuntimeContextIntent(run));
+    }
+
+    private static AgentRuntimeContextIntent CreateRuntimeContextIntent(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        var workspaceScope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+        var isGovernedProcessStep = string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
+                                    string.Equals(run.RequestedByKind, "system", StringComparison.OrdinalIgnoreCase) &&
+                                    !string.IsNullOrWhiteSpace(run.ProcessRunId) &&
+                                    !string.IsNullOrWhiteSpace(run.ProcessStepId);
+        return new AgentRuntimeContextIntent(
+            SourceKind: run.SourceKind,
+            SourceId: run.SourceId,
+            ProcessRunId: run.ProcessRunId,
+            ProcessStepId: run.ProcessStepId,
+            TargetScope: ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
+            IsGovernedProcessStep: isGovernedProcessStep,
+            BrowserToolsAllowed: ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run),
+            ScaffoldToolOnly: ExecutionInvocationMetadata.ResolveProcessScaffoldToolOnly(run),
+            AllowsProductMutation: ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run),
+            WorkspaceToolProfile: ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run),
+            WorkspaceScope: workspaceScope,
+            AllowedOperations: ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run));
     }
 
     private async Task AppendProcessCooperationLogAsync(

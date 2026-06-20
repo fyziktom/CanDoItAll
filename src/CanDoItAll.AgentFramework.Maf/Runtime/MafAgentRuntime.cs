@@ -137,7 +137,14 @@ public sealed partial class MafAgentRuntime(
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
             runtimeOptions);
-        var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt);
+        var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt).ToList();
+        var contextManifest = CreateContextAssemblyManifest(
+            agent,
+            runtimeBuild.Provider,
+            runtimeBuild.Model,
+            runtimeOptions,
+            runtimeBuild,
+            inputMessages);
 
         return await ExecuteRunAsync(
             agent,
@@ -156,7 +163,9 @@ public sealed partial class MafAgentRuntime(
             runtimeOptions,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations,
-            runtimeBuild.SnapshotToolInvocationTraces);
+            runtimeBuild.SnapshotToolInvocationTraces,
+            runtimeBuild.SnapshotContextContributionTraces,
+            contextManifest);
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -265,7 +274,14 @@ public sealed partial class MafAgentRuntime(
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
             runtimeOptions);
-        var inputMessages = CreateApprovalInputMessages(session, approved);
+        var inputMessages = CreateApprovalInputMessages(session, approved).ToList();
+        var contextManifest = CreateContextAssemblyManifest(
+            agent,
+            runtimeBuild.Provider,
+            runtimeBuild.Model,
+            runtimeOptions,
+            runtimeBuild,
+            inputMessages);
 
         return await ExecuteRunAsync(
             agent,
@@ -284,7 +300,9 @@ public sealed partial class MafAgentRuntime(
             runtimeOptions,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations,
-            runtimeBuild.SnapshotToolInvocationTraces);
+            runtimeBuild.SnapshotToolInvocationTraces,
+            runtimeBuild.SnapshotContextContributionTraces,
+            contextManifest);
     }
 
     private async Task<AgentRuntimeResponse> ExecuteRunAsync(
@@ -304,7 +322,9 @@ public sealed partial class MafAgentRuntime(
         AgentRuntimeExecutionOptions runtimeOptions,
         bool forceOmitTemperature,
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
-        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces,
+        Func<IReadOnlyList<AgentContextContributionTrace>> snapshotContextContributionTraces,
+        AgentRuntimeContextAssemblyManifest contextManifest)
     {
         var updates = new List<AgentResponseUpdate>();
         var announcedStreaming = false;
@@ -325,6 +345,13 @@ public sealed partial class MafAgentRuntime(
                 streamedFinalizerRecorder.SnapshotFinalizerInvocations());
         var pollCount = 0;
         var resolvedModel = model;
+
+        AgentRuntimeResponse AttachContextDiagnostics(AgentRuntimeResponse response)
+            => response with
+            {
+                ContextAssemblyManifest = contextManifest,
+                ContextContributionTraces = snapshotContextContributionTraces()
+            };
 
         async Task<AgentRuntimeResponse?> RecordStreamingUpdateAsync(
             AgentResponseUpdate update,
@@ -407,11 +434,11 @@ public sealed partial class MafAgentRuntime(
                         ProviderUsageSourcePhases.FinalizerRecovery);
                     if (finalizerResponse is not null)
                     {
-                        return finalizerResponse;
+                        return AttachContextDiagnostics(finalizerResponse);
                     }
                 }
 
-                return await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                var requiredFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
                     provider,
                     resolvedModel,
                     structuredOutput,
@@ -425,6 +452,9 @@ public sealed partial class MafAgentRuntime(
                     cancellationToken,
                     snapshotEffectiveFinalizerInvocations,
                     snapshotEffectiveToolInvocationTraces);
+                return requiredFinalizerResponse is null
+                    ? null
+                    : AttachContextDiagnostics(requiredFinalizerResponse);
             }
             catch (RequiredFinalizerCapturedException exception)
             {
@@ -444,7 +474,7 @@ public sealed partial class MafAgentRuntime(
                     snapshotEffectiveToolInvocationTraces);
                 if (finalizerResponse is not null)
                 {
-                    return finalizerResponse;
+                    return AttachContextDiagnostics(finalizerResponse);
                 }
 
                 throw new AgentRuntimeUsageException(
@@ -477,7 +507,7 @@ public sealed partial class MafAgentRuntime(
                     snapshotEffectiveToolInvocationTraces);
                 if (finalizerResponse is not null)
                 {
-                    return finalizerResponse;
+                    return AttachContextDiagnostics(finalizerResponse);
                 }
 
                 throw new AgentRuntimeUsageException(
@@ -521,7 +551,7 @@ public sealed partial class MafAgentRuntime(
                             ProviderUsageSourcePhases.FinalizerShortCircuit);
                         if (finalizerResponse is not null)
                         {
-                            return finalizerResponse;
+                            return AttachContextDiagnostics(finalizerResponse);
                         }
                     }
 
@@ -541,7 +571,7 @@ public sealed partial class MafAgentRuntime(
                         snapshotEffectiveToolInvocationTraces);
                     if (postStreamingFinalizerResponse is not null)
                     {
-                        return postStreamingFinalizerResponse;
+                        return AttachContextDiagnostics(postStreamingFinalizerResponse);
                     }
                 }
                 catch (RequiredFinalizerCapturedException exception)
@@ -563,7 +593,7 @@ public sealed partial class MafAgentRuntime(
                         snapshotEffectiveToolInvocationTraces);
                     if (finalizerResponse is not null)
                     {
-                        return finalizerResponse;
+                        return AttachContextDiagnostics(finalizerResponse);
                     }
 
                     throw;
@@ -588,7 +618,7 @@ public sealed partial class MafAgentRuntime(
                         snapshotEffectiveToolInvocationTraces);
                     if (finalizerResponse is not null)
                     {
-                        return finalizerResponse;
+                        return AttachContextDiagnostics(finalizerResponse);
                     }
 
                     throw new AgentRuntimeUsageException(
@@ -625,7 +655,7 @@ public sealed partial class MafAgentRuntime(
                 var repairedFinalizerResponse = await TryRunMissingRequiredFinalizerRepairAsync(response, approvalRequests);
                 if (repairedFinalizerResponse is not null)
                 {
-                    return repairedFinalizerResponse;
+                    return AttachContextDiagnostics(repairedFinalizerResponse);
                 }
 
                 await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
@@ -638,7 +668,7 @@ public sealed partial class MafAgentRuntime(
                     await progressCallback(ExecutionState.WaitingOnTool, "Approval", "The run is waiting for a tool approval response before it can continue.");
                 }
 
-                return new AgentRuntimeResponse(
+                return AttachContextDiagnostics(new AgentRuntimeResponse(
                     ResponseText: ResolveResponseText(response, pendingApprovals),
                     InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
                     OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
@@ -658,7 +688,7 @@ public sealed partial class MafAgentRuntime(
                         updates,
                         ProviderUsageSourcePhases.AgentRuntime,
                         "Microsoft Agent Framework returned a runtime response.")
-                };
+                });
             }
 
             pollCount++;

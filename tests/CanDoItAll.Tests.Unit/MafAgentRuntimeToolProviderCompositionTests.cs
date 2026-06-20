@@ -1,4 +1,5 @@
 using System.Reflection;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -215,6 +216,117 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeProcessContext_read_only_step_does_not_attach_broad_workspace_tools()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(ProcessOperationContractNames.ReadProcessContext));
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("workspace_write_file", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_test", toolNames);
+        Assert.DoesNotContain("workspace_pwsh_run_script", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_new", toolNames);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.WorkspaceTools &&
+            source.Decision == AgentRuntimeContextSourceDecision.Excluded);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeProcessContext_validation_step_attaches_validation_tools_without_write_tools()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(ProcessOperationContractNames.RunValidation));
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("workspace_dotnet_test", toolNames);
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.DoesNotContain("workspace_write_file", toolNames);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.WorkspaceTools &&
+            source.Decision == AgentRuntimeContextSourceDecision.Included &&
+            source.ItemCount > 0);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeProcessContext_two_step_process_reduces_tool_surface_against_agent_baseline()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
+        var provider = CreateProviderProfile();
+
+        var baselineState = await InvokeCreateCapabilityStateAsync(runtime, agent, provider, []);
+        var readOnlyStepState = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            provider,
+            [],
+            CreateProcessContextIntent(ProcessOperationContractNames.ReadProcessContext));
+        var validationStepState = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            provider,
+            [],
+            CreateProcessContextIntent(ProcessOperationContractNames.RunValidation));
+
+        var baselineToolNames = ReadTools(baselineState).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var readOnlyToolNames = ReadTools(readOnlyStepState).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var validationToolNames = ReadTools(validationStepState).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.True(readOnlyToolNames.Count < baselineToolNames.Count);
+        Assert.True(validationToolNames.Count < baselineToolNames.Count);
+        Assert.Empty(readOnlyToolNames);
+        Assert.Contains("workspace_dotnet_test", validationToolNames);
+        Assert.DoesNotContain("workspace_write_file", validationToolNames);
+        Assert.DoesNotContain("workspace_dotnet_new", validationToolNames);
+        Assert.Contains(ReadContextSources(readOnlyStepState), source =>
+            source.Category == AgentRuntimeContextSourceCategories.WorkspaceTools &&
+            source.Decision == AgentRuntimeContextSourceDecision.Excluded);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeProcessContext_read_only_step_skips_skill_provider()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-skill-test-" + Guid.NewGuid().ToString("N"));
+        var skillRoot = Path.Combine(workspaceRoot, "skills", "sample");
+        Directory.CreateDirectory(skillRoot);
+        await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
+        try
+        {
+            var runtime = new MafAgentRuntime(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var state = await InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateSkillCapability("skills/sample")],
+                CreateProcessContextIntent(ProcessOperationContractNames.ReadProcessContext));
+
+            Assert.DoesNotContain(ReadFrameworkToolNames(state), toolName =>
+                string.Equals(toolName, AgentToolInvocationPolicyMetadata.LoadSkill, StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(ReadContextSources(state), source =>
+                source.Category == AgentRuntimeContextSourceCategories.Skills &&
+                source.Decision == AgentRuntimeContextSourceDecision.Excluded);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_reports_provider_failures_with_provider_type()
     {
         var services = new ServiceCollection();
@@ -242,6 +354,16 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     private static IReadOnlyList<AgentRuntimeToolMetadata> ReadToolMetadata(object state)
         => Assert.IsAssignableFrom<IEnumerable<AgentRuntimeToolMetadata>>(
                 state.GetType().GetProperty("RuntimeToolMetadata", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
+            .ToList();
+
+    private static IReadOnlyList<AgentRuntimeContextManifestSource> ReadContextSources(object state)
+        => Assert.IsAssignableFrom<IEnumerable<AgentRuntimeContextManifestSource>>(
+                state.GetType().GetProperty("ContextSources", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
+            .ToList();
+
+    private static IReadOnlyList<string> ReadFrameworkToolNames(object state)
+        => Assert.IsAssignableFrom<IEnumerable<string>>(
+                state.GetType().GetProperty("FrameworkToolNames", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
             .ToList();
 
     private static AgentRuntimeToolProviderDescriptor CreateDescriptor(string providerKey)
@@ -285,7 +407,38 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                ?? throw new InvalidOperationException("CreateCapabilityStateAsync did not produce a result.");
     }
 
-    private static AgentDefinition CreateToolEnabledAgent()
+    private static async Task<object> InvokeCreateCapabilityStateCoreAsync(
+        MafAgentRuntime runtime,
+        AgentDefinition agent,
+        ProviderProfile provider,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        var method = typeof(MafAgentRuntime).GetMethod(
+                         "CreateCapabilityStateCoreAsync",
+                         BindingFlags.NonPublic | BindingFlags.Instance)
+                     ?? throw new InvalidOperationException("CreateCapabilityStateCoreAsync method was not found.");
+        var invocation = method.Invoke(
+            runtime,
+            [
+                agent,
+                provider,
+                capabilities,
+                Array.Empty<AgentMemoryRecord>(),
+                (Func<ExecutionState, string, string, Task>)((_, _, _) => Task.CompletedTask),
+                CancellationToken.None,
+                true,
+                WorkspaceScopeDescriptor.Sandbox,
+                contextIntent
+            ]);
+        var task = Assert.IsAssignableFrom<Task>(invocation);
+        await task;
+
+        return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
+               ?? throw new InvalidOperationException("CreateCapabilityStateCoreAsync did not produce a result.");
+    }
+
+    private static AgentDefinition CreateToolEnabledAgent(string configurationJson = "{}")
         => new(
             Id: Guid.NewGuid(),
             Name: "Tool Provider Agent",
@@ -300,7 +453,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             Temperature: 0,
             RequirePerServiceCallChatHistoryPersistence: false,
             EnableBackgroundResponses: false,
-            ConfigurationJson: "{}",
+            ConfigurationJson: configurationJson,
             IsTemplate: false,
             TemplateKey: string.Empty,
             Permissions: AgentPermissionsPolicy.Default with
@@ -313,6 +466,38 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             Tags: [],
             CreatedAtUtc: DateTimeOffset.UtcNow,
             UpdatedAtUtc: DateTimeOffset.UtcNow);
+
+    private static string CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessSettings accessSettings)
+        => AgentWorkspaceToolAccessMetadata.Write("{}", accessSettings);
+
+    private static AgentRuntimeContextIntent CreateProcessContextIntent(params string[] allowedOperations)
+        => new(
+            SourceKind: "process-step",
+            SourceId: "unit-test",
+            ProcessRunId: Guid.NewGuid().ToString("D"),
+            ProcessStepId: Guid.NewGuid().ToString("D"),
+            TargetScope: ProcessOperationContractNames.ManagedOutputProduct,
+            IsGovernedProcessStep: true,
+            BrowserToolsAllowed: false,
+            ScaffoldToolOnly: false,
+            AllowsProductMutation: allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase),
+            WorkspaceToolProfile: null,
+            WorkspaceScope: WorkspaceScopeDescriptor.Sandbox,
+            AllowedOperations: allowedOperations);
+
+    private static CapabilityCatalogItem CreateSkillCapability(string endpointOrPath)
+        => new(
+            Id: Guid.NewGuid(),
+            Kind: CapabilityKind.Skill,
+            Key: "sample-skill",
+            Name: "Sample skill",
+            Description: "Sample skill.",
+            EndpointOrPath: endpointOrPath,
+            ConfigurationJson: "{}",
+            ProofStatus: CapabilityProofStatus.Verified,
+            ProofNotes: string.Empty,
+            LastVerifiedAtUtc: DateTimeOffset.UtcNow,
+            IsBuiltIn: false);
 
     private static ProviderProfile CreateProviderProfile()
         => new(

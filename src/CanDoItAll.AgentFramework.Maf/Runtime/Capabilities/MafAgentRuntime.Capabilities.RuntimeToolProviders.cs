@@ -68,6 +68,12 @@ public sealed partial class MafAgentRuntime
             composition.State.RuntimeToolProviderDescriptors.Add(registration.Descriptor);
             composition.State.RuntimeToolMetadata.AddRange(toolMetadata);
             composition.State.Tools.AddRange(tools);
+            composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
+                AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                registration.Descriptor.ProviderKey,
+                "registered runtime tool provider selected for this run",
+                tools.Count,
+                EstimateToolSchemaChars(tools)));
             attachedToolCount += tools.Count;
             attachmentSummaries.Add(new RuntimeToolProviderAttachmentSummary(
                 registration.Descriptor.ProviderKey,

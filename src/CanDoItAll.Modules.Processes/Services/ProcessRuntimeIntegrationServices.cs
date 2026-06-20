@@ -1814,6 +1814,10 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
 internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
     IAgentFrameworkWorkspaceService workspaceService) : IProcessRuntimeUsageTelemetryReader
 {
+    private const int ContextEstimatedInputTokenWarningThreshold = 128_000;
+    private const int ContextToolSchemaTokenWarningThreshold = 32_000;
+    private const int ContextToolCountWarningThreshold = 64;
+
     public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
         ProcessRuntimeUsageTelemetryQuery query,
         CancellationToken cancellationToken = default)
@@ -1905,6 +1909,7 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
         var estimatedCostUsd = usageObservation.UsageStatus == ProviderUsageObservationStatus.EstimatedFromMetric
             ? ResolveEstimatedCost(usageObservation, providers)
             : 0m;
+        var contextSummary = ResolveRuntimeContextSummary(usageObservation.DiagnosticsJson);
 
         return new ProcessRuntimeUsageObservation(
             usageObservation.Id,
@@ -1923,7 +1928,82 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             Math.Max(0, usageObservation.ReasoningTokens),
             Math.Max(0, usageObservation.TotalTokens),
             decimal.Round(estimatedCostUsd, 6, MidpointRounding.AwayFromZero),
-            decimal.Round(actualCostUsd, 6, MidpointRounding.AwayFromZero));
+            decimal.Round(actualCostUsd, 6, MidpointRounding.AwayFromZero))
+        {
+            ContextEstimatedInputTokens = contextSummary.EstimatedInputTokens,
+            ContextInputMessageCount = contextSummary.InputMessageCount,
+            ContextToolCount = contextSummary.ToolCount,
+            ContextToolSchemaEstimatedTokens = contextSummary.ToolSchemaEstimatedTokens,
+            ContextSourceCount = contextSummary.SourceCount,
+            ContextBudgetExceeded = HasRuntimeContextBudgetWarning(contextSummary),
+            ContextBudgetWarning = ResolveRuntimeContextBudgetWarning(contextSummary),
+            ContextDiagnosticsJson = contextSummary.DiagnosticsJson
+        };
+    }
+
+    private static RuntimeContextUsageSummary ResolveRuntimeContextSummary(string diagnosticsJson)
+    {
+        if (string.IsNullOrWhiteSpace(diagnosticsJson))
+        {
+            return RuntimeContextUsageSummary.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(diagnosticsJson);
+            if (!document.RootElement.TryGetProperty("contextAssemblyManifest", out var manifest) ||
+                manifest.ValueKind != JsonValueKind.Object)
+            {
+                return RuntimeContextUsageSummary.Empty;
+            }
+
+            if (!manifest.TryGetProperty("totals", out var totals) ||
+                totals.ValueKind != JsonValueKind.Object)
+            {
+                return RuntimeContextUsageSummary.Empty;
+            }
+
+            var sourceCount = manifest.TryGetProperty("sources", out var sources) && sources.ValueKind == JsonValueKind.Array
+                ? sources.GetArrayLength()
+                : 0;
+            return new RuntimeContextUsageSummary(
+                ReadInt32(totals, "estimatedInputTokens"),
+                ReadInt32(totals, "inputMessageCount"),
+                ReadInt32(totals, "toolCount"),
+                ReadInt32(totals, "toolSchemaEstimatedTokens"),
+                sourceCount,
+                manifest.GetRawText());
+        }
+        catch (JsonException)
+        {
+            return RuntimeContextUsageSummary.Empty;
+        }
+    }
+
+    private static int ReadInt32(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var property) && property.TryGetInt32(out var value)
+            ? Math.Max(0, value)
+            : 0;
+
+    private static bool HasRuntimeContextBudgetWarning(RuntimeContextUsageSummary contextSummary)
+        => contextSummary.EstimatedInputTokens >= ContextEstimatedInputTokenWarningThreshold ||
+           contextSummary.ToolSchemaEstimatedTokens >= ContextToolSchemaTokenWarningThreshold ||
+           contextSummary.ToolCount >= ContextToolCountWarningThreshold;
+
+    private static string ResolveRuntimeContextBudgetWarning(RuntimeContextUsageSummary contextSummary)
+    {
+        if (!HasRuntimeContextBudgetWarning(contextSummary))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(
+            " ",
+            "Agent context request shape is above the diagnostic warning threshold.",
+            $"EstimatedInputTokens={contextSummary.EstimatedInputTokens}.",
+            $"ToolCount={contextSummary.ToolCount}.",
+            $"ToolSchemaEstimatedTokens={contextSummary.ToolSchemaEstimatedTokens}.",
+            $"SourceCount={contextSummary.SourceCount}.");
     }
 
     private static decimal ResolveEstimatedCost(
@@ -2028,6 +2108,23 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             stepInstanceId = default;
             return false;
         }
+    }
+
+    private sealed record RuntimeContextUsageSummary(
+        int EstimatedInputTokens,
+        int InputMessageCount,
+        int ToolCount,
+        int ToolSchemaEstimatedTokens,
+        int SourceCount,
+        string DiagnosticsJson)
+    {
+        public static RuntimeContextUsageSummary Empty { get; } = new(
+            EstimatedInputTokens: 0,
+            InputMessageCount: 0,
+            ToolCount: 0,
+            ToolSchemaEstimatedTokens: 0,
+            SourceCount: 0,
+            DiagnosticsJson: string.Empty);
     }
 }
 
@@ -2665,6 +2762,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
         string OwnerId,
         DateTimeOffset CreatedAtUtc,
         DateTimeOffset ExpiresAtUtc);
+
 }
 
 internal sealed class AgentFrameworkProcessExecutionClaimRecoveryWorker(

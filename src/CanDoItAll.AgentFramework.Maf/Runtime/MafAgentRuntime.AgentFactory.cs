@@ -98,7 +98,8 @@ public sealed partial class MafAgentRuntime
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements,
-            runtimeOptions.ContextWorkspaceScope ?? workspaceScope);
+            runtimeOptions.ContextWorkspaceScope ?? workspaceScope,
+            runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty);
         await FilterUnusableApprovalToolsAsync(
             capabilityState,
             effectiveProvider,
@@ -162,7 +163,8 @@ public sealed partial class MafAgentRuntime
             ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
             finalizerCapture,
             toolInvocationTraceRecorder,
-            capabilityState.ContextContributionTraceCollector);
+            capabilityState.ContextContributionTraceCollector,
+            runtimeCapabilityState: capabilityState);
     }
 
     private async Task<RuntimeBuildResult> CreateHandoffRuntimeBuildAsync(
@@ -1628,7 +1630,8 @@ public sealed partial class MafAgentRuntime
         AgentContextContributionTraceCollector? contextContributionTraceCollector,
         Func<IReadOnlyList<AgentFinalizerInvocation>>? snapshotFinalizerInvocations = null,
         Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null,
-        Func<IReadOnlyList<AgentContextContributionTrace>>? snapshotContextContributionTraces = null) : IAsyncDisposable
+        Func<IReadOnlyList<AgentContextContributionTrace>>? snapshotContextContributionTraces = null,
+        RuntimeCapabilityState? runtimeCapabilityState = null) : IAsyncDisposable
     {
         public AIAgent Agent { get; } = agent;
 
@@ -1639,6 +1642,8 @@ public sealed partial class MafAgentRuntime
         public bool HasApprovalTools { get; } = hasApprovalTools;
 
         public bool IsTemperatureOmitted { get; } = isTemperatureOmitted;
+
+        public RuntimeCapabilityState? CapabilityState { get; } = runtimeCapabilityState;
 
         public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
             => snapshotFinalizerInvocations?.Invoke() ?? finalizerCapture?.Snapshot() ?? [];
@@ -1696,6 +1701,8 @@ public sealed partial class MafAgentRuntime
         public List<AIContextProvider> ContextProviders { get; } = [];
 
         public AgentContextContributionTraceCollector ContextContributionTraceCollector { get; } = new();
+
+        public List<AgentRuntimeContextManifestSource> ContextSources { get; } = [];
 
         public HashSet<string> FrameworkToolNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 

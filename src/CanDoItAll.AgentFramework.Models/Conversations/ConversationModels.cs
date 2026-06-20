@@ -349,7 +349,8 @@ public sealed record AgentRuntimeExecutionOptions(
     bool RequireJsonResponseFormat = false,
     string ResponseFormatJsonSchema = "",
     string ResponseFormatSchemaName = "",
-    string ResponseFormatSchemaDescription = "");
+    string ResponseFormatSchemaDescription = "",
+    AgentRuntimeContextIntent? ContextIntent = null);
 
 public sealed record AgentRuntimeHandoffExecutionOptions(
     AgentHandoffSettings Settings,
