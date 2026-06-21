@@ -1,0 +1,7 @@
+{
+    "processKey":  "blazor-fullstack-feature",
+    "compatible":  true,
+    "notes":  [
+                  "Template-only process definition."
+              ]
+}

@@ -34,6 +34,10 @@ public interface ISandboxWorkspaceExecutionRunStore
     Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         CancellationToken cancellationToken = default);
 
+    Task<ExecutionRunRecord?> GetExecutionRunAsync(
+        Guid executionRunId,
+        CancellationToken cancellationToken = default);
+
     Task<ExecutionRunDetail?> GetExecutionRunDetailAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default);
@@ -75,6 +79,17 @@ public interface ISandboxWorkspaceChatQueryStore
     Task<ChatRuntimeSnapshot> LoadChatRuntimeSnapshotAsync(
         Guid agentId,
         Guid? chatSessionId = null,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ISandboxWorkspaceChatSessionStore
+{
+    Task<ChatSessionRecord> CreateChatSessionAsync(
+        ChatSessionRecord session,
+        CancellationToken cancellationToken = default);
+
+    Task<ChatSessionRecord> UpdateChatSessionAsync(
+        ChatSessionRecord session,
         CancellationToken cancellationToken = default);
 }
 
@@ -120,6 +135,10 @@ public sealed record AgentRuntimeResponse(
     public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];
 
     public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+
+    public AgentRuntimeContextAssemblyManifest? ContextAssemblyManifest { get; init; }
+
+    public IReadOnlyList<AgentContextContributionTrace> ContextContributionTraces { get; init; } = [];
 }
 
 public sealed class AgentRuntimeUsageException : Exception

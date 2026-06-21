@@ -1,0 +1,31 @@
+flowchart LR
+%% process-key: hotfix-rollout
+%% definition-doc: processes/hotfix-rollout/definition.md
+    step_activate_emergency_bridge(["Activate emergency bridge and classify severity<br/><sub>activate-emergency-bridge</sub><br/><i>Command posture</i>"])
+    step_assess_blast_radius["Assess blast radius and rollback constraints<br/><sub>assess-blast-radius</sub><br/><i>Risk framing and bounded emergency scope</i>"]
+    step_package_hotfix["Package emergency hotfix and rollback scripts<br/><sub>package-hotfix</sub><br/><i>Controlled change assembly</i>"]
+    step_validate_hotfix["Validate emergency fix in shadow environment<br/><sub>validate-hotfix</sub><br/><i>Fast but explicit regression gate</i>"]
+    step_approve_emergency_release{"Approve emergency release window<br/><sub>approve-emergency-release</sub><br/><i>Explicit go / no-go and rollback trigger</i>"}
+    step_execute_emergency_rollout["Execute emergency rollout and watch telemetry<br/><sub>execute-emergency-rollout</sub><br/><i>Controlled production action</i>"]
+    step_post_incident_review(["Capture post-incident learning and corrective actions<br/><sub>post-incident-review</sub><br/><i>Forensic replay and systemic follow-up</i>"])
+    step_activate_emergency_bridge --> step_assess_blast_radius
+    step_assess_blast_radius --> step_package_hotfix
+    step_package_hotfix --> step_validate_hotfix
+    step_assess_blast_radius --> step_approve_emergency_release
+    step_validate_hotfix --> step_approve_emergency_release
+    step_approve_emergency_release --> step_execute_emergency_rollout
+    step_execute_emergency_rollout --> step_post_incident_review
+%% step-doc: activate-emergency-bridge => processes/hotfix-rollout/steps/activate-emergency-bridge.md
+%% step-artifact: activate-emergency-bridge => emergency-bridge-log
+%% step-doc: assess-blast-radius => processes/hotfix-rollout/steps/assess-blast-radius.md
+%% step-artifact: assess-blast-radius => blast-radius-assessment
+%% step-doc: package-hotfix => processes/hotfix-rollout/steps/package-hotfix.md
+%% step-artifact: package-hotfix => hotfix-package
+%% step-doc: validate-hotfix => processes/hotfix-rollout/steps/validate-hotfix.md
+%% step-artifact: validate-hotfix => emergency-validation-evidence-pack
+%% step-doc: approve-emergency-release => processes/hotfix-rollout/steps/approve-emergency-release.md
+%% step-artifact: approve-emergency-release => emergency-window-approval-record
+%% step-doc: execute-emergency-rollout => processes/hotfix-rollout/steps/execute-emergency-rollout.md
+%% step-artifact: execute-emergency-rollout => rollback-plan
+%% step-doc: post-incident-review => processes/hotfix-rollout/steps/post-incident-review.md
+%% step-artifact: post-incident-review => retrospective-improvement-log

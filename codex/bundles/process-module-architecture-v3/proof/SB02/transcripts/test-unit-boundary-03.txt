@@ -1,0 +1,17 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.16]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.32]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.37]   Starting:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ProcessModuleBoundaryTests.Concrete_process_driver_projects_are_not_active [9 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessModuleBoundaryTests.Process_boundary_projects_appear_in_solution_order [10 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessModuleBoundaryTests.Process_boundary_projects_only_reference_allowed_inner_layers [21 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessModuleBoundaryTests.Process_generic_projects_do_not_contain_domain_specific_vocabulary [85 ms]
+[xUnit.net 00:00:04.91]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ProcessModuleBoundaryTests.Deprecated_process_runtime_symbols_are_absent_from_active_sources [4 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 5
+     Úspěšné: 5
+ Celkový čas: 5,5317 Sekundy

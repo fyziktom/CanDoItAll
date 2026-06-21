@@ -1,0 +1,121 @@
+- region "Project structure selection panel" [ref=e254] [box=1384,96,360,360]:
+  - generic [ref=e255] [box=1397,109,335,95]:
+    - generic [ref=e256] [box=1397,109,216,95]:
+      - paragraph [ref=e257] [box=1397,109,216,14]: Selection panel
+      - heading "Main App" [level=3] [ref=e258] [box=1397,125,216,18]
+      - paragraph [ref=e259] [box=1397,146,216,57]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+    - generic [ref=e260] [box=1624,109,107,32]:
+      - button "Minimize window" [ref=e261] [box=1624,109,32,32]:
+        - generic [ref=e262] [box=1633,117,14,14]: minimize
+      - button "Restart window position and size" [ref=e263] [box=1662,109,32,32]:
+        - generic [ref=e264] [box=1671,117,14,14]: restart_alt
+      - button "Hide window" [ref=e265] [box=1699,109,32,32]:
+        - generic [ref=e266] [box=1708,117,14,14]: visibility_off
+  - generic [ref=e268] [box=1397,215,317,1388]:
+    - generic [ref=e269] [box=1397,215,317,278]:
+      - paragraph [ref=e270] [box=1414,232,283,14]: Delivery block
+      - heading "Main App" [level=3] [ref=e271] [box=1414,259,283,36]
+      - paragraph [ref=e272] [box=1414,314,283,25]: "Status: Draft"
+      - generic [ref=e273] [box=1414,352,283,38]:
+        - generic [ref=e275] [box=1427,359,37,24]: Draft
+        - generic [ref=e277] [box=1499,359,103,24]: Delivery block
+      - generic [ref=e278] [box=1414,404,283,72]:
+        - generic [ref=e279] [box=1414,404,283,24]:
+          - text: Progress
+          - strong [ref=e280] [box=1479,405,23,22]: 0%
+        - generic [ref=e281] [box=1414,428,283,24]:
+          - text: Priority
+          - strong [ref=e282] [box=1468,429,41,22]: None
+        - generic [ref=e283] [box=1414,452,283,24]:
+          - text: Marker
+          - strong [ref=e284] [box=1468,453,41,22]: None
+    - generic [ref=e285] [box=1397,509,317,571]:
+      - paragraph [ref=e286] [box=1414,526,283,14]: Node actions
+      - generic [ref=e287] [box=1414,553,283,510]:
+        - button "Edit" [ref=e288] [box=1414,553,85,43]:
+          - generic [ref=e289] [box=1431,562,51,25]:
+            - generic [ref=e291] [box=1431,567,20,20]: draw
+            - text: Edit
+        - button "Copy id" [ref=e292] [box=1499,553,172,43]:
+          - generic [ref=e293] [box=1516,562,138,25]:
+            - generic [ref=e295] [box=1516,567,80,20]: copy
+            - text: Copy id
+        - button "Copy info" [ref=e296] [box=1414,596,187,43]:
+          - generic [ref=e297] [box=1431,605,153,25]:
+            - generic [ref=e299] [box=1431,609,80,20]: copy
+            - text: Copy info
+        - button "Copy tree ids" [ref=e300] [box=1414,638,211,43]:
+          - generic [ref=e301] [box=1431,647,177,25]:
+            - generic [ref=e303] [box=1431,652,80,20]: copy
+            - text: Copy tree ids
+        - button "Open" [ref=e304] [box=1414,681,97,43]:
+          - generic [ref=e305] [box=1431,690,63,25]:
+            - generic [ref=e307] [box=1431,694,20,20]: open_in_new
+            - text: Open
+        - button "Validate" [ref=e308] [box=1511,681,114,43]:
+          - generic [ref=e309] [box=1528,690,80,25]:
+            - generic [ref=e311] [box=1528,694,20,20]: fact_check
+            - text: Validate
+        - button "Test" [ref=e312] [box=1414,723,86,43]:
+          - generic [ref=e313] [box=1431,732,52,25]:
+            - generic [ref=e315] [box=1431,737,20,20]: science
+            - text: Test
+        - button "Summary" [ref=e316] [box=1499,723,125,43]:
+          - generic [ref=e317] [box=1516,732,91,25]:
+            - generic [ref=e319] [box=1516,737,20,20]: pie_chart
+            - text: Summary
+        - button "Add process" [ref=e320] [box=1414,766,146,43]:
+          - generic [ref=e321] [box=1431,775,112,25]:
+            - generic [ref=e323] [box=1431,779,20,20]: account_tree
+            - text: Add process
+        - button "Add workflow" [ref=e324] [box=1414,808,156,43]:
+          - generic [ref=e325] [box=1431,817,122,25]:
+            - generic [ref=e327] [box=1431,822,20,20]: account_tree
+            - text: Add workflow
+        - button "Connect selected" [ref=e328] [box=1414,851,179,43]:
+          - generic [ref=e329] [box=1431,860,145,25]:
+            - generic [ref=e331] [box=1431,864,20,20]: link
+            - text: Connect selected
+        - button "Reconnect" [ref=e332] [box=1414,893,132,43]:
+          - generic [ref=e333] [box=1431,902,98,25]:
+            - generic [ref=e335] [box=1431,907,20,20]: sync_alt
+            - text: Reconnect
+        - button "Disconnect" [ref=e336] [box=1545,893,136,43]:
+          - generic [ref=e337] [box=1562,902,102,25]:
+            - generic [ref=e339] [box=1562,907,20,20]: link_off
+            - text: Disconnect
+        - button "To subproject" [ref=e340] [box=1414,936,154,43]:
+          - generic [ref=e341] [box=1431,945,120,25]:
+            - generic [ref=e343] [box=1431,949,20,20]: call_split
+            - text: To subproject
+        - button "Export image" [ref=e344] [box=1414,978,152,43]:
+          - generic [ref=e345] [box=1431,987,118,25]:
+            - generic [ref=e347] [box=1431,992,20,20]: image
+            - text: Export image
+        - button "Change block" [ref=e348] [box=1414,1021,155,43]:
+          - generic [ref=e349] [box=1431,1030,121,25]:
+            - generic [ref=e351] [box=1431,1034,20,20]: swap_horiz
+            - text: Change block
+        - button "Delete" [ref=e352] [box=1568,1021,104,43]:
+          - generic [ref=e353] [box=1585,1030,70,25]:
+            - generic [ref=e355] [box=1585,1034,20,20]: delete
+            - text: Delete
+    - generic [ref=e356] [box=1397,1096,317,370]:
+      - paragraph [ref=e357] [box=1414,1113,283,14]: Create next to source
+      - heading "Use the floating toolbox" [level=3] [ref=e358] [box=1414,1141,283,36]
+      - paragraph [ref=e359] [box=1414,1196,283,98]:
+        - text: The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from
+        - strong [ref=e360] [box=1611,1272,71,21]: Main App
+        - text: .
+      - generic [ref=e361] [box=1414,1308,283,86]:
+        - generic [ref=e363] [box=1427,1315,129,24]: "Source: Main App"
+        - generic [ref=e365] [box=1427,1362,256,24]: "Mode: child placement"
+      - button "Open standard blocks" [ref=e367] [box=1414,1407,188,42]:
+        - generic [ref=e368] [box=1431,1416,154,24]: Open standard blocks
+    - group [ref=e369] [box=1397,1482,317,120]:
+      - generic "Advanced details Show advanced details help" [ref=e370] [box=1414,1499,283,73]:
+        - generic [ref=e372] [box=1414,1500,283,47]:
+          - strong [ref=e373] [box=1427,1500,128,22]: Advanced details
+          - button "Show advanced details help" [ref=e376] [cursor=pointer] [box=1414,1529,17,17]:
+            - generic [ref=e377] [box=1420,1533,4,10]: "?"
+        - generic [ref=e379] [box=1414,1552,20,20]: expand_more

@@ -1,0 +1,45 @@
+- dialog "Add process for Main App" [ref=e1874] [box=224,271,1152,458]:
+  - generic [ref=e1875] [box=243,290,1115,404]:
+    - generic [ref=e1876] [box=243,290,935,144]:
+      - generic [ref=e1877] [box=243,290,935,90]:
+        - paragraph [ref=e1878] [box=243,290,88,15]: Process link
+        - heading "Add process for Main App" [level=5] [ref=e1879] [box=243,309,278,37]
+        - paragraph [ref=e1880] [box=243,356,935,25]: Choose an existing process definition to link to this node. The link stays explicit in the project structure and does not create a new process.
+      - generic [ref=e1881] [box=243,392,935,42]:
+        - button "Cancel" [ref=e1882] [box=968,392,81,42]:
+          - generic [ref=e1883] [box=985,401,47,24]: Cancel
+        - button "Add process" [ref=e1884] [box=1057,392,121,42]:
+          - generic [ref=e1885] [box=1074,401,87,24]: Add process
+    - generic [ref=e1887] [box=243,450,935,244]:
+      - generic [ref=e1889] [box=260,467,439,87]:
+        - generic [ref=e1890] [box=260,473,82,25]: Process
+        - combobox [ref=e1891] [box=260,505,439,49]:
+          - option "Select a process" [box=0,0,0,0]
+          - option ".NET architecture design and review subprocess" [selected] [box=0,0,0,0]
+          - option ".NET feature/function implementation subprocess" [box=0,0,0,0]
+          - option ".NET implementation slice with atomic validation" [box=0,0,0,0]
+          - option ".NET runtime command project-structure writeback" [box=0,0,0,0]
+          - option ".NET solution setup subprocess" [box=0,0,0,0]
+          - option ".NET UI screenshot project-structure writeback" [box=0,0,0,0]
+          - option "AI-assisted change delivery with guarded delegation" [box=0,0,0,0]
+          - option "App layout image generation" [box=0,0,0,0]
+          - option "App page screenshot capture" [box=0,0,0,0]
+          - option "App pages screenshot set capture" [box=0,0,0,0]
+          - option "Architecture decision governance and ADR stewardship" [box=0,0,0,0]
+          - option "Blazor app delivery" [box=0,0,0,0]
+          - option "Blazor app repair and fix" [box=0,0,0,0]
+          - option "Blazor backend and frontend feature addition" [box=0,0,0,0]
+          - option "Blazor backend feature addition" [box=0,0,0,0]
+          - option "Blazor frontend feature addition" [box=0,0,0,0]
+          - option "Branching code review and merge governance" [box=0,0,0,0]
+          - option "Business plan development" [box=0,0,0,0]
+          - option "Customer onboarding orchestration" [box=0,0,0,0]
+          - option "Emergency hotfix rollout with shard-risk governance" [box=0,0,0,0]
+          - option "Incident response and escalation" [box=0,0,0,0]
+          - option "Multi-team software delivery and release governance" [box=0,0,0,0]
+          - option "Open-source intake and supply-chain governance" [box=0,0,0,0]
+          - option "Release readiness and deployment control" [box=0,0,0,0]
+      - generic [ref=e1893] [box=260,600,346,77]:
+        - paragraph [ref=e1894] [box=260,600,118,15]: Selected process
+        - paragraph [ref=e1895] [box=260,619,346,24]: .NET architecture design and review subprocess
+        - paragraph [ref=e1896] [box=260,653,213,25]: Global scope • TemplateDefault

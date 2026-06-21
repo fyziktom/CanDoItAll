@@ -17,6 +17,7 @@ using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Processes.Persistence;
 
 namespace CanDoItAll.Composition;
 
@@ -34,6 +35,7 @@ public static class ModuleAssemblies
         typeof(PluginsModuleAssemblyMarker).Assembly,
         typeof(ProjectsModuleAssemblyMarker).Assembly,
         typeof(ProcessesModuleAssemblyMarker).Assembly,
+        typeof(ProcessPersistenceAssemblyMarker).Assembly,
         typeof(PromptsModuleAssemblyMarker).Assembly,
         typeof(ResourcesModuleAssemblyMarker).Assembly,
         typeof(SchedulerPlannerModuleAssemblyMarker).Assembly,

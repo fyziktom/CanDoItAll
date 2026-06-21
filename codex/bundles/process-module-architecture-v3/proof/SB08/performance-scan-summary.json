@@ -1,0 +1,64 @@
+{
+  "command": "rg pattern count over SB08 persistence/projection/test files",
+  "paths": [
+    "src\\CanDoItAll.Processes.Persistence",
+    "src\\CanDoItAll.Processes.Projections",
+    "tests\\CanDoItAll.Tests.Unit\\ProcessPersistenceStoreTests.cs"
+  ],
+  "generatedUtc": "2026-06-15T20:34:23.6688529Z",
+  "counts": {
+    "SyncWait": 0,
+    "ThreadSleep": 0,
+    "PerCallHttpClient": 0,
+    "JsonSerializerOptionsAllocation": 0,
+    "RegexAllocation": 0,
+    "ContainsKey": 0,
+    "ToLowerUpper": 0,
+    "LinqWhere": 7,
+    "LinqSelect": 4,
+    "LinqOrderBy": 4,
+    "LinqToList": 0,
+    "EfToListAsync": 4
+  },
+  "matches": {
+    "SyncWait": [],
+    "ThreadSleep": [],
+    "PerCallHttpClient": [],
+    "JsonSerializerOptionsAllocation": [],
+    "RegexAllocation": [],
+    "ContainsKey": [],
+    "ToLowerUpper": [],
+    "LinqWhere": [
+      "tests\\CanDoItAll.Tests.Unit\\ProcessPersistenceStoreTests.cs:271:            .Where(index => index.IsUnique)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessOutboxStore.cs:34:            .Where(message =>",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessProjectionStore.cs:141:            .Where(deadLetter => deadLetter.ProjectorName == projectorName.Value && deadLetter.ShardKey == shardKey.Value)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeEventStore.cs:42:            .Where(runtimeEvent => runtimeEvent.GlobalSequence > globalSequenceExclusive)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeEventStore.cs:67:            .Where(runtimeEvent => runtimeEvent.RootRunId == rootRunId.Value && runtimeEvent.RootSequence > rootSequenceExclusive)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeEventStore.cs:106:            .Where(runtimeEvent => runtimeEvent.RootRunId == rootRunId)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeUnitOfWork.cs:187:            .Where(runtimeEvent => runtimeEvent.RootRunId == rootRunId)"
+    ],
+    "LinqSelect": [
+      "tests\\CanDoItAll.Tests.Unit\\ProcessPersistenceStoreTests.cs:138:        Assert.Equal([1, 2], globalEvents.Select(runtimeEvent => runtimeEvent.GlobalSequence));",
+      "tests\\CanDoItAll.Tests.Unit\\ProcessPersistenceStoreTests.cs:139:        Assert.Equal([1, 2], rootEvents.Select(runtimeEvent => runtimeEvent.RootSequence));",
+      "tests\\CanDoItAll.Tests.Unit\\ProcessPersistenceStoreTests.cs:269:            .Select(key => key.Properties.Select(property => property.Name).ToArray());",
+      "tests\\CanDoItAll.Tests.Unit\\ProcessPersistenceStoreTests.cs:272:            .Select(index => index.Properties.Select(property => property.Name).ToArray());"
+    ],
+    "LinqOrderBy": [
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessOutboxStore.cs:37:            .OrderBy(message => message.CreatedAtUtc)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessProjectionStore.cs:142:            .OrderBy(deadLetter => deadLetter.GlobalSequence)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeEventStore.cs:43:            .OrderBy(runtimeEvent => runtimeEvent.GlobalSequence)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeEventStore.cs:68:            .OrderBy(runtimeEvent => runtimeEvent.RootSequence)"
+    ],
+    "LinqToList": [],
+    "EfToListAsync": [
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessOutboxStore.cs:39:            .ToListAsync(cancellationToken)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessProjectionStore.cs:144:            .ToListAsync(cancellationToken)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeEventStore.cs:45:            .ToListAsync(cancellationToken)",
+      "src\\CanDoItAll.Processes.Persistence\\EfProcessRuntimeEventStore.cs:70:            .ToListAsync(cancellationToken)"
+    ]
+  },
+  "notes": [
+    "EF query LINQ is database-side store access, not in-memory hot-path projection logic.",
+    "Test-only LINQ is excluded from production performance risk."
+  ]
+}

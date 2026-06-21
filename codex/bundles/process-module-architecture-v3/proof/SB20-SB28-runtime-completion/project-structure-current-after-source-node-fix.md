@@ -1,0 +1,92 @@
+- generic [ref=e792] [box=0,0,1600,1000]:
+  - complementary [ref=e793] [box=16,8,76,984]:
+    - generic [ref=e794] [box=27,19,54,962]:
+      - generic [ref=e795] [box=27,19,54,40]:
+        - generic [ref=e796] [box=27,19,10,40]:
+          - generic [ref=e797] [box=12,19,40,40]: CD
+          - generic [ref=e798] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e799] [box=45,21,36,36]:
+          - generic [ref=e800] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e801] [box=27,67,54,803]:
+        - button "Dashboard" [ref=e803] [box=27,71,44,44]:
+          - generic [ref=e805] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e807] [box=27,121,44,44]:
+          - generic [ref=e809] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e811] [box=27,171,44,44]:
+          - generic [ref=e813] [box=39,183,20,20]: forum
+          - generic [ref=e814] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e816] [box=27,221,44,44]:
+          - generic [ref=e818] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e820] [box=27,271,44,44]:
+          - generic [ref=e822] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e824] [box=27,321,44,44]:
+          - generic [ref=e826] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e828] [box=27,371,44,44]:
+          - generic [ref=e830] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e832] [box=27,421,44,44]:
+          - generic [ref=e834] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e836] [box=27,471,44,44]:
+          - generic [ref=e838] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e840] [box=27,521,44,44]:
+          - generic [ref=e842] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e844] [box=27,571,44,44]:
+          - generic [ref=e846] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e848] [box=27,621,44,44]:
+          - generic [ref=e850] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e852] [box=27,671,44,44]:
+          - generic [ref=e854] [box=39,683,20,20]: construction
+        - button "More pages" [ref=e856] [box=32,721,44,44]:
+          - generic [ref=e858] [box=44,733,20,20]: expand_less
+        - button "Opened work" [ref=e860] [box=32,771,44,44]:
+          - generic [ref=e862] [box=44,783,20,20]: web_asset
+          - generic [ref=e863] [box=58,773,16,16]: "1"
+      - generic [ref=e865] [box=27,887,54,94]:
+        - button "Settings" [ref=e867] [box=27,887,54,44]:
+          - generic [ref=e869] [box=44,899,20,20]: settings
+          - generic [ref=e870] [box=54,909,1,1]: Settings
+        - button "Switch Database" [ref=e872] [box=27,937,54,44]:
+          - generic [ref=e874] [box=44,949,20,20]: storage
+          - generic [ref=e875] [box=54,959,1,1]: Switch Database
+  - main [ref=e876] [box=100,8,1484,984]:
+    - generic [ref=e877] [box=100,8,1484,30]:
+      - generic [ref=e881] [box=104,8,829,30]:
+        - button "Dashboard" [ref=e883] [box=113,13,85,20]:
+          - generic [ref=e884] [box=113,15,59,16]: Dashboard
+          - generic [ref=e886] [box=178,13,20,20]: push_pin
+        - button "Processes" [ref=e888] [box=222,15,53,16]:
+          - generic [ref=e889] [box=222,15,53,16]: Processes
+        - button "Live Processes" [ref=e891] [box=298,15,77,16]:
+          - generic [ref=e892] [box=298,15,77,16]: Live Processes
+        - button "Projects" [ref=e894] [box=400,15,43,16]:
+          - generic [ref=e895] [box=400,15,43,16]: Projects
+        - button "TetrisGame · Structure" [ref=e897] [box=467,15,120,16]:
+          - generic [ref=e898] [box=467,15,120,16]: TetrisGame · Structure
+        - button "TetrisGame · Live Processes" [ref=e900] [box=611,15,144,16]:
+          - generic [ref=e901] [box=611,15,144,16]: TetrisGame · Live Processes
+      - generic [ref=e903] [box=953,10,631,26]:
+        - generic [ref=e904] [box=953,10,207,26]:
+          - generic [ref=e905] [box=964,16,136,13]: Delivery Workspace
+          - generic [ref=e906] [box=1106,15,43,16]: Projects
+        - generic [ref=e907] [box=1168,10,83,26]: TetrisGame
+        - generic [ref=e908] [box=1258,10,44,26]: WIP
+        - generic [ref=e909] [box=1310,10,117,26]: Interactive Server
+        - generic [ref=e910] [box=1436,10,85,26]: Live items 1
+        - generic [ref=e911] [box=1528,10,56,26]: Tabs 6
+    - generic [ref=e915] [box=100,46,1484,1021]:
+      - generic [ref=e917] [box=100,46,1484,155]:
+        - generic [ref=e918] [box=121,67,1442,97]:
+          - paragraph [ref=e919] [box=121,67,1442,17]: Structure canvas
+          - generic [ref=e920] [box=121,96,1442,68]
+        - generic [ref=e935] [box=0,0,1600,1000]:
+          - generic [ref=e936] [box=0,0,1600,72]
+          - generic [ref=e1000] [box=0,0,1600,1000]
+      - generic [ref=e1511] [box=100,225,844,841]:
+        - generic [ref=e1513] [box=134,259,776,570]:
+          - paragraph [ref=e1514] [box=134,259,53,15]: Outline
+          - heading "Project object index" [level=5] [ref=e1515] [box=134,282,211,37]
+          - tree "Project object index" [ref=e1517] [box=134,328,776,502]
+        - generic [ref=e1607] [box=134,880,776,153]:
+          - paragraph [ref=e1608] [box=134,880,118,15]: Canvas coverage
+          - heading "Graph health" [level=5] [ref=e1609] [box=134,903,138,37]
+          - generic [ref=e1610] [box=134,948,220,22]
+          - paragraph [ref=e1620] [box=134,984,776,49]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.

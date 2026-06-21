@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace CanDoItAll.Infrastructure.Persistence;
 
@@ -63,4 +64,28 @@ public sealed class AppDbContext : DbContext
         }
     }
 
+}
+
+internal sealed class AppDbContextModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context)
+    {
+        return Create(context, designTime: false);
+    }
+
+    public object Create(DbContext context, bool designTime)
+    {
+        return context is AppDbContext
+            ? new AppDbContextModelCacheKey(context.GetType(), designTime, AppDbContextModelRegistry.ModelCacheKey)
+            : new DefaultModelCacheKey(context.GetType(), designTime);
+    }
+
+    private sealed record AppDbContextModelCacheKey(
+        Type ContextType,
+        bool DesignTime,
+        string RegistryKey);
+
+    private sealed record DefaultModelCacheKey(
+        Type ContextType,
+        bool DesignTime);
 }

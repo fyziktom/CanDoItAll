@@ -1,1 +1,0 @@
-Expected failing-first: no SB06 idempotency/no-message status markers found before implementation. rg exit code: 1

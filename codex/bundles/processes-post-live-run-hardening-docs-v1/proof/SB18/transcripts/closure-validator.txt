@@ -1,9 +1,0 @@
-# SB18 Closure Validator
-
-Command:
-python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\processes-post-live-run-hardening-docs-v1 --stage completed --repo-root C:\repositories\CanDoItAll
-
-Result:
-Bundle is valid for stage 'completed': bundle://
-
-ExitCode: 0

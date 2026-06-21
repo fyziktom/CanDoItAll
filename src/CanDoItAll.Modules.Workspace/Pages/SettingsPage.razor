@@ -56,6 +56,16 @@
                                 </InputSelect>
                             </div>
                         </Grid>
+                        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                            <div>
+                                <label class="cda-field-label">Currency code</label>
+                                <InputText @bind-Value="settingsModel.CurrencyCode" class="cda-input" maxlength="3" />
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Currency culture</label>
+                                <InputText @bind-Value="settingsModel.CurrencyCultureName" class="cda-input" />
+                            </div>
+                        </Grid>
                     </FormSection>
 
                     <FormSection Title="Workspace notes"

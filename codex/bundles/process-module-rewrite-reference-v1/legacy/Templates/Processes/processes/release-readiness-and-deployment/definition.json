@@ -1,0 +1,1060 @@
+{
+  "Kind": "process-template",
+  "Key": "release-readiness-and-deployment",
+  "DisplayName": "Release readiness and deployment control",
+  "Summary": "Control the path from scope freeze to cutover, live watch, rollback readiness, and learning with explicit release evidence, approvals, and watch ownership.",
+  "ValueStatement": "Lower release risk by turning scattered evidence, deployment choreography, and go-live authority into one typed control process that works for human teams and AI-assisted orchestration.",
+  "CustomerName": "Release management and service operations",
+  "OwnerName": "Change governance board",
+  "InterfaceContractSummary": "Implementation outputs, quality evidence, operational readiness, support coverage, and release-window constraints are merged into one bounded deployment decision.",
+  "GovernanceNotes": "A release is not ready because a team feels ready; it is ready only when the control process can prove scope, evidence, approval, and rollback preparedness.",
+  "ChangeSummary": "Built from SSDF verification/release evidence, SAMM governance maturity, and operational cutover discipline suitable for shared-responsibility SaaS delivery.",
+  "GovernancePolicySummary": "Go-live requires scope freeze, evidence synthesis, change-window coverage, rollback readiness, explicit approval, and named watch coverage.",
+  "ConstitutionRuleSummary": "No one may reinterpret an approval outside the conditions that were explicitly recorded.",
+  "OperatingModeSummary": "Guarded live execution: automation may prepare, validate, and monitor, but final approval and exception handling remain human.",
+  "SimulationReadinessSummary": "Supports cutover rehearsal, watch roster simulation, dashboard integration, and post-release control tuning.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "slsa"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "qa-lead",
+    "security-reviewer",
+    "release-approver",
+    "platform-engineer",
+    "service-owner"
+  ],
+  "SharedChecklistRefs": [
+    "release-go-live-checklist",
+    "qa-evidence-checklist",
+    "security-review-checklist"
+  ],
+  "SharedValidationRefs": [
+    "validation-proof-sufficient",
+    "validation-release-authorized",
+    "validation-rollback-ready",
+    "validation-security-clear"
+  ],
+  "SharedPromptRefs": [
+    "prompt-release-decision",
+    "prompt-qa-test-design",
+    "prompt-security-review"
+  ],
+  "LocalRoleRefs": [
+    "change-manager"
+  ],
+  "LocalChecklistRefs": [
+    "cutover-rehearsal-checklist"
+  ],
+  "LocalValidationRefs": [
+    "validate-watch-coverage"
+  ],
+  "LocalPromptRefs": [
+    "prompt-cutover-command-brief"
+  ],
+  "LocalArtifactRefs": [
+    "cutover-watch-roster"
+  ],
+  "Metrics": [
+    "Release readiness lead time",
+    "Number of open exceptions at go/no-go",
+    "Rollback invocation count",
+    "Time to declare post-release stability"
+  ],
+  "Risks": [
+    "Deployment scope drifts after evidence collection.",
+    "Watch coverage or escalation ownership is incomplete.",
+    "Rollback plan exists on paper but is not operationally ready.",
+    "Approval is issued without clear live conditions."
+  ],
+  "TailoringRules": [
+    "For low-risk internal releases, merge evidence review and change-window check if watch coverage remains typed.",
+    "For customer-visible releases, customer communication artifacts should be linked even if not locally stored in the template.",
+    "For AI-generated release notes or deployment plans, require prompt-package and review evidence artifacts."
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "scope-freeze",
+      "Title": "Freeze release scope and deployment boundary",
+      "Subtitle": "Make the release target explicit",
+      "Notes": "Capture the exact change set, environment boundary, rollout strategy, and excluded items before readiness claims start.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Candidate release contents, change logs, linked work items, and deployment boundary.",
+      "OutputContractSummary": "Frozen release scope with explicit inclusions and exclusions.",
+      "EvidenceContractSummary": "Scope freeze note and environment targeting summary.",
+      "DecisionRightsSummary": "Change manager controls the frozen boundary; delivery manager reviews business commitment impact.",
+      "ExceptionPolicySummary": "No readiness claim is valid if scope can still silently drift.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "change-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Change manager owns boundary discipline."
+        },
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery manager reviews plan impact."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Operational boundary review remains explicit."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "intake-brief",
+          "Title": "Release scope freeze note",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "scope-freeze-intake-brief"
+        },
+        {
+          "TemplateKey": "implementation-plan",
+          "Title": "Deployment strategy outline",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "scope-freeze-implementation-plan"
+        }
+      ],
+      "ChecklistRefs": [
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-proof-sufficient"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/release-readiness-and-deployment/steps/scope-freeze.md"
+      ],
+      "BranchCanvasX": 320,
+      "BranchCanvasY": 200,
+      "Dependencies": [],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "readiness-synthesis",
+      "Title": "Synthesize readiness evidence and open risks",
+      "Subtitle": "Gather all proof into one release lens",
+      "Notes": "Combine implementation state, QA proof, security findings, operational checks, and known open items into one decision-ready package.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Frozen release scope, QA runs, security notes, environment status, and known exceptions.",
+      "OutputContractSummary": "Release readiness package with explicit open-risk inventory.",
+      "EvidenceContractSummary": "Release readiness report and linked evidence references.",
+      "DecisionRightsSummary": "Delivery manager and QA lead own evidence synthesis; security reviewer and service owner contribute risk posture.",
+      "ExceptionPolicySummary": "Do not summarize evidence that you have not actually inspected or linked.",
+      "TargetLeadHours": 8,
+      "DependsOnStepKey": "scope-freeze",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery manager remains accountable for the integrated view."
+        },
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "QA review confirms objective proof coverage."
+        },
+        {
+          "RoleKey": "security-reviewer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Security review remains explicit."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Service owner reviews operational readiness."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "release-readiness-report",
+          "Title": "Release readiness report",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "readiness-synthesis-release-readiness-report"
+        },
+        {
+          "TemplateKey": "test-evidence-pack",
+          "Title": "Test evidence pack",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "readiness-synthesis-test-evidence-pack"
+        }
+      ],
+      "ChecklistRefs": [
+        "qa-evidence-checklist",
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-proof-sufficient"
+      ],
+      "PromptRefs": [
+        "prompt-release-decision",
+        "prompt-qa-test-design"
+      ],
+      "DocRefs": [
+        "processes/release-readiness-and-deployment/steps/readiness-synthesis.md"
+      ],
+      "BranchCanvasX": 630,
+      "BranchCanvasY": 200,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "scope-freeze",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 2,
+      "Key": "cutover-rehearsal",
+      "Title": "Rehearse cutover and confirm watch coverage",
+      "Subtitle": "Operational readiness is rehearsed, not assumed",
+      "Notes": "Exercise the cutover sequence, support handoffs, and watch roster so operators know exactly who acts on which signal during the real release.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Release readiness package, deployment sequence, monitoring plan, and on-call availability.",
+      "OutputContractSummary": "Rehearsed cutover package and watch roster with gaps called out.",
+      "EvidenceContractSummary": "Watch roster, cutover rehearsal notes, and gap log.",
+      "DecisionRightsSummary": "Change manager owns choreography; platform engineer and service owner validate live-operability.",
+      "ExceptionPolicySummary": "If critical watch roles are missing or unreachable, hold the release.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "readiness-synthesis",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "change-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Cutover choreography remains with the change manager."
+        },
+        {
+          "RoleKey": "platform-engineer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Platform engineer reviews operational feasibility."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Service owner validates coverage and escalation."
+        },
+        {
+          "RoleKey": "release-approver",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": false,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Approver may observe rehearsal for high-risk releases."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "cutover-watch-roster",
+          "Title": "Cutover watch roster",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "cutover-rehearsal-cutover-watch-roster"
+        },
+        {
+          "TemplateKey": "rollback-plan",
+          "Title": "Rollback plan",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "cutover-rehearsal-rollback-plan"
+        }
+      ],
+      "ChecklistRefs": [
+        "cutover-rehearsal-checklist",
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-watch-coverage",
+        "validation-rollback-ready"
+      ],
+      "PromptRefs": [
+        "prompt-cutover-command-brief"
+      ],
+      "DocRefs": [
+        "processes/release-readiness-and-deployment/steps/cutover-rehearsal.md"
+      ],
+      "BranchCanvasX": 940,
+      "BranchCanvasY": 200,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "readiness-synthesis",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 3,
+      "Key": "security-and-go-no-go",
+      "Title": "Run final security review and go/no-go approval",
+      "Subtitle": "The last gate decides under explicit conditions",
+      "Notes": "Combine the readiness package, cutover rehearsal, rollback proof, and open exceptions into the final release decision.",
+      "StepKind": "Approval",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": true,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Readiness package, rehearsal output, rollback plan, and any exception requests.",
+      "OutputContractSummary": "Approved or held release decision with explicit conditions.",
+      "EvidenceContractSummary": "Release approval record and exception note if applicable.",
+      "DecisionRightsSummary": "Release approver owns the final decision; security reviewer may hold the release for unresolved control gaps.",
+      "ExceptionPolicySummary": "No release may proceed on informal approval; block when artifact recovery is required for missing or invalid go/no-go evidence.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "cutover-rehearsal",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "release-approver",
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchOutcomes": [
+        {
+          "Key": "go",
+          "Title": "Go",
+          "Description": "Release is approved under the recorded conditions."
+        },
+        {
+          "Key": "hold",
+          "Title": "Hold",
+          "Description": "Release is held pending gap closure or explicit exception resolution."
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "release-approver",
+          "ResponsibilityKind": "Approver",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Final go/no-go authority remains with the release approver."
+        },
+        {
+          "RoleKey": "security-reviewer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Security review remains explicit."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Operational risk owner reviews live conditions."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "security-review-note",
+          "Title": "Security review note",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "security-and-go-no-go-security-review-note"
+        },
+        {
+          "TemplateKey": "release-readiness-report",
+          "Title": "Final go/no-go decision",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "security-and-go-no-go-release-readiness-report"
+        }
+      ],
+      "ChecklistRefs": [
+        "security-review-checklist",
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-security-clear",
+        "validation-release-authorized",
+        "validation-rollback-ready"
+      ],
+      "PromptRefs": [
+        "prompt-release-decision",
+        "prompt-security-review"
+      ],
+      "DocRefs": [
+        "processes/release-readiness-and-deployment/steps/security-and-go-no-go.md"
+      ],
+      "BranchCanvasX": 3709,
+      "BranchCanvasY": -1390,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "cutover-rehearsal",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 4,
+      "Key": "execute-cutover",
+      "Title": "Execute cutover and observe live telemetry",
+      "Subtitle": "Run only inside the approved envelope",
+      "Notes": "Execute the approved deployment sequence, monitor live indicators, and invoke rollback if the approved threshold is breached.",
+      "StepKind": "Delivery",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Go decision, cutover brief, watch roster, telemetry thresholds, and rollback triggers.",
+      "OutputContractSummary": "Executed release with live status and next action record.",
+      "EvidenceContractSummary": "Operator execution note, telemetry snapshots, and rollback note if used.",
+      "DecisionRightsSummary": "Platform engineer performs the cutover; change manager controls timing and handoffs.",
+      "ExceptionPolicySummary": "Rollback immediately when thresholds or instructions dictate it.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "security-and-go-no-go",
+      "DependsOnBranchOutcomeKey": "go",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "platform-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Execution remains with the platform engineer."
+        },
+        {
+          "RoleKey": "change-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Change manager reviews cutover timing."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Backup",
+          "IsRequired": false,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Service owner remains fallback during live watch."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "rollback-plan",
+          "Title": "Rollback plan",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "execute-cutover-rollback-plan"
+        },
+        {
+          "TemplateKey": "provenance-report",
+          "Title": "Release execution provenance note",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "execute-cutover-provenance-report"
+        }
+      ],
+      "ChecklistRefs": [
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-release-authorized"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/release-readiness-and-deployment/steps/execute-cutover.md"
+      ],
+      "BranchCanvasX": 1560,
+      "BranchCanvasY": 200,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "security-and-go-no-go",
+          "DependsOnBranchOutcomeKey": "go"
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 5,
+      "Key": "stabilize-and-close",
+      "Title": "Confirm stability, close watch, and capture learning",
+      "Subtitle": "A release ends only after stability is explicit",
+      "Notes": "Confirm whether the service is stable, close the live watch, and record improvements for the next release.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Cutover outcome, telemetry trend, incident or support notes, and watch coverage observations.",
+      "OutputContractSummary": "Closed release watch with stability declaration and improvements.",
+      "EvidenceContractSummary": "Stability declaration and improvement log.",
+      "DecisionRightsSummary": "Service owner declares stability; change manager closes the change record; delivery manager captures learning.",
+      "ExceptionPolicySummary": "Do not declare stability without observed evidence for the agreed horizon.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "execute-cutover",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 5660,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Stability declaration remains with service owner."
+        },
+        {
+          "RoleKey": "change-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Change manager closes control records."
+        },
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Delivery manager captures follow-up work."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "retrospective-improvement-log",
+          "Title": "Retrospective improvement log",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "stabilize-and-close-retrospective-improvement-log"
+        },
+        {
+          "TemplateKey": "release-readiness-report",
+          "Title": "Release closure note",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "stabilize-and-close-release-readiness-report"
+        }
+      ],
+      "ChecklistRefs": [
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-proof-sufficient"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/release-readiness-and-deployment/steps/stabilize-and-close.md"
+      ],
+      "BranchCanvasX": 1870,
+      "BranchCanvasY": 200,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "execute-cutover",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 6,
+      "Key": "hold-release-and-track-gap-closure",
+      "Title": "Hold the release and track gap closure",
+      "Subtitle": "A held release still needs a typed end state",
+      "Notes": "Record the hold decision, missing controls, and required gap-closure plan so the release can resume from an explicit governance checkpoint instead of an informal retry.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Held release decision with unresolved gaps or exception requests.",
+      "OutputContractSummary": "Closed release attempt with explicit hold conditions and reopening trigger.",
+      "EvidenceContractSummary": "Release hold note and gap-closure summary.",
+      "DecisionRightsSummary": "Release approver and change manager define the hold boundary and required next checkpoint.",
+      "ExceptionPolicySummary": "Do not reopen the release path until the recorded hold conditions are satisfied explicitly.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "security-and-go-no-go",
+      "DependsOnBranchOutcomeKey": "hold",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": -1040,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "release-approver",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Release approver owns the held decision."
+        },
+        {
+          "RoleKey": "change-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Change manager preserves the reopening conditions."
+        }
+      ],
+      "ArtifactExpectations": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [],
+      "BranchCanvasX": 1560,
+      "BranchCanvasY": 340,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "security-and-go-no-go",
+          "DependsOnBranchOutcomeKey": "hold"
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ],
+  "DocPath": "processes/release-readiness-and-deployment/definition.md",
+  "RelativePath": "processes/release-readiness-and-deployment",
+  "DefinitionJsonPath": "processes/release-readiness-and-deployment/definition.json",
+  "DefinitionMarkdownPath": "processes/release-readiness-and-deployment/definition.md",
+  "CurrentModuleImportEnvelopePath": "processes/release-readiness-and-deployment/projection/current-module.import-envelope.json",
+  "CurrentModuleCompatibilityReportPath": "processes/release-readiness-and-deployment/projection/current-module.compatibility-report.json",
+  "CurrentModuleCompatibilityReportMarkdownPath": "processes/release-readiness-and-deployment/projection/current-module.compatibility-report.md",
+  "FlowchartPath": "processes/release-readiness-and-deployment/mermaid/flowchart.mmd",
+  "SequencePath": "processes/release-readiness-and-deployment/mermaid/sequence.mmd",
+  "LocalRoles": [
+    {
+      "Kind": "role-resource",
+      "Key": "change-manager",
+      "DisplayName": "Change manager",
+      "Scope": "local",
+      "ProcessKey": "release-readiness-and-deployment",
+      "Summary": "Change-window and stakeholder-readiness owner for production deployment events.",
+      "Purpose": "Coordinate production change timing, communications, operational readiness, and deployment-event discipline.",
+      "StaffingIntent": "A release/change specialist responsible for controlled execution during go-live windows.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "RoleTemplateSourceKey": "process-role-template/release-readiness-and-deployment/change-manager",
+      "RoleTemplateSnapshotName": "Change manager / template-pack v1",
+      "SnapshotSummary": "Change-window and stakeholder-readiness owner for production deployment events.",
+      "SeniorityBand": "Senior change or release operations management",
+      "MinimumYearsInPrimaryDiscipline": 5,
+      "MinimumYearsInSoftwareDelivery": 7,
+      "DomainTags": [
+        "change-management",
+        "deployment-window",
+        "stakeholder-readiness"
+      ],
+      "KnowledgeRequirements": [
+        "Knowledge of change windows, deployment communications, stakeholder notifications, and cutover discipline.",
+        "Ability to coordinate activities across release, support, infrastructure, and customer-facing teams.",
+        "Understanding of operational readiness checks and fallback ownership during go-live.",
+        "Ability to recognize when an apparently ready release lacks event-level discipline.",
+        "Knowledge of maintenance-window governance and approval paths.",
+        "Ability to document go-live conditions, hold points, and rollback triggers cleanly."
+      ],
+      "ExperienceRequirements": [
+        "Has run or coordinated production change events with multiple parties involved.",
+        "Has handled go/no-go checkpoints and late-breaking blockers.",
+        "Has executed communication and support readiness for customer-impacting releases.",
+        "Has worked with release approvers and operators during deployment windows.",
+        "Has captured lessons after difficult cutovers or rollback events."
+      ],
+      "DecisionRights": [
+        "Approve change-event readiness from a coordination perspective.",
+        "Stop the event when required stakeholders or communications are missing.",
+        "Escalate change-window or support-coverage conflicts.",
+        "Own the authoritative event plan and hold points."
+      ],
+      "OwnedArtifacts": [
+        "Change event plan",
+        "Stakeholder notification set",
+        "Deployment watch roster"
+      ],
+      "CollaborationExpectations": [
+        "Coordinate with release approver, platform engineer, and service owner.",
+        "Keep deployment-event timing and contact points unambiguous.",
+        "Ensure customer-facing teams know what to expect.",
+        "Record deviations and lessons for future release playbooks."
+      ],
+      "AntiPatterns": [
+        "Assuming technical readiness automatically implies event readiness.",
+        "Running change windows without contact, escalation, or support clarity.",
+        "Treating maintenance-window decisions as clerical.",
+        "Failing to preserve a clean go-live timeline."
+      ],
+      "FitnessEvidence": [
+        "Event plans that enabled controlled go-live execution.",
+        "Documented hold points and escalation paths actually used during releases.",
+        "Stakeholder feedback that deployment coordination was clear.",
+        "Improvement of cutover discipline over time."
+      ],
+      "DocPath": "processes/release-readiness-and-deployment/roles/change-manager.md"
+    }
+  ],
+  "LocalArtifacts": [
+    {
+      "Kind": "artifact-resource",
+      "Key": "cutover-watch-roster",
+      "DisplayName": "Cutover watch roster",
+      "Scope": "local",
+      "ProcessKey": "release-readiness-and-deployment",
+      "ArtifactKind": "Brief",
+      "DefaultTrustRequirement": "ReviewRequired",
+      "DefaultSensitivityLevel": "Internal",
+      "DefaultRetentionDays": 365,
+      "Summary": "Named on-watch roster for the first live risk window during deployment or cutover.",
+      "AllowedFutureUsageSummary": "Reusable for the specific deployment event and later incident or retrospective review.",
+      "ValidationRequirementSummary": "Must include actual names, contact paths, and timing, not placeholder roles only.",
+      "OwnerRoleKey": "change-manager",
+      "DocPath": "processes/release-readiness-and-deployment/artifacts/cutover-watch-roster.md"
+    }
+  ],
+  "LocalChecklists": [
+    {
+      "Kind": "checklist-resource",
+      "Key": "cutover-rehearsal-checklist",
+      "DisplayName": "Cutover rehearsal checklist",
+      "Scope": "local",
+      "ProcessKey": "release-readiness-and-deployment",
+      "OwnerRoleKey": "change-manager",
+      "Phase": "rehearsal",
+      "Summary": "Checks whether the cutover or deployment path was rehearsed enough to trust the event plan.",
+      "EntryCriteria": "A significant release or cutover event is nearing execution.",
+      "ExitCriteria": "Rehearsal or dry-run evidence is sufficient for the declared risk level.",
+      "Checks": [
+        "Cutover sequence has been walked through or rehearsed.",
+        "Hold points and rollback triggers are understood.",
+        "Watch roster is assigned.",
+        "Support and communication escalation paths are tested."
+      ],
+      "EvidenceExpectations": [
+        "Cutover watch roster",
+        "Rehearsal notes"
+      ],
+      "DocPath": "processes/release-readiness-and-deployment/checklists/cutover-rehearsal-checklist.md"
+    }
+  ],
+  "LocalValidations": [
+    {
+      "Kind": "validation-resource",
+      "Key": "validate-watch-coverage",
+      "DisplayName": "Validate cutover watch coverage",
+      "Scope": "local",
+      "ProcessKey": "release-readiness-and-deployment",
+      "Severity": "high",
+      "OwnerRoleKey": "change-manager",
+      "Gate": "deployment",
+      "Summary": "Confirms the first live risk window has real staffed monitoring and decision coverage.",
+      "PassCriteria": "Named watchers, approvers, and escalation paths cover the critical deployment horizon.",
+      "FailCriteria": "Deployment depends on unstated availability or placeholder coverage.",
+      "EscalationRule": "Escalate to release approver and service owner before go-live.",
+      "DocPath": "processes/release-readiness-and-deployment/validations/validate-watch-coverage.md"
+    }
+  ],
+  "LocalPrompts": [
+    {
+      "Kind": "prompt-resource",
+      "Key": "prompt-cutover-command-brief",
+      "DisplayName": "Prompt / cutover command brief",
+      "Scope": "local",
+      "ProcessKey": "release-readiness-and-deployment",
+      "AudienceRoleKey": "change-manager",
+      "Phase": "deployment",
+      "Summary": "Prompt scaffold for cutover command briefs at go-live checkpoints.",
+      "RequiredInputs": [
+        "deployment scope",
+        "watch roster",
+        "rollback triggers",
+        "current status"
+      ],
+      "OutputSchema": [
+        "checkpoint summary",
+        "go/no-go question",
+        "open conditions",
+        "next watch interval"
+      ],
+      "RefusalConditions": [
+        "Refuse to summarize the cutover as green if watch coverage or trigger logic is missing."
+      ],
+      "DocPath": "processes/release-readiness-and-deployment/prompts/prompt-cutover-command-brief.md"
+    }
+  ],
+  "RoleUsages": [
+    {
+      "Key": "change-manager",
+      "RoleResourceKey": "change-manager",
+      "DisplayName": "Change manager",
+      "Purpose": "Coordinate production change timing, communications, operational readiness, and deployment-event discipline.",
+      "StaffingIntent": "A release/change specialist responsible for controlled execution during go-live windows.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 60,
+      "CanvasY": 40,
+      "Notes": "Change-window and stakeholder-readiness owner for production deployment events."
+    },
+    {
+      "Key": "delivery-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Delivery manager",
+      "Purpose": "Keep the process executable by turning desired outcomes into a feasible, staffed, time-aware delivery path with explicit escalation triggers.",
+      "StaffingIntent": "A senior delivery-side coordinator with enough authority to challenge unrealistic dates, surface hidden dependencies, and keep multiple roles synchronized.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 210,
+      "CanvasY": 110,
+      "Notes": "Flow owner for sequencing, staffing realism, dependency control, and execution escalation."
+    },
+    {
+      "Key": "service-owner",
+      "RoleResourceKey": "service-owner",
+      "DisplayName": "Service owner",
+      "Purpose": "Represent live-service constraints, operational history, and post-release accountability in change decisions.",
+      "StaffingIntent": "A domain-aligned owner with authority over service-level objectives, support load, and operational trade-offs.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "TechnicalContact",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 25,
+      "CanvasX": 360,
+      "CanvasY": 40,
+      "Notes": "Operational accountability owner for a live service, product surface, or bounded business capability."
+    },
+    {
+      "Key": "qa-lead",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "QA lead",
+      "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
+      "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 40,
+      "CanvasX": 899,
+      "CanvasY": 540.5,
+      "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
+    },
+    {
+      "Key": "security-reviewer",
+      "RoleResourceKey": "security-reviewer",
+      "DisplayName": "Security reviewer",
+      "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
+      "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 25,
+      "CanvasX": 660,
+      "CanvasY": 40,
+      "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
+    },
+    {
+      "Key": "platform-engineer",
+      "RoleResourceKey": "platform-engineer",
+      "DisplayName": "Platform engineer",
+      "Purpose": "Provide the reliable platform path required to build, deploy, observe, and if necessary roll back changes safely.",
+      "StaffingIntent": "A technical specialist in CI/CD, environments, infrastructure, and observability integration.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 30,
+      "CanvasX": 810,
+      "CanvasY": 110,
+      "Notes": "Environment and delivery-pipeline owner for build integrity, deployment mechanics, and operational guardrails."
+    },
+    {
+      "Key": "release-approver",
+      "RoleResourceKey": "release-approver",
+      "DisplayName": "Release approver",
+      "Purpose": "Decide whether the accumulated evidence is sufficient to expose the change to real users, data, and operational load.",
+      "StaffingIntent": "A senior operational or governance authority who can accept release risk on behalf of the organization.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 20,
+      "CanvasX": 960,
+      "CanvasY": 40,
+      "Notes": "Final go-live decision owner for production promotion and rollback preparedness."
+    }
+  ],
+  "SharedArtifactRefs": []
+}

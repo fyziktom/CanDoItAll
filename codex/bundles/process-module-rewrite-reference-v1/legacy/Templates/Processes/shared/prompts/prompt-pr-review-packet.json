@@ -1,0 +1,28 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-pr-review-packet",
+  "DisplayName": "Pull request review packet prompt",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "author",
+  "Phase": "Review preparation",
+  "Summary": "Helps the change author produce a structured review packet that is explicit enough for governed route selection.",
+  "RequiredInputs": [
+    "Diff summary and changed modules.",
+    "Screenshots or proof for customer-visible changes.",
+    "Rollback or revert notes.",
+    "Open risks or unresolved reviewer asks."
+  ],
+  "OutputSchema": [
+    "Structured summary of the change.",
+    "Changed-surface inventory.",
+    "Rollback note.",
+    "Reviewer ask and known risks."
+  ],
+  "RefusalConditions": [
+    "Do not invent proof that does not exist.",
+    "Refuse when changed surfaces or rollback notes are unknown.",
+    "Escalate when the requested summary would hide material uncertainty."
+  ],
+  "DocPath": "shared/prompts/prompt-pr-review-packet.md"
+}

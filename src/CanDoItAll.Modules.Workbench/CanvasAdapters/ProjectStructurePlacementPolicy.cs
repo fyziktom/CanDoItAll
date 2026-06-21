@@ -291,9 +291,9 @@ public sealed class ProjectStructurePlacementPolicy
             .Select(token => token.Length)
             .DefaultIfEmpty(0)
             .Max();
-        var widthBias = Math.Clamp((noteText.Length - 18) * 1.45d, 0d, 132d);
+        var widthBias = Math.Clamp((noteText.Length - 18) * 2.25d, 0d, 220d);
         var longWordBias = Math.Max(0d, longestTokenLength - 12d) * 4.5d;
-        var width = Math.Clamp(Math.Ceiling(164d + widthBias + longWordBias), 148d, 348d);
+        var width = Math.Clamp(Math.Ceiling(164d + widthBias + longWordBias), 148d, 420d);
         var lines = EstimateWrappedLineCount(noteText, Math.Max(1, (int)Math.Floor((width - 40d) / 7.2d)));
         var height = Math.Clamp(Math.Ceiling(30d + (lines * 20d) + 26d), 76d, 304d);
         return new NodeSize(width, height);

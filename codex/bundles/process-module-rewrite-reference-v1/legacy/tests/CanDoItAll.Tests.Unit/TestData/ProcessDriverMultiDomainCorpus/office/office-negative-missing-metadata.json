@@ -1,0 +1,14 @@
+{
+  "scenario": "SB043 office negative fixture",
+  "items": [
+    {
+      "kind": "email",
+      "id": "mail-sb043-negative-001",
+      "subject": "",
+      "sender": "",
+      "recipients": [],
+      "observedAtUtc": null,
+      "text": "Escalation note was pasted without subject, sender, recipients, or observed timestamp. Operator note: password=fixture-password reviewer@example.invalid"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+Performance scan counts for SB12 changed files
+Files scanned:
+- src\CanDoItAll.Processes.Application\ProcessCompatibilityDecisionService.cs
+- src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs
+- src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityReports.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Branches.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Json.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Sidecars.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplateDocuments.cs
+- tests\CanDoItAll.Tests.Unit\ProcessTemplateCompatibilityHistoryTests.cs
+
+async void: 0
+Task.Result / .Wait / GetAwaiter().GetResult: 0
+Task.Run: 0
+ValueTask: 0
+Substring: 0
+StringComparison omissions: 6
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Sidecars.cs:117: if (fileName.Contains("compatibility-report", StringComparison.OrdinalIgnoreCase))
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Sidecars.cs:122: if (fileName.Contains("import-envelope", StringComparison.OrdinalIgnoreCase))
+  tests\CanDoItAll.Tests.Unit\ProcessTemplateCompatibilityHistoryTests.cs:79: Assert.Contains(report.SidecarDrift.Sidecars, sidecar => sidecar.Status == ProcessTemplateSidecarDriftStatus.SourceHashMismatch);
+  tests\CanDoItAll.Tests.Unit\ProcessTemplateCompatibilityHistoryTests.cs:120: Assert.Contains("read-only", denial.SafeSummary, StringComparison.OrdinalIgnoreCase);
+  tests\CanDoItAll.Tests.Unit\ProcessTemplateCompatibilityHistoryTests.cs:164: Assert.Contains("process-governance", decision.RequiredSignoffOwners);
+  tests\CanDoItAll.Tests.Unit\ProcessTemplateCompatibilityHistoryTests.cs:192: Assert.Contains("key and relativePath", exception.Message, StringComparison.Ordinal);
+ToLower/ToUpper empty overload: 0
+RegexOptions.Compiled: 0
+GeneratedRegex: 0
+new Regex: 0
+new List: 8
+  src\CanDoItAll.Processes.Application\ProcessCompatibilityDecisionService.cs:32: var blockingIssues = new List<string>();
+  src\CanDoItAll.Processes.Application\ProcessCompatibilityDecisionService.cs:33: var followUps = new List<string>();
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.cs:38: var migrationItems = new List<ProcessTemplateMigrationDryRunItem>(processEntries.Count);
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.cs:39: var sidecars = new List<ProcessTemplateSidecarDrift>();
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.cs:40: var branchDiagnostics = new List<ProcessBranchMigrationDiagnostic>();
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Branches.cs:15: var diagnostics = new List<ProcessBranchMigrationDiagnostic>();
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Json.cs:18: var entries = new List<TemplateProcessEntry>();
+  src\CanDoItAll.Processes.Templates\ProcessTemplateCompatibilityScanner.Sidecars.cs:19: var sidecars = new List<ProcessTemplateSidecarDrift>();
+new Dictionary: 1
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:96: var entityCounts = new Dictionary<(LegacyProcessRuntimeRecordKind Kind, string SourceEntityName), int>();
+LINQ chain candidates: 20
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:122: .OrderBy(item => item.Key.Kind)
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:124: .Select(item => new LegacyProcessHistoryEntityInventory(
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:128: .ToArray();
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:137: unmappedFields.Order(StringComparer.Ordinal).ToArray(),
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:147: .GroupBy(record => record.RunId)
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:148: .OrderBy(group => group.Key.Value, StringComparer.Ordinal)
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:149: .Select(CreateProjection)
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:150: .ToArray();
+new HttpClient: 0
+new JsonSerializerOptions: 1
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:128: var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+ContainsKey + indexer: 0
+static readonly Dictionary: 0
+sync File APIs: 0
+class declarations: 15
+  src\CanDoItAll.Processes.Application\ProcessCompatibilityDecisionService.cs:21: public sealed class ProcessCompatibilityDecisionService
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:90: public sealed class LegacyProcessHistoryProjectionAdapter
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:10: public sealed class ProcessProjectionJsonCodec
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:137: internal sealed class ProcessRunIdJsonConverter : JsonConverter<ProcessRunId>
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:150: internal sealed class RuntimeEventIdJsonConverter : JsonConverter<RuntimeEventId>
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:163: internal sealed class ArtifactSlotIdJsonConverter : JsonConverter<ArtifactSlotId>
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:176: internal sealed class LegacyProcessRunIdJsonConverter : JsonConverter<LegacyProcessRunId>
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:200: internal sealed partial class ProcessProjectionJsonContext : JsonSerializerContext;
+sealed classes: 9
+  src\CanDoItAll.Processes.Application\ProcessCompatibilityDecisionService.cs:21: public sealed class ProcessCompatibilityDecisionService
+  src\CanDoItAll.Processes.Projections\LegacyProcessHistoryProjections.cs:90: public sealed class LegacyProcessHistoryProjectionAdapter
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:10: public sealed class ProcessProjectionJsonCodec
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:137: internal sealed class ProcessRunIdJsonConverter : JsonConverter<ProcessRunId>
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:150: internal sealed class RuntimeEventIdJsonConverter : JsonConverter<RuntimeEventId>
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:163: internal sealed class ArtifactSlotIdJsonConverter : JsonConverter<ArtifactSlotId>
+  src\CanDoItAll.Processes.Projections\ProcessProjectionJsonCodec.cs:176: internal sealed class LegacyProcessRunIdJsonConverter : JsonConverter<LegacyProcessRunId>
+  tests\CanDoItAll.Tests.Unit\ProcessTemplateCompatibilityHistoryTests.cs:8: public sealed class ProcessTemplateCompatibilityHistoryTests

@@ -61,7 +61,7 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: false);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 1200)
+    public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300)
         => ExecutePlanAsync(
             () => planBuilder.BuildDotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds),
             "workspace_dotnet_test",
@@ -74,6 +74,14 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             () => planBuilder.BuildDotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope),
             "workspace_dotnet_run",
             waitForHttp ? "dotnet_run_http_smoke" : "dotnet_run",
+            "LocalExecution",
+            approvalRequired: false);
+
+    public Task<WorkspaceCommandExecutionResult> DotnetStop(string startupReceiptPath, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildDotnetStop(startupReceiptPath, timeoutSeconds),
+            "workspace_dotnet_stop",
+            "dotnet_stop",
             "LocalExecution",
             approvalRequired: false);
 

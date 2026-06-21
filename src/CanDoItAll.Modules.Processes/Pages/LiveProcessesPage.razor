@@ -1,9 +1,35 @@
 @page "/processes/live"
 @page "/projects/{ProjectId:guid}/processes/live"
 
-<LiveProcessesDashboard ProjectId="@ProjectId" />
+<PageTitle>Live Processes</PageTitle>
+
+<LiveProcessesDashboard ProjectId="@ProjectId"
+                        ProcessIdQuery="@ProcessIdQuery"
+                        RunIdQuery="@RunIdQuery"
+                        LaunchPlanIdQuery="@LaunchPlanIdQuery"
+                        LaunchStarted="@IsProcessStarted"
+                        MockScenarioQuery="@MockScenarioQuery" />
 
 @code {
     [Parameter]
     public Guid? ProjectId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "processId")]
+    public Guid? ProcessIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "runId")]
+    public Guid? RunIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "launchPlanId")]
+    public Guid? LaunchPlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "processStarted")]
+    public string? ProcessStartedQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "mockScenario")]
+    public string? MockScenarioQuery { get; set; }
+
+    private bool IsProcessStarted
+        => string.Equals(ProcessStartedQuery, "1", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(ProcessStartedQuery, "true", StringComparison.OrdinalIgnoreCase);
 }

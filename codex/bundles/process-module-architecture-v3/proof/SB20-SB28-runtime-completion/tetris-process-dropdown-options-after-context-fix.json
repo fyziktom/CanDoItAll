@@ -1,0 +1,108 @@
+[
+  {
+    "testid": "project-structure-process-link-select",
+    "value": "98f8cdb7-a7ac-9a6c-a30e-3541d8a84c07",
+    "options": [
+      {
+        "value": "",
+        "text": "Select a process"
+      },
+      {
+        "value": "98f8cdb7-a7ac-9a6c-a30e-3541d8a84c07",
+        "text": ".NET architecture design and review subprocess"
+      },
+      {
+        "value": "a765e0c8-ea5e-4573-fdde-68f995da9baf",
+        "text": ".NET feature/function implementation subprocess"
+      },
+      {
+        "value": "e90f4838-e49b-9bc2-2112-5f16d7186b53",
+        "text": ".NET implementation slice with atomic validation"
+      },
+      {
+        "value": "68967250-8086-9207-fb59-436d78d9222c",
+        "text": ".NET runtime command project-structure writeback"
+      },
+      {
+        "value": "7917d878-1370-c914-0c35-dc56b297c4fe",
+        "text": ".NET solution setup subprocess"
+      },
+      {
+        "value": "161d5d45-3b6b-91d0-21cc-a84ae8d1abbf",
+        "text": ".NET UI screenshot project-structure writeback"
+      },
+      {
+        "value": "52a8dabe-ce8d-fd6f-f292-ba0e633b9992",
+        "text": "AI-assisted change delivery with guarded delegation"
+      },
+      {
+        "value": "ed56be08-a35b-90d0-9119-7a53a312aca6",
+        "text": "App layout image generation"
+      },
+      {
+        "value": "faa0834c-07f6-7d0b-1e38-be7f55faaa48",
+        "text": "App page screenshot capture"
+      },
+      {
+        "value": "db168f9e-0c47-2916-b050-55e899a2762e",
+        "text": "App pages screenshot set capture"
+      },
+      {
+        "value": "fe3869c8-5bc4-a856-5101-87174e70a3cd",
+        "text": "Architecture decision governance and ADR stewardship"
+      },
+      {
+        "value": "2134aedd-f674-e4d5-a702-609e55482f11",
+        "text": "Blazor app delivery"
+      },
+      {
+        "value": "61c0e9e8-6340-6dc4-66fd-bd6648ffa5c8",
+        "text": "Blazor app repair and fix"
+      },
+      {
+        "value": "110d72cb-72c1-4439-2e4e-8feff168b66b",
+        "text": "Blazor backend and frontend feature addition"
+      },
+      {
+        "value": "21f56b53-c4e6-1af7-5bca-0bb4344cbb0a",
+        "text": "Blazor backend feature addition"
+      },
+      {
+        "value": "27192d3e-3c2a-e4fb-0973-20d9bea7217d",
+        "text": "Blazor frontend feature addition"
+      },
+      {
+        "value": "2c3fdada-40db-2a54-ba86-221ca5d9ed39",
+        "text": "Branching code review and merge governance"
+      },
+      {
+        "value": "2ed94002-543c-57a4-90e6-a03eaab95368",
+        "text": "Business plan development"
+      },
+      {
+        "value": "4b13ac23-8217-d25f-fb84-e34888362110",
+        "text": "Customer onboarding orchestration"
+      },
+      {
+        "value": "d33a9eae-ff4c-f902-adcb-a5680ceaf688",
+        "text": "Emergency hotfix rollout with shard-risk governance"
+      },
+      {
+        "value": "79bec9d3-72ea-866d-3758-ab2505d6f539",
+        "text": "Incident response and escalation"
+      },
+      {
+        "value": "3458e5d8-36b4-1861-83b1-522604c8e302",
+        "text": "Multi-team software delivery and release governance"
+      },
+      {
+        "value": "cf12ad35-fc06-66e9-b90e-ad0d795c4893",
+        "text": "Open-source intake and supply-chain governance"
+      },
+      {
+        "value": "1fdafebb-9c2b-650f-3cb2-9312ba1c687d",
+        "text": "Release readiness and deployment control"
+      }
+    ]
+  }
+]

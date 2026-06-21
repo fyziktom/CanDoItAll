@@ -1,0 +1,115 @@
+- generic [ref=e3] [box=0,0,1920,1080]:
+  - complementary [ref=e4] [box=16,8,76,1064]:
+    - generic [ref=e5] [box=27,19,54,1042]:
+      - generic [ref=e6] [box=27,19,54,40]:
+        - generic [ref=e7] [box=27,19,10,40]:
+          - generic [ref=e8] [box=12,19,40,40]: CD
+          - generic [ref=e9] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e10] [box=45,21,36,36]:
+          - generic [ref=e11] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e12] [box=27,67,54,883]:
+        - button "Dashboard" [ref=e14] [box=27,71,44,44]:
+          - generic [ref=e16] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e18] [box=27,121,44,44]:
+          - generic [ref=e20] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e22] [box=27,171,44,44]:
+          - generic [ref=e24] [box=39,183,20,20]: forum
+          - generic [ref=e25] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e27] [box=27,221,44,44]:
+          - generic [ref=e29] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e31] [box=27,271,44,44]:
+          - generic [ref=e33] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e35] [box=27,321,44,44]:
+          - generic [ref=e37] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e39] [box=27,371,44,44]:
+          - generic [ref=e41] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e43] [box=27,421,44,44]:
+          - generic [ref=e45] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e47] [box=27,471,44,44]:
+          - generic [ref=e49] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e51] [box=27,521,44,44]:
+          - generic [ref=e53] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e55] [box=27,571,44,44]:
+          - generic [ref=e57] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e59] [box=27,621,44,44]:
+          - generic [ref=e61] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e63] [box=27,671,44,44]:
+          - generic [ref=e65] [box=39,683,20,20]: construction
+        - button "Validation Center" [ref=e67] [box=27,721,44,44]:
+          - generic [ref=e69] [box=39,733,20,20]: fact_check
+        - button "More pages" [ref=e71] [box=32,771,44,44]:
+          - generic [ref=e73] [box=44,783,20,20]: expand_less
+        - button "Opened work" [ref=e75] [box=32,821,44,44]:
+          - generic [ref=e77] [box=44,833,20,20]: web_asset
+          - generic [ref=e78] [box=58,823,16,16]: "1"
+      - generic [ref=e80] [box=27,967,54,94]:
+        - button "Settings" [ref=e82] [box=27,967,54,44]:
+          - generic [ref=e84] [box=44,979,20,20]: settings
+          - generic [ref=e85] [box=54,989,1,1]: Settings
+        - button "Switch Database" [ref=e87] [box=27,1017,54,44]:
+          - generic [ref=e89] [box=44,1029,20,20]: storage
+          - generic [ref=e90] [box=54,1039,1,1]: Switch Database
+  - main [ref=e91] [box=100,8,1804,1064]:
+    - generic [ref=e92] [box=100,8,1804,30]:
+      - generic [ref=e96] [box=104,8,1149,30]:
+        - button "Dashboard" [ref=e98] [box=113,13,85,20]:
+          - generic [ref=e99] [box=113,15,59,16]: Dashboard
+          - generic [ref=e101] [box=178,13,20,20]: push_pin
+        - button "Processes" [ref=e103] [box=222,15,53,16]:
+          - generic [ref=e104] [box=222,15,53,16]: Processes
+        - button "Live Processes" [ref=e106] [box=298,15,77,16]:
+          - generic [ref=e107] [box=298,15,77,16]: Live Processes
+        - button "Projects" [ref=e109] [box=400,15,43,16]:
+          - generic [ref=e110] [box=400,15,43,16]: Projects
+        - button "TetrisGame · Structure" [ref=e112] [box=467,15,120,16]:
+          - generic [ref=e113] [box=467,15,120,16]: TetrisGame · Structure
+      - generic [ref=e115] [box=1273,10,631,26]:
+        - generic [ref=e116] [box=1273,10,207,26]:
+          - generic [ref=e117] [box=1284,16,136,13]: Delivery Workspace
+          - generic [ref=e118] [box=1426,15,43,16]: Projects
+        - generic [ref=e119] [box=1488,10,83,26]: TetrisGame
+        - generic [ref=e120] [box=1578,10,44,26]: WIP
+        - generic [ref=e121] [box=1630,10,117,26]: Interactive Server
+        - generic [ref=e122] [box=1756,10,85,26]: Live items 1
+        - generic [ref=e123] [box=1848,10,56,26]: Tabs 5
+    - generic [ref=e127] [box=100,46,1804,996]:
+      - generic [ref=e129] [box=100,46,1804,155]:
+        - generic [ref=e130] [box=121,67,1762,97]:
+          - paragraph [ref=e131] [box=121,67,1762,17]: Structure canvas
+          - generic [ref=e132] [box=121,96,1762,68]:
+            - heading "TetrisGame workbench" [level=2] [ref=e135] [box=121,128,243,36]
+            - generic [ref=e136] [box=1528,96,355,68]
+        - generic [ref=e147] [box=0,0,1920,1080]:
+          - generic [ref=e148] [box=0,0,1920,72]:
+            - generic [ref=e149] [box=17,10,1294,48]
+            - generic [ref=e184] [box=1324,13,579,42]
+          - generic [ref=e212] [box=0,0,1920,1080]:
+            - generic "Canvas workbench" [ref=e213] [box=0,0,1920,1080]
+            - generic [ref=e220] [box=16,1006,576,58]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+            - region "Project structure agents" [ref=e221] [box=1504,96,400,560]
+            - region "Project structure selection panel" [ref=e254] [box=1384,96,360,360]
+            - generic [box=0,0,1920,1080]
+      - generic [ref=e381] [box=100,225,1028,817]:
+        - generic [ref=e383] [box=134,259,960,570]:
+          - paragraph [ref=e384] [box=134,259,53,15]: Outline
+          - heading "Project object index" [level=5] [ref=e385] [box=134,282,211,37]
+          - tree "Project object index" [ref=e387] [box=134,328,960,502]:
+            - treeitem "TetrisGame Active" [ref=e388] [box=134,328,960,42]
+            - treeitem "Blazor WASM PWA app shape Draft" [ref=e396] [box=134,374,960,42]
+            - treeitem "Game loop and board behavior Draft" [ref=e404] [box=134,420,960,42]
+            - treeitem "IndexedDB score storage Draft" [ref=e412] [box=134,466,960,42]
+            - treeitem "Main App Draft" [selected] [ref=e420] [box=134,512,960,42]
+            - treeitem "Main Architecture Draft" [ref=e428] [box=134,558,960,42]
+            - treeitem "main customer request Draft" [ref=e436] [box=134,604,960,42]
+            - treeitem "Output folder Completed" [ref=e444] [box=134,650,960,42]
+            - treeitem "Responsive game screen and acceptance Draft" [ref=e452] [box=134,696,960,42]
+            - 'treeitem "Example: Office365 Category Email Summary To Project Completed" [ref=e460] [box=134,742,960,42]'
+            - treeitem "Office365 category email summary Draft" [ref=e468] [box=134,788,960,42]
+        - generic [ref=e477] [box=134,880,960,128]:
+          - paragraph [ref=e478] [box=134,880,118,15]: Canvas coverage
+          - heading "Graph health" [level=5] [ref=e479] [box=134,903,138,37]
+          - generic [ref=e480] [box=134,948,221,22]:
+            - generic [ref=e483] [box=134,948,68,22]: 11 nodes
+            - generic [ref=e486] [box=210,948,62,22]: 14 links
+            - generic [ref=e489] [box=280,948,75,22]: 1 selected
+          - paragraph [ref=e490] [box=134,984,823,25]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.

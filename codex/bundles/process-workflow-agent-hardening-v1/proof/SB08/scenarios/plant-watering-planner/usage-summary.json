@@ -1,8 +1,0 @@
-{
-  "processRunId": "6ecf7150-8810-49fa-ba25-572ec3d80611",
-  "canDoItAllProviderUsageObserved": false,
-  "incompleteUsageReason": "Provider usage is intentionally reported as unavailable instead of inferred from local tool execution.",
-  "scenarioKey": "plant-watering-planner",
-  "actualCostUsd": null,
-  "actualCostSource": "No CanDoItAll provider execution-run usage records were generated; local dotnet, Chrome CDP, Docker PostgreSQL, and Codex work are outside the app provider ledger."
-}

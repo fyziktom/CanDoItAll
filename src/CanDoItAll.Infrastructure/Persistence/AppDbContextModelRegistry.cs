@@ -8,6 +8,7 @@ public static class AppDbContextModelRegistry
     private static readonly object Gate = new();
     private static readonly Type EntityTypeConfigurationType = typeof(IEntityTypeConfiguration<>);
     private static IReadOnlyList<Assembly> _assemblies = [];
+    private static string _modelCacheKey = string.Empty;
 
     public static IReadOnlyList<Assembly> Assemblies
     {
@@ -20,6 +21,17 @@ public static class AppDbContextModelRegistry
         }
     }
 
+    public static string ModelCacheKey
+    {
+        get
+        {
+            lock (Gate)
+            {
+                return _modelCacheKey;
+            }
+        }
+    }
+
     public static void ConfigureAssemblies(IEnumerable<Assembly> assemblies)
     {
         lock (Gate)
@@ -28,11 +40,21 @@ public static class AppDbContextModelRegistry
                 .Distinct()
                 .Where(ContainsEntityTypeConfiguration)
                 .ToArray();
-            _assemblies = _assemblies
+            var mergedAssemblies = _assemblies
                 .Concat(configuredAssemblies)
                 .Distinct()
                 .OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)
                 .ToArray();
+
+            if (_assemblies.SequenceEqual(mergedAssemblies))
+            {
+                return;
+            }
+
+            _assemblies = mergedAssemblies;
+            _modelCacheKey = string.Join(
+                "|",
+                _assemblies.Select(assembly => assembly.FullName ?? assembly.GetName().Name));
         }
     }
 

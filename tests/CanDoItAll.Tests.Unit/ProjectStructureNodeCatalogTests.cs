@@ -41,6 +41,9 @@ public sealed class ProjectStructureNodeCatalogTests
         Assert.Contains(catalog.Guidance, item => item.Contains("metadata.script.command", StringComparison.Ordinal));
         Assert.Contains(catalog.Guidance, item => item.Contains("metadata.environment.projectPath", StringComparison.Ordinal));
         Assert.Contains(catalog.Guidance, item => item.Contains("metadata.infrastructure.runtimeCommand", StringComparison.Ordinal));
+        Assert.Contains(
+            catalog.Guidance,
+            item => item.Contains("Do not store runnable commands as ProjectBlock delivery nodes", StringComparison.Ordinal));
 
         AssertCatalogAlias(catalog, ProjectObjectType.Repository, "folder", "folder node");
         AssertCatalogAlias(catalog, ProjectObjectType.Repository, "remote", "github repository");

@@ -1,0 +1,129 @@
+Source assertions captured with rg. Paths are repo-relative.
+
+Command: rg -n "ProcessExecutionAdapter|StandardProcessAdapter|ProcessAdapterMutationAudit|RestrictedEvidenceReference|ProcessDiagnosticRetrySafety|ProcessDiagnosticIdempotencyClassification|Only_approved_concrete|Mutation_audit_reports|Layered_driver_slice|Core_and_runtime" src/CanDoItAll.Processes.Drivers.Abstractions src/CanDoItAll.Processes.Drivers.Standard src/CanDoItAll.Processes.Application tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs tests/CanDoItAll.Tests.Unit/ProcessModuleBoundaryTests.cs -g"*.cs" -g"*.csproj"
+
+Result:
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:9:public sealed class ProcessExecutionAdapterBoundaryTests
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:15:            StandardProcessAdapterDescriptors.WorkflowAdapter,
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:16:            new ProcessExecutionAdapterResult(
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:21:                    new ProcessExecutionAdapterDiagnostic(
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:27:                        ProcessDiagnosticRetrySafety.SafeToRetry,
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:28:                        ProcessDiagnosticIdempotencyClassification.Idempotent)
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:33:        var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(adapter, ProcessDriverLayer.Platform);
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:45:        Assert.Equal(ProcessExecutionAdapterKind.Workflow, request.Kind);
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:49:        Assert.Equal("restricted://workflow/run-1", diagnostic.RestrictedEvidenceReference);
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:50:        Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:51:        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:56:    public void Layered_driver_slice_orders_foundation_before_adapter_driver()
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:59:            StandardProcessAdapterDescriptors.WorkflowAdapter,
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:60:            ProcessExecutionAdapterResult.Succeeded("workflow completed", "sha256:workflow"));
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:61:        var packages = StandardProcessAdapterDriverPackageFactory.CreateLayeredPackages(adapter);
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:65:            new HashSet<CapabilityTag> { StandardProcessAdapterCapabilities.WorkflowExecution },
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:72:                StandardProcessAdapterDriverIds.Foundation.Value,
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:73:                StandardProcessAdapterDriverIds.Workflow.Value
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:79:    public async Task Mutation_audit_reports_unauthorized_paths_using_git_wrapper()
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:85:        var service = new ProcessAdapterMutationAuditService();
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:89:            new ProcessAdapterMutationAuditRequest(
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:97:        Assert.Equal(ProcessAdapterMutationAuditOutcome.UnauthorizedPathMutation, report.Outcome);
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:104:    public void Core_and_runtime_do_not_reference_concrete_adapter_apis()
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:110:            nameof(IProcessExecutionAdapter),
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:111:            nameof(ProcessExecutionAdapterRequest),
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:112:            "ProcessExecutionAdapterKind."
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:176:        ProcessExecutionAdapterDescriptor descriptor,
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:177:        ProcessExecutionAdapterResult result) : IProcessExecutionAdapter
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:179:        public ProcessExecutionAdapterDescriptor Descriptor { get; } = descriptor;
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:181:        public List<ProcessExecutionAdapterRequest> Requests { get; } = [];
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:183:        public ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
+tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs:184:            ProcessExecutionAdapterRequest request,
+tests/CanDoItAll.Tests.Unit/ProcessModuleBoundaryTests.cs:190:    public void Only_approved_concrete_process_driver_projects_are_active()
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessStrategyContracts.cs:66:    string? RestrictedEvidenceReference = null,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessStrategyContracts.cs:67:    ProcessDiagnosticRetrySafety RetrySafety = ProcessDiagnosticRetrySafety.Unknown,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessStrategyContracts.cs:68:    ProcessDiagnosticIdempotencyClassification Idempotency = ProcessDiagnosticIdempotencyClassification.Unknown);
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessStrategyContracts.cs:90:public enum ProcessDiagnosticRetrySafety
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessStrategyContracts.cs:97:public enum ProcessDiagnosticIdempotencyClassification
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:5:public interface IProcessExecutionAdapter
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:7:    ProcessExecutionAdapterDescriptor Descriptor { get; }
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:9:    ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:10:        ProcessExecutionAdapterRequest request,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:14:public sealed record ProcessExecutionAdapterDescriptor(
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:15:    ProcessExecutionAdapterId AdapterId,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:16:    ProcessExecutionAdapterKind Kind,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:21:public sealed record ProcessExecutionAdapterRequest(
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:24:    ProcessExecutionAdapterKind Kind,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:25:    ProcessExecutionAdapterOperationKey OperationKey,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:35:public sealed record ProcessExecutionAdapterResult(
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:39:    IReadOnlyList<ProcessExecutionAdapterDiagnostic> Diagnostics,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:44:    public static ProcessExecutionAdapterResult Succeeded(
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:48:        return new ProcessExecutionAdapterResult(
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:59:public sealed record ProcessExecutionAdapterDiagnostic(
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:64:    string? RestrictedEvidenceReference,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:65:    ProcessDiagnosticRetrySafety RetrySafety,
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:66:    ProcessDiagnosticIdempotencyClassification Idempotency);
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessExecutionAdapterContracts.cs:68:public enum ProcessExecutionAdapterKind
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessDriverTokens.cs:63:public readonly record struct ProcessExecutionAdapterId
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessDriverTokens.cs:65:    public ProcessExecutionAdapterId(string value)
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessDriverTokens.cs:75:public readonly record struct ProcessExecutionAdapterOperationKey
+src/CanDoItAll.Processes.Drivers.Abstractions\ProcessDriverTokens.cs:77:    public ProcessExecutionAdapterOperationKey(string value)
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterStrategyFactory.cs:5:public sealed class StandardProcessAdapterStrategyFactory(IProcessExecutionAdapter adapter) : IProcessStrategyFactory
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterStrategyFactory.cs:21:        return ValueTask.FromResult<IProcessStrategy>(new StandardProcessAdapterStrategy(adapter));
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterStrategyFactory.cs:25:internal sealed class StandardProcessAdapterStrategy(IProcessExecutionAdapter adapter) : IProcessStrategy
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterStrategyFactory.cs:34:            new ProcessExecutionAdapterRequest(
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterStrategyFactory.cs:38:                new ProcessExecutionAdapterOperationKey($"{adapter.Descriptor.AdapterId}.execute"),
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterStrategyFactory.cs:52:                diagnostic.RestrictedEvidenceReference,
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:6:public static class StandardProcessAdapterDriverIds
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:13:public static class StandardProcessAdapterCapabilities
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:20:public static class StandardProcessAdapterDescriptors
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:22:    public static ProcessExecutionAdapterDescriptor WorkflowAdapter { get; } = new(
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:23:        new ProcessExecutionAdapterId("adapter.workflow.standard"),
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:24:        ProcessExecutionAdapterKind.Workflow,
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:32:                StandardProcessAdapterCapabilities.AdapterExecution,
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:33:                StandardProcessAdapterCapabilities.WorkflowExecution
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:37:            StandardProcessAdapterCapabilities.AdapterExecution,
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDescriptors.cs:38:            StandardProcessAdapterCapabilities.WorkflowExecution
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:8:public sealed class ProcessAdapterMutationAuditService
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:10:    public async Task<ProcessAdapterMutationAuditReport> AuditAsync(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:12:        ProcessAdapterMutationAuditRequest request,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:20:            return new ProcessAdapterMutationAuditReport(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:21:                ProcessAdapterMutationAuditOutcome.DirtyBaselinePreventedAudit,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:30:            return new ProcessAdapterMutationAuditReport(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:31:                ProcessAdapterMutationAuditOutcome.GitUnavailable,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:33:                    new ProcessAdapterMutationAuditFinding(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:35:                        ProcessAdapterMutationAuditFindingKind.GitCommandFailed,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:45:            return new ProcessAdapterMutationAuditReport(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:46:                ProcessAdapterMutationAuditOutcome.NoChanges,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:52:        var findings = new List<ProcessAdapterMutationAuditFinding>();
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:57:                findings.Add(new ProcessAdapterMutationAuditFinding(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:59:                    ProcessAdapterMutationAuditFindingKind.ForbiddenDeletion,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:66:                findings.Add(new ProcessAdapterMutationAuditFinding(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:68:                    ProcessAdapterMutationAuditFindingKind.UnauthorizedPathMutation,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:80:            var outcome = findings.Any(finding => finding.Kind == ProcessAdapterMutationAuditFindingKind.ForbiddenDeletion)
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:81:                ? ProcessAdapterMutationAuditOutcome.ForbiddenDeletion
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:82:                : ProcessAdapterMutationAuditOutcome.UnauthorizedPathMutation;
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:84:            return new ProcessAdapterMutationAuditReport(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:91:        return new ProcessAdapterMutationAuditReport(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:92:            ProcessAdapterMutationAuditOutcome.AllowedChangesOnly,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:157:public sealed record ProcessAdapterMutationAuditRequest(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:183:public sealed record ProcessAdapterMutationAuditReport(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:184:    ProcessAdapterMutationAuditOutcome Outcome,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:185:    IReadOnlyList<ProcessAdapterMutationAuditFinding> Findings,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:189:public sealed record ProcessAdapterMutationAuditFinding(
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:191:    ProcessAdapterMutationAuditFindingKind Kind,
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:194:public enum ProcessAdapterMutationAuditOutcome
+src/CanDoItAll.Processes.Application\ProcessAdapterMutationAudit.cs:204:public enum ProcessAdapterMutationAuditFindingKind
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:6:public static class StandardProcessAdapterDriverPackageFactory
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:8:    public static IReadOnlyList<ProcessDriverPackage> CreateLayeredPackages(IProcessExecutionAdapter adapter)
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:16:        IProcessExecutionAdapter adapter,
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:29:            [new ProcessDriverDependency(StandardProcessAdapterDriverIds.Foundation, ">=1.0")],
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:41:            [new StandardProcessAdapterStrategyFactory(adapter)],
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:52:            StandardProcessAdapterDriverIds.Foundation,
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:60:                StandardProcessAdapterCapabilities.AdapterExecution
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:82:    private static DriverId ResolveDriverId(ProcessExecutionAdapterKind kind)
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:86:            ProcessExecutionAdapterKind.Workflow => StandardProcessAdapterDriverIds.Workflow,
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:91:    private static string GetAdapterKindToken(ProcessExecutionAdapterKind kind)
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:95:            ProcessExecutionAdapterKind.Workflow => "workflow",
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:96:            ProcessExecutionAdapterKind.SingleAgent => "single-agent",
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:97:            ProcessExecutionAdapterKind.AgentGroup => "agent-group",
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:98:            ProcessExecutionAdapterKind.Handoff => "handoff",
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:99:            ProcessExecutionAdapterKind.SchedulerTrigger => "scheduler-trigger",
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:100:            ProcessExecutionAdapterKind.ProjectContext => "project-context",
+src/CanDoItAll.Processes.Drivers.Standard\StandardProcessAdapterDriverPackageFactory.cs:101:            ProcessExecutionAdapterKind.Plugin => "plugin",

@@ -2,10 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -27,17 +28,17 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectStructureProjectionContributor, ProjectHierarchyProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectResourceProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, PromptFactoryProjectionContributor>();
-        services.AddScoped<IProjectStructureProjectionContributor, ProcessProjectionContributor>();
+        services.AddScoped<IProjectStructureProjectionContributor, ProjectStructureProcessProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ValidationProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, TestPlanProjectionContributor>();
         services.AddScoped<ProjectWorkbenchService>();
-        services.AddScoped<IProcessProjectStructureBridge, ProjectStructureProcessRunSyncBridge>();
         services.AddScoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>();
         services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
         services.AddScoped<ProjectStructureLeaseService>();
         services.AddScoped<ProjectStructureAnalyticsService>();
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectStructureProcessLaunchVariableContributor, DotNetProcessLaunchVariableContributor>());
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
@@ -49,6 +50,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         });
         services.AddScoped<ProjectStructureSourceWorkspacePathResolver>();
         services.AddScoped<ProjectStructureAgentService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectStructureAgentRuntimeToolProvider>());
         services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
         services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();
         services.AddScoped<IProjectGanttPreviewService, ProjectGanttPreviewService>();

@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Git\CanDoItAll.Git.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

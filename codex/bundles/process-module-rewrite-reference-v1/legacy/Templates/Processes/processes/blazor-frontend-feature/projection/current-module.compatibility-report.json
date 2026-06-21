@@ -1,0 +1,7 @@
+{
+    "processKey":  "blazor-frontend-feature",
+    "compatible":  true,
+    "notes":  [
+                  "Template-only process definition."
+              ]
+}

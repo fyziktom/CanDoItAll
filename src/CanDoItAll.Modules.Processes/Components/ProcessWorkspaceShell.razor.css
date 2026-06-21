@@ -1,0 +1,204 @@
+.processes-workspace-root {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 6.5rem);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.processes-command-strip {
+    width: 100%;
+}
+
+.processes-command-strip__row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.processes-command-strip__actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.processes-workspace-identity {
+    width: 100%;
+}
+
+.processes-workspace-identity__copy {
+    min-width: 0;
+}
+
+.processes-workspace-identity__title {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 750;
+    line-height: 1.25;
+    margin: 0;
+}
+
+.processes-workspace-identity__badges {
+    margin-left: auto;
+}
+
+.processes-detail-tab-panel {
+    min-height: 0;
+    width: 100%;
+}
+
+.processes-runs-tab-shell {
+    min-height: 0;
+    width: 100%;
+}
+
+.processes-definition-roles-tab,
+.processes-definition-steps-tab,
+.processes-definition-exchange-tab {
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.processes-definition-list-item {
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    color: #0f172a;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.7rem 0.75rem;
+    text-align: left;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    width: 100%;
+}
+
+.processes-definition-list-item:hover,
+.processes-definition-list-item--selected {
+    border-color: rgba(37, 99, 235, 0.42);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.processes-definition-list-item__title {
+    font-size: 0.875rem;
+    font-weight: 750;
+    line-height: 1.25;
+}
+
+.processes-definition-list-item__summary {
+    color: #64748b;
+    font-size: 0.75rem;
+    line-height: 1.45;
+}
+
+.processes-definition-list-item__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.processes-runtime-toolbar {
+    width: 100%;
+}
+
+.processes-runtime-run-card {
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 0.5rem;
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.7rem;
+}
+
+.processes-runtime-run-card--selected {
+    border-color: rgba(37, 99, 235, 0.55);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.processes-runtime-run-card__body {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+}
+
+.processes-runtime-run-card__header,
+.processes-runtime-run-card__badges {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.processes-runtime-run-card__title {
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 750;
+}
+
+.processes-runtime-run-card__summary {
+    color: #475569;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.processes-runtime-run-card__open {
+    align-self: start;
+}
+
+.processes-runtime-event-row {
+    align-items: flex-start;
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    padding: 0.75rem;
+    text-align: left;
+    width: 100%;
+}
+
+.processes-runtime-event-row__title {
+    color: #0f172a;
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 750;
+}
+
+.processes-runtime-event-row__summary {
+    color: #64748b;
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    margin-top: 0.2rem;
+}
+
+.processes-runtime-event-row__meta {
+    align-items: flex-end;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    gap: 0.35rem;
+}
+
+.processes-runtime-ledger-row {
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+}

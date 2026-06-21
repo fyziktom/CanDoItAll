@@ -1,1 +1,0 @@
-src\plugins\CanDoItAll.Plugin.Office365\README.md:39:Office 365 executors must stay behind plugin installation, capability grants, OAuth grants, and connection status checks. Do not bypass `Office365GraphClient` from product modules.

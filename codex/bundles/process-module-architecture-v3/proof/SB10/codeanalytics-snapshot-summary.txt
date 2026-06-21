@@ -1,0 +1,38 @@
+CanDoItAll CodeAnalytics MCP validation for SB10.
+
+Snapshot:
+snap-20260615221805-8a975694
+
+Scope:
+- CanDoItAll.Processes.Application
+- CanDoItAll.Processes.Contracts
+- CanDoItAll.Processes.Core
+- CanDoItAll.Processes.Persistence
+- CanDoItAll.Processes.Projections
+- CanDoItAll.Processes.Runtime
+
+Result:
+- MCP reachable.
+- Snapshot build completed with force refresh.
+- 6 scoped source projects.
+- 74 scoped documents.
+- 0 diagnostics.
+- no blocking errors.
+- dependency query found no cycles.
+
+Boundary facts:
+- CanDoItAll.Processes.Projections directly references only Contracts and Core.
+- CanDoItAll.Processes.Application directly references Projections and Runtime.
+- CanDoItAll.Processes.Persistence directly references Contracts, Core, Projections, and Runtime.
+- Application has no direct Persistence project reference.
+- Persistence remains the only scoped project with EF Core package references.
+
+Projection persistence facts:
+- ProcessProjectionSnapshotEntity maps to process_projection_snapshots.
+- ProcessProjectionHistoryEntity maps to process_projection_history.
+- ProcessProjectionDeadLetterEntity maps to process_projection_dead_letters.
+
+Findings:
+- Dashboard findings are informational complexity notes only.
+- Projection DTOs and the projection store interface are intentionally explicit read models/contracts for the SB10 UI projection surface.
+- No CodeAnalytics diagnostic or dependency finding blocks SB10 closure.

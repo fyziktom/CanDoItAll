@@ -1,0 +1,8 @@
+FROM gemma4:12b
+
+PARAMETER num_ctx 262144
+PARAMETER num_predict 16384
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+
+SYSTEM You are a precise software engineering assistant. Keep answers grounded in the supplied context and avoid inventing missing details.

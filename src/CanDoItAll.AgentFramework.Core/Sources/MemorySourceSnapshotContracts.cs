@@ -344,7 +344,7 @@ public enum MemorySourceEntityKind
     ProjectNode,
     ProjectLink,
     ProcessRun,
-    ProcessStepRun,
+    ProcessStepEvidence,
     ProcessRunAssignment,
     ProcessWorkBrief,
     ProcessDecision,

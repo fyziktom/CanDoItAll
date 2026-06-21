@@ -1,0 +1,43 @@
+Command:
+rg -n "BranchOutcomeId\.Create\(\"[^\"]*\"\)|ProcessRouteTargetKind|SelectedOutcomeId|LoopFingerprint" src/CanDoItAll.Processes.Application src/CanDoItAll.Processes.Runtime tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs -g"ProcessManager*.cs"
+
+ExitCode: 0
+Result:
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:40:        Assert.Equal(1, stores.LoopBudgets.ConsumptionCount(recoveryResult.RecoveryRequest.LoopFingerprintId));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:86:        Assert.Equal(ProcessRouteTargetKind.PreviousStep, first.RouteHandoff.RouteTarget.Kind);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:87:        Assert.Equal(1, stores.LoopBudgets.ConsumptionCount(first.BranchDecision.LoopFingerprintId!.Value));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:113:        Assert.Equal(ProcessRouteTargetKind.Escalate, second.BranchDecision.RouteTarget.Kind);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:185:        Assert.Equal(0, stores.LoopBudgets.ConsumptionCount(result.RecoveryRequest.LoopFingerprintId));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:232:            new ProcessLoopFingerprintId("loop-missing-artifact"),
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:246:            new LoopFingerprintPolicyId("path-and-evidence"),
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:247:            new ProcessRouteTarget(ProcessRouteTargetKind.Escalate));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:260:                    new ProcessRouteTarget(ProcessRouteTargetKind.PreviousStep),
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:430:        private readonly Dictionary<ProcessLoopFingerprintId, int> counts = [];
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:433:        public int ConsumptionCount(ProcessLoopFingerprintId fingerprintId)
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:10:    ProcessLoopFingerprintId LoopFingerprintId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:34:    ProcessLoopFingerprintId LoopFingerprintId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:51:    ProcessLoopFingerprintId FingerprintId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:58:    ProcessLoopFingerprintId FingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:74:                request.LoopFingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:105:            request.LoopFingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:169:            request.LoopFingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:227:            request.LoopFingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:259:            [new ProcessValidationFailure("ManagerRecovery.LoopBudgetExhausted", $"Loop fingerprint '{request.LoopFingerprintId}' exhausted its recovery budget.")]);
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:127:public readonly record struct ProcessLoopFingerprintId
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:129:    public ProcessLoopFingerprintId(string value)
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:22:    BranchOutcomeId SelectedOutcomeId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:33:    BranchOutcomeId SelectedOutcomeId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:37:    ProcessLoopFingerprintId? LoopFingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:11:        ProcessLoopFingerprintId? fingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:88:            command.SelectedOutcomeId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:89:            new ProcessRouteTarget(ProcessRouteTargetKind.Escalate),
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:123:        ProcessLoopFingerprintId fingerprintId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:129:            ?? new ProcessRouteTarget(ProcessRouteTargetKind.Escalate);
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:181:    private static ProcessLoopFingerprintId CreateLoopFingerprintId(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:185:        var fingerprint = ProcessLoopFingerprint.Create(new LoopFingerprintInput(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:193:        return new ProcessLoopFingerprintId(fingerprint);
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:196:    private static bool IsBackwardRoute(ProcessRouteTargetKind kind)
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:198:        return kind == ProcessRouteTargetKind.PreviousStep;
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:57:        var selected = request.Outcomes.SingleOrDefault(outcome => outcome.Id == command.SelectedOutcomeId);
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:64:                    $"Branch decision request '{request.RequestId}' does not contain outcome '{command.SelectedOutcomeId}'."),
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:80:            var fingerprintId = CreateLoopFingerprintId(request, selected);

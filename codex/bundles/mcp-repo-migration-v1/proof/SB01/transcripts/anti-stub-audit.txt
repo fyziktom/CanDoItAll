@@ -1,6 +1,0 @@
-Command: rg -n "TODO|NotImplementedException|throw new NotImplemented|\bstub\b|fixture-specific" src tools -g "*.cs" -g "*.ps1"
-Invariant ID: SB01-MCP-SOLUTION-BOUNDARY
-Invariant ID: SB01-COMPONENT-PACKAGE-DEPENDENCY
---- output ---
-Anti-stub audit passed: no TODO, NotImplemented, stub, or fixture-specific markers in migrated MCP production source/tools.
-ExitCode: 0

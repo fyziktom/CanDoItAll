@@ -1,0 +1,21 @@
+{
+  "sync_result_wait": 0,
+  "thread_sleep": 0,
+  "task_run": 0,
+  "fire_and_forget": 0,
+  "async_void": 0,
+  "value_task": 0,
+  "substring": 0,
+  "string_contains_family": 68,
+  "case_conversion_empty_overload": 0,
+  "regex_usage": 0,
+  "new_list": 7,
+  "new_dictionary": 0,
+  "linq_chain_candidates": 77,
+  "contains_key_indexer": 0,
+  "static_dictionary": 0,
+  "new_http_client": 0,
+  "new_json_serializer_options": 0,
+  "json_serializer_known_type": 1,
+  "sync_file_all": 6
+}

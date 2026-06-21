@@ -6,6 +6,15 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectStructureNodeEditor
 {
+    private static readonly HashSet<string> ProjectBlockRootFieldKeys =
+    [
+        "outputRoot",
+        "productRoot",
+        "targetRoot",
+        "repositoryRoot",
+        "workspaceRoot"
+    ];
+
     private static readonly HashSet<string> NonEditableFieldKeys =
     [
         "participantRef",
@@ -51,6 +60,22 @@ internal static class ProjectStructureNodeEditor
 
         switch (definition.ObjectType)
         {
+            case ProjectObjectType.ProjectBlock:
+                if (submittedKeys.Overlaps(ProjectBlockRootFieldKeys))
+                {
+                    metadata.ProjectBlock ??= new ProjectBlockMetadata();
+                    metadata.ProjectBlock.OutputRoot = ResolveString(inputValues, submittedKeys, "outputRoot", metadata.ProjectBlock.OutputRoot);
+                    metadata.ProjectBlock.ProductRoot = ResolveString(inputValues, submittedKeys, "productRoot", metadata.ProjectBlock.ProductRoot);
+                    metadata.ProjectBlock.TargetRoot = ResolveString(inputValues, submittedKeys, "targetRoot", metadata.ProjectBlock.TargetRoot);
+                    metadata.ProjectBlock.RepositoryRoot = ResolveString(inputValues, submittedKeys, "repositoryRoot", metadata.ProjectBlock.RepositoryRoot);
+                    metadata.ProjectBlock.WorkspaceRoot = ResolveString(inputValues, submittedKeys, "workspaceRoot", metadata.ProjectBlock.WorkspaceRoot);
+                    if (IsEmpty(metadata.ProjectBlock))
+                    {
+                        metadata.ProjectBlock = null;
+                    }
+                }
+
+                break;
             case ProjectObjectType.Meeting:
                 metadata.Meeting ??= new ProjectMeetingMetadata();
                 metadata.Meeting.Channel = ResolveEnum(inputValues, submittedKeys, "channel", metadata.Meeting.Channel);
@@ -138,6 +163,7 @@ internal static class ProjectStructureNodeEditor
                 metadata.Environment.PythonProvider = ResolveNullableEnum(inputValues, submittedKeys, "pythonProvider", metadata.Environment.PythonProvider);
                 metadata.Environment.EnvironmentName = ResolveString(inputValues, submittedKeys, "environmentName", metadata.Environment.EnvironmentName);
                 metadata.Environment.ProjectPath = ResolveString(inputValues, submittedKeys, "projectPath", metadata.Environment.ProjectPath);
+                metadata.Environment.WorkingDirectory = ResolveString(inputValues, submittedKeys, "workingDirectory", metadata.Environment.WorkingDirectory);
                 metadata.Environment.LaunchProfileName = ResolveString(inputValues, submittedKeys, "launchProfileName", metadata.Environment.LaunchProfileName);
                 metadata.Environment.RuntimeProtocol = ResolveEnum(inputValues, submittedKeys, "runtimeProtocol", metadata.Environment.RuntimeProtocol);
                 metadata.Environment.LocalhostUrl = ResolveString(inputValues, submittedKeys, "localhostUrl", metadata.Environment.LocalhostUrl);
@@ -205,7 +231,9 @@ internal static class ProjectStructureNodeEditor
         {
             return node.ObjectType == ProjectObjectType.Infrastructure
                 ? metadata.Infrastructure?.WorkingDirectory ?? string.Empty
-                : metadata.Script?.WorkingDirectory ?? string.Empty;
+                : node.ObjectType == ProjectObjectType.Environment
+                    ? metadata.Environment?.WorkingDirectory ?? string.Empty
+                    : metadata.Script?.WorkingDirectory ?? string.Empty;
         }
 
         return key switch
@@ -226,6 +254,11 @@ internal static class ProjectStructureNodeEditor
             "organization" => metadata.Participant?.Organization ?? string.Empty,
             "email" => metadata.Participant?.Email ?? string.Empty,
             "phone" => metadata.Participant?.Phone ?? string.Empty,
+            "outputRoot" => metadata.ProjectBlock?.OutputRoot ?? string.Empty,
+            "productRoot" => metadata.ProjectBlock?.ProductRoot ?? string.Empty,
+            "targetRoot" => metadata.ProjectBlock?.TargetRoot ?? string.Empty,
+            "repositoryRoot" => metadata.ProjectBlock?.RepositoryRoot ?? string.Empty,
+            "workspaceRoot" => metadata.ProjectBlock?.WorkspaceRoot ?? string.Empty,
             "workItemKind" => ToCamelCaseToken(metadata.WorkItem?.WorkItemKind == default ? ProjectNodeKindRegistry.ResolveWorkItemKind(node.ObjectSubtype) : metadata.WorkItem?.WorkItemKind),
             "dueUtc" => FormatDateTimeLocal(metadata.WorkItem?.DueUtc),
             "sendKind" => ToCamelCaseToken(metadata.WorkItem?.SendKind),
@@ -248,6 +281,7 @@ internal static class ProjectStructureNodeEditor
             "pythonProvider" => ToCamelCaseToken(metadata.Environment?.PythonProvider),
             "environmentName" => metadata.Environment?.EnvironmentName ?? string.Empty,
             "projectPath" => metadata.Environment?.ProjectPath ?? string.Empty,
+            "workingDirectory" => metadata.Environment?.WorkingDirectory ?? string.Empty,
             "launchProfileName" => metadata.Environment?.LaunchProfileName ?? string.Empty,
             "runtimeProtocol" => ToCamelCaseToken(metadata.Environment?.RuntimeProtocol),
             "localhostUrl" => metadata.Environment?.LocalhostUrl ?? string.Empty,
@@ -309,6 +343,13 @@ internal static class ProjectStructureNodeEditor
         string key,
         string currentValue)
         => submittedKeys.Contains(key) && inputValues.TryGetValue(key, out var value) ? value : currentValue;
+
+    private static bool IsEmpty(ProjectBlockMetadata metadata)
+        => string.IsNullOrWhiteSpace(metadata.OutputRoot) &&
+           string.IsNullOrWhiteSpace(metadata.ProductRoot) &&
+           string.IsNullOrWhiteSpace(metadata.TargetRoot) &&
+           string.IsNullOrWhiteSpace(metadata.RepositoryRoot) &&
+           string.IsNullOrWhiteSpace(metadata.WorkspaceRoot);
 
     private static int ResolveInt(
         IReadOnlyDictionary<string, string> inputValues,

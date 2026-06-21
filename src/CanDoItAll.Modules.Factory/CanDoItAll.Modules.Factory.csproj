@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.1" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
@@ -32,6 +32,4 @@
   </ItemGroup>
 
 </Project>
-
-
 

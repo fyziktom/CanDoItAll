@@ -1,0 +1,29 @@
+{
+  "capturedAtUtc": "2026-06-20T12:23:13.8099717+00:00",
+  "source": "unchanged live development instance on localhost:5032 before deploying SB33 code",
+  "agent": {
+    "id": "1e267ce2-bf18-ce52-9743-9b36b9314994",
+    "name": ".NET Application Developer",
+    "agentListElapsedMilliseconds": 152,
+    "chatSessionsElapsedMilliseconds": 15003,
+    "chatWorkspaceElapsedMilliseconds": 14630,
+    "chatSessionCount": 1
+  },
+  "project": {
+    "id": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+    "name": "TetrisGame",
+    "projectListElapsedMilliseconds": 23,
+    "structureReadElapsedMilliseconds": 78
+  },
+  "runtimeNode": {
+    "id": "custom:0612bea7958345edbdc65614fdedf6bc",
+    "title": "Run app",
+    "subtitle": "Blazor WebAssembly PWA runtime",
+    "objectType": 16,
+    "objectSubtype": "dotnet-runtime",
+    "notes": null,
+    "metadataJson": null,
+    "actionCapabilities": null
+  },
+  "bottleneckConclusion": "The slow operation is backend chat session/workspace loading, not project-structure rendering; the current runtime node summary has dotnet-runtime subtype but no typed metadata or action capabilities."
+}

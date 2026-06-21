@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -21,6 +23,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         return sourceObservations
             .Select(observation => EnrichUsageObservation(run, agent, provider, observation))
+            .Select(observation => AttachRuntimeContextDiagnostics(observation, runtimeResponse))
             .Select(observation => PriceUsageObservation(observation, provider))
             .ToList();
     }
@@ -40,6 +43,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         return sourceObservations
             .Select(observation => EnrichUsageObservation(run, agent, provider, observation))
+            .Select(observation => AttachRuntimeContextDiagnostics(observation, runtimeResponse))
             .Select(observation => PriceUsageObservation(observation, provider))
             .ToList();
     }
@@ -215,5 +219,56 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return ProviderPricingCalculator.TryResolveObservationCost(observation, [provider], out var costUsd)
             ? observation with { CalculatedCostUsd = costUsd }
             : observation;
+    }
+
+    private static ProviderUsageObservation AttachRuntimeContextDiagnostics(
+        ProviderUsageObservation observation,
+        AgentRuntimeResponse runtimeResponse)
+    {
+        if (runtimeResponse.ContextAssemblyManifest is null &&
+            runtimeResponse.ContextContributionTraces.Count == 0)
+        {
+            return observation;
+        }
+
+        var diagnostics = ParseDiagnosticsObject(observation.DiagnosticsJson);
+        if (runtimeResponse.ContextAssemblyManifest is not null)
+        {
+            diagnostics["contextAssemblyManifest"] = JsonSerializer.SerializeToNode(
+                runtimeResponse.ContextAssemblyManifest,
+                AgentOutputJson.SerializerOptions);
+        }
+
+        if (runtimeResponse.ContextContributionTraces.Count > 0)
+        {
+            diagnostics["contextContributionTraces"] = JsonSerializer.SerializeToNode(
+                runtimeResponse.ContextContributionTraces,
+                AgentOutputJson.SerializerOptions);
+        }
+
+        return observation with
+        {
+            DiagnosticsJson = diagnostics.ToJsonString(AgentOutputJson.SerializerOptions)
+        };
+    }
+
+    private static JsonObject ParseDiagnosticsObject(string diagnosticsJson)
+    {
+        if (string.IsNullOrWhiteSpace(diagnosticsJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonNode.Parse(diagnosticsJson) as JsonObject ?? [];
+        }
+        catch (JsonException)
+        {
+            return new JsonObject
+            {
+                ["legacyDiagnostics"] = diagnosticsJson
+            };
+        }
     }
 }

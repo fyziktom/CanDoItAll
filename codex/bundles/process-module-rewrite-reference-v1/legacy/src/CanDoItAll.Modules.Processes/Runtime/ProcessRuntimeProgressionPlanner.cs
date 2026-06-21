@@ -1,0 +1,359 @@
+namespace CanDoItAll.Modules.Processes;
+
+internal static class ProcessRuntimeProgressionPlanner
+{
+    private const string MissingUpstreamArtifactsBlockMarker = "required upstream artifacts are missing";
+    private const string MissingRequiredArtifactInputMarker = "must provide required artifact";
+    private const string UpstreamDependencySkipPrefix = "Skipped because upstream step ";
+
+    public static void ApplyTransitionConsequences(
+        ProcessStepRunStatus targetStatus,
+        ProcessStepDefinition currentStepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
+        DateTimeOffset now,
+        bool invalidateDependentStepRuns = false)
+    {
+        ArgumentNullException.ThrowIfNull(currentStepDefinition);
+        ArgumentNullException.ThrowIfNull(stepDefinitionsById);
+        ArgumentNullException.ThrowIfNull(stepRunsByDefinitionId);
+        ArgumentNullException.ThrowIfNull(stepDependenciesByStepId);
+
+        var dependentStepsByDependsOnStepId = BuildDependentStepsByDependsOnStepId(stepDefinitionsById, stepDependenciesByStepId);
+
+        if (targetStatus == ProcessStepRunStatus.InProgress &&
+            invalidateDependentStepRuns)
+        {
+            InvalidateDependentStepRunsAfterUpstreamRerun(
+                currentStepDefinition,
+                stepRunsByDefinitionId,
+                dependentStepsByDependsOnStepId,
+                now);
+        }
+
+        if (targetStatus == ProcessStepRunStatus.Completed)
+        {
+            foreach (var dependentStep in GetDependentSteps(currentStepDefinition.Id, dependentStepsByDependsOnStepId))
+            {
+                if (!stepRunsByDefinitionId.TryGetValue(dependentStep.Id, out var dependentStepRun))
+                {
+                    continue;
+                }
+
+                if (TryResolveImpossibleDependencyReason(
+                    dependentStep,
+                    stepDefinitionsById,
+                    stepRunsByDefinitionId,
+                    stepDependenciesByStepId,
+                    out var impossibleReason))
+                {
+                    CascadeSkipStepRun(
+                        dependentStep,
+                        stepDefinitionsById,
+                        stepRunsByDefinitionId,
+                        dependentStepsByDependsOnStepId,
+                        stepDependenciesByStepId,
+                        impossibleReason,
+                        now);
+                    continue;
+                }
+
+                if (!AreAllDependenciesSatisfied(dependentStep, stepRunsByDefinitionId, stepDependenciesByStepId))
+                {
+                    continue;
+                }
+
+                if (dependentStepRun.Status == ProcessStepRunStatus.Pending)
+                {
+                    ActivatePendingStepRun(dependentStepRun, dependentStep, now);
+                    continue;
+                }
+
+                if (CanReactivateAutoSkippedDependencyStepRun(dependentStepRun))
+                {
+                    ReactivateAutoSkippedDependencyStepRun(dependentStepRun, dependentStep, now);
+                }
+
+            }
+        }
+
+        if (targetStatus == ProcessStepRunStatus.Skipped)
+        {
+            var reason = $"Skipped because upstream step '{currentStepDefinition.Title}' was skipped.";
+            CascadeSkipDependents(
+                currentStepDefinition,
+                stepDefinitionsById,
+                stepRunsByDefinitionId,
+                dependentStepsByDependsOnStepId,
+                stepDependenciesByStepId,
+                reason,
+                now);
+        }
+    }
+
+    private static IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> BuildDependentStepsByDependsOnStepId(
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId)
+    {
+        var dependentStepsByDependsOnStepId = new Dictionary<Guid, List<ProcessStepDefinition>>();
+
+        foreach (var stepDefinition in stepDefinitionsById.Values)
+        {
+            foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
+            {
+                if (!dependentStepsByDependsOnStepId.TryGetValue(dependency.DependsOnStepId, out var dependentSteps))
+                {
+                    dependentSteps = [];
+                    dependentStepsByDependsOnStepId[dependency.DependsOnStepId] = dependentSteps;
+                }
+
+                dependentSteps.Add(stepDefinition);
+            }
+        }
+
+        return dependentStepsByDependsOnStepId.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<ProcessStepDefinition>)pair.Value
+                .OrderBy(item => item.OrderIndex)
+                .ToList());
+    }
+
+    private static IReadOnlyList<ProcessStepDefinition> GetDependentSteps(
+        Guid stepDefinitionId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> dependentStepsByDependsOnStepId)
+    {
+        return dependentStepsByDependsOnStepId.TryGetValue(stepDefinitionId, out var dependentSteps)
+            ? dependentSteps
+            : [];
+    }
+
+    private static void ActivatePendingStepRun(ProcessStepRun stepRun, ProcessStepDefinition stepDefinition, DateTimeOffset now)
+    {
+        if (stepRun.Status != ProcessStepRunStatus.Pending)
+        {
+            return;
+        }
+
+        stepRun.Status = stepDefinition.RequiresApproval || stepDefinition.StepKind == ProcessStepKind.Approval
+            ? ProcessStepRunStatus.WaitingApproval
+            : ProcessStepRunStatus.Ready;
+        stepRun.ReadyAtUtc = now;
+    }
+
+    private static bool CanReactivateAutoSkippedDependencyStepRun(ProcessStepRun stepRun)
+    {
+        return stepRun.Status == ProcessStepRunStatus.Skipped &&
+               !string.IsNullOrWhiteSpace(stepRun.DecisionSummary) &&
+               stepRun.DecisionSummary.StartsWith(UpstreamDependencySkipPrefix, StringComparison.Ordinal);
+    }
+
+    private static void InvalidateDependentStepRunsAfterUpstreamRerun(
+        ProcessStepDefinition stepDefinition,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> dependentStepsByDependsOnStepId,
+        DateTimeOffset now)
+    {
+        foreach (var dependentStep in GetDependentSteps(stepDefinition.Id, dependentStepsByDependsOnStepId))
+        {
+            if (stepRunsByDefinitionId.TryGetValue(dependentStep.Id, out var dependentStepRun) &&
+                CanInvalidateDependentStepRun(dependentStepRun))
+            {
+                InvalidateDependentStepRun(dependentStepRun, stepDefinition, now);
+            }
+
+            InvalidateDependentStepRunsAfterUpstreamRerun(
+                dependentStep,
+                stepRunsByDefinitionId,
+                dependentStepsByDependsOnStepId,
+                now);
+        }
+    }
+
+    private static bool CanInvalidateDependentStepRun(ProcessStepRun stepRun)
+    {
+        return stepRun.Status is
+            ProcessStepRunStatus.Ready or
+            ProcessStepRunStatus.WaitingApproval or
+            ProcessStepRunStatus.Blocked or
+            ProcessStepRunStatus.Completed or
+            ProcessStepRunStatus.Refused or
+            ProcessStepRunStatus.Skipped or
+            ProcessStepRunStatus.Failed;
+    }
+
+    private static void InvalidateDependentStepRun(
+        ProcessStepRun stepRun,
+        ProcessStepDefinition invalidatedByStepDefinition,
+        DateTimeOffset now)
+    {
+        stepRun.Status = ProcessStepRunStatus.Pending;
+        stepRun.ReadyAtUtc = null;
+        stepRun.StartedAtUtc = null;
+        stepRun.CompletedAtUtc = null;
+        stepRun.BlockedReason = string.Empty;
+        stepRun.RefusalReason = string.Empty;
+        stepRun.ExceptionSummary = string.Empty;
+        stepRun.SelectedBranchOutcomeId = null;
+        stepRun.SelectedBranchOutcomeTitle = string.Empty;
+        stepRun.AutomationDispatchClaimToken = string.Empty;
+        stepRun.AutomationDispatchClaimedBy = string.Empty;
+        stepRun.AutomationDispatchClaimedAtUtc = null;
+        stepRun.AutomationDispatchLeaseExpiresAtUtc = null;
+        ProcessStepRunBlockState.Clear(stepRun);
+        stepRun.DecisionSummary = $"Invalidated because upstream step '{invalidatedByStepDefinition.Title}' was rerun.";
+    }
+
+    private static void ReactivateAutoSkippedDependencyStepRun(
+        ProcessStepRun stepRun,
+        ProcessStepDefinition stepDefinition,
+        DateTimeOffset now)
+    {
+        stepRun.Status = stepDefinition.RequiresApproval || stepDefinition.StepKind == ProcessStepKind.Approval
+            ? ProcessStepRunStatus.WaitingApproval
+            : ProcessStepRunStatus.Ready;
+        stepRun.ReadyAtUtc = now;
+        stepRun.StartedAtUtc = null;
+        stepRun.CompletedAtUtc = null;
+        stepRun.BlockedReason = string.Empty;
+        stepRun.RefusalReason = string.Empty;
+        stepRun.ExceptionSummary = string.Empty;
+        ProcessStepRunBlockState.Clear(stepRun);
+        stepRun.DecisionSummary = "Reopened because upstream dependencies are now satisfied.";
+    }
+
+    public static void ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(
+        ProcessStepRun stepRun,
+        ProcessStepDefinition stepDefinition,
+        DateTimeOffset now)
+    {
+        if (stepRun.Status != ProcessStepRunStatus.Blocked)
+        {
+            return;
+        }
+
+        stepRun.Status = stepDefinition.RequiresApproval || stepDefinition.StepKind == ProcessStepKind.Approval
+            ? ProcessStepRunStatus.WaitingApproval
+            : ProcessStepRunStatus.Ready;
+        stepRun.ReadyAtUtc = now;
+        stepRun.StartedAtUtc = null;
+        stepRun.BlockedReason = string.Empty;
+        ProcessStepRunBlockState.Clear(stepRun);
+        stepRun.DecisionSummary = "Reopened after upstream artifact materialization completed.";
+    }
+
+    public static bool IsMissingUpstreamArtifactBlock(string blockedReason)
+    {
+        return !string.IsNullOrWhiteSpace(blockedReason) &&
+               blockedReason.Contains(MissingUpstreamArtifactsBlockMarker, StringComparison.OrdinalIgnoreCase) &&
+               blockedReason.Contains(MissingRequiredArtifactInputMarker, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void CascadeSkipStepRun(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> dependentStepsByDependsOnStepId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
+        string reason,
+        DateTimeOffset now)
+    {
+        if (!stepRunsByDefinitionId.TryGetValue(stepDefinition.Id, out var stepRun) ||
+            stepRun.Status != ProcessStepRunStatus.Pending)
+        {
+            return;
+        }
+
+        stepRun.Status = ProcessStepRunStatus.Skipped;
+        stepRun.CompletedAtUtc = now;
+        stepRun.DecisionSummary = reason;
+
+        CascadeSkipDependents(
+            stepDefinition,
+            stepDefinitionsById,
+            stepRunsByDefinitionId,
+            dependentStepsByDependsOnStepId,
+            stepDependenciesByStepId,
+            reason,
+            now);
+    }
+
+    private static void CascadeSkipDependents(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepDefinition>> dependentStepsByDependsOnStepId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
+        string reason,
+        DateTimeOffset now)
+    {
+        foreach (var dependentStep in GetDependentSteps(stepDefinition.Id, dependentStepsByDependsOnStepId))
+        {
+            CascadeSkipStepRun(
+                dependentStep,
+                stepDefinitionsById,
+                stepRunsByDefinitionId,
+                dependentStepsByDependsOnStepId,
+                stepDependenciesByStepId,
+                reason,
+                now);
+        }
+    }
+
+    private static bool AreAllDependenciesSatisfied(
+        ProcessStepDefinition stepDefinition,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId)
+    {
+        foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
+        {
+            if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
+                sourceStepRun.Status != ProcessStepRunStatus.Completed)
+            {
+                return false;
+            }
+
+            if (dependency.DependsOnBranchOutcomeId.HasValue &&
+                sourceStepRun.SelectedBranchOutcomeId != dependency.DependsOnBranchOutcomeId)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryResolveImpossibleDependencyReason(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
+        out string reason)
+    {
+        foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
+        {
+            if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
+                !stepDefinitionsById.TryGetValue(dependency.DependsOnStepId, out var sourceStepDefinition))
+            {
+                continue;
+            }
+
+            if (sourceStepRun.Status == ProcessStepRunStatus.Skipped)
+            {
+                reason = $"Skipped because upstream step '{sourceStepDefinition.Title}' was skipped.";
+                return true;
+            }
+
+            if (dependency.DependsOnBranchOutcomeId.HasValue &&
+                sourceStepRun.Status == ProcessStepRunStatus.Completed &&
+                sourceStepRun.SelectedBranchOutcomeId != dependency.DependsOnBranchOutcomeId)
+            {
+                reason = $"Skipped because upstream step '{sourceStepDefinition.Title}' selected a different branch outcome.";
+                return true;
+            }
+        }
+
+        reason = string.Empty;
+        return false;
+    }
+}

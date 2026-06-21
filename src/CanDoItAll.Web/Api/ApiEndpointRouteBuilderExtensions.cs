@@ -1,4 +1,4 @@
-using CanDoItAll.Modules.Workspace.ApiAccess;
+﻿using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Api;
@@ -42,9 +42,9 @@ public static class ApiEndpointRouteBuilderExtensions
             .WithName("IssueApiToken");
 
         group.MapProjectsApi();
-        group.MapProcessesApi();
         group.MapAgentsApi();
         group.MapWorkflowsApi();
+        group.MapProcessesApi();
         group.MapCognitiveMemoryApi();
         group.MapPluginsApi();
 
@@ -64,3 +64,4 @@ public static class ApiEndpointRouteBuilderExtensions
         return builder;
     }
 }
+

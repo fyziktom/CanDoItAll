@@ -1,0 +1,63 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Modules.Activity -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Activity.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Security.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.Modules.Validation -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Validation.dll
+  CanDoItAll.Modules.Factory -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Factory.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.Processes.Abstractions -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Abstractions.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Core.dll
+  CanDoItAll.Processes.Templates -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Templates.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.Processes.Builder -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Builder.dll
+  CanDoItAll.Processes.Runtime -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Runtime.dll
+  CanDoItAll.Processes.Projections -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Projections.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Git.dll
+  CanDoItAll.Processes.Application -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Application.dll
+  CanDoItAll.Processes.Persistence -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Persistence.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Modules.Automation -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Automation.dll
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.CognitiveMemory.dll
+  CanDoItAll.AgentFramework.Rag.Qdrant -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AgentFramework.Rag.Qdrant.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Processes.Drivers.Standard -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Processes.Drivers.Standard.dll
+  CanDoItAll.Components.Git -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Components.Git.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.AppComponents.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Manager.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Plugin.Docker.dll
+  CanDoItAll.Tests.Integration -> C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Tests.Integration.dll
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\test-out\integration-sb33\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 13 s - CanDoItAll.Tests.Integration.dll (net10.0)

@@ -1,171 +1,122 @@
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Persistence;
+using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
+using CanDoItAll.Processes.Templates;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Modules.Processes;
 
 public static class ProcessesModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddProcessesModule(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddProcessesModule(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-        var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
-            configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
-            configuration["LaneKind"]);
-        var runtimeOptions = configuration
-            .GetSection(ProcessRuntimeOptions.SectionName)
-            .Get<ProcessRuntimeOptions>() ?? new ProcessRuntimeOptions();
 
-        services.AddOptions<ProcessTemplatePackOptions>()
-            .BindConfiguration(ProcessTemplatePackOptions.SectionName);
-        services.AddOptions<ProcessRuntimeOptions>()
-            .BindConfiguration(ProcessRuntimeOptions.SectionName)
-            .ValidateDataAnnotations()
-            .Validate(
-                options => options.StepDispatchClaimLeaseDuration > TimeSpan.Zero,
-                "Processes:Runtime:StepDispatchClaimLeaseDuration must be positive.")
-            .Validate(
-                options => options.StepDispatchHeartbeatInterval > TimeSpan.Zero,
-                "Processes:Runtime:StepDispatchHeartbeatInterval must be positive.")
-            .Validate(
-                options => options.StepDispatchHeartbeatInterval < options.StepDispatchClaimLeaseDuration,
-                "Processes:Runtime:StepDispatchHeartbeatInterval must be shorter than StepDispatchClaimLeaseDuration.")
-            .ValidateOnStart();
-        services.AddOptions<ProcessObservationCacheOptions>()
-            .BindConfiguration(ProcessObservationCacheOptions.SectionName);
-        services.AddScoped<ProcessesService>();
-        services.AddScoped<ProcessOutboxService>();
-        services.AddScoped<ProcessWorkflowRunCoordinator>();
-        services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
-        services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
-        services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
-        services.AddSingleton<ProcessObservationCache>();
-        services.AddSingleton<IProcessObservationInvalidator>(provider => provider.GetRequiredService<ProcessObservationCache>());
-        services.AddScoped<IProcessObservationService, ProcessObservationService>();
-        services.AddScoped<IProcessManagerChatService, ProcessManagerChatService>();
-        services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
-        services.AddScoped<IProcessRuntimeEvidenceSourceProvider, ProcessRuntimeEvidenceSourceProvider>();
-        services.AddScoped<ProcessObservationDashboardState>();
-        services.AddScoped<ProcessRuntimeStateOverviewService>();
-        services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
-        services.AddScoped<ProcessRunRecoveryService>();
-        services.AddSingleton<ProcessRunRecoveryStartupGate>();
-        services.AddSingleton<ProcessRuntimeSession>();
-        services.AddScoped<IProcessEscalationService, ProcessEscalationService>();
-        services.AddScoped<ProcessCanvasSurfaceFactory>();
-        services.AddScoped<ProcessCanvasRecompositionService>();
-        services.AddScoped<ProcessCanvasChromeCatalogService>();
-        // Keep the template pack scoped until the loaded graph becomes deeply immutable.
-        services.AddScoped(provider =>
-        {
-            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ProcessTemplatePackOptions>>().Value;
-            return new ProcessTemplatePackLoader(options.PackRoot);
-        });
-        services.AddScoped<ProcessTemplateCatalogService>();
-        services.AddScoped<IDatabaseTransferHandler, ProcessDefinitionsDatabaseTransferHandler>();
-        services.AddScoped<ProcessTemplateLibraryService>();
-        services.AddScoped<ProcessTemplateProjectionService>();
-        services.AddScoped<ProcessTemplateMermaidExporter>();
-        services.AddScoped<ProcessDevelopmentSeedService>();
-        services.AddScoped<ProcessCatalogWarmupService>();
-        services.TryAddScoped<IProcessProjectStructureBridge, NoopProcessProjectStructureBridge>();
-        services.AddScoped<IProcessExecutorRegistryBridge, NoopProcessExecutorRegistryBridge>();
+        services.AddDbContext<ProcessPersistenceDbContext>(ConfigureProcessPersistenceDbContext);
+        services.AddDbContextFactory<ProcessPersistenceDbContext>(
+            ConfigureProcessPersistenceDbContext,
+            ServiceLifetime.Scoped);
 
-        if (backgroundWorkersEnabled)
-        {
-            services.AddHostedService<ProcessCatalogWarmupWorker>();
-            if (runtimeOptions.RecoverActiveRunsOnStartup)
-            {
-                services.AddHostedService<ProcessRunRecoveryWorker>();
-            }
-
-            services.AddHostedService<ProcessOutboxDrainWorker>();
-        }
-
+        services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
+        services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
+        services.TryAddSingleton<ProcessTemplatePackLoader>();
+        services.TryAddScoped<EfProcessRuntimeUnitOfWork>();
+        services.TryAddScoped<IProcessRuntimeUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
+        services.TryAddScoped<IProcessRuntimeStateStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
+        services.TryAddScoped<IProcessRuntimeRunHierarchyStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
+        services.TryAddScoped<IProcessIdempotencyStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
+        services.TryAddScoped<EfProcessRuntimeEventStore>();
+        services.TryAddScoped<IProcessRuntimeEventStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeEventStore>());
+        services.TryAddScoped<IProcessRuntimeEventReplayStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeEventStore>());
+        services.TryAddScoped<IProcessOutboxWriter, EfProcessOutboxStore>();
+        services.TryAddScoped<IProcessArtifactLedgerStore, EfProcessArtifactLedgerStore>();
+        services.TryAddScoped<IProcessProjectionStore, EfProcessProjectionStore>();
+        services.TryAddScoped<IProcessInstancePlanStore, EfProcessInstancePlanStore>();
+        services.TryAddScoped<IProcessRuntimeStepAssignmentStore, EfProcessRuntimeStepAssignmentStore>();
+        services.TryAddScoped<IProcessRuntimeProjector, ProcessRuntimeProjectionProjector>();
+        services.TryAddScoped<ProcessRuntimeProjectionCatchupService>();
+        services.TryAddScoped<IProcessStepBriefBuilder, AgentFrameworkProcessStepBriefBuilder>();
+        services.TryAddScoped<IProcessExecutionAdapter, AgentFrameworkProcessExecutionAdapter>();
+        services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
+        services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, AgentFrameworkProcessRuntimeUsageTelemetryReader>();
+        services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>();
+        services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryReconciler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentExecutionRecoveryObserver, AgentFrameworkProcessExecutionRecoveryObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeRunCancellationObserver, AgentFrameworkProcessRuntimeCancellationObserver>());
+        services.TryAddScoped<IProcessLaunchDriverCatalogProvider, StandardProcessLaunchDriverCatalogProvider>();
+        services.TryAddScoped<IProcessLaunchExecutorResolver, AgentFrameworkProcessLaunchExecutorResolver>();
+        services.TryAddScoped<IProcessRuntimeStepAssignmentRepairService, AgentFrameworkProcessRuntimeStepAssignmentRepairService>();
+        services.TryAddScoped<IProcessLaunchArtifactInitializer, WorkspaceProcessLaunchArtifactInitializer>();
+        services.TryAddScoped<IProcessRuntimeStrategyFactoryResolver, StandardProcessRuntimeStrategyFactoryResolver>();
+        services.Configure<ProcessRuntimeDispatchQueueOptions>(
+            configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
+        services.TryAddSingleton<ProcessRuntimeDispatchQueue>();
+        services.TryAddSingleton<IProcessRuntimeDispatchQueue>(serviceProvider => serviceProvider.GetRequiredService<ProcessRuntimeDispatchQueue>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeDispatchQueueWorker>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AgentFrameworkProcessExecutionClaimRecoveryWorker>());
+        services.TryAddScoped<ProcessLaunchApplicationService>();
+        services.TryAddScoped<ProcessRuntimeDispatchApplicationService>();
+        services.TryAddScoped<ProcessRuntimeOperatorApplicationService>();
+        services.TryAddScoped<ProcessRuntimeProjectionQueryService>();
+        services.TryAddScoped<ProcessDefinitionCatalogProjectionService>();
+        services.TryAddScoped<ProcessDefinitionEditorProjectionService>();
+        services.TryAddScoped<ProcessDefinitionRoleEditorProjectionService>();
+        services.TryAddScoped<ProcessDefinitionCanvasEditorProjectionService>();
+        services.TryAddScoped<ProcessDefinitionStepEditorProjectionService>();
+        services.TryAddScoped<ProcessTemplateCatalogProjectionService>();
+        services.TryAddScoped<ProcessWorkspaceShellProjectionService>();
+        services.TryAddSingleton<IProcessWorkspaceProjectionClient, ProcessWorkspaceProjectionClient>();
+        services.TryAddSingleton<ProcessWorkspaceMockProjectionFactory>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());
+        services.AddSingleton<ProcessModuleRewriteState>(ProcessModuleRewriteState.Enabled);
         return services;
     }
-}
 
-public interface IProcessProjectStructureBridge
-{
-    Task SyncRunAsync(
-        AppDbContext dbContext,
-        ProcessRun run,
-        IReadOnlyCollection<ProcessStepRun> stepRuns,
-        CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<string>> ListLaunchContextAsync(
-        AppDbContext dbContext,
-        Guid projectId,
-        ProcessProjectStructureContext? projectStructureContext,
-        CancellationToken cancellationToken = default);
-
-    Task<ProcessProjectStructureContext?> TryResolveLaunchContextAsync(
-        AppDbContext dbContext,
-        Guid projectId,
-        Guid processDefinitionId,
-        CancellationToken cancellationToken = default);
-}
-
-internal sealed class NoopProcessProjectStructureBridge : IProcessProjectStructureBridge
-{
-    public Task SyncRunAsync(
-        AppDbContext dbContext,
-        ProcessRun run,
-        IReadOnlyCollection<ProcessStepRun> stepRuns,
-        CancellationToken cancellationToken = default)
+    private static void ConfigureProcessPersistenceDbContext(
+        IServiceProvider serviceProvider,
+        DbContextOptionsBuilder options)
     {
-        ArgumentNullException.ThrowIfNull(dbContext);
-        ArgumentNullException.ThrowIfNull(run);
-        ArgumentNullException.ThrowIfNull(stepRuns);
-        return Task.CompletedTask;
-    }
+        var profile = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(options);
 
-    public Task<IReadOnlyList<string>> ListLaunchContextAsync(
-        AppDbContext dbContext,
-        Guid projectId,
-        ProcessProjectStructureContext? projectStructureContext,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-        return Task.FromResult<IReadOnlyList<string>>([]);
-    }
+        switch (profile.Profile.ProviderKind)
+        {
+            case DatabaseProviderKind.InMemory:
+                options.UseInMemoryDatabase(string.IsNullOrWhiteSpace(profile.ConnectionString)
+                    ? $"processes-{profile.Profile.Id:D}"
+                    : profile.ConnectionString);
+                break;
 
-    public Task<ProcessProjectStructureContext?> TryResolveLaunchContextAsync(
-        AppDbContext dbContext,
-        Guid projectId,
-        Guid processDefinitionId,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(dbContext);
-        return Task.FromResult<ProcessProjectStructureContext?>(null);
+            case DatabaseProviderKind.PostgreSql:
+                options.UseNpgsql(
+                    profile.ConnectionString,
+                    builder => builder.MigrationsAssembly("CanDoItAll.Migrations.PostgreSql"));
+                break;
+
+            default:
+                throw new InvalidOperationException($"Unsupported process database provider '{profile.Profile.ProviderKind}'.");
+        }
     }
 }
 
-public interface IProcessExecutorRegistryBridge
+public sealed record ProcessModuleRewriteState(bool IsEnabled)
 {
-    Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListOptionsAsync(CancellationToken cancellationToken = default);
+    public static ProcessModuleRewriteState Disabled { get; } = new(false);
+
+    public static ProcessModuleRewriteState Enabled { get; } = new(true);
 }
 
-public sealed record ProcessExecutorRegistryOption(
-    string RegistryKey,
-    string DisplayName,
-    string ExecutorKind,
-    string Steward,
-    string CapabilitySummary);
-
-internal sealed class NoopProcessExecutorRegistryBridge : IProcessExecutorRegistryBridge
-{
-    public Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListOptionsAsync(CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult<IReadOnlyList<ProcessExecutorRegistryOption>>([]);
-    }
-}
-
-public static class ProcessesModuleAssemblyMarker
-{
-}
+public static class ProcessesModuleAssemblyMarker;

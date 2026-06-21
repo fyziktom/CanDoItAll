@@ -172,6 +172,60 @@ public partial class MainLayout
                 TabGroup: "Projects");
         }
 
+        if (TryReadProjectProcessesSurface(path, out var processProjectId, out var isProjectLiveProcesses))
+        {
+            var project = await ProjectsService.GetAsync(processProjectId);
+            var title = isProjectLiveProcesses
+                ? $"{project.Name} · Live Processes"
+                : $"{project.Name} · Processes";
+            var artifactKind = isProjectLiveProcesses
+                ? "process-live-dashboard"
+                : "process-workspace";
+
+            return new WorkbenchTabDescriptor(
+                isProjectLiveProcesses
+                    ? $"project-processes-live:{processProjectId:N}"
+                    : $"project-processes:{processProjectId:N}",
+                title,
+                route,
+                WorkbenchTabKinds.Processes,
+                ProjectId: processProjectId,
+                ArtifactId: processProjectId,
+                ArtifactKind: artifactKind,
+                ArtifactKey: $"{artifactKind}:{processProjectId:N}",
+                RestoreKey: $"{artifactKind}:{processProjectId:N}",
+                ProjectScope: processProjectId.ToString("D"),
+                ProjectName: project.Name,
+                PhaseName: project.CurrentPhase,
+                Description: isProjectLiveProcesses
+                    ? "Project-scoped live process projection shell."
+                    : "Project-scoped process workspace projection shell.",
+                TabGroup: "Processes");
+        }
+
+        if (string.Equals(path, "/processes", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(path, "/processes/live", StringComparison.OrdinalIgnoreCase))
+        {
+            var isLiveProcesses = path.EndsWith("/live", StringComparison.OrdinalIgnoreCase);
+            var artifactKind = isLiveProcesses
+                ? "process-live-dashboard"
+                : "process-workspace";
+
+            return new WorkbenchTabDescriptor(
+                isLiveProcesses ? "route:processes-live" : "route:processes",
+                isLiveProcesses ? "Live Processes" : "Processes",
+                route,
+                WorkbenchTabKinds.Processes,
+                ArtifactKind: artifactKind,
+                ArtifactKey: artifactKind,
+                RestoreKey: artifactKind,
+                Description: isLiveProcesses
+                    ? "Global live process projection shell."
+                    : "Global process workspace projection shell.",
+                TabGroup: "Processes",
+                IsPinned: false);
+        }
+
         if (string.Equals(path, "/prompt-factory", StringComparison.OrdinalIgnoreCase) &&
             (TryReadGuid(query, "sessionId", out var sessionId) || TryReadGuid(query, "runId", out sessionId)))
         {
@@ -273,6 +327,28 @@ public partial class MainLayout
                string.Equals(segments[2], surfaceSegment, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool TryReadProjectProcessesSurface(string path, out Guid projectId, out bool isLive)
+    {
+        projectId = Guid.Empty;
+        isLive = false;
+        var segments = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length is not 3 and not 4 ||
+            !string.Equals(segments[0], "projects", StringComparison.OrdinalIgnoreCase) ||
+            !Guid.TryParse(segments[1], out projectId) ||
+            !string.Equals(segments[2], "processes", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (segments.Length == 3)
+        {
+            return true;
+        }
+
+        isLive = string.Equals(segments[3], "live", StringComparison.OrdinalIgnoreCase);
+        return isLive;
+    }
+
     private static string ResolveWorkspaceId(string path)
         => path.Trim().ToLowerInvariant() switch
         {
@@ -282,16 +358,26 @@ public partial class MainLayout
         };
 
     private static string ResolvePageGroup(string path)
-        => path.Trim().ToLowerInvariant() switch
+    {
+        var normalized = path.Trim().ToLowerInvariant();
+        if (normalized.StartsWith("/projects/", StringComparison.Ordinal) &&
+            (normalized.EndsWith("/processes", StringComparison.Ordinal) ||
+             normalized.EndsWith("/processes/live", StringComparison.Ordinal)))
         {
-            var normalized when normalized.StartsWith("/crm-hr", StringComparison.Ordinal) => "CRM / HR",
-            var normalized when normalized.StartsWith("/processes", StringComparison.Ordinal) => "Processes",
+            return "Processes";
+        }
+
+        return normalized switch
+        {
+            var candidate when candidate.StartsWith("/crm-hr", StringComparison.Ordinal) => "CRM / HR",
+            var candidate when candidate.StartsWith("/processes", StringComparison.Ordinal) => "Processes",
             "/validation" => "Validation",
             "/test-lab" => "Testing",
             "/settings" => "Settings",
             "/automation" or "/activity" => "Operations",
             _ => "Workspace"
         };
+    }
 
     private static string NormalizeArtifactKey(string path)
         => string.IsNullOrWhiteSpace(path) || string.Equals(path, "/", StringComparison.Ordinal) ? "/" : path.Trim();

@@ -18,6 +18,7 @@ public static class ToolContractCatalog
     public const string WorkspaceDotNetBuild = "workspace_dotnet_build";
     public const string WorkspaceDotNetTest = "workspace_dotnet_test";
     public const string WorkspaceDotNetRun = "workspace_dotnet_run";
+    public const string WorkspaceDotNetStop = "workspace_dotnet_stop";
     public const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";
     public const string WorkspacePythonRunFile = "workspace_python_run_file";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
@@ -42,6 +43,7 @@ public static class ToolContractCatalog
     public const string BrowserPressKey = "browser_press_key";
     public const string BrowserType = "browser_type";
     public const string BrowserDrag = "browser_drag";
+    public const string BrowserWaitFor = "browser_wait_for";
 
     public static IReadOnlyList<string> WorkspaceToolNames { get; } =
     [
@@ -61,6 +63,7 @@ public static class ToolContractCatalog
         WorkspaceDotNetBuild,
         WorkspaceDotNetTest,
         WorkspaceDotNetRun,
+        WorkspaceDotNetStop,
         WorkspacePowerShellRunScript,
         WorkspacePythonRunFile,
         WorkspaceInspectImage,
@@ -87,7 +90,8 @@ public static class ToolContractCatalog
         BrowserSelectOption,
         BrowserPressKey,
         BrowserType,
-        BrowserDrag
+        BrowserDrag,
+        BrowserWaitFor
     ];
 
     public static IReadOnlyList<string> BrowserEvidenceToolNames { get; } =
@@ -99,6 +103,18 @@ public static class ToolContractCatalog
         BrowserTakeScreenshot
     ];
 
+    public static IReadOnlyList<string> FinalizerToolNames { get; } =
+    [
+        AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+        AgentFinalizerPolicies.SubmitCodeReviewResultToolName,
+        AgentFinalizerPolicies.SubmitArchitectureReviewResultToolName,
+        AgentFinalizerPolicies.SubmitImplementationPlanToolName,
+        AgentFinalizerPolicies.SubmitTestPlanToolName,
+        AgentFinalizerPolicies.SubmitToolExecutionDecisionToolName,
+        AgentFinalizerPolicies.SubmitProcessStatePatchToolName,
+        AgentFinalizerPolicies.SubmitHumanEscalationRequestToolName
+    ];
+
     public static IReadOnlyList<string> RepresentativeBrowserInteractionToolNames { get; } =
     [
         BrowserClick,
@@ -107,7 +123,8 @@ public static class ToolContractCatalog
         BrowserPressKey,
         BrowserType,
         BrowserDrag,
-        BrowserEvaluate
+        BrowserEvaluate,
+        BrowserWaitFor
     ];
 
     public static IReadOnlyList<string> DotNetValidationToolNames { get; } =
@@ -121,6 +138,7 @@ public static class ToolContractCatalog
     [
         .. WorkspaceToolNames,
         .. BrowserToolNames,
+        .. FinalizerToolNames,
         AgentToolInvocationPolicyMetadata.LoadSkill,
         AgentToolInvocationPolicyMetadata.ReadSkillResource,
         AgentToolInvocationPolicyMetadata.RunSkillScript,
@@ -162,19 +180,43 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProjectStructureDependencyUnlink,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeTypeUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeMetadataUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodesStatusUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeStatusUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodesProgressUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeProgressUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodesMarkerUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeMarkerUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodesPriorityUpdate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodePriorityUpdate,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeMove,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeRecompose,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeReparent,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeDescendantsToProjectMove,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeCommandExecute,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessDefinitionLink,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowAddOptions,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowDefinitionCreate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodesDelete,
         AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetGet,
+        AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreateRevision,
+        AgentToolInvocationPolicyMetadata.ProjectStructureLinkCreate,
+        AgentToolInvocationPolicyMetadata.ProjectStructureLinkUnlink,
         AgentToolInvocationPolicyMetadata.ProjectStructureImport,
         AgentToolInvocationPolicyMetadata.ProjectStructureKnowledgeQuery,
         AgentToolInvocationPolicyMetadata.ProjectStructureAnalyticsQuery,
         AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire,
         AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire,
         AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet,
+        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew,
         AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease
     ];
 

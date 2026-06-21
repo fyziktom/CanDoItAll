@@ -7,17 +7,39 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.AgentFramework.Hosting;
 
-internal sealed class ProcessMockAgentRuntime(
+internal sealed partial class ProcessMockAgentRuntime(
     IAgentRuntime inner,
     IWorkspaceFileService fileService,
+    string workspaceRoot,
     IOptions<ProcessMockAgentOptions> options) : IAgentRuntime
 {
     private const string WorkspaceStatPathToolName = "workspace_stat_path";
     private const string WorkspaceReadFileToolName = "workspace_read_file";
+    private const string BrowserScreenshotToolName = "browser_take_screenshot";
+    private const string BrowserSnapshotToolName = "browser_snapshot";
+    private const string BrowserConsoleMessagesToolName = "browser_console_messages";
+    private const string BrowserEvaluateToolName = "browser_evaluate";
 
-    private static readonly Regex ManagedWorkspacePathRegex = new(
+    [GeneratedRegex(
         @"(?<path>\b(?:artifacts|output|integration-map|data)/[^\s`'""<>()\[\]{},;]+)",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ManagedWorkspacePathRegex();
+
+    [GeneratedRegex(
+        @"^-\s+(?<title>.+?)\s+\[(?<kind>[^\]]+)\](?:\s+required)?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex RequiredArtifactLineRegex();
+
+    [GeneratedRegex(
+        @"^-\s+(?:(?<key>[^\s()]+)\s+\((?<title>[^)]+)\)|(?<titleOnly>[^:]+))(?:\:\s*(?<description>.*))?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex BranchOutcomeLineRegex();
+
+    [GeneratedRegex(@"`(?<toolName>[^`]+)`", RegexOptions.CultureInvariant)]
+    private static partial Regex RequiredToolNameRegex();
+
+    private static readonly byte[] MockBrowserScreenshotPngBytes = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -132,11 +154,13 @@ internal sealed class ProcessMockAgentRuntime(
             ProcessMockAgentRoleKeys.Qa => ExecuteQa(state),
             ProcessMockAgentRoleKeys.RepairDeveloper => ExecuteRepairDeveloper(state),
             ProcessMockAgentRoleKeys.ReleaseManager => ExecuteReleaseManager(state),
+            ProcessMockAgentRoleKeys.BusinessStrategist => ExecuteBusinessStrategist(state),
+            ProcessMockAgentRoleKeys.FinancialStrategist => ExecuteFinancialStrategist(state),
+            ProcessMockAgentRoleKeys.MarketingSpecialist => ExecuteMarketingSpecialist(state),
             _ => throw new InvalidOperationException($"Unsupported process mock role '{roleKey}'.")
         };
-        var inspectedArtifactPaths = string.Equals(roleKey, ProcessMockAgentRoleKeys.Qa, StringComparison.Ordinal)
-            ? ResolveQaArtifactInspectionPaths(prompt)
-            : [];
+        var inspectedArtifactPaths = ResolveArtifactInspectionPaths(prompt);
+        var requiredToolNames = ResolvePromptRequiredToolNames(prompt);
 
         await progressCallback(
             ExecutionState.Persisting,
@@ -153,11 +177,11 @@ internal sealed class ProcessMockAgentRuntime(
             OutputTokens: EstimateTokens(outcome.ResponseText),
             ToolCalls: outcome.ToolCalls,
             RuntimeSessionKey: state.RuntimeSessionKey,
-            SerializedSessionStateJson: BuildSerializedSessionState(roleKey, state, outcome, inspectedArtifactPaths),
+            SerializedSessionStateJson: BuildSerializedSessionState(roleKey, state, outcome, inspectedArtifactPaths, requiredToolNames),
             PendingApprovals: [])
         {
             FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, outcome.ResponseText),
-            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(structuredOutput, executionOptions)
+            ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(requiredToolNames, structuredOutput, executionOptions)
         };
     }
 
@@ -227,16 +251,25 @@ internal sealed class ProcessMockAgentRuntime(
             - Non-empty names are trimmed before use.
             - Blank names produce an explicit validation failure.
             - QA must reject an implementation that accepts blank input.
-            """;
+        """;
         fileService.WriteTextFile(scopePath, markdown, overwrite: true);
 
-        return BuildOutcome(
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(scopePath, "mock sample scope artifact acceptance criteria validation blank input")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "01", artifacts);
+        var responseSummary = MergeSummary(
             "Scope captured for the deterministic mock delivery process.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
             "Completed",
             "Mock scope and acceptance criteria were written.",
-            null,
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
             "Product owner mock scope artifact saved.",
-            [CreateArtifact(scopePath, "mock sample scope artifact acceptance criteria validation blank input")]);
+            artifacts);
     }
 
     private ProcessMockRuntimeOutcome ExecuteArchitect(ProcessMockRuntimeState state)
@@ -252,16 +285,25 @@ internal sealed class ProcessMockAgentRuntime(
             - `ValidationEngine` owns input validation and normalization rules.
             - UI orchestration calls the engine and displays validation feedback.
             - QA verifies blank-input behavior before release.
-            """;
+        """;
         fileService.WriteTextFile(architecturePath, markdown, overwrite: true);
 
-        return BuildOutcome(
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(architecturePath, "mock sample architecture artifact boundary implementation qa expectations")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "02", artifacts);
+        var responseSummary = MergeSummary(
             "Architecture captured for the deterministic mock delivery process.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
             "Completed",
             "Mock architecture guidance was written.",
-            null,
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
             "Architect mock handoff artifact saved.",
-            [CreateArtifact(architecturePath, "mock sample architecture artifact boundary implementation qa expectations")]);
+            artifacts);
     }
 
     private ProcessMockRuntimeOutcome ExecuteDeveloper(ProcessMockRuntimeState state)
@@ -296,18 +338,21 @@ internal sealed class ProcessMockAgentRuntime(
             responseSummary = requiredArtifactSections;
         }
 
+        var promptSections = BuildPromptRequiredArtifactSections(state, "03", artifacts);
+        responseSummary = MergeSummary(responseSummary, promptSections);
+
         return BuildOutcome(
             responseSummary,
             "Completed",
             "First-pass mock implementation artifact was written.",
-            null,
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
             "Developer mock implementation artifact saved.",
             artifacts);
     }
 
     private ProcessMockRuntimeOutcome ExecuteQa(ProcessMockRuntimeState state)
     {
-        return IsApprovalQaPass(state.OriginalPrompt)
+        return ShouldApproveQaPrompt(state.OriginalPrompt)
             ? ExecuteQaApproval(state)
             : ExecuteQaRejection(state);
     }
@@ -324,16 +369,25 @@ internal sealed class ProcessMockAgentRuntime(
 
             ## Blocking Defect
             `ValidationEngine.NormalizeName` trims input but does not explicitly reject blank values. Repair is required before approval.
-            """;
+        """;
         fileService.WriteTextFile(findingPath, markdown, overwrite: true);
 
-        return BuildOutcome(
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(findingPath, "mock sample qa rejection artifact finding repair branch reason")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "04", artifacts);
+        var responseSummary = MergeSummary(
             "QA rejected the first-pass mock implementation and selected the repair branch.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
             "Completed",
             "Blank-input handling is missing; repair is required.",
-            ProcessMockAgentCatalog.BranchRepairsRequired,
+            ResolveRepairBranchOutcomeKey(state.OriginalPrompt) ?? ProcessMockAgentCatalog.BranchRepairsRequired,
             "QA mock rejection artifact saved.",
-            [CreateArtifact(findingPath, "mock sample qa rejection artifact finding repair branch reason")]);
+            artifacts);
     }
 
     private ProcessMockRuntimeOutcome ExecuteRepairDeveloper(ProcessMockRuntimeState state)
@@ -368,11 +422,14 @@ internal sealed class ProcessMockAgentRuntime(
             responseSummary = requiredArtifactSections;
         }
 
+        var promptSections = BuildPromptRequiredArtifactSections(state, "05", artifacts);
+        responseSummary = MergeSummary(responseSummary, promptSections);
+
         return BuildOutcome(
             responseSummary,
             "Completed",
             "Blank-input repair artifact was written.",
-            null,
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
             "Repair developer mock artifact saved.",
             artifacts);
     }
@@ -391,16 +448,25 @@ internal sealed class ProcessMockAgentRuntime(
             - Non-empty values are normalized.
             - Blank input is handled explicitly.
             - Repair evidence is ready for release notes.
-            """;
+        """;
         fileService.WriteTextFile(approvalPath, markdown, overwrite: true);
 
-        return BuildOutcome(
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(approvalPath, "mock sample qa approval artifact repaired implementation release")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "06", artifacts);
+        var responseSummary = MergeSummary(
             "QA approved the repaired mock implementation and selected the approval branch.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
             "Completed",
             "Repaired mock implementation passed QA.",
-            ProcessMockAgentCatalog.BranchApproved,
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt) ?? ProcessMockAgentCatalog.BranchApproved,
             "QA mock approval artifact saved.",
-            [CreateArtifact(approvalPath, "mock sample qa approval artifact repaired implementation release")]);
+            artifacts);
     }
 
     private ProcessMockRuntimeOutcome ExecuteReleaseManager(ProcessMockRuntimeState state)
@@ -418,16 +484,136 @@ internal sealed class ProcessMockAgentRuntime(
             - First implementation was rejected by QA.
             - Repair developer fixed blank-input behavior.
             - QA approved the repaired output.
-            """;
+        """;
         fileService.WriteTextFile(releasePath, markdown, overwrite: true);
 
-        return BuildOutcome(
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(releasePath, "mock sample release notes artifact qa approval repair evidence")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "07", artifacts);
+        var responseSummary = MergeSummary(
             "Release notes captured after deterministic QA approval.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
             "Completed",
             "Release notes were written after QA approval.",
-            null,
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
             "Release manager mock artifact saved.",
-            [CreateArtifact(releasePath, "mock sample release notes artifact qa approval repair evidence")]);
+            artifacts);
+    }
+
+    private ProcessMockRuntimeOutcome ExecuteBusinessStrategist(ProcessMockRuntimeState state)
+    {
+        fileService.CreateDirectory(state.ArtifactRoot);
+        var strategyPath = $"{state.ArtifactRoot}/08-business-strategy.md";
+        var markdown =
+            """
+            # Business Strategy Plan
+
+            The business strategist captured planning assumptions, product evidence, plan synthesis, integrated review, and approved handoff details.
+
+            ## Business Planning Controls
+            - Facts, assumptions, open questions, and risks are kept distinct.
+            - Product evidence is reviewed before the business plan is synthesized.
+            - Integrated review records the decision status and next actions.
+            """;
+        fileService.WriteTextFile(strategyPath, markdown, overwrite: true);
+
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                strategyPath,
+                "business strategy intake brief product evidence assessment business plan integrated business plan review approved plan handoff assumption inventory")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "08", artifacts);
+        var responseSummary = MergeSummary(
+            "Business strategy artifacts were written for deterministic business-plan automation.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
+            "Completed",
+            "Business planning artifact was written.",
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
+            "Business strategist mock artifact saved.",
+            artifacts);
+    }
+
+    private ProcessMockRuntimeOutcome ExecuteFinancialStrategist(ProcessMockRuntimeState state)
+    {
+        fileService.CreateDirectory(state.ArtifactRoot);
+        var financialPath = $"{state.ArtifactRoot}/09-financial-model.md";
+        var markdown =
+            """
+            # Financial Model And Sensitivity Note
+
+            The financial strategist captured drivers, assumptions, ranges, data gaps, and sensitivity findings for the business plan.
+
+            ## Financial Planning Controls
+            - Forecasts identify drivers and confidence ranges.
+            - Missing source data remains visible.
+            - Downstream review can reuse the model assumptions.
+            """;
+        fileService.WriteTextFile(financialPath, markdown, overwrite: true);
+
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                financialPath,
+                "financial model sensitivity note drivers assumptions ranges data gaps business plan")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "09", artifacts);
+        var responseSummary = MergeSummary(
+            "Financial planning artifact was written for deterministic business-plan automation.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
+            "Completed",
+            "Financial planning artifact was written.",
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
+            "Financial strategist mock artifact saved.",
+            artifacts);
+    }
+
+    private ProcessMockRuntimeOutcome ExecuteMarketingSpecialist(ProcessMockRuntimeState state)
+    {
+        fileService.CreateDirectory(state.ArtifactRoot);
+        var marketingPath = $"{state.ArtifactRoot}/10-marketing-plan.md";
+        var markdown =
+            """
+            # Go-To-Market And Experiment Plan
+
+            The marketing specialist captured audience, promise, channels, budget dependencies, metrics, and validation experiments.
+
+            ## Marketing Planning Controls
+            - Audience and channel assumptions are explicit.
+            - Proof needs and validation experiments are named.
+            - Marketing actions remain tied to business-plan constraints.
+            """;
+        fileService.WriteTextFile(marketingPath, markdown, overwrite: true);
+
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                marketingPath,
+                "go market experiment plan marketing audience promise channels metrics validation business plan")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "10", artifacts);
+        var responseSummary = MergeSummary(
+            "Marketing planning artifact was written for deterministic business-plan automation.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
+            "Completed",
+            "Marketing planning artifact was written.",
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
+            "Marketing specialist mock artifact saved.",
+            artifacts);
     }
 
     private static ProcessMockRuntimeOutcome BuildOutcome(
@@ -445,329 +631,6 @@ internal sealed class ProcessMockAgentRuntime(
             BranchOutcomeKey: branchOutcomeKey,
             ToolCalls: 2,
             Artifacts: artifacts ?? []);
-    }
-
-    private string BuildImplementationRequiredArtifactSections(
-        ProcessMockRuntimeState state,
-        bool repaired,
-        List<ProcessMockRuntimeArtifact> artifacts)
-    {
-        var sections = new List<string>();
-        if (PromptRequiresArtifact(state.OriginalPrompt, "Implementation change set"))
-        {
-            var changeSetPath = repaired
-                ? $"{state.ArtifactRoot}/05-implementation-change-set.md"
-                : $"{state.ArtifactRoot}/03-implementation-change-set.md";
-            var changeSetMarkdown =
-                $$"""
-                # Implementation Change Set
-
-                ## Touched Surface Inventory
-                - `{{state.OutputRoot}}/MockApp/ValidationEngine.cs` contains the mock validation implementation.
-
-                ## Tests And Validation
-                - Deterministic process mock validation stands in for the implementation agent proof path.
-                - The change set is linked to validation behavior tests and migration notes by this governed artifact.
-
-                ## Migration Notes
-                - No schema or data migration is introduced by the mock implementation.
-                """;
-            fileService.WriteTextFile(changeSetPath, changeSetMarkdown, overwrite: true);
-            artifacts.Add(CreateArtifact(
-                changeSetPath,
-                "implementation change set tests migration notes touched surface inventory"));
-            sections.Add(
-                """
-                ## Implementation change set
-                Touched surface inventory: ValidationEngine owns name normalization and blank-input validation behavior for the mock implementation target.
-                Tests and validation: deterministic process mock validation covers the implementation lane and links the change set to test proof.
-                Migration notes: no schema, persistent data, or backfill changes are part of this implementation.
-                """);
-        }
-
-        if (PromptRequiresArtifact(state.OriginalPrompt, "Migration and rollout preparation checklist"))
-        {
-            var checklistPath = repaired
-                ? $"{state.ArtifactRoot}/05-migration-rollout-preparation-checklist.md"
-                : $"{state.ArtifactRoot}/03-migration-rollout-preparation-checklist.md";
-            var checklistMarkdown =
-                """
-                # Migration And Rollout Preparation Checklist
-
-                ## Data Changes
-                - No data migration required.
-                - No schema migration, seed update, backfill, or data rollback step is required.
-
-                ## Operational Preconditions
-                - Implementation validation must pass before rollout.
-                - QA must verify name normalization and blank-input behavior before release.
-
-                ## Rollback Steps
-                - Revert the implementation change set or restore the previous project state.
-                - No data rollback is required because no persistent data changes are introduced.
-                """;
-            fileService.WriteTextFile(checklistPath, checklistMarkdown, overwrite: true);
-            artifacts.Add(CreateArtifact(
-                checklistPath,
-                "migration rollout preparation checklist data changes operational preconditions rollback steps no data migration required"));
-            sections.Add(
-                """
-                ## Migration and rollout preparation checklist
-                Data changes: no data migration required; no schema migration, seed update, backfill, or data rollback is needed.
-                Operational preconditions: implementation validation must pass and QA must verify name normalization plus blank-input behavior.
-                Rollback steps: revert the implementation change set or restore the previous project state; no data rollback is required.
-                """);
-        }
-
-        return string.Join(Environment.NewLine + Environment.NewLine, sections);
-    }
-
-    private static bool PromptRequiresArtifact(string prompt, string artifactTitle)
-    {
-        return prompt.Contains(artifactTitle, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string BuildSerializedSessionState(
-        string roleKey,
-        ProcessMockRuntimeState state,
-        ProcessMockRuntimeOutcome outcome,
-        IReadOnlyList<string> inspectedArtifactPaths)
-    {
-        var callContents = new List<Dictionary<string, object?>>();
-        var resultContents = new List<Dictionary<string, object?>>();
-        var callSequence = 1;
-        foreach (var artifactPath in inspectedArtifactPaths)
-        {
-            var statCallId = $"stat-{callSequence}";
-            var readCallId = $"read-{callSequence}";
-            callContents.Add(CreateFunctionCall(statCallId, WorkspaceStatPathToolName, artifactPath));
-            callContents.Add(CreateFunctionCall(readCallId, WorkspaceReadFileToolName, artifactPath));
-            resultContents.Add(CreateFunctionResult(
-                statCallId,
-                new Dictionary<string, object?>
-                {
-                    ["succeeded"] = true,
-                    ["path"] = artifactPath,
-                    ["exists"] = true
-                }));
-            resultContents.Add(CreateFunctionResult(
-                readCallId,
-                new Dictionary<string, object?>
-                {
-                    ["succeeded"] = true,
-                    ["path"] = artifactPath,
-                    ["content"] = $"Process mock QA inspected inherited artifact {artifactPath}."
-                }));
-            callSequence++;
-        }
-
-        return JsonSerializer.Serialize(
-            new
-            {
-                processMockAgent = true,
-                roleKey,
-                state.RunKey,
-                state.ArtifactRoot,
-                state.ProcessCooperationMode,
-                state.WorkspaceToolProfileOverride,
-                outcome.BranchOutcomeKey,
-                artifacts = outcome.Artifacts.Select(artifact => new
-                {
-                    artifact.RelativePath,
-                    artifact.ContentSignalText
-                }).ToArray(),
-                stateBag = new Dictionary<string, object?>
-                {
-                    ["InMemoryChatHistoryProvider"] = new
-                    {
-                        messages = new object[]
-                        {
-                            new
-                            {
-                                role = "assistant",
-                                contents = callContents.ToArray()
-                            },
-                            new
-                            {
-                                role = "tool",
-                                contents = resultContents.ToArray()
-                            }
-                        }
-                    }
-                }
-            },
-            JsonOptions);
-    }
-
-    private static Dictionary<string, object?> CreateFunctionCall(
-        string callId,
-        string toolName,
-        string artifactPath)
-    {
-        return new Dictionary<string, object?>
-        {
-            ["$type"] = "functionCall",
-            ["callId"] = callId,
-            ["name"] = toolName,
-            ["arguments"] = new Dictionary<string, object?>
-            {
-                ["path"] = artifactPath
-            }
-        };
-    }
-
-    private static Dictionary<string, object?> CreateFunctionResult(
-        string callId,
-        Dictionary<string, object?> result)
-    {
-        return new Dictionary<string, object?>
-        {
-            ["$type"] = "functionResult",
-            ["callId"] = callId,
-            ["result"] = result
-        };
-    }
-
-    private static IReadOnlyList<string> ResolveQaArtifactInspectionPaths(string prompt)
-    {
-        var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        var inUpstreamArtifactsSection = false;
-        foreach (var line in prompt.Split(["\r\n", "\n"], StringSplitOptions.None))
-        {
-            if (string.Equals(line.Trim(), "Upstream artifacts:", StringComparison.OrdinalIgnoreCase))
-            {
-                inUpstreamArtifactsSection = true;
-                continue;
-            }
-
-            if (inUpstreamArtifactsSection && string.IsNullOrWhiteSpace(line))
-            {
-                inUpstreamArtifactsSection = false;
-                continue;
-            }
-
-            if (!inUpstreamArtifactsSection && !MentionsInheritedArtifactInspection(line))
-            {
-                continue;
-            }
-
-            foreach (Match match in ManagedWorkspacePathRegex.Matches(line))
-            {
-                var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
-                if (IsConcreteManagedInspectionPath(normalizedPath))
-                {
-                    paths.Add(normalizedPath);
-                }
-            }
-        }
-
-        return paths.ToList();
-    }
-
-    private static bool MentionsInheritedArtifactInspection(string line)
-    {
-        return line.Contains("upstream durable", StringComparison.OrdinalIgnoreCase) ||
-               line.Contains("upstream artifact", StringComparison.OrdinalIgnoreCase) ||
-               line.Contains("inherited implementation artifact", StringComparison.OrdinalIgnoreCase) ||
-               line.Contains("inherited evidence", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsConcreteManagedInspectionPath(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return false;
-        }
-
-        var slashIndex = path.IndexOf('/');
-        return slashIndex > 0 && slashIndex < path.Length - 1;
-    }
-
-    private static ProcessMockRuntimeArtifact CreateArtifact(
-        string relativePath,
-        string contentSignalText)
-    {
-        return new ProcessMockRuntimeArtifact(relativePath, contentSignalText);
-    }
-
-    private static string BuildStructuredOutcome(
-        string status,
-        string reason,
-        string? branchOutcomeKey,
-        string responseSummary,
-        IReadOnlyList<ProcessMockRuntimeArtifact> artifacts)
-    {
-        var evidenceRefs = artifacts
-            .Select(artifact => artifact.RelativePath)
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .ToArray();
-        var payload = new ProcessStepOutcomeResult
-        {
-            Status = Enum.Parse<ProcessStepOutcomeStatus>(status, ignoreCase: true),
-            Reason = reason,
-            BranchOutcomeKey = branchOutcomeKey ?? string.Empty,
-            EvidenceRefs = evidenceRefs,
-            NextActions = [],
-            HumanReadableSummaryMarkdown = responseSummary
-        };
-
-        return JsonSerializer.Serialize(payload, AgentOutputJson.SerializerOptions);
-    }
-
-    private static IReadOnlyList<AgentFinalizerInvocation> BuildProcessStepOutcomeFinalizerInvocations(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentRuntimeExecutionOptions? executionOptions,
-        string responseText)
-    {
-        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
-        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
-        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
-            finalizerMode == AgentFinalizerMode.Disabled)
-        {
-            return [];
-        }
-
-        return
-        [
-            new AgentFinalizerInvocation(
-                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
-                responseText,
-                Sequence: 1)
-        ];
-    }
-
-    private static IReadOnlyList<AgentToolInvocationTrace> BuildProcessStepOutcomeToolInvocationTraces(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentRuntimeExecutionOptions? executionOptions)
-    {
-        var effectiveStructuredOutput = executionOptions?.StructuredOutput ?? structuredOutput;
-        var finalizerMode = executionOptions?.FinalizerMode ?? AgentFinalizerMode.Disabled;
-        if (effectiveStructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult) ||
-            finalizerMode == AgentFinalizerMode.Disabled)
-        {
-            return [];
-        }
-
-        var timestamp = DateTimeOffset.UtcNow;
-        return
-        [
-            new AgentToolInvocationTrace(
-                AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
-                ToolInvocationClassification.Read,
-                Sequence: 1,
-                StartedAtUtc: timestamp,
-                CompletedAtUtc: timestamp,
-                Succeeded: true,
-                FailureMessage: string.Empty)
-        ];
-    }
-
-    private static bool IsApprovalQaPass(string prompt)
-    {
-        return prompt.Contains("qa recheck", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("recheck repaired", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("repaired mock implementation", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("approve repaired", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveRunKey(WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)
@@ -854,4 +717,30 @@ internal sealed class ProcessMockAgentRuntime(
         string? BranchOutcomeKey,
         int ToolCalls,
         IReadOnlyList<ProcessMockRuntimeArtifact> Artifacts);
+
+    private sealed record PromptRequiredArtifact(
+        string Title,
+        string ArtifactKind,
+        string ValidationRequirementSummary,
+        string? ManagedPath,
+        string? GovernedPath);
+
+    private sealed record PromptBranchOutcome(
+        string Key,
+        string Title,
+        string Description)
+    {
+        public string BranchOutcomeKey => string.IsNullOrWhiteSpace(Key) ? Title : Key;
+    }
+
+    private sealed class PromptRequiredArtifactBuilder(
+        string title,
+        string artifactKind)
+    {
+        public string Title { get; } = title;
+        public string ArtifactKind { get; } = artifactKind;
+        public string ValidationRequirementSummary { get; set; } = string.Empty;
+        public string? ManagedPath { get; set; }
+        public string? GovernedPath { get; set; }
+    }
 }

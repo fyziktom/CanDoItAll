@@ -1,0 +1,8 @@
+Command:
+rg -n "ProcessPersistenceDbContext|ProcessRuntimeEventEntity|ProcessRuntimeStateEntity|ProcessProjectionHistoryEntity|RuntimeStates|RuntimeEvents|DbSet<|Microsoft.EntityFrameworkCore" src/CanDoItAll.Modules.Processes src/CanDoItAll.Web src/CanDoItAll.Processes.Application -g"*.cs" -g"*.razor"
+
+ExitCode: 0
+Result:
+src\CanDoItAll.Web\Program.cs:36:using Microsoft.EntityFrameworkCore;
+src\CanDoItAll.Web\Program.cs:47:    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+src\CanDoItAll.Web\Program.cs:48:    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning);

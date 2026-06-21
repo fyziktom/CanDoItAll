@@ -1,8 +1,0 @@
-Command: Get-FileHash for SB08 evidence files
-ExitCode: 0
-a522a0e1a7c72369ccacd2b1c766777e2589255557b283b8c4e9fa9de83d10cf  repo://codex/bundles/workflow-maf-hardening-followup/architecture/03-maf-executor-binding-decision.md
-8ee40aa83eeb0a9f2c3cfde8a3c414cdb01667088f4d27bf1b915f5e99eaa9f7  repo://codex/bundles/workflow-maf-hardening-followup/reviews/02-final-architecture-review.md
-c4f4b092f825fe8a70cba24f729eafec2f6e61804633446cdbe21388fd02d017  repo://codex/bundles/workflow-maf-hardening-followup/reviews/01-execution-report.md
-168ceb71b6c327be469bf6b32d61ba5a82ee9ee4855dc5348e9620330dfe0905  repo://codex/bundles/workflow-maf-hardening-followup/proof/SB08/manifest.md
-9a3e0e7280bea0f50a91e696550fa783eb4d67fd07cfc078d63fc18ca93148e7  repo://codex/bundles/workflow-maf-hardening-followup/proof/SB08/semantic-invariants.md
-d03d94a7d39fee5204adaed3810781f1588d3d1a9f1cdbd57897240482200522  repo://docs/workflow-maf-hardening.md

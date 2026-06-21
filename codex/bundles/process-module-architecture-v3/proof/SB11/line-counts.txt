@@ -1,0 +1,13 @@
+Changed source/test file line counts:
+67  repo://CanDoItAll.slnx
+110  repo://src/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverTokens.cs
+102  repo://src/CanDoItAll.Processes.Drivers.Abstractions/ProcessStrategyContracts.cs
+77  repo://src/CanDoItAll.Processes.Drivers.Abstractions/ProcessExecutionAdapterContracts.cs
+13  repo://src/CanDoItAll.Processes.Drivers.Standard/CanDoItAll.Processes.Drivers.Standard.csproj
+40  repo://src/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterDescriptors.cs
+105  repo://src/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterDriverPackageFactory.cs
+83  repo://src/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterStrategyFactory.cs
+209  repo://src/CanDoItAll.Processes.Application/ProcessAdapterMutationAudit.cs
+52  repo://tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj
+261  repo://tests/CanDoItAll.Tests.Unit/ProcessModuleBoundaryTests.cs
+206  repo://tests/CanDoItAll.Tests.Unit/ProcessExecutionAdapterBoundaryTests.cs

@@ -478,13 +478,18 @@
     {
         selectedAgentId = item.Agent.Id;
         selectedAgent = item.Agent;
+        selectedSessionId = null;
+        workspace = null;
+        executionLog = [];
+        metrics = [];
         isChatBusy = true;
+        OpenChatWindow();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
             var session = await WorkspaceService.GetOrCreateChatSessionAsync(item.Agent.Id);
             await LoadWorkspaceAsync(item.Agent.Id, session.Id);
-            OpenChatWindow();
             Notify("Thread ready", "success", $"Opened a new contextual thread with {ResolveAgentName(item.Agent)}.");
         }
         catch (Exception exception)

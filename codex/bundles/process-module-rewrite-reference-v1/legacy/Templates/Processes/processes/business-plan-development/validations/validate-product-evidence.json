@@ -1,0 +1,15 @@
+{
+  "Kind": "process-validation-template",
+  "Key": "validate-product-evidence",
+  "DisplayName": "Product evidence grounded",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "Severity": "Error",
+  "OwnerRoleKey": "business-strategist",
+  "Gate": "Product evidence review and business-plan draft",
+  "Summary": "Blocks progress when an existing app or product is analyzed without observable evidence.",
+  "PassCriteria": "Artifacts list inspected source evidence and label observed product behavior separately from assumptions.",
+  "FailCriteria": "Artifacts infer product value, customer behavior, or market claims without source evidence or explicit assumption labels.",
+  "EscalationRule": "Return to product evidence review and inspect the missing app, workflow, or evidence source.",
+  "DocPath": "processes/business-plan-development/validations/validate-product-evidence.md"
+}

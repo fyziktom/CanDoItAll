@@ -54,6 +54,15 @@ public static class InfrastructureServiceCollectionExtensions
             .Bind(configuration.GetSection("ControlPlane"))
             .ValidateOnStart();
 
+        services
+            .AddOptions<CurrencyOptions>()
+            .Bind(configuration.GetSection(CurrencyOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.TryAddSingleton<CurrencyDisplayState>();
+        services.TryAddSingleton<ICurrencyFormatter, CurrencyFormatter>();
+
         var configuredControlPlaneOptions =
             configuration.GetSection("ControlPlane").Get<ControlPlaneOptions>() ?? new ControlPlaneOptions();
         var dataProtectionKeysPath =

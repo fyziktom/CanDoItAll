@@ -33,6 +33,7 @@ internal static class WorkspaceExecutionAuditTrailWriter
         }
 
         var executionRunId = receipt.ExecutionRunId.Value;
+        var runtimeToolOwnership = ResolveRuntimeToolOwnership(toolName);
         var receiptRecord = new ToolExecutionReceiptRecord(
             Id: CreateDeterministicGuid($"{executionRunId:N}|receipt|{receipt.ReceiptRelativePath}|{toolName}|{receipt.StartedAtUtc:O}"),
             ExecutionRunId: executionRunId,
@@ -45,7 +46,11 @@ internal static class WorkspaceExecutionAuditTrailWriter
             WorkingDirectory: workingDirectory,
             ExitSummary: exitSummary,
             StartedAtUtc: receipt.StartedAtUtc,
-            CompletedAtUtc: receipt.CompletedAtUtc);
+            CompletedAtUtc: receipt.CompletedAtUtc)
+        {
+            RuntimeToolProviderKey = runtimeToolOwnership?.ProviderKey ?? string.Empty,
+            RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty
+        };
 
         using (var receiptActivity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.receipt", ActivityKind.Internal))
         {
@@ -55,6 +60,12 @@ internal static class WorkspaceExecutionAuditTrailWriter
             receiptActivity?.SetTag("agentframework.tool_name", toolName);
             receiptActivity?.SetTag("agentframework.risk_class", riskClass);
             receiptActivity?.SetTag("agentframework.approval_mode", approvalMode);
+            if (runtimeToolOwnership is not null)
+            {
+                receiptActivity?.SetTag("agentframework.runtime_tool_provider_key", runtimeToolOwnership.ProviderKey);
+                receiptActivity?.SetTag("agentframework.runtime_tool_provider_name", runtimeToolOwnership.ProviderName);
+            }
+
             AgentFrameworkTelemetry.RecordToolExecution(toolFamily, toolName, riskClass);
         }
 
@@ -144,5 +155,17 @@ internal static class WorkspaceExecutionAuditTrailWriter
     private static string NormalizeRelativePath(string path)
     {
         return path.Replace('\\', '/').TrimStart('/');
+    }
+
+    private static AgentRuntimeToolOwnership? ResolveRuntimeToolOwnership(string toolName)
+    {
+        var ownership = AgentRuntimeToolOwnershipContext.Current;
+        if (ownership is null ||
+            !string.Equals(ownership.ToolName, toolName, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return ownership;
     }
 }

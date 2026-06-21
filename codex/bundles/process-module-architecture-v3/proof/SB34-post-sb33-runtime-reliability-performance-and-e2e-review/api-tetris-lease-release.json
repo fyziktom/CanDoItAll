@@ -1,0 +1,15 @@
+{
+  "scopeKind": 0,
+  "scopeKey": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+  "leaseToken": "27f782f043b54e79a5f433a04600424c",
+  "agentId": "codex-sb34-review",
+  "agentName": "Codex SB34 architecture/performance review",
+  "machineName": "LUCYSPOWER",
+  "repositoryRoot": "C:\\repositories\\CanDoItAll",
+  "branchName": "codex/process-module-architecture-v3-implementation",
+  "reason": "SB34 post-SB33 process architecture/performance e2e repair proof",
+  "acquiredAtUtc": "2026-06-20T11:18:37.710165-04:00",
+  "renewedAtUtc": "2026-06-20T12:19:17.0312785-04:00",
+  "expiresAtUtc": "2026-06-20T12:19:17.0312785-04:00",
+  "isActive": false
+}

@@ -1,0 +1,1 @@
+No legacy ProcessTemplateLibraryDialog or old template-picker symbols found in changed files.

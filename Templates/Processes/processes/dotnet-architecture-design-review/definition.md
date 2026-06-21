@@ -31,12 +31,12 @@ Every step declares explicit operations and target scope so role permissions rem
 - Step kind: Review
 - Operation target scope: ExternalProductTargetReadOnly
 - Depends on: classify-dotnet-application, draft-architecture-design
-- Outputs: Reviewed architecture decision with required fixes, approval rationale, or block reason.
-- Evidence: Checklist answers, design risks, testability assessment, and go/no-go architecture recommendation.
+- Outputs: Reviewed architecture decision with required implementation constraints, approval rationale, or hard block reason.
+- Evidence: Checklist answers, design risks, testability assessment, implementation constraints, and go/no-go architecture recommendation.
 
 ### 4. Hand off reviewed .NET architecture (`architecture-handoff`)
 - Step kind: End
 - Operation target scope: ExternalProductTargetReadOnly
 - Depends on: classify-dotnet-application, review-architecture-design
 - Outputs: Parent-ready architecture handoff for .NET implementation slice routing.
-- Evidence: Accepted design, unresolved risks, implementation start criteria, runtime command expectations, and UI screenshot applicability.
+- Evidence: Accepted design, unresolved risks, mandatory implementation constraints, implementation start criteria, runtime command expectations, and UI screenshot applicability.

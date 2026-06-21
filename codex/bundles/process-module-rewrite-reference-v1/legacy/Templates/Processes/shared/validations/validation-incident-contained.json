@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validation-incident-contained",
+  "DisplayName": "Validate incident containment state",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Severity": "critical",
+  "OwnerRoleKey": "incident-commander",
+  "Gate": "incident",
+  "Summary": "Confirms the incident has a known containment direction, assigned owners, and a factual status baseline.",
+  "PassCriteria": "Impact, owners, and next decision horizon are explicit, and no critical action is ownerless.",
+  "FailCriteria": "Response is chaotic, impact framing is unstable, or key containment action lacks ownership.",
+  "EscalationRule": "Escalate immediately to the senior incident command chain.",
+  "DocPath": "shared/validations/validation-incident-contained.md"
+}

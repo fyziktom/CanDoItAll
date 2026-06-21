@@ -1,0 +1,6 @@
+src\CanDoItAll.Processes.Templates\ProcessTemplateMigrations.cs:13:    JsonDocument Migrate(JsonDocument source);
+src\CanDoItAll.Processes.Templates\ProcessTemplateMerge.cs:58:            throw new ArgumentException("Current source hash cannot be empty.", nameof(currentSourceJsonHash));
+src\CanDoItAll.Processes.Templates\ProcessTemplateDocuments.cs:87:    Markdown,
+src\CanDoItAll.Processes.Templates\ProcessTemplateDocuments.cs:88:    Mermaid,
+src\CanDoItAll.Processes.Templates\ProcessTemplateDocuments.cs:89:    CompatibilityReport,
+src\CanDoItAll.Processes.Templates\ProcessTemplateDocuments.cs:90:    ImportEnvelope

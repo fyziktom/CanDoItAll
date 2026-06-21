@@ -1,6 +1,0 @@
-{
-  "scenarioKey": "recipe-pantry-planner",
-  "processRunId": "d323bea1-7347-42d1-943b-8aef123c9722",
-  "executionRuns": [],
-  "note": "The SB08 harness executed through Codex/local browser tooling and manual process transitions with automation dispatch suppressed. No CanDoItAll Agent Framework provider execution runs were created for this scenario."
-}

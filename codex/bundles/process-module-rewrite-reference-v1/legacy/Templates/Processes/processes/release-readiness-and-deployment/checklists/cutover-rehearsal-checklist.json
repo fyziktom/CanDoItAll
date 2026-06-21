@@ -1,0 +1,23 @@
+{
+  "Kind": "checklist-resource",
+  "Key": "cutover-rehearsal-checklist",
+  "DisplayName": "Cutover rehearsal checklist",
+  "Scope": "local",
+  "ProcessKey": "release-readiness-and-deployment",
+  "OwnerRoleKey": "change-manager",
+  "Phase": "rehearsal",
+  "Summary": "Checks whether the cutover or deployment path was rehearsed enough to trust the event plan.",
+  "EntryCriteria": "A significant release or cutover event is nearing execution.",
+  "ExitCriteria": "Rehearsal or dry-run evidence is sufficient for the declared risk level.",
+  "Checks": [
+    "Cutover sequence has been walked through or rehearsed.",
+    "Hold points and rollback triggers are understood.",
+    "Watch roster is assigned.",
+    "Support and communication escalation paths are tested."
+  ],
+  "EvidenceExpectations": [
+    "Cutover watch roster",
+    "Rehearsal notes"
+  ],
+  "DocPath": "processes/release-readiness-and-deployment/checklists/cutover-rehearsal-checklist.md"
+}

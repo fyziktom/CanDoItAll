@@ -1,0 +1,55 @@
+
+FullName                                                                                           Mode  Length LastWriteTime
+--------                                                                                           ----  ------ -------------
+C:\programovani\dotnet\output\src                                                                  d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\tests                                                                d----        16.06.2026 23:11:24
+C:\programovani\dotnet\output\TetrisGame.slnx                                                      -a--- 231    16.06.2026 23:11:35
+C:\programovani\dotnet\output\src\TetrisGame                                                       d----        16.06.2026 23:16:38
+C:\programovani\dotnet\output\src\TetrisGame\bin                                                   d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\src\TetrisGame\Domain                                                d----        16.06.2026 23:16:38
+C:\programovani\dotnet\output\src\TetrisGame\Layout                                                d----        16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\obj                                                   d----        17.06.2026 3:32:24
+C:\programovani\dotnet\output\src\TetrisGame\Pages                                                 d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\Properties                                            d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot                                               d----        16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\_Imports.razor                                        -a--- 406    16.06.2026 23:16:51
+C:\programovani\dotnet\output\src\TetrisGame\App.razor                                             -a--- 292    16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\Program.cs                                            -a--- 435    16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\TetrisGame.csproj                                     -a--- 564    16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\bin\Debug                                             d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\src\TetrisGame\Domain\TetrisBoardPreview.cs                          -a--- 867    16.06.2026 23:16:38
+C:\programovani\dotnet\output\src\TetrisGame\Layout\MainLayout.razor                               -a--- 79     16.06.2026 23:16:47
+C:\programovani\dotnet\output\src\TetrisGame\Layout\MainLayout.razor.css                           -a--- 1552   17.06.2026 1:30:17
+C:\programovani\dotnet\output\src\TetrisGame\Layout\NavMenu.razor                                  -a--- 1383   16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\Layout\NavMenu.razor.css                              -a--- 2682   16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\obj\Debug                                             d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\src\TetrisGame\obj\project.assets.json                               -a--- 114961 17.06.2026 3:32:24
+C:\programovani\dotnet\output\src\TetrisGame\obj\project.nuget.cache                               -a--- 4887   17.06.2026 3:32:24
+C:\programovani\dotnet\output\src\TetrisGame\obj\TetrisGame.csproj.nuget.dgspec.json               -a--- 23154  17.06.2026 3:32:24
+C:\programovani\dotnet\output\src\TetrisGame\obj\TetrisGame.csproj.nuget.g.props                   -a--- 3296   17.06.2026 3:32:24
+C:\programovani\dotnet\output\src\TetrisGame\obj\TetrisGame.csproj.nuget.g.targets                 -a--- 2477   17.06.2026 3:32:24
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Counter.razor                                   -a--- 332    16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Home.razor                                      -a--- 2345   17.06.2026 2:38:36
+C:\programovani\dotnet\output\src\TetrisGame\Pages\NotFound.razor                                  -a--- 126    16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\Pages\Weather.razor                                   -a--- 1440   16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\Properties\launchSettings.json                        -a--- 877    16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot\css                                           d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot\lib                                           d----        16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot\sample-data                                   d----        16.06.2026 23:10:03
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot\favicon.png                                   -a--- 1148   16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot\icon-192.png                                  -a--- 2626   16.06.2026 23:10:02
+C:\programovani\dotnet\output\src\TetrisGame\wwwroot\index.html                                    -a--- 1077   16.06.2026 23:10:02
+C:\programovani\dotnet\output\tests\TetrisGame.Tests                                               d----        17.06.2026 2:39:04
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\bin                                           d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj                                           d----        17.06.2026 3:32:24
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\TetrisGame.Tests.csproj                       -a--- 741    16.06.2026 23:11:35
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\ViewportFitTests.cs                           -a--- 1344   17.06.2026 1:30:17
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\bin\Debug                                     d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj\Debug                                     d----        16.06.2026 23:12:38
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj\project.assets.json                       -a--- 125875 17.06.2026 3:32:24
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj\project.nuget.cache                       -a--- 5897   17.06.2026 3:32:24
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj\TetrisGame.Tests.csproj.nuget.dgspec.json -a--- 45849  17.06.2026 3:32:24
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj\TetrisGame.Tests.csproj.nuget.g.props     -a--- 2790   17.06.2026 3:32:24
+C:\programovani\dotnet\output\tests\TetrisGame.Tests\obj\TetrisGame.Tests.csproj.nuget.g.targets   -a--- 2715   16.06.2026 23:12:35
+
+

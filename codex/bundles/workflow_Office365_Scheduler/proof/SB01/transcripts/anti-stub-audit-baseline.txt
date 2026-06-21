@@ -1,6 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|office365.message-by-address-unprocessed" src/plugins/CanDoItAll.Plugin.Office365 src/CanDoItAll.Modules.SchedulerPlanner src/CanDoItAll.Modules.AgentFramework/Catalog Templates/Workflows WorkingDirectory: C:\repositories\CanDoItAll StartTimeUtc: 2026-05-29T18:25:58.0316921Z
-ExitCode: 0
-RgExitCode: 
-1
-EndTimeUtc: 
-2026-05-29T18:25:58.1658885Z

@@ -1,0 +1,626 @@
+[
+  {
+    "tag": "button",
+    "role": null,
+    "className": "rz-button cda-button cda-button--size-sm cda-button--filled cda-button--tone-light cda-button--quick",
+    "text": "smart_toysmart toy",
+    "aria": "Agent context",
+    "box": {
+      "x": 1435,
+      "y": 63,
+      "w": 36,
+      "h": 36
+    }
+  },
+  {
+    "tag": "div",
+    "role": null,
+    "className": "cw-context-menu__backdrop is-root is-hive",
+    "text": "",
+    "aria": null,
+    "box": {
+      "x": 934,
+      "y": 498,
+      "w": 212,
+      "h": 358
+    }
+  },
+  {
+    "tag": "div",
+    "role": null,
+    "className": "cw-context-menu__orbit is-root is-hive",
+    "text": ".NET architecture design draftSInspectCCloneHHighlightAIntakeAArchitecture reviewAImplementationASubprocessADecision router",
+    "aria": null,
+    "box": {
+      "x": 934,
+      "y": 498,
+      "w": 212,
+      "h": 358
+    }
+  },
+  {
+    "tag": "div",
+    "role": null,
+    "className": "cw-context-menu__core is-root",
+    "text": ".NET architecture design draft",
+    "aria": null,
+    "box": {
+      "x": 1006,
+      "y": 644,
+      "w": 67,
+      "h": 67
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__core-dot",
+    "text": "",
+    "aria": null,
+    "box": {
+      "x": 1033,
+      "y": 671,
+      "w": 13,
+      "h": 13
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__core-label",
+    "text": ".NET architecture design draft",
+    "aria": null,
+    "box": {
+      "x": 933,
+      "y": 713,
+      "w": 214,
+      "h": 24
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-info",
+    "text": "SInspect",
+    "aria": "Inspect",
+    "box": {
+      "x": 1006,
+      "y": 580,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "S",
+    "aria": null,
+    "box": {
+      "x": 1009,
+      "y": 583,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "S",
+    "aria": null,
+    "box": {
+      "x": 1031,
+      "y": 583,
+      "w": 18,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Inspect",
+    "aria": null,
+    "box": {
+      "x": 1017,
+      "y": 617,
+      "w": 46,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Inspect",
+    "aria": null,
+    "box": {
+      "x": 1017,
+      "y": 619,
+      "w": 46,
+      "h": 13
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-accent",
+    "text": "CClone",
+    "aria": "Clone",
+    "box": {
+      "x": 1065,
+      "y": 614,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "C",
+    "aria": null,
+    "box": {
+      "x": 1068,
+      "y": 617,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "C",
+    "aria": null,
+    "box": {
+      "x": 1089,
+      "y": 617,
+      "w": 20,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Clone",
+    "aria": null,
+    "box": {
+      "x": 1081,
+      "y": 651,
+      "w": 36,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Clone",
+    "aria": null,
+    "box": {
+      "x": 1081,
+      "y": 653,
+      "w": 36,
+      "h": 13
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-warning",
+    "text": "HHighlight",
+    "aria": "Highlight",
+    "box": {
+      "x": 1065,
+      "y": 682,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "H",
+    "aria": null,
+    "box": {
+      "x": 1068,
+      "y": 685,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "H",
+    "aria": null,
+    "box": {
+      "x": 1087,
+      "y": 685,
+      "w": 25,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Highlight",
+    "aria": null,
+    "box": {
+      "x": 1072,
+      "y": 719,
+      "w": 54,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Highlight",
+    "aria": null,
+    "box": {
+      "x": 1072,
+      "y": 721,
+      "w": 54,
+      "h": 13
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-primary",
+    "text": "AIntake",
+    "aria": "Intake",
+    "box": {
+      "x": 1006,
+      "y": 716,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 1009,
+      "y": 719,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 1029,
+      "y": 719,
+      "w": 23,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Intake",
+    "aria": null,
+    "box": {
+      "x": 1020,
+      "y": 753,
+      "w": 40,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Intake",
+    "aria": null,
+    "box": {
+      "x": 1020,
+      "y": 755,
+      "w": 40,
+      "h": 13
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-primary",
+    "text": "AArchitecture review",
+    "aria": "Architecture review",
+    "box": {
+      "x": 947,
+      "y": 682,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 950,
+      "y": 685,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 970,
+      "y": 685,
+      "w": 23,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Architecture review",
+    "aria": null,
+    "box": {
+      "x": 954,
+      "y": 719,
+      "w": 54,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Architecture review",
+    "aria": null,
+    "box": {
+      "x": 954,
+      "y": 723,
+      "w": 54,
+      "h": 9
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-primary",
+    "text": "AImplementation",
+    "aria": "Implementation",
+    "box": {
+      "x": 947,
+      "y": 614,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 950,
+      "y": 617,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 970,
+      "y": 617,
+      "w": 23,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Implementation",
+    "aria": null,
+    "box": {
+      "x": 954,
+      "y": 651,
+      "w": 54,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Implementation",
+    "aria": null,
+    "box": {
+      "x": 954,
+      "y": 653,
+      "w": 54,
+      "h": 13
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-accent",
+    "text": "ASubprocess",
+    "aria": "Subprocess",
+    "box": {
+      "x": 1006,
+      "y": 512,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 1009,
+      "y": 515,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 1029,
+      "y": 515,
+      "w": 23,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Subprocess",
+    "aria": null,
+    "box": {
+      "x": 1013,
+      "y": 549,
+      "w": 54,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Subprocess",
+    "aria": null,
+    "box": {
+      "x": 1013,
+      "y": 551,
+      "w": 54,
+      "h": 13
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "cw-context-menu__action tone-warning",
+    "text": "ADecision router",
+    "aria": "Decision router",
+    "box": {
+      "x": 1065,
+      "y": 546,
+      "w": 68,
+      "h": 60
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__icon",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 1068,
+      "y": 549,
+      "w": 63,
+      "h": 32
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__glyph",
+    "text": "A",
+    "aria": null,
+    "box": {
+      "x": 1088,
+      "y": 549,
+      "w": 23,
+      "h": 32
+    }
+  },
+  {
+    "tag": "strong",
+    "role": null,
+    "className": "cw-context-menu__label",
+    "text": "Decision router",
+    "aria": null,
+    "box": {
+      "x": 1072,
+      "y": 583,
+      "w": 54,
+      "h": 17
+    }
+  },
+  {
+    "tag": "span",
+    "role": null,
+    "className": "cw-context-menu__label-text",
+    "text": "Decision router",
+    "aria": null,
+    "box": {
+      "x": 1072,
+      "y": 587,
+      "w": 54,
+      "h": 9
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "rz-button cda-button cda-button--size-sm cda-button--filled cda-button--tone-info",
+    "text": "inventory_2Add artifact",
+    "aria": null,
+    "box": {
+      "x": 1375,
+      "y": 1288,
+      "w": 137,
+      "h": 42
+    }
+  },
+  {
+    "tag": "button",
+    "role": null,
+    "className": "rz-button cda-button cda-button--size-sm cda-button--filled cda-button--tone-info",
+    "text": "inventory_2Add artifact",
+    "aria": null,
+    "box": {
+      "x": 1307,
+      "y": 2115,
+      "w": 137,
+      "h": 42
+    }
+  }
+]

@@ -1,0 +1,2 @@
+Command: rg -n 'TODO|TBD|stub|placeholder|fake|not implemented|throw new NotImplementedException' src\CanDoItAll.Processes.Persistence src\CanDoItAll.Processes.Projections tests\CanDoItAll.Tests.Unit\ProcessPersistenceStoreTests.cs
+Result: no matches

@@ -1,0 +1,536 @@
+[
+  {
+    "i": 7,
+    "testid": "shell-nav-processes",
+    "text": "account_tree",
+    "disabled": null
+  },
+  {
+    "i": 8,
+    "testid": "shell-nav-processes-live",
+    "text": "monitor_heart",
+    "disabled": null
+  },
+  {
+    "i": 32,
+    "testid": null,
+    "text": "Quality Desk\n                                    Validation runs, test plans, and evidence review.",
+    "disabled": null
+  },
+  {
+    "i": 36,
+    "testid": null,
+    "text": "forum\n                                Collaboration92\n                                Human escalation, inbox, and process-scoped conversations.",
+    "disabled": null
+  },
+  {
+    "i": 37,
+    "testid": null,
+    "text": "groups\n                                CRM / HR\n                                Unified party directory, CRM, workforce, recruiting, agents, and assignments.",
+    "disabled": null
+  },
+  {
+    "i": 40,
+    "testid": null,
+    "text": "account_tree\n                                Processes\n                                Projection-first process definitions, launch planning, live runs, and history.",
+    "disabled": null
+  },
+  {
+    "i": 41,
+    "testid": null,
+    "text": "monitor_heart\n                                Live Processes\n                                Runtime process runs, attention queues, projection freshness, and manager context.",
+    "disabled": null
+  },
+  {
+    "i": 42,
+    "testid": null,
+    "text": "psychology\n                                Cognitive Memory\n                                Memory review, recall traces, consolidation health, projection health, replay, and procedures.",
+    "disabled": null
+  },
+  {
+    "i": 47,
+    "testid": null,
+    "text": "fact_check\n                                Validation Center\n                                Checklists, findings, review decisions, and coverage.",
+    "disabled": null
+  },
+  {
+    "i": 50,
+    "testid": null,
+    "text": "autorenew\n                                Automation\n                                Background jobs, exports, sends, and operational diagnostics.",
+    "disabled": null
+  },
+  {
+    "i": 51,
+    "testid": null,
+    "text": "calendar_month\n                                Scheduler\n                                Calendar-backed workflow and process run planning.",
+    "disabled": null
+  },
+  {
+    "i": 59,
+    "testid": null,
+    "text": "Processes",
+    "disabled": null
+  },
+  {
+    "i": 65,
+    "testid": null,
+    "text": "Live Processes",
+    "disabled": null
+  },
+  {
+    "i": 83,
+    "testid": null,
+    "text": "TetrisGame · Live Processes",
+    "disabled": null
+  },
+  {
+    "i": 109,
+    "testid": null,
+    "text": "restart_alt",
+    "disabled": null
+  },
+  {
+    "i": 119,
+    "testid": null,
+    "text": "account_tree Add process",
+    "disabled": null
+  },
+  {
+    "i": 141,
+    "testid": null,
+    "text": "Cancel",
+    "disabled": true
+  },
+  {
+    "i": 142,
+    "testid": "project-structure-process-assignment-save-close",
+    "text": "Save and close",
+    "disabled": true
+  },
+  {
+    "i": 143,
+    "testid": "project-structure-process-assignment-review-start",
+    "text": "Review and start",
+    "disabled": true
+  },
+  {
+    "i": 144,
+    "testid": "project-structure-process-assignment-filter",
+    "text": "filter_list",
+    "disabled": null
+  },
+  {
+    "i": 145,
+    "testid": "project-structure-process-assignment-role-row-all",
+    "text": "dashboard\nAll\nSummary review\nview_module\nOverview\n20/20",
+    "disabled": null
+  },
+  {
+    "i": 146,
+    "testid": "project-structure-process-assignment-role-row-d4818ee9-56f3-480e-9199-de76b2d500cf",
+    "text": "smart_toy\nClarify .NET scope and app type boundary (product-owner)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 147,
+    "testid": "project-structure-process-assignment-role-row-0f8a797c-68c9-4b50-a956-faa64db24d7c",
+    "text": "design_services\nRun .NET architecture design and review subprocess (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 148,
+    "testid": "project-structure-process-assignment-role-row-9d2cf958-8494-4f1a-92f8-5280143ef6cc",
+    "text": "smart_toy\nRun .NET implementation slice subprocess (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 149,
+    "testid": "project-structure-process-assignment-role-row-eef0e198-e5d1-4c39-b69e-601cb60acce0",
+    "text": "fact_check\nComplete peer review and integration readiness (lead-engineer)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 150,
+    "testid": "project-structure-process-assignment-role-row-9fa6c8ee-c8da-46d2-be27-aad64dc03c2e",
+    "text": "fact_check\nRun QA validation and runtime or browser proof (qa-lead)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 151,
+    "testid": "project-structure-process-assignment-role-row-e9f62bc1-de3a-4f8e-989e-8875bdbab3a6",
+    "text": "smart_toy\nRepair validation findings (lead-engineer)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 152,
+    "testid": "project-structure-process-assignment-role-row-3947669e-06cd-4b57-a79f-81e54ef43f9b",
+    "text": "fact_check\nRe-run QA validation and runtime or browser proof after repair (qa-lead)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 153,
+    "testid": "project-structure-process-assignment-role-row-7c85c6b2-14c8-4394-81cd-d37a6596e8a2",
+    "text": "fact_check\nPerform security and data-handling review (security-reviewer)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 154,
+    "testid": "project-structure-process-assignment-role-row-cf4d1c54-0384-4afd-b5ef-db404be259b2",
+    "text": "smart_toy\nRecord .NET run commands under process run node (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 155,
+    "testid": "project-structure-process-assignment-role-row-d784c308-a266-40e7-8241-77a0c24affe2",
+    "text": "fact_check\nCapture and store .NET UI screenshots (qa-lead)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 156,
+    "testid": "project-structure-process-assignment-role-row-12f95c79-f981-426e-bcc1-bc2e081e430c",
+    "text": "smart_toy\nApprove first-pass release readiness (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 157,
+    "testid": "project-structure-process-assignment-role-row-6babedbe-e369-48c1-9334-b89b92897bf2",
+    "text": "smart_toy\nExecute first-pass controlled release rollout (release-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 158,
+    "testid": "project-structure-process-assignment-role-row-b1d566c4-aba1-4334-8e26-aeb4442615c1",
+    "text": "smart_toy\nCapture first-pass post-release learning (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 159,
+    "testid": "project-structure-process-assignment-role-row-c79f50b9-d883-48ba-9e2c-4356886a1875",
+    "text": "fact_check\nPerform security review after repair (security-reviewer)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 160,
+    "testid": "project-structure-process-assignment-role-row-92dd6883-ac3d-4e31-829f-f450313bb633",
+    "text": "smart_toy\nRecord repaired .NET run commands under process run node (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 161,
+    "testid": "project-structure-process-assignment-role-row-b98788c8-f6dc-4286-b7b3-823a3f83824b",
+    "text": "fact_check\nCapture and store repaired .NET UI screenshots (qa-lead)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 162,
+    "testid": "project-structure-process-assignment-role-row-88559155-7d99-4c19-9a94-0bce58d44427",
+    "text": "smart_toy\nEscalate unresolved repair findings (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 163,
+    "testid": "project-structure-process-assignment-role-row-83807152-585b-4635-9346-ece795419a85",
+    "text": "smart_toy\nApprove repaired release readiness (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 164,
+    "testid": "project-structure-process-assignment-role-row-72c9d69b-16ac-4152-b9ae-53ca9972dd78",
+    "text": "smart_toy\nExecute repaired controlled release rollout (release-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 165,
+    "testid": "project-structure-process-assignment-role-row-7cfc337a-8829-4801-b383-cce599d145a4",
+    "text": "smart_toy\nCapture repaired-release learning (delivery-manager)\nRequired\nauto_awesome\nRecommended\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 166,
+    "testid": "project-structure-process-assignment-ask-hr",
+    "text": "auto_awesome\nAsk HR AI",
+    "disabled": true
+  },
+  {
+    "i": 168,
+    "testid": "project-structure-process-assignment-summary-d4818ee9-56f3-480e-9199-de76b2d500cf-9fc87ec2-e918-d756-b6c9-b42b8eecbe6e-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 169,
+    "testid": "project-structure-process-assignment-change-agent-d4818ee9-56f3-480e-9199-de76b2d500cf",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 170,
+    "testid": null,
+    "text": "2\nRun .NET architecture design and review subprocess (delivery-manager)\nRequired\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 171,
+    "testid": "project-structure-process-assignment-summary-0f8a797c-68c9-4b50-a956-faa64db24d7c-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 172,
+    "testid": "project-structure-process-assignment-change-agent-0f8a797c-68c9-4b50-a956-faa64db24d7c",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 173,
+    "testid": null,
+    "text": "3\nRun .NET implementation slice subprocess (delivery-manager)\nRequired\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 174,
+    "testid": "project-structure-process-assignment-summary-9d2cf958-8494-4f1a-92f8-5280143ef6cc-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 175,
+    "testid": "project-structure-process-assignment-change-agent-9d2cf958-8494-4f1a-92f8-5280143ef6cc",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 176,
+    "testid": null,
+    "text": "4\nComplete peer review and integration readiness (lead-engineer)\nRequired\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 177,
+    "testid": "project-structure-process-assignment-summary-eef0e198-e5d1-4c39-b69e-601cb60acce0-1e267ce2-bf18-ce52-9743-9b36b9314994-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 178,
+    "testid": "project-structure-process-assignment-change-agent-eef0e198-e5d1-4c39-b69e-601cb60acce0",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 180,
+    "testid": "project-structure-process-assignment-summary-9fa6c8ee-c8da-46d2-be27-aad64dc03c2e-549a3e86-5ffc-0d58-bf8c-10952fcdaac4-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 181,
+    "testid": "project-structure-process-assignment-change-agent-9fa6c8ee-c8da-46d2-be27-aad64dc03c2e",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 183,
+    "testid": "project-structure-process-assignment-summary-e9f62bc1-de3a-4f8e-989e-8875bdbab3a6-1e267ce2-bf18-ce52-9743-9b36b9314994-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 184,
+    "testid": "project-structure-process-assignment-change-agent-e9f62bc1-de3a-4f8e-989e-8875bdbab3a6",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 186,
+    "testid": "project-structure-process-assignment-summary-3947669e-06cd-4b57-a79f-81e54ef43f9b-549a3e86-5ffc-0d58-bf8c-10952fcdaac4-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 187,
+    "testid": "project-structure-process-assignment-change-agent-3947669e-06cd-4b57-a79f-81e54ef43f9b",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 188,
+    "testid": null,
+    "text": "8\nPerform security and data-handling review (security-reviewer)\nRequired\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 189,
+    "testid": "project-structure-process-assignment-summary-7c85c6b2-14c8-4394-81cd-d37a6596e8a2-5ab2958c-08de-b251-8ead-caa321248b91-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 190,
+    "testid": "project-structure-process-assignment-change-agent-7c85c6b2-14c8-4394-81cd-d37a6596e8a2",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 191,
+    "testid": null,
+    "text": "9\nRecord .NET run commands under process run node (delivery-manager)\nRequired\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 192,
+    "testid": "project-structure-process-assignment-summary-cf4d1c54-0384-4afd-b5ef-db404be259b2-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 193,
+    "testid": "project-structure-process-assignment-change-agent-cf4d1c54-0384-4afd-b5ef-db404be259b2",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 195,
+    "testid": "project-structure-process-assignment-summary-d784c308-a266-40e7-8241-77a0c24affe2-549a3e86-5ffc-0d58-bf8c-10952fcdaac4-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 196,
+    "testid": "project-structure-process-assignment-change-agent-d784c308-a266-40e7-8241-77a0c24affe2",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 198,
+    "testid": "project-structure-process-assignment-summary-12f95c79-f981-426e-bcc1-bc2e081e430c-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 199,
+    "testid": "project-structure-process-assignment-change-agent-12f95c79-f981-426e-bcc1-bc2e081e430c",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 201,
+    "testid": "project-structure-process-assignment-summary-6babedbe-e369-48c1-9334-b89b92897bf2-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 202,
+    "testid": "project-structure-process-assignment-change-agent-6babedbe-e369-48c1-9334-b89b92897bf2",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 204,
+    "testid": "project-structure-process-assignment-summary-b1d566c4-aba1-4334-8e26-aeb4442615c1-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 205,
+    "testid": "project-structure-process-assignment-change-agent-b1d566c4-aba1-4334-8e26-aeb4442615c1",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 206,
+    "testid": null,
+    "text": "14\nPerform security review after repair (security-reviewer)\nRequired\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 207,
+    "testid": "project-structure-process-assignment-summary-c79f50b9-d883-48ba-9e2c-4356886a1875-5ab2958c-08de-b251-8ead-caa321248b91-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 208,
+    "testid": "project-structure-process-assignment-change-agent-c79f50b9-d883-48ba-9e2c-4356886a1875",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 209,
+    "testid": null,
+    "text": "15\nRecord repaired .NET run commands under process run node (delivery-manager)\nRequired\ncheck",
+    "disabled": null
+  },
+  {
+    "i": 210,
+    "testid": "project-structure-process-assignment-summary-92dd6883-ac3d-4e31-829f-f450313bb633-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 211,
+    "testid": "project-structure-process-assignment-change-agent-92dd6883-ac3d-4e31-829f-f450313bb633",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 213,
+    "testid": "project-structure-process-assignment-summary-b98788c8-f6dc-4286-b7b3-823a3f83824b-549a3e86-5ffc-0d58-bf8c-10952fcdaac4-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 214,
+    "testid": "project-structure-process-assignment-change-agent-b98788c8-f6dc-4286-b7b3-823a3f83824b",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 216,
+    "testid": "project-structure-process-assignment-summary-88559155-7d99-4c19-9a94-0bce58d44427-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 217,
+    "testid": "project-structure-process-assignment-change-agent-88559155-7d99-4c19-9a94-0bce58d44427",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 219,
+    "testid": "project-structure-process-assignment-summary-83807152-585b-4635-9346-ece795419a85-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 220,
+    "testid": "project-structure-process-assignment-change-agent-83807152-585b-4635-9346-ece795419a85",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 222,
+    "testid": "project-structure-process-assignment-summary-72c9d69b-16ac-4152-b9ae-53ca9972dd78-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 223,
+    "testid": "project-structure-process-assignment-change-agent-72c9d69b-16ac-4152-b9ae-53ca9972dd78",
+    "text": "Change agent\nedit",
+    "disabled": true
+  },
+  {
+    "i": 225,
+    "testid": "project-structure-process-assignment-summary-7cfc337a-8829-4801-b383-cce599d145a4-b0c2a317-a417-385f-9f59-0f4a2c5b7ff2-details-badge",
+    "text": "details",
+    "disabled": null
+  },
+  {
+    "i": 226,
+    "testid": "project-structure-process-assignment-change-agent-7cfc337a-8829-4801-b383-cce599d145a4",
+    "text": "Change agent\nedit",
+    "disabled": true
+  }
+]

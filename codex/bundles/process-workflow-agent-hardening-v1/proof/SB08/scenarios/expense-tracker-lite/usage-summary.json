@@ -1,8 +1,0 @@
-{
-  "processRunId": "23563b78-333e-485e-bb03-8cdea971a696",
-  "canDoItAllProviderUsageObserved": false,
-  "incompleteUsageReason": "Provider usage is intentionally reported as unavailable instead of inferred from local tool execution.",
-  "scenarioKey": "expense-tracker-lite",
-  "actualCostUsd": null,
-  "actualCostSource": "No CanDoItAll provider execution-run usage records were generated; local dotnet, Chrome CDP, Docker PostgreSQL, and Codex work are outside the app provider ledger."
-}

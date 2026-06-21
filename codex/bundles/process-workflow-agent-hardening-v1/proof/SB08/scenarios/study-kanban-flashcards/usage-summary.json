@@ -1,8 +1,0 @@
-{
-  "processRunId": "6f14d795-bfc2-4532-8a05-9910a42186b8",
-  "canDoItAllProviderUsageObserved": false,
-  "incompleteUsageReason": "Provider usage is intentionally reported as unavailable instead of inferred from local tool execution.",
-  "scenarioKey": "study-kanban-flashcards",
-  "actualCostUsd": null,
-  "actualCostSource": "No CanDoItAll provider execution-run usage records were generated; local dotnet, Chrome CDP, Docker PostgreSQL, and Codex work are outside the app provider ledger."
-}

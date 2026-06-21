@@ -53,7 +53,12 @@ public sealed record AgentToolInvocationTrace(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     bool Succeeded,
-    string FailureMessage);
+    string FailureMessage)
+{
+    public string RuntimeToolProviderKey { get; init; } = string.Empty;
+
+    public string RuntimeToolProviderName { get; init; } = string.Empty;
+}
 
 public sealed record AgentToolPolicyMetadata(
     string Name,
@@ -126,6 +131,42 @@ public interface IAgentToolInvocationPolicy
 
 public static class AgentToolPolicyBlockGuard
 {
+    private static readonly HashSet<string> RecoverableGovernedReadDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolContractCatalog.WorkspaceListFiles,
+        ToolContractCatalog.WorkspaceSearch,
+        ToolContractCatalog.WorkspaceReadFile,
+        ToolContractCatalog.WorkspaceStatPath
+    };
+
+    public static bool TryCreateRecoverableDeniedResult(
+        string toolName,
+        ToolInvocationPolicyDecision decision,
+        ToolInvocationPolicyContext context,
+        out string result)
+    {
+        ArgumentNullException.ThrowIfNull(decision);
+        ArgumentNullException.ThrowIfNull(context);
+
+        result = string.Empty;
+        if (decision.Kind is not ToolInvocationDecisionKind.Deny and not ToolInvocationDecisionKind.SkipExecution)
+        {
+            return false;
+        }
+
+        if (!string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(context.ProcessRunId) ||
+            string.IsNullOrWhiteSpace(context.ProcessStepId) ||
+            context.Classification != ToolInvocationClassification.Read ||
+            !RecoverableGovernedReadDiscoveryTools.Contains(toolName))
+        {
+            return false;
+        }
+
+        result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments.";
+        return true;
+    }
+
     public static void ThrowIfBlocked(
         string toolName,
         ToolInvocationPolicyDecision decision,
@@ -154,6 +195,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static readonly Regex ConsecutiveSlashRegex = new(
         "/{2,}",
         RegexOptions.CultureInvariant);
+    private static readonly Regex WindowsNativeAbsolutePathRegex = new(
+        "^[A-Za-z]:[\\\\/]",
+        RegexOptions.CultureInvariant);
     private static readonly HashSet<string> ExternalTargetManagedWorkspaceIsolationTools = new(StringComparer.OrdinalIgnoreCase)
     {
         ToolContractCatalog.WorkspaceListFiles,
@@ -171,6 +215,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         ToolContractCatalog.WorkspaceDotNetBuild,
         ToolContractCatalog.WorkspaceDotNetTest,
         ToolContractCatalog.WorkspaceDotNetRun,
+        ToolContractCatalog.WorkspaceDotNetStop,
         ToolContractCatalog.WorkspacePowerShellRunScript,
         ToolContractCatalog.WorkspacePythonRunFile,
         ToolContractCatalog.WorkspaceInspectImage
@@ -222,6 +267,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "data",
         "integration-map",
         "output",
+        "process-artifacts",
         "process-runs"
     ];
     private static readonly string[] DeniedExternalRunManagedRoots =
@@ -420,7 +466,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 ToolCapabilityOperationRequirementKind.WorkspaceFileMutation => [ResolveWorkspaceFileMutationRequirement(context)],
                 ToolCapabilityOperationRequirementKind.WorkspaceScript => [ResolveWorkspaceScriptRequirement(context)],
                 ToolCapabilityOperationRequirementKind.DotNetRun => [ResolveDotnetRunOperationRequirement(context)],
-                ToolCapabilityOperationRequirementKind.ProcessArtifactRecord => [ResolveProcessArtifactRecordRequirement(context)],
+                ToolCapabilityOperationRequirementKind.ProcessArtifactWrite => [ResolveProcessArtifactWriteRequirement(context)],
                 _ => []
             };
         }
@@ -511,6 +557,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        if (IsProductMutationStep(context) &&
+            referencedAliases.Any(alias => IsAllowedExternalTargetAlias(alias, allowedAliases)))
+        {
+            return OperationRequirement.Any(OperationMutateProductTarget);
+        }
+
         if (referencedAliases.Any(alias => !IsExternalArtifactDestinationPath(alias)))
         {
             return OperationRequirement.Any(OperationMutateProductTarget);
@@ -557,7 +610,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 : null;
     }
 
-    private static OperationRequirement ResolveProcessArtifactRecordRequirement(ToolInvocationPolicyContext context)
+    private static OperationRequirement ResolveProcessArtifactWriteRequirement(ToolInvocationPolicyContext context)
     {
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
         if (referencedAliases.Any(IsExternalArtifactDestinationPath))
@@ -579,10 +632,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         if (string.Equals(context.ToolName, "browser_snapshot", StringComparison.OrdinalIgnoreCase))
         {
-            var depthAllowed = context.RedactedArguments.TryGetValue("depth", out var depthValue) &&
-                               int.TryParse(depthValue, out var depth) &&
-                               depth <= 4;
-            if (!depthAllowed)
+            if (!context.RedactedArguments.TryGetValue("depth", out var depthValue) ||
+                !int.TryParse(depthValue, out var depth) ||
+                depth > 4)
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
@@ -591,11 +643,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
             if (context.RedactedArguments.TryGetValue("boxes", out var boxesValue) &&
                 bool.TryParse(boxesValue, out var boxes) &&
-                boxes)
+                boxes &&
+                depth > 2)
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
-                    "Governed process browser snapshots must not request element boxes because they can produce oversized tool output. Retry once with boxes=false and do not repeat this blocked call.");
+                    "Governed process browser snapshots with element boxes must set depth to 2 or less because deeper boxed snapshots can produce oversized tool output. Retry once with depth=2 or boxes=false and do not repeat this blocked call.");
             }
 
             return null;
@@ -1298,7 +1351,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        if (allowedAliases.Count == 0)
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
+        if (readableAliases.Length == 0)
         {
             return null;
         }
@@ -1329,7 +1388,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        if (allowedAliases.Count == 0)
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
+        if (readableAliases.Length == 0)
         {
             return null;
         }
@@ -1412,7 +1477,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        if (allowedAliases.Count == 0)
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
+        if (readableAliases.Length == 0)
         {
             return null;
         }
@@ -1429,6 +1500,25 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         foreach (var pathArgument in pathArguments)
         {
+            var rawPath = NormalizeToolArgument(pathArgument.Value);
+            if (BroadManagedWorkspaceDiscoveryTools.Contains(context.ToolName) &&
+                IsBroadManagedWorkspacePath(rawPath))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    "This governed run has a grounded external product target. Broad managed-workspace root discovery is denied because it can pull stale source or helper files from unrelated runs; list or search the grounded external-target alias or current-run artifact folders instead.");
+            }
+
+            var nativeAbsolutePathDecision = EvaluateNativeAbsoluteWorkspaceToolPath(
+                context,
+                signature,
+                rawPath,
+                readableAliases);
+            if (nativeAbsolutePathDecision is not null)
+            {
+                return nativeAbsolutePathDecision;
+            }
+
             var normalizedPath = NormalizeManagedWorkspacePath(pathArgument.Value);
             if (string.IsNullOrWhiteSpace(normalizedPath) ||
                 IsExternalTargetAliasPath(normalizedPath))
@@ -1449,6 +1539,14 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
                     $"This governed run has a grounded external product target. Broad managed evidence discovery at '{normalizedPath}' is denied because it can pull stale artifacts from unrelated runs; list or search the grounded external-target alias or current-run artifact root '{BuildCurrentRunManagedArtifactRoot(context)}' instead.");
+            }
+
+            if (BroadManagedWorkspaceDiscoveryTools.Contains(context.ToolName) &&
+                IsBroadManagedProcessRunDiscoveryPath(normalizedPath))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed run has a grounded external product target. Broad process-run artifact discovery at '{normalizedPath}' is denied because it can pull stale artifacts from unrelated runs; list or search a specific current-run or child-run artifact folder instead.");
             }
 
             if (IsManagedOutputPath(normalizedPath) &&
@@ -1481,6 +1579,45 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateNativeAbsoluteWorkspaceToolPath(
+        ToolInvocationPolicyContext context,
+        string signature,
+        string rawPath,
+        IReadOnlyList<string> readableAliases)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath) ||
+            IsExternalTargetAliasPath(rawPath) ||
+            !IsNativeAbsolutePath(rawPath))
+        {
+            return null;
+        }
+
+        var normalizedAlias = NormalizeExternalTargetAlias(rawPath);
+        if (string.IsNullOrWhiteSpace(normalizedAlias))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed run has a grounded external product target. Native absolute path '{rawPath}' is outside the workspace-tool boundary; use a grounded external-target alias or a relative current-run artifact path.");
+        }
+
+        if (IsExplicitManagedWorkspaceFileRead(context, rawPath) ||
+            IsExplicitManagedProjectMediaRead(context, rawPath))
+        {
+            return null;
+        }
+
+        if (IsAllowedExternalTargetAlias(normalizedAlias, readableAliases))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed run has a grounded external product target. Workspace tools must use grounded external-target aliases, not native absolute paths. Use '{normalizedAlias}' instead of '{rawPath}'.");
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"This governed run has a grounded external product target. Native absolute path '{rawPath}' resolves to '{normalizedAlias}', which is outside the current-run external-target roots; use the grounded external-target alias or current-run artifact folders instead.");
     }
 
     private static ToolInvocationPolicyDecision? EvaluateReadOnlyExternalTargetMutation(
@@ -1544,7 +1681,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         return ToolInvocationPolicyDecision.Deny(
             signature,
-            "This governed .NET scaffold step is tool-only for product files. Create or modify product solution, project, and source files with scaffold/build tools such as workspace_dotnet_new or a reviewed script, and use workspace_write_file only for current-run artifacts.");
+            $"This governed .NET scaffold step is tool-only for product files. Use {ToolContractCatalog.WorkspaceDotNetNew} for new scaffolds or {ToolContractCatalog.WorkspacePowerShellRunScript} with a ProductMutation sideEffectManifest for surgical dotnet CLI operations or project-file repair. Do not retry {ToolContractCatalog.WorkspaceWriteFile} against external-target product paths; use it only for current-run artifacts.");
     }
 
     private static bool IsGovernedProcessRun(ToolInvocationPolicyContext context)
@@ -1793,6 +1930,22 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                segments.Length == 1;
     }
 
+    private static bool IsBroadManagedProcessRunDiscoveryPath(string normalizedPath)
+    {
+        var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 2 &&
+            string.Equals(segments[0], "artifacts", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(segments[1], "process-runs", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return segments.Length == 5 &&
+               string.Equals(segments[0], "artifacts", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[1], "scopes", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[4], "process-runs", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsShallowSharedManagedEvidencePath(string normalizedPath)
     {
         var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -1817,6 +1970,95 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     {
         var dotIndex = segment.LastIndexOf('.');
         return dotIndex > 0 && dotIndex < segment.Length - 1;
+    }
+
+    private static bool IsNativeAbsolutePath(string path)
+    {
+        return WindowsNativeAbsolutePathRegex.IsMatch(path) ||
+               path.StartsWith(@"\\", StringComparison.Ordinal) ||
+               path.StartsWith("//", StringComparison.Ordinal);
+    }
+
+    private static bool IsExplicitManagedProjectMediaRead(
+        ToolInvocationPolicyContext context,
+        string path)
+    {
+        if (!string.Equals(context.ToolName, ToolContractCatalog.WorkspaceReadFile, StringComparison.OrdinalIgnoreCase) ||
+            context.Classification != ToolInvocationClassification.Read)
+        {
+            return false;
+        }
+
+        var normalizedPath = NormalizeManagedWorkspacePath(path);
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            return false;
+        }
+
+        const string relativePrefix = "managed-files/project-media/files/";
+        const string absoluteMarker = "/managed-files/project-media/files/";
+        var payload = normalizedPath.StartsWith(relativePrefix, StringComparison.OrdinalIgnoreCase)
+            ? normalizedPath[relativePrefix.Length..]
+            : ExtractAfterMarker(normalizedPath, absoluteMarker);
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return false;
+        }
+
+        var segments = payload.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length >= 2 && HasFileExtension(segments[^1]);
+    }
+
+    private static bool IsExplicitManagedWorkspaceFileRead(
+        ToolInvocationPolicyContext context,
+        string path)
+    {
+        if (!string.Equals(context.ToolName, ToolContractCatalog.WorkspaceReadFile, StringComparison.OrdinalIgnoreCase) ||
+            context.Classification != ToolInvocationClassification.Read)
+        {
+            return false;
+        }
+
+        var normalizedPath = NormalizeManagedWorkspacePath(path);
+        var payload = ExtractAfterMarker(normalizedPath, "/workspace/");
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return false;
+        }
+
+        payload = NormalizeManagedWorkspacePath(payload);
+        if (IsBroadManagedWorkspacePath(payload) ||
+            IsDeniedExternalRunManagedPath(payload))
+        {
+            return false;
+        }
+
+        var segments = payload.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 0 ||
+            !HasFileExtension(segments[^1]))
+        {
+            return false;
+        }
+
+        return IsAllowedExternalRunManagedPath(payload) ||
+               (segments.Length == 1 && IsManagedEvidenceFileName(segments[0]));
+    }
+
+    private static bool IsManagedEvidenceFileName(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        return extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".json", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".txt", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".yml", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".log", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ExtractAfterMarker(string value, string marker)
+    {
+        var index = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        return index < 0 ? string.Empty : value[(index + marker.Length)..];
     }
 
     private static string BuildCurrentRunManagedArtifactRoot(ToolInvocationPolicyContext context)
@@ -1903,19 +2145,44 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureDependencyUnlink = "project_structure_dependency_unlink";
     public const string ProjectStructureNodeCreate = "project_structure_node_create";
     public const string ProjectStructureNodeUpdate = "project_structure_node_update";
+    public const string ProjectStructureNodeTypeUpdate = "project_structure_node_type_update";
+    public const string ProjectStructureNodeMetadataUpdate = "project_structure_node_metadata_update";
+    public const string ProjectStructureNodesStatusUpdate = "project_structure_nodes_status_update";
+    public const string ProjectStructureNodeStatusUpdate = "project_structure_node_status_update";
+    public const string ProjectStructureNodesProgressUpdate = "project_structure_nodes_progress_update";
+    public const string ProjectStructureNodeProgressUpdate = "project_structure_node_progress_update";
+    public const string ProjectStructureNodesMarkerUpdate = "project_structure_nodes_marker_update";
+    public const string ProjectStructureNodeMarkerUpdate = "project_structure_node_marker_update";
+    public const string ProjectStructureNodesPriorityUpdate = "project_structure_nodes_priority_update";
+    public const string ProjectStructureNodePriorityUpdate = "project_structure_node_priority_update";
     public const string ProjectStructureNodeMove = "project_structure_node_move";
     public const string ProjectStructureNodeRecompose = "project_structure_node_recompose";
     public const string ProjectStructureNodeReparent = "project_structure_node_reparent";
+    public const string ProjectStructureNodeDescendantsToProjectMove = "project_structure_node_descendants_to_project_move";
+    public const string ProjectStructureNodeCommandExecute = "project_structure_node_command_execute";
+    public const string ProjectStructureNodeProcessDefinitionLink = "project_structure_node_process_definition_link";
+    public const string ProjectStructureNodeProcessStart = "project_structure_node_process_start";
+    public const string ProjectStructureProcessSubprocessLaunch = "project_structure_process_subprocess_launch";
+    public const string ProjectStructureNodeWorkflowAddOptions = "project_structure_node_workflow_add_options";
+    public const string ProjectStructureNodeWorkflowDefinitionCreate = "project_structure_node_workflow_definition_create";
+    public const string ProjectStructureNodeWorkflowStart = "project_structure_node_workflow_start";
+    public const string ProjectStructureNodeWorkflowStatusGet = "project_structure_node_workflow_status_get";
+    public const string ProjectStructureNodeDelete = "project_structure_node_delete";
+    public const string ProjectStructureNodesDelete = "project_structure_nodes_delete";
     public const string ProjectStructureApprovalRequest = "project_structure_approval_request";
     public const string ProjectStructureAssetCreate = "project_structure_asset_create";
     public const string ProjectStructureAssetGet = "project_structure_asset_get";
+    public const string ProjectStructureAssetContentGet = "project_structure_asset_content_get";
     public const string ProjectStructureAssetCreateRevision = "project_structure_asset_create_revision";
+    public const string ProjectStructureLinkCreate = "project_structure_link_create";
+    public const string ProjectStructureLinkUnlink = "project_structure_link_unlink";
     public const string ProjectStructureImport = "project_structure_import";
     public const string ProjectStructureKnowledgeQuery = "project_structure_knowledge_query";
     public const string ProjectStructureAnalyticsQuery = "project_structure_analytics_query";
     public const string ProjectStructureProjectLeaseAcquire = "project_structure_project_lease_acquire";
     public const string ProjectStructureRepoBranchLeaseAcquire = "project_structure_repo_branch_lease_acquire";
     public const string ProjectStructureLeaseGet = "project_structure_lease_get";
+    public const string ProjectStructureLeaseRenew = "project_structure_lease_renew";
     public const string ProjectStructureLeaseRelease = "project_structure_lease_release";
 
     private static readonly string[] ProjectStructureReadToolNames =
@@ -1927,6 +2194,9 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureChecklist,
         ProjectStructureDependenciesQuery,
         ProjectStructureAssetGet,
+        ProjectStructureAssetContentGet,
+        ProjectStructureNodeWorkflowAddOptions,
+        ProjectStructureNodeWorkflowStatusGet,
         ProjectStructureKnowledgeQuery,
         ProjectStructureAnalyticsQuery,
         ProjectStructureLeaseGet
@@ -1942,15 +2212,37 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureDependencyUnlink,
         ProjectStructureNodeCreate,
         ProjectStructureNodeUpdate,
+        ProjectStructureNodeTypeUpdate,
+        ProjectStructureNodeMetadataUpdate,
+        ProjectStructureNodesStatusUpdate,
+        ProjectStructureNodeStatusUpdate,
+        ProjectStructureNodesProgressUpdate,
+        ProjectStructureNodeProgressUpdate,
+        ProjectStructureNodesMarkerUpdate,
+        ProjectStructureNodeMarkerUpdate,
+        ProjectStructureNodesPriorityUpdate,
+        ProjectStructureNodePriorityUpdate,
         ProjectStructureNodeMove,
         ProjectStructureNodeRecompose,
         ProjectStructureNodeReparent,
+        ProjectStructureNodeDescendantsToProjectMove,
+        ProjectStructureNodeCommandExecute,
+        ProjectStructureNodeProcessDefinitionLink,
+        ProjectStructureNodeProcessStart,
+        ProjectStructureProcessSubprocessLaunch,
+        ProjectStructureNodeWorkflowDefinitionCreate,
+        ProjectStructureNodeWorkflowStart,
+        ProjectStructureNodeDelete,
+        ProjectStructureNodesDelete,
         ProjectStructureApprovalRequest,
         ProjectStructureAssetCreate,
         ProjectStructureAssetCreateRevision,
+        ProjectStructureLinkCreate,
+        ProjectStructureLinkUnlink,
         ProjectStructureImport,
         ProjectStructureProjectLeaseAcquire,
         ProjectStructureRepoBranchLeaseAcquire,
+        ProjectStructureLeaseRenew,
         ProjectStructureLeaseRelease
     ];
 

@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -48,6 +49,11 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
         AssertScoped<ProjectCrossModuleMutationProcessor>(services);
         AssertScoped<ProjectStructureAssemblyService>(services);
         AssertScoped<ProjectWorkbenchService>(services);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IAgentRuntimeToolProvider) &&
+                descriptor.ImplementationType == typeof(ProjectStructureAgentRuntimeToolProvider) &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType == typeof(IProjectNodeAssignmentPolicyBridge) &&

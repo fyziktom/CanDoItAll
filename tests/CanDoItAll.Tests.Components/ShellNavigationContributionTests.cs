@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Web.Composition;
 
 namespace CanDoItAll.Tests.Components;
@@ -26,6 +27,36 @@ public sealed class ShellNavigationContributionTests
 
         Assert.Equal("/agents/workflows", item.Route);
         Assert.Equal("Workflows", item.Title);
+    }
+
+    [Fact]
+    public void Process_contribution_inserts_live_processes_after_contributed_process_parent()
+    {
+        var items = ShellNavigation.GetItems(
+            0,
+            [
+                new AgentFrameworkShellNavigationContributor(),
+                new ProcessesShellNavigationContributor()
+            ]);
+        var processesIndex = items.ToList().FindIndex(item => item.Route == "/processes");
+        var liveProcessesIndex = items.ToList().FindIndex(item => item.Route == "/processes/live");
+        var cognitiveMemoryIndex = items.ToList().FindIndex(item => item.Route == "/cognitive-memory");
+
+        Assert.True(processesIndex >= 0);
+        Assert.Equal("Processes", items[processesIndex].Title);
+        Assert.Equal(processesIndex + 1, liveProcessesIndex);
+        Assert.True(cognitiveMemoryIndex > liveProcessesIndex);
+    }
+
+    [Fact]
+    public void Contributed_route_matching_prefers_live_processes_over_processes_parent()
+    {
+        var item = ShellNavigation.MatchRoute(
+            "processes/live",
+            [new ProcessesShellNavigationContributor()]);
+
+        Assert.Equal("/processes/live", item.Route);
+        Assert.Equal("Live Processes", item.Title);
     }
 
     [Fact]

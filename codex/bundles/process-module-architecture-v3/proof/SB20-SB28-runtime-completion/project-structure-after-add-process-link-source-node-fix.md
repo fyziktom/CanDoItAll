@@ -1,0 +1,306 @@
+- generic [ref=e792] [box=0,0,1900,1400]:
+  - complementary [ref=e793] [box=16,8,76,1384]:
+    - generic [ref=e794] [box=27,19,54,1362]:
+      - generic [ref=e795] [box=27,19,54,40]:
+        - generic [ref=e796] [box=27,19,10,40]:
+          - generic [ref=e797] [box=12,19,40,40]: CD
+          - generic [ref=e798] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e799] [box=45,21,36,36]:
+          - generic [ref=e800] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e801] [box=27,67,54,1203]:
+        - button "Dashboard" [ref=e803] [box=27,71,44,44]:
+          - generic [ref=e805] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e807] [box=27,121,44,44]:
+          - generic [ref=e809] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e811] [box=27,171,44,44]:
+          - generic [ref=e813] [box=39,183,20,20]: forum
+          - generic [ref=e814] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e816] [box=27,221,44,44]:
+          - generic [ref=e818] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e820] [box=27,271,44,44]:
+          - generic [ref=e822] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e824] [box=27,321,44,44]:
+          - generic [ref=e826] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e828] [box=27,371,44,44]:
+          - generic [ref=e830] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e832] [box=27,421,44,44]:
+          - generic [ref=e834] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e836] [box=27,471,44,44]:
+          - generic [ref=e838] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e840] [box=27,521,44,44]:
+          - generic [ref=e842] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e844] [box=27,571,44,44]:
+          - generic [ref=e846] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e848] [box=27,621,44,44]:
+          - generic [ref=e850] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e852] [box=27,671,44,44]:
+          - generic [ref=e854] [box=39,683,20,20]: construction
+        - button "Validation Center" [ref=e1626] [box=27,721,44,44]:
+          - generic [ref=e1628] [box=39,733,20,20]: fact_check
+        - button "Test Lab" [ref=e1630] [box=27,771,44,44]:
+          - generic [ref=e1632] [box=39,783,20,20]: science
+        - button "Activity" [ref=e1634] [box=27,821,44,44]:
+          - generic [ref=e1636] [box=39,833,20,20]: timeline
+        - button "Automation" [ref=e1638] [box=27,871,44,44]:
+          - generic [ref=e1640] [box=39,883,20,20]: autorenew
+        - button "Scheduler" [ref=e1642] [box=27,921,44,44]:
+          - generic [ref=e1644] [box=39,933,20,20]: calendar_month
+        - button "Settings" [ref=e1646] [box=27,971,44,44]:
+          - generic [ref=e1648] [box=39,983,20,20]: settings
+        - button "Opened work" [ref=e860] [box=32,1021,44,44]:
+          - generic [ref=e862] [box=44,1033,20,20]: web_asset
+          - generic [ref=e863] [box=58,1023,16,16]: "1"
+      - generic [ref=e865] [box=27,1287,54,94]:
+        - button "Settings" [ref=e867] [box=27,1287,54,44]:
+          - generic [ref=e869] [box=44,1299,20,20]: settings
+          - generic [ref=e870] [box=54,1309,1,1]: Settings
+        - button "Switch Database" [ref=e872] [box=27,1337,54,44]:
+          - generic [ref=e874] [box=44,1349,20,20]: storage
+          - generic [ref=e875] [box=54,1359,1,1]: Switch Database
+  - main [ref=e876] [box=100,8,1784,1384]:
+    - generic [ref=e877] [box=100,8,1784,30]:
+      - generic [ref=e881] [box=104,8,1129,30]:
+        - button "Dashboard" [ref=e883] [box=113,13,85,20]:
+          - generic [ref=e884] [box=113,15,59,16]: Dashboard
+          - generic [ref=e886] [box=178,13,20,20]: push_pin
+        - button "Processes" [ref=e888] [box=222,15,53,16]:
+          - generic [ref=e889] [box=222,15,53,16]: Processes
+        - button "Live Processes" [ref=e891] [box=298,15,77,16]:
+          - generic [ref=e892] [box=298,15,77,16]: Live Processes
+        - button "Projects" [ref=e894] [box=400,15,43,16]:
+          - generic [ref=e895] [box=400,15,43,16]: Projects
+        - button "TetrisGame · Structure" [ref=e897] [box=467,15,120,16]:
+          - generic [ref=e898] [box=467,15,120,16]: TetrisGame · Structure
+        - button "TetrisGame · Live Processes" [ref=e900] [box=611,15,144,16]:
+          - generic [ref=e901] [box=611,15,144,16]: TetrisGame · Live Processes
+      - generic [ref=e903] [box=1253,10,631,26]:
+        - generic [ref=e904] [box=1253,10,207,26]:
+          - generic [ref=e905] [box=1264,16,136,13]: Delivery Workspace
+          - generic [ref=e906] [box=1406,15,43,16]: Projects
+        - generic [ref=e907] [box=1468,10,83,26]: TetrisGame
+        - generic [ref=e908] [box=1558,10,44,26]: WIP
+        - generic [ref=e909] [box=1610,10,117,26]: Interactive Server
+        - generic [ref=e910] [box=1736,10,85,26]: Live items 1
+        - generic [ref=e911] [box=1828,10,56,26]: Tabs 6
+    - generic [ref=e913] [box=100,46,1784,1346]:
+      - generic [ref=e915] [box=100,46,1784,996]:
+        - generic [ref=e917] [box=100,46,1784,155]:
+          - generic [ref=e918] [box=121,67,1742,97]:
+            - paragraph [ref=e919] [box=121,67,1742,17]: Structure canvas
+            - generic [ref=e920] [box=121,96,1742,68]:
+              - heading "TetrisGame workbench" [level=2] [ref=e923] [box=121,128,243,36]
+              - generic [ref=e924] [box=1508,96,355,68]:
+                - generic [ref=e925] [box=1508,96,112,68]:
+                  - generic [ref=e926] [box=1524,108,80,17]: Nodes
+                  - strong [ref=e927] [box=1524,128,80,24]: "11"
+                - generic [ref=e928] [box=1629,96,112,68]:
+                  - generic [ref=e929] [box=1646,108,80,17]: Links
+                  - strong [ref=e930] [box=1646,128,80,24]: "15"
+                - generic [ref=e931] [box=1751,96,112,68]:
+                  - generic [ref=e932] [box=1767,108,80,17]: Selection
+                  - strong [ref=e933] [box=1767,128,80,24]: "1"
+          - generic [ref=e935] [box=0,0,1900,1400]:
+            - generic [ref=e936] [box=0,0,1900,72]:
+              - generic [ref=e937] [box=17,10,1274,48]:
+                - button "Open quick create actions" [ref=e938] [cursor=pointer] [box=17,10,48,48]:
+                  - generic [ref=e939] [box=30,23,22,22]: add
+                  - generic [ref=e940] [box=41,34,1,1]: Open quick create actions
+                - button "Focus root" [ref=e941] [cursor=pointer] [box=74,14,41,41]:
+                  - generic [ref=e942] [box=87,27,15,15]: center_focus_strong
+                  - generic [ref=e943] [box=94,34,1,1]: Focus root
+                - generic [ref=e944] [box=123,14,491,41]:
+                  - generic [ref=e945] [box=123,14,134,41]:
+                    - button "Select" [ref=e946] [cursor=pointer] [box=123,14,41,41]
+                    - button "Dependency" [ref=e949] [cursor=pointer] [box=170,14,41,41]
+                    - button "Delete" [ref=e952] [cursor=pointer] [box=217,14,41,41]
+                  - button "Inspector" [ref=e955] [cursor=pointer] [box=266,14,41,41]:
+                    - generic [ref=e956] [box=279,27,15,15]: visibility
+                    - generic [ref=e957] [box=286,34,1,1]: visibility
+                  - button "Health" [ref=e958] [cursor=pointer] [box=315,14,41,41]:
+                    - generic [ref=e959] [box=327,27,15,15]: assessment
+                    - generic [ref=e960] [box=334,34,1,1]: assessment
+                  - button "Blocks" [ref=e961] [cursor=pointer] [box=363,14,41,41]:
+                    - generic [ref=e962] [box=376,27,15,15]: dashboard
+                    - generic [ref=e963] [box=383,34,1,1]: dashboard
+                  - button "Signals" [ref=e964] [cursor=pointer] [box=412,14,41,41]:
+                    - generic [ref=e965] [box=425,27,15,15]: notifications_active
+                    - generic [ref=e966] [box=432,34,1,1]: notifications active
+                  - button "Agents" [ref=e967] [cursor=pointer] [box=461,14,41,41]:
+                    - generic [ref=e968] [box=474,27,15,15]: smart_toy
+                    - generic [ref=e969] [box=481,34,1,1]: smart toy
+                  - button "Recompose" [disabled] [ref=e970] [box=510,14,105,41]:
+                    - generic [ref=e971] [box=527,28,71,13]: Recompose
+              - generic [ref=e972] [box=1304,13,579,42]:
+                - button "Fit canvas" [ref=e973] [cursor=pointer] [box=1304,14,41,41]:
+                  - generic [ref=e974] [box=1317,27,15,15]: fit_screen
+                  - generic [ref=e975] [box=1324,34,1,1]: Fit canvas
+                - button "Toggle maximize" [ref=e976] [cursor=pointer] [box=1353,14,41,41]:
+                  - generic [ref=e977] [box=1366,27,15,15]: close_fullscreen
+                  - generic [ref=e978] [box=1373,34,1,1]: Dock canvas
+                - button "Toggle minimap" [ref=e979] [cursor=pointer] [box=1403,14,41,41]:
+                  - generic [ref=e980] [box=1416,27,15,15]: map
+                  - generic [ref=e981] [box=1423,34,1,1]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e982] [cursor=pointer] [box=1453,14,41,41]:
+                  - generic [ref=e983] [box=1465,27,15,15]: monitor_heart
+                  - generic [ref=e984] [box=1473,34,1,1]: Toggle diagnostics
+                - button "Toggle help" [ref=e985] [cursor=pointer] [box=1502,14,41,41]:
+                  - generic [ref=e986] [box=1515,27,15,15]: help
+                  - generic [ref=e987] [box=1522,34,1,1]: Canvas help
+                - button "Toggle settings" [ref=e988] [cursor=pointer] [box=1552,14,41,41]:
+                  - generic [ref=e989] [box=1565,27,15,15]: settings
+                  - generic [ref=e990] [box=1572,34,1,1]: Canvas settings
+                - generic [ref=e991] [box=1601,13,282,42]:
+                  - button "Zoom out" [ref=e992] [cursor=pointer] [box=1606,17,35,35]:
+                    - generic [ref=e993] [box=1616,27,15,15]: remove
+                    - generic [ref=e994] [box=1623,34,1,1]: Zoom out
+                  - slider "Canvas zoom" [ref=e995] [box=1649,26,128,16]: "85"
+                  - button "Zoom in" [ref=e996] [cursor=pointer] [box=1784,17,35,35]:
+                    - generic [ref=e997] [box=1794,27,15,15]: add
+                    - generic [ref=e998] [box=1801,34,1,1]: Zoom in
+                  - generic [ref=e999] [box=1826,17,52,35]: 87%
+            - generic [ref=e1000] [box=0,0,1900,1400]:
+              - generic "Canvas workbench" [ref=e1001] [box=0,0,1900,1400]:
+                - generic [ref=e1002] [box=0,0,1900,1400]:
+                  - generic [box=0,0,1900,1400]:
+                    - generic "Main App Input" [ref=e1729] [box=390,245,14,14]
+                    - generic "Main App Output" [ref=e1730] [box=578,245,14,14]
+                    - generic "Main App Input" [ref=e1731] [box=484,178,14,14]
+                    - generic "Main App Output" [ref=e1732] [box=484,312,14,14]
+              - generic [ref=e1008] [box=16,1326,576,58]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure selection panel" [ref=e1384] [box=1224,96,360,360]:
+                - generic [ref=e1385] [box=1237,109,335,95]:
+                  - generic [ref=e1386] [box=1237,109,216,95]:
+                    - paragraph [ref=e1387] [box=1237,109,216,14]: Selection panel
+                    - heading "Main App" [level=3] [ref=e1388] [box=1237,125,216,18]
+                    - paragraph [ref=e1389] [box=1237,146,216,57]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e1390] [box=1464,109,107,32]:
+                    - button "Minimize window" [ref=e1391] [box=1464,109,32,32]
+                    - button "Restart window position and size" [ref=e1393] [box=1502,109,32,32]
+                    - button "Hide window" [ref=e1395] [box=1539,109,32,32]
+                - generic [ref=e1398] [box=1237,-150,317,1452]:
+                  - generic [ref=e1399] [box=1237,-150,317,278]:
+                    - paragraph [ref=e1400] [box=1254,-133,283,14]: Delivery block
+                    - heading "Main App" [level=3] [ref=e1401] [box=1254,-106,283,36]
+                    - paragraph [ref=e1402] [box=1254,-51,283,25]: "Status: Draft"
+                    - generic [ref=e1403] [box=1254,-13,283,38]
+                    - generic [ref=e1408] [box=1254,39,283,72]
+                  - generic [ref=e1415] [box=1237,144,317,571]:
+                    - paragraph [ref=e1416] [box=1254,161,283,14]: Node actions
+                    - generic [ref=e1417] [box=1254,188,283,510]
+                  - generic [ref=e1701] [box=1237,731,317,48]: Multi-team software delivery and release governance was linked to Main App.
+                  - generic [ref=e1486] [box=1237,795,317,370]:
+                    - paragraph [ref=e1487] [box=1254,812,283,14]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e1488] [box=1254,840,283,36]
+                    - paragraph [ref=e1489] [box=1254,895,283,98]
+                    - generic [ref=e1491] [box=1254,1007,283,86]
+                    - button "Open standard blocks" [ref=e1497] [box=1254,1106,188,42]
+                  - group [ref=e1499] [box=1237,1181,317,120]:
+                    - generic "Advanced details Show advanced details help" [ref=e1500] [box=1254,1198,283,73]
+              - generic [box=0,0,1900,1400]:
+                - generic [box=-1,-1,1,1]: Main App is the primary selection.
+                - region "Canvas accessibility mirror" [box=-1,-1,1,1]:
+                  - heading "Canvas accessibility mirror" [level=3] [box=-1,-1,1,24]
+                  - paragraph [box=-1,23,1,24]: 1 selected nodes across 11 canvas nodes
+                  - list [box=-1,47,1,264]:
+                    - listitem [box=-1,47,1,24]: Main AppStatus Draft • 3 annotations
+                    - listitem [box=-1,71,1,24]: Blazor WASM PWA app shapeFrontend-only web app • Status Draft • 3 annotations
+                    - listitem [box=-1,95,1,24]: "Example: Office365 Category Email Summary To ProjectActive workflow · 6 nodes • Status Completed • 3 annotations"
+                    - listitem [box=-1,119,1,24]: Game loop and board behaviorCore Tetris mechanics • Status Draft • 3 annotations
+                    - listitem [box=-1,143,1,24]: IndexedDB score storageLocal persistence only • Status Draft • 3 annotations
+                    - listitem [box=-1,167,1,24]: Main ArchitectureStatus Draft • 3 annotations
+                    - listitem [box=-1,191,1,24]: main customer requestStatus Draft • 3 annotations
+                    - listitem [box=-1,215,1,24]: Office365 category email summaryStatus Draft • 3 annotations
+                    - listitem [box=-1,239,1,24]: Output folderStatus Completed • 3 annotations
+                    - listitem [box=-1,263,1,24]: Responsive game screen and acceptanceNo-scroll fit on screen • Status Draft • 3 annotations
+                    - listitem [box=-1,287,1,24]: TetrisGameStatus Active • 3 annotations
+        - generic [ref=e1511] [box=100,225,1017,817]:
+          - generic [ref=e1513] [box=134,259,949,570]:
+            - paragraph [ref=e1514] [box=134,259,53,15]: Outline
+            - heading "Project object index" [level=5] [ref=e1515] [box=134,282,211,37]
+            - tree "Project object index" [ref=e1517] [box=134,328,949,502]:
+              - treeitem "TetrisGame Active" [ref=e1518] [box=134,328,949,42]:
+                - button "TetrisGame Active" [ref=e1521] [box=170,328,913,42]:
+                  - generic [ref=e1523] [box=181,339,20,20]: folder
+                  - generic [ref=e1524] [box=209,337,795,24]: TetrisGame
+                  - generic [ref=e1525] [box=1012,339,60,19]: Active
+              - treeitem "Blazor WASM PWA app shape Draft" [ref=e1526] [box=134,374,949,42]:
+                - button "Blazor WASM PWA app shape Draft" [ref=e1529] [box=170,374,913,42]:
+                  - generic [ref=e1531] [box=181,385,20,20]: view_in_ar
+                  - generic [ref=e1532] [box=209,383,799,24]: Blazor WASM PWA app shape
+                  - generic [ref=e1533] [box=1016,385,56,19]: Draft
+              - treeitem "Game loop and board behavior Draft" [ref=e1534] [box=134,420,949,42]:
+                - button "Game loop and board behavior Draft" [ref=e1537] [box=170,420,913,42]:
+                  - generic [ref=e1539] [box=181,431,20,20]: view_in_ar
+                  - generic [ref=e1540] [box=209,429,799,24]: Game loop and board behavior
+                  - generic [ref=e1541] [box=1016,431,56,19]: Draft
+              - treeitem "IndexedDB score storage Draft" [ref=e1542] [box=134,466,949,42]:
+                - button "IndexedDB score storage Draft" [ref=e1545] [box=170,466,913,42]:
+                  - generic [ref=e1547] [box=181,477,20,20]: view_in_ar
+                  - generic [ref=e1548] [box=209,475,799,24]: IndexedDB score storage
+                  - generic [ref=e1549] [box=1016,477,56,19]: Draft
+              - treeitem "Main App Draft" [selected] [ref=e1550] [box=134,512,949,42]:
+                - button "Main App Draft" [ref=e1553] [box=170,512,913,42]:
+                  - generic [ref=e1555] [box=181,523,20,20]: view_in_ar
+                  - generic [ref=e1556] [box=209,521,799,24]: Main App
+                  - generic [ref=e1557] [box=1016,523,56,19]: Draft
+              - treeitem "Main Architecture Draft" [ref=e1558] [box=134,558,949,42]:
+                - button "Main Architecture Draft" [ref=e1561] [box=170,558,913,42]:
+                  - generic [ref=e1563] [box=181,569,20,20]: view_in_ar
+                  - generic [ref=e1564] [box=209,567,799,24]: Main Architecture
+                  - generic [ref=e1565] [box=1016,569,56,19]: Draft
+              - treeitem "main customer request Draft" [ref=e1566] [box=134,604,949,42]:
+                - button "main customer request Draft" [ref=e1569] [box=170,604,913,42]:
+                  - generic [ref=e1571] [box=181,615,20,20]: view_in_ar
+                  - generic [ref=e1572] [box=209,613,799,24]: main customer request
+                  - generic [ref=e1573] [box=1016,615,56,19]: Draft
+              - treeitem "Output folder Completed" [ref=e1574] [box=134,650,949,42]:
+                - button "Output folder Completed" [ref=e1577] [box=170,650,913,42]:
+                  - generic [ref=e1579] [box=181,661,20,20]: view_in_ar
+                  - generic [ref=e1580] [box=209,659,766,24]: Output folder
+                  - generic [ref=e1581] [box=983,661,89,19]: Completed
+              - treeitem "Responsive game screen and acceptance Draft" [ref=e1582] [box=134,696,949,42]:
+                - button "Responsive game screen and acceptance Draft" [ref=e1585] [box=170,696,913,42]:
+                  - generic [ref=e1587] [box=181,707,20,20]: view_in_ar
+                  - generic [ref=e1588] [box=209,705,799,24]: Responsive game screen and acceptance
+                  - generic [ref=e1589] [box=1016,707,56,19]: Draft
+              - 'treeitem "Example: Office365 Category Email Summary To Project Completed" [ref=e1590] [box=134,742,949,42]':
+                - 'button "Example: Office365 Category Email Summary To Project Completed" [ref=e1593] [box=170,742,913,42]':
+                  - generic [ref=e1595] [box=181,753,20,20]: grid_view
+                  - generic [ref=e1596] [box=209,751,766,24]: "Example: Office365 Category Email Summary To Project"
+                  - generic [ref=e1597] [box=983,753,89,19]: Completed
+              - treeitem "Office365 category email summary Draft" [ref=e1598] [box=134,788,949,42]:
+                - button "Office365 category email summary Draft" [ref=e1601] [box=170,788,913,42]:
+                  - generic [ref=e1603] [box=181,799,20,20]: article
+                  - generic [ref=e1604] [box=209,797,799,24]: Office365 category email summary
+                  - generic [ref=e1605] [box=1016,799,56,19]: Draft
+          - generic [ref=e1607] [box=134,880,949,128]:
+            - paragraph [ref=e1608] [box=134,880,118,15]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e1609] [box=134,903,138,37]
+            - generic [ref=e1610] [box=134,948,220,22]:
+              - generic [ref=e1613] [box=134,948,68,22]: 11 nodes
+              - generic [ref=e1616] [box=210,948,62,22]: 15 links
+              - generic [ref=e1619] [box=280,948,75,22]: 1 selected
+            - paragraph [ref=e1620] [box=134,984,823,25]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+      - dialog "Start Multi-team software delivery and release governance" [ref=e1703] [box=374,426,1152,547]:
+        - generic [ref=e1704] [box=393,445,1115,494]:
+          - generic [ref=e1705] [box=393,445,1115,144]:
+            - generic [ref=e1706] [box=393,445,1115,90]:
+              - paragraph [ref=e1707] [box=393,445,96,15]: Process start
+              - heading "Start Multi-team software delivery and release governance" [level=5] [ref=e1708] [box=393,464,621,37]
+              - paragraph [ref=e1709] [box=393,511,993,25]: This prepares a launch plan for the selected project node. You will review HR role assignments before anything is approved, provisioned, or started.
+            - generic [ref=e1710] [box=393,548,1115,42]:
+              - button "Cancel" [ref=e1711] [box=1321,548,81,42]:
+                - generic [ref=e1712] [box=1338,557,47,24]: Cancel
+              - button "Continue" [ref=e1713] [box=1409,548,98,42]:
+                - generic [ref=e1714] [box=1426,557,64,24]: Continue
+          - generic [ref=e1716] [box=393,606,1115,333]:
+            - generic [ref=e1718] [box=410,623,585,180]:
+              - paragraph [ref=e1719] [box=410,623,120,15]: Execution target
+              - paragraph [ref=e1720] [box=410,642,71,24]: Main App
+              - paragraph [ref=e1721] [box=410,675,415,25]: "Target node id: custom:cfd406780f034384a70ea6b87507422a"
+              - paragraph [ref=e1722] [box=410,709,482,25]: "Resolved parent node id: custom:cfd406780f034384a70ea6b87507422a"
+              - paragraph [ref=e1723] [box=410,743,585,25]: "Selected process node id: process-definition:3458e5d8-36b4-1861-83b1-522604c8e302"
+              - paragraph [ref=e1724] [box=410,778,347,25]: "Project id: 3324868f-66e2-478a-bb8f-14f32a5db1e9"
+            - generic [ref=e1726] [box=410,848,1076,74]:
+              - paragraph [ref=e1727] [box=410,848,133,15]: What happens next
+              - paragraph [ref=e1728] [box=410,873,1076,49]: The app will create or reuse a launch plan, then open staffing review. Approval, provisioning, and execution only happen after the role assignments are reviewed and the final Start action is confirmed.

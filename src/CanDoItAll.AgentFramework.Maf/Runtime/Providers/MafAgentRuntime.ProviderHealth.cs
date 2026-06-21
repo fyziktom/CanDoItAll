@@ -74,11 +74,7 @@ public sealed partial class MafAgentRuntime
         var frameworkManagedHistory = provider.PreferFrameworkManagedChatHistory || !SupportsServiceManagedConversations(provider);
         var agent = CreateFrameworkAgent(provider, model, options, frameworkManagedHistory);
         var session = await agent.CreateSessionAsync(cancellationToken);
-        var inputMessages = request.Messages
-            .OrderBy(item => item.CreatedAtUtc)
-            .Where(message => !string.IsNullOrWhiteSpace(message.Content))
-            .Select(message => new ChatMessage(MapRole(message.Role), message.Content.Trim()))
-            .ToList();
+        var inputMessages = BuildProviderTestInputMessages(request);
 
         if (!string.IsNullOrWhiteSpace(request.Prompt))
         {
@@ -119,6 +115,17 @@ public sealed partial class MafAgentRuntime
             responseText,
             (int)(response.Usage?.InputTokenCount ?? 0),
             (int)(response.Usage?.OutputTokenCount ?? 0));
+    }
+
+    internal static List<ChatMessage> BuildProviderTestInputMessages(ProviderTestChatRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return (request.Messages ?? [])
+            .OrderBy(item => item.CreatedAtUtc)
+            .Where(message => !string.IsNullOrWhiteSpace(message.Content))
+            .Select(message => new ChatMessage(MapRole(message.Role), message.Content.Trim()))
+            .ToList();
     }
 
     public async Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(

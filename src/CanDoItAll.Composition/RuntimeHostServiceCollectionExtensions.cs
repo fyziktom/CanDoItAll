@@ -1,4 +1,4 @@
-using CanDoItAll.Infrastructure.ControlPlane;
+﻿using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
@@ -214,55 +214,26 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
     private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
     private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
-    private const string StepDispatchClaimIndexName = "IX_Processes_StepRuns_ProcessRunId_AutomationDispatchLeaseExpi~";
+    private const string WorkflowCheckpointsMigrationId = "20260529111314_AddWorkflowCheckpoints";
+    private const string SchedulerRunObservabilityMigrationId = "20260529220032_AddSchedulerRunObservability";
+    private const string DisableCognitiveMemoryByDefaultMigrationId = "20260603113251_DisableCognitiveMemoryByDefault";
+    private static readonly string[] CurrentPostgreSqlMigrationIds =
+    [
+        InitialPostgreSqlBaselineMigrationId,
+        WorkflowCheckpointsMigrationId,
+        SchedulerRunObservabilityMigrationId,
+        DisableCognitiveMemoryByDefaultMigrationId
+    ];
     private static readonly string[] BaselineSentinelTables =
     [
         "Activity_Entries",
         "Projects_Projects",
-        "Processes_Outbox",
         "Workspace_ProviderProfiles"
-    ];
-    private static readonly string[] ProcessStepDispatchClaimColumns =
-    [
-        "AutomationDispatchAttemptCount",
-        "AutomationDispatchClaimToken",
-        "AutomationDispatchClaimedAtUtc",
-        "AutomationDispatchClaimedBy",
-        "AutomationDispatchLeaseExpiresAtUtc"
     ];
     private static readonly PostgreSqlColumnRequirement[] MergedBaselineColumnRequirements =
     [
-        new("Processes_StepRuns", ProcessStepDispatchClaimColumns),
-        new("Processes_StepRuns",
-        [
-            "BlockReasonCode",
-            "RecoveryOptionsJson",
-            "NextRecoveryAction"
-        ]),
-        new("Processes_ArtifactRecords",
-        [
-            "ProjectionLineageJson",
-            "ProjectionIdentityHash"
-        ]),
-        new("Processes_StepDefinitions",
-        [
-            "AllowedOperations",
-            "OperationTargetScope"
-        ]),
-        new("Processes_DefinitionVersions", ["ContractMode"]),
-        new("Processes_ArtifactExpectations",
-        [
-            "SubprocessChildArtifactExpectationId",
-            "WorkflowOutputId",
-            "WorkflowOutputKind",
-            "WorkflowOutputName"
-        ])
     ];
-    private static readonly string[] MergedBaselineIndexRequirements =
-    [
-        "IX_Processes_ArtifactExpectations_SubprocessChildArtifactExpec~",
-        "IX_Processes_ArtifactRecords_ProcessRunId_ProjectionIdentityHa~"
-    ];
+    private static readonly string[] MergedBaselineIndexRequirements = [];
 
     private readonly record struct PostgreSqlColumnRequirement(string TableName, string[] ColumnNames);
 
@@ -357,18 +328,20 @@ public sealed class AppDatabaseBootstrapper(
         var missingRequirements = await FindMissingPostgreSqlMergedBaselineRequirementsAsync(dbContext, cancellationToken);
         if (missingRequirements.Count > 0) {
             throw new InvalidOperationException(
-                $"PostgreSQL profile '{profile.Profile.DisplayName}' has CanDoItAll tables but does not match the merged PostgreSQL baseline. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to record migration {InitialPostgreSqlBaselineMigrationId} automatically.");
+                $"PostgreSQL profile '{profile.Profile.DisplayName}' has CanDoItAll tables but does not match the current PostgreSQL migration chain. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to record migrations {string.Join(", ", CurrentPostgreSqlMigrationIds)} automatically.");
         }
 
         logger.LogWarning(
-            "PostgreSQL profile {ProfileId} has an existing current CanDoItAll schema but no recorded merged EF migration. Recording baseline migration {MigrationId} before applying pending migrations.",
+            "PostgreSQL profile {ProfileId} has an existing current CanDoItAll schema but no recorded EF migration history. Recording current migration chain {MigrationIds} before applying pending migrations.",
             profile.Profile.Id,
-            InitialPostgreSqlBaselineMigrationId);
+            string.Join(", ", CurrentPostgreSqlMigrationIds));
 
         await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
-        await EnsureProcessStepDispatchClaimIndexAsync(dbContext, cancellationToken);
-        await EnsureProcessClaimHotPathIndexesAsync(dbContext, cancellationToken);
-        await MarkPostgreSqlMigrationAppliedAsync(dbContext, InitialPostgreSqlBaselineMigrationId, cancellationToken);
+        foreach (var migrationId in CurrentPostgreSqlMigrationIds) {
+            if (!appliedMigrations.Contains(migrationId)) {
+                await MarkPostgreSqlMigrationAppliedAsync(dbContext, migrationId, cancellationToken);
+            }
+        }
     }
 
     private static async Task<bool> PostgreSqlTableExistsAsync(
@@ -497,28 +470,12 @@ public sealed class AppDatabaseBootstrapper(
             ("@migrationId", migrationId),
             ("@productVersion", ResolveEfCoreProductVersion()));
 
-    private static Task EnsureProcessStepDispatchClaimIndexAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-        => ExecutePostgreSqlNonQueryAsync(
-            dbContext,
-            $"""
-            CREATE INDEX IF NOT EXISTS "{StepDispatchClaimIndexName}"
-            ON "Processes_StepRuns" ("ProcessRunId", "AutomationDispatchLeaseExpiresAtUtc");
-            """,
-            cancellationToken);
-
-    private static Task EnsureProcessClaimHotPathIndexesAsync(
+    private static Task EnsureAutomationClaimHotPathIndexesAsync(
         AppDbContext dbContext,
         CancellationToken cancellationToken)
         => ExecutePostgreSqlNonQueryAsync(
             dbContext,
             """
-            CREATE INDEX IF NOT EXISTS "IX_Processes_Outbox_PendingClaimOrder"
-            ON "Processes_Outbox" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
-            INCLUDE ("Id", "CommandKey", "ProcessRunId", "LeaseExpiresAtUtc")
-            WHERE "Status" = 0;
-
             CREATE INDEX IF NOT EXISTS "IX_Automation_EnvelopeDeliveries_DueClaimOrder"
             ON "Automation_EnvelopeDeliveries" ("AvailableAtUtc", "CreatedAtUtc")
             INCLUDE ("Id", "EnvelopeId", "State", "LockedAtUtc")
@@ -987,3 +944,4 @@ public sealed class DatabaseSwitchCoordinator(
         }
     }
 }
+

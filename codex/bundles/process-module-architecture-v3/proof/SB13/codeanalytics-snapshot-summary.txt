@@ -1,0 +1,27 @@
+# SB13 CodeAnalytics Snapshot Summary
+
+Snapshot: `snap-20260616003325-e1504595`
+
+Scope:
+
+- `CanDoItAll.Modules.Processes`
+- `CanDoItAll.Processes.Application`
+- `CanDoItAll.Processes.Projections`
+- `CanDoItAll.Modules.AgentFramework`
+- `CanDoItAll.Web`
+
+Results:
+
+- Snapshot completed with no blocking errors.
+- The earlier Process-module `DI0002` warning from an untyped singleton registration was removed by registering `ProcessModuleRewriteState` with an explicit service type.
+- Remaining DI diagnostics are existing AgentFramework factory-registration collector ambiguities at `AgentFrameworkModuleServiceCollectionExtensions.cs` lines 37, 63, and 95; they are not introduced by SB13 Process shell registration.
+- `CanDoItAll.Modules.Processes` has module dependencies only to `CanDoItAll.Processes.Application` and `CanDoItAll.Processes.Projections` in the scoped dependency query.
+- `CanDoItAll.Processes.Application` depends on `CanDoItAll.Processes.Projections`; broader Application runtime references are existing manager-control-loop code from earlier subbundles, not the SB13 shell projection service.
+- `ProcessWorkspaceShellProjectionService` and `ProcessWorkspaceShellProjection` received informational size findings only; the snapshot has no blocking errors.
+
+Queries:
+
+- `code_analytics_snapshot_build` with `includeDi`, `includePersistence`, and `includeRisks`.
+- `code_analytics_dependencies_get` for `CanDoItAll.Modules.Processes`.
+- `code_analytics_services_get` for `ProcessWorkspace`.
+- `code_analytics_services_get` for `ProcessRuntimeEvidenceSourceProvider`.

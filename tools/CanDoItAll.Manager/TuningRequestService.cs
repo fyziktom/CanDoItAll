@@ -302,7 +302,7 @@ public sealed class TuningRequestService(
         string? adapterJobId,
         CancellationToken cancellationToken)
     {
-        TuningRequestRecord? updatedRecord = null;
+        TuningRequestRecord updatedRecord;
         lock (_gate)
         {
             if (!_requests.TryGetValue(id, out var record))
@@ -320,14 +320,16 @@ public sealed class TuningRequestService(
                 AdapterJobId = adapterJobId ?? record.AdapterJobId,
                 UpdatedAtUtc = DateTimeOffset.UtcNow
             };
+        }
+
+        await AppendEventLogAsync(updatedRecord, cancellationToken);
+
+        lock (_gate)
+        {
             _requests[id] = updatedRecord;
         }
 
         await PublishAsync(id, status, summary, cancellationToken);
-        if (updatedRecord is not null)
-        {
-            await AppendEventLogAsync(updatedRecord, cancellationToken);
-        }
     }
 
     private async Task PublishAsync(Guid id, TuningRequestStatus status, string summary, CancellationToken cancellationToken)

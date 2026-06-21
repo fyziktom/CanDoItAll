@@ -1,0 +1,17 @@
+sync-over-async .Result/.Wait/GetAwaiter: 0
+Thread.Sleep: 0
+Task.Run: 0
+per-call HttpClient: 0
+per-call JsonSerializerOptions: 0
+Regex allocation: 0
+unbounded queue/channel: 0
+LINQ materialization: 6
+  src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs:32:        foreach (var entry in manifest.Processes.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+  src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor:1053:            .ToArray());
+  src\CanDoItAll.Processes.Application\ProcessDefinitionCatalogProjectionService.cs:43:            .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+  src\CanDoItAll.Processes.Application\ProcessDefinitionCatalogProjectionService.cs:45:            .ToArray();
+  src\CanDoItAll.Processes.Application\ProcessDefinitionCatalogProjectionService.cs:48:            .ToArray();
+  src\CanDoItAll.Processes.Application\ProcessDefinitionCatalogProjectionService.cs:51:            .ToArray();
+ContainsKey then indexer: 0
+sync file APIs: 0
+Mitigation: all nonzero LINQ/materialization matches are bounded template metadata or UI projection rendering paths; no runtime dispatcher, queue, persistence loop, or hot path was added in SB15.

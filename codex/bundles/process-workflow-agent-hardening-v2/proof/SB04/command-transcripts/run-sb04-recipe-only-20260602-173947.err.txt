@@ -1,6 +1,0 @@
-[31;1mGet-Content: [0mC:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v2\scripts\run_sb04_real_process_e2e.ps1:422[0m
-[31;1m[0m[36;1mLine |[0m
-[31;1m[0m[36;1m[36;1m 422 | [0m     $requestMarkdown = [36;1mGet-Content -Path $path -Raw[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCannot find path[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m     | [31;1m'C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v2\templates\process-test-scenarios\r.md' because it does not exist.[0m

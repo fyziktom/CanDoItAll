@@ -1,5 +1,0 @@
-CI metadata check
-Repository: C:\repositories\CanDoItAll
-Has .github directory: True
-Has .github/workflows directory: False
-No local GitHub Actions workflow directory was present; SB08 documents the expected local gate as restore/build plus targeted unit/integration/component regression.

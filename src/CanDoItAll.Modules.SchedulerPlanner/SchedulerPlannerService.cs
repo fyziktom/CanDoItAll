@@ -5,7 +5,6 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Automation;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -128,7 +127,6 @@ public sealed class SchedulerPlannerService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IAutomationTriggerRegistry triggerRegistry,
     ICronDescriptionService cronDescriptionService,
-    ProcessesService processesService,
     IWorkflowCatalogService workflowCatalogService,
     ISchedulerWorkflowInputSchemaService workflowInputSchemaService,
     IClock clock,
@@ -168,12 +166,11 @@ public sealed class SchedulerPlannerService(
     public async Task<SchedulerPlanEditorModel> CreateDefaultEditorAsync(CancellationToken cancellationToken = default)
     {
         var targets = await ListTargetOptionsAsync(cancellationToken);
-        var firstProcess = targets.FirstOrDefault(item => item.Kind == SchedulerPlanTargetKind.Process);
-        var firstTarget = firstProcess ?? targets.FirstOrDefault();
+        var firstTarget = targets.FirstOrDefault(item => item.Kind == SchedulerPlanTargetKind.Workflow);
         return new SchedulerPlanEditorModel
         {
             Name = firstTarget is null ? "Scheduled run" : $"{firstTarget.Name} schedule",
-            TargetKind = firstTarget?.Kind ?? SchedulerPlanTargetKind.Process,
+            TargetKind = firstTarget?.Kind ?? SchedulerPlanTargetKind.Workflow,
             TargetId = firstTarget?.Id ?? Guid.Empty,
             TargetVersionId = firstTarget?.VersionId,
             TimeZoneId = ResolveDefaultTimeZoneId(),
@@ -289,15 +286,6 @@ public sealed class SchedulerPlannerService(
 
     private async Task<IReadOnlyList<SchedulerTargetOption>> ListTargetOptionsAsync(CancellationToken cancellationToken)
     {
-        var processTargets = (await processesService.ListDefinitionsAsync(cancellationToken: cancellationToken))
-            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(item => new SchedulerTargetOption(
-                SchedulerPlanTargetKind.Process,
-                item.Id,
-                VersionId: null,
-                item.Name,
-                item.Summary,
-                item.HasPublishedVersion ? "Published" : item.Status.ToString()));
         var workflowTargets = (await workflowCatalogService.ListDefinitionsAsync(cancellationToken))
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .Select(item => new SchedulerTargetOption(
@@ -308,9 +296,7 @@ public sealed class SchedulerPlannerService(
                 item.Description,
                 $"{item.Status} / {item.PreferredBackend}"));
 
-        return processTargets
-            .Concat(workflowTargets)
-            .ToArray();
+        return workflowTargets.ToArray();
     }
 
     private async Task<SchedulerTargetOption> ResolveTargetAsync(
@@ -831,7 +817,6 @@ public sealed class QuartzCronDescriptionService : ICronDescriptionService
 }
 
 public sealed class SchedulerTargetLauncher(
-    ProcessesService processesService,
     IWorkflowCatalogService workflowCatalogService,
     IWorkflowRuntimeManager workflowRuntimeManager) : ISchedulerTargetLauncher
 {
@@ -849,39 +834,14 @@ public sealed class SchedulerTargetLauncher(
 
         return plan.TargetKind switch
         {
-            SchedulerPlanTargetKind.Process => await LaunchProcessAsync(plan, firedAtUtc, cancellationToken),
+            SchedulerPlanTargetKind.Process => throw new SchedulerTargetLaunchException(
+                "Process scheduler targets are unavailable while the Process module is rebuilt.",
+                SchedulerPlanRunRetryCategory.SchedulerFailure,
+                SchedulerPlanRunRoutes.Failed,
+                targetKind: SchedulerPlanTargetKind.Process),
             SchedulerPlanTargetKind.Workflow => await LaunchWorkflowAsync(plan, cancellationToken),
             _ => throw new InvalidOperationException($"Scheduler target kind '{plan.TargetKind}' is not supported.")
         };
-    }
-
-    private async Task<SchedulerTargetLaunchResult> LaunchProcessAsync(
-        SchedulerPlan plan,
-        DateTimeOffset firedAtUtc,
-        CancellationToken cancellationToken)
-    {
-        var result = await processesService.StartRunAsync(
-            new ProcessRunStartRequest
-            {
-                ProcessDefinitionId = plan.TargetId,
-                RunName = $"{plan.Name} / {firedAtUtc:yyyy-MM-dd HH:mm} UTC",
-                OperatingMode = ProcessOperatingMode.AssistedExecution,
-                TriggerReason = $"Started by scheduler plan '{plan.Name}' ({plan.Id:D})."
-            },
-            cancellationToken);
-        if (result.IsFailure || result.Value == Guid.Empty)
-        {
-            var errors = result.Errors.Count == 0
-                ? "Process run failed without an error message."
-                : string.Join(" | ", result.Errors.Select(item => $"{item.Code}: {item.Message}"));
-            throw new InvalidOperationException(errors);
-        }
-
-        return new SchedulerTargetLaunchResult(
-            SchedulerPlanTargetKind.Process,
-            result.Value,
-            "Started",
-            $"Started process run '{result.Value:D}'.");
     }
 
     private async Task<SchedulerTargetLaunchResult> LaunchWorkflowAsync(

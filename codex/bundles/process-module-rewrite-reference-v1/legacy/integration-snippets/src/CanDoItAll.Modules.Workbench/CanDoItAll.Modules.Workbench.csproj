@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+  </ItemGroup>
+
+</Project>
+
+
+

@@ -58,6 +58,7 @@
   ],
   "TailoringRules": [
     "Use one subprocess run per bounded function, endpoint, component, or feature behavior.",
+    "When a full deliverable parent scope already supplies product root, app archetype, architecture constraints, and validation hooks, derive the first reviewable MVP behavior instead of blocking only because the parent request is broader than one feature. The derived behavior must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof.",
     "Split UI, persistence, and integration-heavy work into separate child runs when focused proof would otherwise become vague.",
     "Managers may request missing artifacts or targeted repair from assigned agents before escalation, but must keep the dispatcher generic."
   ],
@@ -95,7 +96,7 @@
     {
       "Key": "software-engineer",
       "RoleResourceKey": "software-engineer",
-      "DisplayName": "Feature implementer",
+      "DisplayName": ".NET feature implementer",
       "Purpose": "Make the minimal code change and produce a reviewable change-set summary.",
       "StaffingIntent": "A .NET-capable implementer with repository read/write and build/test tools.",
       "PreferredExecutorKind": "agent",
@@ -129,7 +130,7 @@
       "Key": "feature-slice-intake",
       "Title": "Capture feature or function boundary",
       "Subtitle": "One behavior only",
-      "Notes": "Restate the requested function or feature as one observable behavior with repository target, acceptance criteria, exclusions, and expected proof. Reject vague bulk work and ask the manager to split it.",
+      "Notes": "Restate the requested function or feature as one observable behavior with repository target, acceptance criteria, exclusions, and expected proof. If the parent request is a repair request, treat the parent repair target as the feature boundary. Do not derive a new MVP behavior; preserve the failed acceptance criteria, failing command or browser metrics, upstream child/parent artifact refs, and the smallest proof that would close the defect. Exclusions must not exclude the failing requirement that triggered repair. If the parent request is a full app or broad deliverable, derive the first reviewable MVP behavior from upstream scope, architecture, setup evidence, product root, app archetype, and validation hooks, then record excluded follow-up behavior. The derived behavior must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must contain an observable product-specific interaction. Reject only when no safe behavior can be chosen without inventing requirements.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -137,9 +138,9 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Parent slice scope, repository or project target, existing solution evidence, and requested behavior.",
       "OutputContractSummary": "Feature scope packet with acceptance criteria, exclusions, and proof expectations.",
-      "EvidenceContractSummary": "Bounded behavior statement, affected surface, assumptions, and excluded follow-up work.",
-      "DecisionRightsSummary": "Feature manager can narrow the requested behavior but cannot drop accepted parent criteria without recording the change.",
-      "ExceptionPolicySummary": "Block when the requested behavior cannot be made small enough for one implementation and one validation loop.",
+      "EvidenceContractSummary": "Bounded behavior statement, affected surface, assumptions, excluded follow-up work, and inherited repair target details when launched for repair.",
+      "DecisionRightsSummary": "Feature manager can narrow the requested behavior but cannot drop accepted parent criteria or downgrade the requested product to scaffold-only readiness.",
+      "ExceptionPolicySummary": "Block only when upstream evidence is contradictory, the product root/app archetype/validation boundary is missing, the selected behavior is scaffold/setup/app-shell/build-only work, a repair launch lacks a concrete repair target, or no single behavior can be selected without inventing requirements.",
       "TargetLeadHours": 1,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -169,7 +170,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation, validation, and parent process handoff.",
-          "ValidationRequirementSummary": "Must identify one behavior, acceptance criteria, exclusions, target repository surface, and proof commands."
+          "ValidationRequirementSummary": "Must identify one behavior, acceptance criteria, exclusions, target repository surface, proof commands, and any broader parent-scope items intentionally deferred to follow-up slices. For repair launches, the packet must preserve the inherited repair target and must not replace it with a fresh MVP behavior."
         },
         {
           "Key": "feature-acceptance-criteria",
@@ -181,7 +182,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by test contract and validation steps.",
-          "ValidationRequirementSummary": "Must be concrete enough that validation can pass or fail without interpreting intent."
+          "ValidationRequirementSummary": "Must be concrete enough that validation can pass or fail without interpreting intent. For repair launches, it must include the exact failed criteria or metric from the parent repair target."
         }
       ],
       "ArtifactInputs": [],
@@ -205,7 +206,7 @@
       "Key": "implementation-approach",
       "Title": "Decide implementation approach",
       "Subtitle": "Fit the local architecture",
-      "Notes": "Identify existing patterns, canonical data ownership, UI/application/domain/infrastructure boundaries, required services, and the smallest file set likely to change.",
+      "Notes": "Identify existing patterns, canonical data ownership, UI/application/domain/infrastructure boundaries, required services, and the smallest file set likely to change. For repair runs, plan against the inherited repair target instead of broadening scope; name the failing proof, the product surfaces likely responsible, and the focused verification that must pass before handoff.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -377,9 +378,9 @@
     {
       "Order": 3,
       "Key": "code-change",
-      "Title": "Implement the feature or function",
+      "Title": "Implement the .NET feature or function",
       "Subtitle": "Minimal code path",
-      "Notes": "Make the smallest production and test changes that satisfy the validation contract. Follow existing project conventions, keep state changes explicit, and avoid introducing fallback behavior that hides errors.",
+      "Notes": "Make the smallest production and test changes that satisfy the validation contract. Follow existing project conventions, keep state changes explicit, and avoid introducing fallback behavior that hides errors. Keep generated tests deterministic and bounded: avoid loops that depend only on mutable product state without a maximum iteration guard and an assertion that each state transition succeeded. Use a workspace_dotnet_test timeout of 300 seconds or less for focused generated-app tests unless a current diagnostic proves the test suite needs more time. This implementation step does not own runtime launch, browser navigation, screenshots, or viewport proof; those belong to targeted-validation because this step lacks LaunchRuntime and CaptureRuntimeProof. Do not block this step only because browser proof is missing when code changes, build, and focused tests are complete.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -471,17 +472,17 @@
       "Key": "targeted-validation",
       "Title": "Run focused validation",
       "Subtitle": "Pass or request rework",
-      "Notes": "Run the agreed validation commands and browser proof. For UI proof, launch or verify the app first, use the returned URL, then collect browser snapshot, console messages, and screenshot. If proof fails because an artifact is missing, the app cannot launch, or the implementation is incomplete, ask the manager to request targeted repair from the owning role before escalation.",
+      "Notes": "Run the agreed validation commands and browser proof. For repair-sourced runs, the focused proof must include the inherited repair target; do not accept a different behavior while the triggering defect remains untested or failing. Keep focused validation bounded: use a workspace_dotnet_test timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and choose the feature-repair-required branch instead of waiting on a broad unbounded run. For UI proof, launch or verify the app first, use the returned URL, then collect browser snapshot, console messages, and screenshot. If proof fails because an artifact is missing, the app cannot launch, or the implementation is incomplete, choose feature-repair-required and route the defect to the owning implementation role. Use blocked status only for an unrecoverable environment, permission, or process-contract problem that cannot be repaired inside this subprocess.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Feature change set and validation contract.",
-      "OutputContractSummary": "Focused validation evidence and rework directive when proof is missing or failing.",
+      "OutputContractSummary": "Focused validation evidence plus an explicit feature-accepted or feature-repair-required branch.",
       "EvidenceContractSummary": "Commands, exit codes, relevant logs, screenshots for UI, and acceptance-criteria mapping.",
-      "DecisionRightsSummary": "Validation owner can pass, block for targeted rework, or escalate only when manager-directed repair cannot resolve the blocker.",
-      "ExceptionPolicySummary": "Block on failing proof, missing artifacts, environment blockers, or evidence that does not map to the accepted behavior.",
+      "DecisionRightsSummary": "Validation owner can accept proof or route targeted rework, but cannot mutate product files in this step.",
+      "ExceptionPolicySummary": "Select feature-repair-required for failing proof, missing artifacts, app launch failures, incomplete implementation, or evidence that does not map to the accepted behavior. Block only when repair cannot be attempted because the environment, permissions, or process contract is unavailable.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "code-change",
       "DependsOnBranchOutcomeKey": "",
@@ -540,7 +541,18 @@
           "SourceStepKey": "test-contract"
         }
       ],
-      "BranchOutcomes": [],
+      "BranchOutcomes": [
+        {
+          "Key": "feature-accepted",
+          "Title": "Feature accepted",
+          "Description": "Focused validation evidence satisfies the accepted behavior and the feature can be handed to the parent process."
+        },
+        {
+          "Key": "feature-repair-required",
+          "Title": "Feature repair required",
+          "Description": "Focused validation found a concrete defect, failed proof, missing artifact, launch failure, or implementation gap that the implementer must repair."
+        }
+      ],
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
@@ -562,21 +574,21 @@
       "Order": 5,
       "Key": "feature-handoff",
       "Title": "Hand off feature implementation",
-      "Subtitle": "Parent-ready result",
-      "Notes": "Summarize what changed, what passed, what remains risky, and whether the parent process should continue, request another subprocess, or escalate.",
+      "Subtitle": "Parent-ready accepted result",
+      "Notes": "Summarize the initially accepted feature implementation path: what changed, what passed, what remains risky, and whether the parent process should continue, request another subprocess, or escalate.",
       "StepKind": "End",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
-      "InputContractSummary": "Feature scope, change set, validation evidence, and any rework directives.",
+      "InputContractSummary": "Feature scope, change set, and accepted validation evidence.",
       "OutputContractSummary": "Parent-ready handoff packet with status, blockers, residual risks, and next recommendation.",
       "EvidenceContractSummary": "Implementation summary, validation result, open issues, and explicit parent next action.",
-      "DecisionRightsSummary": "Feature manager can close only when required evidence exists or unresolved blockers are explicit.",
-      "ExceptionPolicySummary": "Do not close when validation fails, required artifacts are missing, or the parent cannot determine the next action.",
+      "DecisionRightsSummary": "Feature manager can close only when the feature-accepted branch was selected and required evidence exists.",
+      "ExceptionPolicySummary": "Do not close on the initial path when validation selected repair-required, required artifacts are missing, or the parent cannot determine the next action.",
       "TargetLeadHours": 1,
       "DependsOnStepKey": "targeted-validation",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "feature-accepted",
       "DecisionRoleKey": "",
       "CanvasX": 5660,
       "CanvasY": 0,
@@ -589,7 +601,7 @@
         },
         {
           "DependsOnStepKey": "targeted-validation",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "feature-accepted"
         }
       ],
       "RoleAssignments": [
@@ -631,6 +643,378 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 6,
+      "Key": "feature-repair",
+      "Title": "Repair .NET focused validation findings",
+      "Subtitle": "Targeted implementation rework",
+      "Notes": "Repair only the concrete defects, failed proof, launch issue, or missing artifacts identified by targeted validation. Stay inside the accepted feature scope and rerun the smallest useful validation command before handing back to QA recheck.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Feature change set, focused validation evidence, and feature-repair-required disposition.",
+      "OutputContractSummary": "Focused repair change set and validation notes ready for recheck.",
+      "EvidenceContractSummary": "Repaired defect, changed files, rerun command output when available, and remaining risk.",
+      "DecisionRightsSummary": "Feature implementer owns product changes; QA may clarify failing evidence without mutating product files.",
+      "ExceptionPolicySummary": "Do not broaden the feature scope. Escalate if the requested repair requires a new behavior, architecture change, missing permission, or unavailable tool.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "targeted-validation",
+      "DependsOnBranchOutcomeKey": "feature-repair-required",
+      "DecisionRoleKey": "",
+      "CanvasX": 5660,
+      "CanvasY": 840,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "code-change",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "targeted-validation",
+          "DependsOnBranchOutcomeKey": "feature-repair-required"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer with repository write and build/test tools."
+        },
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "QA can clarify the failing proof without taking ownership of product changes."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "feature-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Feature repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by recheck, parent QA, and release readiness.",
+          "ValidationRequirementSummary": "Must name the failing proof addressed, changed files, rerun validation, and unresolved risk."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "feature-change-set",
+          "SourceStepKey": "code-change"
+        },
+        {
+          "ArtifactExpectationKey": "feature-test-evidence",
+          "SourceStepKey": "targeted-validation"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
+    },
+    {
+      "Order": 7,
+      "Key": "targeted-recheck",
+      "Title": "Re-run focused validation after repair",
+      "Subtitle": "Repair proof",
+      "Notes": "Re-run the failing proof and the smallest regression commands needed to verify the repair. If the failed proof involved app launch, runtime rendering, browser behavior, screenshots, console output, or visible UI acceptance criteria, this is not a build/test-only step: launch or verify the app with a trusted runtime receipt, navigate only to the confirmed URL, capture browser snapshot or browser evaluation output, console messages, and screenshot, exercise the repaired visible behavior enough to prove the original failure is gone, and stop any runtime started by this step with cleanup evidence. Select feature-accepted only when the repaired evidence satisfies the accepted behavior and any inherited repair target. Select feature-repair-escalation only after the required proof was executed and still fails, remains unmapped, or another repair would exceed the subprocess scope. Do not choose feature-repair-escalation solely because this step skipped browser or runtime proof it had the tools and contract to run; return Blocked only when the proof tool, launch capability, product root, or runtime environment is unavailable. For repair-sourced runs, include the before/after metric or assertion from the parent repair target in the artifact.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Original validation failure, repair change set, and validation contract.",
+      "OutputContractSummary": "Recheck evidence plus an explicit feature-accepted or feature-repair-escalation branch.",
+      "EvidenceContractSummary": "Rerun commands, exit codes, browser/runtime proof whenever the failed proof or acceptance criteria involved UI/runtime behavior, cleanup receipt for any runtime started by this step, before/after repair target assessment, and acceptance-criteria mapping after repair.",
+      "DecisionRightsSummary": "Validation owner can accept repaired evidence or escalate unresolved repair findings; QA still does not mutate product files.",
+      "ExceptionPolicySummary": "Select feature-repair-escalation when required proof was executed and remains failing, detached, or unmapped after repair. Block only for environment, permission, unavailable proof tool, launch capability, product-root, or process-contract failures that prevent recheck execution.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "feature-repair",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "qa-lead",
+      "CanvasX": 6740,
+      "CanvasY": 840,
+      "BranchCanvasX": 7000,
+      "BranchCanvasY": 1190,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "targeted-validation",
+          "DependsOnBranchOutcomeKey": "feature-repair-required"
+        },
+        {
+          "DependsOnStepKey": "feature-repair",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a reviewer capable of rerunning and interpreting the required proof."
+        },
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Implementation owner reviews remaining findings before parent escalation."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "feature-recheck-evidence",
+          "TemplateKey": "test-evidence-pack",
+          "Title": "Feature repair recheck evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent QA and release readiness.",
+          "ValidationRequirementSummary": "Must include rerun commands, exit codes, relevant output, live UI/browser/runtime proof when the failed proof or acceptance criteria involved UI/runtime behavior, cleanup receipt for any runtime started by this step, and unresolved gaps after repair. Missing live proof is not a valid escalation reason when this step had the tool capability and product root needed to run it."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "feature-test-evidence",
+          "SourceStepKey": "targeted-validation"
+        },
+        {
+          "ArtifactExpectationKey": "feature-repair-change-set",
+          "SourceStepKey": "feature-repair"
+        },
+        {
+          "ArtifactExpectationKey": "feature-validation-contract",
+          "SourceStepKey": "test-contract"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "feature-accepted",
+          "Title": "Feature accepted",
+          "Description": "Repaired focused validation evidence satisfies the accepted behavior and the feature can be handed to the parent process."
+        },
+        {
+          "Key": "feature-repair-escalation",
+          "Title": "Feature repair escalation",
+          "Description": "Repaired validation still has release-blocking proof gaps or defects that require parent escalation or a new subprocess scope."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-feature-function-implementation/steps/targeted-recheck.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 8,
+      "Key": "feature-handoff-after-repair",
+      "Title": "Hand off repaired feature implementation",
+      "Subtitle": "Parent-ready repaired result",
+      "Notes": "Summarize the repaired accepted path: original failure, repair, recheck evidence, remaining risks, and whether the parent process should continue.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Feature scope, original change set, repair change set, and accepted recheck evidence.",
+      "OutputContractSummary": "Parent-ready repaired handoff packet with status, blockers, residual risks, and next recommendation.",
+      "EvidenceContractSummary": "Implementation summary, repair summary, validation result, open issues, and explicit parent next action.",
+      "DecisionRightsSummary": "Feature manager can close only when the repaired feature-accepted branch was selected and required evidence exists.",
+      "ExceptionPolicySummary": "Do not close when repaired validation selected escalation, required artifacts are missing, or the parent cannot determine the next action.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "targeted-recheck",
+      "DependsOnBranchOutcomeKey": "feature-accepted",
+      "DecisionRoleKey": "",
+      "CanvasX": 7820,
+      "CanvasY": 840,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "feature-repair",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "targeted-recheck",
+          "DependsOnBranchOutcomeKey": "feature-accepted"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can produce parent-ready reports."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "feature-handoff-packet-after-repair",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Repaired feature implementation handoff packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent implementation slice, peer review, and release approval.",
+          "ValidationRequirementSummary": "Must summarize original change, repair change, validation result, blockers, risks, and parent next action."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "feature-change-set",
+          "SourceStepKey": "code-change"
+        },
+        {
+          "ArtifactExpectationKey": "feature-repair-change-set",
+          "SourceStepKey": "feature-repair"
+        },
+        {
+          "ArtifactExpectationKey": "feature-recheck-evidence",
+          "SourceStepKey": "targeted-recheck"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-handoff-after-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 9,
+      "Key": "feature-repair-escalation",
+      "Title": "Escalate unresolved feature repair",
+      "Subtitle": "Parent no-go packet",
+      "Notes": "Record the unresolved repair findings and make the parent no-go recommendation explicit instead of closing the child as accepted.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Original validation failure, repair change set, and failed recheck evidence.",
+      "OutputContractSummary": "Parent escalation packet with unresolved defects, proof gaps, risks, and recommended next action.",
+      "EvidenceContractSummary": "Unresolved blocker list, failing proof references, attempted repair, and parent escalation recommendation.",
+      "DecisionRightsSummary": "Feature manager can escalate unresolved repair findings but cannot present the feature as accepted.",
+      "ExceptionPolicySummary": "Do not continue to parent-ready accepted handoff while repaired validation remains unresolved.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "targeted-recheck",
+      "DependsOnBranchOutcomeKey": "feature-repair-escalation",
+      "DecisionRoleKey": "",
+      "CanvasX": 7820,
+      "CanvasY": 1240,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "feature-repair",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "targeted-recheck",
+          "DependsOnBranchOutcomeKey": "feature-repair-escalation"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can produce no-go reports."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "feature-repair-escalation-packet",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Feature repair escalation packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent implementation slice, incident review, and future repair planning.",
+          "ValidationRequirementSummary": "Must summarize unresolved findings, attempted repair, failing proof, no-go rationale, and required next scope."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "feature-test-evidence",
+          "SourceStepKey": "targeted-validation"
+        },
+        {
+          "ArtifactExpectationKey": "feature-repair-change-set",
+          "SourceStepKey": "feature-repair"
+        },
+        {
+          "ArtifactExpectationKey": "feature-recheck-evidence",
+          "SourceStepKey": "targeted-recheck"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-feature-function-implementation/steps/feature-repair-escalation.md"
       ],
       "AllowedOperations": [
         "ReadProcessContext",

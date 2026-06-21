@@ -1,0 +1,621 @@
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace CanDoItAll.Modules.Processes;
+
+public enum ProcessOperatingMode {
+    Simulation,
+    Development,
+    AssistedExecution,
+    GovernedLive,
+    Emergency
+}
+
+public enum ProcessDecisionKind {
+    Assignment,
+    Approval,
+    Escalation,
+    DirectMessage,
+    Exception,
+    Refusal,
+    Autonomy,
+    Variant,
+    ImportWarning,
+    ImprovementCandidate
+}
+
+public enum ProcessDecisionOutcome {
+    Proposed,
+    Approved,
+    Rejected,
+    Escalated,
+    Refused,
+    Accepted,
+    Recorded
+}
+
+public enum ProcessArtifactTrustStatus {
+    Draft,
+    ReviewRequired,
+    Approved,
+    Rejected,
+    TrustedSource
+}
+
+public enum ProcessCapabilityGapSeverity {
+    None,
+    Attention,
+    Critical
+}
+
+public enum ProcessConformanceSeverity {
+    Low,
+    Moderate,
+    High,
+    Critical
+}
+
+public enum ProcessImprovementStatus {
+    Open,
+    Planned,
+    Accepted,
+    Rejected,
+    Closed
+}
+
+public enum ProcessLaunchPlanStatus {
+    Draft,
+    PendingApproval,
+    ChangesRequested,
+    Rejected,
+    Approved,
+    Provisioning,
+    Ready,
+    Executing,
+    Completed,
+    Cancelled
+}
+
+public enum ProcessLaunchCandidateKind {
+    ProjectAssignment,
+    Workforce,
+    AiResource,
+    NewAiAgentProposal,
+    Workflow,
+    Gap
+}
+
+public enum ProcessLaunchApprovalStatus {
+    Pending,
+    Approved,
+    ChangesRequested,
+    Rejected
+}
+
+public enum ProcessLaunchProvisioningStatus {
+    NotRequired,
+    Pending,
+    Provisioned,
+    Rejected
+}
+
+public sealed class ProcessRun : IHasConcurrencyToken {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessDefinitionId { get; set; }
+
+    public Guid ProcessDefinitionVersionId { get; set; }
+
+    public Guid? ParentRunId { get; set; }
+
+    public Guid? ParentStepRunId { get; set; }
+
+    public Guid? RootRunId { get; set; }
+
+    public int HierarchyDepth { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public ProcessRunStatus Status { get; set; } = ProcessRunStatus.Draft;
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public string TriggerReason { get; set; } = string.Empty;
+
+    public string GovernanceSnapshot { get; set; } = string.Empty;
+
+    public string PolicySnapshot { get; set; } = string.Empty;
+
+    public string ExecutorSnapshotSummary { get; set; } = string.Empty;
+
+    public Guid? ManagerAgentId { get; set; }
+
+    public string ManagerAgentName { get; set; } = string.Empty;
+
+    public string ReplayPackageKey { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    public DateTimeOffset? StartedAtUtc { get; set; }
+
+    public DateTimeOffset? CompletedAtUtc { get; set; }
+
+    public decimal EstimatedCost { get; set; }
+
+    public decimal ActualCost { get; set; }
+
+    public int FirstTimeRightPercent { get; set; } = 100;
+
+    public int SlaAttainmentPercent { get; set; } = 100;
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
+}
+
+public sealed class ProcessStepRun : IHasConcurrencyToken {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid StepDefinitionId { get; set; }
+
+    public int Sequence { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    public ProcessStepKind StepKind { get; set; } = ProcessStepKind.Work;
+
+    public ProcessStepRunStatus Status { get; set; } = ProcessStepRunStatus.Pending;
+
+    public string RoleSnapshotSummary { get; set; } = string.Empty;
+
+    public string CurrentExecutorName { get; set; } = string.Empty;
+
+    public Guid? CurrentExecutorPartyId { get; set; }
+
+    public string DecisionSummary { get; set; } = string.Empty;
+
+    public string BlockedReason { get; set; } = string.Empty;
+
+    public ProcessStepBlockReasonCode BlockReasonCode { get; set; } = ProcessStepBlockReasonCode.None;
+
+    public string RecoveryOptionsJson { get; set; } = "[]";
+
+    public ProcessStepRecoveryOption NextRecoveryAction { get; set; } = ProcessStepRecoveryOption.None;
+
+    public string RefusalReason { get; set; } = string.Empty;
+
+    public string ExceptionSummary { get; set; } = string.Empty;
+
+    public string InputQualitySummary { get; set; } = string.Empty;
+
+    public Guid? SelectedBranchOutcomeId { get; set; }
+
+    public string SelectedBranchOutcomeTitle { get; set; } = string.Empty;
+
+    public DateTimeOffset? ReadyAtUtc { get; set; }
+
+    public DateTimeOffset? StartedAtUtc { get; set; }
+
+    public DateTimeOffset? CompletedAtUtc { get; set; }
+
+    public int WaitMinutes { get; set; }
+
+    public int TouchMinutes { get; set; }
+
+    public int BlockedMinutes { get; set; }
+
+    public int ReworkCount { get; set; }
+
+    public ProcessCapabilityGapSeverity CapabilityGapSeverity { get; set; } = ProcessCapabilityGapSeverity.None;
+
+    public string AutomationDispatchClaimToken { get; set; } = string.Empty;
+
+    public string AutomationDispatchClaimedBy { get; set; } = string.Empty;
+
+    public DateTimeOffset? AutomationDispatchClaimedAtUtc { get; set; }
+
+    public DateTimeOffset? AutomationDispatchLeaseExpiresAtUtc { get; set; }
+
+    public int AutomationDispatchAttemptCount { get; set; }
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
+}
+
+public sealed class ProcessRunAssignment {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid RoleRequirementId { get; set; }
+
+    public Guid? StepDefinitionId { get; set; }
+
+    public Guid? PartyId { get; set; }
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
+    public string BindingReason { get; set; } = string.Empty;
+
+    public string SourceRegistryKey { get; set; } = string.Empty;
+
+    public string SnapshotSummary { get; set; } = string.Empty;
+
+    public bool IsFallback { get; set; }
+
+    public bool IsCapabilityGap { get; set; }
+
+    public bool AllowsDirectMessaging { get; set; }
+}
+
+public sealed class ProcessWorkBrief {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid? StepRunId { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    public string WorkBriefText { get; set; } = string.Empty;
+
+    public string HandoffSummary { get; set; } = string.Empty;
+
+    public string AssignmentReason { get; set; } = string.Empty;
+
+    public string ExpectedOutcome { get; set; } = string.Empty;
+
+    public string EvidenceExpectationSummary { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public sealed class ProcessDecisionRecord {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid? StepRunId { get; set; }
+
+    public ProcessDecisionKind DecisionKind { get; set; } = ProcessDecisionKind.Assignment;
+
+    public ProcessDecisionOutcome Outcome { get; set; } = ProcessDecisionOutcome.Recorded;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Reason { get; set; } = string.Empty;
+
+    public string PolicyEvaluation { get; set; } = string.Empty;
+
+    public Guid? BranchOutcomeId { get; set; }
+
+    public string BranchOutcomeTitle { get; set; } = string.Empty;
+
+    public string DecidedBy { get; set; } = string.Empty;
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public sealed class ProcessArtifactRecord {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid? StepRunId { get; set; }
+
+    public Guid? ArtifactExpectationId { get; set; }
+
+    public ProcessArtifactKind ArtifactKind { get; set; } = ProcessArtifactKind.Evidence;
+
+    public string Title { get; set; } = string.Empty;
+
+    public ProcessArtifactTrustStatus TrustStatus { get; set; } = ProcessArtifactTrustStatus.ReviewRequired;
+
+    public ProcessSensitivityLevel SensitivityLevel { get; set; } = ProcessSensitivityLevel.Internal;
+
+    public string ProvenanceSummary { get; set; } = string.Empty;
+
+    public string AllowedFutureUsageSummary { get; set; } = string.Empty;
+
+    public string ReviewSummary { get; set; } = string.Empty;
+
+    public string ManagedStoragePath { get; set; } = string.Empty;
+
+    public string ExternalReferenceKey { get; set; } = string.Empty;
+
+    public string ProjectionLineageJson { get; set; } = string.Empty;
+
+    public string ProjectionIdentityHash { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public sealed class ProcessJournalEntry {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid? StepRunId { get; set; }
+
+    public string EventType { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public string CorrelationId { get; set; } = string.Empty;
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public string PolicyVersion { get; set; } = string.Empty;
+
+    public string EnvironmentMode { get; set; } = string.Empty;
+
+    public string ReplayContextJson { get; set; } = "{}";
+
+    public DateTimeOffset OccurredAtUtc { get; set; }
+}
+
+public sealed class ProcessConformanceObservation {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid? StepRunId { get; set; }
+
+    public ProcessConformanceSeverity Severity { get; set; } = ProcessConformanceSeverity.Moderate;
+
+    public string Category { get; set; } = string.Empty;
+
+    public string Observation { get; set; } = string.Empty;
+
+    public string DeviationReason { get; set; } = string.Empty;
+
+    public bool IsSafeNonAction { get; set; }
+
+    public bool ContainsSensitiveAssessment { get; set; }
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public sealed class ProcessImprovementCandidate {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessDefinitionId { get; set; }
+
+    public Guid? ProcessRunId { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Category { get; set; } = string.Empty;
+
+    public string ProblemSummary { get; set; } = string.Empty;
+
+    public string EvidenceSummary { get; set; } = string.Empty;
+
+    public ProcessImprovementStatus Status { get; set; } = ProcessImprovementStatus.Open;
+
+    public bool IsTrainingOpportunity { get; set; }
+
+    public bool RequiresGovernanceReview { get; set; } = true;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset? ClosedAtUtc { get; set; }
+}
+
+public sealed class ProcessLaunchPlan : IHasConcurrencyToken {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessDefinitionId { get; set; }
+
+    public Guid ProcessDefinitionVersionId { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public string TriggerReason { get; set; } = string.Empty;
+
+    public ProcessLaunchPlanStatus Status { get; set; } = ProcessLaunchPlanStatus.Draft;
+
+    public string RecommendationStrategy { get; set; } = string.Empty;
+
+    public string FallbackStrategy { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public Guid? ApprovalThreadId { get; set; }
+
+    public Guid? LatestApprovalRecordId { get; set; }
+
+    public Guid? GeneratedRunId { get; set; }
+
+    public string RequestedBy { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    public DateTimeOffset? SubmittedAtUtc { get; set; }
+
+    public DateTimeOffset? ApprovedAtUtc { get; set; }
+
+    public DateTimeOffset? ExecutedAtUtc { get; set; }
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
+}
+
+public sealed class ProcessLaunchPlanRole {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanId { get; set; }
+
+    public Guid RoleRequirementId { get; set; }
+
+    public string RoleKey { get; set; } = string.Empty;
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string PreferredExecutorKind { get; set; } = string.Empty;
+
+    public string RequiredSkillIdsJson { get; set; } = "[]";
+
+    public string RecommendationSummary { get; set; } = string.Empty;
+
+    public string SelectionSummary { get; set; } = string.Empty;
+
+    public string ReadinessSummary { get; set; } = string.Empty;
+
+    public Guid? SelectedCandidateId { get; set; }
+
+    public bool IsRequired { get; set; } = true;
+
+    public bool RequiresExplicitApproval { get; set; }
+
+    public bool RequiresProvisioning { get; set; }
+
+    public bool IsResolved { get; set; }
+
+    public int DisplayOrder { get; set; }
+}
+
+public sealed class ProcessLaunchCandidate {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanRoleId { get; set; }
+
+    public ProcessLaunchCandidateKind CandidateKind { get; set; } = ProcessLaunchCandidateKind.Gap;
+
+    public Guid? PartyId { get; set; }
+
+    public Guid? TechnicalAgentId { get; set; }
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
+    public decimal Score { get; set; }
+
+    public bool IsRecommended { get; set; }
+
+    public bool AllowsDirectMessaging { get; set; }
+
+    public bool RequiresProvisioning { get; set; }
+
+    public string RecommendationSummary { get; set; } = string.Empty;
+
+    public string AvailabilitySummary { get; set; } = string.Empty;
+
+    public string SourceRegistryKey { get; set; } = string.Empty;
+
+    public string MetadataJson { get; set; } = "{}";
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public sealed class ProcessWorkflowRunLink {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid StepRunId { get; set; }
+
+    public Guid AssignmentId { get; set; }
+
+    public Guid WorkflowDefinitionId { get; set; }
+
+    public Guid WorkflowVersionId { get; set; }
+
+    public Guid WorkflowRunId { get; set; }
+
+    public WorkflowRuntimeBackendKind WorkflowBackend { get; set; } = WorkflowRuntimeBackendKind.InProcess;
+
+    public string WorkflowBackendRunId { get; set; } = string.Empty;
+
+    public WorkflowRunState State { get; set; } = WorkflowRunState.NotStarted;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+}
+
+public sealed class ProcessLaunchApprovalRecord {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanId { get; set; }
+
+    public ProcessLaunchApprovalStatus Status { get; set; } = ProcessLaunchApprovalStatus.Pending;
+
+    public Guid? ApproverPartyId { get; set; }
+
+    public string ApproverDisplayName { get; set; } = string.Empty;
+
+    public string ApproverKind { get; set; } = string.Empty;
+
+    public Guid? HumanSubstitutePartyId { get; set; }
+
+    public string HumanSubstituteName { get; set; } = string.Empty;
+
+    public Guid? CollaborationThreadId { get; set; }
+
+    public string RequestMessage { get; set; } = string.Empty;
+
+    public string ResolutionSummary { get; set; } = string.Empty;
+
+    public string DecidedBy { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset? DecidedAtUtc { get; set; }
+}
+
+public sealed class ProcessLaunchProvisioningRequest {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LaunchPlanId { get; set; }
+
+    public Guid LaunchPlanRoleId { get; set; }
+
+    public Guid SelectedCandidateId { get; set; }
+
+    public ProcessLaunchProvisioningStatus Status { get; set; } = ProcessLaunchProvisioningStatus.Pending;
+
+    public string RequestKind { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string RequestPayloadJson { get; set; } = "{}";
+
+    public Guid? ResultPartyId { get; set; }
+
+    public Guid? ResultTechnicalAgentId { get; set; }
+
+    public string ResultSummary { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset? CompletedAtUtc { get; set; }
+}
+

@@ -1,0 +1,30 @@
+{
+  "scenario": "SB043 runtime positive fixture",
+  "executionRun": {
+    "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "state": "Completed",
+    "outcome": "Succeeded",
+    "isTerminal": true,
+    "isActive": false,
+    "completedAtUtc": "2026-06-08T11:05:00Z"
+  },
+  "attempt": {
+    "attemptNumber": 1,
+    "status": "Completed",
+    "unresolvedCriticalToolFailureCount": 0
+  },
+  "finalizer": {
+    "hasResult": true,
+    "shouldApplyTransition": true,
+    "completionStatus": "Completed",
+    "stepRunConcurrencyToken": "dddddddd-dddd-dddd-dddd-dddddddddddd"
+  },
+  "retry": {
+    "shouldRetry": false,
+    "primaryFailureKind": "None"
+  },
+  "projectionSourceOrder": [
+    "FileWrite",
+    "CompletedDecision"
+  ]
+}

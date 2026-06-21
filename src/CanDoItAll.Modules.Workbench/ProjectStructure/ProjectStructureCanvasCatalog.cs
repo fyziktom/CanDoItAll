@@ -44,6 +44,13 @@ public sealed record ProjectStructureInspectorCreateGroup(
 
 internal static partial class ProjectStructureCanvasCatalog
 {
+    private static readonly IReadOnlyList<CanvasWorkbenchInputField> DeliveryTargetRootFields =
+    [
+        Field("outputRoot", "Output root", "text", @"C:\repositories\CanDoItAll\output\App"),
+        Field("targetRoot", "Target root", "text", @"C:\repositories\CanDoItAll\output\App"),
+        Field("repositoryRoot", "Repository root", "text", @"C:\repositories\CanDoItAll")
+    ];
+
     private sealed record CreateGroupDefinition(
         string Key,
         string Label,
@@ -85,7 +92,7 @@ internal static partial class ProjectStructureCanvasCatalog
             new("add-block-financial", ProjectObjectType.ProjectBlock, "financial", "blocks", "Financial block", "Track budget, commercial scope, and financial planning.", "money", "mint", "Financial block", "Block name", "Financial block", "Budget / owner", "Budget lane or owner", "Description", "Financial scope or constraints"),
             new("add-block-marketing", ProjectObjectType.ProjectBlock, "marketing", "blocks", "Marketing block", "Track positioning, launch support, and go-to-market work.", "market", "danger", "Marketing block", "Block name", "Marketing block", "Channel", "Audience or channel", "Description", "Marketing focus and deliverables"),
             new("add-block-operations", ProjectObjectType.ProjectBlock, "operations", "blocks", "Operations block", "Track operations, maintenance, and internal support work.", "ops", "primary", "Operations block", "Block name", "Operations block", "Owner", "Ops owner or team", "Description", "Operational scope and expectations"),
-            new("add-block-delivery", ProjectObjectType.ProjectBlock, "delivery", "blocks", "Delivery block", "Track release readiness, rollout, and delivery coordination.", "ship", "warn", "Delivery block", "Block name", "Delivery block", "Release", "Target release or stream", "Description", "Delivery dependencies and outcome"),
+            new("add-block-delivery", ProjectObjectType.ProjectBlock, "delivery", "blocks", "Delivery block", "Track release readiness, rollout, and delivery coordination.", "ship", "warn", "Delivery block", "Block name", "Delivery block", "Release", "Target release or stream", "Description", "Delivery dependencies and outcome", false, string.Empty, "Drop a file here or choose one.", true, "Create", DeliveryTargetRootFields),
             new("add-block-risk", ProjectObjectType.ProjectBlock, "risk", "blocks", "Risk block", "Track known risks, mitigations, and contingency work.", "risk", "danger", "Risk block", "Block name", "Risk block", "Severity", "High, medium, low...", "Description", "Risk details and mitigation"),
             new("add-block-compliance", ProjectObjectType.ProjectBlock, "compliance", "blocks", "Compliance block", "Track compliance, policy, audit, and governance requirements.", "audit", "danger", "Compliance block", "Block name", "Compliance block", "Framework", "ISO, SOC, policy...", "Description", "Compliance scope and evidence"),
             new("add-block-support", ProjectObjectType.ProjectBlock, "support", "blocks", "Support block", "Track enablement, support readiness, and handover work.", "support", "sky", "Support block", "Block name", "Support block", "Owner", "Support owner or queue", "Description", "Support coverage and handover notes"),
@@ -259,12 +266,13 @@ internal static partial class ProjectStructureCanvasCatalog
             linkKinds,
             [
                 "Use objectType WorkItem with objectSubtype task for work task nodes. Do not invent node enum names such as WorkTask or TaskNode.",
-                "Use ProjectBlock plus a lowercase objectSubtype such as feature, implementation, testing, delivery, backlog, task-flow, risk, server, or wifi for typed blocks.",
+                "Use ProjectBlock plus a lowercase objectSubtype such as feature, implementation, testing, delivery, backlog, task-flow, risk, server, or wifi for typed blocks. For delivery targets, set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder.",
                 "Use Repository with objectSubtype folder and metadata.repository.localPath for local folder nodes; set metadata.repository.relativePath only when the node should point inside that folder.",
                 "Use File plus a file subtype such as pdf, excel, docx, markdown, mermaid, screenshot, log, archive, or audio for generated or uploaded files; set metadata.file.externalPath when the file already exists on a local drive.",
                 "Use Link for web links and Repository remote for source-control repositories. GitHub and GitLab URLs are recognized from link.url or repository.repositoryUrl, including SSH-style git@host:owner/repo.git addresses.",
                 "Use Script with subtypes powershell, console, ef-migration, or tailwind-watch for runtime scripts; set metadata.script.command, arguments, scriptPath, and workingDirectory as needed.",
-                "Use Environment with subtype python, dotnet-runtime, dotnet-watch, or dotnet-release for language runtimes; Python nodes need metadata.environment.projectPath, pythonProvider, and environmentName.",
+                "Use Environment with subtype python, dotnet-runtime, dotnet-watch, or dotnet-release for language runtimes; .NET nodes need metadata.environment.projectPath and workingDirectory when the project path is relative, while Python nodes need projectPath, pythonProvider, and environmentName.",
+                "Do not store runnable commands as ProjectBlock delivery nodes. If a user should be able to double-click and run a command, use Script, Environment, or Infrastructure with the required runtime metadata.",
                 "Use Infrastructure with objectSubtype docker-mode for Docker runtime nodes; set metadata.infrastructure.runtimeCommand, runtimeArguments, workingDirectory, and folderPath so double-click can offer Run normally and Run as administrator.",
                 "Use Infrastructure with objectSubtype deployment-folder and metadata.infrastructure.folderPath for deployment folders that should open in File Explorer.",
                 "When creating several task nodes, decide whether any task depends on another and create DependsOn links from dependent task to prerequisite task.",

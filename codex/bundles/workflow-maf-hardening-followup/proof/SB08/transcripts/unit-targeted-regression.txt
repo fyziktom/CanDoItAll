@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB08/unit-targeted-regression.txt
-ExitCode: 0
-Result: 60 targeted unit tests passed.
-Source transcript: bundle://proof/SB08/unit-targeted-regression.txt

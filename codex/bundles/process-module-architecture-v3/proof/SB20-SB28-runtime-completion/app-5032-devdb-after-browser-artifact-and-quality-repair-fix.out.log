@@ -1,0 +1,172 @@
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: DBConnectionManager[0]
+      Registering datasource 'default' with db provider: 'Quartz.Impl.AdoJobStore.Common.DbProvider'
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using object serializer: Quartz.Simpl.JsonObjectSerializer, Quartz.Serialization.Json
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Using thread monitor-based data access locking (synchronization).
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Successfully validated presence of 10 schema objects
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      JobStoreTX initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll Automation' with instanceId 'CanDoItAll.Automation' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Impl.AdoJobStore.JobStoreTX', supports persistence: True, clustered: False
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\CanDoItAll.Web
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Freed 0 triggers from 'acquired' / 'blocked' state.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovering 0 jobs that were in-progress at the time of the last shut-down.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovery complete.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 'complete' triggers.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 stale fired job entries.
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll Automation_$_CanDoItAll.Automation started.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run 5b570e5e-a58c-478d-a3ab-90ec0d0be20d for agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run 6ddc4e58-3e24-4cdd-adce-6e8a43c8767b for agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run 8022263d-fa5c-47b2-8619-e12406736032 for agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run 89e0e2df-c196-484a-802b-2fc2363101ae for agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run cae5aacb-23f8-4057-9961-68a2ca9bbdb9 for agent 38d4deb5-74ce-8e55-bf1a-17e88b437472.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run dd3248ad-b73d-405a-b76c-78ef1ee83a7d for agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run f43deeb8-e576-4478-8216-1cb0354aaef4 for agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryWorker[0]
+      Recovered 7 interrupted AgentFramework execution run(s) during startup.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Summary To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+warn: Microsoft.EntityFrameworkCore.Query[20504]
+      Compiling a query which loads related collections for more than one collection navigation, either via 'Include' or through projection, but no 'QuerySplittingBehavior' has been configured. By default, Entity Framework will use 'QuerySplittingBehavior.SingleQuery', which can potentially result in slow query performance. See https://go.microsoft.com/fwlink/?linkid=2134277 for more information. To identify the query that's triggering this warning call 'ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning))'.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Tasks To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 323680 ms.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f5eac08f-5ebe-4f42-9d1a-f7db0aa57340 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=80cf08d2-b9b7-485a-bd8d-12d7653a0aab RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_create_directory on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f5eac08f-5ebe-4f42-9d1a-f7db0aa57340 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=80cf08d2-b9b7-485a-bd8d-12d7653a0aab RuntimeToolProviderKey= Signature=workspace_create_directory|path=artifacts/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10/feature-intake
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f5eac08f-5ebe-4f42-9d1a-f7db0aa57340 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=80cf08d2-b9b7-485a-bd8d-12d7653a0aab RuntimeToolProviderKey= Signature=workspace_write_file|content=# Scope Boundary Packet — feature-intake  ## Step - Process: Multi-team software delivery and release governance - Step key: `feature-intake` - Step title: Clar...#1139e4b471c3,path=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f5eac08f-5ebe-4f42-9d1a-f7db0aa57340 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=80cf08d2-b9b7-485a-bd8d-12d7653a0aab RuntimeToolProviderKey= Signature=workspace_write_file|content=# Scope boundary packet (Brief)  - Step: feature-intake — Clarify .NET scope and app type boundary - Project: TetrisGame - Selected node: Main App (`ProjectBloc...#dca721c37f82,path=artifacts/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10/acfdcb63-5b16-ff2f-185f-2b621f77eb3a
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f5eac08f-5ebe-4f42-9d1a-f7db0aa57340 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=80cf08d2-b9b7-485a-bd8d-12d7653a0aab RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_stat_path on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f5eac08f-5ebe-4f42-9d1a-f7db0aa57340 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=80cf08d2-b9b7-485a-bd8d-12d7653a0aab RuntimeToolProviderKey= Signature=workspace_stat_path|path=artifacts/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10/acfdcb63-5b16-ff2f-185f-2b621f77eb3a
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_stat_path on agent 9fc87ec2-e918-d756-b6c9-b42b8eecbe6e. ExecutionRunId=f5eac08f-5ebe-4f42-9d1a-f7db0aa57340 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=80cf08d2-b9b7-485a-bd8d-12d7653a0aab RuntimeToolProviderKey= Signature=workspace_stat_path|path=artifacts/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10/feature-intake
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=08056e37-a513-4fb8-ad07-114fa44c8e22 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=75c804d9-0806-4417-8c6e-4fa111c3d712 RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=200,relativePath=artifacts/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10,searchPattern=*
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_process_subprocess_launch on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=08056e37-a513-4fb8-ad07-114fa44c8e22 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=75c804d9-0806-4417-8c6e-4fa111c3d712 RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_process_subprocess_launch|request={"definitionKey":"dotnet-architecture-design-review","parentProjectNodeId":"custom:cfd406780f034384a70ea6b87507422a","variables":{"ProjectId":"3324868f-66e2-478...#fdaf5656b0e4
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      project_structure_process_subprocess_launch invocation failed.
+      System.Text.Json.JsonException: The JSON value could not be converted to System.String. Path: $.variables.includeLaunchPlan | LineNumber: 0 | BytePositionInLine: 4925.
+       ---> System.InvalidOperationException: Cannot get the value of a token type 'True' as a string.
+         at System.Text.Json.ThrowHelper.ThrowInvalidOperationException_ExpectedString(JsonTokenType tokenType)
+         at System.Text.Json.Serialization.JsonDictionaryConverter`3.OnTryRead(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, TDictionary& value)
+         at System.Text.Json.Serialization.JsonConverter`1.TryReadAsObject(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, Object& value)
+         at System.Text.Json.Serialization.Converters.LargeObjectWithParameterizedConstructorConverter`1.ReadAndCacheConstructorArgument(ReadStack& state, Utf8JsonReader& reader, JsonParameterInfo jsonParameterInfo)
+         at System.Text.Json.Serialization.Converters.ObjectWithParameterizedConstructorConverter`1.OnTryRead(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, T& value)
+         at System.Text.Json.Serialization.JsonConverter`1.ReadCore(Utf8JsonReader& reader, T& value, JsonSerializerOptions options, ReadStack& state)
+         --- End of inner exception stack trace ---
+         at System.Text.Json.ThrowHelper.ReThrowWithPath(ReadStack& state, Utf8JsonReader& reader, Exception ex)
+         at System.Text.Json.Serialization.JsonConverter`1.ReadCore(Utf8JsonReader& reader, T& value, JsonSerializerOptions options, ReadStack& state)
+         at System.Text.Json.Serialization.Metadata.JsonTypeInfo`1.Deserialize(Utf8JsonReader& reader, ReadStack& state)
+         at System.Text.Json.Serialization.Metadata.JsonTypeInfo`1.DeserializeAsObject(Utf8JsonReader& reader, ReadStack& state)
+         at System.Text.Json.JsonSerializer.ReadFromSpanAsObject(ReadOnlySpan`1 utf8Json, JsonTypeInfo jsonTypeInfo, Nullable`1 actualByteCount)
+         at System.Text.Json.JsonSerializer.Deserialize(JsonElement element, JsonTypeInfo jsonTypeInfo)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass40_0.<GetParameterMarshaller>b__3(AIFunctionArguments arguments, CancellationToken _)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass83_0.<<CreateInstrumentedAgent>b__6>d.MoveNext() in C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:line 551
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=08056e37-a513-4fb8-ad07-114fa44c8e22 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=75c804d9-0806-4417-8c6e-4fa111c3d712 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10/steps/feature-intake.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=08056e37-a513-4fb8-ad07-114fa44c8e22 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=75c804d9-0806-4417-8c6e-4fa111c3d712 RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=3324868f-66e2-478a-bb8f-14f32a5db1e9,request={"nodeIds":["custom:cfd406780f034384a70ea6b87507422a"],"includeMetadata":true,"includeNotes":true,"take":10}
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_search on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=08056e37-a513-4fb8-ad07-114fa44c8e22 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=75c804d9-0806-4417-8c6e-4fa111c3d712 RuntimeToolProviderKey= Signature=workspace_search|maxResults=20,query=dotnet-architecture-design-review,relativePath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_search on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=08056e37-a513-4fb8-ad07-114fa44c8e22 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=75c804d9-0806-4417-8c6e-4fa111c3d712 RuntimeToolProviderKey= Signature=workspace_search|maxResults=50,query=architecture-review,relativePath=artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/d11eae68-b7e6-4354-892b-12e154a0aa10
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_process_subprocess_launch on agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2. ExecutionRunId=08056e37-a513-4fb8-ad07-114fa44c8e22 SourceKind=process-step ProcessRunId=d11eae68-b7e6-4354-892b-12e154a0aa10 ProcessStepId=75c804d9-0806-4417-8c6e-4fa111c3d712 RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_process_subprocess_launch|estimatedMinutes=5,request={"definitionKey":"dotnet-architecture-design-review","parentProjectNodeId":"custom:cfd406780f034384a70ea6b87507422a","variables":{"ProjectId":"3324868f-66e2-478...#221762df3ad3
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=load_skill|skillName=aspnet-core
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool load_skill on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=load_skill|skillName=concrete-deliverable-delivery
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey=project-structure.runtime-tools Signature=project_structure_read|projectId=3324868f-66e2-478a-bb8f-14f32a5db1e9,request={"nodeIds":["custom:cfd406780f034384a70ea6b87507422a"],"includeMetadata":true,"includeNotes":true,"includeLinks":true,"includeLayout":true,"includeAssets":false...#e975094f6678
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=200,relativePath=C:\programovani\dotnet\output,searchPattern=*
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_list_files on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_list_files|maxResults=200,relativePath=artifacts/process-runs/cc48188c-31f0-4d6f-a877-51467d9b1c48,searchPattern=*
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/TetrisGame.csproj
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/Program.cs
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/App.razor
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/tests/TetrisGame.Tests/TetrisGame.Tests.csproj
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/Pages/Home.razor
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_search on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_search|maxResults=20,query=service-worker,relativePath=external-target/C/programovani/dotnet/output/src/TetrisGame
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_search on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_search|maxResults=20,query=manifest,relativePath=external-target/C/programovani/dotnet/output/src/TetrisGame
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/wwwroot/index.html
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/Pages/Weather.razor
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/Pages/Counter.razor
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_read_file on agent 38d4deb5-74ce-8e55-bf1a-17e88b437472. ExecutionRunId=8f7404b9-3b76-491f-b6d7-8deeb0824eec SourceKind=process-step ProcessRunId=cc48188c-31f0-4d6f-a877-51467d9b1c48 ProcessStepId=2411c5f6-9c46-4b01-ada2-19bc932daf41 RuntimeToolProviderKey= Signature=workspace_read_file|maxCharacters=12000,path=external-target/C/programovani/dotnet/output/src/TetrisGame/Pages/NotFound.razor

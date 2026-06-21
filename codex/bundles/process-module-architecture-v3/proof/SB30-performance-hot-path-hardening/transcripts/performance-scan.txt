@@ -1,0 +1,39 @@
+Command scope:
+
+repo://src/CanDoItAll.Processes.Application/ProcessDefinitionCatalogProjectionService.cs
+repo://src/CanDoItAll.Processes.Application/ProcessTemplateCatalogProjectionService.cs
+repo://src/CanDoItAll.Processes.Application/ProcessWorkspaceShellProjectionService.cs
+repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs
+repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.BranchOutcomes.cs
+repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.PromptArtifacts.cs
+repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.SessionState.cs
+repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ScenarioHarnessAgentRuntime.cs
+
+Scan execution checklist:
+
+SyncOverAsync_TaskResultWaitGetResult: 0
+TaskRun: 0
+AsyncVoid: 0
+Substring: 0
+StringComparisonOmissions: 0
+ToLowerUpperEmpty: 0
+RegexOptionsCompiled: 0
+GeneratedRegex: 5
+NewRegex: 0
+NewList: 24
+NewDictionary: 15
+LinqChains: 35
+ContainsKey: 0
+StaticReadonlyDictionary: 0
+NewHttpClient: 0
+NewJsonSerializerOptions: 0
+UnsealedLeafCandidate: 0
+SealedClass: 8
+
+Classification:
+
+Critical findings: 0.
+Moderate findings: 0 remaining in modified hot-path code.
+Info findings: Bounded collection and LINQ use remains in projection construction where it either materializes output DTOs or operates on already bounded query results.
+Accepted tradeoffs: no BenchmarkDotNet run; behavior-preserving structural changes were validated by focused tests and builds.
+

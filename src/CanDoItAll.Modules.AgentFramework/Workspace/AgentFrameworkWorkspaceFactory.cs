@@ -63,6 +63,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var runtime = new ProcessMockAgentRuntime(
             scenarioRuntime,
             fileService,
+            workspaceRoot,
             processMockAgentOptions);
         var checkpointBridge = new WorkflowBackedAgentExecutionCheckpointBridge(store, workspaceRoot, scope);
         var governanceBridge = new DurableAgentExecutionGovernanceBridge(checkpointBridge);
@@ -79,7 +80,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             governanceBridge,
             new NullAgentExecutionEventSink(),
             checkpointBridge,
-            processHost);
+            processHost,
+            serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>());
 
         workspaceServices[key] = workspaceService;
         return workspaceService;

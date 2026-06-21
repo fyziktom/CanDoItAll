@@ -53,6 +53,51 @@ public sealed class ProjectStructureRuntimeLauncherTests
     }
 
     [Fact]
+    public void Resolve_uses_dotnet_working_directory_for_relative_project_paths()
+    {
+        var sut = CreateSut();
+        var node = CreateEnvironmentNode(
+            ProjectEnvironmentKind.DotNetRuntime,
+            new ProjectEnvironmentMetadata
+            {
+                ProjectPath = @"src\TetrisGame\TetrisGame.csproj",
+                WorkingDirectory = @"repos\TetrisGame",
+                LocalhostUrl = "http://127.0.0.1:55963/"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal(@"C:\workspace\repos\TetrisGame", result.Plan!.WorkingDirectory);
+        Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
+        Assert.Equal(
+            "dotnet run --project 'C:\\workspace\\repos\\TetrisGame\\src\\TetrisGame\\TetrisGame.csproj' --no-launch-profile",
+            result.Plan.DisplayCommand);
+    }
+
+    [Fact]
+    public void Resolve_hydrates_dotnet_runtime_from_note_only_command_evidence()
+    {
+        var sut = CreateSut();
+        var node = CreateEnvironmentNode(
+            ProjectEnvironmentKind.DotNetRuntime,
+            new ProjectEnvironmentMetadata(),
+            "Launch the client-only TetrisGame app from C:\\workspace\\repos\\TetrisGame using `dotnet run --project src/TetrisGame/TetrisGame.csproj`. Observed QA launch returned `http://127.0.0.1:55963/`.");
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal(".NET runtime", result.Plan!.DisplayName);
+        Assert.Equal(@"C:\workspace\repos\TetrisGame", result.Plan.WorkingDirectory);
+        Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
+        Assert.Equal(
+            "dotnet run --project 'C:\\workspace\\repos\\TetrisGame\\src\\TetrisGame\\TetrisGame.csproj' --no-launch-profile",
+            result.Plan.DisplayCommand);
+    }
+
+    [Fact]
     public void Resolve_returns_console_script_plan_from_command_and_arguments()
     {
         var sut = CreateSut();
@@ -250,22 +295,22 @@ public sealed class ProjectStructureRuntimeLauncherTests
             new WorkspacePathAccessGuard(new TestWorkspacePathResolver(@"C:\workspace")),
             NullLogger<ProjectStructureRuntimeLauncher>.Instance);
 
-    private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata)
+    private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata, string notes = "")
         => CreateEnvironmentNode(kind, kind switch
         {
             ProjectEnvironmentKind.DotNetWatch => "dotnet-watch",
             ProjectEnvironmentKind.DotNetRelease => "dotnet-release",
             ProjectEnvironmentKind.PythonEnvironment => "python",
             _ => "dotnet-runtime"
-        }, metadata);
+        }, metadata, notes);
 
-    private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, string objectSubtype, ProjectEnvironmentMetadata metadata)
+    private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, string objectSubtype, ProjectEnvironmentMetadata metadata, string notes = "")
     {
         metadata.EnvironmentKind = kind;
         return CreateNode(ProjectObjectType.Environment, objectSubtype, new ProjectObjectMetadataEnvelope
         {
             Environment = metadata
-        });
+        }, notes);
     }
 
     private static ProjectStructureNode CreateScriptNode(ProjectScriptMetadata metadata)
@@ -286,7 +331,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
             Infrastructure = metadata
         });
 
-    private static ProjectStructureNode CreateNode(ProjectObjectType objectType, string objectSubtype, ProjectObjectMetadataEnvelope metadata)
+    private static ProjectStructureNode CreateNode(ProjectObjectType objectType, string objectSubtype, ProjectObjectMetadataEnvelope metadata, string notes = "")
         => new(
             "node-1",
             "project:1",
@@ -295,7 +340,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
             "Runtime node",
             "Context",
             "Planned",
-            string.Empty,
+            notes,
             string.Empty,
             string.Empty,
             null,

@@ -1,0 +1,79 @@
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Workbench.Pages;
+
+namespace CanDoItAll.Tests.Unit;
+
+public sealed class ProjectStructureProcessStartEstimateCalculatorTests
+{
+    [Fact]
+    public void Calculate_uses_provider_model_price_lists_for_preflight_cost()
+    {
+        var provider = CreateProvider(
+            "Provider A",
+            "model-a",
+            [new ProviderModelTokenPrice("model-a", 1.00m, 0.10m, 4.00m)]);
+
+        var estimate = ProjectStructureProcessStartEstimateCalculator.Calculate(
+            "software-delivery",
+            assignmentCount: 2,
+            [
+                new ProjectStructureProcessStartEstimateAssignment(Guid.NewGuid(), "model-a", provider),
+                new ProjectStructureProcessStartEstimateAssignment(Guid.NewGuid(), "model-a", provider)
+            ]);
+
+        Assert.Equal(0.40m, estimate.EstimatedCostUsd);
+        Assert.Equal("Priced", estimate.ConfidenceLabel);
+        Assert.Equal("Provider price lists", estimate.SourceLabel);
+        Assert.Contains("2 assignment(s) priced from provider model price lists.", estimate.Summary);
+    }
+
+    [Fact]
+    public void Calculate_reports_partial_coverage_when_provider_model_price_is_missing()
+    {
+        var provider = CreateProvider(
+            "Provider A",
+            "model-a",
+            [new ProviderModelTokenPrice("model-a", 1.00m, 0.10m, 4.00m)]);
+
+        var estimate = ProjectStructureProcessStartEstimateCalculator.Calculate(
+            "software-delivery",
+            assignmentCount: 2,
+            [
+                new ProjectStructureProcessStartEstimateAssignment(Guid.NewGuid(), "model-a", provider),
+                new ProjectStructureProcessStartEstimateAssignment(Guid.NewGuid(), "unpriced-model", provider)
+            ]);
+
+        Assert.Equal(0.20m, estimate.EstimatedCostUsd);
+        Assert.Equal("Partial", estimate.ConfidenceLabel);
+        Assert.Equal("Provider price lists", estimate.SourceLabel);
+        Assert.Contains("1 assignment(s) priced; 1 assignment(s) missing provider model prices.", estimate.Summary);
+    }
+
+    private static ProviderProfile CreateProvider(
+        string name,
+        string defaultModel,
+        IReadOnlyList<ProviderModelTokenPrice> prices)
+    {
+        return new ProviderProfile(
+            Id: Guid.NewGuid(),
+            Name: name,
+            Kind: ProviderKind.OpenAi,
+            BaseUrl: "https://api.example.test/v1",
+            ApiKeyEnvironmentVariable: "TEST_API_KEY",
+            DefaultModel: defaultModel,
+            Transport: ProviderTransportKind.Responses,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: false,
+            SupportsBackgroundResponses: true,
+            ConfigurationJson: "{}",
+            Notes: string.Empty,
+            HealthStatus: "ok",
+            LastCheckedAtUtc: null,
+            SuggestedModels: [])
+        {
+            ModelPrices = prices
+        };
+    }
+}

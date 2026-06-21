@@ -543,13 +543,17 @@ public static class ProviderPricingCalculator
 
         var provider = providers.FirstOrDefault(candidate =>
             string.Equals(candidate.Name, observation.ProviderName, StringComparison.OrdinalIgnoreCase));
+        var billableOutputTokens = ResolveBillableOutputTokens(
+            observation.InputTokens,
+            observation.OutputTokens,
+            observation.TotalTokens);
         if (provider is not null &&
             TryCalculate(
                 provider.Name,
                 observation.Model,
                 observation.InputTokens,
                 observation.CachedInputTokens,
-                observation.OutputTokens,
+                billableOutputTokens,
                 provider.ModelPrices,
                 out var calculatedCost))
         {
@@ -582,7 +586,7 @@ public static class ProviderPricingCalculator
             CachedInputTokens: knownItems.Sum(item => item.CachedInputTokens),
             OutputTokens: knownItems.Sum(item => item.OutputTokens),
             ReasoningTokens: knownItems.Sum(item => item.ReasoningTokens),
-            TotalTokens: knownItems.Sum(item => item.TotalTokens),
+            TotalTokens: knownItems.Sum(item => ResolveTotalTokens(item.InputTokens, item.OutputTokens, item.TotalTokens)),
             KnownCostUsd: decimal.Round(knownCost, 6, MidpointRounding.AwayFromZero));
     }
 
@@ -598,4 +602,20 @@ public static class ProviderPricingCalculator
         return status is ProviderUsageObservationStatus.Observed
             or ProviderUsageObservationStatus.ObservedFromMetric;
     }
+
+    public static int ResolveBillableOutputTokens(int inputTokens, int outputTokens, int totalTokens)
+    {
+        var normalizedOutputTokens = Math.Max(0, outputTokens);
+        if (totalTokens <= 0)
+        {
+            return normalizedOutputTokens;
+        }
+
+        return Math.Max(normalizedOutputTokens, Math.Max(0, totalTokens - Math.Max(0, inputTokens)));
+    }
+
+    private static int ResolveTotalTokens(int inputTokens, int outputTokens, int totalTokens)
+        => totalTokens > 0
+            ? totalTokens
+            : Math.Max(0, inputTokens) + Math.Max(0, outputTokens);
 }

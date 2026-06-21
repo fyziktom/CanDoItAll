@@ -726,7 +726,7 @@ public sealed class CognitiveMemorySourceIngestionService(
             MemorySourceEntityKind.ProjectNode => CognitiveMemoryEvidenceAnchorKind.MindMapNode,
             MemorySourceEntityKind.ProjectLink => CognitiveMemoryEvidenceAnchorKind.StructuredPath,
             MemorySourceEntityKind.ProcessRun or
-            MemorySourceEntityKind.ProcessStepRun or
+            MemorySourceEntityKind.ProcessStepEvidence or
             MemorySourceEntityKind.ProcessRunAssignment or
             MemorySourceEntityKind.ProcessWorkBrief or
             MemorySourceEntityKind.ProcessDecision or

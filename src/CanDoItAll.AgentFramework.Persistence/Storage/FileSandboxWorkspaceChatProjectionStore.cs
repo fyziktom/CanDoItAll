@@ -153,6 +153,58 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         return true;
     }
 
+    public async Task<bool> SaveSessionAsync(
+        ChatSessionRecord? previousSession,
+        ChatSessionRecord session,
+        ExecutionStorageIndex executionIndex,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(executionIndex);
+
+        var currentChatIndex = await LoadOrBuildChatIndexAsync(cancellationToken);
+        var affectedSessionIds = new HashSet<Guid> { session.Id };
+        if (previousSession is not null)
+        {
+            affectedSessionIds.Add(previousSession.Id);
+        }
+
+        var sessionSummaries = currentChatIndex.SessionSummaries
+            .Where(item => !affectedSessionIds.Contains(item.Id))
+            .ToList();
+
+        foreach (var sessionId in affectedSessionIds)
+        {
+            var storedSession = await jsonStore.ReadJsonAsync<ChatSessionRecord>(layout.SessionPath(sessionId), cancellationToken);
+            if (storedSession is null)
+            {
+                continue;
+            }
+
+            var latestRun = await ResolveLatestRunForSessionAsync(storedSession, cancellationToken);
+            sessionSummaries.Add(WorkspaceChatProjectionBuilder.CreateChatSessionSummary(storedSession, latestRun));
+        }
+
+        var nextChatIndex = new ExecutionChatIndex(
+            Version: executionIndex.Version,
+            Revision: executionIndex.Revision,
+            UpdatedAtUtc: executionIndex.UpdatedAtUtc,
+            SessionSummaries: sessionSummaries
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ToList(),
+            RunSummaries: currentChatIndex.RunSummaries);
+
+        if (currentChatIndex is not null &&
+            File.Exists(layout.ExecutionChatIndexPath) &&
+            !jsonStore.RequiresSave(currentChatIndex, nextChatIndex))
+        {
+            return false;
+        }
+
+        await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionChatIndexPath, nextChatIndex, cancellationToken);
+        return true;
+    }
+
     private async Task<ExecutionChatIndex> LoadOrBuildChatIndexAsync(CancellationToken cancellationToken)
     {
         var chatIndex = await jsonStore.ReadJsonAsync<ExecutionChatIndex>(layout.ExecutionChatIndexPath, cancellationToken);

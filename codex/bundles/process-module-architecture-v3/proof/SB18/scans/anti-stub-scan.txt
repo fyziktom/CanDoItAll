@@ -1,0 +1,17 @@
+Pattern: TODO|NotImplementedException|throw new NotImplementedException|STUB|Stub
+Files:
+- src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor
+- src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceShell.razor
+- src\CanDoItAll.Modules.Processes\Services\ProcessWorkspaceProjectionClient.cs
+- src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs
+- src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs
+- src\CanDoItAll.Processes.Application\ProcessWorkspaceShellProjectionService.cs
+- src\CanDoItAll.Processes.Projections\ProcessDefinitionStepEditorProjectionContracts.cs
+- src\CanDoItAll.Processes.Projections\ProcessWorkspaceShellProjectionContracts.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplatePackLoader.cs
+- src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs
+- tests\CanDoItAll.Tests.Unit\ProcessDefinitionCatalogProjectionTests.cs
+- tests\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs
+- tests\CanDoItAll.Tests.Playwright\ProcessShellSmokeTests.cs
+
+No matches.

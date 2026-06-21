@@ -129,6 +129,7 @@ internal static class ProjectStructureCreateRequestComposer
                     PythonProvider = TryParseNullableEnum<ProjectPythonProvider>(inputValues, "pythonProvider"),
                     EnvironmentName = GetValue(inputValues, "environmentName"),
                     ProjectPath = GetValue(inputValues, "projectPath"),
+                    WorkingDirectory = GetValue(inputValues, "workingDirectory"),
                     LaunchProfileName = GetValue(inputValues, "launchProfileName"),
                     RuntimeProtocol = ParseEnum(inputValues, "runtimeProtocol", ProjectRuntimeProtocol.Https),
                     LocalhostUrl = GetValue(inputValues, "localhostUrl")

@@ -10,10 +10,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IAgentExecutionCheckpointBridge executionCheckpointBridge,
     IProviderProfileRegistry providerRegistry,
     IAgentProviderCredentialResolver providerCredentialResolver,
+    IAgentExecutionCancellationRegistry? executionCancellationRegistry = null,
     IAgentOutputRepairService? outputRepairService = null)
 {
     private readonly IAgentOutputRepairService outputRepairService =
         outputRepairService ?? JsonObjectExtractionAgentOutputRepairService.Instance;
+    private readonly IAgentExecutionCancellationRegistry executionCancellationRegistry =
+        executionCancellationRegistry ?? new AgentExecutionCancellationRegistry();
 
     public event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
 }

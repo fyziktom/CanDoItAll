@@ -11,6 +11,7 @@ public sealed class LiveSpecialistAgentScenarioIntegrationTests
 {
     private const string RepositoryRoot = @"C:\repositories\CanDoItAll";
     private const string LiveValidationVariable = "CANDOITALL_RUN_LIVE_AGENT_VALIDATION";
+    private const string LiveOpenAiSmokeVariable = "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE";
 
     [Fact]
     [Trait("Category", "LiveAgent")]
@@ -116,8 +117,14 @@ public sealed class LiveSpecialistAgentScenarioIntegrationTests
 
     private static bool IsLiveValidationEnabled()
     {
+        return IsEnabled(LiveValidationVariable) &&
+            IsEnabled(LiveOpenAiSmokeVariable);
+    }
+
+    private static bool IsEnabled(string environmentVariable)
+    {
         return string.Equals(
-            Environment.GetEnvironmentVariable(LiveValidationVariable),
+            Environment.GetEnvironmentVariable(environmentVariable),
             "true",
             StringComparison.OrdinalIgnoreCase);
     }

@@ -278,7 +278,12 @@ public sealed record ToolExecutionReceiptRecord(
     string WorkingDirectory,
     string ExitSummary,
     DateTimeOffset StartedAtUtc,
-    DateTimeOffset CompletedAtUtc);
+    DateTimeOffset CompletedAtUtc)
+{
+    public string RuntimeToolProviderKey { get; init; } = string.Empty;
+
+    public string RuntimeToolProviderName { get; init; } = string.Empty;
+}
 
 public sealed record ExecutionWorkflowCheckpointRecord(
     Guid Id,
@@ -344,7 +349,8 @@ public sealed record AgentRuntimeExecutionOptions(
     bool RequireJsonResponseFormat = false,
     string ResponseFormatJsonSchema = "",
     string ResponseFormatSchemaName = "",
-    string ResponseFormatSchemaDescription = "");
+    string ResponseFormatSchemaDescription = "",
+    AgentRuntimeContextIntent? ContextIntent = null);
 
 public sealed record AgentRuntimeHandoffExecutionOptions(
     AgentHandoffSettings Settings,

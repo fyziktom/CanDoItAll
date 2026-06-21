@@ -45,6 +45,44 @@ else
                                 </div>
                             </Grid>
 
+                            <SurfaceCard Soft="true" Class="agent-details-dialog__avatar-summary" data-testid="agents-catalog-avatar-summary">
+                                <Stack Orientation="Orientation.Horizontal"
+                                       AlignItems="AlignItems.Center"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       GapScale="LayoutGap.Medium">
+                                    <Stack Orientation="Orientation.Horizontal"
+                                           AlignItems="AlignItems.Center"
+                                           GapScale="LayoutGap.Medium">
+                                        <Avatar Alt="@ResolveAvatarAltText()"
+                                                ImageUrl="@editorModel.AvatarImageUrl"
+                                                FallbackText="@ResolveAvatarFallbackText()"
+                                                DefaultImageSeed="@ResolveAvatarSeed()"
+                                                Size="AvatarSize.Large"
+                                                Shape="AvatarShape.Rounded" />
+                                        <Stack GapScale="LayoutGap.XSmall">
+                                            <span class="cda-field-label">Avatar</span>
+                                            <strong>@ResolveAvatarSelectionText()</strong>
+                                            <small class="text-sm text-slate-600">Stored with the technical agent identity and reused by runtime surfaces.</small>
+                                        </Stack>
+                                    </Stack>
+                                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
+                                        <Button Text="Choose avatar"
+                                                Icon="face"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="OpenAvatarSelectorAsync"
+                                                data-testid="agents-catalog-avatar-open" />
+                                        <Button Text="Use default"
+                                                Icon="restart_alt"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)"
+                                                Click="ClearAvatarAsync"
+                                                data-testid="agents-catalog-avatar-clear" />
+                                    </Cluster>
+                                </Stack>
+                            </SurfaceCard>
+
                             <div class="agent-details-dialog__full-field">
                                 <label class="cda-field-label">Summary</label>
                                 <InputTextArea @bind-Value="editorModel.Summary"
@@ -272,6 +310,62 @@ else
                         <FormSection Title="Workspace Tools" Description="These settings decide whether the current agent receives native workspace file tools, external workspace roots, and storage-driver tools.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-workspace-tools">
                                 <div class="cda-admin-subpanel">
+                                    <label class="cda-field-label" for="agents-catalog-workspace-profile">Access profile</label>
+                                    <select id="agents-catalog-workspace-profile"
+                                            class="cda-input mt-2"
+                                            value="@editorModel.WorkspaceToolAccess.Profile"
+                                            @onchange="args => ChangeWorkspaceToolProfile(args.Value)"
+                                            data-testid="agents-catalog-workspace-profile">
+                                        @foreach (var profile in WorkspaceToolProfileOptions)
+                                        {
+                                            <option value="@profile">@FormatWorkspaceToolProfile(profile)</option>
+                                        }
+                                    </select>
+                                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                                        @DescribeWorkspaceExecutionScope(editorModel)
+                                    </p>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <p class="cda-field-label mb-2">Execution tools</p>
+                                    <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanRunValidationCommands"
+                                                   @onchange="args => ToggleWorkspaceValidationCommands(args.Value)"
+                                                   data-testid="agents-catalog-workspace-validation" />
+                                            Can run build, test, and app commands
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanRunLocalScripts"
+                                                   @onchange="args => ToggleWorkspaceLocalScripts(args.Value)"
+                                                   data-testid="agents-catalog-workspace-scripts" />
+                                            Can run local scripts
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanScaffoldProjects"
+                                                   @onchange="args => ToggleWorkspaceScaffoldProjects(args.Value)"
+                                                   data-testid="agents-catalog-workspace-scaffold" />
+                                            Can scaffold projects
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanManageWorkspacePaths"
+                                                   @onchange="args => ToggleWorkspaceManagePaths(args.Value)"
+                                                   data-testid="agents-catalog-workspace-manage-paths" />
+                                            Can move, copy, and delete paths
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanTransformArtifacts"
+                                                   @onchange="args => ToggleWorkspaceTransformArtifacts(args.Value)"
+                                                   data-testid="agents-catalog-workspace-transform" />
+                                            Can transform artifacts
+                                        </label>
+                                    </Grid>
+                                </div>
+                                <div class="cda-admin-subpanel">
                                     <p class="cda-field-label mb-2">File access</p>
                                     <Stack GapScale="LayoutGap.Small">
                                         <label class="cda-inline-option">
@@ -286,7 +380,7 @@ else
                                                    checked="@editorModel.WorkspaceToolAccess.CanWriteFiles"
                                                    @onchange="args => ToggleWorkspaceFileWrite(args.Value)"
                                                    data-testid="agents-catalog-workspace-write" />
-                                            Can write files and run build tools
+                                            Can write files
                                         </label>
                                     </Stack>
                                     <p class="mt-3 text-sm leading-6 text-slate-600">
@@ -428,104 +522,13 @@ else
                                     </Stack>
                                 </div>
                                 <div class="cda-admin-subpanel md:col-span-2">
-                                    <Split Breakpoint="LayoutBreakpoint.Md"
-                                           Gap="LayoutGap.Medium"
-                                           AlignItems="AlignItems.Center"
-                                           JustifyContent="JustifyContent.SpaceBetween"
-                                           Wrap="FlexWrap.Wrap">
-                                        <div>
-                                            <p class="cda-field-label mb-1">Allowed processes</p>
-                                            <p class="text-sm leading-6 text-slate-600">
-                                                @DescribeProcessScope(editorModel)
-                                            </p>
-                                        </div>
-                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                            <Button Text="Select all"
-                                                    ButtonStyle="ButtonStyle.Light"
-                                                    Size="ButtonSize.Small"
-                                                    Click="SelectAllProcesses"
-                                                    Disabled="@(!areProcessDefinitionsLoaded || isLoadingProcessDefinitions || !string.IsNullOrWhiteSpace(processDefinitionsErrorMessage) || editorModel.ProcessAccess.AllowAllDefinitions)" />
-                                            <Button Text="Clear"
-                                                    ButtonStyle="ButtonStyle.Light"
-                                                    Size="ButtonSize.Small"
-                                                    Click="ClearProcesses"
-                                                    Disabled="@(!areProcessDefinitionsLoaded || isLoadingProcessDefinitions || !string.IsNullOrWhiteSpace(processDefinitionsErrorMessage) || editorModel.ProcessAccess.AllowAllDefinitions)" />
-                                        </Cluster>
-                                    </Split>
-
-                                    @if (editorModel.ProcessAccess.AllowAllDefinitions)
-                                    {
-                                        <div class="mt-3 cda-admin-empty">
-                                            This agent can access all current and future processes. Turn off the all-processes option to manage a specific allowlist.
-                                        </div>
-                                    }
-                                    else if (!processDefinitionsRequested)
-                                    {
-                                        <div class="mt-3 cda-admin-empty">
-                                            Load the process list only when you need to inspect or change the access scope.
-                                        </div>
-                                        <Cluster Gap="LayoutGap.Small"
-                                                 Wrap="FlexWrap.Wrap"
-                                                 Class="mt-3">
-                                            <Button Text="Load process list"
-                                                    ButtonStyle="ButtonStyle.Light"
-                                                    Size="ButtonSize.Small"
-                                                    Click="RequestProcessDefinitionsAsync"
-                                                    Disabled="@isLoadingProcessDefinitions"
-                                                    IsBusy="@isLoadingProcessDefinitions"
-                                                    data-testid="agents-catalog-process-load" />
-                                        </Cluster>
-                                    }
-                                    else if (!areProcessDefinitionsLoaded &&
-                                             string.IsNullOrWhiteSpace(processDefinitionsErrorMessage))
-                                    {
-                                        <div class="mt-3 cda-admin-empty">
-                                            Loading process definitions that can be granted to this agent...
-                                        </div>
-                                    }
-                                    else if (!string.IsNullOrWhiteSpace(processDefinitionsErrorMessage))
-                                    {
-                                        <div class="mt-3 cda-admin-empty text-rose-700">
-                                            @processDefinitionsErrorMessage
-                                        </div>
-                                        <Cluster Gap="LayoutGap.Small"
-                                                 Wrap="FlexWrap.Wrap"
-                                                 Class="mt-3">
-                                            <Button Text="Retry process list"
-                                                    ButtonStyle="ButtonStyle.Light"
-                                                    Size="ButtonSize.Small"
-                                                    Click="RequestProcessDefinitionsAsync"
-                                                    Disabled="@isLoadingProcessDefinitions"
-                                                    IsBusy="@isLoadingProcessDefinitions" />
-                                        </Cluster>
-                                    }
-                                    else if (processDefinitions.Count == 0)
-                                    {
-                                        <div class="mt-3 cda-admin-empty">
-                                            No process definitions exist yet. Create a process before granting process access.
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="mt-3 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4"
-                                             data-testid="agents-catalog-processes">
-                                            <Stack GapScale="LayoutGap.Small">
-                                                @foreach (var definition in processDefinitions)
-                                                {
-                                                    <label class="cda-inline-option cda-inline-option--muted">
-                                                        <input type="checkbox"
-                                                               checked="@HasProcessAccess(definition.Id)"
-                                                               @onchange="args => ToggleProcess(definition.Id, args.Value)" />
-                                                        @definition.Name
-                                                        @if (!string.IsNullOrWhiteSpace(definition.ProjectName))
-                                                        {
-                                                            <span class="text-slate-500">(@definition.ProjectName)</span>
-                                                        }
-                                                    </label>
-                                                }
-                                            </Stack>
-                                        </div>
-                                    }
+                                    <p class="cda-field-label mb-1">Allowed processes</p>
+                                    <p class="text-sm leading-6 text-slate-600">
+                                        @DescribeProcessScope(editorModel)
+                                    </p>
+                                    <div class="mt-3 cda-admin-empty">
+                                        Process definition selection is unavailable while the Process module is rebuilt. Existing stored access metadata is preserved.
+                                    </div>
                                 </div>
                             </Grid>
                         </FormSection>
@@ -708,4 +711,69 @@ else
             </StickyActionFooter>
         </Stack>
     </EditForm>
+}
+
+@if (avatarSelectorOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Agent identity"
+            Title="Choose avatar"
+            Subtitle="@ResolveAvatarAltText()"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="agents-catalog-avatar-dialog"
+            OnClose="CloseAvatarSelectorAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <SurfaceCard Soft="true">
+                    <Stack Orientation="Orientation.Horizontal"
+                           AlignItems="AlignItems.Center"
+                           GapScale="LayoutGap.Medium">
+                        <Avatar Alt="@ResolveAvatarAltText()"
+                                ImageUrl="@editorModel.AvatarImageUrl"
+                                FallbackText="@ResolveAvatarFallbackText()"
+                                DefaultImageSeed="@ResolveAvatarSeed()"
+                                Size="AvatarSize.Large"
+                                Shape="AvatarShape.Rounded" />
+                        <Stack GapScale="LayoutGap.XSmall">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current avatar" />
+                            <strong>@ResolveAvatarSelectionText()</strong>
+                            <small class="text-sm text-slate-600">Avatar changes are saved when you save the agent.</small>
+                        </Stack>
+                    </Stack>
+                </SurfaceCard>
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplate="repeat(4,minmax(0,1fr))"
+                      data-testid="agents-catalog-avatar-options">
+                    @foreach (var option in AvatarOptions.Select((url, index) => new { Url = url, Number = index + 1 }))
+                    {
+                        <button type="button"
+                                class="@ResolveAvatarOptionClass(option.Url)"
+                                @onclick="@(() => SelectAvatar(option.Url))"
+                                data-testid="@($"agents-catalog-avatar-option-{option.Number}")">
+                            <Avatar Alt="@($"Avatar {option.Number}")"
+                                    ImageUrl="@option.Url"
+                                    FallbackText="@option.Number.ToString()"
+                                    UseDefaultImageWhenMissing="false"
+                                    Size="AvatarSize.Large"
+                                    Shape="AvatarShape.Rounded" />
+                            <span>Avatar @option.Number</span>
+                            @if (IsSelectedAvatar(option.Url))
+                            {
+                                <StatusBadge Tone="success" Text="Selected" />
+                            }
+                        </button>
+                    }
+                </Grid>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseAvatarSelectorAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
 }

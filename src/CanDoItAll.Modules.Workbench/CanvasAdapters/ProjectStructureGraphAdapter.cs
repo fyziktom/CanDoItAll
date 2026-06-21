@@ -22,7 +22,9 @@ public sealed class ProjectStructureGraphAdapter
             Mode = "authoring",
             UiState = uiState,
             Chrome = chrome,
-            Nodes = surface.Nodes.Select(node => MapCanvasNode(surface.Nodes, node, actionCatalog, canLaunchRuntime, canOpenInFileExplorer, canOpenInNewTab)).ToList(),
+            Nodes = surface.Nodes
+                .Select(node => MapCanvasNode(surface.Nodes, node, uiState.SelectedNodeIds, actionCatalog, canLaunchRuntime, canOpenInFileExplorer, canOpenInNewTab))
+                .ToList(),
             Links = surface.Links.Select(link => new CanvasWorkbenchLink
             {
                 SourceId = link.SourceId,
@@ -116,6 +118,7 @@ public sealed class ProjectStructureGraphAdapter
     private static CanvasWorkbenchNode MapCanvasNode(
         IReadOnlyList<ProjectStructureNode> nodes,
         ProjectStructureNode node,
+        IReadOnlyList<string> selectedNodeIds,
         ProjectStructureActionCatalogAdapter actionCatalog,
         Func<ProjectStructureNode, bool>? canLaunchRuntime,
         Func<ProjectStructureNode, bool>? canOpenInFileExplorer,
@@ -185,8 +188,23 @@ public sealed class ProjectStructureGraphAdapter
                 node,
                 canLaunchRuntime?.Invoke(node) == true,
                 canOpenInFileExplorer?.Invoke(node) == true,
-                canOpenInNewTab?.Invoke(node) == true).ToList()
+                canOpenInNewTab?.Invoke(node) == true,
+                CountSelectedContextTargets(node.Id, selectedNodeIds)).ToList()
         };
+    }
+
+    private static int CountSelectedContextTargets(string nodeId, IReadOnlyList<string> selectedNodeIds)
+    {
+        if (selectedNodeIds.Count <= 1 ||
+            !selectedNodeIds.Contains(nodeId, StringComparer.Ordinal))
+        {
+            return 0;
+        }
+
+        return selectedNodeIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
     }
 
     private static void ConfigureChrome(ProjectStructureSurface surface, CanvasWorkbenchChrome chrome)

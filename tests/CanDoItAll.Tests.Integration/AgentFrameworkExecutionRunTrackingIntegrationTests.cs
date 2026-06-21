@@ -203,6 +203,127 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteRunAsync_persists_context_manifest_in_usage_diagnostics()
+    {
+        var contextManifest = CreateContextManifest();
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-context-manifest");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialPendingApprovals = [],
+                    InitialResponseText = "Completed successfully.",
+                    InitialContextAssemblyManifest = contextManifest
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+
+        var result = await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Run with context manifest.",
+                session.Id,
+                CreateProcessStepContext(),
+                AutoApprovePendingToolCalls: true));
+
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+        Assert.NotNull(detail);
+        var usage = Assert.Single(detail.UsageObservations);
+        using var diagnostics = JsonDocument.Parse(usage.DiagnosticsJson);
+        var manifest = diagnostics.RootElement.GetProperty("contextAssemblyManifest");
+        Assert.Equal(contextManifest.Id, manifest.GetProperty("id").GetGuid());
+        Assert.Equal(7, manifest.GetProperty("totals").GetProperty("estimatedInputTokens").GetInt32());
+        Assert.Equal("workspace-tools", manifest.GetProperty("sources")[0].GetProperty("category").GetString());
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_passes_process_context_intent_for_two_agent_steps()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-two-step-context-intent");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialPendingApprovals = [],
+                    InitialResponseText = "Completed successfully."
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<StructuredOutputApprovalRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+
+        await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Read the process context.",
+                session.Id,
+                CreateProcessStepContext(
+                    CreateProcessStepMetadata(
+                        ProcessOperationContractNames.ExternalProductTargetReadOnly,
+                        allowsProductMutation: false,
+                        ProcessOperationContractNames.ReadProcessContext),
+                    sourceId: "step-read",
+                    processRunId: "run-two-step",
+                    processStepId: "step-read"),
+                AutoApprovePendingToolCalls: true));
+        await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Run validation.",
+                session.Id,
+                CreateProcessStepContext(
+                    CreateProcessStepMetadata(
+                        ProcessOperationContractNames.ExternalProductTargetReadOnly,
+                        allowsProductMutation: false,
+                        ProcessOperationContractNames.RunValidation),
+                    sourceId: "step-validate",
+                    processRunId: "run-two-step",
+                    processStepId: "step-validate"),
+                AutoApprovePendingToolCalls: true));
+
+        Assert.Equal(2, runtime.RunExecutionOptions.Count);
+        var readIntent = runtime.RunExecutionOptions[0]?.ContextIntent;
+        var validationIntent = runtime.RunExecutionOptions[1]?.ContextIntent;
+        Assert.NotNull(readIntent);
+        Assert.NotNull(validationIntent);
+        Assert.True(readIntent!.IsGovernedProcessStep);
+        Assert.True(validationIntent!.IsGovernedProcessStep);
+        Assert.Equal("step-read", readIntent.SourceId);
+        Assert.Equal("step-validate", validationIntent.SourceId);
+        Assert.Contains(ProcessOperationContractNames.ReadProcessContext, readIntent.AllowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.RunValidation, readIntent.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.RunValidation, validationIntent.AllowedOperations);
+        Assert.False(readIntent.AllowsProductMutation);
+        Assert.False(validationIntent.AllowsProductMutation);
+    }
+
+    [Fact]
     public async Task ExecuteRunAsync_preserves_usage_when_runtime_fails_after_provider_call()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-runtime-failure-usage");
@@ -730,18 +851,36 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                      entry.Message.Contains("failed validation", StringComparison.Ordinal));
     }
 
-    private static ExecutionInvocationContext CreateProcessStepContext(string metadataJson = "{}")
+    private static ExecutionInvocationContext CreateProcessStepContext(
+        string metadataJson = "{}",
+        string sourceId = "step-001",
+        string processRunId = "run-001",
+        string processStepId = "step-001")
     {
         return new ExecutionInvocationContext(
             SourceKind: "process-step",
-            SourceId: "step-001",
+            SourceId: sourceId,
             CorrelationId: "corr-001",
-            CausationId: "cause-001",
+            CausationId: processStepId,
             RequestedBy: "process-automation-dispatch",
             RequestedByKind: "system",
             MetadataJson: metadataJson,
-            ProcessRunId: "run-001",
-            ProcessStepId: "step-001");
+            ProcessRunId: processRunId,
+            ProcessStepId: processStepId);
+    }
+
+    private static string CreateProcessStepMetadata(
+        string targetScope,
+        bool allowsProductMutation,
+        params string[] allowedOperations)
+    {
+        var metadata = new Dictionary<string, object?>
+        {
+            [ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey] = targetScope,
+            [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = allowsProductMutation,
+            [ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey] = allowedOperations
+        };
+        return JsonSerializer.Serialize(metadata, AgentOutputJson.SerializerOptions);
     }
 
     private static string CreateRequiredFinalizerMetadata()
@@ -783,6 +922,47 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             ReasoningTokens: 0,
             TotalTokens: inputTokens + outputTokens,
             ToolCallCount: 0);
+    }
+
+    private static AgentRuntimeContextAssemblyManifest CreateContextManifest()
+    {
+        return new AgentRuntimeContextAssemblyManifest(
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            Guid.NewGuid(),
+            "test-agent",
+            "OpenAI default",
+            ProviderKind.OpenAi,
+            "gpt-5.4-mini",
+            ProviderTransportKind.Responses,
+            AgentRuntimeContextIntent.Empty with
+            {
+                SourceKind = "process-step",
+                SourceId = "step-001",
+                ProcessRunId = "run-001",
+                ProcessStepId = "step-001",
+                IsGovernedProcessStep = true,
+                AllowedOperations = [ProcessOperationContractNames.RunValidation]
+            },
+            new AgentRuntimeContextManifestTotals(
+                InputMessageCount: 1,
+                InputMessageChars: 12,
+                InputMessageEstimatedTokens: 3,
+                ToolCount: 2,
+                ToolSchemaEstimatedChars: 16,
+                ToolSchemaEstimatedTokens: 4,
+                ContextProviderCount: 0,
+                FrameworkToolCount: 0,
+                RuntimeToolProviderCount: 0,
+                EstimatedInputTokens: 7),
+            [
+                AgentRuntimeContextManifestSource.Included(
+                    AgentRuntimeContextSourceCategories.WorkspaceTools,
+                    "configured-workspace-tools",
+                    "validation operation requires test tools",
+                    itemCount: 2,
+                    estimatedChars: 16)
+            ]);
     }
 
     private static AgentFinalizerInvocation CreateFinalizerInvocation(ProcessStepOutcomeResult outcome)
@@ -951,6 +1131,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
 
         public List<AgentStructuredOutputContract?> ContinuationStructuredOutputs { get; } = [];
 
+        public List<AgentRuntimeExecutionOptions?> RunExecutionOptions { get; } = [];
+
         public List<Guid> ObservedExecutionRunIds { get; } = [];
 
         public string InitialResponseText { get; init; } = "Pending approval.";
@@ -977,6 +1159,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         public IReadOnlyList<AgentToolInvocationTrace> InitialToolInvocationTraces { get; init; } = [];
 
         public IReadOnlyList<ProviderUsageObservation> InitialUsageObservations { get; init; } = [];
+
+        public AgentRuntimeContextAssemblyManifest? InitialContextAssemblyManifest { get; init; }
 
         public bool ThrowUsageExceptionOnRun { get; init; }
 
@@ -1035,6 +1219,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             AgentRuntimeExecutionOptions? executionOptions = null)
         {
             RunStructuredOutputs.Add(structuredOutput);
+            RunExecutionOptions.Add(executionOptions);
             if (!session.LatestExecutionRunId.HasValue)
             {
                 throw new InvalidOperationException("Expected the runtime session to carry the execution run id.");
@@ -1063,7 +1248,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 ToolInvocationTraces = InitialToolInvocationTraces.Count == 0
                     ? CreateFinalizerToolInvocationTraces(InitialFinalizerInvocations)
                     : InitialToolInvocationTraces,
-                UsageObservations = InitialUsageObservations
+                UsageObservations = InitialUsageObservations,
+                ContextAssemblyManifest = InitialContextAssemblyManifest
             });
         }
 

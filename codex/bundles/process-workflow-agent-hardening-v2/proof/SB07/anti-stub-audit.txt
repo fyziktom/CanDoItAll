@@ -1,7 +1,0 @@
-Command:
-
-`rg -n --pcre2 "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|stubbed|stub-only" Templates/Processes/processes/software-delivery codex/skills/candoitall-api-processes/SKILL.md codex/skills/candoitall-api-agents/SKILL.md codex/skills/bundles/candoitall-bundle-validator/SKILL.md codex/skills/bundles/candoitall-bundle-execution/SKILL.md`
-
-Result:
-
-PASS. No TODO, NotImplemented, fixture-specific, or stub-only implementation markers were found.

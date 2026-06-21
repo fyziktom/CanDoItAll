@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class AgentFrameworkExecutionRecoveryService(
-    ISandboxWorkspaceStore workspaceStore,
     ISandboxWorkspaceExecutionRunStore executionRunStore,
+    IEnumerable<IAgentExecutionRecoveryObserver> recoveryObservers,
     ILogger<AgentFrameworkExecutionRecoveryService> logger)
 {
     private const string RestartRecoveryPhase = "startup-recovery";
@@ -21,8 +21,8 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         DateTimeOffset startupCutoffUtc,
         CancellationToken cancellationToken = default)
     {
-        var executionState = await workspaceStore.LoadExecutionAsync(cancellationToken);
-        var strandedRunIds = executionState.ExecutionRuns
+        var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken);
+        var strandedRunIds = executionRuns
             .Where(run => IsInterruptedRun(run, startupCutoffUtc))
             .Select(item => item.Id)
             .ToList();
@@ -77,6 +77,7 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
             };
 
             await executionRunStore.SaveExecutionRunDetailAsync(repairedDetail, cancellationToken);
+            await NotifyRecoveryObserversAsync(repairedRun, repairedAtUtc, cancellationToken);
             repairedCount++;
 
             logger.LogInformation(
@@ -86,6 +87,42 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         }
 
         return repairedCount;
+    }
+
+    private async Task NotifyRecoveryObserversAsync(
+        ExecutionRunRecord run,
+        DateTimeOffset repairedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var observation = new AgentExecutionRecoveryObservation(
+            run.Id,
+            run.SourceKind,
+            run.ProcessRunId,
+            run.ProcessStepId,
+            run.State,
+            run.Outcome,
+            run.ResultSummary,
+            repairedAtUtc);
+
+        foreach (var observer in recoveryObservers)
+        {
+            try
+            {
+                await observer.OnExecutionRecoveredAsync(observation, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "AgentFramework execution recovery observer {ObserverType} failed for execution run {ExecutionRunId}.",
+                    observer.GetType().FullName,
+                    run.Id);
+            }
+        }
     }
 
     private static bool IsInterruptedRun(ExecutionRunRecord run, DateTimeOffset startupCutoffUtc)

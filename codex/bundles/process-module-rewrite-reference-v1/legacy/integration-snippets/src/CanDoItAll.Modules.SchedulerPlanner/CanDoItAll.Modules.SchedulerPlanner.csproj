@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+  </ItemGroup>
+
+</Project>

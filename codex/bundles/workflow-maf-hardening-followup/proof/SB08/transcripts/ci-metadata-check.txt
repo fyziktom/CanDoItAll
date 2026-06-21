@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB08/ci-metadata-check.txt
-ExitCode: 0
-Result: No local .github/workflows directory; expected local gate documented.
-Source transcript: bundle://proof/SB08/ci-metadata-check.txt

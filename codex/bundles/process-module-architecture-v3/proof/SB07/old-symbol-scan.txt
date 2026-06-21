@@ -1,0 +1,3 @@
+Old legacy dispatch symbol scan
+Command: rg -n "ProcessRunAutomationDispatchService|ProcessStepRunTransitions|ProcessStepRunStatus|ProcessStepRun|ProcessRunAutomationDispatch|AutomationDispatch" src\CanDoItAll.Processes.Runtime tests\CanDoItAll.Tests.Unit\ProcessRuntimeEngineTests.cs
+No matches.

@@ -1,0 +1,58 @@
+Command: rg -n 'Microsoft.EntityFrameworkCore|Npgsql.EntityFrameworkCore.PostgreSQL|DbContext|IEntityTypeConfiguration|HasIndex|IsUnique|ToTable' src\CanDoItAll.Processes.Persistence src\CanDoItAll.Processes.Projections
+src\CanDoItAll.Processes.Persistence\EfProcessOutboxStore.cs:3:using Microsoft.EntityFrameworkCore;
+src\CanDoItAll.Processes.Persistence\EfProcessOutboxStore.cs:7:public sealed class EfProcessOutboxStore(ProcessPersistenceDbContext dbContext) : IProcessOutboxWriter
+src\CanDoItAll.Processes.Persistence\EfProcessArtifactLedgerStore.cs:5:public sealed class EfProcessArtifactLedgerStore(ProcessPersistenceDbContext dbContext) : IProcessArtifactLedgerStore
+src\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj:16:    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj:17:    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+src\CanDoItAll.Processes.Persistence\EfProcessRuntimeUnitOfWork.cs:4:using Microsoft.EntityFrameworkCore;
+src\CanDoItAll.Processes.Persistence\EfProcessRuntimeUnitOfWork.cs:8:public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbContext) :
+src\CanDoItAll.Processes.Persistence\EfProcessRuntimeEventStore.cs:5:using Microsoft.EntityFrameworkCore;
+src\CanDoItAll.Processes.Persistence\EfProcessRuntimeEventStore.cs:9:public sealed class EfProcessRuntimeEventStore(ProcessPersistenceDbContext dbContext) :
+src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs:2:using Microsoft.EntityFrameworkCore;
+src\CanDoItAll.Processes.Persistence\EfProcessProjectionStore.cs:6:public sealed class EfProcessProjectionStore(ProcessPersistenceDbContext dbContext) : IProcessProjectionStore
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceDbContext.cs:1:using Microsoft.EntityFrameworkCore;
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceDbContext.cs:5:public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersistenceDbContext> options) : DbContext(options)
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceDbContext.cs:33:        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ProcessPersistenceDbContext).Assembly);
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:1:using Microsoft.EntityFrameworkCore;
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:2:using Microsoft.EntityFrameworkCore.Metadata.Builders;
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:6:internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeStateEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:10:        builder.ToTable("process_runtime_states");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:15:        builder.HasIndex(state => state.RootRunId);
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:16:        builder.HasIndex(state => state.Status);
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:40:internal sealed class ProcessRuntimeStepEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeStepEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:44:        builder.ToTable("process_runtime_steps");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:49:        builder.HasIndex(step => new { step.RunId, step.Status });
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:50:        builder.HasIndex(step => new { step.RunId, step.ActiveClaimToken });
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:54:internal sealed class ProcessDispatchClaimEntityConfiguration : IEntityTypeConfiguration<ProcessDispatchClaimEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:58:        builder.ToTable("process_dispatch_claims");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:62:        builder.HasIndex(claim => new { claim.StepInstanceId, claim.ClaimToken }).IsUnique();
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:63:        builder.HasIndex(claim => new { claim.RunId, claim.Status, claim.ExpiresAtUtc });
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:67:internal sealed class ProcessStrategyResultReceiptEntityConfiguration : IEntityTypeConfiguration<ProcessStrategyResultReceiptEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:71:        builder.ToTable("process_strategy_result_receipts");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:77:        builder.HasIndex(receipt => new { receipt.StepInstanceId, receipt.StrategyId, receipt.IdempotencyKey }).IsUnique();
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:81:internal sealed class ProcessRuntimeAvailableArtifactSlotEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeAvailableArtifactSlotEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:85:        builder.ToTable("process_runtime_available_artifact_slots");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:90:internal sealed class ProcessRuntimeEventEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeEventEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:94:        builder.ToTable("process_runtime_events");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:103:        builder.HasIndex(runtimeEvent => runtimeEvent.EventId).IsUnique();
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:104:        builder.HasIndex(runtimeEvent => new { runtimeEvent.RootRunId, runtimeEvent.RootSequence }).IsUnique();
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:105:        builder.HasIndex(runtimeEvent => new { runtimeEvent.RunId, runtimeEvent.OccurredAtUtc });
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:109:internal sealed class ProcessOutboxMessageEntityConfiguration : IEntityTypeConfiguration<ProcessOutboxMessageEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:113:        builder.ToTable("process_outbox_messages");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:120:        builder.HasIndex(message => new { message.EventId, message.SubscriberKind }).IsUnique();
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:121:        builder.HasIndex(message => new { message.Status, message.AvailableAtUtc, message.LockedAtUtc });
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:125:internal sealed class ProcessArtifactLedgerEventEntityConfiguration : IEntityTypeConfiguration<ProcessArtifactLedgerEventEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:129:        builder.ToTable("process_artifact_ledger_events");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:132:        builder.HasIndex(ledgerEvent => new { ledgerEvent.SlotId, ledgerEvent.LedgerEventId }).IsUnique();
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:133:        builder.HasIndex(ledgerEvent => ledgerEvent.EventId);
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:137:internal sealed class ProcessRuntimeIdempotencyEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeIdempotencyEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:141:        builder.ToTable("process_runtime_idempotency_keys");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:147:internal sealed class ProcessProjectionSnapshotEntityConfiguration : IEntityTypeConfiguration<ProcessProjectionSnapshotEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:151:        builder.ToTable("process_projection_snapshots");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:158:        builder.HasIndex(snapshot => snapshot.UpdatedAtUtc);
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:162:internal sealed class ProcessProjectorOffsetEntityConfiguration : IEntityTypeConfiguration<ProcessProjectorOffsetEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:166:        builder.ToTable("process_projector_offsets");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:170:        builder.HasIndex(offset => offset.GlobalSequence);
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:174:internal sealed class ProcessProjectionDeadLetterEntityConfiguration : IEntityTypeConfiguration<ProcessProjectionDeadLetterEntity>
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:178:        builder.ToTable("process_projection_dead_letters");
+src\CanDoItAll.Processes.Persistence\ProcessPersistenceConfigurations.cs:185:        builder.HasIndex(deadLetter => new { deadLetter.ProjectorName, deadLetter.ShardKey, deadLetter.GlobalSequence });

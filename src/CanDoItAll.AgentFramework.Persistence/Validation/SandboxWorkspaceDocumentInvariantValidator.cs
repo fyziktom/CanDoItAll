@@ -185,18 +185,23 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
             }
         }
 
-        foreach (var observation in document.ProviderUsageObservations.Where(item => item.ExecutionRunId.HasValue))
+        foreach (var observation in document.ProviderUsageObservations)
         {
+            if (observation.ExecutionRunId is not { } executionRunId)
+            {
+                continue;
+            }
+
             if (observation.AgentId.HasValue && !agentIds.Contains(observation.AgentId.Value))
             {
                 throw new InvalidOperationException(
                     $"Provider usage observation '{observation.Id:N}' references missing agent '{observation.AgentId.Value:N}'.");
             }
 
-            if (!runIds.Contains(observation.ExecutionRunId.Value))
+            if (!runIds.Contains(executionRunId))
             {
                 throw new InvalidOperationException(
-                    $"Provider usage observation '{observation.Id:N}' references missing execution run '{observation.ExecutionRunId.Value:N}'.");
+                    $"Provider usage observation '{observation.Id:N}' references missing execution run '{executionRunId:N}'.");
             }
         }
 

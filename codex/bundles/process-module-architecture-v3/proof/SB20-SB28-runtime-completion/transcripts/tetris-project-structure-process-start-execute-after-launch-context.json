@@ -1,0 +1,164 @@
+{
+  "statusCode": 200,
+  "content": {
+    "projectId": "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+    "nodeId": "custom:bd8169fc3fa944dbafd13998fb167fe8",
+    "processDefinitionId": "2134aedd-f674-e4d5-a702-609e55482f11",
+    "launchPlanId": "e927377f-5742-4386-be0e-152eb372ff3e",
+    "runId": "d19b0fb9-8fe7-4b6a-8872-62522f0a60ff",
+    "stage": "Running",
+    "route": "/projects/3324868f-66e2-478a-bb8f-14f32a5db1e9/processes/live?runId=d19b0fb9-8fe7-4b6a-8872-62522f0a60ff",
+    "launchPlan": {
+      "planId": {
+        "value": "e927377f-5742-4386-be0e-152eb372ff3e"
+      },
+      "definitionId": {
+        "value": "2134aedd-f674-e4d5-a702-609e55482f11"
+      },
+      "definitionVersionId": {
+        "value": "f5f04b31-c99b-6394-ed0a-10a80e3d2e00"
+      },
+      "definitionKey": "blazor-app-delivery",
+      "definitionName": "Blazor app delivery",
+      "definitionSummary": "Simplified multi-team delivery for a new or rebuilt Blazor SSR, WASM, or WASM PWA application from project-structure requirements.",
+      "liveRunProfileKey": "generic-blazor-wasm-pwa-app",
+      "planHash": "sha256:066049f20f819dc5a59e603fc8906cee2a43916c33185a0679675e6e9a4d2213",
+      "steps": [
+        {
+          "stepInstanceId": {
+            "value": "4980add1-8794-4439-b5b4-6a4fd0eda822"
+          },
+          "stepKey": "resolve-blazor-contract",
+          "title": "Resolve Blazor delivery contract",
+          "roleKey": "blazor-solution-architect",
+          "executorKind": "agent",
+          "executorId": "38d4deb5-74ce-8e55-bf1a-17e88b437472",
+          "executorDisplayName": ".NET Solution Architect",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": null
+        },
+        {
+          "stepInstanceId": {
+            "value": "8ccea0c5-7a28-4fe6-bb64-bf3f49600ff2"
+          },
+          "stepKey": "implement-blazor-change",
+          "title": "Build Blazor application",
+          "roleKey": "blazor-engineer",
+          "executorKind": "agent",
+          "executorId": "e166ec8b-7eeb-9252-aac1-07b4c49e2d82",
+          "executorDisplayName": "Blazor Application Developer",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": null
+        },
+        {
+          "stepInstanceId": {
+            "value": "a2909177-3ea6-4c2c-a72a-65bc2e00b4d5"
+          },
+          "stepKey": "validate-blazor-runtime",
+          "title": "Validate Blazor runtime and browser evidence",
+          "roleKey": "blazor-qa-lead",
+          "executorKind": "agent",
+          "executorId": "752665f3-bf7d-0b54-9208-7809282cd415",
+          "executorDisplayName": ".NET QA Review Lead",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": null
+        },
+        {
+          "stepInstanceId": {
+            "value": "329e9441-6a3e-474f-bf4c-8971a859a673"
+          },
+          "stepKey": "repair-blazor-findings",
+          "title": "Repair Blazor validation findings",
+          "roleKey": "blazor-engineer",
+          "executorKind": "agent",
+          "executorId": "e166ec8b-7eeb-9252-aac1-07b4c49e2d82",
+          "executorDisplayName": "Blazor Application Developer",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": {
+            "sourceStepKey": "validate-blazor-runtime",
+            "requiredOutcomeKey": "repair-required"
+          }
+        },
+        {
+          "stepInstanceId": {
+            "value": "49e1bf1b-d7bd-48e4-8a61-e4e6f0dfa64d"
+          },
+          "stepKey": "revalidate-blazor-repair",
+          "title": "Revalidate Blazor repair",
+          "roleKey": "blazor-qa-lead",
+          "executorKind": "agent",
+          "executorId": "752665f3-bf7d-0b54-9208-7809282cd415",
+          "executorDisplayName": ".NET QA Review Lead",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": null
+        },
+        {
+          "stepInstanceId": {
+            "value": "aea2add9-733c-4add-a5c3-6390316dff72"
+          },
+          "stepKey": "record-blazor-results",
+          "title": "Record Blazor results and evidence index",
+          "roleKey": "blazor-delivery-manager",
+          "executorKind": "agent",
+          "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+          "executorDisplayName": "Delivery Manager",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": {
+            "sourceStepKey": "validate-blazor-runtime",
+            "requiredOutcomeKey": "quality-accepted"
+          }
+        },
+        {
+          "stepInstanceId": {
+            "value": "55f47185-cdea-4eca-a7c1-ea6115329940"
+          },
+          "stepKey": "record-blazor-results-after-repair",
+          "title": "Record repaired Blazor results and evidence index",
+          "roleKey": "blazor-delivery-manager",
+          "executorKind": "agent",
+          "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+          "executorDisplayName": "Delivery Manager",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": {
+            "sourceStepKey": "revalidate-blazor-repair",
+            "requiredOutcomeKey": "quality-accepted"
+          }
+        },
+        {
+          "stepInstanceId": {
+            "value": "b33773ad-344d-4015-86d3-cbd8e01b9899"
+          },
+          "stepKey": "escalate-blazor-unresolved-repair",
+          "title": "Escalate unresolved Blazor repair findings",
+          "roleKey": "blazor-delivery-manager",
+          "executorKind": "agent",
+          "executorId": "b0c2a317-a417-385f-9f59-0f4a2c5b7ff2",
+          "executorDisplayName": "Delivery Manager",
+          "isBlocked": false,
+          "blockedReason": null,
+          "branchGate": {
+            "sourceStepKey": "revalidate-blazor-repair",
+            "requiredOutcomeKey": "repair-escalation"
+          }
+        }
+      ],
+      "readinessFindings": [
+        {
+          "severity": 0,
+          "code": "process.launch.readiness_ok",
+          "message": "All executable steps have active agent bindings with enabled providers.",
+          "stepKey": null,
+          "roleKey": null
+        }
+      ]
+    },
+    "warnings": []
+  }
+}

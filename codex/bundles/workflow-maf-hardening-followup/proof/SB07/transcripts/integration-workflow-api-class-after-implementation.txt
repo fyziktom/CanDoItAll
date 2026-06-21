@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB07/integration-workflow-api-class-after-implementation.txt
-ExitCode: 0
-Result: 13 workflow API integration tests passed.
-Source transcript: bundle://proof/SB07/integration-workflow-api-class-after-implementation.txt

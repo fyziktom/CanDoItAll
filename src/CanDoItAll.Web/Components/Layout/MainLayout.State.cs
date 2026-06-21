@@ -61,7 +61,7 @@ public partial class MainLayout
 
     private bool IsFocusWorkbenchRoute
         => CurrentUri.AbsolutePath.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(CurrentUri.AbsolutePath, "/processes", StringComparison.OrdinalIgnoreCase) ||
+           CurrentUri.AbsolutePath.EndsWith("/processes", StringComparison.OrdinalIgnoreCase) ||
            CurrentUri.AbsolutePath.EndsWith("/processes/live", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(CurrentUri.AbsolutePath, "/prompt-factory", StringComparison.OrdinalIgnoreCase);
 

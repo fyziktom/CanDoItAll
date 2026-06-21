@@ -1,0 +1,216 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.Common
+
+<Stack GapScale="LayoutGap.Tiny"
+       data-testid="processes-runtime-host-readback">
+    <SectionCard Title="Runtime-host readback"
+                 Description=""
+                 HelpText="Operator readback verifies the selected run through the read-only runtime host, including audit retention and mutation-denial flags.">
+        @if (Presenter.RuntimeHostReadbackLoading)
+        {
+            <LoadingState Title="Loading runtime-host readback"
+                          Description="Requesting read-only verification and audit status for the selected process run." />
+        }
+        else if (!string.IsNullOrWhiteSpace(Presenter.RuntimeHostReadbackError))
+        {
+            <EmptyState Eyebrow="Readback unavailable"
+                        Title="Runtime-host readback failed"
+                        Description="@Presenter.RuntimeHostReadbackError" />
+        }
+        else if (Presenter.RuntimeHostReadback is not { } readback)
+        {
+            <EmptyState Eyebrow="No readback"
+                        Title="No runtime-host readback has been loaded"
+                        Description="Select a run with persisted step details to inspect read-only host status and audit metadata." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                <Split Gap="LayoutGap.Medium">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Operator readback</p>
+                        <h3 class="text-base font-semibold text-slate-950">@readback.VerificationStatus through @readback.Lane</h3>
+                        <p class="text-sm leading-6 text-slate-600">
+                            @readback.CallerContext
+                        </p>
+                    </Stack>
+                    <Cluster Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@ResolveReadinessTone(readback.HostReadiness)"
+                                     Text="@($"host: {readback.HostReadiness}")" />
+                        <StatusBadge Tone="@ResolveVerificationTone(readback.VerificationStatus)"
+                                     Text="@readback.VerificationStatus" />
+                        <StatusBadge Tone="@ResolveBooleanTone(readback.IsMutationGuarded)"
+                                     Text="No mutation" />
+                        <StatusBadge Tone="neutral"
+                                     Text="@($"{readback.EnabledLaneCount}/{readback.RegisteredLaneCount} lanes enabled")" />
+                    </Cluster>
+                </Split>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="3">
+                    <SurfaceCard Soft="true"
+                                 data-testid="processes-runtime-host-readback-identity">
+                        <p class="cda-eyebrow">Run identity</p>
+                        <Stack GapScale="LayoutGap.Tiny"
+                               Class="mt-3">
+                            <p class="text-xs text-slate-500">Run @readback.ProcessRunId</p>
+                            <p class="text-xs text-slate-500">Step @readback.StepRunId</p>
+                            <p class="text-xs text-slate-500">Capability @readback.CapabilityKey</p>
+                        </Stack>
+                    </SurfaceCard>
+
+                    <SurfaceCard Soft="true"
+                                 data-testid="processes-runtime-host-readback-audit">
+                        <p class="cda-eyebrow">Audit</p>
+                        <Stack GapScale="LayoutGap.Tiny"
+                               Class="mt-3">
+                            <p class="text-xs text-slate-500">Record @(readback.AuditRecordId?.ToString("D") ?? "none")</p>
+                            <p class="text-xs text-slate-500">Hash @(string.IsNullOrWhiteSpace(readback.AuditRecordObservationHash) ? "none" : readback.AuditRecordObservationHash)</p>
+                            <p class="text-xs text-slate-500">@readback.AuditRecords.Count retained records / @readback.HostAuditStoreKind</p>
+                        </Stack>
+                    </SurfaceCard>
+
+                    <SurfaceCard Soft="true"
+                                 data-testid="processes-runtime-host-readback-flags">
+                        <p class="cda-eyebrow">Mutation flags</p>
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.Wrap"
+                                 Class="mt-3">
+                            <StatusBadge Tone="@ResolveBooleanTone(readback.NoMutationPerformed)"
+                                         Text="@($"no mutation: {FormatBool(readback.NoMutationPerformed)}")" />
+                            <StatusBadge Tone="@ResolveMutationPermissionTone(readback.AllowsProcessMutation)"
+                                         Text="@($"process writes: {FormatAllowed(readback.AllowsProcessMutation)}")" />
+                            <StatusBadge Tone="@ResolveMutationPermissionTone(readback.AllowsTransitionMutation)"
+                                         Text="@($"transition writes: {FormatAllowed(readback.AllowsTransitionMutation)}")" />
+                            <StatusBadge Tone="@ResolveMutationPermissionTone(readback.AllowsFinalizerMutation)"
+                                         Text="@($"finalizer writes: {FormatAllowed(readback.AllowsFinalizerMutation)}")" />
+                        </Cluster>
+                    </SurfaceCard>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="2">
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Projection</p>
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.Wrap"
+                                 Class="mt-3">
+                            <StatusBadge Tone="info"
+                                         Text="@readback.ProjectionMode" />
+                            <StatusBadge Tone="@ResolveBooleanTone(readback.ProjectionAttached)"
+                                         Text="@($"attached: {FormatBool(readback.ProjectionAttached)}")" />
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"{readback.ResponseCount} responses")" />
+                            <StatusBadge Tone="warning"
+                                         Text="@($"{readback.DiagnosticCount} diagnostics")" />
+                            <StatusBadge Tone="info"
+                                         Text="@($"{readback.EvidenceReferenceCount} evidence refs")" />
+                        </Cluster>
+                    </SurfaceCard>
+
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Host contract</p>
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.Wrap"
+                                 Class="mt-3">
+                            <StatusBadge Tone="@ResolveBooleanTone(readback.HostEnabled)"
+                                         Text="@($"enabled: {FormatBool(readback.HostEnabled)}")" />
+                            <StatusBadge Tone="@ResolveMutationPermissionTone(readback.HostEmergencyDisabled)"
+                                         Text="@($"emergency disabled: {FormatBool(readback.HostEmergencyDisabled)}")" />
+                            <StatusBadge Tone="@ResolveBooleanTone(readback.HostUsesDurableAuditStore)"
+                                         Text="@($"durable audit: {FormatBool(readback.HostUsesDurableAuditStore)}")" />
+                            <StatusBadge Tone="@ResolveBooleanTone(readback.HostSupportsAuditRetentionQuery)"
+                                         Text="@($"audit query: {FormatBool(readback.HostSupportsAuditRetentionQuery)}")" />
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"{readback.CapabilityCount} capabilities")" />
+                        </Cluster>
+                    </SurfaceCard>
+                </Grid>
+
+                @if (readback.HasDenial)
+                {
+                    <SurfaceCard Soft="true"
+                                 data-testid="processes-runtime-host-readback-denial">
+                        <p class="cda-eyebrow">Denial</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            @readback.DenialCategory / @readback.DenialCode
+                        </p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">@readback.DenialMessage</p>
+                    </SurfaceCard>
+                }
+
+                @if (readback.Diagnostics.Count > 0)
+                {
+                    <SurfaceCard Soft="true"
+                                 data-testid="processes-runtime-host-readback-diagnostics">
+                        <p class="cda-eyebrow">Diagnostics</p>
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="mt-3">
+                            @foreach (var diagnostic in readback.Diagnostics.Take(4))
+                            {
+                                <SurfaceCard Soft="true">
+                                    <Split Gap="LayoutGap.Small">
+                                        <p class="text-sm font-semibold text-slate-950">@diagnostic.Category</p>
+                                        <StatusBadge Tone="@ResolveDiagnosticTone(diagnostic.Severity)"
+                                                     Text="@diagnostic.Severity" />
+                                    </Split>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">@diagnostic.Message</p>
+                                </SurfaceCard>
+                            }
+                        </Stack>
+                    </SurfaceCard>
+                }
+            </Stack>
+        }
+    </SectionCard>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+
+    private static string ResolveReadinessTone(string readiness)
+    {
+        return string.Equals(readiness, "Ready", StringComparison.Ordinal)
+            ? "mint"
+            : "warning";
+    }
+
+    private static string ResolveVerificationTone(string status)
+    {
+        return string.Equals(status, "Succeeded", StringComparison.Ordinal)
+            ? "mint"
+            : "warning";
+    }
+
+    private static string ResolveDiagnosticTone(string severity)
+    {
+        return severity switch
+        {
+            "Error" => "danger",
+            "Warning" => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveBooleanTone(bool value)
+    {
+        return value ? "mint" : "warning";
+    }
+
+    private static string ResolveMutationPermissionTone(bool allowed)
+    {
+        return allowed ? "danger" : "mint";
+    }
+
+    private static string FormatBool(bool value)
+    {
+        return value ? "yes" : "no";
+    }
+
+    private static string FormatAllowed(bool allowed)
+    {
+        return allowed ? "allowed" : "denied";
+    }
+}

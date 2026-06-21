@@ -140,7 +140,9 @@ public sealed class MafWorkflowEventNormalizer : IMafWorkflowEventNormalizer
     {
         return workflowEvent switch
         {
-            WorkflowOutputEvent outputEvent => FirstNonEmpty(outputEvent.ExecutorId, outputEvent.SourceId),
+            WorkflowOutputEvent outputEvent => FirstNonEmpty(
+                outputEvent.ExecutorId,
+                TryReadStringProperty(outputEvent, "SourceId")),
             ExecutorEvent executorEvent => executorEvent.ExecutorId,
             _ => FirstNonEmpty(
                 TryReadStringProperty(workflowEvent, "ExecutorId"),

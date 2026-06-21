@@ -6,7 +6,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProviderUsageNormalizationTests
 {
     [Fact]
-    public void Normalize_SB03_INV_001_reads_openai_responses_usage_details()
+    public void Normalize_reads_openai_responses_usage_details()
     {
         const string rawResponseJson = """
                                        {
@@ -55,7 +55,7 @@ public sealed class ProviderUsageNormalizationTests
     }
 
     [Fact]
-    public void Normalize_SB03_INV_002_marks_openai_usage_null_as_unavailable_without_cost_tokens()
+    public void Normalize_marks_openai_usage_null_as_unavailable_without_cost_tokens()
     {
         const string rawResponseJson = """
                                        {
@@ -92,7 +92,7 @@ public sealed class ProviderUsageNormalizationTests
     }
 
     [Fact]
-    public void Reconcile_SB03_INV_003_reports_matched_mismatched_internal_only_and_external_only_rows()
+    public void Reconcile_reports_matched_mismatched_internal_only_and_external_only_rows()
     {
         var internalMatched = CreateObservation("resp_matched", totalTokens: 1261, costUsd: 0.006m);
         var internalMismatched = CreateObservation("resp_mismatch", totalTokens: 200, costUsd: 0.002m);

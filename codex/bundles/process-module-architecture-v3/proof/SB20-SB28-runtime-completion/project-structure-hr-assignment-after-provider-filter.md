@@ -1,0 +1,855 @@
+- generic [ref=e3] [box=0,0,1920,1080]:
+  - complementary [ref=e4] [box=16,8,76,1064]:
+    - generic [ref=e5] [box=27,19,54,1042]:
+      - generic [ref=e6] [box=27,19,54,40]:
+        - generic [ref=e7] [box=27,19,10,40]:
+          - generic [ref=e8] [box=12,19,40,40]: CD
+          - generic [ref=e9] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e10] [box=45,21,36,36]:
+          - generic [ref=e11] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e12] [box=27,67,54,883]:
+        - button "Dashboard" [ref=e14] [box=27,71,44,44]:
+          - generic [ref=e16] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e18] [box=27,121,44,44]:
+          - generic [ref=e20] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e22] [box=27,171,44,44]:
+          - generic [ref=e24] [box=39,183,20,20]: forum
+          - generic [ref=e25] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e27] [box=27,221,44,44]:
+          - generic [ref=e29] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e31] [box=27,271,44,44]:
+          - generic [ref=e33] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e35] [box=27,321,44,44]:
+          - generic [ref=e37] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e39] [box=27,371,44,44]:
+          - generic [ref=e41] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e43] [box=27,421,44,44]:
+          - generic [ref=e45] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e47] [box=27,471,44,44]:
+          - generic [ref=e49] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e51] [box=27,521,44,44]:
+          - generic [ref=e53] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e55] [box=27,571,44,44]:
+          - generic [ref=e57] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e59] [box=27,621,44,44]:
+          - generic [ref=e61] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e63] [box=27,671,44,44]:
+          - generic [ref=e65] [box=39,683,20,20]: construction
+        - button "Validation Center" [ref=e67] [box=27,721,44,44]:
+          - generic [ref=e69] [box=39,733,20,20]: fact_check
+        - button "More pages" [ref=e71] [box=32,771,44,44]:
+          - generic [ref=e73] [box=44,783,20,20]: expand_less
+        - button "Opened work" [ref=e75] [box=32,821,44,44]:
+          - generic [ref=e77] [box=44,833,20,20]: web_asset
+          - generic [ref=e78] [box=58,823,16,16]: "1"
+      - generic [ref=e80] [box=27,967,54,94]:
+        - button "Settings" [ref=e82] [box=27,967,54,44]:
+          - generic [ref=e84] [box=44,979,20,20]: settings
+          - generic [ref=e85] [box=54,989,1,1]: Settings
+        - button "Switch Database" [ref=e87] [box=27,1017,54,44]:
+          - generic [ref=e89] [box=44,1029,20,20]: storage
+          - generic [ref=e90] [box=54,1039,1,1]: Switch Database
+  - main [ref=e91] [box=100,8,1804,1064]:
+    - generic [ref=e92] [box=100,8,1804,30]:
+      - generic [ref=e96] [box=104,8,1149,30]:
+        - button "Dashboard" [ref=e98] [box=113,13,85,20]:
+          - generic [ref=e99] [box=113,15,59,16]: Dashboard
+          - generic [ref=e101] [box=178,13,20,20]: push_pin
+        - button "Processes" [ref=e103] [box=222,15,53,16]:
+          - generic [ref=e104] [box=222,15,53,16]: Processes
+        - button "Live Processes" [ref=e106] [box=298,15,77,16]:
+          - generic [ref=e107] [box=298,15,77,16]: Live Processes
+        - button "Projects" [ref=e109] [box=400,15,43,16]:
+          - generic [ref=e110] [box=400,15,43,16]: Projects
+        - button "TetrisGame · Structure" [ref=e112] [box=467,15,120,16]:
+          - generic [ref=e113] [box=467,15,120,16]: TetrisGame · Structure
+      - generic [ref=e115] [box=1273,10,631,26]:
+        - generic [ref=e116] [box=1273,10,207,26]:
+          - generic [ref=e117] [box=1284,16,136,13]: Delivery Workspace
+          - generic [ref=e118] [box=1426,15,43,16]: Projects
+        - generic [ref=e119] [box=1488,10,83,26]: TetrisGame
+        - generic [ref=e120] [box=1578,10,44,26]: WIP
+        - generic [ref=e121] [box=1630,10,117,26]: Interactive Server
+        - generic [ref=e122] [box=1756,10,85,26]: Live items 1
+        - generic [ref=e123] [box=1848,10,56,26]: Tabs 5
+    - generic [ref=e125] [box=100,46,1804,1026]:
+      - generic [ref=e127] [box=100,46,1804,996]:
+        - generic [ref=e129] [box=100,46,1804,155]:
+          - generic [ref=e130] [box=121,67,1762,97]:
+            - paragraph [ref=e131] [box=121,67,1762,17]: Structure canvas
+            - generic [ref=e132] [box=121,96,1762,68]:
+              - heading "TetrisGame workbench" [level=2] [ref=e135] [box=121,128,243,36]
+              - generic [ref=e136] [box=1528,96,355,68]:
+                - generic [ref=e137] [box=1528,96,112,68]:
+                  - generic [ref=e138] [box=1544,108,80,17]: Nodes
+                  - strong [ref=e139] [box=1544,128,80,24]: "11"
+                - generic [ref=e140] [box=1649,96,112,68]:
+                  - generic [ref=e141] [box=1666,108,80,17]: Links
+                  - strong [ref=e142] [box=1666,128,80,24]: "14"
+                - generic [ref=e143] [box=1771,96,112,68]:
+                  - generic [ref=e144] [box=1787,108,80,17]: Selection
+                  - strong [ref=e145] [box=1787,128,80,24]: "1"
+          - generic [ref=e147] [box=0,0,1920,1080]:
+            - generic [ref=e148] [box=0,0,1920,72]:
+              - generic [ref=e149] [box=17,10,1294,48]:
+                - button "Open quick create actions" [ref=e150] [cursor=pointer] [box=17,10,48,48]:
+                  - generic [ref=e151] [box=30,23,22,22]: add
+                  - generic [ref=e152] [box=41,34,1,1]: Open quick create actions
+                - button "Focus root" [ref=e153] [cursor=pointer] [box=74,14,41,41]:
+                  - generic [ref=e154] [box=87,27,15,15]: center_focus_strong
+                  - generic [ref=e155] [box=94,34,1,1]: Focus root
+                - generic [ref=e156] [box=123,14,491,41]:
+                  - generic [ref=e157] [box=123,14,134,41]:
+                    - button "Select" [ref=e158] [cursor=pointer] [box=123,14,41,41]
+                    - button "Dependency" [ref=e161] [cursor=pointer] [box=170,14,41,41]
+                    - button "Delete" [ref=e164] [cursor=pointer] [box=217,14,41,41]
+                  - button "Inspector" [ref=e167] [cursor=pointer] [box=266,14,41,41]:
+                    - generic [ref=e168] [box=279,27,15,15]: visibility
+                    - generic [ref=e169] [box=286,34,1,1]: visibility
+                  - button "Health" [ref=e170] [cursor=pointer] [box=315,14,41,41]:
+                    - generic [ref=e171] [box=327,27,15,15]: assessment
+                    - generic [ref=e172] [box=334,34,1,1]: assessment
+                  - button "Blocks" [ref=e173] [cursor=pointer] [box=363,14,41,41]:
+                    - generic [ref=e174] [box=376,27,15,15]: dashboard
+                    - generic [ref=e175] [box=383,34,1,1]: dashboard
+                  - button "Signals" [ref=e176] [cursor=pointer] [box=412,14,41,41]:
+                    - generic [ref=e177] [box=425,27,15,15]: notifications_active
+                    - generic [ref=e178] [box=432,34,1,1]: notifications active
+                  - button "Agents" [ref=e179] [cursor=pointer] [box=461,14,41,41]:
+                    - generic [ref=e180] [box=474,27,15,15]: smart_toy
+                    - generic [ref=e181] [box=481,34,1,1]: smart toy
+                  - button "Recompose" [disabled] [ref=e182] [box=510,14,105,41]:
+                    - generic [ref=e183] [box=527,28,71,13]: Recompose
+              - generic [ref=e184] [box=1324,13,579,42]:
+                - button "Fit canvas" [ref=e185] [cursor=pointer] [box=1324,14,41,41]:
+                  - generic [ref=e186] [box=1337,27,15,15]: fit_screen
+                  - generic [ref=e187] [box=1344,34,1,1]: Fit canvas
+                - button "Toggle maximize" [ref=e188] [cursor=pointer] [box=1373,14,41,41]:
+                  - generic [ref=e189] [box=1386,27,15,15]: close_fullscreen
+                  - generic [ref=e190] [box=1393,34,1,1]: Dock canvas
+                - button "Toggle minimap" [ref=e191] [cursor=pointer] [box=1423,14,41,41]:
+                  - generic [ref=e192] [box=1436,27,15,15]: map
+                  - generic [ref=e193] [box=1443,34,1,1]: Toggle minimap
+                - button "Toggle diagnostics" [ref=e194] [cursor=pointer] [box=1473,14,41,41]:
+                  - generic [ref=e195] [box=1485,27,15,15]: monitor_heart
+                  - generic [ref=e196] [box=1493,34,1,1]: Toggle diagnostics
+                - button "Toggle help" [ref=e197] [cursor=pointer] [box=1522,14,41,41]:
+                  - generic [ref=e198] [box=1535,27,15,15]: help
+                  - generic [ref=e199] [box=1542,34,1,1]: Canvas help
+                - button "Toggle settings" [ref=e200] [cursor=pointer] [box=1572,14,41,41]:
+                  - generic [ref=e201] [box=1585,27,15,15]: settings
+                  - generic [ref=e202] [box=1592,34,1,1]: Canvas settings
+                - generic [ref=e203] [box=1621,13,282,42]:
+                  - button "Zoom out" [ref=e204] [cursor=pointer] [box=1626,17,35,35]:
+                    - generic [ref=e205] [box=1636,27,15,15]: remove
+                    - generic [ref=e206] [box=1643,34,1,1]: Zoom out
+                  - slider "Canvas zoom" [ref=e207] [box=1669,26,128,16]: "85"
+                  - button "Zoom in" [ref=e208] [cursor=pointer] [box=1804,17,35,35]:
+                    - generic [ref=e209] [box=1814,27,15,15]: add
+                    - generic [ref=e210] [box=1821,34,1,1]: Zoom in
+                  - generic [ref=e211] [box=1846,17,52,35]: 87%
+            - generic [ref=e212] [box=0,0,1920,1080]:
+              - generic "Canvas workbench" [ref=e213] [box=0,0,1920,1080]:
+                - generic [ref=e491] [box=0,0,1920,1080]:
+                  - generic [box=0,0,1920,1080]:
+                    - generic "Main App Input" [ref=e923] [box=390,245,14,14]
+                    - generic "Main App Output" [ref=e924] [box=578,245,14,14]
+                    - generic "Main App Input" [ref=e925] [box=484,178,14,14]
+                    - generic "Main App Output" [ref=e926] [box=484,312,14,14]
+              - generic [ref=e220] [box=16,1006,576,58]: Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.
+              - region "Project structure agents" [ref=e221] [box=1504,96,400,560]:
+                - generic [ref=e222] [box=1517,109,375,35]:
+                  - generic [ref=e223] [box=1517,109,135,35]:
+                    - paragraph [ref=e224] [box=1517,109,135,14]: Project agents
+                    - heading "Project agents" [level=3] [ref=e225] [box=1517,125,135,18]
+                  - generic [ref=e226] [box=1784,109,107,32]:
+                    - button "Minimize window" [ref=e227] [box=1784,109,32,32]
+                    - button "Restart window position and size" [ref=e229] [box=1822,109,32,32]
+                    - button "Hide window" [ref=e231] [box=1859,109,32,32]
+                - generic [ref=e234] [box=1517,155,357,489]:
+                  - generic [ref=e235] [box=1517,155,357,42]:
+                    - textbox "Search contextual agents" [ref=e236] [box=1517,155,175,42]:
+                      - /placeholder: Search agents
+                    - textbox "Filter tags" [ref=e240] [box=1709,161,155,24]
+                  - generic [ref=e241] [box=1517,207,357,26]:
+                    - generic [ref=e242] [box=1517,207,67,26]: 23 of 23
+                    - generic [ref=e243] [box=1590,207,85,26]: This project
+                    - generic "Show contextual agent window help" [ref=e245] [box=1683,209,22,22]
+                  - generic [ref=e497] [box=1517,243,357,400]:
+                    - article [ref=e498] [box=1517,243,339,99]
+                    - article [ref=e513] [box=1517,351,339,99]
+                    - article [ref=e528] [box=1517,459,339,99]
+                    - article [ref=e543] [box=1517,567,339,121]
+                    - article [ref=e559] [box=1517,697,339,99]
+                    - article [ref=e574] [box=1517,805,339,99]
+                    - article [ref=e589] [box=1517,912,339,121]
+                    - article [ref=e606] [box=1517,1043,339,99]
+                    - article [ref=e621] [box=1517,1150,339,99]
+                    - article [ref=e636] [box=1517,1258,339,99]
+                    - article [ref=e651] [box=1517,1366,339,121]
+                    - article [ref=e666] [box=1517,1496,339,99]
+                    - article [ref=e681] [box=1517,1604,339,99]
+                    - article [ref=e696] [box=1517,1711,339,99]
+                    - article [ref=e711] [box=1517,1819,339,99]
+                    - article [ref=e726] [box=1517,1927,339,99]
+                    - article [ref=e742] [box=1517,2035,339,121]
+                    - article [ref=e756] [box=1517,2165,339,99]
+                    - article [ref=e771] [box=1517,2273,339,99]
+                    - article [ref=e786] [box=1517,2380,339,99]
+                    - article [ref=e801] [box=1517,2488,339,99]
+                    - article [ref=e816] [box=1517,2596,339,99]
+                    - article [ref=e831] [box=1517,2703,339,99]
+              - region "Project structure selection panel" [ref=e254] [box=1384,96,360,360]:
+                - generic [ref=e255] [box=1397,109,335,95]:
+                  - generic [ref=e256] [box=1397,109,216,95]:
+                    - paragraph [ref=e257] [box=1397,109,216,14]: Selection panel
+                    - heading "Main App" [level=3] [ref=e258] [box=1397,125,216,18]
+                    - paragraph [ref=e259] [box=1397,146,216,57]: Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.
+                  - generic [ref=e260] [box=1624,109,107,32]:
+                    - button "Minimize window" [ref=e261] [box=1624,109,32,32]
+                    - button "Restart window position and size" [ref=e263] [box=1662,109,32,32]
+                    - button "Hide window" [ref=e265] [box=1699,109,32,32]
+                - generic [ref=e268] [box=1397,-243,317,1452]:
+                  - generic [ref=e269] [box=1397,-243,317,278]:
+                    - paragraph [ref=e270] [box=1414,-226,283,14]: Delivery block
+                    - heading "Main App" [level=3] [ref=e271] [box=1414,-199,283,36]
+                    - paragraph [ref=e272] [box=1414,-144,283,25]: "Status: Draft"
+                    - generic [ref=e273] [box=1414,-106,283,38]
+                    - generic [ref=e278] [box=1414,-54,283,72]
+                  - generic [ref=e285] [box=1397,51,317,571]:
+                    - paragraph [ref=e286] [box=1414,68,283,14]: Node actions
+                    - generic [ref=e287] [box=1414,95,283,510]
+                  - generic [ref=e886] [box=1397,638,317,48]: Multi-team software delivery and release governance was linked to Main App.
+                  - generic [ref=e356] [box=1397,702,317,370]:
+                    - paragraph [ref=e357] [box=1414,719,283,14]: Create next to source
+                    - heading "Use the floating toolbox" [level=3] [ref=e358] [box=1414,747,283,36]
+                    - paragraph [ref=e359] [box=1414,802,283,98]
+                    - generic [ref=e361] [box=1414,914,283,86]
+                    - button "Open standard blocks" [ref=e367] [box=1414,1013,188,42]
+                  - group [ref=e369] [box=1397,1088,317,120]:
+                    - generic "Advanced details Show advanced details help" [ref=e370] [box=1414,1105,283,73]
+              - generic [box=0,0,1920,1080]:
+                - generic [box=-1,-1,1,1]: Main App is the primary selection.
+                - region "Canvas accessibility mirror" [box=-1,-1,1,1]:
+                  - heading "Canvas accessibility mirror" [level=3] [box=-1,-1,1,24]
+                  - paragraph [box=-1,23,1,24]: 1 selected nodes across 11 canvas nodes
+                  - list [box=-1,47,1,264]:
+                    - listitem [box=-1,47,1,24]: Main AppStatus Draft • 3 annotations
+                    - listitem [box=-1,71,1,24]: Blazor WASM PWA app shapeFrontend-only web app • Status Draft • 3 annotations
+                    - listitem [box=-1,95,1,24]: "Example: Office365 Category Email Summary To ProjectActive workflow · 6 nodes • Status Completed • 3 annotations"
+                    - listitem [box=-1,119,1,24]: Game loop and board behaviorCore Tetris mechanics • Status Draft • 3 annotations
+                    - listitem [box=-1,143,1,24]: IndexedDB score storageLocal persistence only • Status Draft • 3 annotations
+                    - listitem [box=-1,167,1,24]: Main ArchitectureStatus Draft • 3 annotations
+                    - listitem [box=-1,191,1,24]: main customer requestStatus Draft • 3 annotations
+                    - listitem [box=-1,215,1,24]: Office365 category email summaryStatus Draft • 3 annotations
+                    - listitem [box=-1,239,1,24]: Output folderStatus Completed • 3 annotations
+                    - listitem [box=-1,263,1,24]: Responsive game screen and acceptanceNo-scroll fit on screen • Status Draft • 3 annotations
+                    - listitem [box=-1,287,1,24]: TetrisGameStatus Active • 3 annotations
+        - generic [ref=e381] [box=100,225,1028,817]:
+          - generic [ref=e383] [box=134,259,960,570]:
+            - paragraph [ref=e384] [box=134,259,53,15]: Outline
+            - heading "Project object index" [level=5] [ref=e385] [box=134,282,211,37]
+            - tree "Project object index" [ref=e387] [box=134,328,960,502]:
+              - treeitem "TetrisGame Active" [ref=e388] [box=134,328,960,42]:
+                - button "TetrisGame Active" [ref=e391] [box=170,328,924,42]:
+                  - generic [ref=e393] [box=181,339,20,20]: folder
+                  - generic [ref=e394] [box=209,337,807,24]: TetrisGame
+                  - generic [ref=e395] [box=1024,339,60,19]: Active
+              - treeitem "Blazor WASM PWA app shape Draft" [ref=e396] [box=134,374,960,42]:
+                - button "Blazor WASM PWA app shape Draft" [ref=e399] [box=170,374,924,42]:
+                  - generic [ref=e401] [box=181,385,20,20]: view_in_ar
+                  - generic [ref=e402] [box=209,383,810,24]: Blazor WASM PWA app shape
+                  - generic [ref=e403] [box=1027,385,56,19]: Draft
+              - treeitem "Game loop and board behavior Draft" [ref=e404] [box=134,420,960,42]:
+                - button "Game loop and board behavior Draft" [ref=e407] [box=170,420,924,42]:
+                  - generic [ref=e409] [box=181,431,20,20]: view_in_ar
+                  - generic [ref=e410] [box=209,429,810,24]: Game loop and board behavior
+                  - generic [ref=e411] [box=1027,431,56,19]: Draft
+              - treeitem "IndexedDB score storage Draft" [ref=e412] [box=134,466,960,42]:
+                - button "IndexedDB score storage Draft" [ref=e415] [box=170,466,924,42]:
+                  - generic [ref=e417] [box=181,477,20,20]: view_in_ar
+                  - generic [ref=e418] [box=209,475,810,24]: IndexedDB score storage
+                  - generic [ref=e419] [box=1027,477,56,19]: Draft
+              - treeitem "Main App Draft" [selected] [ref=e420] [box=134,512,960,42]:
+                - button "Main App Draft" [ref=e423] [box=170,512,924,42]:
+                  - generic [ref=e425] [box=181,523,20,20]: view_in_ar
+                  - generic [ref=e426] [box=209,521,810,24]: Main App
+                  - generic [ref=e427] [box=1027,523,56,19]: Draft
+              - treeitem "Main Architecture Draft" [ref=e428] [box=134,558,960,42]:
+                - button "Main Architecture Draft" [ref=e431] [box=170,558,924,42]:
+                  - generic [ref=e433] [box=181,569,20,20]: view_in_ar
+                  - generic [ref=e434] [box=209,567,810,24]: Main Architecture
+                  - generic [ref=e435] [box=1027,569,56,19]: Draft
+              - treeitem "main customer request Draft" [ref=e436] [box=134,604,960,42]:
+                - button "main customer request Draft" [ref=e439] [box=170,604,924,42]:
+                  - generic [ref=e441] [box=181,615,20,20]: view_in_ar
+                  - generic [ref=e442] [box=209,613,810,24]: main customer request
+                  - generic [ref=e443] [box=1027,615,56,19]: Draft
+              - treeitem "Output folder Completed" [ref=e444] [box=134,650,960,42]:
+                - button "Output folder Completed" [ref=e447] [box=170,650,924,42]:
+                  - generic [ref=e449] [box=181,661,20,20]: view_in_ar
+                  - generic [ref=e450] [box=209,659,777,24]: Output folder
+                  - generic [ref=e451] [box=994,661,89,19]: Completed
+              - treeitem "Responsive game screen and acceptance Draft" [ref=e452] [box=134,696,960,42]:
+                - button "Responsive game screen and acceptance Draft" [ref=e455] [box=170,696,924,42]:
+                  - generic [ref=e457] [box=181,707,20,20]: view_in_ar
+                  - generic [ref=e458] [box=209,705,810,24]: Responsive game screen and acceptance
+                  - generic [ref=e459] [box=1027,707,56,19]: Draft
+              - 'treeitem "Example: Office365 Category Email Summary To Project Completed" [ref=e460] [box=134,742,960,42]':
+                - 'button "Example: Office365 Category Email Summary To Project Completed" [ref=e463] [box=170,742,924,42]':
+                  - generic [ref=e465] [box=181,753,20,20]: grid_view
+                  - generic [ref=e466] [box=209,751,777,24]: "Example: Office365 Category Email Summary To Project"
+                  - generic [ref=e467] [box=994,753,89,19]: Completed
+              - treeitem "Office365 category email summary Draft" [ref=e468] [box=134,788,960,42]:
+                - button "Office365 category email summary Draft" [ref=e471] [box=170,788,924,42]:
+                  - generic [ref=e473] [box=181,799,20,20]: article
+                  - generic [ref=e474] [box=209,797,810,24]: Office365 category email summary
+                  - generic [ref=e475] [box=1027,799,56,19]: Draft
+          - generic [ref=e477] [box=134,880,960,128]:
+            - paragraph [ref=e478] [box=134,880,118,15]: Canvas coverage
+            - heading "Graph health" [level=5] [ref=e479] [box=134,903,138,37]
+            - generic [ref=e480] [box=134,948,221,22]:
+              - generic [ref=e483] [box=134,948,68,22]: 11 nodes
+              - generic [ref=e486] [box=210,948,62,22]: 14 links
+              - generic [ref=e489] [box=280,948,75,22]: 1 selected
+            - paragraph [ref=e490] [box=134,984,823,25]: Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.
+      - dialog "Assign roles for Main App" [ref=e928] [box=13,13,1894,1054]:
+        - generic [ref=e929] [box=31,31,1857,1001]:
+          - generic [ref=e930] [box=31,31,1857,144]:
+            - generic [ref=e931] [box=31,31,1857,90]:
+              - paragraph [ref=e932] [box=31,31,140,15]: Process assignment
+              - heading "Assign roles for Main App" [level=5] [ref=e933] [box=31,50,275,37]
+              - paragraph [ref=e934] [box=31,97,1230,25]: Required process roles must be paired before the launch can continue. Select the resources manually or ask the HR manager to match them from CRM-HR and the AI agent directory.
+            - generic [ref=e935] [box=31,134,1857,42]:
+              - strong [ref=e937] [box=1160,136,336,23]: 20 of 20 roles assigned
+              - button "Cancel" [ref=e940] [box=1504,134,81,42]:
+                - generic [ref=e941] [box=1521,143,47,24]: Cancel
+              - button "Save and close" [ref=e942] [box=1593,134,138,42]:
+                - generic [ref=e943] [box=1610,143,104,24]: Save and close
+              - button "Review and start" [ref=e944] [box=1739,134,150,42]:
+                - generic [ref=e945] [box=1756,143,116,24]: Review and start
+          - generic [ref=e947] [box=31,192,1857,841]:
+            - complementary "Process roles" [ref=e948] [box=31,192,400,841]:
+              - generic [ref=e949] [box=47,212,369,43]:
+                - generic [ref=e950] [box=47,223,20,20]: search
+                - searchbox "Search roles" [ref=e951] [box=76,212,287,43]
+                - button "Filter roles" [ref=e952] [cursor=pointer] [box=373,212,42,42]:
+                  - generic [ref=e953] [box=384,223,20,20]: filter_list
+              - generic [ref=e955] [box=49,277,116,16]: Process roles (20)
+              - generic [ref=e956] [box=47,306,369,586]:
+                - button "All Summary review Overview 20/20" [ref=e957] [cursor=pointer] [box=47,306,350,70]:
+                  - generic [ref=e959] [box=65,338,20,20]: dashboard
+                  - generic [ref=e960] [box=103,318,217,61]:
+                    - strong [ref=e961] [box=103,318,217,19]: All
+                    - generic [ref=e962] [box=103,339,217,17]: Summary review
+                    - emphasis [ref=e963] [box=103,359,217,20]
+                  - generic [ref=e965] [box=332,334,52,29]: 20/20
+                - button "Clarify .NET scope and app type boundary (product-owner) Required Recommended" [ref=e966] [cursor=pointer] [box=47,387,350,70]:
+                  - generic [ref=e968] [box=65,429,20,20]: smart_toy
+                  - generic [ref=e969] [box=103,399,246,80]:
+                    - strong [ref=e970] [box=103,399,246,37]: Clarify .NET scope and app type boundary (product-owner)
+                    - generic [ref=e971] [box=103,440,246,17]: Required
+                    - emphasis [ref=e972] [box=103,459,246,20]
+                  - generic [ref=e975] [box=362,429,20,20]: check
+                - button "Run .NET architecture design and review subprocess (delivery-manager) Required Recommended" [ref=e976] [cursor=pointer] [box=47,469,350,70]:
+                  - generic [ref=e978] [box=65,520,20,20]: design_services
+                  - generic [ref=e979] [box=103,481,246,99]:
+                    - strong [ref=e980] [box=103,481,246,56]: Run .NET architecture design and review subprocess (delivery-manager)
+                    - generic [ref=e981] [box=103,540,246,17]: Required
+                    - emphasis [ref=e982] [box=103,560,246,20]
+                  - generic [ref=e985] [box=362,520,20,20]: check
+                - button "Run .NET implementation slice subprocess (delivery-manager) Required Recommended" [ref=e986] [cursor=pointer] [box=47,550,350,70]:
+                  - generic [ref=e988] [box=65,593,20,20]: smart_toy
+                  - generic [ref=e989] [box=103,563,246,80]:
+                    - strong [ref=e990] [box=103,563,246,37]: Run .NET implementation slice subprocess (delivery-manager)
+                    - generic [ref=e991] [box=103,603,246,17]: Required
+                    - emphasis [ref=e992] [box=103,623,246,20]
+                  - generic [ref=e995] [box=362,593,20,20]: check
+                - button "Complete peer review and integration readiness (lead-engineer) Required Recommended" [ref=e996] [cursor=pointer] [box=47,632,350,70]:
+                  - generic [ref=e998] [box=65,684,20,20]: fact_check
+                  - generic [ref=e999] [box=103,644,246,99]:
+                    - strong [ref=e1000] [box=103,644,246,56]: Complete peer review and integration readiness (lead-engineer)
+                    - generic [ref=e1001] [box=103,703,246,17]: Required
+                    - emphasis [ref=e1002] [box=103,723,246,20]
+                  - generic [ref=e1005] [box=362,684,20,20]: check
+                - button "Run QA validation and runtime or browser proof (qa-lead) Required Recommended" [ref=e1006] [cursor=pointer] [box=47,714,350,70]:
+                  - generic [ref=e1008] [box=65,756,20,20]: fact_check
+                  - generic [ref=e1009] [box=103,726,246,80]:
+                    - strong [ref=e1010] [box=103,726,246,37]: Run QA validation and runtime or browser proof (qa-lead)
+                    - generic [ref=e1011] [box=103,766,246,17]: Required
+                    - emphasis [ref=e1012] [box=103,786,246,20]
+                  - generic [ref=e1015] [box=362,756,20,20]: check
+                - button "Repair validation findings (lead-engineer) Required Recommended" [ref=e1016] [cursor=pointer] [box=47,795,350,70]:
+                  - generic [ref=e1018] [box=65,837,20,20]: smart_toy
+                  - generic [ref=e1019] [box=103,807,246,80]:
+                    - strong [ref=e1020] [box=103,807,246,37]: Repair validation findings (lead-engineer)
+                    - generic [ref=e1021] [box=103,848,246,17]: Required
+                    - emphasis [ref=e1022] [box=103,867,246,20]
+                  - generic [ref=e1025] [box=362,837,20,20]: check
+                - button "Re-run QA validation and runtime or browser proof after repair (qa-lead) Required Recommended" [ref=e1026] [cursor=pointer] [box=47,877,350,70]:
+                  - generic [ref=e1028] [box=65,928,20,20]: fact_check
+                  - generic [ref=e1029] [box=103,889,246,99]:
+                    - strong [ref=e1030] [box=103,889,246,56]: Re-run QA validation and runtime or browser proof after repair (qa-lead)
+                    - generic [ref=e1031] [box=103,948,246,17]: Required
+                    - emphasis [ref=e1032] [box=103,968,246,20]
+                  - generic [ref=e1035] [box=362,928,20,20]: check
+                - button "Perform security and data-handling review (security-reviewer) Required Recommended" [ref=e1036] [cursor=pointer] [box=47,958,350,70]:
+                  - generic [ref=e1038] [box=65,1001,20,20]: fact_check
+                  - generic [ref=e1039] [box=103,971,246,80]:
+                    - strong [ref=e1040] [box=103,971,246,37]: Perform security and data-handling review (security-reviewer)
+                    - generic [ref=e1041] [box=103,1011,246,17]: Required
+                    - emphasis [ref=e1042] [box=103,1031,246,20]
+                  - generic [ref=e1045] [box=362,1001,20,20]: check
+                - button "Record .NET run commands under process run node (delivery-manager) Required Recommended" [ref=e1046] [cursor=pointer] [box=47,1040,350,70]:
+                  - generic [ref=e1048] [box=65,1092,20,20]: smart_toy
+                  - generic [ref=e1049] [box=103,1052,246,99]:
+                    - strong [ref=e1050] [box=103,1052,246,56]: Record .NET run commands under process run node (delivery-manager)
+                    - generic [ref=e1051] [box=103,1111,246,17]: Required
+                    - emphasis [ref=e1052] [box=103,1131,246,20]
+                  - generic [ref=e1055] [box=362,1092,20,20]: check
+                - button "Capture and store .NET UI screenshots (qa-lead) Required Recommended" [ref=e1056] [cursor=pointer] [box=47,1122,350,70]:
+                  - generic [ref=e1058] [box=65,1164,20,20]: fact_check
+                  - generic [ref=e1059] [box=103,1134,246,80]:
+                    - strong [ref=e1060] [box=103,1134,246,37]: Capture and store .NET UI screenshots (qa-lead)
+                    - generic [ref=e1061] [box=103,1174,246,17]: Required
+                    - emphasis [ref=e1062] [box=103,1194,246,20]
+                  - generic [ref=e1065] [box=362,1164,20,20]: check
+                - button "Approve first-pass release readiness (delivery-manager) Required Recommended" [ref=e1066] [cursor=pointer] [box=47,1203,350,70]:
+                  - generic [ref=e1068] [box=65,1245,20,20]: smart_toy
+                  - generic [ref=e1069] [box=103,1215,246,80]:
+                    - strong [ref=e1070] [box=103,1215,246,37]: Approve first-pass release readiness (delivery-manager)
+                    - generic [ref=e1071] [box=103,1256,246,17]: Required
+                    - emphasis [ref=e1072] [box=103,1275,246,20]
+                  - generic [ref=e1075] [box=362,1245,20,20]: check
+                - button "Execute first-pass controlled release rollout (release-manager) Required Recommended" [ref=e1076] [cursor=pointer] [box=47,1285,350,70]:
+                  - generic [ref=e1078] [box=65,1327,20,20]: smart_toy
+                  - generic [ref=e1079] [box=103,1297,246,80]:
+                    - strong [ref=e1080] [box=103,1297,246,37]: Execute first-pass controlled release rollout (release-manager)
+                    - generic [ref=e1081] [box=103,1337,246,17]: Required
+                    - emphasis [ref=e1082] [box=103,1357,246,20]
+                  - generic [ref=e1085] [box=362,1327,20,20]: check
+                - button "Capture first-pass post-release learning (delivery-manager) Required Recommended" [ref=e1086] [cursor=pointer] [box=47,1366,350,70]:
+                  - generic [ref=e1088] [box=65,1409,20,20]: smart_toy
+                  - generic [ref=e1089] [box=103,1379,246,80]:
+                    - strong [ref=e1090] [box=103,1379,246,37]: Capture first-pass post-release learning (delivery-manager)
+                    - generic [ref=e1091] [box=103,1419,246,17]: Required
+                    - emphasis [ref=e1092] [box=103,1439,246,20]
+                  - generic [ref=e1095] [box=362,1409,20,20]: check
+                - button "Perform security review after repair (security-reviewer) Required Recommended" [ref=e1096] [cursor=pointer] [box=47,1448,350,70]:
+                  - generic [ref=e1098] [box=65,1490,20,20]: fact_check
+                  - generic [ref=e1099] [box=103,1460,246,80]:
+                    - strong [ref=e1100] [box=103,1460,246,37]: Perform security review after repair (security-reviewer)
+                    - generic [ref=e1101] [box=103,1500,246,17]: Required
+                    - emphasis [ref=e1102] [box=103,1520,246,20]
+                  - generic [ref=e1105] [box=362,1490,20,20]: check
+                - button "Record repaired .NET run commands under process run node (delivery-manager) Required Recommended" [ref=e1106] [cursor=pointer] [box=47,1530,350,70]:
+                  - generic [ref=e1108] [box=65,1581,20,20]: smart_toy
+                  - generic [ref=e1109] [box=103,1542,246,99]:
+                    - strong [ref=e1110] [box=103,1542,246,56]: Record repaired .NET run commands under process run node (delivery-manager)
+                    - generic [ref=e1111] [box=103,1601,246,17]: Required
+                    - emphasis [ref=e1112] [box=103,1620,246,20]
+                  - generic [ref=e1115] [box=362,1581,20,20]: check
+                - button "Capture and store repaired .NET UI screenshots (qa-lead) Required Recommended" [ref=e1116] [cursor=pointer] [box=47,1611,350,70]:
+                  - generic [ref=e1118] [box=65,1653,20,20]: fact_check
+                  - generic [ref=e1119] [box=103,1623,246,80]:
+                    - strong [ref=e1120] [box=103,1623,246,37]: Capture and store repaired .NET UI screenshots (qa-lead)
+                    - generic [ref=e1121] [box=103,1664,246,17]: Required
+                    - emphasis [ref=e1122] [box=103,1683,246,20]
+                  - generic [ref=e1125] [box=362,1653,20,20]: check
+                - button "Escalate unresolved repair findings (delivery-manager) Required Recommended" [ref=e1126] [cursor=pointer] [box=47,1693,350,70]:
+                  - generic [ref=e1128] [box=65,1735,20,20]: smart_toy
+                  - generic [ref=e1129] [box=103,1705,246,80]:
+                    - strong [ref=e1130] [box=103,1705,246,37]: Escalate unresolved repair findings (delivery-manager)
+                    - generic [ref=e1131] [box=103,1745,246,17]: Required
+                    - emphasis [ref=e1132] [box=103,1765,246,20]
+                  - generic [ref=e1135] [box=362,1735,20,20]: check
+                - button "Approve repaired release readiness (delivery-manager) Required Recommended" [ref=e1136] [cursor=pointer] [box=47,1774,350,70]:
+                  - generic [ref=e1138] [box=65,1817,20,20]: smart_toy
+                  - generic [ref=e1139] [box=103,1787,246,80]:
+                    - strong [ref=e1140] [box=103,1787,246,37]: Approve repaired release readiness (delivery-manager)
+                    - generic [ref=e1141] [box=103,1827,246,17]: Required
+                    - emphasis [ref=e1142] [box=103,1847,246,20]
+                  - generic [ref=e1145] [box=362,1817,20,20]: check
+                - button "Execute repaired controlled release rollout (release-manager) Required Recommended" [ref=e1146] [cursor=pointer] [box=47,1856,350,70]:
+                  - generic [ref=e1148] [box=65,1898,20,20]: smart_toy
+                  - generic [ref=e1149] [box=103,1868,246,80]:
+                    - strong [ref=e1150] [box=103,1868,246,37]: Execute repaired controlled release rollout (release-manager)
+                    - generic [ref=e1151] [box=103,1908,246,17]: Required
+                    - emphasis [ref=e1152] [box=103,1928,246,20]
+                  - generic [ref=e1155] [box=362,1898,20,20]: check
+                - button "Capture repaired-release learning (delivery-manager) Required Recommended" [ref=e1156] [cursor=pointer] [box=47,1938,350,70]:
+                  - generic [ref=e1158] [box=65,1980,20,20]: smart_toy
+                  - generic [ref=e1159] [box=103,1950,246,80]:
+                    - strong [ref=e1160] [box=103,1950,246,37]: Capture repaired-release learning (delivery-manager)
+                    - generic [ref=e1161] [box=103,1990,246,17]: Required
+                    - emphasis [ref=e1162] [box=103,2010,246,20]
+                  - generic [ref=e1165] [box=362,1980,20,20]: check
+              - generic [ref=e1166] [box=47,908,369,109]:
+                - generic [ref=e1168] [box=62,956,20,20]: support_agent
+                - generic [ref=e1169] [box=94,923,179,78]:
+                  - strong [ref=e1170] [box=94,923,179,41]: Need help with assignments?
+                  - generic [ref=e1171] [box=94,965,179,36]: Ask the HR AI agent for suggestions
+                - button "Ask HR AI" [ref=e1172] [cursor=pointer] [box=285,944,115,38]:
+                  - generic [ref=e1173] [box=300,952,20,20]: auto_awesome
+                  - text: Ask HR AI
+            - main [ref=e1174] [box=431,192,1457,841]:
+              - generic [ref=e1175] [box=453,212,1414,147]:
+                - generic [ref=e1176] [box=470,253,700,65]:
+                  - generic [ref=e1177] [box=470,253,700,14]: Preflight estimate
+                  - strong [ref=e1178] [box=470,271,700,25]: $0.00
+                  - generic [ref=e1179] [box=470,299,700,19]: 20 executable assignment(s) resolved from process template 'software-delivery'.
+                - generic [ref=e1180] [box=1185,228,665,115]:
+                  - generic [ref=e1181] [box=1185,228,158,115]:
+                    - term [ref=e1182] [box=1198,240,132,41]: Elapsed
+                    - definition [ref=e1183] [box=1198,286,132,45]: 600 min
+                  - generic [ref=e1184] [box=1354,228,158,115]:
+                    - term [ref=e1185] [box=1367,240,132,41]: Touch
+                    - definition [ref=e1186] [box=1367,286,132,45]: 400 min
+                  - generic [ref=e1187] [box=1523,228,158,115]:
+                    - term [ref=e1188] [box=1536,240,132,41]: Confidence
+                    - definition [ref=e1189] [box=1536,286,132,45]: Template
+                  - generic [ref=e1190] [box=1692,228,158,115]:
+                    - term [ref=e1191] [box=1705,240,132,14]: Source
+                    - definition [ref=e1192] [box=1705,259,132,72]: Multi-team software delivery and release governance
+              - generic [ref=e1193] [box=453,375,1414,502]:
+                - article [ref=e1194] [box=453,375,266,285]:
+                  - button "1 Clarify .NET scope and app type boundary (product-owner) Required" [ref=e1195] [cursor=pointer] [box=468,390,237,74]:
+                    - generic [ref=e1196] [box=468,390,29,29]: "1"
+                    - generic [ref=e1197] [box=507,390,163,74]
+                    - generic [ref=e1201] [box=683,392,20,20]: check
+                  - generic [ref=e1202] [box=468,480,237,41]:
+                    - generic [ref=e1203] [box=480,491,20,20]: auto_awesome
+                    - generic [ref=e1204] [box=505,491,115,19]: HR AI recommended
+                  - generic [ref=e1205] [box=468,534,237,107]:
+                    - img "Business Strategist" [ref=e1206] [box=481,548,56,56]
+                    - generic [ref=e1207] [box=549,556,142,40]
+                    - generic [ref=e1210] [box=481,615,209,22]
+                    - generic [ref=e1218] [box=538,648,96,29]
+                  - button "Change agent" [ref=e1220] [cursor=pointer] [box=468,654,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1221] [box=619,665,20,20]: edit
+                - article [ref=e1222] [box=735,375,266,285]:
+                  - button "2 Run .NET architecture design and review subprocess (delivery-manager) Required" [ref=e1223] [cursor=pointer] [box=750,390,237,92]:
+                    - generic [ref=e1224] [box=750,390,29,29]: "2"
+                    - generic [ref=e1225] [box=789,390,163,92]
+                    - generic [ref=e1229] [box=965,392,20,20]: check
+                  - generic [ref=e1230] [box=750,499,237,41]:
+                    - generic [ref=e1231] [box=762,509,20,20]: auto_awesome
+                    - generic [ref=e1232] [box=787,510,115,19]: HR AI recommended
+                  - generic [ref=e1233] [box=750,552,237,107]:
+                    - img "Delivery Manager" [ref=e1234] [box=764,566,56,56]
+                    - generic [ref=e1235] [box=831,574,142,40]
+                    - generic [ref=e1238] [box=764,633,209,22]
+                    - generic [ref=e1246] [box=821,667,96,29]
+                  - button "Change agent" [ref=e1248] [cursor=pointer] [box=750,672,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1249] [box=902,683,20,20]: edit
+                - article [ref=e1250] [box=1017,375,266,285]:
+                  - button "3 Run .NET implementation slice subprocess (delivery-manager) Required" [ref=e1251] [cursor=pointer] [box=1032,390,237,92]:
+                    - generic [ref=e1252] [box=1032,390,29,29]: "3"
+                    - generic [ref=e1253] [box=1071,390,163,92]
+                    - generic [ref=e1257] [box=1247,392,20,20]: check
+                  - generic [ref=e1258] [box=1032,499,237,41]:
+                    - generic [ref=e1259] [box=1044,509,20,20]: auto_awesome
+                    - generic [ref=e1260] [box=1070,510,115,19]: HR AI recommended
+                  - generic [ref=e1261] [box=1032,552,237,107]:
+                    - img "Delivery Manager" [ref=e1262] [box=1046,566,56,56]
+                    - generic [ref=e1263] [box=1113,574,142,40]
+                    - generic [ref=e1266] [box=1046,633,209,22]
+                    - generic [ref=e1274] [box=1103,667,96,29]
+                  - button "Change agent" [ref=e1276] [cursor=pointer] [box=1032,672,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1277] [box=1184,683,20,20]: edit
+                - article [ref=e1278] [box=1300,375,266,285]:
+                  - button "4 Complete peer review and integration readiness (lead-engineer) Required" [ref=e1279] [cursor=pointer] [box=1314,390,237,92]:
+                    - generic [ref=e1280] [box=1314,390,29,29]: "4"
+                    - generic [ref=e1281] [box=1353,390,163,92]
+                    - generic [ref=e1285] [box=1529,392,20,20]: check
+                  - generic [ref=e1286] [box=1314,499,237,41]:
+                    - generic [ref=e1287] [box=1326,509,20,20]: auto_awesome
+                    - generic [ref=e1288] [box=1352,510,115,19]: HR AI recommended
+                  - generic [ref=e1289] [box=1314,552,237,107]:
+                    - img ".NET Application Developer" [ref=e1290] [box=1328,567,56,56]
+                    - generic [ref=e1291] [box=1395,566,142,58]
+                    - generic [ref=e1294] [box=1328,636,209,22]
+                    - generic [ref=e1302] [box=1385,669,96,29]
+                  - button "Change agent" [ref=e1304] [cursor=pointer] [box=1314,672,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1305] [box=1466,683,20,20]: edit
+                - article [ref=e1306] [box=1582,375,266,285]:
+                  - button "5 Run QA validation and runtime or browser proof (qa-lead) Required" [ref=e1307] [cursor=pointer] [box=1596,390,237,74]:
+                    - generic [ref=e1308] [box=1596,390,29,29]: "5"
+                    - generic [ref=e1309] [box=1636,390,163,74]
+                    - generic [ref=e1313] [box=1811,392,20,20]: check
+                  - generic [ref=e1314] [box=1596,480,237,41]:
+                    - generic [ref=e1315] [box=1608,491,20,20]: auto_awesome
+                    - generic [ref=e1316] [box=1634,491,115,19]: HR AI recommended
+                  - generic [ref=e1317] [box=1596,534,237,107]:
+                    - img "Delivery QA Observer" [ref=e1318] [box=1610,549,56,56]
+                    - generic [ref=e1319] [box=1677,548,142,58]
+                    - generic [ref=e1322] [box=1610,617,209,22]
+                    - generic [ref=e1330] [box=1667,650,96,29]
+                  - button "Change agent" [ref=e1332] [cursor=pointer] [box=1596,654,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1333] [box=1748,665,20,20]: edit
+                - article [ref=e1334] [box=453,676,266,285]:
+                  - button "6 Repair validation findings (lead-engineer) Required" [ref=e1335] [cursor=pointer] [box=468,691,237,74]:
+                    - generic [ref=e1336] [box=468,691,29,29]: "6"
+                    - generic [ref=e1337] [box=507,691,163,74]
+                    - generic [ref=e1341] [box=683,693,20,20]: check
+                  - generic [ref=e1342] [box=468,781,237,41]:
+                    - generic [ref=e1343] [box=480,792,20,20]: auto_awesome
+                    - generic [ref=e1344] [box=505,792,115,19]: HR AI recommended
+                  - generic [ref=e1345] [box=468,835,237,107]:
+                    - img ".NET Application Developer" [ref=e1346] [box=481,850,56,56]
+                    - generic [ref=e1347] [box=549,849,142,58]
+                    - generic [ref=e1350] [box=481,918,209,22]
+                    - generic [ref=e1358] [box=538,951,96,29]
+                  - button "Change agent" [ref=e1360] [cursor=pointer] [box=468,955,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1361] [box=619,966,20,20]: edit
+                - article [ref=e1362] [box=735,676,266,285]:
+                  - button "7 Re-run QA validation and runtime or browser proof after repair (qa-lead) Required" [ref=e1363] [cursor=pointer] [box=750,691,237,92]:
+                    - generic [ref=e1364] [box=750,691,29,29]: "7"
+                    - generic [ref=e1365] [box=789,691,163,92]
+                    - generic [ref=e1369] [box=965,693,20,20]: check
+                  - generic [ref=e1370] [box=750,800,237,41]:
+                    - generic [ref=e1371] [box=762,810,20,20]: auto_awesome
+                    - generic [ref=e1372] [box=787,811,115,19]: HR AI recommended
+                  - generic [ref=e1373] [box=750,853,237,107]:
+                    - img "Delivery QA Observer" [ref=e1374] [box=764,868,56,56]
+                    - generic [ref=e1375] [box=831,867,142,58]
+                    - generic [ref=e1378] [box=764,936,209,22]
+                    - generic [ref=e1386] [box=821,970,96,29]
+                  - button "Change agent" [ref=e1388] [cursor=pointer] [box=750,973,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1389] [box=902,984,20,20]: edit
+                - article [ref=e1390] [box=1017,676,266,285]:
+                  - button "8 Perform security and data-handling review (security-reviewer) Required" [ref=e1391] [cursor=pointer] [box=1032,691,237,74]:
+                    - generic [ref=e1392] [box=1032,691,29,29]: "8"
+                    - generic [ref=e1393] [box=1071,691,163,74]
+                    - generic [ref=e1397] [box=1247,693,20,20]: check
+                  - generic [ref=e1398] [box=1032,781,237,41]:
+                    - generic [ref=e1399] [box=1044,792,20,20]: auto_awesome
+                    - generic [ref=e1400] [box=1070,792,115,19]: HR AI recommended
+                  - generic [ref=e1401] [box=1032,835,237,107]:
+                    - img "Security Reviewer" [ref=e1402] [box=1046,849,56,56]
+                    - generic [ref=e1403] [box=1113,857,142,40]
+                    - generic [ref=e1406] [box=1046,916,209,22]
+                    - generic [ref=e1414] [box=1103,949,96,29]
+                  - button "Change agent" [ref=e1416] [cursor=pointer] [box=1032,955,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1417] [box=1184,966,20,20]: edit
+                - article [ref=e1418] [box=1300,676,266,285]:
+                  - button "9 Record .NET run commands under process run node (delivery-manager) Required" [ref=e1419] [cursor=pointer] [box=1314,691,237,92]:
+                    - generic [ref=e1420] [box=1314,691,29,29]: "9"
+                    - generic [ref=e1421] [box=1353,691,163,92]
+                    - generic [ref=e1425] [box=1529,693,20,20]: check
+                  - generic [ref=e1426] [box=1314,800,237,41]:
+                    - generic [ref=e1427] [box=1326,810,20,20]: auto_awesome
+                    - generic [ref=e1428] [box=1352,811,115,19]: HR AI recommended
+                  - generic [ref=e1429] [box=1314,853,237,107]:
+                    - img "Delivery Manager" [ref=e1430] [box=1328,867,56,56]
+                    - generic [ref=e1431] [box=1395,875,142,40]
+                    - generic [ref=e1434] [box=1328,934,209,22]
+                    - generic [ref=e1442] [box=1385,968,96,29]
+                  - button "Change agent" [ref=e1444] [cursor=pointer] [box=1314,973,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1445] [box=1466,984,20,20]: edit
+                - article [ref=e1446] [box=1582,676,266,285]:
+                  - button "10 Capture and store .NET UI screenshots (qa-lead) Required" [ref=e1447] [cursor=pointer] [box=1596,691,237,74]:
+                    - generic [ref=e1448] [box=1596,691,29,29]: "10"
+                    - generic [ref=e1449] [box=1636,691,163,74]
+                    - generic [ref=e1453] [box=1811,693,20,20]: check
+                  - generic [ref=e1454] [box=1596,781,237,41]:
+                    - generic [ref=e1455] [box=1608,792,20,20]: auto_awesome
+                    - generic [ref=e1456] [box=1634,792,115,19]: HR AI recommended
+                  - generic [ref=e1457] [box=1596,835,237,107]:
+                    - img "Delivery QA Observer" [ref=e1458] [box=1610,850,56,56]
+                    - generic [ref=e1459] [box=1677,849,142,58]
+                    - generic [ref=e1462] [box=1610,918,209,22]
+                    - generic [ref=e1470] [box=1667,951,96,29]
+                  - button "Change agent" [ref=e1472] [cursor=pointer] [box=1596,955,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1473] [box=1748,966,20,20]: edit
+                - article [ref=e1474] [box=453,977,266,285]:
+                  - button "11 Approve first-pass release readiness (delivery-manager) Required" [ref=e1475] [cursor=pointer] [box=468,991,237,74]:
+                    - generic [ref=e1476] [box=468,991,29,29]: "11"
+                    - generic [ref=e1477] [box=507,991,163,74]
+                    - generic [ref=e1481] [box=683,993,20,20]: check
+                  - generic [ref=e1482] [box=468,1082,237,41]:
+                    - generic [ref=e1483] [box=480,1092,20,20]: auto_awesome
+                    - generic [ref=e1484] [box=505,1093,115,19]: HR AI recommended
+                  - generic [ref=e1485] [box=468,1136,237,107]:
+                    - img "Delivery Manager" [ref=e1486] [box=481,1149,56,56]
+                    - generic [ref=e1487] [box=549,1157,142,40]
+                    - generic [ref=e1490] [box=481,1217,209,22]
+                    - generic [ref=e1498] [box=538,1250,96,29]
+                  - button "Change agent" [ref=e1500] [cursor=pointer] [box=468,1256,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1501] [box=619,1266,20,20]: edit
+                - article [ref=e1502] [box=735,977,266,285]:
+                  - button "12 Execute first-pass controlled release rollout (release-manager) Required" [ref=e1503] [cursor=pointer] [box=750,991,237,92]:
+                    - generic [ref=e1504] [box=750,991,29,29]: "12"
+                    - generic [ref=e1505] [box=789,991,163,92]
+                    - generic [ref=e1509] [box=965,993,20,20]: check
+                  - generic [ref=e1510] [box=750,1100,237,41]:
+                    - generic [ref=e1511] [box=762,1111,20,20]: auto_awesome
+                    - generic [ref=e1512] [box=787,1111,115,19]: HR AI recommended
+                  - generic [ref=e1513] [box=750,1154,237,107]:
+                    - img "Delivery Manager" [ref=e1514] [box=764,1168,56,56]
+                    - generic [ref=e1515] [box=831,1176,142,40]
+                    - generic [ref=e1518] [box=764,1235,209,22]
+                    - generic [ref=e1526] [box=821,1268,96,29]
+                  - button "Change agent" [ref=e1528] [cursor=pointer] [box=750,1274,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1529] [box=902,1285,20,20]: edit
+                - article [ref=e1530] [box=1017,977,266,285]:
+                  - button "13 Capture first-pass post-release learning (delivery-manager) Required" [ref=e1531] [cursor=pointer] [box=1032,991,237,74]:
+                    - generic [ref=e1532] [box=1032,991,29,29]: "13"
+                    - generic [ref=e1533] [box=1071,991,163,74]
+                    - generic [ref=e1537] [box=1247,993,20,20]: check
+                  - generic [ref=e1538] [box=1032,1082,237,41]:
+                    - generic [ref=e1539] [box=1044,1092,20,20]: auto_awesome
+                    - generic [ref=e1540] [box=1070,1093,115,19]: HR AI recommended
+                  - generic [ref=e1541] [box=1032,1136,237,107]:
+                    - img "Delivery Manager" [ref=e1542] [box=1046,1149,56,56]
+                    - generic [ref=e1543] [box=1113,1157,142,40]
+                    - generic [ref=e1546] [box=1046,1217,209,22]
+                    - generic [ref=e1554] [box=1103,1250,96,29]
+                  - button "Change agent" [ref=e1556] [cursor=pointer] [box=1032,1256,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1557] [box=1184,1266,20,20]: edit
+                - article [ref=e1558] [box=1300,977,266,285]:
+                  - button "14 Perform security review after repair (security-reviewer) Required" [ref=e1559] [cursor=pointer] [box=1314,991,237,74]:
+                    - generic [ref=e1560] [box=1314,991,29,29]: "14"
+                    - generic [ref=e1561] [box=1353,991,163,74]
+                    - generic [ref=e1565] [box=1529,993,20,20]: check
+                  - generic [ref=e1566] [box=1314,1082,237,41]:
+                    - generic [ref=e1567] [box=1326,1092,20,20]: auto_awesome
+                    - generic [ref=e1568] [box=1352,1093,115,19]: HR AI recommended
+                  - generic [ref=e1569] [box=1314,1136,237,107]:
+                    - img "Security Reviewer" [ref=e1570] [box=1328,1149,56,56]
+                    - generic [ref=e1571] [box=1395,1157,142,40]
+                    - generic [ref=e1574] [box=1328,1217,209,22]
+                    - generic [ref=e1582] [box=1385,1250,96,29]
+                  - button "Change agent" [ref=e1584] [cursor=pointer] [box=1314,1256,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1585] [box=1466,1266,20,20]: edit
+                - article [ref=e1586] [box=1582,977,266,285]:
+                  - button "15 Record repaired .NET run commands under process run node (delivery-manager) Required" [ref=e1587] [cursor=pointer] [box=1596,991,237,92]:
+                    - generic [ref=e1588] [box=1596,991,29,29]: "15"
+                    - generic [ref=e1589] [box=1636,991,163,92]
+                    - generic [ref=e1593] [box=1811,993,20,20]: check
+                  - generic [ref=e1594] [box=1596,1100,237,41]:
+                    - generic [ref=e1595] [box=1608,1111,20,20]: auto_awesome
+                    - generic [ref=e1596] [box=1634,1111,115,19]: HR AI recommended
+                  - generic [ref=e1597] [box=1596,1154,237,107]:
+                    - img "Delivery Manager" [ref=e1598] [box=1610,1168,56,56]
+                    - generic [ref=e1599] [box=1677,1176,142,40]
+                    - generic [ref=e1602] [box=1610,1235,209,22]
+                    - generic [ref=e1610] [box=1667,1268,96,29]
+                  - button "Change agent" [ref=e1612] [cursor=pointer] [box=1596,1274,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1613] [box=1748,1285,20,20]: edit
+                - article [ref=e1614] [box=453,1278,266,285]:
+                  - button "16 Capture and store repaired .NET UI screenshots (qa-lead) Required" [ref=e1615] [cursor=pointer] [box=468,1292,237,74]:
+                    - generic [ref=e1616] [box=468,1292,29,29]: "16"
+                    - generic [ref=e1617] [box=507,1292,163,74]
+                    - generic [ref=e1621] [box=683,1294,20,20]: check
+                  - generic [ref=e1622] [box=468,1383,237,41]:
+                    - generic [ref=e1623] [box=480,1393,20,20]: auto_awesome
+                    - generic [ref=e1624] [box=505,1394,115,19]: HR AI recommended
+                  - generic [ref=e1625] [box=468,1436,237,107]:
+                    - img "Delivery QA Observer" [ref=e1626] [box=481,1451,56,56]
+                    - generic [ref=e1627] [box=549,1450,142,58]
+                    - generic [ref=e1630] [box=481,1520,209,22]
+                    - generic [ref=e1638] [box=538,1553,96,29]
+                  - button "Change agent" [ref=e1640] [cursor=pointer] [box=468,1556,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1641] [box=619,1567,20,20]: edit
+                - article [ref=e1642] [box=735,1278,266,285]:
+                  - button "17 Escalate unresolved repair findings (delivery-manager) Required" [ref=e1643] [cursor=pointer] [box=750,1292,237,74]:
+                    - generic [ref=e1644] [box=750,1292,29,29]: "17"
+                    - generic [ref=e1645] [box=789,1292,163,74]
+                    - generic [ref=e1649] [box=965,1294,20,20]: check
+                  - generic [ref=e1650] [box=750,1383,237,41]:
+                    - generic [ref=e1651] [box=762,1393,20,20]: auto_awesome
+                    - generic [ref=e1652] [box=787,1394,115,19]: HR AI recommended
+                  - generic [ref=e1653] [box=750,1436,237,107]:
+                    - img "Delivery Manager" [ref=e1654] [box=764,1450,56,56]
+                    - generic [ref=e1655] [box=831,1458,142,40]
+                    - generic [ref=e1658] [box=764,1517,209,22]
+                    - generic [ref=e1666] [box=821,1551,96,29]
+                  - button "Change agent" [ref=e1668] [cursor=pointer] [box=750,1556,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1669] [box=902,1567,20,20]: edit
+                - article [ref=e1670] [box=1017,1278,266,285]:
+                  - button "18 Approve repaired release readiness (delivery-manager) Required" [ref=e1671] [cursor=pointer] [box=1032,1292,237,74]:
+                    - generic [ref=e1672] [box=1032,1292,29,29]: "18"
+                    - generic [ref=e1673] [box=1071,1292,163,74]
+                    - generic [ref=e1677] [box=1247,1294,20,20]: check
+                  - generic [ref=e1678] [box=1032,1383,237,41]:
+                    - generic [ref=e1679] [box=1044,1393,20,20]: auto_awesome
+                    - generic [ref=e1680] [box=1070,1394,115,19]: HR AI recommended
+                  - generic [ref=e1681] [box=1032,1436,237,107]:
+                    - img "Delivery Manager" [ref=e1682] [box=1046,1450,56,56]
+                    - generic [ref=e1683] [box=1113,1458,142,40]
+                    - generic [ref=e1686] [box=1046,1517,209,22]
+                    - generic [ref=e1694] [box=1103,1551,96,29]
+                  - button "Change agent" [ref=e1696] [cursor=pointer] [box=1032,1556,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1697] [box=1184,1567,20,20]: edit
+                - article [ref=e1698] [box=1300,1278,266,285]:
+                  - button "19 Execute repaired controlled release rollout (release-manager) Required" [ref=e1699] [cursor=pointer] [box=1314,1292,237,92]:
+                    - generic [ref=e1700] [box=1314,1292,29,29]: "19"
+                    - generic [ref=e1701] [box=1353,1292,163,92]
+                    - generic [ref=e1705] [box=1529,1294,20,20]: check
+                  - generic [ref=e1706] [box=1314,1401,237,41]:
+                    - generic [ref=e1707] [box=1326,1412,20,20]: auto_awesome
+                    - generic [ref=e1708] [box=1352,1412,115,19]: HR AI recommended
+                  - generic [ref=e1709] [box=1314,1455,237,107]:
+                    - img "Delivery Manager" [ref=e1710] [box=1328,1469,56,56]
+                    - generic [ref=e1711] [box=1395,1477,142,40]
+                    - generic [ref=e1714] [box=1328,1536,209,22]
+                    - generic [ref=e1722] [box=1385,1569,96,29]
+                  - button "Change agent" [ref=e1724] [cursor=pointer] [box=1314,1575,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1725] [box=1466,1586,20,20]: edit
+                - article [ref=e1726] [box=1582,1278,266,285]:
+                  - button "20 Capture repaired-release learning (delivery-manager) Required" [ref=e1727] [cursor=pointer] [box=1596,1292,237,74]:
+                    - generic [ref=e1728] [box=1596,1292,29,29]: "20"
+                    - generic [ref=e1729] [box=1636,1292,163,74]
+                    - generic [ref=e1733] [box=1811,1294,20,20]: check
+                  - generic [ref=e1734] [box=1596,1383,237,41]:
+                    - generic [ref=e1735] [box=1608,1393,20,20]: auto_awesome
+                    - generic [ref=e1736] [box=1634,1394,115,19]: HR AI recommended
+                  - generic [ref=e1737] [box=1596,1436,237,107]:
+                    - img "Delivery Manager" [ref=e1738] [box=1610,1450,56,56]
+                    - generic [ref=e1739] [box=1677,1458,142,40]
+                    - generic [ref=e1742] [box=1610,1517,209,22]
+                    - generic [ref=e1750] [box=1667,1551,96,29]
+                  - button "Change agent" [ref=e1752] [cursor=pointer] [box=1596,1556,237,42]:
+                    - text: Change agent
+                    - generic [ref=e1753] [box=1748,1567,20,20]: edit
+              - generic [ref=e1754] [box=453,887,1414,134]:
+                - generic [ref=e1755] [box=470,903,739,103]:
+                  - img "Business Strategist" [ref=e1756] [box=470,926,56,56]
+                  - generic [ref=e1757] [box=540,903,669,103]:
+                    - generic [ref=e1758] [box=540,903,669,26]
+                    - paragraph [ref=e1761] [box=540,933,669,38]: Creates grounded business plans, operating assumptions, risk views, and cross-functional handoffs for non-code processes.
+                    - generic [ref=e1762] [box=540,979,669,27]
+                - button "Details" [ref=e1766] [cursor=pointer] [box=1225,936,71,38]
+                - generic [ref=e1767] [box=1312,906,480,97]:
+                  - strong [ref=e1768] [box=1330,906,462,19]: Why recommended?
+                  - generic [ref=e1769] [box=1330,931,462,20]:
+                    - generic [ref=e1770] [box=1330,931,20,20]: check_circle
+                    - text: Recommended for role 'product-owner' on step 'feature-intake'.
+                  - generic [ref=e1771] [box=1330,957,462,20]:
+                    - generic [ref=e1772] [box=1330,957,20,20]: check_circle
+                    - text: Active
+                  - generic [ref=e1773] [box=1330,983,462,20]:
+                    - generic [ref=e1774] [box=1330,983,20,20]: check_circle
+                    - text: Resolved from active process launch executor catalog.
+                - button "Close selected agent detail" [ref=e1775] [cursor=pointer] [box=1808,933,42,42]:
+                  - generic [ref=e1776] [box=1819,944,20,20]: close

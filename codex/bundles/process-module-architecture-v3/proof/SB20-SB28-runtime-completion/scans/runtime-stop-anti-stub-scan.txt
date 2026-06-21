@@ -1,0 +1,2 @@
+src\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:383:                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never make validation pass by writing fake package")
+src\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:419:                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never make validation pass by writing fake package")

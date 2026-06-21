@@ -1,0 +1,28 @@
+{
+  "subbundle": "SB11",
+  "scope": [
+    "src/CanDoItAll.Processes.Drivers.Abstractions/ProcessExecutionAdapterContracts.cs",
+    "src/CanDoItAll.Processes.Drivers.Abstractions/ProcessStrategyContracts.cs",
+    "src/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterDescriptors.cs",
+    "src/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterDriverPackageFactory.cs",
+    "src/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterStrategyFactory.cs",
+    "src/CanDoItAll.Processes.Application/ProcessAdapterMutationAudit.cs"
+  ],
+  "result": "pass",
+  "counts": {
+    "sync_over_async_wait_result": 0,
+    "thread_sleep": 0,
+    "task_run_hot_path": 0,
+    "unbounded_channel_queue": 0,
+    "per_call_http_client": 0,
+    "json_serializer_options_allocations": 0,
+    "process_start_info": 0,
+    "to_lower_upper_without_comparison": 1,
+    "linq_hot_path_candidates": 1
+  },
+  "notes": [
+    "No sync-over-async, Thread.Sleep, Task.Run, unbounded queues, per-call HttpClient, per-call JsonSerializerOptions, or ProcessStartInfo patterns were introduced.",
+    "One ToLowerInvariant call hashes a restricted diff reference for stable lowercase SHA-256 text; it is not a routing or hot-path comparison.",
+    "One LINQ Any call checks a small in-memory audit finding list, not a runtime dispatch loop or UI load-all query."
+  ]
+}

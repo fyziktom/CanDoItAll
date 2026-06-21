@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+    <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
+    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\Templates\**\*"
+             Link="Templates\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+  </ItemGroup>
+
+</Project>
+
+
+

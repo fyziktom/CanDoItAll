@@ -1,0 +1,181 @@
+@page "/agents"
+
+<PageTitle>Agents</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="AgentFramework"
+                    Title="Integrated technical agent runtime"
+                    Description="@AgentFrameworkShellHelpText"
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="technical agents"
+                             Value="@ResolveSummaryValue(technicalAgentCount)"
+                             TooltipText="Organization-scoped technical runtime records."
+                             Tone="info" />
+                <CompactStat Label="providers"
+                             Value="@ResolveSummaryValue(providerCount)"
+                             TooltipText="Workspace-owned providers executed through AgentFramework."
+                             Tone="success" />
+                <CompactStat Label="bound resources"
+                             Value="@ResolveSummaryValue(boundResourceCount)"
+                             TooltipText="CRM-HR AI resources already bound to a technical agent."
+                             Tone="warning" />
+                <CompactStat Label="capabilities"
+                             Value="@ResolveSummaryValue(capabilityCount)"
+                             TooltipText="Reusable skills, MCP servers, and other runtime capabilities."
+                             Tone="accent" />
+                <CompactStat Label="active runs"
+                             Value="@ResolveSummaryValue(activeRunCount)"
+                             TooltipText="Durable technical executions still in progress."
+                             Tone="info" />
+                <CompactStat Label="failed runs"
+                             Value="@ResolveSummaryValue(failedRunCount)"
+                             TooltipText="Recent execution failures that still need governance attention."
+                             Tone="danger" />
+            </Stats>
+            <Actions>
+                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                             OpenOnHover="true"
+                             AriaLabel="Show AgentFramework shell help"
+                             Title="Show AgentFramework shell help"
+                             Heading="AgentFramework shell"
+                             Body="@AgentFrameworkShellHelpText" />
+                <PageHeaderActionButton Icon="cloud_sync"
+                                        Label="Feed defaults"
+                                        TooltipText="Feed default technical agents and providers."
+                                        Click="FeedDefaultsAsync"
+                                        Disabled="@isFeedingDefaults"
+                                        IsBusy="@isFeedingDefaults"
+                                        data-testid="agents-shell-feed-defaults" />
+                <PageHeaderActionButton Icon="groups"
+                                        Label="Open CRM / HR agents"
+                                        TooltipText="Open CRM-HR agent projections."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenCrmHrAgents"
+                                        data-testid="agents-shell-open-crmhr" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open workflows"
+                                        TooltipText="Open AgentFramework workflows."
+                                        Click="OpenWorkflows"
+                                        data-testid="agents-shell-open-workflows" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open processes"
+                                        TooltipText="Open the processes workspace."
+                                        Click="OpenProcesses"
+                                        data-testid="agents-shell-open-processes" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <div data-testid="agents-shell-tabs">
+            <SecondaryTabs Items="Tabs"
+                           SelectedKey="@selectedTab"
+                           SelectedKeyChanged="HandleTabChangedAsync" />
+        </div>
+    </Lead>
+
+    <ChildContent>
+        @if (ShouldShowOverviewLoadingCard)
+        {
+            <SurfaceCard>
+                <p class="cda-eyebrow">AgentFramework</p>
+                <h2 class="mt-1 text-lg font-semibold text-slate-950">Loading canonical agent runtime</h2>
+                <p class="mt-3 text-sm leading-6 text-slate-600">
+                    Refreshing the organization catalog, CRM-HR projection, and runtime counts before opening the selected surface.
+                </p>
+            </SurfaceCard>
+        }
+        else if (string.Equals(selectedTab, "providers", StringComparison.Ordinal))
+        {
+            <AgentProviderProfilesPanel />
+        }
+        else if (string.Equals(selectedTab, "voice", StringComparison.Ordinal))
+        {
+            <AgentVoiceSettingsPanel />
+        }
+        else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
+        {
+            <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
+                               SkipCatalogRepair="true" />
+        }
+        else if (string.Equals(selectedTab, "chat", StringComparison.Ordinal))
+        {
+            <AgentChatPanel PreferredAgentId="@effectiveRequestedAgentId" />
+        }
+        else if (string.Equals(selectedTab, "capabilities", StringComparison.Ordinal))
+        {
+            <AgentCapabilitiesPanel PreferredAgentId="@effectiveRequestedAgentId" />
+        }
+        else if (string.Equals(selectedTab, "governance", StringComparison.Ordinal))
+        {
+            <AgentGovernancePanel PreferredAgentId="@effectiveRequestedAgentId" />
+        }
+        else if (string.Equals(selectedTab, "scenarios", StringComparison.Ordinal))
+        {
+            <ScenarioHarnessPanel />
+        }
+        else if (string.Equals(selectedTab, "diagnostics", StringComparison.Ordinal))
+        {
+            <AgentDiagnosticsPanel />
+        }
+        else
+        {
+            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                <SurfaceCard>
+                    <p class="cda-eyebrow">Canonical boundary</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">One technical runtime, no duplicated ownership</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        Workspace and Security still own provider master data and secrets. CRM-HR still carries business-facing directory context, but AgentFramework owns the editable AI-agent runtime catalog and the execution path that actually talks to providers.
+                    </p>
+                    <Cluster Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.Wrap"
+                             Class="mt-4">
+                        <StatusBadge Tone="info" Text="@dashboard.ToolExecutionBoundary.Mode" />
+                        <StatusBadge Tone="neutral" Text="@(dashboard.ToolExecutionBoundary.IsEnforcedByHost ? "Host enforced" : "Host reported")" />
+                    </Cluster>
+                    <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">@dashboard.ToolExecutionBoundary.HostLabel</p>
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Run governance</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">Process launch and runtime evidence stay durable</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        Approved process launches dispatch technical execution through a single AgentFramework boundary. Approvals, checkpoints, receipts, artifacts, and failures remain queryable instead of disappearing into transient logs.
+                    </p>
+                    <Cluster Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.Wrap"
+                             Class="mt-4">
+                        <Button Text="Open governance"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(async () => await HandleTabChangedAsync("governance"))" />
+                        <Button Text="Open scenarios"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(async () => await HandleTabChangedAsync("scenarios"))"
+                                data-testid="agents-shell-open-scenarios" />
+                    </Cluster>
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Cross-module flow</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">Business resources, launch staffing, and technical execution are connected</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        CRM-HR projects business-facing AI resources over AgentFramework-owned agents. Processes selects those resources through launch planning, approval, and provisioning. This shell exposes the runtime and proof surfaces behind that connected flow.
+                    </p>
+                    <Cluster Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.Wrap"
+                             Class="mt-4">
+                        <Button Text="Open chat"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(async () => await HandleTabChangedAsync("chat"))" />
+                        <Button Text="Open capabilities"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(async () => await HandleTabChangedAsync("capabilities"))" />
+                    </Cluster>
+                </SurfaceCard>
+            </Grid>
+        }
+    </ChildContent>
+</PageScaffold>

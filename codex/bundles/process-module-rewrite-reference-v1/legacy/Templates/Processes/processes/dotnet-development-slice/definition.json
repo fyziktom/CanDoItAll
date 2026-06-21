@@ -1,0 +1,592 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "dotnet-development-slice",
+  "DisplayName": ".NET implementation slice with atomic validation",
+  "Summary": "Reusable software-development child process that breaks implementation into intake, architecture, optional solution setup, feature/function implementation, unit tests, and evidence handoff.",
+  "ValueStatement": "Keeps a large implementation lane observable and manager-reportable by using small process steps plus nested setup and feature/function implementation subprocesses.",
+  "CustomerName": "Software delivery process",
+  "OwnerName": "Engineering manager",
+  "InterfaceContractSummary": "The parent process supplies the change scope, repository target, architecture decision, and validation bar; this subprocess returns implementation and test evidence.",
+  "GovernanceNotes": "Implementation work must remain split into typed, observable steps so blockers can be reported by managers without reading raw execution threads.",
+  "ChangeSummary": "Adds the default atomic implementation subprocess used by the software-delivery process.",
+  "GovernancePolicySummary": "A development slice cannot close until code change, tests, and validation evidence are durable and linked to the parent scope.",
+  "ConstitutionRuleSummary": "The parent and child runs share process identity through explicit runtime relationships, not duplicated state or chat summaries.",
+  "OperatingModeSummary": "Assisted execution with manager observation; process-level manager override can replace default HR matching for manager roles.",
+  "SimulationReadinessSummary": "Small enough for real local validation while still exercising nested subprocess creation and child-run observation.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "openchain",
+    "spdx",
+    "slsa"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "solution-architect",
+    "software-engineer",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [
+    "scope-boundary-packet",
+    "architecture-decision-record",
+    "implementation-change-set",
+    "test-evidence-pack",
+    "regression-evidence-pack",
+    "implementation-plan"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Number of implementation slices completed without parent-step blockage.",
+    "Time spent blocked in scaffold, implementation, and validation phases.",
+    "Share of slices with test evidence attached before parent peer review."
+  ],
+  "Risks": [
+    "Nested setup subprocess is used for an existing solution without explicit tailoring.",
+    "Code implementation expands beyond the approved slice boundary.",
+    "Validation evidence is missing or too broad to explain failures."
+  ],
+  "TailoringRules": [
+    "Skip the generic .NET solution setup subprocess only when the repository already has a correct solution skeleton and the skip records explicit proof.",
+    "Use the app archetype, test framework, validation type, and product root from the current project structure or upstream architecture notes; escalate when those inputs conflict or are missing.",
+    "Split large features into multiple instances of this subprocess instead of widening one child run indefinitely.",
+    "Keep parent approval and release gates in the parent process; this subprocess owns implementation proof only."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "delivery-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Slice manager",
+      "Purpose": "Report progress, blockers, and child subprocess status to the parent process.",
+      "StaffingIntent": "A manager-capable human or AI agent that can summarize high-volume execution data.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "solution-architect",
+      "RoleResourceKey": "solution-architect",
+      "DisplayName": "Slice architect",
+      "Purpose": "Confirm the slice fits the parent architecture and does not create hidden source-of-truth drift.",
+      "StaffingIntent": "Architecture reviewer for scoped design decisions and integration risks.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Architect",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 60,
+      "CanvasX": 899,
+      "CanvasY": -370
+    },
+    {
+      "Key": "software-engineer",
+      "RoleResourceKey": "software-engineer",
+      "DisplayName": "Implementation engineer",
+      "Purpose": "Implement the bounded change and maintain tests.",
+      "StaffingIntent": "A .NET-capable implementer with repository access.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Developer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": -170,
+      "CanvasY": -1123.2
+    },
+    {
+      "Key": "qa-lead",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Validation owner",
+      "Purpose": "Confirm the implementation has focused tests and regression evidence.",
+      "StaffingIntent": "A reviewer capable of interpreting targeted test, build, and browser proof.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 70,
+      "CanvasX": 4139,
+      "CanvasY": 370
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "slice-intake",
+      "Title": "Capture implementation slice boundary",
+      "Subtitle": "Small enough to finish",
+      "Notes": "Restate the parent scope as one bounded implementation slice with assumptions, exclusions, and validation hooks. This is an intake step: do not run restore, build, test, app startup, or browser validation here.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Parent scope packet, repository context, and requested behavior.",
+      "OutputContractSummary": "Slice boundary with acceptance criteria, product-root intent, setup needs, and excluded follow-up work.",
+      "EvidenceContractSummary": "Scope summary, assumptions, product-root classification, setup/implementation handoff, and validation plan outline.",
+      "DecisionRightsSummary": "Slice manager can narrow execution scope but cannot silently discard parent acceptance criteria.",
+      "ExceptionPolicySummary": "Block when the slice cannot be made small enough for atomic validation or when the required product root, architecture, app archetype, or validation boundary is contradictory.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-scope-packet",
+          "TemplateKey": "scope-boundary-packet",
+          "Title": "Implementation slice scope packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent peer review and future slices.",
+          "ValidationRequirementSummary": "Must define acceptance criteria, exclusions, intended product root, setup needs, and validation hooks without using build/runtime/browser proof as intake evidence."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/slice-intake.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "slice-architecture-check",
+      "Title": "Check architecture and source-of-truth impact",
+      "Subtitle": "No hidden ownership drift",
+      "Notes": "Confirm canonical models, integration boundaries, persistence ownership, and UI/application/domain responsibilities before code starts. This architecture step must not run restore, build, test, app startup, browser proof, or product-root file inspection for a missing greenfield root; record the intended root and setup handoff instead.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Slice scope packet and parent architecture notes.",
+      "OutputContractSummary": "Architecture decision record or explicit no-ADR rationale for this slice.",
+      "EvidenceContractSummary": "Touched boundaries, source-of-truth decision, and risk notes.",
+      "DecisionRightsSummary": "Slice architect can require split or escalation when ownership boundaries are unclear.",
+      "ExceptionPolicySummary": "Block on canonical model ambiguity, persistence ownership conflict, unsafe cross-layer leakage, contradictory project-structure requirements, or artifact recovery when required architecture evidence is missing or invalid before branch routing. Do not block only because a greenfield product root does not exist yet.",
+      "TargetLeadHours": 3,
+      "DependsOnStepKey": "slice-intake",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "solution-architect",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 1600,
+      "BranchCanvasY": 357,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "slice-intake",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "solution-architect",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an architect-capable reviewer."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-architecture-decision",
+          "TemplateKey": "architecture-decision-record",
+          "Title": "Slice architecture decision record",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by implementation, peer review, and parent release approval.",
+          "ValidationRequirementSummary": "Must name source-of-truth ownership and cross-layer impact."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-scope-packet",
+          "SourceStepKey": "slice-intake"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/slice-architecture-check.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 2,
+      "Key": "prepare-solution-skeleton",
+      "Title": "Prepare solution skeleton subprocess",
+      "Subtitle": "Nested scaffold run",
+      "Notes": "Launch the generic .NET solution setup subprocess when the slice starts from an empty or incomplete .NET solution. The child process must choose the app archetype and test framework from project structure or architecture notes, not from process-specific assumptions.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-solution-setup",
+      "SubprocessDefinitionSnapshotName": ".NET solution setup subprocess",
+      "AllowsManualSkip": true,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Slice scope, architecture decision, and target solution naming contract.",
+      "OutputContractSummary": "Observed child run that creates or validates the solution skeleton and test project.",
+      "EvidenceContractSummary": "Child run status, build proof, and setup handoff packet.",
+      "DecisionRightsSummary": "Slice manager may skip only when an equivalent solution skeleton already exists and evidence is recorded.",
+      "ExceptionPolicySummary": "Block the slice when the child setup run blocks, fails, or reports missing scaffold proof.",
+      "TargetLeadHours": 8,
+      "DependsOnStepKey": "slice-architecture-check",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "slice-architecture-check",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can coordinate parent and child run evidence."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "solution-skeleton-evidence",
+          "TemplateKey": "implementation-plan",
+          "Title": "Solution skeleton evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by implementation and validation steps.",
+          "ValidationRequirementSummary": "Must point to the observed child run or an explicit already-existing skeleton proof.",
+          "SubprocessChildStepKey": "setup-handoff",
+          "SubprocessChildArtifactTitle": "Setup handoff packet"
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/prepare-solution-skeleton.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 3,
+      "Key": "implement-code-change",
+      "Title": "Implement bounded code change through subprocess",
+      "Subtitle": "Observed feature run",
+      "Notes": "Launch the feature/function implementation subprocess for the bounded behavior in this slice. Observe the child run status, change-set artifact, validation evidence, blockers, and manager-directed rework without duplicating child runtime state in this parent step.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-feature-function-implementation",
+      "SubprocessDefinitionSnapshotName": ".NET feature/function implementation subprocess",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Slice scope, architecture decision, solution skeleton evidence, and one bounded feature or function request.",
+      "OutputContractSummary": "Observed child run that returns a reviewable code change, focused validation evidence, blockers, and residual risks.",
+      "EvidenceContractSummary": "Child run status, implementation change set, validation evidence, manager rework directives, and unresolved blockers.",
+      "DecisionRightsSummary": "Slice manager can request targeted child-run repair but cannot widen behavior beyond the slice boundary.",
+      "ExceptionPolicySummary": "Block the slice when the child implementation run blocks, fails, or reports missing change-set or validation proof.",
+      "TargetLeadHours": 12,
+      "DependsOnStepKey": "prepare-solution-skeleton",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "slice-architecture-check",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "prepare-solution-skeleton",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can observe child implementation runs and request targeted rework."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Slice implementation change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by tests, peer review, and parent QA.",
+          "ValidationRequirementSummary": "Must point to the observed child implementation run and include changed files, behavioral intent, touched-surface inventory, and proof summary.",
+          "SubprocessChildStepKey": "code-change",
+          "SubprocessChildArtifactTitle": "Feature implementation change set"
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-architecture-decision",
+          "SourceStepKey": "slice-architecture-check"
+        },
+        {
+          "ArtifactExpectationKey": "solution-skeleton-evidence",
+          "SourceStepKey": "prepare-solution-skeleton"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/implement-code-change.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 4,
+      "Key": "add-tests-and-proof",
+      "Title": "Validate tests and targeted proof",
+      "Subtitle": "Read-only validation before handoff",
+      "Notes": "Review the child implementation run, test additions, and validation evidence, then run the smallest reliable validation command needed to prove the slice behavior. Do not add, edit, or repair product tests in this step; missing or inadequate tests must route back to implementation repair instead of being silently fixed by QA.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Implementation change set and slice architecture decision.",
+      "OutputContractSummary": "Test and validation evidence review tied to the implemented behavior, with explicit repair direction when evidence is inadequate.",
+      "EvidenceContractSummary": "Commands, exit codes, warnings, executed tests, browser/runtime proof when UI is touched, and explicit assessment of whether child-run tests satisfy acceptance criteria.",
+      "DecisionRightsSummary": "Validation owner can require focused implementation rework when proof or tests do not match acceptance criteria, but cannot mutate product files.",
+      "ExceptionPolicySummary": "Block on missing tests, failing build, validation that is too broad to diagnose failures, or artifact recovery when required validation evidence is missing or invalid before branch routing; route test changes back to implementation.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "implement-code-change",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "qa-lead",
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchCanvasX": 4840,
+      "BranchCanvasY": 357,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implement-code-change",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a reviewer capable of evaluating targeted test evidence."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-test-evidence",
+          "TemplateKey": "test-evidence-pack",
+          "Title": "Slice test evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent QA and release approval.",
+          "ValidationRequirementSummary": "Must include command, exit code, proof tied to acceptance criteria, and review of child-run test coverage. If tests are missing or inadequate, the artifact must route repair to implementation instead of recording QA-authored product changes."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-change-set",
+          "SourceStepKey": "implement-code-change"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/add-tests-and-proof.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 5,
+      "Key": "slice-handoff",
+      "Title": "Hand off implementation slice",
+      "Subtitle": "Parent-ready evidence",
+      "Notes": "Summarize the completed slice, produced evidence, blockers, residual risks, and recommended parent-process next action.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Scope, architecture, change set, and test evidence.",
+      "OutputContractSummary": "Parent-ready implementation handoff with blockers and residual risks.",
+      "EvidenceContractSummary": "Implementation summary, validation result, open issues, and explicit next action.",
+      "DecisionRightsSummary": "Slice manager can close only when validation evidence is present and unresolved blockers are explicit.",
+      "ExceptionPolicySummary": "Do not close when tests fail, blockers remain untriaged, or the parent cannot determine next action.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "add-tests-and-proof",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 5660,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implement-code-change",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "add-tests-and-proof",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "slice-handoff-packet",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Implementation slice handoff packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent peer review, QA, and release approval.",
+          "ValidationRequirementSummary": "Must summarize change, test evidence, unresolved risks, and recommended next action."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "slice-change-set",
+          "SourceStepKey": "implement-code-change"
+        },
+        {
+          "ArtifactExpectationKey": "slice-test-evidence",
+          "SourceStepKey": "add-tests-and-proof"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-development-slice/steps/slice-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ]
+}

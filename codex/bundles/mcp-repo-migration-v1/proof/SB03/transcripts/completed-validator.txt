@@ -1,5 +1,0 @@
-Command: python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed --repo-root C:\repositories\CanDoItAll codex\bundles\mcp-repo-migration-v1
-Invariant ID: SB03-DOCS-CLOSURE
---- output ---
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\mcp-repo-migration-v1
-ExitCode: 0

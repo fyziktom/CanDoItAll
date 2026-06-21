@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validate-domain-owner-coverage",
+  "DisplayName": "Validate domain-owner coverage",
+  "Scope": "local",
+  "ProcessKey": "architecture-decision-governance",
+  "Severity": "medium",
+  "OwnerRoleKey": "domain-owner",
+  "Gate": "decision-readiness",
+  "Summary": "Confirms the impacted domain owners have been consulted before a cross-domain decision is locked in.",
+  "PassCriteria": "Every materially affected domain has either participated or been explicitly waived with rationale.",
+  "FailCriteria": "Architecture decision is proceeding with hidden affected domains or ownership blind spots.",
+  "EscalationRule": "Escalate to architecture facilitator and chief architect before approval.",
+  "DocPath": "processes/architecture-decision-governance/validations/validate-domain-owner-coverage.md"
+}

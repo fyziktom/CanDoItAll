@@ -1,0 +1,4 @@
+Command: rg -n "TODO|HACK|NotImplemented|throw new NotImplementedException|stub|fake" changed production and test files
+ExitCode: 0
+
+No matches found in changed production/test files for TODO, HACK, NotImplemented, throw new NotImplementedException, stub, or fake.

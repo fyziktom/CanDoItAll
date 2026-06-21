@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.ArtifactEvidence\CanDoItAll.Processes.Drivers.ArtifactEvidence.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.BusinessAnalysis\CanDoItAll.Processes.Drivers.BusinessAnalysis.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.ObservationAggregation\CanDoItAll.Processes.Drivers.ObservationAggregation.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.OfficeEvidence\CanDoItAll.Processes.Drivers.OfficeEvidence.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.RuntimeEvidence\CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
+  </ItemGroup>
+
+</Project>

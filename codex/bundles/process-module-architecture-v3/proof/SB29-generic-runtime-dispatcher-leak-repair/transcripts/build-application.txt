@@ -1,0 +1,9 @@
+Command: dotnet build src\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj -p:UseCommonOutputDirectory=false
+WorkingDirectory: repo://.
+Exit code: 0
+
+Summary:
+- Restored projects were already current.
+- Built CanDoItAll.Processes.Application and its process dependencies successfully.
+- Result: 0 warnings, 0 errors.
+

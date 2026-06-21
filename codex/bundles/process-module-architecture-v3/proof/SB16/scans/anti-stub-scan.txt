@@ -1,0 +1,4 @@
+No unfinished implementation markers found.
+
+Scan note:
+- The broad marker scan matched ProcessWorkspaceShell.razor:492 because it contains a normal HTML placeholder attribute (`placeholder="Search definitions"`). This is UI markup, not a stub or unfinished implementation marker.

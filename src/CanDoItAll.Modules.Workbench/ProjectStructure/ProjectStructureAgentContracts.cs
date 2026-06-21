@@ -1,6 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -384,6 +383,10 @@ public sealed record ProjectStructureNodeParentInput(
 public sealed record ProjectStructureNodeDeleteInput(
     string? LeaseToken = null);
 
+public sealed record ProjectStructureNodeDeleteBatchInput(
+    IReadOnlyList<string> NodeIds,
+    string? LeaseToken = null);
+
 public sealed record ProjectStructureLinkInput(
     string SourceNodeId,
     string TargetNodeId,
@@ -746,7 +749,37 @@ public sealed record ProjectStructureProcessNodeStartResult(
     Guid? RunId,
     string Stage,
     string Route,
-    ProcessLaunchPlanDetails? LaunchPlan,
+    object? LaunchPlan,
+    IReadOnlyList<string> Warnings);
+
+public sealed record ProjectStructureProcessSubprocessLaunchInput(
+    string DefinitionKey,
+    string? LiveRunProfileKey = null,
+    string? ParentProjectNodeId = null,
+    IReadOnlyDictionary<string, object?>? Variables = null,
+    bool RunHrMatch = true,
+    bool Execute = true,
+    bool IncludeLaunchPlan = true,
+    string RequestedBy = "project-structure-process",
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureProcessSubprocessLaunchResult(
+    Guid ProjectId,
+    string ProjectNodeId,
+    string ParentProcessRunId,
+    string ParentProcessStepId,
+    string ParentProcessStepKey,
+    string DefinitionKey,
+    Guid ProcessDefinitionId,
+    Guid LaunchPlanId,
+    Guid? RunId,
+    string Stage,
+    string Route,
+    object? LaunchPlan,
+    string ChildManagedArtifactRoot,
+    string ChildStepsArtifactRoot,
+    string ChildLiveProcessesRoute,
+    IReadOnlyList<string> ExpectedChildEvidenceRefs,
     IReadOnlyList<string> Warnings);
 
 public enum ProjectStructureImportSourceKind

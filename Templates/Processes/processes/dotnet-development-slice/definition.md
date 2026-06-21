@@ -4,7 +4,7 @@
 **Criticality:** High
 **Autonomy level:** Guarded
 
-Reusable child process for breaking a large implementation lane into intake, architecture check, optional solution setup subprocess, feature/function implementation subprocess, read-only validation proof, and handoff evidence. Product mutation is confined to nested implementation subprocesses; slice-level QA validates and routes repair.
+Reusable child process for breaking a large implementation lane into intake, architecture check, optional solution setup subprocess, feature/function implementation subprocess, read-only validation proof, bounded repair subprocesses, repaired recheck, and handoff evidence. Full-app parent scopes are narrowed to one reviewable MVP behavior before the feature/function child subprocess starts. Product mutation is confined to nested implementation subprocesses; slice-level QA validates and routes repair.
 
 ## Steps
 - Capture implementation slice boundary.

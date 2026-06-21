@@ -1,0 +1,22 @@
+{
+  "subbundle": "SB09",
+  "scope": [
+    "src/CanDoItAll.Processes.Application/ProcessManager*.cs",
+    "src/CanDoItAll.Processes.Runtime/ProcessManager*.cs"
+  ],
+  "result": "pass",
+  "counts": {
+    "sync_over_async_wait_result": 0,
+    "thread_sleep": 0,
+    "task_run_hot_path": 0,
+    "unbounded_channel_queue": 0,
+    "per_call_http_client": 0,
+    "per_call_json_serializer_options": 0,
+    "load_all_ui_queries": 0,
+    "linq_hot_path_candidates": 1
+  },
+  "notes": [
+    "No sync-over-async, Thread.Sleep, Task.Run, per-call HttpClient, per-call JsonSerializerOptions, load-all async query, or queue hot-path patterns were introduced in manager code.",
+    "The single LINQ hot-path candidate is ProcessManagerControlLoop.Branching.cs outcome selection over an in-memory typed outcome collection; no persistence/UI query hot path is present."
+  ]
+}

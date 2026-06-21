@@ -136,6 +136,46 @@ public sealed class ManagedSeedProviderFallbacksTests
     }
 
     [Fact]
+    public void Provider_repair_override_preserves_remote_ollama_for_managed_seed_agent()
+    {
+        var originalAgent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.FallbackModel);
+        var agent = originalAgent with
+        {
+            ConfigurationJson = ManagedSeedProviderFallbacks.EnableProviderRepairFallbackOverride(originalAgent.ConfigurationJson)
+        };
+        var registryProvider = CreateFallbackProvider();
+        var catalogShadowProvider = CreateOpenAiProvider();
+
+        var effectiveProvider = ManagedSeedProviderFallbacks.ResolvePreferredProvider(
+            agent,
+            registryProvider,
+            catalogShadowProvider,
+            openAiApiKeyOverride: "present");
+        var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
+
+        Assert.Equal(registryProvider, effectiveProvider);
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+    }
+
+    [Fact]
+    public void Provider_repair_override_uses_fallback_model_when_managed_seed_agent_keeps_openai_model()
+    {
+        var originalAgent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        var agent = originalAgent with
+        {
+            ConfigurationJson = ManagedSeedProviderFallbacks.EnableProviderRepairFallbackOverride(originalAgent.ConfigurationJson)
+        };
+        var registryProvider = CreateFallbackProvider();
+
+        var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(
+            agent,
+            registryProvider,
+            openAiApiKeyOverride: "present");
+
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+    }
+
+    [Fact]
     public void Catalog_shadow_openai_provider_is_used_when_registry_provider_is_missing()
     {
         var agent = CreateManagedSeedAgent(model: "gpt-4.1");

@@ -1,0 +1,34 @@
+SB12 source assertions
+
+Template compatibility scanner:
+- src/CanDoItAll.Processes.Templates/ProcessTemplateCompatibilityScanner.cs
+- src/CanDoItAll.Processes.Templates/ProcessTemplateCompatibilityScanner.Json.cs
+- src/CanDoItAll.Processes.Templates/ProcessTemplateCompatibilityScanner.Sidecars.cs
+- src/CanDoItAll.Processes.Templates/ProcessTemplateCompatibilityScanner.Branches.cs
+- src/CanDoItAll.Processes.Templates/ProcessTemplateCompatibilityReports.cs
+
+Assertions:
+- Reads manifest and definitions asynchronously.
+- `definition.json` is canonical.
+- Missing schema is treated as `process-definition/current-module-legacy`.
+- Dry-run report sets `WouldMutateFiles` to false.
+- Sidecar drift is explicit.
+- Ambiguous branch outcomes produce typed diagnostics.
+
+Legacy history:
+- src/CanDoItAll.Processes.Projections/LegacyProcessHistoryProjections.cs
+- src/CanDoItAll.Processes.Projections/ProcessProjectionJsonCodec.cs
+
+Assertions:
+- Legacy run ids are strongly typed.
+- Legacy records and action denials are typed records/enums.
+- Legacy run projections are read-only.
+- JSON codec supports legacy inventory, run projection, and action denial payloads.
+
+Compatibility decision:
+- src/CanDoItAll.Processes.Application/ProcessCompatibilityDecisionService.cs
+
+Assertions:
+- Full migration, archive export, read-only projection plus archive, and approved deletion are explicit options.
+- Runtime actions are allowed only for full migration.
+- Manual template review creates blocking issues.

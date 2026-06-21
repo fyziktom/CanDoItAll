@@ -1,6 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Factory;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
@@ -169,29 +168,6 @@ internal sealed class ProjectNodeScopeBridge(
                 .Select(item => (Guid?)item.ProjectId)
                 .FirstOrDefaultAsync(cancellationToken);
             return BuildProjectedResolution(validationProjectId, projectId, ProjectObjectType.ValidationRun);
-        }
-
-        if (TryParsePrefixedGuidNodeKey(nodeKey, "process-definition:", out var processDefinitionId))
-        {
-            var definitionProjectId = await dbContext.Set<ProcessDefinition>()
-                .Where(item => item.Id == processDefinitionId)
-                .Select(item => item.ProjectId)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (!definitionProjectId.HasValue)
-            {
-                return new ProjectNodeScopeResolution(true, false, false, ProjectObjectType.ProcessDefinition, string.Empty);
-            }
-
-            return BuildProjectedResolution(definitionProjectId, projectId, ProjectObjectType.ProcessDefinition);
-        }
-
-        if (TryParsePrefixedGuidNodeKey(nodeKey, "process-run:", out var processRunId))
-        {
-            var runProjectId = await dbContext.Set<ProcessRun>()
-                .Where(item => item.Id == processRunId)
-                .Select(item => item.ProjectId)
-                .FirstOrDefaultAsync(cancellationToken);
-            return BuildProjectedResolution(runProjectId, projectId, ProjectObjectType.ProcessRun);
         }
 
         if (TryParsePrefixedGuidNodeKey(nodeKey, "test-plan:", out var testPlanId))

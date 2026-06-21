@@ -1,9 +1,0 @@
-# SB14 closure-validator.txt
-
-Command:
-`$matches = python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\processes-post-live-run-hardening-docs-v1 --stage completed --repo-root C:\repositories\CanDoItAll | Select-String -Pattern 'SB14|RN14|semantic-invariants|manifest|Production Behavior Artifact Matrix|Failing-first|Adversarial'; if ($matches) { $matches; exit 1 } else { 'No SB14 validator findings.'; exit 0 }`
-
-ExitCode: 0
-
-Output:
-`No SB14 validator findings.`

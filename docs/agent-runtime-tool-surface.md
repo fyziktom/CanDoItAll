@@ -1,18 +1,23 @@
 # Agent Runtime Tool Surface
 
-This page defines the boundary between internal MAF tools and the HTTP control-plane APIs.
+This page defines the boundary between internal MAF/runtime-provider tools and the HTTP control-plane APIs.
 
-The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered in `MafAgentRuntime.ProcessTools.cs` or `MafAgentRuntime.ProjectStructureTools.cs` and classified by `AgentToolInvocationPolicy`.
+The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered by MAF itself or by an `IAgentRuntimeToolProvider`, and classified by `AgentToolInvocationPolicy`.
 
 ## Process Tools
 
 Source:
 
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs`
+- `src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`
+- `src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
+- `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
+- `src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
 - `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
 - `src/CanDoItAll.Web/Api/ProcessesApi.cs`
 
 Current direct runtime tools: 23.
+
+Process tools are owned by `CanDoItAll.Modules.Processes` and exposed through `ProcessAgentRuntimeToolProvider`, which is registered as an `IAgentRuntimeToolProvider` by the Processes module. `CanDoItAll.AgentFramework.Maf` composes registered providers and applies the same approval wrapping rules it applies to its built-in tools. If the Processes module is not registered, MAF starts without process tools instead of carrying a compile-time dependency on `CanDoItAll.Modules.Processes`.
 
 | Capability | Direct tools |
 | --- | --- |
@@ -37,38 +42,29 @@ The following process HTTP operations are HTTP-only until typed runtime tools ar
 
 Source:
 
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProjectStructureTools.cs`
+- `src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`
+- `src/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs`
 - `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
 - `src/CanDoItAll.Web/ProjectStructureAgentApi.cs`
 
-Current direct runtime tools: 28.
+Current direct runtime tools: 51.
 
 | Capability | Direct tools |
 | --- | --- |
 | Project hierarchy | `project_structure_projects_list`, `project_structure_project_create`, `project_structure_project_update`, `project_structure_hierarchy_get`, `project_structure_subproject_link`, `project_structure_nodes_to_new_subproject` |
-| Structure read/write | `project_structure_read`, `project_structure_node_catalog`, `project_structure_node_create`, `project_structure_node_update`, `project_structure_node_move`, `project_structure_node_recompose`, `project_structure_node_reparent` |
-| Planning support | `project_structure_checklist`, `project_structure_dependencies_query`, `project_structure_dependency_link`, `project_structure_dependency_unlink`, `project_structure_approval_request`, `project_structure_knowledge_query`, `project_structure_analytics_query` |
-| Assets and imports | `project_structure_asset_create`, `project_structure_asset_get`, `project_structure_asset_create_revision`, `project_structure_import` |
-| Leases | `project_structure_project_lease_acquire`, `project_structure_repo_branch_lease_acquire`, `project_structure_lease_get`, `project_structure_lease_release` |
+| Structure read/write | `project_structure_read`, `project_structure_node_catalog`, `project_structure_node_create`, `project_structure_node_update`, `project_structure_node_type_update`, `project_structure_node_metadata_update`, `project_structure_nodes_status_update`, `project_structure_node_status_update`, `project_structure_nodes_progress_update`, `project_structure_node_progress_update`, `project_structure_nodes_marker_update`, `project_structure_node_marker_update`, `project_structure_nodes_priority_update`, `project_structure_node_priority_update`, `project_structure_node_move`, `project_structure_node_recompose`, `project_structure_node_reparent`, `project_structure_node_descendants_to_project_move`, `project_structure_node_delete` |
+| Node operations | `project_structure_node_command_execute`, `project_structure_node_process_definition_link`, `project_structure_node_process_start`, `project_structure_node_workflow_add_options`, `project_structure_node_workflow_definition_create`, `project_structure_node_workflow_start`, `project_structure_node_workflow_status_get` |
+| Planning and links | `project_structure_checklist`, `project_structure_dependencies_query`, `project_structure_dependency_link`, `project_structure_dependency_unlink`, `project_structure_link_create`, `project_structure_link_unlink`, `project_structure_approval_request`, `project_structure_knowledge_query`, `project_structure_analytics_query` |
+| Assets and imports | `project_structure_asset_create`, `project_structure_asset_get`, `project_structure_asset_content_get`, `project_structure_asset_create_revision`, `project_structure_import` |
+| Leases | `project_structure_project_lease_acquire`, `project_structure_repo_branch_lease_acquire`, `project_structure_lease_get`, `project_structure_lease_renew`, `project_structure_lease_release` |
 
-The following project-structure HTTP operations are HTTP-only until typed runtime tools are deliberately added with policy and approval coverage:
-
-- Node type-only changes through `/type`.
-- Node metadata-only, status, progress, marker, and priority bulk/single update routes.
-- Multi-node reparent and move-descendants routes not covered by the current direct move/reparent tools.
-- Node command execution.
-- Node process-definition and process-start operations.
-- Node workflow-add-options, workflow-definition, workflow-start, and workflow-status operations.
-- Node delete operation.
-- Generic project links and unlink routes outside dependency-specific tools.
-- Asset content download route.
-- Lease renew route.
+The current project-structure HTTP route set is covered by typed runtime tools. New project-structure HTTP operations must remain HTTP-only until they have explicit tool registration, policy classification, approval behavior, and tests.
 
 ## Adding A Direct Tool
 
 Adding a direct tool is a runtime/security change, not documentation cleanup. The minimum implementation set is:
 
-- Tool descriptor registration in the relevant MAF tool builder.
+- Tool descriptor registration in the relevant MAF tool builder or owning `IAgentRuntimeToolProvider`.
 - Strongly typed request/response shape or reuse of an existing strongly typed model.
 - Service-layer call through the owning module boundary.
 - `AgentToolInvocationPolicy` constant and classification.

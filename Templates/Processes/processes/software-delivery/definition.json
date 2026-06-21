@@ -278,16 +278,16 @@
       "Key": "architecture-review",
       "Title": "Run .NET architecture design and review subprocess",
       "Subtitle": "Design, challenge, and app-type routing",
-      "Notes": "Launch and observe the .NET architecture design and review subprocess. The child process must classify the app type, draft architecture, independently review the design, and return implementation-ready architecture evidence. This parent step coordinates the subprocess and must not perform product mutation or implementation work.",
+      "Notes": "Launch and observe the .NET architecture design and review subprocess. The child process must classify the app type, draft architecture, independently review the design, and return implementation-ready architecture evidence with any mandatory implementation constraints. This parent step coordinates the subprocess and must not perform product mutation or implementation work.",
       "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Scope packet, project-structure context, requested .NET deliverable, and acceptance criteria.",
-      "OutputContractSummary": "Observed child architecture run with app-type classification, reviewed design decision, implementation-ready handoff, and unresolved architecture risks.",
-      "EvidenceContractSummary": "Child run status, .NET app classification, architecture decision, review findings, implementation start criteria, and UI/no-UI applicability.",
-      "DecisionRightsSummary": "Delivery manager coordinates the child run; architecture authority remains inside the subprocess review and cannot mutate product files.",
+      "OutputContractSummary": "Observed child architecture run with app-type classification, reviewed design decision, implementation-ready handoff, mandatory implementation constraints, and unresolved architecture risks.",
+      "EvidenceContractSummary": "Child run status, .NET app classification, architecture decision, review findings, implementation constraints, implementation start criteria, and UI/no-UI applicability.",
+      "DecisionRightsSummary": "Solution architect owns the visible architecture subprocess assignment and reviewed handoff; delivery manager remains an explicit coordination reviewer.",
       "ExceptionPolicySummary": "Block when the child architecture subprocess blocks, fails, or returns missing app type, design review, or implementation-ready handoff evidence.",
       "TargetLeadHours": 14,
       "DependsOnStepKey": "feature-intake",
@@ -305,18 +305,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "solution-architect",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Delivery manager launches and observes the architecture subprocess without taking architecture authority."
+          "RebindPolicySummary": "Architecture subprocess ownership stays with a role-compatible technical authority that can review design evidence without implementing code."
         },
         {
-          "RoleKey": "solution-architect",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Architecture role reviews subprocess evidence without implementing code."
+          "RebindPolicySummary": "Delivery manager reviews subprocess sequencing and escalation without taking architecture authority."
         }
       ],
       "ArtifactExpectations": [
@@ -372,6 +372,8 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
@@ -384,17 +386,17 @@
       "Key": "implementation",
       "Title": "Run .NET implementation slice subprocess",
       "Subtitle": "Observed implementation and validation slice",
-      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. The child implementation slice owns solution setup, feature/function implementation, tests, and targeted proof. This parent step records child-run evidence and does not mutate product files directly.",
+      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from feature-intake and architecture artifacts. The MVP slice must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must include the smallest observable product-specific path a user can exercise. The child implementation slice owns solution setup, feature/function implementation, repair subprocesses, tests, targeted proof, and accepted handoff evidence. This parent step records child-run evidence and does not mutate product files directly. This parent step must not launch the app, navigate a browser, wait on browser state, capture screenshots, or perform viewport/runtime proof directly; those actions belong to child targeted validation and later runtime/screenshot writeback steps that include LaunchRuntime and CaptureRuntimeProof.",
       "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Approved .NET architecture path, app classification, scope packet, unresolved technical questions, and implementation-slice start criteria.",
-      "OutputContractSummary": "Observed child implementation slice with reviewable change set, test evidence, blockers, rollout inputs, and parent-ready handoff.",
-      "EvidenceContractSummary": "Child run status, change-set projection, validation outputs, output-placement notes, migration steps when applicable, touched-surface inventory, and blockers.",
-      "DecisionRightsSummary": "Parent delivery manager owns subprocess sequencing and escalation; implementation changes remain inside child implementation roles.",
-      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, or returns missing change-set, test, or handoff evidence.",
+      "OutputContractSummary": "Observed child implementation slice with reviewable change set, test evidence, blockers, rollout inputs, accepted parent-ready handoff, or explicit repair escalation evidence.",
+      "EvidenceContractSummary": "Child run status, change-set projection, validation outputs, accepted handoff evidence, repair escalation evidence, output-placement notes, migration steps when applicable, touched-surface inventory, and blockers.",
+      "DecisionRightsSummary": "Lead engineer owns the visible implementation subprocess assignment and accepted handoff; delivery manager remains an explicit coordination reviewer.",
+      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, lacks accepted handoff evidence, or returns slice-repair-escalation. Do not treat a completed child run with an escalation/no-go packet as accepted implementation proof. If accepted child evidence is missing, record a blocker or repair escalation instead of attempting browser proof from this parent step.",
       "TargetLeadHours": 36,
       "DependsOnStepKey": "architecture-review",
       "DependsOnBranchOutcomeKey": "",
@@ -415,18 +417,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "lead-engineer",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Delivery manager launches and observes child implementation without editing product code."
+          "RebindPolicySummary": "Implementation subprocess ownership stays with a role-compatible engineering agent that can own technical handoff evidence."
         },
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Engineering role reviews child implementation evidence and owns follow-up repair when assigned."
+          "RebindPolicySummary": "Delivery manager reviews child implementation sequencing and escalation without editing product code."
         }
       ],
       "ArtifactExpectations": [
@@ -440,7 +442,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for peer review, QA, runtime command writeback, screenshot writeback, release approval, and later defect forensics.",
-          "ValidationRequirementSummary": "Must point to the observed .NET implementation slice child run and include changed files, behavioral intent, validation proof tied to acceptance criteria, and confirmation that explicit project-structure requirements were not dropped or deferred.",
+          "ValidationRequirementSummary": "Must point to the observed .NET implementation slice child run and include changed files, behavioral intent, validation proof tied to acceptance criteria, accepted handoff evidence from slice-handoff or slice-handoff-after-repair, and confirmation that explicit project-structure requirements were not dropped or deferred. A slice-repair-escalation packet is blocker evidence, not accepted implementation proof.",
           "SubprocessChildStepKey": "implement-code-change",
           "SubprocessChildArtifactTitle": "Slice implementation change set"
         },
@@ -454,7 +456,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release rehearsal and rollback planning.",
-          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish/output-placement steps, rollback/removal steps, and child-run evidence used to derive them.",
+          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish/output-placement steps, rollback/removal steps, and accepted child-run handoff evidence used to derive them. Accept either slice-handoff or slice-handoff-after-repair as the source; do not use slice-repair-escalation as rollout-ready evidence.",
           "SubprocessChildStepKey": "slice-handoff",
           "SubprocessChildArtifactTitle": "Implementation slice handoff packet"
         }
@@ -491,6 +493,8 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
@@ -590,6 +594,7 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
+        "RunValidation",
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],
@@ -811,6 +816,8 @@
         "ReadUpstreamArtifacts",
         "MutateProductTarget",
         "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable"
@@ -1038,7 +1045,7 @@
       "Key": "record-runtime-commands",
       "Title": "Record .NET run commands under process run node",
       "Subtitle": "Run command, Run app, Run tests",
-      "Notes": "Launch and observe the .NET runtime command writeback subprocess after first-pass QA acceptance. It must create or reuse Run command under the current process run node and child nodes Run app and Run tests. This step coordinates subprocess evidence only and does not mutate product files.",
+      "Notes": "Launch and observe the .NET runtime command writeback subprocess after first-pass QA acceptance. It must create or update runtime-capable Run app and Run tests nodes under the current process run node, using Environment nodes for runnable .NET app launch commands and Script nodes for test/build/utility commands. It must not write runnable commands as delivery blocks. The child handoff must include launcher-compatible metadata receipts for every runnable command node; do not accept a Run app or Run tests node as complete when it lacks the project path, command, arguments, working directory, subtype, or other metadata needed by the project-structure runtime launcher. This step coordinates subprocess evidence only and does not mutate product files.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-runtime-command-writeback",
       "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
@@ -1047,10 +1054,10 @@
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
-      "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready writeback evidence.",
+      "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready evidence for runtime-capable Run app and Run tests nodes.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1125,7 +1132,7 @@
       "Key": "capture-ui-screenshots",
       "Title": "Capture and store .NET UI screenshots",
       "Subtitle": "Screenshots under process run node",
-      "Notes": "Launch and observe the .NET UI screenshot writeback subprocess after runtime command nodes exist. UI targets must capture screenshots and store accepted image assets under a Screenshots parent node below the current process run node. Backend-only or no-UI targets must produce explicit no-UI evidence.",
+      "Notes": "Launch and observe the .NET UI screenshot writeback subprocess after runtime command nodes exist. UI targets must capture screenshots and store accepted image assets under a Screenshots parent node below the current process run node. Backend-only or no-UI targets must produce explicit no-UI evidence. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
@@ -1137,7 +1144,7 @@
       "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1176,7 +1183,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
-          "ValidationRequirementSummary": "Must point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
+          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots.md in final evidenceRefs, point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
           "SubprocessChildStepKey": "screenshot-handoff",
           "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
         }
@@ -1194,7 +1201,9 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
-        "ExecuteExternalAction"
+        "ExecuteExternalAction",
+        "LaunchRuntime",
+        "CaptureRuntimeProof"
       ],
       "OperationTargetScope": "ExternalActionControlled"
     },
@@ -1407,7 +1416,9 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
-        "ExecuteExternalAction"
+        "ExecuteExternalAction",
+        "LaunchRuntime",
+        "CaptureRuntimeProof"
       ],
       "OperationTargetScope": "ExternalActionControlled"
     },
@@ -1599,7 +1610,7 @@
       "Key": "record-runtime-commands-after-repair",
       "Title": "Record repaired .NET run commands under process run node",
       "Subtitle": "Run command, Run app, Run tests",
-      "Notes": "Launch and observe runtime command writeback after repaired QA acceptance. Refresh or confirm Run command, Run app, and Run tests nodes under the current process run node using repaired evidence.",
+      "Notes": "Launch and observe runtime command writeback after repaired QA acceptance. Refresh or confirm runtime-capable Run app and Run tests nodes under the current process run node using repaired evidence. Runnable commands must use Environment, Script, or Infrastructure node types with runtime metadata, not delivery blocks. The child handoff must include launcher-compatible metadata receipts for every runnable command node; do not accept a Run app or Run tests node as repaired when it lacks the project path, command, arguments, working directory, subtype, or other metadata needed by the project-structure runtime launcher.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-runtime-command-writeback",
       "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
@@ -1608,10 +1619,10 @@
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
-      "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready writeback evidence.",
+      "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready evidence for runtime-capable Run app and Run tests nodes.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1690,7 +1701,7 @@
       "Key": "capture-ui-screenshots-after-repair",
       "Title": "Capture and store repaired .NET UI screenshots",
       "Subtitle": "Screenshots under process run node",
-      "Notes": "Launch and observe UI screenshot writeback after repaired runtime command nodes exist. UI targets must store repaired screenshots under Screenshots below the process run node; no-UI targets must carry explicit no-UI evidence.",
+      "Notes": "Launch and observe UI screenshot writeback after repaired runtime command nodes exist. UI targets must store repaired screenshots under Screenshots below the process run node; no-UI targets must carry explicit no-UI evidence. Write the parent step record to artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md and include that exact path in final evidenceRefs together with child screenshot handoff evidence.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
@@ -1702,7 +1713,7 @@
       "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
       "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
       "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
-      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "ExceptionPolicySummary": "Inspect stopped child subprocess evidence before blocking. If required child evidence is missing and relaunch is allowed, relaunch through the subprocess driver; block only for concrete missing tools, inputs, policy/environment failures, or irrecoverable evidence after a fresh child result.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -1741,7 +1752,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
-          "ValidationRequirementSummary": "Must point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
+          "ValidationRequirementSummary": "Must include the current-run parent step artifact path artifacts/process-runs/<current-process-run-id>/steps/capture-ui-screenshots-after-repair.md in final evidenceRefs, point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
           "SubprocessChildStepKey": "screenshot-handoff",
           "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
         }
@@ -1759,7 +1770,9 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
-        "ExecuteExternalAction"
+        "ExecuteExternalAction",
+        "LaunchRuntime",
+        "CaptureRuntimeProof"
       ],
       "OperationTargetScope": "ExternalActionControlled"
     },
@@ -1973,7 +1986,7 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
-        "processes/software-delivery/steps/release-approval.md"
+        "processes/software-delivery/steps/release-approval-after-repair.md"
       ],
       "AllowedOperations": [
         "ReadProcessContext",

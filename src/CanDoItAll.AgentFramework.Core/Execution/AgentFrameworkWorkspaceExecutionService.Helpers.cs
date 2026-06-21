@@ -465,6 +465,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return session;
     }
 
+    private static ChatSessionRecord EnsureAgentOwnsSession(
+        ChatSessionRecord? session,
+        Guid agentId,
+        Guid chatSessionId)
+    {
+        if (session is null)
+        {
+            throw new InvalidOperationException("Chat session was not found.");
+        }
+
+        if (session.AgentId != agentId)
+        {
+            throw new InvalidOperationException(
+                $"Chat session '{chatSessionId:N}' does not belong to agent '{agentId:N}'.");
+        }
+
+        return session;
+    }
+
     private static int EstimateTokens(string value)
     {
         return Math.Max(1, value.Length / 4);

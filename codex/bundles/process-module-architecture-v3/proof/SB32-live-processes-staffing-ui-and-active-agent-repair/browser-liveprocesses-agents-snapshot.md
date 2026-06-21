@@ -1,0 +1,145 @@
+- generic [ref=e377] [box=0,0,1440,1000]:
+  - complementary [ref=e378] [box=16,8,76,984]:
+    - generic [ref=e379] [box=27,19,54,962]:
+      - generic [ref=e380] [box=27,19,54,40]:
+        - generic [ref=e381] [box=27,19,10,40]:
+          - generic [ref=e382] [box=12,19,40,40]: CD
+          - generic [ref=e383] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e384] [box=45,21,36,36]:
+          - generic [ref=e385] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e386] [box=27,67,54,803]:
+        - button "Dashboard" [ref=e388] [box=27,71,44,44]:
+          - generic [ref=e390] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e392] [box=27,121,44,44]:
+          - generic [ref=e394] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e396] [box=27,171,44,44]:
+          - generic [ref=e398] [box=39,183,20,20]: forum
+          - generic [ref=e399] [box=51,173,18,16]: "92"
+        - button "CRM / HR" [ref=e401] [box=27,221,44,44]:
+          - generic [ref=e403] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e405] [box=27,271,44,44]:
+          - generic [ref=e407] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e409] [box=27,321,44,44]:
+          - generic [ref=e411] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e413] [box=27,371,44,44]:
+          - generic [ref=e415] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e417] [box=27,421,44,44]:
+          - generic [ref=e419] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e421] [box=27,471,44,44]:
+          - generic [ref=e423] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e425] [box=27,521,44,44]:
+          - generic [ref=e427] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e429] [box=27,571,44,44]:
+          - generic [ref=e431] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e433] [box=27,621,44,44]:
+          - generic [ref=e435] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e437] [box=27,671,44,44]:
+          - generic [ref=e439] [box=39,683,20,20]: construction
+        - button "Validation Center" [ref=e441] [box=27,721,44,44]:
+          - generic [ref=e443] [box=39,733,20,20]: fact_check
+        - button "More pages" [ref=e445] [box=32,771,44,44]:
+          - generic [ref=e447] [box=44,783,20,20]: expand_less
+      - generic [ref=e449] [box=27,887,54,94]:
+        - button "Settings" [ref=e451] [box=27,887,54,44]:
+          - generic [ref=e453] [box=44,899,20,20]: settings
+          - generic [ref=e454] [box=54,909,1,1]: Settings
+        - button "Switch Database" [ref=e456] [box=27,937,54,44]:
+          - generic [ref=e458] [box=44,949,20,20]: storage
+          - generic [ref=e459] [box=54,959,1,1]: Switch Database
+  - main [ref=e460] [box=100,8,1324,984]:
+    - generic [ref=e461] [box=100,8,1324,30]:
+      - generic [ref=e465] [box=104,8,776,30]:
+        - button "Dashboard" [ref=e467] [box=113,13,85,20]:
+          - generic [ref=e468] [box=113,15,59,16]: Dashboard
+          - generic [ref=e470] [box=178,13,20,20]: push_pin
+        - button "Live Processes" [ref=e472] [box=222,15,77,16]:
+          - generic [ref=e473] [box=222,15,77,16]: Live Processes
+      - generic [ref=e475] [box=900,10,524,26]:
+        - generic [ref=e476] [box=900,10,241,26]:
+          - generic [ref=e477] [box=911,16,136,13]: Delivery Workspace
+          - generic [ref=e478] [box=1052,15,77,16]: Live Processes
+        - generic [ref=e479] [box=1149,10,117,26]: Interactive Server
+        - generic [ref=e480] [box=1274,10,86,26]: Live items 0
+        - generic [ref=e481] [box=1368,10,56,26]: Tabs 2
+    - generic [ref=e484] [box=100,46,1324,946]:
+      - generic [ref=e487] [box=117,63,1290,36]:
+        - generic [ref=e488] [box=117,70,1198,22]:
+          - paragraph [ref=e489] [box=117,73,85,16]: Processes
+          - heading "Live processes" [level=1] [ref=e490] [box=210,71,107,20]
+          - generic [ref=e493] [box=324,70,64,22]: 2 active
+          - generic [ref=e496] [box=396,70,82,22]: 0 attention
+          - generic [ref=e499] [box=486,70,62,22]: 0 failed
+          - generic [ref=e502] [box=556,70,55,22]: Ready
+        - generic [ref=e503] [box=1327,63,80,36]:
+          - button "Refresh" [ref=e505] [box=1327,63,36,36]:
+            - generic [ref=e506] [box=1335,71,20,20]: refresh
+            - generic [ref=e507] [box=1345,81,1,1]: refresh
+          - button "Definitions" [ref=e509] [box=1371,63,36,36]:
+            - generic [ref=e510] [box=1379,71,20,20]: account_tree
+            - generic [ref=e511] [box=1389,81,1,1]: account tree
+      - generic [ref=e513] [box=100,132,1324,860]:
+        - status [ref=e514] [box=100,132,359,45]:
+          - generic [ref=e515] [box=115,145,20,20]: check_circle
+          - generic [ref=e516] [box=143,144,302,21]: Process started. Live run projection is loading.
+        - generic [ref=e518] [box=113,202,584,22]:
+          - generic [ref=e521] [box=113,202,97,22]: 24 definitions
+          - generic [ref=e524] [box=218,202,64,22]: 2 active
+          - generic [ref=e527] [box=290,202,82,22]: 0 attention
+          - generic [ref=e530] [box=379,202,62,22]: 0 failed
+          - generic [ref=e533] [box=450,202,164,22]: 17.06.2026 15:16 last event
+          - generic [ref=e536] [box=622,202,75,22]: 0 backlog
+        - generic [ref=e538] [box=100,249,1324,743]:
+          - tablist "Tabs" [ref=e539] [box=100,249,1324,47]:
+            - tab "Activity 2" [ref=e540] [box=104,249,206,46]:
+              - generic [ref=e541] [box=121,263,80,20]: monitoring
+              - generic [ref=e542] [box=209,261,52,24]: Activity
+              - generic [ref=e543] [box=269,263,24,19]: "2"
+            - tab "Agents 0" [active] [selected] [ref=e544] [box=318,250,143,46]:
+              - generic [ref=e545] [box=335,264,20,20]: smart_toy
+              - generic [ref=e546] [box=363,262,49,24]: Agents
+              - generic [ref=e547] [box=420,264,24,19]: "0"
+            - tab "Graphs" [ref=e548] [box=469,249,112,46]:
+              - generic [ref=e549] [box=486,263,20,20]: bar_chart
+              - generic [ref=e550] [box=514,261,50,24]: Graphs
+            - tab "Tool analytics 0" [ref=e551] [box=589,249,188,46]:
+              - generic [ref=e552] [box=606,263,20,20]: analytics
+              - generic [ref=e553] [box=634,261,94,24]: Tool analytics
+              - generic [ref=e554] [box=736,263,24,19]: "0"
+          - tabpanel "Agents 0" [ref=e770] [box=100,295,1324,697]:
+            - generic [ref=e771] [box=117,312,1275,488]:
+              - generic [ref=e772] [box=117,312,1275,187]:
+                - paragraph [ref=e773] [box=138,333,1233,15]: Manager context
+                - heading "Open process agent context" [level=2] [ref=e774] [box=138,348,1233,24]
+                - paragraph [ref=e775] [box=138,380,1233,24]: processes:workspace
+                - paragraph [ref=e776] [box=138,412,1233,24]: No blocked or manager-escalated process runs are present in the selected history window.
+                - generic [ref=e777] [box=138,452,1233,26]:
+                  - generic [ref=e778] [box=138,452,71,26]: Available
+                  - generic [ref=e779] [box=217,452,116,26]: 0 working agents
+                  - generic [ref=e780] [box=341,452,95,26]: 2 stale claims
+              - generic [ref=e782] [box=117,511,666,289]:
+                - article [ref=e783] [box=117,511,327,289]:
+                  - generic [ref=e784] [box=131,525,299,44]:
+                    - generic [ref=e785] [box=131,525,120,44]
+                    - generic [ref=e788] [box=334,525,96,26]: Lease expired
+                  - paragraph [ref=e789] [box=131,579,299,59]: Delivery Manager is Running on prepare-solution-skeleton as delivery-manager. Lease expired 17.06.2026 15:46.
+                  - generic [ref=e790] [box=131,648,299,90]:
+                    - generic [ref=e791] [box=131,648,100,26]: Run c9b825b9
+                    - generic [ref=e792] [box=237,648,164,26]: prepare-solution-skeleton
+                    - generic [ref=e793] [box=131,680,154,26]: claimed 17.06.2026 15:16
+                    - generic [ref=e794] [box=131,712,141,26]: lease 17.06.2026 15:46
+                  - button "Open process control" [ref=e795] [box=131,749,299,38]:
+                    - generic [ref=e796] [box=270,758,20,20]: open_in_new
+                    - generic [ref=e797] [box=280,767,1,1]: open in new
+                - article [ref=e798] [box=456,511,327,289]:
+                  - generic [ref=e799] [box=470,525,299,44]:
+                    - generic [ref=e800] [box=470,525,187,44]
+                    - generic [ref=e803] [box=673,525,96,26]: Lease expired
+                  - paragraph [ref=e804] [box=470,579,299,59]: .NET Application Developer is Running on implementation as delivery-manager. Lease expired 17.06.2026 15:44.
+                  - generic [ref=e805] [box=470,648,299,90]:
+                    - generic [ref=e806] [box=470,648,93,26]: Run 18fb14ac
+                    - generic [ref=e807] [box=569,648,109,26]: implementation
+                    - generic [ref=e808] [box=470,680,154,26]: claimed 17.06.2026 15:14
+                    - generic [ref=e809] [box=470,712,141,26]: lease 17.06.2026 15:44
+                  - button "Open process control" [ref=e810] [box=470,749,299,38]:
+                    - generic [ref=e811] [box=609,758,20,20]: open_in_new
+                    - generic [ref=e812] [box=619,767,1,1]: open in new

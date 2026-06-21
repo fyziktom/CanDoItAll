@@ -1,0 +1,42 @@
+{
+  "succeeded": true,
+  "message": "Application started and http://127.0.0.1:61481 returned success. The process tree is still running for follow-up browser proof; call workspace_dotnet_stop with startup.json when proof is complete.",
+  "projectPath": "C:\\programovani\\dotnet\\output\\TetrisGame.csproj",
+  "workingDirectory": "C:\\programovani\\dotnet\\output",
+  "workspaceRoot": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace",
+  "listenUrl": "http://127.0.0.1:61481",
+  "probeUrl": "http://127.0.0.1:61481",
+  "hostUrl": "http://127.0.0.1:61481",
+  "databaseProfileId": null,
+  "databaseProfileFingerprint": null,
+  "databaseProfileKey": null,
+  "appProcessId": 48824,
+  "appProcessTreeIds": [
+    41804,
+    34512,
+    48824
+  ],
+  "keepAlive": true,
+  "lifetimeScope": "ExecutionRun",
+  "aspNetCoreEnvironment": "Development",
+  "dotnetEnvironment": "Development",
+  "cleanupProcessIds": [],
+  "stopTool": "workspace_dotnet_stop",
+  "stopToolStartupReceiptPath": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace\\artifacts\\scopes\\organization\\e5df9ad633dbc6974a0678a74976013c\\process-runs\\dotnet-run\\20260616-191701086\\startup.json",
+  "staticWebAssetsAliasMappings": [],
+  "stdoutLog": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace\\artifacts\\scopes\\organization\\e5df9ad633dbc6974a0678a74976013c\\process-runs\\dotnet-run\\20260616-191701086\\app.stdout.log",
+  "stderrLog": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace\\artifacts\\scopes\\organization\\e5df9ad633dbc6974a0678a74976013c\\process-runs\\dotnet-run\\20260616-191701086\\app.stderr.log",
+  "stdoutTail": "info: Microsoft.Hosting.Lifetime[14]\r\n      Now listening on: http://127.0.0.1:61481\r\ninfo: Microsoft.Hosting.Lifetime[0]\r\n      Application started. Press Ctrl+C to shut down.\r\ninfo: Microsoft.Hosting.Lifetime[0]\r\n      Hosting environment: Development\r\ninfo: Microsoft.Hosting.Lifetime[0]\r\n      Content root path: C:\\programovani\\dotnet\\output\r\n",
+  "stderrTail": null,
+  "capturedAtUtc": "2026-06-16T15:17:05.0702246-04:00",
+  "cleanupAttempted": true,
+  "cleanupReceiptPath": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace\\artifacts\\scopes\\organization\\e5df9ad633dbc6974a0678a74976013c\\process-runs\\dotnet-run\\20260616-191701086\\cleanup.json",
+  "cleanupSucceeded": true,
+  "cleanupStoppedProcessIds": [
+    41804,
+    34512,
+    48824
+  ],
+  "cleanupStillRunningProcessIds": [],
+  "cleanupCompletedAtUtc": "2026-06-16T19:17:43.2043409+00:00"
+}

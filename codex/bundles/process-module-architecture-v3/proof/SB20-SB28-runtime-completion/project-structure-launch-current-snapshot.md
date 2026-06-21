@@ -1,0 +1,54 @@
+- generic [ref=e1] [box=0,0,1920,1080]:
+  - generic [ref=e792] [box=0,0,1920,1080]:
+    - complementary [ref=e793] [box=16,8,76,1064]:
+      - generic [ref=e794] [box=27,19,54,1042]:
+        - generic [ref=e795] [box=27,19,54,40]:
+          - generic [ref=e796] [box=27,19,10,40]
+          - button "Expand navigation" [ref=e799] [box=45,21,36,36]
+        - navigation "Primary navigation" [ref=e801] [box=27,67,54,883]:
+          - button "Dashboard" [ref=e803] [box=27,71,44,44]
+          - button "Projects" [ref=e807] [box=27,121,44,44]
+          - button "Collaboration" [ref=e811] [box=27,171,44,44]
+          - button "CRM / HR" [ref=e816] [box=27,221,44,44]
+          - button "Agents" [ref=e820] [box=27,271,44,44]
+          - button "Workflows" [ref=e824] [box=27,321,44,44]
+          - button "Processes" [ref=e828] [box=27,371,44,44]
+          - button "Live Processes" [ref=e832] [box=27,421,44,44]
+          - button "Cognitive Memory" [ref=e836] [box=27,471,44,44]
+          - button "Resources" [ref=e840] [box=27,521,44,44]
+          - button "Plugins" [ref=e844] [box=27,571,44,44]
+          - button "Prompt Gallery" [ref=e848] [box=27,621,44,44]
+          - button "Prompt Factory" [ref=e852] [box=27,671,44,44]
+          - button "Validation Center" [ref=e856] [box=27,721,44,44]
+          - button "More pages" [ref=e860] [box=32,771,44,44]
+          - button "Opened work" [ref=e864] [box=32,821,44,44]
+        - generic [ref=e869] [box=27,967,54,94]:
+          - button "Settings" [ref=e871] [box=27,967,54,44]
+          - button "Switch Database" [ref=e876] [box=27,1017,54,44]
+    - main [ref=e880] [box=100,8,1804,1064]:
+      - generic [ref=e881] [box=100,8,1804,30]:
+        - generic [ref=e885] [box=104,8,1149,30]:
+          - button "Dashboard" [ref=e887] [box=113,13,85,20]
+          - button "Processes" [ref=e892] [box=222,15,53,16]
+          - button "Live Processes" [ref=e895] [box=298,15,77,16]
+          - button "Projects" [ref=e898] [box=400,15,43,16]
+          - button "TetrisGame · Structure" [ref=e901] [box=467,15,120,16]
+        - generic [ref=e904] [box=1273,10,631,26]:
+          - generic [ref=e905] [box=1273,10,207,26]
+          - generic [ref=e908] [box=1488,10,83,26]: TetrisGame
+          - generic [ref=e909] [box=1578,10,44,26]: WIP
+          - generic [ref=e910] [box=1630,10,117,26]: Interactive Server
+          - generic [ref=e911] [box=1756,10,85,26]: Live items 1
+          - generic [ref=e912] [box=1848,10,56,26]: Tabs 5
+      - generic [ref=e914] [box=100,46,1804,1026]:
+        - generic [ref=e916] [box=100,46,1804,996]:
+          - generic [ref=e918] [box=100,46,1804,155]
+          - generic [ref=e1512] [box=100,225,1028,817]
+        - dialog "Assign roles for Main App" [ref=e1700] [box=13,13,1894,1054]:
+          - generic [ref=e1701] [box=31,31,1857,1001]
+  - dialog [active] [ref=e2559] [box=800,216,320,168]:
+    - generic [ref=e2560] [box=832,248,256,104]:
+      - paragraph [ref=e2561] [box=864,248,193,48]:
+        - text: Failed to rejoin.
+        - text: Please retry or reload the page.
+      - button "Retry" [ref=e2562] [box=918,312,84,40]

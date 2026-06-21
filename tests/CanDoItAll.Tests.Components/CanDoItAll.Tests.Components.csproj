@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -26,15 +26,13 @@
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.1" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
@@ -44,6 +42,4 @@
   </ItemGroup>
 
 </Project>
-
-
 

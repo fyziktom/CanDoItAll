@@ -1,7 +1,0 @@
-tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:468:                    "SB06 deterministic fake-mode proof",
-tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1109:            "Deterministic plugin fake-mode test executor.",
-tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1112:            "sb06-plugin-fake-mode",
-tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1126:            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("SB06 fake-mode preview proof."),
-tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1136:            "SB06 plugin fake-mode workflow",
-tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1670:            throw new InvalidOperationException("Bundled plugin fake-mode proof must not invoke the live executor.");
-src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:510:                ? "Executor can run with deterministic fake or preview inputs."

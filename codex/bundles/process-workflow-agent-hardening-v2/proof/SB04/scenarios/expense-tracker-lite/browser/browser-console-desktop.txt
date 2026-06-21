@@ -1,2 +1,0 @@
-info: Debugging hotkey: Shift+Alt+D (when application has focus)
-info: Debugging hotkey: Shift+Alt+D (when application has focus)

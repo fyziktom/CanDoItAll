@@ -1,0 +1,31 @@
+{
+  "Kind": "prompt-resource",
+  "Key": "prompt-intake-structuring",
+  "DisplayName": "Prompt / intake structuring",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "AudienceRoleKey": "product-owner",
+  "Phase": "intake",
+  "Summary": "Prompt scaffold for turning unstructured demand into an explicit intake brief without inventing missing facts.",
+  "RequiredInputs": [
+    "request source",
+    "desired outcome",
+    "known constraints",
+    "known stakeholders",
+    "known missing inputs"
+  ],
+  "OutputSchema": [
+    "problem statement",
+    "outcome statement",
+    "scope boundary",
+    "non-goals",
+    "missing assumptions",
+    "decision owner"
+  ],
+  "RefusalConditions": [
+    "Refuse to invent acceptance criteria not supported by the input.",
+    "Refuse to mark scope complete if key owners or constraints are unknown.",
+    "Escalate when the request contains contradictory goals."
+  ],
+  "DocPath": "shared/prompts/prompt-intake-structuring.md"
+}

@@ -3,7 +3,6 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
@@ -30,9 +29,6 @@ public partial class AgentDetailsDialog
     public ProjectsService ProjectsService { get; set; } = default!;
 
     [Inject]
-    public ProcessesService ProcessesService { get; set; } = default!;
-
-    [Inject]
     public SecretService SecretService { get; set; } = default!;
 
     [Inject]
@@ -46,7 +42,6 @@ public partial class AgentDetailsDialog
     private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyList<CapabilityCatalogItem> capabilities = [];
     private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
-    private IReadOnlyList<ProcessDefinitionListItem> processDefinitions = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<string> tagValues = [];
     private string externalWorkspaceRootsText = string.Empty;
@@ -62,18 +57,27 @@ public partial class AgentDetailsDialog
     private bool areProjectStructureProjectsLoaded;
     private bool isLoadingProjectStructureProjects;
     private bool projectStructureProjectsRequested;
-    private bool areProcessDefinitionsLoaded;
-    private bool isLoadingProcessDefinitions;
-    private bool processDefinitionsRequested;
     private bool areSecretsLoaded;
     private bool isLoadingSecrets;
     private string? providerLoadErrorMessage;
     private string? projectStructureProjectsErrorMessage;
-    private string? processDefinitionsErrorMessage;
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
-    private Task? processDefinitionsLoadTask;
     private int selectedTabIndex;
+    private bool avatarSelectorOpen;
+
+    private static IReadOnlyList<string> AvatarOptions => AvatarFallbackResolver.GetBundledAvatarUrls();
+
+    private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
+    [
+        AgentWorkspaceToolProfileKind.Custom,
+        AgentWorkspaceToolProfileKind.ReadOnly,
+        AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+        AgentWorkspaceToolProfileKind.QualityValidation,
+        AgentWorkspaceToolProfileKind.ArchitectureReview,
+        AgentWorkspaceToolProfileKind.SecurityReview,
+        AgentWorkspaceToolProfileKind.BusinessAnalysis
+    ];
 
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
@@ -192,12 +196,6 @@ public partial class AgentDetailsDialog
         return EnsureProjectStructureProjectsLoadedAsync();
     }
 
-    private Task RequestProcessDefinitionsAsync()
-    {
-        processDefinitionsRequested = true;
-        return EnsureProcessDefinitionsLoadedAsync();
-    }
-
     private Task EnsureProjectStructureProjectsLoadedAsync()
     {
         if (areProjectStructureProjectsLoaded)
@@ -234,46 +232,6 @@ public partial class AgentDetailsDialog
         {
             isLoadingProjectStructureProjects = false;
             projectStructureProjectsLoadTask = null;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private Task EnsureProcessDefinitionsLoadedAsync()
-    {
-        if (areProcessDefinitionsLoaded)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (processDefinitionsLoadTask is not null)
-        {
-            return processDefinitionsLoadTask;
-        }
-
-        processDefinitionsLoadTask = LoadProcessDefinitionsAsync();
-        return processDefinitionsLoadTask;
-    }
-
-    private async Task LoadProcessDefinitionsAsync()
-    {
-        isLoadingProcessDefinitions = true;
-        processDefinitionsErrorMessage = null;
-        await InvokeAsync(StateHasChanged);
-
-        try
-        {
-            processDefinitions = await ProcessesService.ListDefinitionsAsync(cancellationToken: default);
-            areProcessDefinitionsLoaded = true;
-        }
-        catch (Exception exception)
-        {
-            processDefinitionsErrorMessage = $"Failed to load processes. {exception.Message}";
-            NotificationService.Error("Process list failed to load", exception.Message);
-        }
-        finally
-        {
-            isLoadingProcessDefinitions = false;
-            processDefinitionsLoadTask = null;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -358,6 +316,51 @@ public partial class AgentDetailsDialog
         selectedTabIndex = 0;
         return Task.CompletedTask;
     }
+
+    private Task OpenAvatarSelectorAsync()
+    {
+        avatarSelectorOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseAvatarSelectorAsync()
+    {
+        avatarSelectorOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task ClearAvatarAsync()
+    {
+        editorModel.AvatarImageUrl = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void SelectAvatar(string avatarImageUrl)
+    {
+        editorModel.AvatarImageUrl = avatarImageUrl.Trim();
+    }
+
+    private bool IsSelectedAvatar(string avatarImageUrl)
+        => string.Equals(editorModel.AvatarImageUrl?.Trim(), avatarImageUrl.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private string ResolveAvatarOptionClass(string avatarImageUrl)
+        => IsSelectedAvatar(avatarImageUrl)
+            ? "agent-details-dialog__avatar-option agent-details-dialog__avatar-option--selected"
+            : "agent-details-dialog__avatar-option";
+
+    private string ResolveAvatarSelectionText()
+        => string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)
+            ? "Default generated avatar"
+            : "Custom selected avatar";
+
+    private string ResolveAvatarAltText()
+        => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");
+
+    private string ResolveAvatarFallbackText()
+        => BuildInitials(ResolveAvatarSeed());
+
+    private string ResolveAvatarSeed()
+        => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");
 
     private async Task ToggleCapabilityAsync(Guid capabilityId)
     {
@@ -535,6 +538,40 @@ public partial class AgentDetailsDialog
             : $"{accessMode}; {externalRootCount} external root(s)";
     }
 
+    private static string DescribeWorkspaceExecutionScope(AgentEditorModel editor)
+    {
+        var access = editor.WorkspaceToolAccess;
+        var enabled = new List<string>();
+        if (access.CanRunValidationCommands)
+        {
+            enabled.Add("build/test/run");
+        }
+
+        if (access.CanRunLocalScripts)
+        {
+            enabled.Add("local scripts");
+        }
+
+        if (access.CanScaffoldProjects)
+        {
+            enabled.Add("project scaffolding");
+        }
+
+        if (access.CanManageWorkspacePaths)
+        {
+            enabled.Add("path management");
+        }
+
+        if (access.CanTransformArtifacts)
+        {
+            enabled.Add("artifact transforms");
+        }
+
+        return enabled.Count == 0
+            ? "Execution tools disabled"
+            : $"Enabled: {string.Join(", ", enabled)}";
+    }
+
     private static string DescribeStorageScope(AgentEditorModel editor)
     {
         if (!editor.WorkspaceToolAccess.CanReadStorage &&
@@ -652,12 +689,6 @@ public partial class AgentDetailsDialog
     {
         var isEnabled = rawValue is bool value && value;
         editorModel.ProcessAccess.CanRead = isEnabled;
-        if (isEnabled)
-        {
-            processDefinitionsRequested = true;
-            _ = EnsureProcessDefinitionsLoadedAsync();
-        }
-
         if (!isEnabled)
         {
             editorModel.ProcessAccess.CanWrite = false;
@@ -672,8 +703,6 @@ public partial class AgentDetailsDialog
         if (isEnabled)
         {
             editorModel.ProcessAccess.CanRead = true;
-            processDefinitionsRequested = true;
-            _ = EnsureProcessDefinitionsLoadedAsync();
         }
     }
 
@@ -687,24 +716,116 @@ public partial class AgentDetailsDialog
         }
     }
 
+    private void ChangeWorkspaceToolProfile(object? rawValue)
+    {
+        if (!Enum.TryParse<AgentWorkspaceToolProfileKind>(rawValue?.ToString(), ignoreCase: true, out var profile) ||
+            !Enum.IsDefined(profile))
+        {
+            return;
+        }
+
+        var current = editorModel.WorkspaceToolAccess;
+        var next = profile == AgentWorkspaceToolProfileKind.Custom
+            ? CloneWorkspaceToolAccess(current)
+            : AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
+        next.Profile = profile;
+        next.AllowedExternalTargetAliases = current.AllowedExternalTargetAliases.ToList();
+        next.CanReadStorage = current.CanReadStorage;
+        next.CanWriteStorage = current.CanWriteStorage;
+        next.AllowAllStorageCatalogs = current.AllowAllStorageCatalogs;
+        next.AllowedStorageCatalogIds = current.AllowedStorageCatalogIds.ToList();
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(next);
+    }
+
     private void ToggleWorkspaceFileRead(object? rawValue)
     {
         var isEnabled = rawValue is bool value && value;
+        MarkWorkspaceToolProfileCustom();
         editorModel.WorkspaceToolAccess.CanReadFiles = isEnabled;
         if (!isEnabled)
         {
             editorModel.WorkspaceToolAccess.CanWriteFiles = false;
         }
+
+        NormalizeWorkspaceToolAccess();
     }
 
     private void ToggleWorkspaceFileWrite(object? rawValue)
     {
         var isEnabled = rawValue is bool value && value;
+        MarkWorkspaceToolProfileCustom();
         editorModel.WorkspaceToolAccess.CanWriteFiles = isEnabled;
         if (isEnabled)
         {
             editorModel.WorkspaceToolAccess.CanReadFiles = true;
         }
+
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceValidationCommands(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanRunValidationCommands = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceLocalScripts(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanRunLocalScripts = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceScaffoldProjects(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanScaffoldProjects = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceManagePaths(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanManageWorkspacePaths = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void ToggleWorkspaceTransformArtifacts(object? rawValue)
+    {
+        MarkWorkspaceToolProfileCustom();
+        editorModel.WorkspaceToolAccess.CanTransformArtifacts = rawValue is bool value && value;
+        NormalizeWorkspaceToolAccess();
+    }
+
+    private void MarkWorkspaceToolProfileCustom()
+    {
+        editorModel.WorkspaceToolAccess.Profile = AgentWorkspaceToolProfileKind.Custom;
+    }
+
+    private void NormalizeWorkspaceToolAccess()
+    {
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
+    }
+
+    private static AgentWorkspaceToolAccessSettings CloneWorkspaceToolAccess(AgentWorkspaceToolAccessSettings source)
+    {
+        return new AgentWorkspaceToolAccessSettings
+        {
+            Profile = source.Profile,
+            CanReadFiles = source.CanReadFiles,
+            CanWriteFiles = source.CanWriteFiles,
+            CanRunValidationCommands = source.CanRunValidationCommands,
+            CanRunLocalScripts = source.CanRunLocalScripts,
+            CanScaffoldProjects = source.CanScaffoldProjects,
+            CanManageWorkspacePaths = source.CanManageWorkspacePaths,
+            CanTransformArtifacts = source.CanTransformArtifacts,
+            AllowedExternalTargetAliases = source.AllowedExternalTargetAliases.ToList(),
+            CanReadStorage = source.CanReadStorage,
+            CanWriteStorage = source.CanWriteStorage,
+            AllowAllStorageCatalogs = source.AllowAllStorageCatalogs,
+            AllowedStorageCatalogIds = source.AllowedStorageCatalogIds.ToList()
+        };
     }
 
     private void ToggleStorageRead(object? rawValue)
@@ -787,47 +908,6 @@ public partial class AgentDetailsDialog
     private void ClearProjectStructureProjects()
     {
         editorModel.ProjectStructureAccess.AllowedProjectIds = [];
-    }
-
-    private bool HasProcessAccess(Guid definitionId)
-    {
-        return editorModel.ProcessAccess.AllowedDefinitionIds.Contains(definitionId);
-    }
-
-    private void ToggleProcess(Guid definitionId, object? rawValue)
-    {
-        var selectedDefinitions = editorModel.ProcessAccess.AllowedDefinitionIds.ToList();
-        var isEnabled = rawValue is bool value && value;
-        if (isEnabled)
-        {
-            if (!selectedDefinitions.Contains(definitionId))
-            {
-                selectedDefinitions.Add(definitionId);
-            }
-        }
-        else
-        {
-            selectedDefinitions.RemoveAll(item => item == definitionId);
-        }
-
-        editorModel.ProcessAccess.AllowedDefinitionIds = selectedDefinitions
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-    }
-
-    private void SelectAllProcesses()
-    {
-        editorModel.ProcessAccess.AllowedDefinitionIds = processDefinitions
-            .Select(item => item.Id)
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-    }
-
-    private void ClearProcesses()
-    {
-        editorModel.ProcessAccess.AllowedDefinitionIds = [];
     }
 
     private Task HandleTagsChangedAsync(IReadOnlyList<string> value)
@@ -919,6 +999,20 @@ public partial class AgentDetailsDialog
             .ToList();
     }
 
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private static string BuildInitials(string value)
+    {
+        var words = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToArray();
+        return words.Length == 0
+            ? "A"
+            : string.Concat(words.Select(word => char.ToUpperInvariant(word[0])));
+    }
+
     private bool IsCapabilityAttached(Guid capabilityId)
         => editorModel.SelectedCapabilityIds.Contains(capabilityId);
 
@@ -929,6 +1023,20 @@ public partial class AgentDetailsDialog
             CapabilityKind.McpServer => "MCP server",
             CapabilityKind.AiContext => "AI context",
             _ => kind.ToString()
+        };
+    }
+
+    private static string FormatWorkspaceToolProfile(AgentWorkspaceToolProfileKind profile)
+    {
+        return profile switch
+        {
+            AgentWorkspaceToolProfileKind.ReadOnly => "Read only",
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment => "Software development",
+            AgentWorkspaceToolProfileKind.QualityValidation => "Quality validation",
+            AgentWorkspaceToolProfileKind.ArchitectureReview => "Architecture review",
+            AgentWorkspaceToolProfileKind.SecurityReview => "Security review",
+            AgentWorkspaceToolProfileKind.BusinessAnalysis => "Business analysis",
+            _ => "Custom"
         };
     }
 

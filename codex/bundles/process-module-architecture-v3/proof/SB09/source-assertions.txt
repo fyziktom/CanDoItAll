@@ -1,0 +1,161 @@
+Source assertions captured with rg. Paths are repo-relative.
+
+Command: rg -n "public sealed partial class ProcessManagerControlLoop|RaiseIncidentAsync|EvaluateRecoveryAsync|RecordBranchDecisionAsync|SendSubprocessMessageAsync|SaveDiagnosticEvidenceAsync|CreateRouteHandoff|ConsumeBudgetAsync|ProcessRuntimeEventTypes\.Manager|IProcess.*Store|IProcessManagerStrategy|ProcessRestrictedDiagnosticEvidence|ProcessSafeIncidentContent|ProcessSubprocessControlMessage|ProcessBranchDecision|ProcessRecoveryRequest" src/CanDoItAll.Processes.Application src/CanDoItAll.Processes.Runtime tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs -g"ProcessManager*.cs" -g"ProcessRuntimeEventTypes.cs"
+
+Result:
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:26:        var incidentResult = await manager.RaiseIncidentAsync(MissingArtifactSignal("token=restricted-value"));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:27:        var recoveryResult = await manager.EvaluateRecoveryAsync(NewRecoveryRequest(incidentResult.Incident.IncidentId));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:32:        Assert.Equal(ProcessRuntimeEventTypes.ManagerIncidentRaised, incidentResult.DecisionEvent.EventType);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:37:        Assert.Equal(ProcessRecoveryRequestStatus.Scheduled, recoveryResult.RecoveryRequest.Status);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:39:        Assert.Equal(ProcessRuntimeEventTypes.ManagerRecoveryApproved, recoveryResult.DecisionEvent.EventType);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:49:        var result = await manager.RaiseIncidentAsync(MissingArtifactSignal("previous version expired") with
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:69:        var first = await manager.RecordBranchDecisionAsync(new ProcessBranchDecisionCommand(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:75:        var second = await manager.RecordBranchDecisionAsync(new ProcessBranchDecisionCommand(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:97:        var first = await manager.RecordBranchDecisionAsync(new ProcessBranchDecisionCommand(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:103:        var second = await manager.RecordBranchDecisionAsync(new ProcessBranchDecisionCommand(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:112:        Assert.Equal(ProcessBranchDecisionStatus.Escalated, second.BranchDecision.Status);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:114:        Assert.Equal(ProcessRuntimeEventTypes.ManagerLoopBudgetEscalated, second.DecisionEvent.EventType);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:146:        var result = await manager.SendSubprocessMessageAsync(draft);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:149:        Assert.Equal(ProcessRuntimeEventTypes.ManagerSubprocessMessageQueued, result.DecisionEvent.EventType);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:164:        var result = await manager.RaiseIncidentAsync(MissingArtifactSignal(restrictedDetail));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:177:        var incident = await manager.RaiseIncidentAsync(MissingArtifactSignal("policy denies recovery"));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:179:        var result = await manager.EvaluateRecoveryAsync(NewRecoveryRequest(incident.Incident.IncidentId));
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:183:        Assert.Equal(ProcessRecoveryRequestStatus.Denied, result.RecoveryRequest.Status);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:184:        Assert.Equal(ProcessRuntimeEventTypes.ManagerRecoveryDenied, result.DecisionEvent.EventType);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:197:        Assert.DoesNotContain(typeof(IProcessRuntimeStateStore), dependencyTypes);
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:211:            new ProcessRestrictedDiagnosticEvidence(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:228:            ProcessRecoveryRequestId.New(),
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:240:    private static ProcessBranchDecisionRequest BackwardBranchRequest(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:248:        return new ProcessBranchDecisionRequest(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:249:            ProcessBranchDecisionRequestId.New(),
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:293:    private sealed class RecordingDiagnosticEvidenceStore : IProcessDiagnosticEvidenceStore
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:295:        public List<ProcessRestrictedDiagnosticEvidence> Evidence { get; } = [];
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:300:            ProcessRestrictedDiagnosticEvidence evidence,
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:312:    private sealed class RecordingIncidentStore : IProcessIncidentStore
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:380:    private sealed class RecordingRecoveryRequestStore : IProcessRecoveryRequestStore
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:382:        public List<ProcessRecoveryRequest> Requests { get; } = [];
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:384:        public Task<ProcessRecoveryRequest?> FindByIdempotencyKeyAsync(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:395:            ProcessRecoveryRequest request,
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:403:    private sealed class RecordingBranchDecisionStore : IProcessBranchDecisionStore
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:405:        public List<ProcessBranchDecision> Decisions { get; } = [];
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:407:        public Task<ProcessBranchDecision?> FindByIdempotencyKeyAsync(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:409:            ProcessBranchDecisionRequestId requestId,
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:420:            ProcessBranchDecision decision,
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:471:    private sealed class RecordingSubprocessMessageStore : IProcessSubprocessMessageStore
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:473:        public List<ProcessSubprocessControlMessage> Messages { get; } = [];
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:475:        public Task<ProcessSubprocessControlMessage?> FindByIdempotencyKeyAsync(
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:488:            ProcessSubprocessControlMessage message,
+tests\CanDoItAll.Tests.Unit\ProcessManagerControlLoopTests.cs:496:    private sealed class RecordingManagerDecisionStore : IProcessManagerDecisionStore
+src\CanDoItAll.Processes.Runtime\ProcessManagerSubprocessContracts.cs:29:public sealed record ProcessSubprocessControlMessage(
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:6:    ProcessRecoveryRequestId RecoveryRequestId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:26:public sealed record ProcessRecoveryRequest(
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:27:    ProcessRecoveryRequestId RecoveryRequestId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:32:    ProcessRecoveryRequestStatus Status,
+src\CanDoItAll.Processes.Runtime\ProcessManagerRecoveryContracts.cs:43:    ProcessRecoveryRequestId RecoveryRequestId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:6:public interface IProcessDiagnosticEvidenceStore
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:11:        ProcessRestrictedDiagnosticEvidence evidence,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:15:public interface IProcessIncidentStore
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:56:public interface IProcessRecoveryRequestStore
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:58:    Task<ProcessRecoveryRequest?> FindByIdempotencyKeyAsync(
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:64:        ProcessRecoveryRequest request,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:68:public interface IProcessBranchDecisionStore
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:70:    Task<ProcessBranchDecision?> FindByIdempotencyKeyAsync(
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:72:        ProcessBranchDecisionRequestId requestId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:77:        ProcessBranchDecision decision,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:88:public interface IProcessSubprocessMessageStore
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:90:    Task<ProcessSubprocessControlMessage?> FindByIdempotencyKeyAsync(
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:97:        ProcessSubprocessControlMessage message,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:101:public interface IProcessManagerDecisionStore
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:108:public interface IProcessManagerStrategy
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:137:    ProcessRecoveryRequest RecoveryRequest,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:147:public sealed record ProcessBranchDecisionHandlingResult(
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:148:    ProcessBranchDecision BranchDecision,
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:155:    public bool Succeeded => Diagnostics.Count == 0 && BranchDecision.Status == ProcessBranchDecisionStatus.Recorded;
+src\CanDoItAll.Processes.Runtime\ProcessManagerPorts.cs:159:    ProcessSubprocessControlMessage Message,
+src\CanDoItAll.Processes.Runtime\ProcessManagerEnums.cs:80:public enum ProcessRecoveryRequestStatus
+src\CanDoItAll.Processes.Runtime\ProcessManagerEnums.cs:120:public enum ProcessBranchDecisionStatus
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:6:public sealed record ProcessBranchDecisionRequest(
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:7:    ProcessBranchDecisionRequestId RequestId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:20:public sealed record ProcessBranchDecisionCommand(
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:21:    ProcessBranchDecisionRequest Request,
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:27:public sealed record ProcessBranchDecision(
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:28:    ProcessBranchDecisionId DecisionId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:29:    ProcessBranchDecisionRequestId RequestId,
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:35:    ProcessBranchDecisionStatus Status,
+src\CanDoItAll.Processes.Runtime\ProcessManagerBranchContracts.cs:44:    ProcessBranchDecisionId DecisionId,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Helpers.cs:8:public sealed partial class ProcessManagerControlLoop
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.cs:7:public sealed partial class ProcessManagerControlLoop(ProcessManagerRuntimeDependencies runtimeDependencies)
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:7:public sealed partial class ProcessManagerControlLoop
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:9:    public async Task<ProcessRecoveryEvaluationResult> EvaluateRecoveryAsync(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:93:            ProcessRuntimeEventTypes.ManagerRecoveryApproved,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:97:        var recoveryRequest = new ProcessRecoveryRequest(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:103:            ProcessRecoveryRequestStatus.Scheduled,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:157:            ProcessRuntimeEventTypes.ManagerRecoveryDenied,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:161:        var recoveryRequest = new ProcessRecoveryRequest(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:167:            ProcessRecoveryRequestStatus.Denied,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:215:            ProcessRuntimeEventTypes.ManagerLoopBudgetEscalated,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:219:        var recoveryRequest = new ProcessRecoveryRequest(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:225:            ProcessRecoveryRequestStatus.Escalated,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:262:    private static ProcessEventType EventTypeForRecoveryStatus(ProcessRecoveryRequestStatus status)
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:266:            ProcessRecoveryRequestStatus.Denied => ProcessRuntimeEventTypes.ManagerRecoveryDenied,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:267:            ProcessRecoveryRequestStatus.Escalated => ProcessRuntimeEventTypes.ManagerLoopBudgetEscalated,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:268:            _ => ProcessRuntimeEventTypes.ManagerRecoveryApproved
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:272:    private static ProcessManagerDecisionKind DecisionKindForRecoveryStatus(ProcessRecoveryRequestStatus status)
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:276:            ProcessRecoveryRequestStatus.Denied => ProcessManagerDecisionKind.RecoveryDenied,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:277:            ProcessRecoveryRequestStatus.Escalated => ProcessManagerDecisionKind.LoopBudgetEscalated,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:282:    private static ProcessRecoveryDispatchHandoff? DispatchHandoffFor(ProcessRecoveryRequest request)
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Recovery.cs:284:        if (request.Status != ProcessRecoveryRequestStatus.Scheduled)
+src\CanDoItAll.Processes.Runtime\ProcessManagerIncidentContracts.cs:6:public sealed record ProcessRestrictedDiagnosticEvidence(
+src\CanDoItAll.Processes.Runtime\ProcessManagerIncidentContracts.cs:30:    ProcessRestrictedDiagnosticEvidence DiagnosticEvidence,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Incidents.cs:5:public sealed partial class ProcessManagerControlLoop
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Incidents.cs:7:    public async Task<ProcessIncidentHandlingResult> RaiseIncidentAsync(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Incidents.cs:26:                ProcessRuntimeEventTypes.ManagerIncidentRaised,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Incidents.cs:89:            ProcessRuntimeEventTypes.ManagerIncidentRaised,
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:45:public readonly record struct ProcessRecoveryRequestId
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:47:    public ProcessRecoveryRequestId(Guid value)
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:54:    public static ProcessRecoveryRequestId New() => new(Guid.NewGuid());
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:59:public readonly record struct ProcessBranchDecisionRequestId
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:61:    public ProcessBranchDecisionRequestId(Guid value)
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:68:    public static ProcessBranchDecisionRequestId New() => new(Guid.NewGuid());
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:73:public readonly record struct ProcessBranchDecisionId
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:75:    public ProcessBranchDecisionId(Guid value)
+src\CanDoItAll.Processes.Runtime\ProcessManagerIdentifiers.cs:82:    public static ProcessBranchDecisionId New() => new(Guid.NewGuid());
+src\CanDoItAll.Processes.Application\ProcessManagerRuntimeDependencies.cs:6:    IProcessDiagnosticEvidenceStore Diagnostics,
+src\CanDoItAll.Processes.Application\ProcessManagerRuntimeDependencies.cs:7:    IProcessIncidentStore Incidents,
+src\CanDoItAll.Processes.Application\ProcessManagerRuntimeDependencies.cs:10:    IProcessRecoveryRequestStore RecoveryRequests,
+src\CanDoItAll.Processes.Application\ProcessManagerRuntimeDependencies.cs:11:    IProcessBranchDecisionStore BranchDecisions,
+src\CanDoItAll.Processes.Application\ProcessManagerRuntimeDependencies.cs:13:    IProcessSubprocessMessageStore SubprocessMessages,
+src\CanDoItAll.Processes.Application\ProcessManagerRuntimeDependencies.cs:14:    IProcessManagerDecisionStore Decisions);
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:6:public sealed partial class ProcessManagerControlLoop
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:8:    public async Task<ProcessBranchDecisionHandlingResult> RecordBranchDecisionAsync(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:9:        ProcessBranchDecisionCommand command,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:30:                ProcessRuntimeEventTypes.ManagerBranchDecisionRecorded,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.cs:45:            return new ProcessBranchDecisionHandlingResult(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:6:public sealed partial class ProcessManagerControlLoop
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:8:    private async Task<ProcessBranchDecisionHandlingResult> RecordAcceptedBranchDecisionAsync(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:9:        ProcessBranchDecisionCommand command,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:21:            ProcessRuntimeEventTypes.ManagerBranchDecisionRecorded,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:25:        var branchDecision = new ProcessBranchDecision(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:26:            ProcessBranchDecisionId.New(),
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:33:            ProcessBranchDecisionStatus.Recorded,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:58:        return new ProcessBranchDecisionHandlingResult(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:67:    private async Task<ProcessBranchDecisionHandlingResult> RecordRejectedBranchDecisionAsync(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:68:        ProcessBranchDecisionCommand command,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:78:            ProcessRuntimeEventTypes.ManagerBranchDecisionRejected,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:82:        var branchDecision = new ProcessBranchDecision(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:83:            ProcessBranchDecisionId.New(),
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:90:            ProcessBranchDecisionStatus.Rejected,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:111:        return new ProcessBranchDecisionHandlingResult(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:120:    private async Task<ProcessBranchDecisionHandlingResult> RecordEscalatedBranchDecisionAsync(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:121:        ProcessBranchDecisionCommand command,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:135:            ProcessRuntimeEventTypes.ManagerLoopBudgetEscalated,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:139:        var branchDecision = new ProcessBranchDecision(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:140:            ProcessBranchDecisionId.New(),
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:147:            ProcessBranchDecisionStatus.Escalated,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:172:        return new ProcessBranchDecisionHandlingResult(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Branching.Results.cs:182:        ProcessBranchDecisionRequest request,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Subprocess.cs:6:public sealed partial class ProcessManagerControlLoop
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Subprocess.cs:8:    public async Task<ProcessSubprocessMessageResult> SendSubprocessMessageAsync(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Subprocess.cs:33:                ProcessRuntimeEventTypes.ManagerSubprocessMessageQueued,
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Subprocess.cs:68:        var message = new ProcessSubprocessControlMessage(
+src\CanDoItAll.Processes.Application\ProcessManagerControlLoop.Subprocess.cs:88:            ProcessRuntimeEventTypes.ManagerSubprocessMessageQueued,

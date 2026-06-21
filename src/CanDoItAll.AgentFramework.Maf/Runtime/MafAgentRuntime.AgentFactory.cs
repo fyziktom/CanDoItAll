@@ -1,6 +1,7 @@
 using Azure.AI.OpenAI;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Agents.AI;
@@ -97,7 +98,8 @@ public sealed partial class MafAgentRuntime
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements,
-            runtimeOptions.ContextWorkspaceScope ?? workspaceScope);
+            runtimeOptions.ContextWorkspaceScope ?? workspaceScope,
+            runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty);
         await FilterUnusableApprovalToolsAsync(
             capabilityState,
             effectiveProvider,
@@ -123,7 +125,7 @@ public sealed partial class MafAgentRuntime
             agent.Instructions,
             finalizerCapture?.Policy,
             runtimeOptions.FinalizerMode,
-            runtimeOptions.StructuredOutput is not null);
+            ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
         chatOptions.AllowMultipleToolCalls = !capabilityState.HasApprovalTools;
 
         if (capabilityState.Tools.Count > 0)
@@ -161,7 +163,8 @@ public sealed partial class MafAgentRuntime
             ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
             finalizerCapture,
             toolInvocationTraceRecorder,
-            capabilityState.ContextContributionTraceCollector);
+            capabilityState.ContextContributionTraceCollector,
+            runtimeCapabilityState: capabilityState);
     }
 
     private async Task<RuntimeBuildResult> CreateHandoffRuntimeBuildAsync(
@@ -456,6 +459,7 @@ public sealed partial class MafAgentRuntime
             .Select(tool => tool.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var runtimeToolOwnershipByToolName = CreateRuntimeToolOwnershipByToolName(capabilityState);
         var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
         var logger = services.GetService<ILogger<MafAgentRuntime>>();
         builder.UseLogging(
@@ -466,7 +470,10 @@ public sealed partial class MafAgentRuntime
             var functionName = context.Function?.Name ?? "unknown";
             var invocationArguments = ResolveFunctionInvocationArguments(context).ToArray();
             var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(invocationArguments);
-            var classification = AgentToolInvocationPolicyMetadata.Classify(functionName);
+            var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode);
+            var classification = isRequiredFinalizerTool
+                ? ToolInvocationClassification.Read
+                : AgentToolInvocationPolicyMetadata.Classify(functionName);
             var auditScope = WorkspaceExecutionAuditContext.Current;
             var scriptSideEffectManifestJson = TryGetStringArgument(
                 invocationArguments,
@@ -482,7 +489,7 @@ public sealed partial class MafAgentRuntime
                 ToolName: functionName,
                 RedactedArguments: redactedArguments,
                 Classification: classification,
-                IsKnownTool: knownToolNames.Contains(functionName),
+                IsKnownTool: isRequiredFinalizerTool || knownToolNames.Contains(functionName),
                 AutoApprovalAllowed: suppressApprovalRequirements,
                 ApprovalWrapperAvailable: approvalWrappedToolNames.Contains(functionName),
                 ExecutionRunId: auditScope?.ExecutionRunId.ToString("D") ?? string.Empty,
@@ -513,9 +520,15 @@ public sealed partial class MafAgentRuntime
             activity?.SetTag("agentframework.tool_iteration", context.Iteration);
             activity?.SetTag("agentframework.tool_count", context.FunctionCount);
             activity?.SetTag("agentframework.tool_is_streaming", context.IsStreaming);
+            runtimeToolOwnershipByToolName.TryGetValue(functionName, out var runtimeToolOwnership);
+            if (runtimeToolOwnership is not null)
+            {
+                activity?.SetTag("agentframework.runtime_tool_provider_key", runtimeToolOwnership.ProviderKey);
+                activity?.SetTag("agentframework.runtime_tool_provider_name", runtimeToolOwnership.ProviderName);
+            }
 
             logger?.LogInformation(
-                "Agent tool policy decision {Decision} for tool {ToolName} on agent {AgentId}. ExecutionRunId={ExecutionRunId} SourceKind={SourceKind} ProcessRunId={ProcessRunId} ProcessStepId={ProcessStepId} Signature={Signature}",
+                "Agent tool policy decision {Decision} for tool {ToolName} on agent {AgentId}. ExecutionRunId={ExecutionRunId} SourceKind={SourceKind} ProcessRunId={ProcessRunId} ProcessStepId={ProcessStepId} RuntimeToolProviderKey={RuntimeToolProviderKey} Signature={Signature}",
                 policyDecision.Kind,
                 functionName,
                 agentDefinition.Id,
@@ -523,13 +536,33 @@ public sealed partial class MafAgentRuntime
                 policyContext.SourceKind,
                 policyContext.ProcessRunId,
                 policyContext.ProcessStepId,
+                runtimeToolOwnership?.ProviderKey ?? string.Empty,
                 policyDecision.Signature);
 
-            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification);
+            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification, runtimeToolOwnership);
             var succeeded = false;
             var failureMessage = string.Empty;
+            using var runtimeToolOwnershipScope = AgentRuntimeToolOwnershipContext.BeginScope(runtimeToolOwnership);
             try
             {
+                if (AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+                        functionName,
+                        policyDecision,
+                        policyContext,
+                        out var policyDeniedResult))
+                {
+                    failureMessage = policyDeniedResult;
+                    activity?.SetTag("agentframework.tool_policy_recoverable_denial", true);
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    logger?.LogInformation(
+                        "Returning recoverable policy denial for tool {ToolName} on governed run {ProcessRunId}, step {ProcessStepId}. Reason={Reason}",
+                        functionName,
+                        policyContext.ProcessRunId,
+                        policyContext.ProcessStepId,
+                        policyDecision.Reason);
+                    return policyDeniedResult;
+                }
+
                 AgentToolPolicyBlockGuard.ThrowIfBlocked(
                     functionName,
                     policyDecision,
@@ -576,6 +609,31 @@ public sealed partial class MafAgentRuntime
             $"{AgentFrameworkTelemetry.SourceName}.Maf.{provider.Kind}",
             telemetry => telemetry.EnableSensitiveData = false);
         return builder.Build(services);
+    }
+
+    private static IReadOnlyDictionary<string, AgentRuntimeToolOwnership> CreateRuntimeToolOwnershipByToolName(
+        RuntimeCapabilityState capabilityState)
+    {
+        if (capabilityState.RuntimeToolMetadata.Count == 0)
+        {
+            return new Dictionary<string, AgentRuntimeToolOwnership>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var descriptorsByKey = capabilityState.RuntimeToolProviderDescriptors
+            .ToDictionary(
+                descriptor => descriptor.ProviderKey,
+                StringComparer.OrdinalIgnoreCase);
+        var ownershipByToolName = new Dictionary<string, AgentRuntimeToolOwnership>(StringComparer.OrdinalIgnoreCase);
+        foreach (var metadata in capabilityState.RuntimeToolMetadata)
+        {
+            descriptorsByKey.TryGetValue(metadata.ProviderKey, out var descriptor);
+            ownershipByToolName[metadata.ToolName] = new AgentRuntimeToolOwnership(
+                metadata.ProviderKey,
+                descriptor?.DisplayName ?? metadata.ProviderKey,
+                metadata.ToolName);
+        }
+
+        return ownershipByToolName;
     }
 
     private static bool IsRequiredFinalizerTool(
@@ -859,6 +917,12 @@ public sealed partial class MafAgentRuntime
         ArgumentNullException.ThrowIfNull(runtimeOptions);
         if (runtimeOptions.StructuredOutput is not null)
         {
+            if (runtimeOptions.FinalizerMode == AgentFinalizerMode.Required &&
+                AgentFinalizerPolicies.TryResolveForStructuredOutput(runtimeOptions.StructuredOutput, out _))
+            {
+                return;
+            }
+
             EnsureStructuredOutputCapability(provider, runtimeOptions.StructuredOutput);
             return;
         }
@@ -1046,6 +1110,7 @@ public sealed partial class MafAgentRuntime
               $"- Call `{finalizerPolicy.ToolName}` exactly once after all other significant tool work is complete.{Environment.NewLine}" +
               "- A normal assistant response without that finalizer tool is invalid for this run and will fail the execution even if the work itself succeeded." + Environment.NewLine +
               $"- The finalizer arguments are the authoritative machine output for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
+              BuildRequiredFinalizerArgumentInstructions(finalizerPolicy) +
               (hasStructuredResponseFormat
                   ? $"- After the tool call, return exactly one JSON object matching the same `{finalizerPolicy.OutputContract.ContractKey}` schema through the configured structured response format.{Environment.NewLine}" +
                     "- Do not use Markdown, prose, code fences, or any extra text around the JSON object."
@@ -1054,6 +1119,20 @@ public sealed partial class MafAgentRuntime
         return string.IsNullOrWhiteSpace(instructions)
             ? finalizerInstructions.Trim()
             : instructions.TrimEnd() + finalizerInstructions;
+    }
+
+    private static string BuildRequiredFinalizerArgumentInstructions(AgentFinalizerPolicy finalizerPolicy)
+    {
+        if (!string.Equals(
+                finalizerPolicy.OutputContract.ContractKey,
+                AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
+               "- The `result` object must have this JSON shape: `{ \"status\": \"Completed|Blocked|Failed|WaitingApproval|Refused\", \"reason\": \"...\", \"branchOutcomeKey\": \"\", \"branchOutcomeTitle\": \"\", \"evidenceRefs\": [\"artifacts/process-runs/...\"], \"nextActions\": [], \"humanReadableSummaryMarkdown\": \"...\" }`." + Environment.NewLine;
     }
 
     private ScriptContentInspection ResolveScriptContentInspectionForPolicy(
@@ -1569,7 +1648,8 @@ public sealed partial class MafAgentRuntime
         AgentContextContributionTraceCollector? contextContributionTraceCollector,
         Func<IReadOnlyList<AgentFinalizerInvocation>>? snapshotFinalizerInvocations = null,
         Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null,
-        Func<IReadOnlyList<AgentContextContributionTrace>>? snapshotContextContributionTraces = null) : IAsyncDisposable
+        Func<IReadOnlyList<AgentContextContributionTrace>>? snapshotContextContributionTraces = null,
+        RuntimeCapabilityState? runtimeCapabilityState = null) : IAsyncDisposable
     {
         public AIAgent Agent { get; } = agent;
 
@@ -1580,6 +1660,8 @@ public sealed partial class MafAgentRuntime
         public bool HasApprovalTools { get; } = hasApprovalTools;
 
         public bool IsTemperatureOmitted { get; } = isTemperatureOmitted;
+
+        public RuntimeCapabilityState? CapabilityState { get; } = runtimeCapabilityState;
 
         public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
             => snapshotFinalizerInvocations?.Invoke() ?? finalizerCapture?.Snapshot() ?? [];
@@ -1630,9 +1712,15 @@ public sealed partial class MafAgentRuntime
     {
         public List<AITool> Tools { get; } = [];
 
+        public List<AgentRuntimeToolProviderDescriptor> RuntimeToolProviderDescriptors { get; } = [];
+
+        public List<AgentRuntimeToolMetadata> RuntimeToolMetadata { get; } = [];
+
         public List<AIContextProvider> ContextProviders { get; } = [];
 
         public AgentContextContributionTraceCollector ContextContributionTraceCollector { get; } = new();
+
+        public List<AgentRuntimeContextManifestSource> ContextSources { get; } = [];
 
         public HashSet<string> FrameworkToolNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -1656,7 +1744,8 @@ public sealed partial class MafAgentRuntime
 
         public int Start(
             string toolName,
-            ToolInvocationClassification classification)
+            ToolInvocationClassification classification,
+            AgentRuntimeToolOwnership? runtimeToolOwnership)
         {
             lock (gate)
             {
@@ -1668,7 +1757,11 @@ public sealed partial class MafAgentRuntime
                     DateTimeOffset.UtcNow,
                     CompletedAtUtc: null,
                     Succeeded: false,
-                    FailureMessage: string.Empty));
+                    FailureMessage: string.Empty)
+                {
+                    RuntimeToolProviderKey = runtimeToolOwnership?.ProviderKey ?? string.Empty,
+                    RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty
+                });
                 return nextSequence;
             }
         }

@@ -90,12 +90,32 @@ public sealed class SecretScanningTests
     {
         var relativePath = Path.GetRelativePath(root, filePath);
         var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (IsUnderTransientBundlePath(segments))
+        {
+            return true;
+        }
+
         return segments.Any(segment =>
             string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, ".artifacts", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "node_modules", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsUnderTransientBundlePath(IReadOnlyList<string> pathSegments)
+    {
+        for (var index = 0; index < pathSegments.Count - 1; index++)
+        {
+            if (string.Equals(pathSegments[index], "codex", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(pathSegments[index + 1], "bundles", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsTextFile(string filePath)

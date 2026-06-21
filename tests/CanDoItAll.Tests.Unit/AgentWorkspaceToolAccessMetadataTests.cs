@@ -135,11 +135,13 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         var businessProfile = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.BusinessAnalysis);
 
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_build"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_stop"));
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_write_file"));
         Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_new"));
         Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_delete_path"));
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_convert_document"));
         Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_dotnet_run"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_dotnet_stop"));
     }
 
     [Fact]
@@ -211,7 +213,7 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     }
 
     [Fact]
-    public void GroundPromptExternalTargetAliases_SB04_INV_001_keeps_process_free_text_alias_read_only_even_when_product_mutation_is_allowed()
+    public void GroundPromptExternalTargetAliases_keeps_process_free_text_alias_read_only_even_when_product_mutation_is_allowed()
     {
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             $"{{\"{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}\":true}}",

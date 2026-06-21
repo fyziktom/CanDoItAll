@@ -1,0 +1,3 @@
+Dispatcher domain-decision scan
+Command: rg -n "Branch|Recovery|Manager|Artifact|DbContext|CanDoItAll\.Modules" src\CanDoItAll.Processes.Runtime\ProcessStrategyDispatcher.cs
+No matches.

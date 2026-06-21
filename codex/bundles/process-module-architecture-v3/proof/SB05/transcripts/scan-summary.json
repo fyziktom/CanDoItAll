@@ -1,0 +1,6 @@
+{
+  "DriverAbstractionsForbiddenDependencyMatches": 0,
+  "ConcreteDriverNameMatchesInCoreRuntimeBuilder": 0,
+  "DriverAbstractionsDomainOpacityMatches": 0,
+  "AntiStubAuditMatches": 0
+}

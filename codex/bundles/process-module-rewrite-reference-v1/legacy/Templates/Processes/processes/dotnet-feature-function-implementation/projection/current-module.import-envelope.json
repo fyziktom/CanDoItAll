@@ -1,0 +1,6 @@
+{
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection",
+  "Warnings": [
+    "Import this process through the in-app projection service so subprocess references are resolved in the target project scope."
+  ]
+}

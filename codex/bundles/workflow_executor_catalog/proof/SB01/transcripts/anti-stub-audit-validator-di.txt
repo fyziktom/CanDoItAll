@@ -1,3 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotSupportedException" src\CanDoItAll.AgentFramework.Hosting src\CanDoItAll.Modules.AgentFramework\Services src\CanDoItAll.Modules.AgentFramework\Catalog tests\CanDoItAll.Tests.Unit\AgentFrameworkHostingServiceCollectionTests.cs
-No stub markers found in SB01 touched production/test paths.
-ExitCode: 0

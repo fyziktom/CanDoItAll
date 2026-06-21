@@ -100,6 +100,12 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                         return existingNode;
                     }
 
+                    var objectSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype);
+                    var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                        request.ObjectType,
+                        objectSubtype,
+                        request.Notes,
+                        request.MetadataJson);
                     var createdNode = await projectWorkbenchService.CreateObjectAsync(
                         projectId,
                         new ProjectObjectCreateRequest(
@@ -112,9 +118,9 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                             request.Y,
                             request.StartUtc,
                             request.EndUtc,
-                            ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
+                            objectSubtype,
                             MapMedia(request.Media),
-                            BuildIdempotentMetadataJson(request.MetadataJson, idempotencyKey, request.IdempotencyBatchKey),
+                            BuildIdempotentMetadataJson(metadataJson, idempotencyKey, request.IdempotencyBatchKey),
                             request.DurationSeconds),
                         cancellationToken);
                     return MapNode(createdNode, createdNode.Priority, FullNodeReadRequest);

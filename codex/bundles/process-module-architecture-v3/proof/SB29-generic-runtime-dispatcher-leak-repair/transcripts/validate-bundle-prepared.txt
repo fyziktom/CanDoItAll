@@ -1,0 +1,11 @@
+Command:
+python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-module-architecture-v3 --stage prepared
+
+Working directory:
+C:\repositories\CanDoItAll
+
+Result:
+Exit code 0
+
+Output:
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3

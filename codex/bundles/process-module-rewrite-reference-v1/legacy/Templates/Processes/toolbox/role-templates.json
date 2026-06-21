@@ -1,0 +1,172 @@
+[
+  {
+    "ActionId": "process-role.blank",
+    "Label": "Blank role",
+    "Summary": "Create a blank role requirement for process-specific staffing.",
+    "TemplateRoleKey": "",
+    "KeyPrefix": "role",
+    "DisplayNameTemplate": "Role {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 50
+  },
+  {
+    "ActionId": "process-role.product-owner",
+    "Label": "Product owner",
+    "Summary": "Outcome and acceptance owner for value, scope, sequencing, and release acceptance.",
+    "TemplateRoleKey": "product-owner",
+    "KeyPrefix": "product-owner",
+    "DisplayNameTemplate": "Product owner {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 35
+  },
+  {
+    "ActionId": "process-role.delivery-manager",
+    "Label": "Delivery manager",
+    "Summary": "Flow owner for sequencing, staffing realism, dependency control, and execution escalation.",
+    "TemplateRoleKey": "delivery-manager",
+    "KeyPrefix": "delivery-manager",
+    "DisplayNameTemplate": "Delivery manager {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 50
+  },
+  {
+    "ActionId": "process-role.solution-architect",
+    "Label": "Solution architect",
+    "Summary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence.",
+    "TemplateRoleKey": "solution-architect",
+    "KeyPrefix": "solution-architect",
+    "DisplayNameTemplate": "Solution architect {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 30
+  },
+  {
+    "ActionId": "process-role.lead-engineer",
+    "Label": "Lead engineer",
+    "Summary": "Implementation owner for code, tests, migration notes, and reviewable delivery proof.",
+    "TemplateRoleKey": "lead-engineer",
+    "KeyPrefix": "lead-engineer",
+    "DisplayNameTemplate": "Lead engineer {ordinal}",
+    "PreferredExecutorKind": "person-or-agent",
+    "DefaultAllocationPercent": 100
+  },
+  {
+    "ActionId": "process-role.qa-lead",
+    "Label": "QA lead",
+    "Summary": "Quality owner for coverage depth, evidence quality, and release confidence.",
+    "TemplateRoleKey": "qa-lead",
+    "KeyPrefix": "qa-lead",
+    "DisplayNameTemplate": "QA lead {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 40
+  },
+  {
+    "ActionId": "process-role.security-reviewer",
+    "Label": "Security reviewer",
+    "Summary": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions.",
+    "TemplateRoleKey": "security-reviewer",
+    "KeyPrefix": "security-reviewer",
+    "DisplayNameTemplate": "Security reviewer {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 25
+  },
+  {
+    "ActionId": "process-role.release-manager",
+    "Label": "Release manager",
+    "Summary": "Operational owner for release window control, rollback readiness, and live-watch discipline.",
+    "TemplateRoleKey": "release-manager",
+    "KeyPrefix": "release-manager",
+    "DisplayNameTemplate": "Release manager {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 45
+  },
+  {
+    "ActionId": "process-role.review-lead",
+    "Label": "Review lead",
+    "Summary": "Governed reviewer who owns code-review lane selection, normalization, and escalation discipline.",
+    "TemplateRoleKey": "review-lead",
+    "KeyPrefix": "review-lead",
+    "DisplayNameTemplate": "Review lead {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 35
+  },
+  {
+    "ActionId": "process-role.author",
+    "Label": "Author",
+    "Summary": "Change author responsible for preparing a reviewable packet and implementing requested repairs.",
+    "TemplateRoleKey": "author",
+    "KeyPrefix": "author",
+    "DisplayNameTemplate": "Author {ordinal}",
+    "PreferredExecutorKind": "person-or-agent",
+    "DefaultAllocationPercent": 100
+  },
+  {
+    "ActionId": "process-role.merge-approver",
+    "Label": "Merge approver",
+    "Summary": "Go / no-go owner for merging reviewed changes into the governed integration branch.",
+    "TemplateRoleKey": "merge-approver",
+    "KeyPrefix": "merge-approver",
+    "DisplayNameTemplate": "Merge approver {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 20
+  },
+  {
+    "ActionId": "process-role.account-owner",
+    "Label": "Account owner",
+    "Summary": "Commercial owner for onboarding priority, stakeholder alignment, and acceptance timing.",
+    "TemplateRoleKey": "account-owner",
+    "KeyPrefix": "account-owner",
+    "DisplayNameTemplate": "Account owner {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 35
+  },
+  {
+    "ActionId": "process-role.staffing-manager",
+    "Label": "Staffing manager",
+    "Summary": "Capacity and staffing authority for onboarding sequencing, specialist allocation, and kickoff feasibility.",
+    "TemplateRoleKey": "staffing-manager",
+    "KeyPrefix": "staffing-manager",
+    "DisplayNameTemplate": "Staffing manager {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 50
+  },
+  {
+    "ActionId": "process-role.kickoff-lead",
+    "Label": "Kickoff lead",
+    "Summary": "Meeting and execution lead for the formal onboarding kickoff and first-phase alignment.",
+    "TemplateRoleKey": "kickoff-lead",
+    "KeyPrefix": "kickoff-lead",
+    "DisplayNameTemplate": "Kickoff lead {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 40
+  },
+  {
+    "ActionId": "process-role.triage-lead",
+    "Label": "Triage lead",
+    "Summary": "Initial incident coordinator for severity framing, responder mobilization, and first containment path selection.",
+    "TemplateRoleKey": "triage-lead",
+    "KeyPrefix": "triage-lead",
+    "DisplayNameTemplate": "Triage lead {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 100
+  },
+  {
+    "ActionId": "process-role.resolver",
+    "Label": "Resolver",
+    "Summary": "Primary technical owner for diagnosis, mitigation, and restoration work inside an active incident.",
+    "TemplateRoleKey": "resolver",
+    "KeyPrefix": "resolver",
+    "DisplayNameTemplate": "Resolver {ordinal}",
+    "PreferredExecutorKind": "person-or-agent",
+    "DefaultAllocationPercent": 100
+  },
+  {
+    "ActionId": "process-role.approver",
+    "Label": "Approver",
+    "Summary": "Explicit governance decision owner for escalated incident actions, risky mitigations, or customer-impacting restoration choices.",
+    "TemplateRoleKey": "approver",
+    "KeyPrefix": "approver",
+    "DisplayNameTemplate": "Approver {ordinal}",
+    "PreferredExecutorKind": "person",
+    "DefaultAllocationPercent": 20
+  }
+]

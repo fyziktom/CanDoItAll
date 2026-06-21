@@ -72,7 +72,7 @@
     {
       "Key": "software-engineer",
       "RoleResourceKey": "software-engineer",
-      "DisplayName": "Generic .NET scaffold engineer",
+      "DisplayName": ".NET scaffold engineer",
       "Purpose": "Create the requested .NET solution, app project, test project, and references from the scaffold contract without assuming a UI stack, service shape, or default test framework.",
       "StaffingIntent": "A general .NET-capable implementer with access to repository files and build tools; must choose app and test templates only from current-run project structure or upstream artifacts.",
       "PreferredExecutorKind": "agent",
@@ -168,9 +168,9 @@
     {
       "Order": 1,
       "Key": "create-dotnet-project",
-      "Title": "Create solution and .NET app project",
+      "Title": "Create .NET solution and app project",
       "Subtitle": "Solution skeleton",
-      "Notes": "Create the solution file and requested .NET app project with the agreed names, paths, archetype, and template. Use workspace_create_directory for the grounded product root and productRoot/src when they do not exist. Use workspace_dotnet_new with template sln for the solution at the product root, inspect the resulting .slnx or .sln file, then scaffold the app under productRoot/src with the template named by current-run requirements. Do not create the test project, add feature code, run dotnet build/test/run, start a browser, or default to a UI template or guessed external-target paths in this step.",
+      "Notes": "Create the solution file and requested .NET app project with the agreed names, paths, archetype, and template. Use workspace_create_directory for the grounded product root and productRoot/src when they do not exist. Use workspace_dotnet_new with template sln for the solution at the product root, inspect the resulting .slnx or .sln file, then scaffold the app under productRoot/src with the template named by current-run requirements. Existing files are not enough proof: inspect and repair stale template-critical app files before handoff, especially Blazor WebAssembly Program.cs, App.razor, _Imports.razor, and PWA assets. For Blazor WebAssembly, _Imports.razor must include @using Microsoft.AspNetCore.Components.Routing so Router, Found, FocusOnNavigate, NotFound, and routeData resolve; repair that scaffold drift here instead of leaving it to first-build validation. Do not create the test project, add feature code, run dotnet build/test/run, start a browser, or default to a UI template or guessed external-target paths in this step.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -244,7 +244,7 @@
     {
       "Order": 2,
       "Key": "add-test-project",
-      "Title": "Add test project and reference",
+      "Title": "Add .NET test project and reference",
       "Subtitle": "Test lane from the start",
       "Notes": "Create the test project using the test framework grounded by the parent contract or existing repository convention, add it to the solution, and reference the application project where appropriate. Do not default to a specific test framework when the current run names another one. Do not implement feature tests, run dotnet build/test/run, start a browser, or perform runtime proof in this step; those belong to validation or feature implementation steps.",
       "StepKind": "Work",
@@ -322,7 +322,7 @@
       "Key": "validate-first-build",
       "Title": "Validate first build and test discovery",
       "Subtitle": "Build proof",
-      "Notes": "Run restore/build and a targeted test discovery or initial test command so the scaffold is known good before handoff. Do not start a web app, run browser proof, or implement feature behavior in this setup validation step unless the parent process explicitly asks for runtime proof as part of setup.",
+      "Notes": "Run restore/build and a targeted test discovery or initial test command so the scaffold is known good before handoff. Do not launch runtime, start a web app, run browser proof, or implement feature behavior in this setup validation step; runtime and browser proof belong to downstream validation steps unless the parent process defines a separate runtime-proof setup step.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -396,7 +396,6 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "RunValidation",
-        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly"

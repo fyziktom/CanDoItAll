@@ -7,6 +7,7 @@ public static class ManagedSeedProviderFallbacks
 {
     private const string ManagedSeedMarker = "managedSeedVersion";
     private const string OpenAiApiKeyVariableName = "OPENAI_API_KEY";
+    private const string ProviderRepairFallbackOverrideMarker = "providerRepairFallbackOverride";
 
     private static readonly IReadOnlySet<string> ManagedSeedOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -79,7 +80,9 @@ public static class ManagedSeedProviderFallbacks
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (IsFallbackProvider(provider) && IsManagedSeedAgent(agent))
+        if (IsFallbackProvider(provider) &&
+            IsManagedSeedAgent(agent) &&
+            !HasProviderRepairFallbackOverride(agent))
         {
             return CreateOpenAiDefaultProvider(provider);
         }
@@ -138,6 +141,13 @@ public static class ManagedSeedProviderFallbacks
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(provider);
+
+        if (IsFallbackProvider(provider) &&
+            HasProviderRepairFallbackOverride(agent) &&
+            !IsProviderSupportedModel(agent.Model, provider))
+        {
+            return provider.DefaultModel;
+        }
 
         if (ShouldUseFallback(agent, provider, openAiApiKeyOverride))
         {
@@ -199,6 +209,28 @@ public static class ManagedSeedProviderFallbacks
                ManagedSeedTemplateKeys.Contains(agent.TemplateKey);
     }
 
+    public static bool HasProviderRepairFallbackOverride(AgentDefinition agent)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+
+        return HasProviderRepairFallbackOverride(agent.ConfigurationJson);
+    }
+
+    public static bool HasProviderRepairFallbackOverride(string configurationJson)
+    {
+        var configuration = ParseConfigurationObject(configurationJson);
+        return configuration[ProviderRepairFallbackOverrideMarker] is JsonValue value &&
+               value.TryGetValue<bool>(out var isEnabled) &&
+               isEnabled;
+    }
+
+    public static string EnableProviderRepairFallbackOverride(string configurationJson)
+    {
+        var configuration = ParseConfigurationObject(configurationJson);
+        configuration[ProviderRepairFallbackOverrideMarker] = true;
+        return configuration.ToJsonString();
+    }
+
     private static bool IsFallbackProvider(ProviderProfile provider)
     {
         return provider.Kind == ProviderKind.Ollama &&
@@ -227,6 +259,15 @@ public static class ManagedSeedProviderFallbacks
     private static bool IsKnownOllamaFallbackModel(string model)
     {
         return ManagedSeedFallbackSuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsProviderSupportedModel(
+        string model,
+        ProviderProfile provider)
+    {
+        return !string.IsNullOrWhiteSpace(model) &&
+               (string.Equals(model, provider.DefaultModel, StringComparison.OrdinalIgnoreCase) ||
+                provider.SuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase));
     }
 
     private static ProviderProfile CreateOpenAiDefaultProvider(ProviderProfile provider)

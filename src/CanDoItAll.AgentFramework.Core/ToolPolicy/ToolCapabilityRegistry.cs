@@ -26,7 +26,7 @@ public enum ToolCapabilityOperationRequirementKind
     WorkspaceFileMutation,
     WorkspaceScript,
     DotNetRun,
-    ProcessArtifactRecord
+    ProcessArtifactWrite
 }
 
 public enum ToolCapabilityBrowserProofRole
@@ -170,6 +170,9 @@ public static class ToolCapabilityRegistry
             Validation(ToolContractCatalog.WorkspaceDotNetBuild, ToolCapabilitySideEffectKind.LocalProcessExecution, StaticRequirement(ProcessOperationContractNames.RunValidation)),
             Validation(ToolContractCatalog.WorkspaceDotNetTest, ToolCapabilitySideEffectKind.LocalProcessExecution, StaticRequirement(ProcessOperationContractNames.RunValidation)),
             Validation(ToolContractCatalog.WorkspaceDotNetRun, ToolCapabilitySideEffectKind.RuntimeLaunch, ToolCapabilityOperationRequirementKind.DotNetRun),
+            Validation(ToolContractCatalog.WorkspaceDotNetStop, ToolCapabilitySideEffectKind.RuntimeLaunch, StaticRequirement(
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof)),
             Mutation(AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript, ToolCapabilitySideEffectKind.LocalProcessExecution, ToolCapabilityOperationRequirementKind.WorkspaceScript),
             Mutation(AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile, ToolCapabilitySideEffectKind.LocalProcessExecution, ToolCapabilityOperationRequirementKind.WorkspaceScript),
             Read(
@@ -205,6 +208,15 @@ public static class ToolCapabilityRegistry
             Validation(ToolContractCatalog.BrowserPressKey, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
             Validation(ToolContractCatalog.BrowserType, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
             Validation(ToolContractCatalog.BrowserDrag, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+            Validation(ToolContractCatalog.BrowserWaitFor, ToolCapabilitySideEffectKind.RuntimeProofCapture, StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+            Read(AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, ToolCapabilitySideEffectKind.None),
+            Read(AgentFinalizerPolicies.SubmitCodeReviewResultToolName, ToolCapabilitySideEffectKind.None),
+            Read(AgentFinalizerPolicies.SubmitArchitectureReviewResultToolName, ToolCapabilitySideEffectKind.None),
+            Read(AgentFinalizerPolicies.SubmitImplementationPlanToolName, ToolCapabilitySideEffectKind.None),
+            Read(AgentFinalizerPolicies.SubmitTestPlanToolName, ToolCapabilitySideEffectKind.None),
+            Read(AgentFinalizerPolicies.SubmitToolExecutionDecisionToolName, ToolCapabilitySideEffectKind.None),
+            Read(AgentFinalizerPolicies.SubmitProcessStatePatchToolName, ToolCapabilitySideEffectKind.None),
+            Read(AgentFinalizerPolicies.SubmitHumanEscalationRequestToolName, ToolCapabilitySideEffectKind.None),
             Read(AgentToolInvocationPolicyMetadata.LoadSkill, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(AgentToolInvocationPolicyMetadata.ReadSkillResource, ToolCapabilitySideEffectKind.WorkspaceRead),
             Mutation(AgentToolInvocationPolicyMetadata.RunSkillScript, ToolCapabilitySideEffectKind.LocalProcessExecution, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
@@ -219,7 +231,7 @@ public static class ToolCapabilityRegistry
                 ProcessOperationContractNames.RecoverArtifactsOnly,
                 ProcessOperationContractNames.ExecuteExternalAction)),
             Mutation(AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve, ToolCapabilitySideEffectKind.ProcessMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
-            Mutation(AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord, ToolCapabilitySideEffectKind.ProcessMutation, ToolCapabilityOperationRequirementKind.ProcessArtifactRecord),
+            Mutation(AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord, ToolCapabilitySideEffectKind.ProcessMutation, ToolCapabilityOperationRequirementKind.ProcessArtifactWrite),
             Read(AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport, ToolCapabilitySideEffectKind.WorkspaceRead),
@@ -239,8 +251,27 @@ public static class ToolCapabilityRegistry
 
         capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureReadTools.Select(toolName =>
             Read(toolName, ToolCapabilitySideEffectKind.WorkspaceRead)));
-        capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Select(toolName =>
-            Mutation(toolName, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction))));
+        capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools
+            .Where(toolName =>
+                !string.Equals(toolName, AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(toolName, AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(toolName, AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch, StringComparison.OrdinalIgnoreCase))
+            .Select(toolName =>
+                Mutation(toolName, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction))));
+        capabilities.Add(Mutation(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
+            ToolCapabilitySideEffectKind.ProjectStructureMutation,
+            StaticRequirement(ProcessOperationContractNames.StartProjectNodeProcess)));
+        capabilities.Add(Mutation(
+            AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
+            ToolCapabilitySideEffectKind.ProjectStructureMutation,
+            StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)));
+        capabilities.Add(Mutation(
+            AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
+            ToolCapabilitySideEffectKind.ProjectStructureMutation,
+            StaticRequirement(
+                ProcessOperationContractNames.EscalateOrDecide,
+                ProcessOperationContractNames.ExecuteExternalAction)));
 
         return capabilities.ToDictionary(
             capability => ToolContractCatalog.NormalizeToolName(capability.Name),
@@ -421,7 +452,7 @@ public static class ToolCapabilityRegistry
             [
                 ProcessOperationContractNames.ExternalProductTargetReadOnly
             ],
-            ToolCapabilityOperationRequirementKind.ProcessArtifactRecord =>
+            ToolCapabilityOperationRequirementKind.ProcessArtifactWrite =>
             [
                 ProcessOperationContractNames.ExternalArtifactDestination,
                 ProcessOperationContractNames.ManagedProcessArtifactsOnly
@@ -458,6 +489,10 @@ public static class ToolCapabilityRegistry
             [
                 ProcessOperationContractNames.ExternalActionControlled
             ],
+            ProcessOperationContractNames.StartProjectNodeProcess =>
+            [
+                ProcessOperationContractNames.ExternalActionControlled
+            ],
             _ => []
         };
     }
@@ -477,7 +512,8 @@ public static class ToolCapabilityRegistry
     {
         return requirementKind == ToolCapabilityOperationRequirementKind.WorkspaceScript ||
                sideEffectKind == ToolCapabilitySideEffectKind.ExternalAction ||
-               HasOperationRequirement(requirements, ProcessOperationContractNames.ExecuteExternalAction);
+               HasOperationRequirement(requirements, ProcessOperationContractNames.ExecuteExternalAction) ||
+               HasOperationRequirement(requirements, ProcessOperationContractNames.StartProjectNodeProcess);
     }
 
     private static bool CanReadExternalTarget(
@@ -498,7 +534,7 @@ public static class ToolCapabilityRegistry
     {
         return requirementKind is ToolCapabilityOperationRequirementKind.WorkspaceFileMutation or
                    ToolCapabilityOperationRequirementKind.WorkspaceScript or
-                   ToolCapabilityOperationRequirementKind.ProcessArtifactRecord ||
+                   ToolCapabilityOperationRequirementKind.ProcessArtifactWrite ||
                HasOperationRequirement(requirements, ProcessOperationContractNames.WriteManagedProcessArtifacts);
     }
 
@@ -524,7 +560,8 @@ public static class ToolCapabilityRegistry
             ToolContractCatalog.BrowserSnapshot or ToolContractCatalog.BrowserTakeScreenshot => ToolCapabilityBrowserProofRole.EvidenceCapture,
             ToolContractCatalog.BrowserConsoleMessages or
                 ToolContractCatalog.BrowserEvaluate or
-                ToolContractCatalog.BrowserNetworkRequests => ToolCapabilityBrowserProofRole.Observation,
+                ToolContractCatalog.BrowserNetworkRequests or
+                ToolContractCatalog.BrowserWaitFor => ToolCapabilityBrowserProofRole.Observation,
             _ => ToolCapabilityBrowserProofRole.None
         };
     }

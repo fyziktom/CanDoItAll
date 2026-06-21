@@ -1,5 +1,4 @@
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -206,6 +205,10 @@ public sealed record ProjectStructureProcessStartRoleState(
     string ReadinessSummary,
     IReadOnlyList<ProjectStructureProcessStartCandidateState> Candidates)
 {
+    public string StepKey { get; init; } = string.Empty;
+    public string RoleKey { get; init; } = string.Empty;
+    public IReadOnlyList<ProjectStructureProcessStartCandidateState> DirectoryCandidates { get; init; } = [];
+
     public bool HasBlockingGap => IsRequired && !IsResolved;
 }
 
@@ -265,8 +268,16 @@ public sealed record ProjectStructureProcessStartDialogState(
 
     public bool EstimateOnlyMode { get; init; }
 
-    public ProcessRunEstimateResult? Estimate { get; init; }
+    public ProjectStructureProcessEstimateSummary? Estimate { get; init; }
 }
+
+public sealed record ProjectStructureProcessEstimateSummary(
+    decimal EstimatedCostUsd,
+    int EstimatedElapsedMinutes,
+    int EstimatedTouchMinutes,
+    string ConfidenceLabel,
+    string SourceLabel,
+    string Summary);
 
 public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,
@@ -302,7 +313,12 @@ public sealed record ProjectStructureDeletePrompt(
     string Title,
     int DescendantCount,
     bool RequiresConfirmation,
-    string ImpactCopy);
+    string ImpactCopy)
+{
+    public IReadOnlyList<string> NodeIds { get; init; } = string.IsNullOrWhiteSpace(NodeId) ? [] : [NodeId];
+
+    public bool IsBulk => NodeIds.Count > 1;
+}
 
 public sealed record ProjectStructureSummaryDialogState(
     string RootNodeId,

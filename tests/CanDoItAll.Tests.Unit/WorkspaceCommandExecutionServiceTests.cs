@@ -157,7 +157,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
-    public async Task PowerShellRunScript_SB06_INV_001_fails_post_execution_audit_when_nonmutating_step_changes_product_root()
+    public async Task PowerShellRunScript_fails_post_execution_audit_when_nonmutating_step_changes_product_root()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -253,18 +253,22 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("workspaceRoot = $workspaceRoot", script, StringComparison.Ordinal);
             Assert.Contains("databaseProfileId = $env:CANDOITALL_DATABASE_PROFILE_ID", script, StringComparison.Ordinal);
             Assert.Contains("databaseProfileFingerprint = $env:CANDOITALL_DATABASE_PROFILE_FINGERPRINT", script, StringComparison.Ordinal);
-            Assert.Contains("cleanupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
+            Assert.Contains("$cleanupReceipt = Join-Path (Split-Path -Parent $startupReceipt) 'cleanup.json'", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupReceiptPath = $cleanupReceipt", script, StringComparison.Ordinal);
+            Assert.Contains("stopTool = 'workspace_dotnet_stop'", script, StringComparison.Ordinal);
+            Assert.Contains("stopToolStartupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
             Assert.Contains("Resolve-StaticWebAssetsAliasMappings", script, StringComparison.Ordinal);
             Assert.Contains("Mount-StaticWebAssetsAliasMappings", script, StringComparison.Ordinal);
             Assert.Contains("Dismount-StaticWebAssetsAliasMappings", script, StringComparison.Ordinal);
             Assert.Contains("staticWebAssetsAliasMappings = @($staticWebAssetsAliasMappings)", script, StringComparison.Ordinal);
-            Assert.Contains("if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings (Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }", script, StringComparison.Ordinal);
+            Assert.Contains("if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings -Mappings @(Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }", script, StringComparison.Ordinal);
+            Assert.Contains("if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return @() }", script, StringComparison.Ordinal);
             Assert.Contains("Stop-AppProcessTree $processTreeIds", script, StringComparison.Ordinal);
             Assert.Contains("Dismount-StaticWebAssetsAliasMappings $staticWebAssetsAliasMappings", script, StringComparison.Ordinal);
             Assert.Contains("Process tree was stopped after smoke validation", script, StringComparison.Ordinal);
             Assert.Contains("cleanupAttempted = $CleanupAttempted", script, StringComparison.Ordinal);
             Assert.Contains("cleanupProcessIds = @($CleanupProcessIds)", script, StringComparison.Ordinal);
-            Assert.Contains("stopCommand = Build-StopCommand $processTreeIds", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("stopCommand", script, StringComparison.Ordinal);
             Assert.Contains("Write-StartupReceipt $true \"Application started and $probeUrl returned success. Process tree was stopped after smoke validation.\" ($processTreeIds.Count -gt 0) $processTreeIds", script, StringComparison.Ordinal);
             Assert.Contains("Write-StartupReceipt $false $message ($processTreeIds.Count -gt 0) $processTreeIds", script, StringComparison.Ordinal);
             Assert.DoesNotContain("workflow", script, StringComparison.OrdinalIgnoreCase);
@@ -300,10 +304,69 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
             Assert.Contains("$keepAlive = $true", script, StringComparison.Ordinal);
             Assert.Contains("The process tree is still running for follow-up browser proof", script, StringComparison.Ordinal);
-            Assert.Contains("stopCommand", script, StringComparison.Ordinal);
-            Assert.Contains("stopCommand = Build-StopCommand $processTreeIds", script, StringComparison.Ordinal);
-            Assert.Contains("[void]$commands.Add('subst ' + $mapping.drive + ' /d')", script, StringComparison.Ordinal);
-            Assert.Contains("cleanupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
+            Assert.Contains("call workspace_dotnet_stop with startup.json when proof is complete", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("stopCommand", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupReceiptPath = $cleanupReceipt", script, StringComparison.Ordinal);
+            Assert.Contains("stopTool = 'workspace_dotnet_stop'", script, StringComparison.Ordinal);
+            Assert.Contains("stopToolStartupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetStop_uses_startup_receipt_and_records_cleanup_targets()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var receiptDirectory = Path.Combine(workspaceRoot, "artifacts", "process-runs", "dotnet-run", "20260616-183000000");
+        Directory.CreateDirectory(receiptDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(receiptDirectory, "startup.json"),
+            """
+            {
+              "succeeded": true,
+              "appProcessId": 12345,
+              "appProcessTreeIds": [12346, 12345],
+              "staticWebAssetsAliasMappings": [
+                { "drive": "Q:", "mounted": true }
+              ]
+            }
+            """);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetStop(
+                "artifacts/process-runs/dotnet-run/20260616-183000000/startup.json",
+                timeoutSeconds: 10);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_stop", processHost.LastRequest!.ToolName);
+            Assert.Equal("dotnet_stop", processHost.LastRequest.RecipeId);
+            Assert.Equal(receiptDirectory, processHost.LastRequest.WorkingDirectory);
+            Assert.Contains("-File", processHost.LastRequest.Arguments);
+            Assert.DoesNotContain("-EncodedCommand", processHost.LastRequest.Arguments);
+            Assert.Contains(
+                result.Receipt.TargetPaths,
+                item => string.Equals(item, "artifacts/process-runs/dotnet-run/20260616-183000000/startup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(
+                result.Receipt.TargetPaths,
+                item => string.Equals(item, "artifacts/process-runs/dotnet-run/20260616-183000000/cleanup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(
+                result.Receipt.TargetPaths,
+                item => string.Equals(item, "artifacts/process-runs/dotnet-run/20260616-183000000/stop.ps1", StringComparison.OrdinalIgnoreCase));
+
+            var script = await ReadGeneratedPowerShellScriptAsync(processHost);
+            Assert.Contains("Resolve-StartupProcessIds", script, StringComparison.Ordinal);
+            Assert.Contains("Stop-AppProcessTree", script, StringComparison.Ordinal);
+            Assert.Contains("Dismount-StaticWebAssetsAliasMappings", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupReceiptPath = $cleanupReceipt", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupSucceeded", script, StringComparison.Ordinal);
+            Assert.Contains("if (-not $succeeded) { exit 1 }", script, StringComparison.Ordinal);
         }
         finally
         {
@@ -337,7 +400,9 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("$keepAlive = $true", script, StringComparison.Ordinal);
             Assert.Contains("$lifetimeScope = 'ProcessRun'", script, StringComparison.Ordinal);
             Assert.Contains("lifetimeScope = $lifetimeScope", script, StringComparison.Ordinal);
-            Assert.Contains("stopCommand", script, StringComparison.Ordinal);
+            Assert.Contains("stopTool = 'workspace_dotnet_stop'", script, StringComparison.Ordinal);
+            Assert.Contains("stopToolStartupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("stopCommand", script, StringComparison.Ordinal);
         }
         finally
         {
@@ -365,7 +430,61 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal("workspace_dotnet_test", processHost.LastRequest!.ToolName);
             Assert.Equal("test", processHost.LastRequest.Arguments[0]);
             Assert.Equal("tests/SampleWeb.Tests/SampleWeb.Tests.csproj".Replace('/', Path.DirectorySeparatorChar), processHost.LastRequest.Arguments[1]);
+            Assert.Equal(300, processHost.LastRequest.TimeoutSeconds);
             Assert.Contains("tests/SampleWeb.Tests/SampleWeb.Tests.csproj", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRestore_disables_build_servers_to_avoid_stale_msbuild_pipes()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRestore("apps/SampleWeb");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_restore", processHost.LastRequest!.ToolName);
+            Assert.Equal("restore", processHost.LastRequest.Arguments[0]);
+            Assert.Contains("--disable-build-servers", processHost.LastRequest.Arguments);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetBuild_disables_build_servers_to_avoid_stale_msbuild_pipes()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetBuild("apps/SampleWeb", noRestore: true);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_build", processHost.LastRequest!.ToolName);
+            Assert.Equal("build", processHost.LastRequest.Arguments[0]);
+            Assert.Contains("--no-restore", processHost.LastRequest.Arguments);
+            Assert.Contains("--disable-build-servers", processHost.LastRequest.Arguments);
         }
         finally
         {
@@ -586,6 +705,53 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task DotnetNew_accepts_blazor_webassembly_pwa_template_option()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("blazorwasm --pwa", "TetrisGame", "apps");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
+            Assert.Equal(["new", "blazorwasm", "--pwa", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+            Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
+            Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_rejects_unapproved_inline_template_option()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("blazorwasm --install-source", "TetrisGame", "apps");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("Template option '--install-source' is not approved", result.Message, StringComparison.Ordinal);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetNew_accepts_empty_blazor_webassembly_template()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
@@ -705,6 +871,9 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     private static async Task<string> ReadGeneratedDotnetRunScriptAsync(FakeWorkspaceProcessHost processHost)
+        => await ReadGeneratedPowerShellScriptAsync(processHost);
+
+    private static async Task<string> ReadGeneratedPowerShellScriptAsync(FakeWorkspaceProcessHost processHost)
     {
         Assert.NotNull(processHost.LastRequest);
         var fileIndex = processHost.LastRequest!.Arguments.ToList().IndexOf("-File");

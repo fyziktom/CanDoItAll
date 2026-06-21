@@ -168,6 +168,8 @@ public sealed class ProjectObjectMetadataEnvelope
 {
     public ProjectWorkflowProjectWriteMetadata? WorkflowProjectWrite { get; set; }
 
+    public ProjectBlockMetadata? ProjectBlock { get; set; }
+
     public ProjectMeetingMetadata? Meeting { get; set; }
 
     public ProjectRecordingMetadata? Recording { get; set; }
@@ -200,6 +202,24 @@ public sealed class ProjectWorkflowProjectWriteMetadata
     public string IdempotencyKey { get; set; } = string.Empty;
 
     public string BatchIdempotencyKey { get; set; } = string.Empty;
+}
+
+public sealed class ProjectBlockMetadata
+{
+    [ProjectStructurePreviewField("Output root", 10)]
+    public string OutputRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Product root", 20)]
+    public string ProductRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Target root", 30)]
+    public string TargetRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Repository root", 40)]
+    public string RepositoryRoot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Workspace root", 50)]
+    public string WorkspaceRoot { get; set; } = string.Empty;
 }
 
 public sealed record ProjectNodeMarker(
@@ -361,6 +381,7 @@ public sealed class ProjectScriptMetadata
     public string Command { get; set; } = string.Empty;
 
     [ProjectStructurePreviewField("Arguments", 40)]
+    [JsonConverter(typeof(ProjectCommandLineArgumentsJsonConverter))]
     public string Arguments { get; set; } = string.Empty;
 
     [ProjectStructurePreviewField("Working directory", 50)]
@@ -368,6 +389,47 @@ public sealed class ProjectScriptMetadata
 
     [ProjectStructurePreviewField("Terminal route", 60)]
     public string TerminalRoute { get; set; } = string.Empty;
+}
+
+internal sealed class ProjectCommandLineArgumentsJsonConverter : JsonConverter<string>
+{
+    public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => reader.TokenType switch
+        {
+            JsonTokenType.String => reader.GetString() ?? string.Empty,
+            JsonTokenType.Null => string.Empty,
+            JsonTokenType.StartArray => ReadArgumentArray(ref reader),
+            _ => throw new JsonException("Script arguments must be a string or an array of string tokens.")
+        };
+
+    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+        => writer.WriteStringValue(value ?? string.Empty);
+
+    private static string ReadArgumentArray(ref Utf8JsonReader reader)
+    {
+        var arguments = new List<string>();
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndArray)
+            {
+                return string.Join(' ', arguments.Select(QuotePowerShellArgument));
+            }
+
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException("Script argument arrays must contain only strings.");
+            }
+
+            arguments.Add(reader.GetString() ?? string.Empty);
+        }
+
+        throw new JsonException("Script argument array was not closed.");
+    }
+
+    private static string QuotePowerShellArgument(string value)
+        => string.IsNullOrEmpty(value)
+            ? "''"
+            : $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
 }
 
 public sealed class ProjectEnvironmentMetadata
@@ -384,13 +446,16 @@ public sealed class ProjectEnvironmentMetadata
     [ProjectStructurePreviewField("Project path", 40)]
     public string ProjectPath { get; set; } = string.Empty;
 
-    [ProjectStructurePreviewField("Launch profile", 50)]
+    [ProjectStructurePreviewField("Working directory", 50)]
+    public string WorkingDirectory { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Launch profile", 60)]
     public string LaunchProfileName { get; set; } = string.Empty;
 
-    [ProjectStructurePreviewField("Runtime protocol", 60)]
+    [ProjectStructurePreviewField("Runtime protocol", 70)]
     public ProjectRuntimeProtocol RuntimeProtocol { get; set; } = ProjectRuntimeProtocol.Https;
 
-    [ProjectStructurePreviewField("Localhost URL", 70)]
+    [ProjectStructurePreviewField("Localhost URL", 80)]
     public string LocalhostUrl { get; set; } = string.Empty;
 }
 
@@ -827,6 +892,11 @@ public static class ProjectObjectMetadataSerializer
     private static int CountFamilies(ProjectObjectMetadataEnvelope metadata)
     {
         var count = 0;
+        if (metadata.ProjectBlock is not null)
+        {
+            count++;
+        }
+
         if (metadata.Meeting is not null)
         {
             count++;
@@ -897,6 +967,11 @@ public static class ProjectObjectMetadataSerializer
 
     private static ProjectNodeKindFamily ResolveMetadataFamily(ProjectObjectMetadataEnvelope metadata)
     {
+        if (metadata.ProjectBlock is not null)
+        {
+            return ProjectNodeKindFamily.ProjectBlock;
+        }
+
         if (metadata.Meeting is not null)
         {
             return ProjectNodeKindFamily.Meeting;

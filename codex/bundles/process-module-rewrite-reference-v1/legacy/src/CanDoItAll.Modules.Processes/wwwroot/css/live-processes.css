@@ -1,0 +1,694 @@
+.live-processes-page {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.relative:has(> .live-processes-page) {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.live-processes-dashboard,
+.live-processes-tabs,
+.live-processes-tab-panel {
+    width: 100%;
+}
+
+.live-processes-dashboard {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.live-processes-summary {
+    width: 100%;
+}
+
+.live-processes-summary > * {
+    width: 100%;
+}
+
+.live-processes-command-strip {
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.94);
+}
+
+.live-processes-command-strip__row {
+    align-items: center;
+    min-height: 3.25rem;
+}
+
+.live-processes-command-strip__actions {
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.live-processes-title {
+    min-width: 0;
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.live-processes-select {
+    width: 9.5rem;
+    min-height: 2rem;
+    font-size: 0.8125rem;
+}
+
+.live-processes-select--wide {
+    width: min(22rem, 34vw);
+}
+
+.live-processes-alert {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(220, 38, 38, 0.28);
+    border-radius: 8px;
+    background: #fff1f2;
+    color: #9f1239;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.875rem;
+    font-weight: 650;
+}
+
+.live-processes-alert--info {
+    border-color: rgba(37, 99, 235, 0.24);
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.live-processes-tabs {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.live-processes-tabs .cad-tabs__panels,
+.live-processes-tabs .cad-tabs__panel {
+    min-height: 0;
+}
+
+.live-processes-tab-panel {
+    min-height: 0;
+    padding-top: 0.75rem;
+}
+
+.live-processes-card-grid,
+.live-processes-agent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: 0.75rem;
+    min-height: 0;
+}
+
+.live-processes-card,
+.live-processes-agent-card,
+.live-processes-tool-table {
+    position: relative;
+    min-width: 0;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-left: 4px solid #64748b;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.live-processes-card {
+    display: flex;
+    min-height: 13.5rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.9rem;
+    padding-right: 5rem;
+    cursor: pointer;
+}
+
+.live-processes-card:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.live-processes-card--active {
+    border-left-color: #2563eb;
+}
+
+.live-processes-card--blocked {
+    border-left-color: #d97706;
+}
+
+.live-processes-card--failed {
+    border-left-color: #dc2626;
+}
+
+.live-processes-notification-card {
+    min-height: 12rem;
+    padding-right: 3.4rem;
+    overflow: hidden;
+    cursor: default;
+}
+
+.live-processes-notification-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.92;
+}
+
+.live-processes-notification-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.live-processes-notification-card--escalation {
+    border-left-color: #d97706;
+    box-shadow: 0 14px 32px rgba(217, 119, 6, 0.16);
+}
+
+.live-processes-notification-card--escalation::before {
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.96), rgba(255, 255, 255, 0.8));
+}
+
+.live-processes-notification-card--approvalrequired,
+.live-processes-notification-card--blockedstep,
+.live-processes-notification-card--operatorrequestedrework {
+    border-left-color: #d97706;
+}
+
+.live-processes-notification-card--failedstep,
+.live-processes-notification-card--retrybudgetexhausted {
+    border-left-color: #dc2626;
+    box-shadow: 0 14px 32px rgba(220, 38, 38, 0.16);
+}
+
+.live-processes-notification-card--saferefusal,
+.live-processes-notification-card--toolpolicyblocked {
+    border-left-color: #7c3aed;
+    box-shadow: 0 14px 32px rgba(124, 58, 237, 0.14);
+}
+
+.live-processes-notification-card--outboxdeadletter {
+    border-left-color: #e11d48;
+    box-shadow: 0 14px 32px rgba(225, 29, 72, 0.15);
+}
+
+.live-processes-notification-card--severity-critical {
+    border-color: rgba(220, 38, 38, 0.38);
+    border-left-color: #991b1b;
+}
+
+.live-processes-notification-card--event {
+    border-left-width: 5px;
+}
+
+.live-processes-notification-card--completed {
+    border-left-color: #059669;
+    box-shadow: 0 16px 34px rgba(5, 150, 105, 0.18);
+}
+
+.live-processes-notification-card--completed::before {
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.78));
+}
+
+.live-processes-notification-card--blocked {
+    border-left-color: #d97706;
+    box-shadow: 0 16px 34px rgba(217, 119, 6, 0.18);
+}
+
+.live-processes-notification-card--blocked::before {
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.78));
+}
+
+.live-processes-notification-card--failed {
+    border-left-color: #dc2626;
+    box-shadow: 0 16px 34px rgba(220, 38, 38, 0.2);
+}
+
+.live-processes-notification-card--failed::before {
+    background: linear-gradient(135deg, rgba(254, 242, 242, 0.98), rgba(255, 255, 255, 0.78));
+}
+
+.live-processes-notification-card__header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: flex-start;
+}
+
+.live-processes-notification-card__icon {
+    display: inline-flex;
+    height: 2.35rem;
+    width: 2.35rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.84);
+    color: #0f172a;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.live-processes-notification-card__icon .rz-icon {
+    font-size: 1.25rem;
+}
+
+.live-processes-notification-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: auto;
+}
+
+.live-processes-notification-close {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    z-index: 2;
+}
+
+.live-processes-card__actions {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    display: flex;
+    gap: 0.35rem;
+}
+
+.live-processes-card-action {
+    display: inline-flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    border-radius: 999px;
+    background: #ffffff;
+    color: #64748b;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.live-processes-card-action:hover {
+    border-color: rgba(37, 99, 235, 0.45);
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.live-processes-card-close:hover {
+    border-color: rgba(220, 38, 38, 0.5);
+    background: #fff1f2;
+    color: #dc2626;
+}
+
+.live-processes-card-action .rz-icon {
+    font-size: 1rem;
+}
+
+.live-processes-card__header,
+.live-processes-agent-card__header,
+.live-processes-tool-table__header,
+.live-processes-tool-row {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.live-processes-card__identity {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.live-processes-card__status {
+    display: inline-flex;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.live-processes-card__status > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.live-processes-card__identity h2,
+.live-processes-agent-card__header h2,
+.live-processes-tool-row h3 {
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.98rem;
+    font-weight: 720;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.live-processes-progress {
+    height: 0.45rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.live-processes-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #14b8a6);
+}
+
+.live-processes-card__metrics,
+.live-processes-agent-card__details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.live-processes-card__metrics span,
+.live-processes-agent-card__details span,
+.live-processes-tool-row__meta span {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1.2;
+    padding: 0.25rem 0.5rem;
+}
+
+.live-processes-card__summary,
+.live-processes-agent-card__role,
+.live-processes-dialog-copy,
+.live-processes-tool-row p {
+    color: #64748b;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.live-processes-card__footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: auto;
+}
+
+.live-processes-agent-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.85rem;
+    min-height: 10.5rem;
+    padding: 0.95rem;
+    border-left-color: #14b8a6;
+}
+
+.live-processes-agent-card__avatar {
+    padding-top: 0.15rem;
+}
+
+.live-processes-agent-card__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.live-processes-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.live-processes-chart-grid > :last-child {
+    grid-column: 1 / -1;
+}
+
+.live-processes-tool-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
+    gap: 0.85rem;
+    align-items: start;
+}
+
+.live-processes-tool-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 0.95rem;
+}
+
+.live-processes-tool-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.live-processes-tool-row {
+    align-items: center;
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    padding-top: 0.55rem;
+}
+
+.live-processes-tool-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.live-processes-tool-row__meta {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
+}
+
+.live-processes-duration-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.live-processes-dialog-body {
+    min-height: 0;
+    max-height: min(72vh, 48rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.live-processes-dialog-body--full {
+    max-height: min(78vh, 56rem);
+}
+
+.live-processes-detail-tabs {
+    min-height: 0;
+}
+
+.live-processes-detail-panel {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding-top: 0.75rem;
+}
+
+.live-processes-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.live-processes-detail-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.65rem;
+}
+
+.live-processes-detail-metric {
+    min-width: 0;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 0.65rem 0.75rem;
+}
+
+.live-processes-detail-metric span {
+    display: block;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 720;
+    text-transform: uppercase;
+}
+
+.live-processes-detail-metric strong {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 720;
+    line-height: 1.35;
+    margin-top: 0.25rem;
+}
+
+.live-processes-detail-list,
+.live-processes-timeline-list {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.live-processes-detail-row,
+.live-processes-timeline-item {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 0.7rem 0.8rem;
+}
+
+.live-processes-detail-row h3,
+.live-processes-timeline-item h3,
+.live-processes-manager-chat-threads h3 {
+    min-width: 0;
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 720;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.live-processes-detail-row p,
+.live-processes-timeline-item p {
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    margin-top: 0.2rem;
+    overflow-wrap: anywhere;
+}
+
+.live-processes-timeline-item {
+    justify-content: flex-start;
+}
+
+.live-processes-timeline-item > .cda-status-badge,
+.live-processes-timeline-item > .rz-badge {
+    flex-shrink: 0;
+}
+
+.live-processes-timeline-item span:last-child {
+    display: inline-flex;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 650;
+    margin-top: 0.35rem;
+}
+
+.live-processes-code-block {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    padding: 0.75rem;
+}
+
+.live-processes-manager-chat-layout {
+    display: grid;
+    grid-template-columns: minmax(17rem, 0.34fr) minmax(0, 1fr);
+    gap: 0.85rem;
+    min-height: min(68vh, 48rem);
+}
+
+.live-processes-manager-chat-threads,
+.live-processes-manager-chat-panel {
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.live-processes-manager-chat-threads {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    overflow: hidden;
+    padding: 0.85rem;
+}
+
+.live-processes-manager-chat-thread-list {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.55rem;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+    scrollbar-gutter: stable;
+}
+
+.live-processes-manager-chat-panel {
+    overflow: hidden;
+    padding: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+    .live-processes-command-strip__row,
+    .live-processes-command-strip__actions {
+        align-items: stretch;
+    }
+
+    .live-processes-select,
+    .live-processes-select--wide {
+        width: 100%;
+    }
+
+    .live-processes-chart-grid,
+    .live-processes-tool-layout,
+    .live-processes-detail-grid,
+    .live-processes-manager-chat-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .live-processes-chart-grid > :last-child {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .live-processes-card-grid,
+    .live-processes-agent-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .live-processes-card {
+        padding-right: 4.75rem;
+    }
+
+    .live-processes-duration-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
