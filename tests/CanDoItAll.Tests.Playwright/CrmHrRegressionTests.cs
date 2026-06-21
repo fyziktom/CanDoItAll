@@ -3,7 +3,6 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
@@ -29,7 +28,6 @@ public sealed class CrmHrRegressionTests
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
         var seed = await SeedScenarioAsync(suffix);
         var resourceName = $"B13 Resource {suffix}";
-        var validationTitle = $"B13 Validation {suffix}";
         var testPlanTitle = $"B13 Test Plan {suffix}";
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -79,19 +77,12 @@ public sealed class CrmHrRegressionTests
             FullPage = true
         });
 
-        await page.GotoAsync($"{fixture.BaseUrl}/activity");
-        await page.GetByTestId("activity-search-input").WaitForAsync();
-        await page.GetByTestId("activity-search-input").FillAsync(seed.InteractionSubject);
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions
-        {
-            Name = "Search",
-            Exact = true
-        }).ClickAsync();
+        await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.AccountId:D}");
         await page.WaitForSelectorAsync($"text={seed.InteractionSubject}");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-activity-b13-desktop.png"),
+            Path = Path.Combine(evidenceDirectory, "crm-hr-account-b13-desktop.png"),
             FullPage = true
         });
 
@@ -112,21 +103,6 @@ public sealed class CrmHrRegressionTests
             FullPage = true
         });
 
-        await page.GotoAsync($"{fixture.BaseUrl}/validation?projectId={seed.ProjectId:D}");
-        await page.GetByTestId("validation-project-select").WaitForAsync();
-        await WaitForSelectOptionAsync(page.GetByTestId("validation-responsible-party-select"), seed.OwnerId.ToString());
-        await page.GetByTestId("validation-responsible-party-select").SelectOptionAsync(seed.OwnerId.ToString());
-        await page.GetByTestId("validation-artifact-title-input").FillAsync(validationTitle);
-        await page.GetByTestId("validation-source-content-input").FillAsync("B13 regression validation source content.");
-        await page.GetByTestId("validation-run-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Validation completed.");
-        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-validation-b13-desktop.png"),
-            FullPage = true
-        });
-
         await page.GotoAsync($"{fixture.BaseUrl}/test-lab?projectId={seed.ProjectId:D}");
         await page.GetByTestId("testlab-project-select").WaitForAsync();
         await WaitForSelectOptionAsync(page.GetByTestId("testlab-responsible-party-select"), seed.OwnerId.ToString());
@@ -141,7 +117,7 @@ public sealed class CrmHrRegressionTests
             FullPage = true
         });
 
-        await VerifyPersistedStateAsync(seed, resourceName, validationTitle, testPlanTitle);
+        await VerifyPersistedStateAsync(seed, resourceName, testPlanTitle);
     }
 
     private async Task<SeededScenario> SeedScenarioAsync(string suffix)
@@ -257,6 +233,7 @@ public sealed class CrmHrRegressionTests
         return new SeededScenario(
             ProjectId: projectId,
             ProjectName: projectName,
+            AccountId: accountId,
             OwnerId: ownerId,
             MaintainerId: maintainerId,
             SensitivePartyId: sensitivePartyId,
@@ -264,7 +241,7 @@ public sealed class CrmHrRegressionTests
             InteractionSubject: interactionSubject);
     }
 
-    private async Task VerifyPersistedStateAsync(SeededScenario seed, string resourceName, string validationTitle, string testPlanTitle)
+    private async Task VerifyPersistedStateAsync(SeededScenario seed, string resourceName, string testPlanTitle)
     {
         var activeProfile = CreateActiveProfile();
         await using var serviceProvider = await TestApplicationBootstrap.BuildServiceProviderAsync(
@@ -277,7 +254,6 @@ public sealed class CrmHrRegressionTests
             });
         await using var scope = serviceProvider.CreateAsyncScope();
         var resourcesService = scope.ServiceProvider.GetRequiredService<ResourcesService>();
-        var validationService = scope.ServiceProvider.GetRequiredService<ValidationService>();
         var testLabService = scope.ServiceProvider.GetRequiredService<TestLabService>();
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var searchIndexService = scope.ServiceProvider.GetRequiredService<ISearchIndexService>();
@@ -286,10 +262,6 @@ public sealed class CrmHrRegressionTests
         var savedResource = await resourcesService.GetAsync(savedResourceSummary.Id);
         Assert.Equal(seed.OwnerId, savedResource.OwnerPartyId);
         Assert.Equal(seed.MaintainerId, savedResource.MaintainerPartyId);
-
-        var savedValidationSummary = Assert.Single(await validationService.ListRunsAsync(), item => item.ArtifactTitle == validationTitle);
-        var savedValidation = await validationService.GetRunAsync(savedValidationSummary.Id);
-        Assert.Equal(validationTitle, savedValidation.ArtifactTitle);
 
         var savedPlanSummary = Assert.Single(await testLabService.ListAsync(), item => item.Title == testPlanTitle);
         var savedPlan = await testLabService.GetAsync(savedPlanSummary.Id);
@@ -487,6 +459,7 @@ public sealed class CrmHrRegressionTests
     private sealed record SeededScenario(
         Guid ProjectId,
         string ProjectName,
+        Guid AccountId,
         Guid OwnerId,
         Guid MaintainerId,
         Guid SensitivePartyId,

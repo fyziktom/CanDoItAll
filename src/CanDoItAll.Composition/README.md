@@ -19,9 +19,7 @@ dotnet build src/CanDoItAll.Composition/CanDoItAll.Composition.csproj
 Project references:
 
 - `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj`
 - `../CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
-- `../CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj`
 - `../CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
 - `../CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj`
 - `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
@@ -30,7 +28,6 @@ Project references:
 - `../CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj`
 - `../CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
 - `../CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj`
-- `../CanDoItAll.Modules.Validation/CanDoItAll.Modules.Validation.csproj`
 - `../CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
 - `../CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
 - `../CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj`

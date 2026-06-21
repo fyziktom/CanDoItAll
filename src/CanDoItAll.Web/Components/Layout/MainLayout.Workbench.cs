@@ -251,22 +251,6 @@ public partial class MainLayout
                 TabGroup: "Prompt Sessions");
         }
 
-        if (string.Equals(path, "/validation", StringComparison.OrdinalIgnoreCase) &&
-            TryReadGuid(query, "runId", out var validationRunId))
-        {
-            return new WorkbenchTabDescriptor(
-                $"validation:{validationRunId:N}",
-                "Validation Run",
-                route,
-                WorkbenchTabKinds.ValidationRun,
-                ArtifactId: validationRunId,
-                ArtifactKind: "validation-run",
-                ArtifactKey: $"validation:{validationRunId:N}",
-                RestoreKey: $"validation:{validationRunId:N}",
-                Description: "Validation review artifact.",
-                TabGroup: "Validation");
-        }
-
         if (string.Equals(path, "/test-lab", StringComparison.OrdinalIgnoreCase) &&
             TryReadGuid(query, "planId", out var testPlanId))
         {
@@ -352,8 +336,8 @@ public partial class MainLayout
     private static string ResolveWorkspaceId(string path)
         => path.Trim().ToLowerInvariant() switch
         {
-            "/validation" or "/test-lab" => "quality",
-            "/automation" or "/activity" or "/settings" => "automation",
+            "/test-lab" => "quality",
+            "/scheduler" or "/settings" => "operations",
             _ => "delivery"
         };
 
@@ -371,10 +355,9 @@ public partial class MainLayout
         {
             var candidate when candidate.StartsWith("/crm-hr", StringComparison.Ordinal) => "CRM / HR",
             var candidate when candidate.StartsWith("/processes", StringComparison.Ordinal) => "Processes",
-            "/validation" => "Validation",
             "/test-lab" => "Testing",
+            "/scheduler" => "Scheduler",
             "/settings" => "Settings",
-            "/automation" or "/activity" => "Operations",
             _ => "Workspace"
         };
     }

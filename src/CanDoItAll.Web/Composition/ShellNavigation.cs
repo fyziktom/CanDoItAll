@@ -17,10 +17,7 @@ public static class ShellNavigation
         new("Plugins", "/plugins", "extension", "Plugin catalog, runtime packages, installation state, and availability.", PinnedByDefault: false),
         new("Prompt Gallery", "/prompt-gallery", "library_books", "Prompt library, collections, versions, and usage.", PinnedByDefault: false),
         new("Prompt Factory", "/prompt-factory", "construction", "Guided prompt assembly with flow templates and blueprints.", PinnedByDefault: false),
-        new("Validation Center", "/validation", "fact_check", "Checklists, findings, review decisions, and coverage.", PinnedByDefault: false),
         new("Test Lab", "/test-lab", "science", "Plans, evidence, linked tests, and execution records.", PinnedByDefault: false),
-        new("Activity", "/activity", "timeline", "Timeline and cross-entity search for recent work.", PinnedByDefault: false),
-        new("Automation", "/automation", "autorenew", "Background jobs, exports, sends, and operational diagnostics.", PinnedByDefault: false),
         new("Scheduler", "/scheduler", "calendar_month", "Calendar-backed workflow and process run planning.", PinnedByDefault: false),
         new("Settings", "/settings", "settings", "Workspace defaults, providers, secrets, and environment settings.", PinnedByDefault: true)
     ];

@@ -14,28 +14,14 @@ public static class ProjectStructureValidationOverlay
             annotations.Add(new CanvasWorkbenchAnnotation
             {
                 Id = $"{node.Id}:validation",
-                Kind = "validation",
+                Kind = "health",
                 Tone = "danger",
                 Label = "Blocked",
-                Description = $"This {ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} is marked '{status}'. Open validation tooling before continuing.",
-                Icon = "fact_check",
-                ActionId = "validate"
+                Description = $"This {ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} is marked '{status}'. Review the node before continuing.",
+                Icon = "warning",
+                ActionId = "summary"
             });
         }
-        else if (RequiresValidationReview(node, status))
-        {
-            annotations.Add(new CanvasWorkbenchAnnotation
-            {
-                Id = $"{node.Id}:validation-open",
-                Kind = "validation",
-                Tone = "warn",
-                Label = "Review",
-                Description = "This validation artifact still needs a pass or decision.",
-                Icon = "fact_check",
-                ActionId = "validate"
-            });
-        }
-
         if (node.Priority >= 4)
         {
             annotations.Add(new CanvasWorkbenchAnnotation
@@ -83,9 +69,7 @@ public static class ProjectStructureValidationOverlay
            || status.Contains("error", StringComparison.OrdinalIgnoreCase);
 
     public static bool RequiresValidationReview(ProjectStructureNode node, string status)
-        => node.ObjectType == ProjectObjectType.ValidationRun
-           && !status.Contains("approved", StringComparison.OrdinalIgnoreCase)
-           && !status.Contains("complete", StringComparison.OrdinalIgnoreCase);
+        => false;
 }
 
 public sealed record ProjectStructureValidationOverlaySummary(

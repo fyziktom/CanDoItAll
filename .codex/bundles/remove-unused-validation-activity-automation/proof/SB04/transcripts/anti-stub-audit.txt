@@ -1,0 +1,4 @@
+Command: anti-stub audit for changed source/test files
+Invariant: RM-003 no stub markers introduced by module removal
+Scanned 61 changed existing source/test/tool files; no stub markers found.
+ExitCode: 0

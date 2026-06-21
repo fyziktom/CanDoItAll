@@ -132,12 +132,6 @@ public partial class ProjectStructurePage
                 "summary",
                 "accent",
                 "transcript:summarize"),
-            ProjectObjectType.ValidationRun => BuildCommandQuickAction(
-                "Open Validation",
-                "Open the validation workspace in a separate tab.",
-                "qa",
-                "primary",
-                ProjectStructureCommandKind.Validate),
             ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => BuildCommandQuickAction(
                 "Open Test Lab",
                 "Open the test workspace in a separate tab.",

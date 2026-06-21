@@ -7,7 +7,7 @@ summary: Describes one user-visible activity entry emitted by feature modules.
 owns: category, action, title, route, artifact-link
 deps: none
 risks: missing-route, low-detail-entry
-tests: unit:ActivityServiceTests
+tests: unit:ActivityStreamContractTests
 inputs: module action payloads
 outputs: activity timeline writes
 */
@@ -30,7 +30,7 @@ summary: Accepts cross-module activity events without forcing direct module refe
 owns: activity-write boundary
 deps: ActivityWriteRequest
 risks: missed-instrumentation
-tests: unit:ActivityServiceTests
+tests: unit:ActivityStreamContractTests
 inputs: ActivityWriteRequest
 outputs: persisted activity entries
 */

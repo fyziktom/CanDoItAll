@@ -40,7 +40,7 @@ public sealed partial class AppSmokeTests
         var page = await context.NewPageAsync();
 
         await page.GotoAsync($"{fixture.BaseUrl}/projects");
-        await page.GotoAsync($"{fixture.BaseUrl}/validation");
+        await page.GotoAsync($"{fixture.BaseUrl}/scheduler");
         await page.GotoAsync($"{fixture.BaseUrl}/test-lab");
         await page.WaitForSelectorAsync("text=Tests, evidence, and execution results");
         await page.WaitForFunctionAsync(
@@ -5111,7 +5111,7 @@ public sealed partial class AppSmokeTests
         var value when value.StartsWith("add-block-", StringComparison.Ordinal) => "group-blocks",
         "add-prompt-flow" or "add-prompt-session" or "add-prompt-step" => "group-prompts",
         "add-repository" or "add-file" or "add-image-asset" or "add-video-asset" or "add-link" or "add-connector" or "add-secret-reference" => "group-assets",
-        "add-validation-run" or "add-test-plan" or "add-test-evidence" => "group-assurance",
+        "add-test-plan" or "add-test-evidence" => "group-assurance",
         _ => null
     };
 

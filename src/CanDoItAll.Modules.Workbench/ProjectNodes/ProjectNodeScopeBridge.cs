@@ -3,7 +3,6 @@ using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -159,15 +158,6 @@ internal sealed class ProjectNodeScopeBridge(
                 .Select(item => (Guid?)item.ProjectId)
                 .FirstOrDefaultAsync(cancellationToken);
             return BuildProjectedResolution(promptRunProjectId, projectId, ProjectObjectType.PromptStep);
-        }
-
-        if (TryParsePrefixedGuidNodeKey(nodeKey, "validation:", out var validationId))
-        {
-            var validationProjectId = await dbContext.Set<ValidationRun>()
-                .Where(item => item.Id == validationId)
-                .Select(item => (Guid?)item.ProjectId)
-                .FirstOrDefaultAsync(cancellationToken);
-            return BuildProjectedResolution(validationProjectId, projectId, ProjectObjectType.ValidationRun);
         }
 
         if (TryParsePrefixedGuidNodeKey(nodeKey, "test-plan:", out var testPlanId))

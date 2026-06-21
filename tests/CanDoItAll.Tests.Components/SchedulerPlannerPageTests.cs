@@ -1,7 +1,6 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
-using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.SchedulerPlanner.Pages;
 using Microsoft.Extensions.DependencyInjection;

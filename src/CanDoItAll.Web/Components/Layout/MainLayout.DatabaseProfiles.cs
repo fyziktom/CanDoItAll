@@ -375,8 +375,8 @@ public partial class MainLayout
 
         return activeWorkspaceId switch
         {
-            "quality" => "/validation",
-            "automation" => "/automation",
+            "quality" => "/test-lab",
+            "operations" => "/scheduler",
             _ => "/projects"
         };
     }

@@ -1,7 +1,5 @@
 using System.Reflection;
-using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
@@ -14,7 +12,6 @@ using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Persistence;
@@ -25,9 +22,7 @@ public static class ModuleAssemblies
 {
     public static readonly Assembly[] All =
     [
-        typeof(ActivityModuleAssemblyMarker).Assembly,
         typeof(AgentFrameworkModuleAssemblyMarker).Assembly,
-        typeof(AutomationModuleAssemblyMarker).Assembly,
         typeof(CognitiveMemoryModuleAssemblyMarker).Assembly,
         typeof(CollaborationModuleAssemblyMarker).Assembly,
         typeof(CrmHrModuleAssemblyMarker).Assembly,
@@ -41,7 +36,6 @@ public static class ModuleAssemblies
         typeof(SchedulerPlannerModuleAssemblyMarker).Assembly,
         typeof(SecurityModuleAssemblyMarker).Assembly,
         typeof(TestLabModuleAssemblyMarker).Assembly,
-        typeof(ValidationModuleAssemblyMarker).Assembly,
         typeof(WorkbenchModuleAssemblyMarker).Assembly,
         typeof(WorkspaceModuleAssemblyMarker).Assembly
     ];

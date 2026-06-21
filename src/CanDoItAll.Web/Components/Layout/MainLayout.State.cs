@@ -12,8 +12,8 @@ public partial class MainLayout
     private readonly IReadOnlyList<ShellWorkspaceItem> workspaces =
     [
         new("delivery", "Delivery Workspace", "Project authoring, structure, calendars, and prompt sessions.", "/projects"),
-        new("quality", "Quality Desk", "Validation runs, test plans, and evidence review.", "/validation"),
-        new("automation", "Automation Ops", "Activity, automation status, and environment settings.", "/automation")
+        new("quality", "Quality Desk", "Test plans and evidence review.", "/test-lab"),
+        new("operations", "Operations Desk", "Scheduler, runtime settings, and environment status.", "/scheduler")
     ];
 
     private string activeWorkspaceId = "delivery";

@@ -1,0 +1,4 @@
+Command: active reference audit for removed modules
+Invariant: RM-003 active source/test/tool references to retired module namespaces and menu commands are gone
+No active retired-module references found outside historical migrations.
+ExitCode: 0

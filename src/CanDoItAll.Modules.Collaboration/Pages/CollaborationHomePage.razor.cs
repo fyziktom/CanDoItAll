@@ -163,9 +163,9 @@ public partial class CollaborationHomePage
         selectedThreadId = workspace.SelectedThread?.ThreadId;
     }
 
-    private void OpenActivity()
+    private void OpenScheduler()
     {
-        Navigation.NavigateTo("/activity");
+        Navigation.NavigateTo("/scheduler");
     }
 
     private void OpenContext()

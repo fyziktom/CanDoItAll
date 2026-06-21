@@ -308,7 +308,6 @@
         const actions = [
             { action: "open", label: "Open" },
             { action: "link", label: "Link" },
-            { action: "validate", label: "Validate" },
             { action: "test", label: "Test" },
             { action: "add-note", label: "Note" }
         ];

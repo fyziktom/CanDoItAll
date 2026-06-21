@@ -16,20 +16,19 @@ public sealed class AppShellTests : TestContext
     }
 
     [Fact]
-    public void Renders_more_continuation_panel_when_desktop_navigation_overflows()
+    public void Renders_current_navigation_without_removed_module_items()
     {
         var cut = RenderComponent<AppShell>(parameters => parameters
             .Add(component => component.NavigationItems, ShellNavigation.Items)
-            .Add(component => component.CurrentRoute, "automation")
+            .Add(component => component.CurrentRoute, "scheduler")
             .Add(component => component.TopBar, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Shell status</div>"))));
 
         Assert.Contains("app-shell-workbar", cut.Markup);
-        Assert.Contains("shell-nav-more", cut.Markup);
-        Assert.Contains("expand_less", cut.Markup);
-        Assert.Contains("shell-nav-overflow-panel", cut.Markup);
-        Assert.Contains("shell-nav-overflow-test-lab", cut.Markup);
-        Assert.Contains(">Tests<", cut.Markup);
-        Assert.Contains("shell-nav-automation", cut.Markup);
+        Assert.Contains("shell-nav-test-lab", cut.Markup);
+        Assert.Contains("shell-nav-scheduler", cut.Markup);
+        Assert.DoesNotContain("shell-nav-automation", cut.Markup);
+        Assert.DoesNotContain("shell-nav-activity", cut.Markup);
+        Assert.DoesNotContain("shell-nav-validation", cut.Markup);
     }
 
     [Fact]
@@ -38,8 +37,8 @@ public sealed class AppShellTests : TestContext
         var workspaces = new[]
         {
             new ShellWorkspaceItem("delivery", "Delivery Workspace", "Project authoring, structure, calendars, and prompt sessions.", "/"),
-            new ShellWorkspaceItem("quality", "Quality Desk", "Validation runs, test plans, and evidence review.", "/validation"),
-            new ShellWorkspaceItem("automation", "Automation Ops", "Activity, automation status, and environment settings.", "/automation")
+            new ShellWorkspaceItem("quality", "Quality Desk", "Test plans and evidence review.", "/test-lab"),
+            new ShellWorkspaceItem("operations", "Operations", "Scheduler, runtime settings, and environment status.", "/scheduler")
         };
         var openedProjects = new[]
         {
@@ -51,7 +50,7 @@ public sealed class AppShellTests : TestContext
             .Add(component => component.NavigationItems, ShellNavigation.Items)
             .Add(component => component.Workspaces, workspaces)
             .Add(component => component.OpenedProjects, openedProjects)
-            .Add(component => component.CurrentRoute, "automation"));
+            .Add(component => component.CurrentRoute, "scheduler"));
 
         var desktopSidebarMarkup = cut.Find("aside").InnerHtml;
 

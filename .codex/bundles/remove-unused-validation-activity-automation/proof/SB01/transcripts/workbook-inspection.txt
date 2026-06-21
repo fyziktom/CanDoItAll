@@ -1,0 +1,8 @@
+Command: inspect unused-module-reference-map workbook artifacts
+Invariant: RM-001 reference inventory workbook exists before deletion and has no formula-injection findings
+.codex\bundles\remove-unused-validation-activity-automation\inventories\unused-module-reference-map.xlsx length=81572
+.codex\bundles\remove-unused-validation-activity-automation\inventories\unused-module-reference-map-preview.png length=465587
+.codex\bundles\remove-unused-validation-activity-automation\inventories\unused-module-reference-map.xlsx.inspect.ndjson length=3187669
+SHA-256 .codex\bundles\remove-unused-validation-activity-automation\inventories\unused-module-reference-map.xlsx 126A5163835C1D2B92CD9164BCA803099294CFDC1096204A332FF0E4F4D2E4F9
+No formula-injection markers found in inspect NDJSON.
+ExitCode: 0

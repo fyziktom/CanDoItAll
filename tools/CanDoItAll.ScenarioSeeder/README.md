@@ -21,9 +21,7 @@ Project references:
 - `../../src/CanDoItAll.Composition/CanDoItAll.Composition.csproj`
 - `../../src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
 - `../../src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj`
-- `../../src/CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj`
 - `../../src/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
-- `../../src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj`
 - `../../src/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
 - `../../src/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj`
 - `../../src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj`
@@ -33,7 +31,6 @@ Project references:
 - `../../src/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj`
 - `../../src/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
 - `../../src/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj`
-- `../../src/CanDoItAll.Modules.Validation/CanDoItAll.Modules.Validation.csproj`
 - `../../src/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
 - `../../src/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
 - `../../src/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`

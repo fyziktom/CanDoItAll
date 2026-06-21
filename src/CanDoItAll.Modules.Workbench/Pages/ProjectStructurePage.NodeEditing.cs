@@ -149,7 +149,6 @@ public partial class ProjectStructurePage
             ProjectStructureCommandKind.Branch => new ProjectStructureInspectorAction("command:branch", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "fork", "accent"),
             ProjectStructureCommandKind.MarkUsed => new ProjectStructureInspectorAction("command:mark-used", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "use", "mint"),
             ProjectStructureCommandKind.Skip => new ProjectStructureInspectorAction("command:skip", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "skip", "ghost"),
-            ProjectStructureCommandKind.Validate => new ProjectStructureInspectorAction("command:validate", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "qa", "primary"),
             _ => new ProjectStructureInspectorAction("command:test", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "test", "warn")
         };
 
@@ -218,9 +217,6 @@ public partial class ProjectStructurePage
                 break;
             case "command:skip":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, node.Id);
-                break;
-            case "command:validate":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Validate, node.Id);
                 break;
             case "command:test":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Test, node.Id);

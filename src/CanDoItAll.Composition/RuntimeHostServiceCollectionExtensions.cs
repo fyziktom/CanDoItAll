@@ -7,9 +7,7 @@ using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Rag.Driver.Models;
 using CanDoItAll.AgentFramework.Rag.Qdrant.DependencyInjection;
 using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
-using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
@@ -22,7 +20,6 @@ using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -65,14 +62,11 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddCanDoItAllGmailPlugin();
         services.AddCanDoItAllOffice365Plugin();
         services.AddProcessesModule(configuration);
-        services.AddValidationModule();
         services.AddTestLabModule();
-        services.AddActivityModule();
         services.AddAgentFrameworkModule(configuration);
-        services.AddAutomationModule(configuration, contentRootPath);
         services.AddConfiguredQdrantRagDriver(configuration);
         services.AddCognitiveMemoryModule();
-        services.AddSchedulerPlannerModule();
+        services.AddSchedulerPlannerModule(configuration);
         services.AddCollaborationModule();
         services.AddCrmHrModule();
         services.AddSchedulerPlannerWorkflowInputOptionProviders();
@@ -226,7 +220,6 @@ public sealed class AppDatabaseBootstrapper(
     ];
     private static readonly string[] BaselineSentinelTables =
     [
-        "Activity_Entries",
         "Projects_Projects",
         "Workspace_ProviderProfiles"
     ];
@@ -273,10 +266,6 @@ public sealed class AppDatabaseBootstrapper(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
             profile.Profile.Id);
         await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        logger.LogInformation(
-            "Ensuring Quartz automation schema for profile {ProfileId}.",
-            profile.Profile.Id);
-        await AutomationQuartzSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         logger.LogInformation(
             "Ensuring plugin runtime schema for profile {ProfileId}.",
             profile.Profile.Id);
@@ -469,24 +458,6 @@ public sealed class AppDatabaseBootstrapper(
             cancellationToken,
             ("@migrationId", migrationId),
             ("@productVersion", ResolveEfCoreProductVersion()));
-
-    private static Task EnsureAutomationClaimHotPathIndexesAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-        => ExecutePostgreSqlNonQueryAsync(
-            dbContext,
-            """
-            CREATE INDEX IF NOT EXISTS "IX_Automation_EnvelopeDeliveries_DueClaimOrder"
-            ON "Automation_EnvelopeDeliveries" ("AvailableAtUtc", "CreatedAtUtc")
-            INCLUDE ("Id", "EnvelopeId", "State", "LockedAtUtc")
-            WHERE "State" IN (0, 1, 2);
-
-            CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_PendingClaimOrder"
-            ON "Workspace_ConnectorCommands" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
-            INCLUDE ("Id", "ProjectId", "ConnectorPluginKey", "CommandKey", "LeaseExpiresAtUtc")
-            WHERE "Status" = 0 AND "ApprovalState" <> 1;
-            """,
-            cancellationToken);
 
     private static string ResolveEfCoreProductVersion() {
         var informationalVersion = typeof(DbContext).Assembly

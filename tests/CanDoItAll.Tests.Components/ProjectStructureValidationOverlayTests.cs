@@ -7,29 +7,30 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProjectStructureValidationOverlayTests
 {
     [Fact]
-    public void Blocked_validation_nodes_surface_annotations()
+    public void Blocked_nodes_surface_health_annotations()
     {
         var node = CreateNode(
-            "validation-run",
-            ProjectObjectType.ValidationRun,
+            "blocked-note",
+            ProjectObjectType.Note,
             "Blocked",
             priority: 4);
 
         var annotations = ProjectStructureValidationOverlay.BuildNodeAnnotations(node);
 
-        Assert.Contains(annotations, annotation => annotation.ActionId == "validate");
+        Assert.Contains(annotations, annotation => annotation.ActionId == "summary");
+        Assert.Contains(annotations, annotation => annotation.Kind == "health");
         Assert.Contains(annotations, annotation => annotation.Kind == "priority");
     }
 
     [Fact]
-    public void Summary_counts_blocked_review_and_priority_nodes()
+    public void Summary_counts_blocked_and_priority_nodes()
     {
         var blocked = CreateNode("blocked", ProjectObjectType.Note, "Blocked", priority: 2);
-        var review = CreateNode("review", ProjectObjectType.ValidationRun, "Pending review", priority: 1);
+        var review = CreateNode("review", ProjectObjectType.Decision, "Pending review", priority: 1);
         var priority = CreateNode("priority", ProjectObjectType.Decision, "Active", priority: 5);
         var surface = new ProjectStructureSurface(
             Guid.NewGuid(),
-            "Validation project",
+            "Project structure",
             [blocked, review, priority],
             [],
             null);
@@ -38,7 +39,7 @@ public sealed class ProjectStructureValidationOverlayTests
 
         Assert.True(summary.IsVisible);
         Assert.Equal(1, summary.BlockedCount);
-        Assert.Equal(1, summary.ReviewCount);
+        Assert.Equal(0, summary.ReviewCount);
         Assert.Equal(1, summary.PriorityCount);
         Assert.Equal(2, summary.SelectedIssueCount);
         Assert.Contains("Blocked", summary.SpotlightNodes[0], StringComparison.OrdinalIgnoreCase);

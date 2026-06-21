@@ -56,14 +56,55 @@ public sealed class WorkbenchStateServiceTests
             clock);
 
         await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/")]);
-        await service.TrackRouteAsync("/validation", "Validation Center", false);
-        await service.TrackRouteAsync("/validation", "Validation Review", false);
+        await service.TrackRouteAsync("/test-lab", "Test Lab", false);
+        await service.TrackRouteAsync("/test-lab", "Test Evidence", false);
 
-        var validationTabs = service.Tabs.Where(tab => tab.Route == "/validation").ToList();
-        Assert.Single(validationTabs);
-        Assert.Equal("Validation Review", validationTabs[0].Title);
-        Assert.Equal(validationTabs[0].TabId, service.ActiveTabId);
-        Assert.False(validationTabs[0].IsSleeping);
+        var testLabTabs = service.Tabs.Where(tab => tab.Route == "/test-lab").ToList();
+        Assert.Single(testLabTabs);
+        Assert.Equal("Test Evidence", testLabTabs[0].Title);
+        Assert.Equal(testLabTabs[0].TabId, service.ActiveTabId);
+        Assert.False(testLabTabs[0].IsSleeping);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_drops_retired_module_routes_from_restored_session()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore
+        {
+            Snapshot = new WorkbenchSessionSnapshot(
+                4,
+                "route:validation",
+                [
+                    new WorkbenchTabState("dashboard", "Dashboard", "/", Order: 0),
+                    new WorkbenchTabState("route:validation", "Validation Center", "/validation", Order: 1),
+                    new WorkbenchTabState("route:automation", "Automation", "/automation", Order: 2)
+                ],
+                CompatibilityMarker: "candoitall.workbench.v4",
+                RecentTabs:
+                [
+                    new WorkbenchTabState("route:activity", "Activity", "/activity")
+                ])
+        };
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard-default", "Dashboard", "/")]);
+        await service.TrackRouteAsync("/validation", "Validation Center", false);
+
+        Assert.Single(service.Tabs);
+        Assert.Equal("dashboard", service.ActiveTabId);
+        Assert.DoesNotContain(service.Tabs, tab => tab.Route is "/validation" or "/activity" or "/automation");
+        Assert.Empty(service.RecentTabs);
+        Assert.NotNull(service.LastRestoreReport);
+        Assert.Equal(2, service.LastRestoreReport!.Failures.Count);
+        Assert.All(
+            service.LastRestoreReport.Failures,
+            failure => Assert.Contains("retired module", failure.Summary, StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(store.SavedSnapshot);
+        Assert.DoesNotContain(store.SavedSnapshot!.Tabs, tab => tab.Route is "/validation" or "/activity" or "/automation");
     }
 
     [Fact]

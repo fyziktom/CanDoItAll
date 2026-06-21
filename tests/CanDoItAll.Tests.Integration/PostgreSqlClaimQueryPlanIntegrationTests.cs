@@ -8,7 +8,6 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
     private const string ProcessOutboxClaimIndex = "IX_Processes_Outbox_PendingClaimOrder";
     private const string ProcessStepDispatchHeaderIndex = "IX_Processes_StepRuns_ProcessRunId_Sequence";
-    private const string AutomationDeliveryClaimIndex = "IX_Automation_EnvelopeDeliveries_DueClaimOrder";
     private const string ConnectorCommandClaimIndex = "IX_Workspace_ConnectorCommands_PendingClaimOrder";
 
     [Fact]
@@ -35,10 +34,6 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
         await WritePlanAsync("process-step-dispatch-header", processStepDispatchPlan);
         AssertPlanUsesIndex(processStepDispatchPlan, ProcessStepDispatchHeaderIndex, "Processes_StepRuns");
 
-        var automationDeliveryPlan = await ExplainAsync(dbContext, AutomationDeliveryClaimSql);
-        await WritePlanAsync("automation-delivery-claim", automationDeliveryPlan);
-        AssertPlanUsesIndex(automationDeliveryPlan, AutomationDeliveryClaimIndex, "Automation_EnvelopeDeliveries");
-
         var connectorCommandPlan = await ExplainAsync(dbContext, ConnectorCommandClaimSql);
         await WritePlanAsync("connector-command-claim", connectorCommandPlan);
         AssertPlanUsesIndex(connectorCommandPlan, ConnectorCommandClaimIndex, "Workspace_ConnectorCommands");
@@ -49,7 +44,6 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             [
                 ProcessOutboxClaimIndex,
                 ProcessStepDispatchHeaderIndex,
-                AutomationDeliveryClaimIndex,
                 ConnectorCommandClaimIndex
             ],
             StringComparer.Ordinal);
@@ -68,7 +62,6 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
               AND indexname IN (
                   'IX_Processes_Outbox_PendingClaimOrder',
                 'IX_Processes_StepRuns_ProcessRunId_Sequence',
-                  'IX_Automation_EnvelopeDeliveries_DueClaimOrder',
                   'IX_Workspace_ConnectorCommands_PendingClaimOrder'
               );
             """;
@@ -84,13 +77,11 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
     private static async Task SeedClaimPlanDatasetsAsync(AppDbContext dbContext) {
         await dbContext.Database.ExecuteSqlRawAsync(SeedProcessOutboxSql);
         await dbContext.Database.ExecuteSqlRawAsync(SeedProcessStepDispatchSql);
-        await dbContext.Database.ExecuteSqlRawAsync(SeedAutomationDeliveriesSql);
         await dbContext.Database.ExecuteSqlRawAsync(SeedConnectorCommandsSql);
         await dbContext.Database.ExecuteSqlRawAsync(
             """
             ANALYZE "Processes_Outbox";
             ANALYZE "Processes_StepRuns";
-            ANALYZE "Automation_EnvelopeDeliveries";
             ANALYZE "Workspace_ConnectorCommands";
             """);
     }
@@ -416,67 +407,6 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
         FROM generate_series(1, 6000) AS series(value);
         """;
 
-    private const string SeedAutomationDeliveriesSql =
-        """
-        INSERT INTO "Automation_Envelopes" (
-            "Id",
-            "EnvelopeType",
-            "PayloadJson",
-            "State",
-            "AttemptCount",
-            "AvailableAtUtc",
-            "CreatedAtUtc",
-            "UpdatedAtUtc")
-        SELECT
-            ('00000000-0000-0000-2000-' || lpad(series.value::text, 12, '0'))::uuid,
-            'scenario05.claim-plan',
-            '{{}}',
-            0,
-            0,
-            now(),
-            now() - make_interval(secs => series.value),
-            now()
-        FROM generate_series(1, 20000) AS series(value);
-
-        INSERT INTO "Automation_EnvelopeDeliveries" (
-            "Id",
-            "EnvelopeId",
-            "EnvelopeType",
-            "HandlerKey",
-            "State",
-            "AttemptCount",
-            "MaxAttempts",
-            "AvailableAtUtc",
-            "CreatedAtUtc",
-            "UpdatedAtUtc",
-            "LastError",
-            "LockToken",
-            "LockedAtUtc")
-        SELECT
-            ('00000000-0000-0000-3000-' || lpad(series.value::text, 12, '0'))::uuid,
-            ('00000000-0000-0000-2000-' || lpad(series.value::text, 12, '0'))::uuid,
-            'scenario05.claim-plan',
-            'handler',
-            CASE
-                WHEN series.value % 17 = 0 THEN 3
-                WHEN series.value % 7 = 0 THEN 1
-                WHEN series.value % 5 = 0 THEN 2
-                ELSE 0
-            END,
-            0,
-            3,
-            CASE WHEN series.value % 19 = 0 THEN now() + interval '1 day' ELSE now() - interval '5 minutes' END,
-            now() - make_interval(secs => series.value),
-            now(),
-            '',
-            '',
-            CASE
-                WHEN series.value % 7 = 0 THEN now() - interval '10 minutes'
-                ELSE NULL
-            END
-        FROM generate_series(1, 20000) AS series(value);
-        """;
-
     private const string SeedConnectorCommandsSql =
         """
         INSERT INTO "Workspace_ConnectorCommands" (
@@ -560,38 +490,6 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
           AND (s."AutomationDispatchLeaseExpiresAtUtc" IS NULL OR s."AutomationDispatchLeaseExpiresAtUtc" <= now())
         ORDER BY s."Sequence"
         LIMIT 64;
-        """;
-
-    private const string AutomationDeliveryClaimSql =
-        """
-        WITH due AS (
-            SELECT d."Id"
-            FROM "Automation_EnvelopeDeliveries" AS d
-            WHERE d."AvailableAtUtc" <= now()
-              AND (
-                  d."State" = 0
-                  OR d."State" = 2
-                  OR (
-                      d."State" = 1
-                      AND d."LockedAtUtc" IS NOT NULL
-                      AND d."LockedAtUtc" <= now() - interval '2 minutes'
-                  )
-              )
-            ORDER BY d."AvailableAtUtc", d."CreatedAtUtc"
-            FOR UPDATE SKIP LOCKED
-            LIMIT 64
-        )
-        UPDATE "Automation_EnvelopeDeliveries" AS d
-        SET "State" = 1,
-            "AttemptCount" = d."AttemptCount" + 1,
-            "LastAttemptAtUtc" = now(),
-            "UpdatedAtUtc" = now(),
-            "CompletedAtUtc" = NULL,
-            "LockedAtUtc" = now(),
-            "LockToken" = 'scenario05'
-        FROM due
-        WHERE d."Id" = due."Id"
-        RETURNING d."Id", d."LockToken", d."EnvelopeId";
         """;
 
     private const string ConnectorCommandClaimSql =

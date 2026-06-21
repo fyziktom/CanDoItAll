@@ -22,7 +22,6 @@ Project references:
 - `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
 - `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
 - `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
-- `../CanDoItAll.Modules.Validation/CanDoItAll.Modules.Validation.csproj`
 
 Framework references:
 

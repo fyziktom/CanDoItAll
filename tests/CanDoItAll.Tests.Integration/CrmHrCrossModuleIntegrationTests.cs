@@ -1,11 +1,8 @@
 using CanDoItAll.Infrastructure.Search;
-using CanDoItAll.Modules.Activity;
-using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +11,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class CrmHrCrossModuleIntegrationTests
 {
     [Fact]
-    public async Task Safe_crm_hr_records_surface_in_search_activity_and_automation()
+    public async Task Safe_crm_hr_records_surface_in_search_and_owned_workspaces()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -23,8 +20,6 @@ public sealed class CrmHrCrossModuleIntegrationTests
         var recruitingService = scope.ServiceProvider.GetRequiredService<RecruitingService>();
         var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
         var searchIndexService = scope.ServiceProvider.GetRequiredService<ISearchIndexService>();
-        var activityService = scope.ServiceProvider.GetRequiredService<ActivityService>();
-        var automationWorkspaceService = scope.ServiceProvider.GetRequiredService<AutomationWorkspaceService>();
 
         var recruiterId = await CreatePartyAsync(
             partyDirectoryService,
@@ -146,8 +141,6 @@ public sealed class CrmHrCrossModuleIntegrationTests
         var candidateSearchResults = await searchIndexService.SearchAsync("Mila Candidate");
         var interactionSearchResults = await searchIndexService.SearchAsync("Quarterly expansion review");
         var agentSearchResults = await searchIndexService.SearchAsync("Pipeline Reviewer");
-        var activityItems = await activityService.ListRecentAsync();
-        var automationSignals = await automationWorkspaceService.ListSignalsAsync();
 
         Assert.Contains(
             candidateSearchResults,
@@ -164,34 +157,16 @@ public sealed class CrmHrCrossModuleIntegrationTests
         Assert.Contains(
             agentSearchResults,
             item => item.Route.Contains($"/crm-hr/agents?partyId={agentId}", StringComparison.Ordinal));
-
-        Assert.Contains(
-            activityItems,
-            item => item.Title.Contains("Converted Mila Candidate to workforce", StringComparison.Ordinal));
-        Assert.Contains(
-            activityItems,
-            item => item.Title.Contains("Saved AI agent profile for Pipeline Reviewer", StringComparison.Ordinal));
-        Assert.Contains(
-            activityItems,
-            item => item.Title.Contains("Logged Meeting for Borealis Systems", StringComparison.Ordinal));
-
-        Assert.Contains(
-            automationSignals,
-            item => string.Equals(item.Title, "CRM follow-ups overdue", StringComparison.Ordinal));
-        Assert.Contains(
-            automationSignals,
-            item => string.Equals(item.Title, "Lifecycle tasks due or overdue", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task Responsible_party_links_round_trip_for_resources_validation_and_test_lab()
+    public async Task Responsible_party_links_round_trip_for_resources_and_test_lab()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var resourcesService = scope.ServiceProvider.GetRequiredService<ResourcesService>();
-        var validationService = scope.ServiceProvider.GetRequiredService<ValidationService>();
         var testLabService = scope.ServiceProvider.GetRequiredService<TestLabService>();
 
         var projectId = await CreateProjectAsync(projectsService, "Cross-module ownership");
@@ -229,34 +204,21 @@ public sealed class CrmHrCrossModuleIntegrationTests
         });
         Assert.True(resourceResult.IsSuccess);
 
-        var validationResult = await validationService.RunAsync(new ValidationRunEditorModel
-        {
-            ProjectId = projectId,
-            ResponsiblePartyId = ownerId,
-            ValidationType = ValidationType.Architecture,
-            ArtifactTitle = "CRM-HR bundle review",
-            ArtifactRoute = "/crm-hr",
-            SourceContent = "Cross-module validation source for CRM-HR resources, automation, and routing."
-        });
-        Assert.True(validationResult.IsSuccess);
-
         var testPlanResult = await testLabService.SaveAsync(new TestPlanEditorModel
         {
             ProjectId = projectId,
             ResponsiblePartyId = ownerId,
             Title = "CRM-HR cross-module proof",
             Phase = "B11",
-            CoverageGoal = "Cover search, activity, responsible ownership, and automation signals."
+            CoverageGoal = "Cover search, responsible ownership, and project evidence."
         });
         Assert.True(testPlanResult.IsSuccess);
 
         var savedResource = await resourcesService.GetAsync(resourceResult.Value);
-        var savedValidationRun = await validationService.GetRunAsync(validationResult.Value);
         var savedTestPlan = await testLabService.GetAsync(testPlanResult.Value);
 
         Assert.Equal(ownerId, savedResource.OwnerPartyId);
         Assert.Equal(maintainerId, savedResource.MaintainerPartyId);
-        Assert.Equal(ownerId, savedValidationRun.ResponsiblePartyId);
         Assert.Equal(ownerId, savedTestPlan.ResponsiblePartyId);
     }
 

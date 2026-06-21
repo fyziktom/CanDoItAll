@@ -24,7 +24,6 @@ internal static class ProjectStructureNodeHelpers
             ]);
         }
 
-        commands.Add(ProjectStructureCommandKind.Validate);
         commands.Add(ProjectStructureCommandKind.Test);
         return commands;
     }

@@ -25,7 +25,6 @@ Project references:
 - `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj`
 - `../CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`
-- `../CanDoItAll.Modules.Validation/CanDoItAll.Modules.Validation.csproj`
 - `../CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
 
 Framework references:

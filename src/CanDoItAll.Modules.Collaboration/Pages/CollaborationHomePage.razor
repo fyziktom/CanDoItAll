@@ -8,7 +8,7 @@
     <Header>
         <PageHeader Eyebrow="Collaboration"
                     Title="Inbox, threads, and escalation workspace"
-                    Description="Durable notifications and human conversations now live in one canonical module instead of being scattered across automation transport and activity timelines."
+                    Description="Durable notifications and human conversations now live in one canonical module instead of being scattered across transport and timeline views."
                     Compact="true">
             <Stats>
                 <CompactStat Label="unread"
@@ -24,14 +24,14 @@
                              TooltipText="Durable collaboration threads stored in the app database." />
                 <CompactStat Label="transport"
                              Value="canonical"
-                             TooltipText="Automation can project signals in, but Collaboration owns the read model."
+                             TooltipText="External systems can project signals in, but Collaboration owns the read model."
                              Tone="success" />
             </Stats>
             <Actions>
-                <PageHeaderActionButton Icon="rev"
-                                        Label="Open activity"
-                                        TooltipText="Open the activity timeline."
-                                        Click="OpenActivity" />
+                <PageHeaderActionButton Icon="calendar_month"
+                                        Label="Open scheduler"
+                                        TooltipText="Open scheduler planning."
+                                        Click="OpenScheduler" />
                 <PageHeaderActionButton Icon="done_all"
                                         Label="Mark selected read"
                                         TooltipText="Mark the selected collaboration thread as read."

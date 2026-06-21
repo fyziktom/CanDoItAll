@@ -1,0 +1,6 @@
+Command: SchedulerPlanner Automation dependency audit
+Invariant: RM-002 SchedulerPlanner owns scheduling and has no CanDoItAll.Modules.Automation dependency
+No SchedulerPlanner references to old Automation module contracts found.
+Passing transcript: proof/SB04/transcripts/build-solution.txt
+failing-first: N/A - process/non-production removal audit; no new production behavior fixture was introduced.
+ExitCode: 0

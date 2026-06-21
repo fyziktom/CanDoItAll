@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Product module for scheduling process definitions and workflow versions through the Automation module. It owns scheduler plans, run history, cron description, target launch orchestration, trigger payloads, and the `/scheduler` Blazor page.
+Product module for scheduling process definitions and workflow versions through scheduler-owned Quartz projection. It owns scheduler plans, run history, cron description, target launch orchestration, and the `/scheduler` Blazor page.
 
 ## Project Type
 
@@ -23,7 +23,7 @@ Project references:
 - `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
 - `../CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
 - `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj`
+- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
 - `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
 
@@ -39,7 +39,7 @@ Direct package references:
 
 Scheduler Planner should coordinate existing process and workflow runtimes; it should not duplicate process launch logic or workflow execution semantics. Persistence is split between `SchedulerPlanner_Plans` and `SchedulerPlanner_Runs`, with PostgreSQL EF migrations owning runtime schema.
 
-Automation trigger handling is explicit through `SchedulerPlannerTriggerFireHandler`. Keep dedupe keys and run-state transitions predictable so repeated trigger delivery does not launch duplicate work.
+Scheduler trigger handling is explicit through `SchedulerPlannerRunDispatcher`. Keep dedupe keys and run-state transitions predictable so repeated scheduler fires do not launch duplicate work.
 
 ## Related Docs
 

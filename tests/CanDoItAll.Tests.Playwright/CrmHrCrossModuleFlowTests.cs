@@ -2,7 +2,6 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
@@ -29,7 +28,6 @@ public sealed class CrmHrCrossModuleFlowTests
         var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
         var seed = await SeedScenarioAsync(suffix);
         var resourceName = $"B11 Resource {suffix}";
-        var validationTitle = $"B11 Validation {suffix}";
         var testPlanTitle = $"B11 Test Plan {suffix}";
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -42,29 +40,14 @@ public sealed class CrmHrCrossModuleFlowTests
         });
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{fixture.BaseUrl}/activity");
+        await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/crm?accountId={seed.AccountId:D}");
         await DismissStartupModalIfPresentAsync(page);
-        await page.GetByTestId("activity-search-input").WaitForAsync();
-        await page.WaitForSelectorAsync($"text=Converted {seed.CandidateName} to workforce");
-        await page.WaitForSelectorAsync($"text=Logged Meeting for {seed.AccountName}");
-        await page.GetByTestId("activity-search-input").FillAsync(seed.InteractionSubject);
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions
-        {
-            Name = "Search",
-            Exact = true
-        }).ClickAsync();
         await page.WaitForSelectorAsync($"text={seed.InteractionSubject}");
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-activity-b11-desktop.png"),
+            Path = Path.Combine(evidenceDirectory, "crm-hr-account-b11-desktop.png"),
             FullPage = true
         });
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions
-        {
-            Name = seed.InteractionSubject,
-            Exact = false
-        }).First.ClickAsync();
-        await WaitForUrlContainsAsync(page, $"/crm-hr/crm?accountId={seed.AccountId:D}");
         await page.GetByTestId("crmhr-overdue-action-item").WaitForAsync();
         await page.WaitForSelectorAsync($"text={seed.NextActionText}");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -104,21 +87,6 @@ public sealed class CrmHrCrossModuleFlowTests
         });
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
-        await page.GotoAsync($"{fixture.BaseUrl}/validation?projectId={seed.ProjectId:D}");
-        await page.GetByTestId("validation-project-select").WaitForAsync();
-        await WaitForSelectOptionAsync(page.GetByTestId("validation-responsible-party-select"), seed.OwnerId.ToString());
-        await page.GetByTestId("validation-responsible-party-select").SelectOptionAsync(seed.OwnerId.ToString());
-        await page.GetByTestId("validation-artifact-title-input").FillAsync(validationTitle);
-        await page.GetByTestId("validation-source-content-input").FillAsync("Cross-module validation source for CRM-HR search, activity, ownership, and automation proof.");
-        await page.GetByTestId("validation-run-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Validation completed.");
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-validation-b11-desktop.png"),
-            FullPage = true
-        });
-        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
-
         await page.GotoAsync($"{fixture.BaseUrl}/test-lab?projectId={seed.ProjectId:D}");
         await page.GetByTestId("testlab-project-select").WaitForAsync();
         await WaitForSelectOptionAsync(page.GetByTestId("testlab-responsible-party-select"), seed.OwnerId.ToString());
@@ -133,27 +101,7 @@ public sealed class CrmHrCrossModuleFlowTests
         });
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
-        await page.GotoAsync($"{fixture.BaseUrl}/automation");
-        await page.GetByTestId("automation-signal-item").First.WaitForAsync();
-        await page.WaitForSelectorAsync("text=CRM follow-ups overdue");
-        await page.WaitForSelectorAsync("text=Lifecycle tasks due or overdue");
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(evidenceDirectory, "crm-hr-automation-b11-desktop.png"),
-            FullPage = true
-        });
-        await page.GetByTestId("automation-signal-item")
-            .Filter(new LocatorFilterOptions
-            {
-                HasText = "Lifecycle tasks due or overdue"
-            })
-            .GetByRole(AriaRole.Button, new LocatorGetByRoleOptions
-            {
-                Name = "Open",
-                Exact = true
-            })
-            .ClickAsync();
-        await WaitForUrlContainsAsync(page, "/crm-hr/recruiting");
+        await page.GotoAsync($"{fixture.BaseUrl}/crm-hr/recruiting");
         await page.GetByTestId("crmhr-recruiting-search").WaitForAsync();
         await page.GetByTestId("crmhr-recruiting-search").FillAsync(seed.CandidateName);
         await page.GetByTestId("crmhr-recruiting-application-item")
@@ -168,7 +116,7 @@ public sealed class CrmHrCrossModuleFlowTests
         await page.WaitForSelectorAsync($"text={seed.LifecycleTaskTitle}");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
-        await VerifyPersistedStateAsync(seed, resourceName, validationTitle, testPlanTitle);
+        await VerifyPersistedStateAsync(seed, resourceName, testPlanTitle);
     }
 
     private async Task<SeededScenario> SeedScenarioAsync(string suffix)
@@ -344,7 +292,7 @@ public sealed class CrmHrCrossModuleFlowTests
             lifecycleTaskTitle);
     }
 
-    private async Task VerifyPersistedStateAsync(SeededScenario seed, string resourceName, string validationTitle, string testPlanTitle)
+    private async Task VerifyPersistedStateAsync(SeededScenario seed, string resourceName, string testPlanTitle)
     {
         var activeProfile = CreateActiveProfile();
         await using var serviceProvider = await TestApplicationBootstrap.BuildServiceProviderAsync(
@@ -357,17 +305,12 @@ public sealed class CrmHrCrossModuleFlowTests
             });
         await using var scope = serviceProvider.CreateAsyncScope();
         var resourcesService = scope.ServiceProvider.GetRequiredService<ResourcesService>();
-        var validationService = scope.ServiceProvider.GetRequiredService<ValidationService>();
         var testLabService = scope.ServiceProvider.GetRequiredService<TestLabService>();
 
         var savedResourceSummary = Assert.Single(await resourcesService.ListAsync(), item => item.Name == resourceName);
         var savedResource = await resourcesService.GetAsync(savedResourceSummary.Id);
         Assert.Equal(seed.OwnerId, savedResource.OwnerPartyId);
         Assert.Equal(seed.MaintainerId, savedResource.MaintainerPartyId);
-
-        var savedValidationSummary = Assert.Single(await validationService.ListRunsAsync(), item => item.ArtifactTitle == validationTitle);
-        var savedValidation = await validationService.GetRunAsync(savedValidationSummary.Id);
-        Assert.Equal(seed.OwnerId, savedValidation.ResponsiblePartyId);
 
         var savedPlanSummary = Assert.Single(await testLabService.ListAsync(), item => item.Title == testPlanTitle);
         var savedPlan = await testLabService.GetAsync(savedPlanSummary.Id);

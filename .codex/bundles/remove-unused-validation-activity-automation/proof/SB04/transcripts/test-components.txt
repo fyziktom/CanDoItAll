@@ -1,0 +1,13 @@
+Command: dotnet test tests\\CanDoItAll.Tests.Components\\CanDoItAll.Tests.Components.csproj --no-build
+Invariant: RM-003 component tests pass after shell/menu removal
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:02:35.83]     CanDoItAll.Tests.Components.ProjectStructurePartyPickerTests.Participant_editor_can_link_and_unlink_directory_party [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.ProjectStructurePartyPickerTests.Participant_editor_can_link_and_unlink_directory_party [7 s]
+  Chybová zpráva:
+   Bunit.ElementNotFoundException : No elements were found that matches the selector '[data-testid='project-structure-participant-save']'
+  Trasování zásobníku:
+     at Bunit.RenderedFragmentExtensions.Find(IRenderedFragment renderedFragment, String cssSelector) in /_/src/bunit.web/Extensions/RenderedFragmentExtensions.cs:line 27
+   at CanDoItAll.Tests.Components.ProjectStructurePartyPickerTests.Participant_editor_can_link_and_unlink_directory_party() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProjectStructurePartyPickerTests.cs:line 68
+   at CanDoItAll.Tests.Components.ProjectStructurePartyPickerTests.Participant_editor_can_link_and_unlink_directory_party() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProjectStructurePartyPickerTests.cs:line 89
+--- End of stack trace from previous location ---

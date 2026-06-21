@@ -1,4 +1,3 @@
-using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +15,6 @@ public sealed class OpportunityConversionIntegrationTests
         var crmService = scope.ServiceProvider.GetRequiredService<CrmService>();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var projectPartyIntegrationService = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
-        var activityService = scope.ServiceProvider.GetRequiredService<ActivityService>();
 
         var accountId = await CreatePartyAsync(
             partyDirectoryService,
@@ -128,9 +126,6 @@ public sealed class OpportunityConversionIntegrationTests
         Assert.Contains(
             workspace.ActivityTimeline,
             item => item.Title.Contains("Converted opportunity", StringComparison.Ordinal));
-        Assert.Contains(
-            await activityService.ListRecentAsync(),
-            item => item.Title.Contains("Converted opportunity Managed platform handoff to project", StringComparison.Ordinal));
     }
 
     private static async Task<Guid> CreatePartyAsync(

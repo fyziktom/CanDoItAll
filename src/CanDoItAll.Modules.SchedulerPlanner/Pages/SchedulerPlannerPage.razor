@@ -5,7 +5,6 @@
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
-@using CanDoItAll.Modules.Automation
 @inject ISchedulerPlannerService SchedulerPlannerService
 @inject ICronDescriptionService CronDescriptionService
 @inject ISchedulerWorkflowInputSchemaService WorkflowInputSchemaService
@@ -17,11 +16,11 @@
     <Header>
         <PageHeader Eyebrow="Scheduler"
                     Title="Scheduler and planner"
-                    Description="Plan automatic workflow and process runs with Quartz CRON triggers, durable recovery, and calendar-backed visibility."
+                    Description="Plan workflow and process runs with scheduler-owned Quartz CRON triggers and calendar-backed visibility."
                     Compact="true">
             <Stats>
                 <CompactStat Label="schedules" Value="@Plans.Count.ToString()" TooltipText="Saved run plans." Tone="info" />
-                <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" TooltipText="Plans currently projected into Quartz." Tone="success" />
+                <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" TooltipText="Plans currently projected into the scheduler runtime." Tone="success" />
                 <CompactStat Label="next 30 days" Value="@CalendarEventCount.ToString()" TooltipText="Projected calendar events." Tone="accent" />
                 <CompactStat Label="failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" TooltipText="Failed dispatch attempts in the current history view." Tone="warning" />
                 <CompactStat Label="no action" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.NoMessages).ToString()" TooltipText="No-message polling runs in the current history view." Tone="neutral" />
@@ -204,7 +203,7 @@
                                     <InputSelect @bind-Value="editor.MisfirePolicy"
                                                  class="cda-input mt-1"
                                                  data-testid="scheduler-misfire">
-                                        @foreach (var policy in Enum.GetValues<AutomationTriggerMisfirePolicy>())
+                                        @foreach (var policy in Enum.GetValues<SchedulerPlanMisfirePolicy>())
                                         {
                                             <option value="@policy">@policy</option>
                                         }
@@ -388,7 +387,7 @@
                             <div class="mt-4">
                                 <EmptyState Eyebrow="No history"
                                             Title="No scheduled run history"
-                                            Description="Triggered runs and dispatch failures appear here after Quartz fires a schedule." />
+                                            Description="Triggered runs and dispatch failures appear here after the scheduler fires a schedule." />
                             </div>
                         }
                         else
@@ -442,7 +441,7 @@
             <Dialog IsOpen="@isTargetPickerOpen"
                     Eyebrow="Target"
                     Title="Choose workflow or process"
-                    Subtitle="Select the run target for this Quartz CRON schedule."
+                    Subtitle="Select the run target for this scheduler CRON schedule."
                     Size="ModalSize.Wide"
                     DenseChrome="true"
                     TestId="scheduler-target-dialog"
@@ -624,7 +623,7 @@
         }
     }
 
-    private string CronPreviewDescription => "Quartz will trigger the saved plan using this expression and the selected misfire policy. The scheduler stores Quartz state in the database for recovery.";
+    private string CronPreviewDescription => "The scheduler will trigger the saved plan using this expression and the selected misfire policy.";
 
     private IReadOnlyList<string> AvailableTargetTags
         => TargetOptions

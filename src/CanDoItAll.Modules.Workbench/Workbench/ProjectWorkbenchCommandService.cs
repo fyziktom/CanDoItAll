@@ -89,7 +89,6 @@ public sealed class ProjectWorkbenchCommandService(
 
         return commandKind switch
         {
-            ProjectStructureCommandKind.Validate => new ArtifactReference("validation", null, "Validation Center", $"/validation?projectId={projectId}", "Project validation workspace", projectId),
             ProjectStructureCommandKind.Test => new ArtifactReference("test-plan", null, "Test Lab", $"/test-lab?projectId={projectId}", "Project test planning workspace", projectId),
             ProjectStructureCommandKind.Open => BuildArtifactReference(node, projectId),
             _ => BuildArtifactReference(node, projectId)

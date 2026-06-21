@@ -71,7 +71,7 @@ internal static partial class ProjectStructureCanvasCatalog
             ["runtime"] = new("runtime", "Runtime", "Repositories, scripts, environments, and local execution context.", "mint", "runtime"),
             ["assets"] = new("assets", "Assets", "Repositories, files, uploads, links, and system touchpoints.", "sky", "asset"),
             ["infrastructure"] = new("infrastructure", "Infrastructure", "Servers, domains, deployment details, keys, and AI references.", "danger", "infra"),
-            ["assurance"] = new("assurance", "Assurance", "Validation, test planning, and supporting evidence.", "warn", "assure")
+            ["assurance"] = new("assurance", "Assurance", "Test planning and supporting evidence.", "warn", "assure")
         };
 
     private static readonly Lazy<IReadOnlyList<ProjectStructureCreateLeafDefinition>> LazyCreateLeafDefinitions = new(() =>
@@ -106,7 +106,6 @@ internal static partial class ProjectStructureCanvasCatalog
             new("add-link", ProjectObjectType.Link, string.Empty, "assets", "Link", "Create a link node and capture the address immediately.", "link", "sky", "New link", "Label", "API reference", "Address", "https://...", "Usage", "How this link is used"),
             new("add-connector", ProjectObjectType.Connector, string.Empty, "assets", "Connector", "Describe the integration or handoff point represented by this node.", "plug", "accent", "New connector", "Connector", "CI pipeline", "System", "Source or target system", "Handshake", "What the connector does"),
             new("add-secret-reference", ProjectObjectType.SecretReference, string.Empty, "assets", "Secret", "Track a secret reference without exposing the secret value itself.", "shield", "danger", "Secret reference", "Secret name", "API_KEY reference", "Vault / key", "Vault path or identifier", "Usage", "Where this secret is needed"),
-            new("add-validation-run", ProjectObjectType.ValidationRun, string.Empty, "assurance", "Validation", "Capture a validation run and its acceptance criteria immediately.", "qa", "mint", "Validation run", "Validation", "Contract check", "Type", "Review, lint, runtime...", "Criteria", "What success means"),
             new("add-test-plan", ProjectObjectType.TestPlan, string.Empty, "assurance", "Test plan", "Create a test plan node and note the coverage target.", "test", "warn", "Test plan", "Plan name", "Regression sweep", "Phase", "Execution", "Coverage goal", "What this plan must cover"),
             new("add-test-evidence", ProjectObjectType.TestEvidence, string.Empty, "assurance", "Evidence", "Log the evidence item or result that supports a test plan.", "evidence", "warn", "Test evidence", "Evidence", "Screenshot bundle", "Source", "Run, file, or system", "Result", "What this evidence proves")
         ];
@@ -622,7 +621,6 @@ internal static partial class ProjectStructureCanvasCatalog
             "add-meeting-onsite" => "Onsite",
             "add-recording" => "Recording",
             "add-transcript" => "Transcript",
-            "add-validation-run" => "Validation",
             _ => TrimMenuLabel(definition.Label)
         };
 

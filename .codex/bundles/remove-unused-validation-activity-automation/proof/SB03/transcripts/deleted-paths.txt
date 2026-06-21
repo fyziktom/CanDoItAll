@@ -1,0 +1,6 @@
+Command: verify retired module directories are absent
+Invariant: RM-003 retired module project directories are deleted
+ABSENT src\CanDoItAll.Modules.Activity
+ABSENT src\CanDoItAll.Modules.Automation
+ABSENT src\CanDoItAll.Modules.Validation
+ExitCode: 0

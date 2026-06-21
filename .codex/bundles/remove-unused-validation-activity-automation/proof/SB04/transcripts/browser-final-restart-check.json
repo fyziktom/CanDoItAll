@@ -1,0 +1,13 @@
+{
+  "command": "Browser reload after final restart at http://localhost:5032/",
+  "invariant": "RM-004 final 5032 instance exposes Scheduler/Test Lab and no retired module labels/routes",
+  "result": {
+    "containsRemovedLabels": false,
+    "containsScheduler": true,
+    "containsTestLab": true,
+    "hasBlazorError": false,
+    "hasRetiredRouteText": false,
+    "path": "/"
+  },
+  "exitCode": 0
+}

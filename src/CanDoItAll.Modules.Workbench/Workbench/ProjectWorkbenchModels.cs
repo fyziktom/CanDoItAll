@@ -5,7 +5,6 @@ using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +17,6 @@ public enum ProjectStructureCommandKind
     Open,
     Wizard,
     Branch,
-    Validate,
     Test,
     Skip,
     MarkUsed

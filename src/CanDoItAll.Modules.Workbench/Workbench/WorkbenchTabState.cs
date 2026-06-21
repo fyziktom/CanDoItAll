@@ -25,6 +25,12 @@ public sealed class WorkbenchStateService(
     private const int SnapshotVersion = 4;
     private const string CompatibilityMarker = "candoitall.workbench.v4";
     private const int MaxRecentTabs = 12;
+    private static readonly string[] RetiredModuleRoutes =
+    [
+        "/activity",
+        "/automation",
+        "/validation"
+    ];
 
     private readonly List<WorkbenchTabState> _tabs = [];
     private readonly List<WorkbenchTabState> _recentTabs = [];
@@ -133,7 +139,13 @@ public sealed class WorkbenchStateService(
         Guid? projectId = null,
         string tabKind = WorkbenchTabKinds.Page,
         CancellationToken cancellationToken = default)
-        => TrackTabAsync(
+    {
+        if (IsRetiredModuleRoute(route))
+        {
+            return Task.CompletedTask;
+        }
+
+        return TrackTabAsync(
             new WorkbenchTabDescriptor(
                 BuildPageTabId(route),
                 title,
@@ -149,6 +161,7 @@ public sealed class WorkbenchStateService(
                 IsPinned: pinned,
                 CanClose: !pinned),
             cancellationToken);
+    }
 
     public Task OpenArtifactAsync(ArtifactReference artifactReference, CancellationToken cancellationToken = default)
     {
@@ -548,6 +561,14 @@ public sealed class WorkbenchStateService(
             return false;
         }
 
+        var route = NormalizeRoute(tab.Route);
+        if (IsRetiredModuleRoute(route))
+        {
+            normalized = tab with { Route = route };
+            failure = new WorkbenchRestoreFailure(tab.TabId, tab.Title, $"Tab route '{route}' belongs to a retired module.");
+            return false;
+        }
+
         normalized = NormalizeNewTab(tab);
         failure = null;
         return true;
@@ -620,6 +641,15 @@ public sealed class WorkbenchStateService(
         }
 
         return route.StartsWith('/') ? route : $"/{route}";
+    }
+
+    private static bool IsRetiredModuleRoute(string route)
+    {
+        var normalized = NormalizeRoute(route);
+        return RetiredModuleRoutes.Any(retiredRoute =>
+            string.Equals(normalized, retiredRoute, StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith($"{retiredRoute}?", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith($"{retiredRoute}/", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string ResolveTabGroup(string tabKind) => tabKind switch

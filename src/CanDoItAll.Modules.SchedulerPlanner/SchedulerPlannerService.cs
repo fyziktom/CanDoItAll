@@ -4,7 +4,6 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Automation;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -125,25 +124,18 @@ internal static class SchedulerPlanRunRetryClassifier
 
 public sealed class SchedulerPlannerService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IAutomationTriggerRegistry triggerRegistry,
+    ISchedulerPlannerTriggerScheduler triggerScheduler,
     ICronDescriptionService cronDescriptionService,
     IWorkflowCatalogService workflowCatalogService,
     ISchedulerWorkflowInputSchemaService workflowInputSchemaService,
     IClock clock,
     ILogger<SchedulerPlannerService> logger) : ISchedulerPlannerService
 {
-    private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public async Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
         SchedulerHistoryQuery? historyQuery = null,
         CancellationToken cancellationToken = default)
     {
         var targetOptions = await ListTargetOptionsAsync(cancellationToken);
-        var triggerLookup = (await triggerRegistry.ListAsync(cancellationToken))
-            .Where(item =>
-                item.OwnerKind == AutomationTriggerOwnerKind.Module &&
-                string.Equals(item.OwnerKey, SchedulerPlannerConstants.AutomationOwnerKey, StringComparison.Ordinal))
-            .ToDictionary(item => item.Id);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var plans = await dbContext.Set<SchedulerPlan>()
@@ -152,7 +144,7 @@ public sealed class SchedulerPlannerService(
             .ThenBy(item => item.Name)
             .ToListAsync(cancellationToken);
         var summaries = plans
-            .Select(plan => MapPlan(plan, triggerLookup.GetValueOrDefault(plan.AutomationTriggerId)))
+            .Select(MapPlan)
             .ToArray();
         var history = await SearchHistoryAsync(dbContext, historyQuery ?? new SchedulerHistoryQuery(), cancellationToken);
 
@@ -175,7 +167,7 @@ public sealed class SchedulerPlannerService(
             TargetVersionId = firstTarget?.VersionId,
             TimeZoneId = ResolveDefaultTimeZoneId(),
             CronExpression = "0 0 9 ? * MON-FRI",
-            MisfirePolicy = AutomationTriggerMisfirePolicy.FireOnceNow,
+            MisfirePolicy = SchedulerPlanMisfirePolicy.FireOnceNow,
             InputJson = "{}",
             IsEnabled = true
         };
@@ -208,10 +200,10 @@ public sealed class SchedulerPlannerService(
             plan = new SchedulerPlan
             {
                 Id = editor.Id.GetValueOrDefault(Guid.NewGuid()),
-                AutomationTriggerId = Guid.NewGuid(),
+                SchedulerTriggerId = Guid.NewGuid(),
                 CreatedAtUtc = now
             };
-            plan.AutomationTriggerKey = BuildTriggerKey(plan.Id);
+            plan.SchedulerTriggerKey = BuildTriggerKey(plan.Id);
             await dbContext.Set<SchedulerPlan>().AddAsync(plan, cancellationToken);
         }
 
@@ -235,12 +227,8 @@ public sealed class SchedulerPlannerService(
         plan.UpdatedAtUtc = now;
 
         await dbContext.SaveChangesAsync(cancellationToken);
-
-        var savedTrigger = await triggerRegistry.SaveAsync(BuildTriggerDefinition(plan), cancellationToken);
-        plan.NextPlannedFireAtUtc = savedTrigger.NextPlannedFireAtUtc;
-        plan.LastFiredAtUtc = savedTrigger.LastFiredAtUtc;
-        plan.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
+        await dbContext.Entry(plan).ReloadAsync(cancellationToken);
 
         logger.LogInformation(
             "Saved scheduler plan {PlanId} for {TargetKind} target {TargetId}. Enabled={IsEnabled}, Cron={CronExpression}, TimeZone={TimeZoneId}.",
@@ -251,7 +239,7 @@ public sealed class SchedulerPlannerService(
             plan.CronExpression,
             plan.TimeZoneId);
 
-        return MapPlan(plan, savedTrigger);
+        return MapPlan(plan);
     }
 
     public async Task SetPlanEnabledAsync(
@@ -276,12 +264,7 @@ public sealed class SchedulerPlannerService(
         plan.IsEnabled = isEnabled;
         plan.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
-
-        var savedTrigger = await triggerRegistry.SaveAsync(BuildTriggerDefinition(plan), cancellationToken);
-        plan.NextPlannedFireAtUtc = savedTrigger.NextPlannedFireAtUtc;
-        plan.LastFiredAtUtc = savedTrigger.LastFiredAtUtc;
-        plan.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
     }
 
     private async Task<IReadOnlyList<SchedulerTargetOption>> ListTargetOptionsAsync(CancellationToken cancellationToken)
@@ -553,9 +536,7 @@ public sealed class SchedulerPlannerService(
         }
     }
 
-    private static SchedulerPlanSummary MapPlan(
-        SchedulerPlan plan,
-        AutomationTriggerDefinition? trigger)
+    private static SchedulerPlanSummary MapPlan(SchedulerPlan plan)
     {
         return new SchedulerPlanSummary(
             plan.Id,
@@ -572,38 +553,9 @@ public sealed class SchedulerPlannerService(
             plan.IsEnabled,
             plan.StartAtUtc,
             plan.EndAtUtc,
-            trigger?.NextPlannedFireAtUtc ?? plan.NextPlannedFireAtUtc,
-            trigger?.LastFiredAtUtc ?? plan.LastFiredAtUtc,
-            plan.LastError,
-            plan.UpdatedAtUtc);
-    }
-
-    private static AutomationTriggerDefinition BuildTriggerDefinition(SchedulerPlan plan)
-    {
-        var payloadJson = JsonSerializer.Serialize(
-            new SchedulerPlanAutomationPayload(
-                plan.Id,
-                plan.TargetKind,
-                plan.TargetId,
-                plan.TargetVersionId),
-            JsonOptions);
-
-        return new AutomationTriggerDefinition(
-            plan.AutomationTriggerId,
-            AutomationTriggerOwnerKind.Module,
-            SchedulerPlannerConstants.AutomationOwnerKey,
-            plan.AutomationTriggerKey,
-            plan.IsEnabled,
-            AutomationTriggerKind.Cron,
-            plan.CronExpression,
-            plan.TimeZoneId,
-            plan.StartAtUtc,
-            plan.EndAtUtc,
-            plan.MisfirePolicy,
-            payloadJson,
-            $"scheduler-planner:{plan.Id:N}",
             plan.NextPlannedFireAtUtc,
             plan.LastFiredAtUtc,
+            plan.LastError,
             plan.UpdatedAtUtc);
     }
 
@@ -1063,74 +1015,47 @@ public sealed class SchedulerTargetLauncher(
     }
 }
 
-public sealed class SchedulerPlannerTriggerFireHandler(
+public interface ISchedulerPlannerRunDispatcher
+{
+    Task DispatchAsync(
+        SchedulerPlanFireRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record SchedulerPlanFireRequest(
+    Guid PlanId,
+    Guid SchedulerFireId,
+    Guid? CorrelationId,
+    DateTimeOffset FiredAtUtc,
+    DateTimeOffset? NextPlannedFireAtUtc);
+
+public sealed class SchedulerPlannerRunDispatcher(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ISchedulerTargetLauncher targetLauncher,
     IClock clock,
-    ILogger<SchedulerPlannerTriggerFireHandler> logger) : AutomationMessageHandler<AutomationTriggerFireRequest>
+    ILogger<SchedulerPlannerRunDispatcher> logger) : ISchedulerPlannerRunDispatcher
 {
-    protected override async Task<AutomationMessageHandleResult> HandleAsync(
-        AutomationTriggerFireRequest envelope,
-        AutomationMessageContext context,
-        CancellationToken cancellationToken)
+    public async Task DispatchAsync(
+        SchedulerPlanFireRequest request,
+        CancellationToken cancellationToken = default)
     {
-        if (envelope.OwnerKind != AutomationTriggerOwnerKind.Module ||
-            !string.Equals(envelope.OwnerKey, SchedulerPlannerConstants.AutomationOwnerKey, StringComparison.Ordinal))
+        if (request.PlanId == Guid.Empty)
         {
-            return AutomationMessageHandleResult.Completed();
+            throw new ArgumentException("Scheduler plan id is required.", nameof(request));
         }
 
-        SchedulerPlanAutomationPayload payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<SchedulerPlanAutomationPayload>(envelope.PayloadJson, SerializerOptions)
-                ?? throw new InvalidOperationException("Scheduler trigger payload was empty.");
-        }
-        catch (JsonException exception)
-        {
-            return AutomationMessageHandleResult.DeadLettered($"Scheduler trigger payload JSON is invalid: {exception.Message}");
-        }
-
-        if (payload.PlanId == Guid.Empty)
-        {
-            return AutomationMessageHandleResult.DeadLettered("Scheduler trigger payload does not contain a plan id.");
-        }
-
-        try
-        {
-            await DispatchAsync(payload.PlanId, envelope, context, cancellationToken);
-            return AutomationMessageHandleResult.Completed();
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Scheduler plan {PlanId} failed to dispatch after trigger {TriggerId} fired at {FiredAtUtc}.",
-                payload.PlanId,
-                envelope.TriggerId,
-                envelope.FiredAtUtc);
-            return AutomationMessageHandleResult.RetryScheduled(exception.Message);
-        }
-    }
-
-    private async Task DispatchAsync(
-        Guid planId,
-        AutomationTriggerFireRequest envelope,
-        AutomationMessageContext context,
-        CancellationToken cancellationToken)
-    {
         var now = clock.GetUtcNow();
-        var dedupeKey = context.DedupeKey ?? $"scheduler-planner:{planId:N}:{envelope.FiredAtUtc.UtcTicks}";
+        var dedupeKey = BuildFireDedupeKey(request.PlanId, request.FiredAtUtc);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+        var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == request.PlanId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Scheduler plan '{request.PlanId:D}' was not found.");
         if (!plan.IsEnabled)
         {
             logger.LogInformation(
-                "Ignoring disabled scheduler plan {PlanId} after trigger {TriggerId} fired.",
+                "Ignoring disabled scheduler plan {PlanId} after scheduler fire {SchedulerFireId}.",
                 plan.Id,
-                envelope.TriggerId);
+                request.SchedulerFireId);
             return;
         }
 
@@ -1148,9 +1073,9 @@ public sealed class SchedulerPlannerTriggerFireHandler(
                 Id = Guid.NewGuid(),
                 PlanId = plan.Id,
                 DedupeKey = dedupeKey,
-                AutomationEnvelopeId = context.EnvelopeId,
-                CorrelationId = context.CorrelationId,
-                FiredAtUtc = envelope.FiredAtUtc,
+                SchedulerFireId = request.SchedulerFireId,
+                CorrelationId = request.CorrelationId,
+                FiredAtUtc = request.FiredAtUtc,
                 CreatedAtUtc = now
             };
             await dbContext.Set<SchedulerPlanRun>().AddAsync(run, cancellationToken);
@@ -1170,7 +1095,7 @@ public sealed class SchedulerPlannerTriggerFireHandler(
 
         try
         {
-            var launchResult = await targetLauncher.LaunchAsync(plan, envelope.FiredAtUtc, cancellationToken);
+            var launchResult = await targetLauncher.LaunchAsync(plan, request.FiredAtUtc, cancellationToken);
             var completedAt = clock.GetUtcNow();
             run.Status = launchResult.DispatchStatus;
             run.TargetRunId = launchResult.TargetRunId;
@@ -1185,7 +1110,8 @@ public sealed class SchedulerPlannerTriggerFireHandler(
                 plan.LastError = string.Empty;
             }
 
-            plan.LastFiredAtUtc = envelope.FiredAtUtc;
+            plan.LastFiredAtUtc = request.FiredAtUtc;
+            plan.NextPlannedFireAtUtc = request.NextPlannedFireAtUtc;
             plan.UpdatedAtUtc = completedAt;
             await dbContext.SaveChangesAsync(cancellationToken);
         }
@@ -1199,7 +1125,8 @@ public sealed class SchedulerPlannerTriggerFireHandler(
             run.RetryCategory = SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval;
             run.DispatchedAtUtc = waitingAt;
             run.UpdatedAtUtc = waitingAt;
-            plan.LastFiredAtUtc = envelope.FiredAtUtc;
+            plan.LastFiredAtUtc = request.FiredAtUtc;
+            plan.NextPlannedFireAtUtc = request.NextPlannedFireAtUtc;
             plan.UpdatedAtUtc = waitingAt;
             await dbContext.SaveChangesAsync(cancellationToken);
         }
@@ -1219,11 +1146,24 @@ public sealed class SchedulerPlannerTriggerFireHandler(
             run.RetryCategory = retryCategory;
             run.UpdatedAtUtc = failedAt;
             plan.LastError = exception.Message;
-            plan.LastFiredAtUtc = envelope.FiredAtUtc;
+            plan.LastFiredAtUtc = request.FiredAtUtc;
+            plan.NextPlannedFireAtUtc = request.NextPlannedFireAtUtc;
             plan.UpdatedAtUtc = failedAt;
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            logger.LogError(
+                exception,
+                "Scheduler plan {PlanId} failed to dispatch after scheduler fire {SchedulerFireId} at {FiredAtUtc}.",
+                request.PlanId,
+                request.SchedulerFireId,
+                request.FiredAtUtc);
             throw;
         }
+    }
+
+    private static string BuildFireDedupeKey(Guid planId, DateTimeOffset firedAtUtc)
+    {
+        return $"scheduler-planner:{planId:N}:{firedAtUtc.UtcTicks}";
     }
 
     private static bool IsNoRetryTerminalStatus(SchedulerPlanRunDispatchStatus status)

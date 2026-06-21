@@ -12,17 +12,12 @@ tests: component:HomePageTests, e2e:smoke-dashboard
 *@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
-@using CanDoItAll.Infrastructure.BackgroundJobs
-@using CanDoItAll.Modules.Automation
 @using CanDoItAll.Modules.Workbench
-@using CanDoItAll.Modules.Validation
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 @inject NavigationManager Navigation
 @inject WorkbenchStateService Workbench
 @inject ProjectsService ProjectsService
-@inject ValidationService ValidationService
-@inject AutomationWorkspaceService AutomationWorkspaceService
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -30,7 +25,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
     <Header>
         <PageHeader Eyebrow="Dashboard"
                     Title="Delivery control surface"
-                    Description="Resume active work, reopen recent sessions, and move directly into the next project, validation, or prompt task."
+                    Description="Resume active work, reopen recent sessions, and move directly into the next project, test, or prompt task."
                     Compact="true">
             <Stats>
                 <CompactStat Label="projects"
@@ -40,13 +35,10 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                              Value="@openWorkItems.Count.ToString()"
                              TooltipText="Tabs currently active in the recoverable workbench."
                              Tone="info" />
-                <CompactStat Label="validation runs"
-                             Value="@validationRunCount.ToString()"
-                             TooltipText="Persisted review runs available for follow-up." />
-                <CompactStat Label="failed jobs"
-                             Value="@failedJobs.Count.ToString()"
-                             TooltipText="Operational issues that likely need attention."
-                             Tone="@(failedJobs.Count > 0 ? "warning" : "success")" />
+                <CompactStat Label="recent tabs"
+                             Value="@recentTabs.Count.ToString()"
+                             TooltipText="Recently closed workbench tabs available to reopen."
+                             Tone="neutral" />
             </Stats>
             <Actions>
                 <PageHeaderActionButton Icon="add"
@@ -80,10 +72,10 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                                            OnSelect="@(() => Navigation.NavigateTo("/prompt-factory"))" />
                     </div>
                     <div class="h-full">
-                        <SelectionListItem Eyebrow="Validation"
-                                           Title="Run a new validation"
-                                           Summary="Launch a deterministic review and capture findings or decisions."
-                                           OnSelect="@(() => Navigation.NavigateTo("/validation"))" />
+                        <SelectionListItem Eyebrow="Test lab"
+                                           Title="Open test planning"
+                                           Summary="Review plans, evidence, linked tests, and execution records."
+                                           OnSelect="@(() => Navigation.NavigateTo("/test-lab"))" />
                     </div>
                     <div class="h-full">
                         <SelectionListItem Eyebrow="Settings"
@@ -95,35 +87,15 @@ tests: component:HomePageTests, e2e:smoke-dashboard
             </SectionCard>
 
             <SectionCard Title="Attention queue" Description="Surface the follow-up items that should interrupt new work.">
-                @if (failedJobs.Count == 0 && recentTabs.Count == 0)
+                @if (recentTabs.Count == 0)
                 {
                     <EmptyState Eyebrow="Stable workspace"
                                 Title="No immediate blockers"
-                                Description="Background jobs are quiet and there are no recent work items waiting to be reopened." />
+                                Description="There are no recent work items waiting to be reopened." />
                 }
                 else
                 {
                     <Stack GapScale="LayoutGap.Medium">
-                        @foreach (var job in failedJobs.Take(3))
-                        {
-                            <div class="cda-panel-card border-amber-200 bg-amber-50/80">
-                                <Split Breakpoint="LayoutBreakpoint.None"
-                                       Gap="LayoutGap.Medium"
-                                       JustifyContent="JustifyContent.SpaceBetween"
-                                       Wrap="FlexWrap.Wrap">
-                                    <div>
-                                        <p class="text-sm font-semibold text-slate-950">@job.Description</p>
-                                        <p class="mt-1 text-xs text-slate-600">@job.JobType / @job.CorrelationId</p>
-                                    </div>
-                                    <StatusBadge Tone="warning" Text="@job.State.ToString()" />
-                                </Split>
-                                @if (!string.IsNullOrWhiteSpace(job.ErrorSummary))
-                                {
-                                    <p class="mt-3 text-sm leading-6 text-amber-900">@job.ErrorSummary</p>
-                                }
-                            </div>
-                        }
-
                         @foreach (var recent in recentTabs.Take(2))
                         {
                             <SelectionListItem Eyebrow="Recent tab"
@@ -143,7 +115,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                 {
                     <EmptyState Eyebrow="No live items"
                                 Title="Nothing is currently open"
-                                Description="Start a project, prompt session, validation, or test plan and it will appear here for quick return." />
+                                Description="Start a project, prompt session, or test plan and it will appear here for quick return." />
                 }
                 else
                 {
@@ -183,8 +155,6 @@ tests: component:HomePageTests, e2e:smoke-dashboard
 
 @code {
     private int projectCount;
-    private int validationRunCount;
-    private IReadOnlyList<BackgroundJobSummary> failedJobs = [];
     private IReadOnlyList<WorkbenchTabState> openWorkItems = [];
     private IReadOnlyList<WorkbenchTabState> recentTabs = [];
 
@@ -197,11 +167,6 @@ tests: component:HomePageTests, e2e:smoke-dashboard
     private async Task LoadAsync()
     {
         projectCount = (await ProjectsService.ListAsync()).Count;
-        validationRunCount = (await ValidationService.ListRunsAsync()).Count;
-        failedJobs = (await AutomationWorkspaceService.ListJobsAsync())
-            .Where(job => job.State == BackgroundJobState.Failed)
-            .OrderByDescending(job => job.UpdatedAtUtc)
-            .ToList();
 
         openWorkItems = Workbench.Tabs
             .Where(tab => !string.Equals(tab.Route, "/", StringComparison.OrdinalIgnoreCase))

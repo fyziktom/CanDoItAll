@@ -146,7 +146,7 @@ else
                                                                 State="@HealthWindowState"
                                                                 StateChanged="HandleHealthWindowStateChangedAsync"
                                                                 SummaryState="@canvasValidationOverlay"
-                                                                CanValidateSelected="@(selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)"
+                                                                CanValidateSelected="false"
                                                                 ValidateSelected="RunSelectedValidationAsync" />
                         }
                         @if (SignalsWindowState.IsVisible)
@@ -862,9 +862,7 @@ else
         };
     private bool CanApplySelectionStatus => selectedNodes.Count > 0 && selectedNodes.All(ProjectStructureNodeHelpers.IsCanvasStatusMutable);
     private Task RunSelectedValidationAsync()
-        => selectedNode is null
-            ? Task.CompletedTask
-            : ExecuteCommandAsync(ProjectStructureCommandKind.Validate, selectedNode.Id);
+        => Task.CompletedTask;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -1529,9 +1527,6 @@ else
                 break;
             case "skip":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, nodeId);
-                break;
-            case "validate":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Validate, nodeId);
                 break;
             case "test":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Test, nodeId);

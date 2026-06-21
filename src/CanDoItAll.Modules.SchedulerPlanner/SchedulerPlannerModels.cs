@@ -1,7 +1,6 @@
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Automation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -34,6 +33,13 @@ public enum SchedulerPlanRunRetryCategory
     SchedulerFailure
 }
 
+public enum SchedulerPlanMisfirePolicy
+{
+    FireOnceNow,
+    DoNothing,
+    IgnoreMisfire
+}
+
 public static class SchedulerPlanRunRoutes
 {
     public const string Processed = "processed";
@@ -64,7 +70,7 @@ public sealed class SchedulerPlan
 
     public string TimeZoneId { get; set; } = "UTC";
 
-    public AutomationTriggerMisfirePolicy MisfirePolicy { get; set; } = AutomationTriggerMisfirePolicy.FireOnceNow;
+    public SchedulerPlanMisfirePolicy MisfirePolicy { get; set; } = SchedulerPlanMisfirePolicy.FireOnceNow;
 
     public bool IsEnabled { get; set; } = true;
 
@@ -74,9 +80,9 @@ public sealed class SchedulerPlan
 
     public string InputJson { get; set; } = "{}";
 
-    public Guid AutomationTriggerId { get; set; }
+    public Guid SchedulerTriggerId { get; set; }
 
-    public string AutomationTriggerKey { get; set; } = string.Empty;
+    public string SchedulerTriggerKey { get; set; } = string.Empty;
 
     public DateTimeOffset? NextPlannedFireAtUtc { get; set; }
 
@@ -102,9 +108,12 @@ internal sealed class SchedulerPlanConfiguration : IEntityTypeConfiguration<Sche
         builder.Property(item => item.CronDescription).HasMaxLength(500).IsRequired();
         builder.Property(item => item.TimeZoneId).HasMaxLength(120).IsRequired();
         builder.Property(item => item.InputJson).HasColumnType("TEXT");
-        builder.Property(item => item.AutomationTriggerKey).HasMaxLength(180).IsRequired();
+        builder.Property(item => item.SchedulerTriggerId).HasColumnName("AutomationTriggerId");
+        builder.Property(item => item.SchedulerTriggerKey).HasColumnName("AutomationTriggerKey").HasMaxLength(180).IsRequired();
         builder.Property(item => item.LastError).HasColumnType("TEXT");
-        builder.HasIndex(item => item.AutomationTriggerId).IsUnique();
+        builder.HasIndex(item => item.SchedulerTriggerId)
+            .HasDatabaseName("IX_SchedulerPlanner_Plans_AutomationTriggerId")
+            .IsUnique();
         builder.HasIndex(item => new
         {
             item.TargetKind,
@@ -123,7 +132,7 @@ public sealed class SchedulerPlanRun
 
     public string DedupeKey { get; set; } = string.Empty;
 
-    public Guid AutomationEnvelopeId { get; set; }
+    public Guid SchedulerFireId { get; set; }
 
     public Guid? CorrelationId { get; set; }
 
@@ -159,6 +168,7 @@ internal sealed class SchedulerPlanRunConfiguration : IEntityTypeConfiguration<S
         builder.ToTable("SchedulerPlanner_Runs");
         builder.HasKey(item => item.Id);
         builder.Property(item => item.DedupeKey).HasMaxLength(260).IsRequired();
+        builder.Property(item => item.SchedulerFireId).HasColumnName("AutomationEnvelopeId");
         builder.Property(item => item.TargetRunKind).HasMaxLength(80);
         builder.Property(item => item.Summary).HasColumnType("TEXT");
         builder.Property(item => item.ErrorMessage).HasColumnType("TEXT");
@@ -195,7 +205,7 @@ public sealed record SchedulerPlanSummary(
     string CronExpression,
     string CronDescription,
     string TimeZoneId,
-    AutomationTriggerMisfirePolicy MisfirePolicy,
+    SchedulerPlanMisfirePolicy MisfirePolicy,
     bool IsEnabled,
     DateTimeOffset? StartAtUtc,
     DateTimeOffset? EndAtUtc,
@@ -244,7 +254,7 @@ public sealed class SchedulerPlanEditorModel
 
     public string TimeZoneId { get; set; } = "UTC";
 
-    public AutomationTriggerMisfirePolicy MisfirePolicy { get; set; } = AutomationTriggerMisfirePolicy.FireOnceNow;
+    public SchedulerPlanMisfirePolicy MisfirePolicy { get; set; } = SchedulerPlanMisfirePolicy.FireOnceNow;
 
     public bool IsEnabled { get; set; } = true;
 
@@ -295,13 +305,3 @@ public sealed record SchedulerTargetLaunchResult(
     string Route = SchedulerPlanRunRoutes.Processed,
     SchedulerPlanRunRetryCategory RetryCategory = SchedulerPlanRunRetryCategory.None);
 
-public sealed record SchedulerPlanAutomationPayload(
-    Guid PlanId,
-    SchedulerPlanTargetKind TargetKind,
-    Guid TargetId,
-    Guid? TargetVersionId);
-
-public static class SchedulerPlannerConstants
-{
-    public const string AutomationOwnerKey = "scheduler-planner";
-}

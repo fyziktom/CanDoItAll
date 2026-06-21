@@ -18,7 +18,7 @@ public sealed class AppTabStripTests : TestContext
             .Add(component => component.Items,
             [
                 new WorkbenchTabState("projects", "Projects", "/projects", IsPinned: true, IsSleeping: true),
-                new WorkbenchTabState("validation", "Validation", "/validation")
+                new WorkbenchTabState("test-lab", "Test Lab", "/test-lab")
             ])
             .Add(component => component.ActiveTabId, "projects")
             .Add(component => component.Activate, EventCallback.Factory.Create<string>(this, value => activated = value))

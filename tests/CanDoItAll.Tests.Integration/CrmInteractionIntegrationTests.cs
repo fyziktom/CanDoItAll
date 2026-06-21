@@ -1,5 +1,4 @@
 using CanDoItAll.Infrastructure.Search;
-using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.CrmHr;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,14 +7,13 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class CrmInteractionIntegrationTests
 {
     [Fact]
-    public async Task Crm_service_persists_profile_stakeholders_interactions_and_search_activity_projection()
+    public async Task Crm_service_persists_profile_stakeholders_interactions_and_search_projection()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var crmService = scope.ServiceProvider.GetRequiredService<CrmService>();
         var searchIndexService = scope.ServiceProvider.GetRequiredService<ISearchIndexService>();
-        var activityService = scope.ServiceProvider.GetRequiredService<ActivityService>();
 
         var accountId = await CreatePartyAsync(
             partyDirectoryService,
@@ -74,7 +72,6 @@ public sealed class CrmInteractionIntegrationTests
 
         var workspace = await crmService.GetAccountWorkspaceAsync(accountId);
         var searchResults = await searchIndexService.SearchAsync("Fabrikam");
-        var activityTimeline = await activityService.ListRecentAsync();
 
         Assert.NotNull(workspace);
         Assert.Equal(CrmAccountRelationshipStage.ActiveCustomer, workspace.Profile.RelationshipStage);
@@ -86,12 +83,6 @@ public sealed class CrmInteractionIntegrationTests
         Assert.Contains(
             searchResults,
             item => item.Route.Contains($"/crm-hr/crm?accountId={accountId}", StringComparison.Ordinal));
-        Assert.Contains(
-            activityTimeline,
-            item => item.Title.Contains("Updated account profile for Fabrikam Delivery", StringComparison.Ordinal));
-        Assert.Contains(
-            activityTimeline,
-            item => item.Title.Contains("Logged Meeting for Fabrikam Delivery", StringComparison.Ordinal));
     }
 
     private static async Task<Guid> CreatePartyAsync(

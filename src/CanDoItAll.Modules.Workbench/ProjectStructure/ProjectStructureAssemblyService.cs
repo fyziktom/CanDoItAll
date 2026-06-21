@@ -7,7 +7,6 @@ using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -918,42 +917,6 @@ internal sealed class PromptFactoryProjectionContributor : IProjectStructureProj
                 node.Node.ParentPromptRunNodeId.HasValue
                     ? ProjectObjectLinkKind.DerivedFrom
                     : ProjectObjectLinkKind.Contains);
-        }
-    }
-}
-
-internal sealed class ValidationProjectionContributor : IProjectStructureProjectionContributor
-{
-    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
-    {
-        var validations = (await context.DbContext.Set<ValidationRun>()
-                .Where(item => item.ProjectId == context.ProjectId)
-                .ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToList();
-
-        foreach (var validation in validations.Select((validation, index) => new { Validation = validation, Index = index }))
-        {
-            context.AddNode(new ProjectObjectRecord
-            {
-                ProjectId = context.ProjectId,
-                NodeKey = $"validation:{validation.Validation.Id}",
-                ObjectType = ProjectObjectType.ValidationRun,
-                Title = validation.Validation.ArtifactTitle,
-                Subtitle = validation.Validation.ValidationType.ToString(),
-                Status = validation.Validation.Decision.ToString(),
-                Notes = validation.Validation.Summary,
-                Binding = ProjectStructureProjectionBindingFactory.Create($"/validation?runId={validation.Validation.Id}", "validation-run", validation.Validation.Id),
-                ParentNodeKey = $"project:{context.ProjectId}",
-                PositionX = 780,
-                PositionY = 580 + (validation.Index * 120),
-                StartUtc = validation.Validation.UpdatedAtUtc,
-                EndUtc = validation.Validation.UpdatedAtUtc.AddHours(1),
-                DurationSeconds = 3600,
-                CreatedAtUtc = validation.Validation.CreatedAtUtc,
-                UpdatedAtUtc = context.AssembledAtUtc
-            });
-            context.AddLink($"project:{context.ProjectId}", $"validation:{validation.Validation.Id}", ProjectObjectLinkKind.Validates);
         }
     }
 }

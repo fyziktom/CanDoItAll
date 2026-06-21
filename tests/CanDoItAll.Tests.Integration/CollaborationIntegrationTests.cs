@@ -76,8 +76,8 @@ public sealed class CollaborationIntegrationTests
                 "Follow-up required on overdue account check-in",
                 "The overdue account interaction needs a manual owner before the reminder can be dismissed.",
                 CollaborationInboxItemKind.Notification,
-                ContextLabel: "Automation follow-up",
-                ContextRoute: "/automation"));
+                ContextLabel: "Scheduler follow-up",
+                ContextRoute: "/scheduler"));
 
         Assert.True(createResult.IsSuccess, string.Join(" | ", createResult.Errors.Select(error => error.Message)));
 
@@ -86,8 +86,8 @@ public sealed class CollaborationIntegrationTests
         var selectedThread = workspace.SelectedThread!;
 
         Assert.Equal(CollaborationContextKind.AutomationSignal, selectedThread.ContextKind);
-        Assert.Equal("Automation follow-up", selectedThread.ContextLabel);
-        Assert.Equal("/automation", selectedThread.ContextRoute);
+        Assert.Equal("Scheduler follow-up", selectedThread.ContextLabel);
+        Assert.Equal("/scheduler", selectedThread.ContextRoute);
         Assert.Equal(CollaborationInboxItemKind.Notification, selectedThread.ItemKind);
         Assert.Contains(selectedThread.Participants, item => item.ParticipantKind == CollaborationParticipantKind.System);
         Assert.Contains(selectedThread.Messages, item => item.MessageKind == CollaborationMessageKind.System);
