@@ -349,6 +349,31 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Blocked_missing_tool_result_adds_manager_rights_request_signal()
+    {
+        var assignment = CreateControlledExternalActionAssignment(ProcessRunId.New());
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Blocked,
+                Reason = "PolicyDenied: Tool 'workspace_read_file' was denied for this governed process step because the external-target path is outside the workspace boundary.",
+                EvidenceRefs = [],
+                NextActions =
+                [
+                    "Manager action: grant workspace_read_file access to the assigned agent or reassign the step."
+                ]
+            });
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.agent_rights_request");
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.agent_rights_request");
+        Assert.Contains(".NET Solution Architect", result.UserSafeSummary, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_file", result.UserSafeSummary, StringComparison.Ordinal);
+        Assert.Contains(ProcessOperationContractNames.ExecuteExternalAction, result.UserSafeSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Pending_child_run_detection_defers_blocked_controlled_subprocess_step()
     {
         var parentRunId = ProcessRunId.New();

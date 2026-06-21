@@ -17,7 +17,8 @@ public sealed partial class MafAgentRuntime
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements,
-        WorkspaceScopeDescriptor contextWorkspaceScope)
+        WorkspaceScopeDescriptor contextWorkspaceScope,
+        AgentRuntimeContextIntent contextIntent)
     {
         if (!agent.Permissions.CanUseTools ||
             composition.RuntimeToolProviders.Count == 0)
@@ -32,6 +33,7 @@ public sealed partial class MafAgentRuntime
             suppressApprovalRequirements,
             MapRuntimeToolProviderPurpose(ResolveContextPolicyKind(agent, suppressApprovalRequirements)),
             RuntimeSessionKey: string.Empty,
+            contextIntent,
             ResolveRuntimeToolProviderTags(contextWorkspaceScope));
         var attachedToolCount = 0;
         var attachmentSummaries = new List<RuntimeToolProviderAttachmentSummary>();
@@ -58,12 +60,29 @@ public sealed partial class MafAgentRuntime
                     $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned a null tool list.");
             }
 
-            var tools = providerTools
+            EnsureRuntimeToolProviderNamesAreValid(toolProvider, providerTools);
+            var allToolMetadata = ResolveRuntimeToolMetadata(registration, context, providerTools);
+            var filtered = FilterRuntimeProviderToolsForContextIntent(registration, contextIntent, providerTools, allToolMetadata);
+            var tools = filtered.Tools
                 .Select(tool => WrapRuntimeProviderToolForApproval(tool, suppressApprovalRequirements))
                 .ToList();
-            EnsureRuntimeToolProviderNamesAreValid(toolProvider, tools);
             EnsureRuntimeToolProviderDoesNotDuplicateExistingTools(toolProvider, composition.State.Tools, tools);
-            var toolMetadata = ResolveRuntimeToolMetadata(registration, context, tools);
+            var toolMetadata = filtered.Metadata;
+            if (tools.Count == 0)
+            {
+                composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
+                    AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                    registration.Descriptor.ProviderKey,
+                    filtered.ExcludedToolCount > 0
+                        ? $"registered runtime tool provider pruned {filtered.ExcludedToolCount} tool(s) that are outside this governed process step operation contract"
+                        : "registered runtime tool provider returned no tools for this run"));
+                attachmentSummaries.Add(new RuntimeToolProviderAttachmentSummary(
+                    registration.Descriptor.ProviderKey,
+                    registration.Descriptor.DisplayName,
+                    ToolCount: 0,
+                    filtered.ExcludedToolCount));
+                continue;
+            }
 
             composition.State.RuntimeToolProviderDescriptors.Add(registration.Descriptor);
             composition.State.RuntimeToolMetadata.AddRange(toolMetadata);
@@ -78,7 +97,8 @@ public sealed partial class MafAgentRuntime
             attachmentSummaries.Add(new RuntimeToolProviderAttachmentSummary(
                 registration.Descriptor.ProviderKey,
                 registration.Descriptor.DisplayName,
-                tools.Count));
+                tools.Count,
+                filtered.ExcludedToolCount));
         }
 
         composition.State.HasApprovalTools |= composition.State.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
@@ -243,6 +263,133 @@ public sealed partial class MafAgentRuntime
             _ => AgentRuntimeToolOperationKind.Unknown
         };
 
+    private static FilteredRuntimeToolProviderTools FilterRuntimeProviderToolsForContextIntent(
+        RuntimeToolProviderRegistration registration,
+        AgentRuntimeContextIntent contextIntent,
+        IReadOnlyList<AITool> tools,
+        IReadOnlyList<AgentRuntimeToolMetadata> metadata)
+    {
+        if (!contextIntent.IsGovernedProcessStep)
+        {
+            return new FilteredRuntimeToolProviderTools(tools, metadata, ExcludedToolCount: 0);
+        }
+
+        var metadataByToolName = metadata.ToDictionary(
+            item => item.ToolName,
+            StringComparer.OrdinalIgnoreCase);
+        var includedTools = new List<AITool>(tools.Count);
+        var includedMetadata = new List<AgentRuntimeToolMetadata>(metadata.Count);
+        foreach (var tool in tools)
+        {
+            if (!metadataByToolName.TryGetValue(tool.Name, out var toolMetadata))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime tool provider '{DescribeRuntimeToolProvider(registration.Provider)}' did not resolve metadata for tool '{tool.Name}'.");
+            }
+
+            if (!ShouldAttachRuntimeProviderToolForProcessIntent(tool.Name, toolMetadata, contextIntent))
+            {
+                continue;
+            }
+
+            includedTools.Add(tool);
+            includedMetadata.Add(toolMetadata);
+        }
+
+        return new FilteredRuntimeToolProviderTools(
+            includedTools,
+            includedMetadata,
+            tools.Count - includedTools.Count);
+    }
+
+    private static bool ShouldAttachRuntimeProviderToolForProcessIntent(
+        string toolName,
+        AgentRuntimeToolMetadata metadata,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        if (ToolCapabilityRegistry.TryResolve(toolName, out var capability))
+        {
+            return IsToolCapabilityAllowedForProcessIntent(capability, contextIntent);
+        }
+
+        return metadata.OperationKind switch
+        {
+            AgentRuntimeToolOperationKind.Read => true,
+            AgentRuntimeToolOperationKind.Validation => HasAnyOperation(
+                contextIntent,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof),
+            _ => false
+        };
+    }
+
+    private static bool IsToolCapabilityAllowedForProcessIntent(
+        ToolCapabilityMetadata capability,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        if (capability.Classification == ToolInvocationClassification.Read)
+        {
+            return true;
+        }
+
+        return capability.OperationRequirementKind switch
+        {
+            ToolCapabilityOperationRequirementKind.None => capability.Classification == ToolInvocationClassification.Validation &&
+                                                           HasAnyOperation(
+                                                               contextIntent,
+                                                               ProcessOperationContractNames.RunValidation,
+                                                               ProcessOperationContractNames.LaunchRuntime,
+                                                               ProcessOperationContractNames.CaptureRuntimeProof),
+            ToolCapabilityOperationRequirementKind.Static => AllStaticRequirementsSatisfied(capability, contextIntent),
+            ToolCapabilityOperationRequirementKind.WorkspaceFileMutation => contextIntent.AllowsProductMutation &&
+                                                                            HasAnyOperation(
+                                                                                contextIntent,
+                                                                                ProcessOperationContractNames.MutateProductTarget,
+                                                                                ProcessOperationContractNames.WriteExternalArtifactDestination,
+                                                                                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                                                                                ProcessOperationContractNames.RecoverArtifactsOnly),
+            ToolCapabilityOperationRequirementKind.WorkspaceScript => HasAnyOperation(
+                contextIntent,
+                ProcessOperationContractNames.ExecuteExternalAction,
+                ProcessOperationContractNames.MutateProductTarget),
+            ToolCapabilityOperationRequirementKind.DotNetRun => HasAnyOperation(
+                contextIntent,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof),
+            ToolCapabilityOperationRequirementKind.ProcessArtifactWrite => HasAnyOperation(
+                contextIntent,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                ProcessOperationContractNames.WriteExternalArtifactDestination,
+                ProcessOperationContractNames.RecoverArtifactsOnly),
+            _ => false
+        };
+    }
+
+    private static bool AllStaticRequirementsSatisfied(
+        ToolCapabilityMetadata capability,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        if (capability.OperationRequirements.Count == 0)
+        {
+            return false;
+        }
+
+        var allowedOperations = contextIntent.AllowedOperations.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return capability.OperationRequirements.All(requirement =>
+            requirement.AnyOf.Count == 0 ||
+            requirement.AnyOf.Any(allowedOperations.Contains));
+    }
+
+    private static bool HasAnyOperation(
+        AgentRuntimeContextIntent contextIntent,
+        params string[] operations)
+    {
+        return contextIntent.AllowedOperations.Any(operation =>
+            operations.Contains(operation, StringComparer.OrdinalIgnoreCase));
+    }
+
     private static AgentRuntimeToolProviderPurpose MapRuntimeToolProviderPurpose(AgentRuntimeContextPolicyKind policyKind)
         => policyKind switch
         {
@@ -287,12 +434,20 @@ public sealed partial class MafAgentRuntime
         var providers = string.Join(
             "; ",
             attachmentSummaries.Select(summary =>
-                $"{summary.ProviderKey} ({summary.ProviderName}, {summary.ToolCount} tool(s))"));
+                summary.ExcludedToolCount > 0
+                    ? $"{summary.ProviderKey} ({summary.ProviderName}, {summary.ToolCount} tool(s), {summary.ExcludedToolCount} pruned)"
+                    : $"{summary.ProviderKey} ({summary.ProviderName}, {summary.ToolCount} tool(s))"));
         return $"{message} Providers: {providers}.";
     }
 
     private sealed record RuntimeToolProviderAttachmentSummary(
         string ProviderKey,
         string ProviderName,
-        int ToolCount);
+        int ToolCount,
+        int ExcludedToolCount);
+
+    private sealed record FilteredRuntimeToolProviderTools(
+        IReadOnlyList<AITool> Tools,
+        IReadOnlyList<AgentRuntimeToolMetadata> Metadata,
+        int ExcludedToolCount);
 }

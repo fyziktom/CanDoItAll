@@ -237,6 +237,15 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         builder.AppendLine($"AppTemplate: {appArchetype.Template}");
         builder.AppendLine($"AppTemplateOptions: {appArchetype.TemplateOptions}");
         builder.AppendLine($"AllowedTemplateSwitches: {appArchetype.AllowedTemplateSwitches}");
+        builder.AppendLine($"ScaffoldToolContract: use workspace_dotnet_new with template '{BuildTemplateSpec(appArchetype)}' for the app project; do not hand-author SDK/package scaffolding unless repairing an existing project in place.");
+        builder.AppendLine("ExistingScaffoldRule: existing files are not enough; if the app project already exists, compare template-critical files to the current template baseline and repair stale or hand-authored scaffold drift before first build validation.");
+        if (string.Equals(appArchetype.Template, "blazorwasm", StringComparison.OrdinalIgnoreCase) &&
+            ContainsAny(appArchetype.AllowedTemplateSwitches, "--pwa"))
+        {
+            builder.AppendLine("PackageRule: do not add PackageReference Include=\"Microsoft.AspNetCore.Components.WebAssembly.PWA\"; Blazor WebAssembly PWA support comes from the template-generated assets, not a NuGet package.");
+            builder.AppendLine("BlazorWasmTemplateIntegrityRule: Program.cs, App.razor, and _Imports.razor must retain the current blazorwasm template wiring, including Microsoft.AspNetCore.Components.Routing imports, a resolvable App root component, and template-generated PWA assets.");
+        }
+
         builder.AppendLine($"TestProjectName: {testProjectName}");
         builder.AppendLine($"TestProjectDirectory: {testProjectDirectory}");
         builder.AppendLine($"TestTemplate: {DefaultTestTemplate}");
@@ -246,6 +255,11 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         builder.Append("Layout: solution file at ProductRoot, app under ProductRoot/src, tests under ProductRoot/tests.");
         return builder.ToString();
     }
+
+    private static string BuildTemplateSpec(DotNetScaffoldArchetype appArchetype)
+        => string.IsNullOrWhiteSpace(appArchetype.TemplateOptions)
+            ? appArchetype.Template
+            : $"{appArchetype.Template} {appArchetype.TemplateOptions}";
 
     private static void AddIfMissing(IDictionary<string, string> variables, string key, string value)
     {

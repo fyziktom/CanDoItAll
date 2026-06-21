@@ -131,6 +131,42 @@ public interface IAgentToolInvocationPolicy
 
 public static class AgentToolPolicyBlockGuard
 {
+    private static readonly HashSet<string> RecoverableGovernedReadDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolContractCatalog.WorkspaceListFiles,
+        ToolContractCatalog.WorkspaceSearch,
+        ToolContractCatalog.WorkspaceReadFile,
+        ToolContractCatalog.WorkspaceStatPath
+    };
+
+    public static bool TryCreateRecoverableDeniedResult(
+        string toolName,
+        ToolInvocationPolicyDecision decision,
+        ToolInvocationPolicyContext context,
+        out string result)
+    {
+        ArgumentNullException.ThrowIfNull(decision);
+        ArgumentNullException.ThrowIfNull(context);
+
+        result = string.Empty;
+        if (decision.Kind is not ToolInvocationDecisionKind.Deny and not ToolInvocationDecisionKind.SkipExecution)
+        {
+            return false;
+        }
+
+        if (!string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(context.ProcessRunId) ||
+            string.IsNullOrWhiteSpace(context.ProcessStepId) ||
+            context.Classification != ToolInvocationClassification.Read ||
+            !RecoverableGovernedReadDiscoveryTools.Contains(toolName))
+        {
+            return false;
+        }
+
+        result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments.";
+        return true;
+    }
+
     public static void ThrowIfBlocked(
         string toolName,
         ToolInvocationPolicyDecision decision,

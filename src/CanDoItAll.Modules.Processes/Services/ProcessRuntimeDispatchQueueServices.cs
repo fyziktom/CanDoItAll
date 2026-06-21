@@ -26,13 +26,13 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var recoveryEnabled = options.Value.EnableRecovery;
-        var readyRecoveryStartedAtUtc = DateTimeOffset.UtcNow;
+        var recurringReadyRecoveryStartedAtUtc = DateTimeOffset.UtcNow;
         var nextRecoveryAtUtc = DateTimeOffset.MinValue;
         var activeImmediateDispatches = new Dictionary<Task, ProcessRunId>();
         var activeRecoveryDispatches = new Dictionary<Task, ProcessRunId>();
         if (recoveryEnabled)
         {
-            await EnqueueRecoverableRunsAsync(readyRecoveryStartedAtUtc, stoppingToken).ConfigureAwait(false);
+            await EnqueueRecoverableRunsAsync(readyUpdatedAfterUtc: null, stoppingToken).ConfigureAwait(false);
         }
 
         while (!stoppingToken.IsCancellationRequested)
@@ -45,7 +45,7 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                 var nowUtc = DateTimeOffset.UtcNow;
                 if (recoveryEnabled && nowUtc >= nextRecoveryAtUtc)
                 {
-                    await EnqueueRecoverableRunsAsync(readyRecoveryStartedAtUtc, stoppingToken).ConfigureAwait(false);
+                    await EnqueueRecoverableRunsAsync(recurringReadyRecoveryStartedAtUtc, stoppingToken).ConfigureAwait(false);
                     nextRecoveryAtUtc = nowUtc.Add(RecoveryPollInterval);
                 }
 
@@ -486,7 +486,7 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
     }
 
     private async Task EnqueueRecoverableRunsAsync(
-        DateTimeOffset readyUpdatedAfterUtc,
+        DateTimeOffset? readyUpdatedAfterUtc,
         CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();

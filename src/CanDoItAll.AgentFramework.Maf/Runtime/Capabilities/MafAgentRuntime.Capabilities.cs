@@ -68,7 +68,8 @@ public sealed partial class MafAgentRuntime
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements,
-            contextWorkspaceScope);
+            contextWorkspaceScope,
+            contextIntent);
         await AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements);
         await AttachCatalogCapabilitiesAsync(
             composition,
@@ -296,15 +297,6 @@ public sealed partial class MafAgentRuntime
         bool suppressApprovalRequirements,
         AgentRuntimeContextIntent contextIntent)
     {
-        var skillRoots = composition.SkillBuilder.ResolveSkillRoots(capabilities, composition.AgentConfiguration);
-        var inlineSkills = composition.SkillBuilder.ResolveInlineSkills(capabilities);
-        var serviceSkills = composition.SkillBuilder.ResolveRegisteredSkills(capabilities);
-
-        if (skillRoots.Count == 0 && inlineSkills.Count == 0 && serviceSkills.Count == 0)
-        {
-            return;
-        }
-
         if (ShouldExcludeSkillsForProcessStep(contextIntent))
         {
             composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
@@ -315,6 +307,15 @@ public sealed partial class MafAgentRuntime
                 ExecutionState.Preparing,
                 "Skills",
                 "Skipped AgentSkillsProvider for this governed process step because the step operation profile does not require skill execution.");
+            return;
+        }
+
+        var skillRoots = composition.SkillBuilder.ResolveSkillRoots(capabilities, composition.AgentConfiguration);
+        var inlineSkills = composition.SkillBuilder.ResolveInlineSkills(capabilities);
+        var serviceSkills = composition.SkillBuilder.ResolveRegisteredSkills(capabilities);
+
+        if (skillRoots.Count == 0 && inlineSkills.Count == 0 && serviceSkills.Count == 0)
+        {
             return;
         }
 

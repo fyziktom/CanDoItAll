@@ -545,6 +545,24 @@ public sealed partial class MafAgentRuntime
             using var runtimeToolOwnershipScope = AgentRuntimeToolOwnershipContext.BeginScope(runtimeToolOwnership);
             try
             {
+                if (AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+                        functionName,
+                        policyDecision,
+                        policyContext,
+                        out var policyDeniedResult))
+                {
+                    failureMessage = policyDeniedResult;
+                    activity?.SetTag("agentframework.tool_policy_recoverable_denial", true);
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    logger?.LogInformation(
+                        "Returning recoverable policy denial for tool {ToolName} on governed run {ProcessRunId}, step {ProcessStepId}. Reason={Reason}",
+                        functionName,
+                        policyContext.ProcessRunId,
+                        policyContext.ProcessStepId,
+                        policyDecision.Reason);
+                    return policyDeniedResult;
+                }
+
                 AgentToolPolicyBlockGuard.ThrowIfBlocked(
                     functionName,
                     policyDecision,

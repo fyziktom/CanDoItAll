@@ -1125,6 +1125,119 @@ public sealed class ProcessRuntimeDispatchQueueTests
         Assert.Null(selected);
     }
 
+    [Fact]
+    public void Claim_recovery_releases_only_stale_claim_without_matching_execution()
+    {
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var staleAfter = TimeSpan.FromMinutes(2);
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            "dispatcher",
+            now.AddMinutes(-3),
+            now.AddMinutes(22));
+
+        Assert.True(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
+            [],
+            candidate,
+            now,
+            staleAfter));
+
+        var freshCandidate = candidate with { CreatedAtUtc = now.AddSeconds(-30) };
+        Assert.False(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
+            [],
+            freshCandidate,
+            now,
+            staleAfter));
+
+        var matchingRunningExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now.AddMinutes(-2),
+            ExecutionState.Running,
+            null);
+        Assert.False(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
+            [matchingRunningExecution],
+            candidate,
+            now,
+            staleAfter));
+
+        var mismatchedExecution = CreateExecutionRun(
+            Guid.NewGuid(),
+            stepId,
+            now.AddMinutes(-2),
+            ExecutionState.Running,
+            null);
+        Assert.True(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
+            [mismatchedExecution],
+            candidate,
+            now,
+            staleAfter));
+    }
+
+    [Fact]
+    public void Execution_recovery_observer_skips_old_recovered_run_when_newer_active_execution_exists()
+    {
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var recoveredExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now.AddMinutes(-5),
+            ExecutionState.Failed,
+            RunOutcome.Cancelled);
+        var newerActiveExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now.AddMinutes(-1),
+            ExecutionState.Running,
+            null);
+
+        Assert.True(AgentFrameworkProcessExecutionRecoveryObserver.HasNewerActiveExecutionRun(
+            [recoveredExecution, newerActiveExecution],
+            recoveredExecution));
+
+        var newerCompletedExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now,
+            ExecutionState.Completed,
+            RunOutcome.Succeeded);
+        Assert.False(AgentFrameworkProcessExecutionRecoveryObserver.HasNewerActiveExecutionRun(
+            [recoveredExecution, newerCompletedExecution],
+            recoveredExecution));
+
+        var newerMismatchedExecution = CreateExecutionRun(
+            Guid.NewGuid(),
+            stepId,
+            now,
+            ExecutionState.Running,
+            null);
+        Assert.False(AgentFrameworkProcessExecutionRecoveryObserver.HasNewerActiveExecutionRun(
+            [recoveredExecution, newerMismatchedExecution],
+            recoveredExecution));
+    }
+
+    [Fact]
+    public void Claim_recovery_associates_only_claims_near_recovered_execution_creation()
+    {
+        var executionCreatedAtUtc = new DateTimeOffset(2026, 6, 17, 18, 10, 0, TimeSpan.Zero);
+
+        Assert.True(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+            executionCreatedAtUtc.AddSeconds(-45),
+            executionCreatedAtUtc));
+        Assert.True(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+            executionCreatedAtUtc.AddMinutes(2),
+            executionCreatedAtUtc));
+        Assert.False(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+            executionCreatedAtUtc.AddMinutes(3),
+            executionCreatedAtUtc));
+    }
+
     private static ProcessPersistenceDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>()

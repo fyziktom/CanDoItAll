@@ -658,10 +658,31 @@ public sealed partial class MafAgentRuntime(
                     return AttachContextDiagnostics(repairedFinalizerResponse);
                 }
 
-                await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
-                var serializedSession = await runtimeAgent.SerializeSessionAsync(runtimeSession, cancellationToken: cancellationToken);
-                var serializedSessionJson = JsonSerializer.Serialize(serializedSession, SerializerOptions);
                 var pendingApprovals = approvalRequests.Select(MapPendingApproval).ToList();
+                string? serializedSessionJson = null;
+                if (ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
+                {
+                    await progressCallback(
+                        ExecutionState.Persisting,
+                        "Session",
+                        "Skipped Microsoft Agent Framework session serialization for a governed process step with no pending approvals. Process state is persisted through the typed outcome and artifacts.");
+                }
+                else
+                {
+                    await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
+                    serializedSessionJson = await TrySerializeRuntimeSessionAsync(
+                        runtimeAgent,
+                        runtimeSession,
+                        cancellationToken);
+                }
+
+                if (serializedSessionJson is null && !ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
+                {
+                    await progressCallback(
+                        ExecutionState.Persisting,
+                        "Session",
+                        "Microsoft Agent Framework session serialization did not complete within the bounded timeout. Continuing without serialized session state.");
+                }
 
                 if (pendingApprovals.Count > 0)
                 {
@@ -1303,6 +1324,14 @@ public sealed partial class MafAgentRuntime(
             : (int)tokenCount.Value;
     }
 
+    private static bool ShouldSkipRuntimeSessionSerialization(
+        AgentRuntimeExecutionOptions runtimeOptions,
+        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals)
+    {
+        return pendingApprovals.Count == 0 &&
+               runtimeOptions.ContextIntent?.IsGovernedProcessStep == true;
+    }
+
     private static async Task<string?> TrySerializeRuntimeSessionAsync(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
@@ -1310,11 +1339,13 @@ public sealed partial class MafAgentRuntime(
     {
         try
         {
-            var serializedSession = await runtimeAgent.SerializeSessionAsync(
-                runtimeSession,
-                cancellationToken: cancellationToken).AsTask().WaitAsync(
-                    FinalizerSessionSerializationTimeout,
-                    cancellationToken);
+            var serializedSession = await Task.Run(
+                async () => await runtimeAgent.SerializeSessionAsync(
+                    runtimeSession,
+                    cancellationToken: cancellationToken),
+                cancellationToken).WaitAsync(
+                FinalizerSessionSerializationTimeout,
+                cancellationToken);
             return JsonSerializer.Serialize(serializedSession, SerializerOptions);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -1850,6 +1850,58 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public void BlockGuard_returns_recoverable_result_for_governed_read_discovery_denial()
+    {
+        var decision = ToolInvocationPolicyDecision.Deny(
+            "workspace_search|relativePath=",
+            "Broad managed-workspace root discovery is denied.");
+        var context = CreateContext(
+            "workspace_search",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            "workspace_search",
+            decision,
+            context,
+            out var result);
+
+        Assert.True(recoverable);
+        Assert.Contains("PolicyDenied", result, StringComparison.Ordinal);
+        Assert.Contains("grounded external-target alias", result, StringComparison.Ordinal);
+        Assert.Contains("Broad managed-workspace root discovery is denied", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BlockGuard_does_not_return_recoverable_result_for_mutation_denial()
+    {
+        var decision = ToolInvocationPolicyDecision.Deny(
+            "workspace_write_file|path=external-target/C/programovani/dotnet/output/Program.cs",
+            "Read-only external-target roots cannot be mutated.");
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: true,
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            "workspace_write_file",
+            decision,
+            context,
+            out var result);
+
+        Assert.False(recoverable);
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
     public void BlockGuard_does_not_reclassify_allowed_tool_exceptions()
     {
         var decision = ToolInvocationPolicyDecision.Allow("workspace_read_file|path=artifact.md");

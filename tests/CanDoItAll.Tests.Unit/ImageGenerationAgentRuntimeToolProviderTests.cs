@@ -75,6 +75,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
             SuppressApprovalRequirements: false,
             AgentRuntimeToolProviderPurpose.InteractiveChat,
             RuntimeSessionKey: "unit-image-generation",
+            AgentRuntimeContextIntent.Empty,
             Tags: new Dictionary<string, string>());
     }
 

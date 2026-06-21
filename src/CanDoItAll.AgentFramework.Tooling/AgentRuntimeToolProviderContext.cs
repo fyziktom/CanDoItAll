@@ -9,4 +9,5 @@ public sealed record AgentRuntimeToolProviderContext(
     bool SuppressApprovalRequirements,
     AgentRuntimeToolProviderPurpose Purpose,
     string RuntimeSessionKey,
+    AgentRuntimeContextIntent ContextIntent,
     IReadOnlyDictionary<string, string> Tags);

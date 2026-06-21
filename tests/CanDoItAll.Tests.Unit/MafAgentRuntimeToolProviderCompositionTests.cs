@@ -216,6 +216,64 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeProcessContext_read_only_step_filters_registered_runtime_tool_providers()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.project-structure-provider"),
+            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts));
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureRead, toolNames);
+        Assert.DoesNotContain(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate, toolNames);
+        Assert.DoesNotContain(AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart, toolNames);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.RuntimeToolProvider &&
+            source.Decision == AgentRuntimeContextSourceDecision.Included &&
+            source.ItemCount == 1);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeProcessContext_start_project_node_step_keeps_only_matching_runtime_mutation_tool()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.project-structure-provider"),
+            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(ProcessOperationContractNames.StartProjectNodeProcess));
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureRead, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart, toolNames);
+        Assert.DoesNotContain(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate, toolNames);
+        Assert.Equal(2, toolNames.Count);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeProcessContext_read_only_step_does_not_attach_broad_workspace_tools()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());

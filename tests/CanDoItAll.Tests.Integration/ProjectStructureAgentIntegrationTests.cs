@@ -687,6 +687,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("Blazor WebAssembly PWA", classifyAssignment.LaunchVariables["DotNetAppArchetype"]);
         Assert.Contains("AppTemplate: blazorwasm", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("AllowedTemplateSwitches: --pwa", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("ExistingScaffoldRule: existing files are not enough", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("PackageRule: do not add PackageReference Include=\"Microsoft.AspNetCore.Components.WebAssembly.PWA\"", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("BlazorWasmTemplateIntegrityRule: Program.cs, App.razor, and _Imports.razor", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("project-structure-grounded greenfield target", classifyAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("absence of .sln, .slnx, or .csproj files", classifyAssignment.Prompt, StringComparison.Ordinal);
         var parentProcessRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(parent.RunId.Value);
@@ -1094,6 +1098,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("SolutionName: TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("AppTemplate: blazorwasm", scaffoldAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("AllowedTemplateSwitches: --pwa", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("ExistingScaffoldRule: existing files are not enough", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("PackageRule: do not add PackageReference Include=\"Microsoft.AspNetCore.Components.WebAssembly.PWA\"", scaffoldAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains("BlazorWasmTemplateIntegrityRule: Program.cs, App.razor, and _Imports.razor", scaffoldAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("TestTemplate: xunit", scaffoldAssignment.Prompt, StringComparison.Ordinal);
     }
 

@@ -107,6 +107,32 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public void Process_execution_metadata_grants_read_only_product_alias_for_external_action_controller()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.ExecuteExternalAction,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            ProcessOperationContractNames.ExternalActionControlled,
+            stepKey: "prepare-solution-skeleton");
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
+        var readOnlyAliases = ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run);
+
+        Assert.Empty(writableAliases);
+        Assert.Contains("external-target/C/programovani/dotnet/output", readOnlyAliases);
+        Assert.False(ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run));
+    }
+
+    [Fact]
     public void Agent_runtime_options_include_process_context_intent_from_trusted_step_metadata()
     {
         var assignment = CreateAssignment(
