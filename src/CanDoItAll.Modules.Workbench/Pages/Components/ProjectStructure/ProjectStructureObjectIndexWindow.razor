@@ -1,41 +1,73 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Modules.Workbench
 @using CanDoItAll.SharedKernel
 
-<Stack GapScale="LayoutGap.Large"
-       Class="w-full">
-    <PanelCard Class="w-full project-structure-support-card project-structure-support-card--outline"
-               data-testid="project-structure-outline-panel">
-        <Stack GapScale="LayoutGap.Small"
-               Class="w-full">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Outline" />
-            <TextBlock TextStyle="TextStyle.H5" Value="Project object index" Class="cw-panel-title" />
-            <TreeView Items="@OutlineNodes"
-                      AriaLabel="Project object index"
-                      Class="w-full"
-                      OnSelect="OnSelectNode"
-                      OnToggle="HandleIgnoredToggleAsync"
-                      OnContextMenu="HandleNodeContextMenuAsync" />
-        </Stack>
-    </PanelCard>
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="@TestId"
+                      AriaLabel="@AriaLabel"
+                      Kicker="@Kicker"
+                      Title="@Title"
+                      Summary="@Summary"
+                      BodyClass="project-structure-object-index-window__body"
+                      DefaultPlacement="top-left"
+                      DefaultWidth="@DefaultWidth"
+                      DefaultHeight="560"
+                      MinWidth="320"
+                      MinHeight="280"
+                      MaxWidth="520"
+                      MaxHeight="760"
+                      State="@State"
+                      StateChanged="StateChanged">
+    @if (IsLoaded)
+    {
+        <div class="project-structure-object-index-window"
+             data-testid="project-structure-object-index-content">
+            <div class="project-structure-object-index-window__toolbar">
+                <input type="search"
+                       class="cda-input project-structure-object-index-window__search"
+                       placeholder="Search nodes, status, or type"
+                       aria-label="Search project object index"
+                       value="@SearchText"
+                       @oninput="HandleSearchChangedAsync"
+                       data-testid="project-structure-object-index-search" />
+                <div class="project-structure-object-index-window__badges"
+                     aria-label="Project object index summary">
+                    <StatusBadge Tone="info" Text="@VisibleNodeCountLabel" />
+                    <StatusBadge Tone="neutral" Text="@SelectedNodeCountLabel" />
+                </div>
+            </div>
 
-    <PanelCard Class="w-full project-structure-support-card project-structure-support-card--health">
-        <Stack GapScale="LayoutGap.Small"
-               Class="w-full">
-            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Canvas coverage" />
-            <TextBlock TextStyle="TextStyle.H5" Value="Graph health" Class="cw-panel-title" />
-            <CompactStatStrip>
-                <CompactStat Label="nodes" Value="@TotalNodes.ToString()" TooltipText="Total nodes on the project structure canvas." Tone="info" />
-                <CompactStat Label="links" Value="@TotalLinks.ToString()" TooltipText="Total links on the project structure canvas." Tone="success" />
-                <CompactStat Label="selected" Value="@SelectedCount.ToString()" TooltipText="Currently selected canvas nodes." />
-            </CompactStatStrip>
-            <TextBlock TextStyle="TextStyle.Note"
-                       Value="Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate."
-                       Class="cw-panel-copy" />
-        </Stack>
-    </PanelCard>
-</Stack>
+            @if (FilteredNodes.Count == 0)
+            {
+                <div class="project-structure-object-index-window__empty"
+                     data-testid="project-structure-object-index-empty">
+                    No nodes match the current search.
+                </div>
+            }
+            else
+            {
+                <div class="project-structure-object-index-window__tree-scroller"
+                     data-testid="project-structure-object-index-tree-scroller">
+                    <TreeView Items="@OutlineNodes"
+                              AriaLabel="Project object index"
+                              Class="project-structure-object-index-window__tree"
+                              OnSelect="OnSelectNode"
+                              OnToggle="HandleIgnoredToggleAsync"
+                              OnContextMenu="HandleNodeContextMenuAsync" />
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="project-structure-object-index-window__unloaded"
+             data-testid="project-structure-object-index-unloaded">
+            Object index loading is paused.
+        </div>
+    }
+</CanvasFloatingWindow>
 
 @if (outlineContextMenu is not null)
 {
@@ -76,10 +108,43 @@
         IReadOnlyList<ProjectStructureSupportPanelContextAction> Actions);
 
     [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchWindowState State { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+
+    [Parameter]
+    public bool IsLoaded { get; set; }
+
+    [Parameter, EditorRequired]
     public IReadOnlyList<ProjectStructureNode> Nodes { get; set; } = [];
 
     [Parameter, EditorRequired]
     public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SearchTextChanged { get; set; }
 
     [Parameter]
     public EventCallback<string> OnSelectNode { get; set; }
@@ -91,23 +156,31 @@
     [Parameter]
     public EventCallback<ProjectStructureSupportPanelContextActionRequest> OnExecuteNodeContextAction { get; set; }
 
-    private int TotalNodes => Nodes.Count;
-
-    private int TotalLinks { get; set; }
+    [Parameter]
+    public double DefaultWidth { get; set; } = 380;
 
     private int SelectedCount => SelectedNodeIds.Count;
 
+    private string VisibleNodeCountLabel
+        => HasSearch
+            ? $"{FilteredNodes.Count} of {Nodes.Count} nodes"
+            : $"{Nodes.Count} nodes";
+
+    private string SelectedNodeCountLabel
+        => $"{SelectedCount} selected";
+
+    private bool HasSearch
+        => !string.IsNullOrWhiteSpace(SearchText);
+
     private OutlineContextMenuState? outlineContextMenu;
 
-    [Parameter]
-    public int LinkCount
-    {
-        get => TotalLinks;
-        set => TotalLinks = value;
-    }
+    private IReadOnlyList<ProjectStructureNode> FilteredNodes
+        => Nodes
+            .Where(MatchesSearch)
+            .ToList();
 
     private IReadOnlyList<TreeViewNode> OutlineNodes
-        => Nodes
+        => FilteredNodes
             .Select(node => new TreeViewNode
             {
                 Id = node.Id,
@@ -122,6 +195,24 @@
 
     private Task HandleIgnoredToggleAsync(string _)
         => Task.CompletedTask;
+
+    private Task HandleSearchChangedAsync(ChangeEventArgs args)
+        => SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private bool MatchesSearch(ProjectStructureNode node)
+    {
+        if (!HasSearch)
+        {
+            return true;
+        }
+
+        var search = SearchText.Trim();
+        return node.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               node.Status.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               ProjectStructureCanvasCatalog.ResolveNodeLabel(node).Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               (!string.IsNullOrWhiteSpace(node.Subtitle) && node.Subtitle.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+               (!string.IsNullOrWhiteSpace(node.ObjectSubtype) && node.ObjectSubtype.Contains(search, StringComparison.OrdinalIgnoreCase));
+    }
 
     private async Task HandleNodeContextMenuAsync(TreeViewNodeContextMenuRequest request)
     {

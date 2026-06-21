@@ -91,6 +91,7 @@ public sealed class ProjectPartyAssignmentFlowTests
             Path = Path.Combine(evidenceDirectory, "crm-hr-structure-b10-before-select.png"),
             FullPage = true
         });
+        await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId(BuildOutlineNodeTestId(seed.ParticipantNodeId)).ClickAsync();
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -342,6 +343,28 @@ public sealed class ProjectPartyAssignmentFlowTests
         {
             State = WaitForSelectorState.Detached
         });
+    }
+
+    private static async Task EnsureStructureObjectIndexWindowExpandedAsync(IPage page)
+    {
+        var window = page.GetByTestId("project-structure-object-index-window");
+        if (!await window.IsVisibleAsync())
+        {
+            await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
+        }
+
+        await window.WaitForAsync();
+        if (await window.EvaluateAsync<bool>("node => node.classList.contains('is-minimized')"))
+        {
+            await window.GetByRole(AriaRole.Button, new() { Name = "Expand window" }).ClickAsync();
+            await page.WaitForFunctionAsync(
+                @"() => {
+                    const element = document.querySelector('[data-testid=""project-structure-object-index-window""]');
+                    return !!element && !element.classList.contains('is-minimized');
+                }");
+        }
+
+        await page.GetByTestId("project-structure-object-index-content").WaitForAsync();
     }
 
     private static string BuildOutlineNodeTestId(string nodeId)

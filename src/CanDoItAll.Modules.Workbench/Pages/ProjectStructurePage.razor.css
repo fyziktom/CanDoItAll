@@ -6,6 +6,76 @@
     background: rgba(248, 250, 252, 0.94);
 }
 
+.project-structure-page {
+    min-height: calc(100dvh - 5.5rem);
+}
+
+.project-structure-page ::deep .cw-stage {
+    min-height: calc(100dvh - 6rem);
+}
+
+.project-structure-page ::deep .cw-stage-header-row {
+    align-items: center;
+    row-gap: 0.45rem;
+}
+
+.project-structure-page ::deep .cw-stage-stats {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+.project-structure-page ::deep .cw-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+    min-width: auto;
+    padding: 0.34rem 0.62rem;
+    border-radius: 999px;
+    border-color: rgba(15, 118, 110, 0.14);
+    background: linear-gradient(135deg, rgba(240, 253, 250, 0.96), rgba(240, 249, 255, 0.92));
+    box-shadow: none;
+}
+
+.project-structure-page ::deep .cw-stat-chip span,
+.project-structure-page ::deep .cw-stat-chip strong {
+    margin: 0;
+    display: inline;
+}
+
+.project-structure-page ::deep .cw-stat-chip span {
+    color: rgba(51, 65, 85, 0.72);
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.project-structure-page ::deep .cw-stat-chip strong {
+    color: rgba(15, 23, 42, 0.92);
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+
+.project-structure-page ::deep .cw-stage-surface,
+.project-structure-page ::deep .cw-main-grid,
+.project-structure-page ::deep .cw-workbench-shell,
+.project-structure-page ::deep .cw-workbench-frame,
+.project-structure-page ::deep .cw-workbench,
+.project-structure-page ::deep .cw-canvas-host,
+.project-structure-page ::deep .cw-workbench__canvas {
+    min-height: calc(100dvh - 12rem) !important;
+}
+
+.project-structure-page ::deep .cw-workbench-shell,
+.project-structure-page ::deep .cw-workbench-frame,
+.project-structure-page ::deep .cw-stage-surface,
+.project-structure-page ::deep .cw-workbench,
+.project-structure-page ::deep .cw-canvas-host,
+.project-structure-page ::deep .cw-workbench__canvas {
+    height: calc(100dvh - 12rem) !important;
+}
+
 .project-structure-validation-overlay {
     display: grid;
     gap: 0.8rem;
@@ -182,6 +252,16 @@
 
 .project-structure-page ::deep .cw-floating-window[data-testid="project-structure-signals-window"] .cw-floating-window__body {
     min-height: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+    padding-right: 0;
+}
+
+.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-object-index-window"] .cw-floating-window__body {
+    min-height: 0;
+    min-width: 0;
     height: 100%;
     display: grid;
     grid-template-rows: minmax(0, 1fr);

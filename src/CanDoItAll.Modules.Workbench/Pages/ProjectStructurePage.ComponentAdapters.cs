@@ -13,6 +13,9 @@ public partial class ProjectStructurePage
     private Task ToggleToolboxWindowAsync()
         => ToggleWindowAsync(ToolboxWindowKey);
 
+    private Task ToggleObjectIndexWindowAsync()
+        => ToggleWindowAsync(ObjectIndexWindowKey);
+
     private Task HandleToolboxActionSelectedAsync(string actionId)
     {
         var action = ToolboxCreateGroups

@@ -6,10 +6,25 @@ namespace CanDoItAll.Modules.Workbench.Pages;
 public partial class ProjectStructurePage
 {
     private const string ToolboxWindowKey = "project-structure.toolbox";
+    private const string ObjectIndexWindowKey = "project-structure.objectIndex";
     private string structureToolboxSearchText = string.Empty;
+    private string objectIndexSearchText = string.Empty;
     private string? expandedToolboxGroupKey;
 
     private CanvasWorkbenchWindowState ToolboxWindowState => ResolveToolboxWindowState();
+
+    private CanvasWorkbenchWindowState ObjectIndexWindowState => ResolveObjectIndexWindowState();
+
+    private bool IsObjectIndexWindowLoaded
+        => ObjectIndexWindowState is { IsVisible: true, IsMinimized: false };
+
+    private IReadOnlyList<ProjectStructureNode> ObjectIndexWindowNodes
+        => IsObjectIndexWindowLoaded ? outlineNodes : [];
+
+    private string ObjectIndexWindowSummary
+        => IsObjectIndexWindowLoaded
+            ? $"{surface?.Nodes.Count ?? 0} nodes - {selectedNodeIds.Count} selected"
+            : "Paused until expanded";
 
     private IReadOnlyList<ProjectStructureInspectorCreateGroup> ToolboxCreateGroups
         => BuildToolboxCreateGroups();
@@ -24,6 +39,15 @@ public partial class ProjectStructurePage
 
     private Task HandleToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(ToolboxWindowKey, state);
+
+    private Task HandleObjectIndexWindowStateChangedAsync(CanvasWorkbenchWindowState state)
+        => PersistWindowStateAsync(ObjectIndexWindowKey, state);
+
+    private Task HandleObjectIndexSearchTextChangedAsync(string value)
+    {
+        objectIndexSearchText = value;
+        return Task.CompletedTask;
+    }
 
     private async Task OpenToolboxAsync()
     {
@@ -45,6 +69,17 @@ public partial class ProjectStructurePage
         {
             IsVisible = false
         });
+    }
+
+    private CanvasWorkbenchWindowState ResolveObjectIndexWindowState()
+    {
+        var uiState = ResolveEditableUiState();
+        return uiState.WindowStates.TryGetValue(ObjectIndexWindowKey, out var state)
+            ? CanvasWorkbenchWindowState.Normalize(state)
+            : CanvasWorkbenchWindowState.Normalize(new CanvasWorkbenchWindowState
+            {
+                IsVisible = false
+            });
     }
 
     private IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildToolboxCreateGroups()

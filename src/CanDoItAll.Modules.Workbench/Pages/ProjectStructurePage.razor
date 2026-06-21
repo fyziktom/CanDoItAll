@@ -68,8 +68,9 @@ else if (surface is null || canvasSurface is null)
 }
 else
 {
-    <Stack Gap="1.5rem"
-           Class="project-structure-page">
+    <div class="project-structure-page">
+        <Stack Gap="1.5rem"
+               Class="project-structure-page__stack">
 
         <CanvasWorkbenchStage Eyebrow="Structure canvas"
                               Title="@($"{surface.ProjectName} workbench")"
@@ -90,6 +91,7 @@ else
                         <ProjectStructureToolbarActions SelectionWindowVisible="@SelectionWindowState.IsVisible"
                                                        HealthWindowVisible="@HealthWindowState.IsVisible"
                                                        ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
+                                                       ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
                                                        AgentWindowVisible="@AgentWindowState.IsVisible"
                                                        ActiveTool="@canvasToolMode"
@@ -102,6 +104,7 @@ else
                                                        ToggleSelectionWindow="ToggleSelectionWindowAsync"
                                                        ToggleHealthWindow="ToggleHealthWindowAsync"
                                                        ToggleToolboxWindow="ToggleToolboxWindowAsync"
+                                                       ToggleObjectIndexWindow="ToggleObjectIndexWindowAsync"
                                                        ToggleSignalsWindow="ToggleSignalsWindowAsync"
                                                        ToggleAgentWindow="ToggleAgentWindowAsync"
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
@@ -137,6 +140,26 @@ else
                                                            DefaultWidth="@ToolboxWindowDefaultWidth"
                                                            OnToggleGroup="ExpandToolboxGroup"
                                                            OnOpenAction="HandleToolboxActionSelectedAsync" />
+                        }
+                        @if (ObjectIndexWindowState.IsVisible)
+                        {
+                            <ProjectStructureObjectIndexWindow WindowId="@ObjectIndexWindowKey"
+                                                               TestId="project-structure-object-index-window"
+                                                               AriaLabel="Project object index"
+                                                               Kicker="Object index"
+                                                               Title="Project object index"
+                                                               Summary="@ObjectIndexWindowSummary"
+                                                               State="@ObjectIndexWindowState"
+                                                               StateChanged="HandleObjectIndexWindowStateChangedAsync"
+                                                               IsLoaded="@IsObjectIndexWindowLoaded"
+                                                               Nodes="@ObjectIndexWindowNodes"
+                                                               SelectedNodeIds="@selectedNodeIds"
+                                                               SearchText="@objectIndexSearchText"
+                                                               SearchTextChanged="HandleObjectIndexSearchTextChangedAsync"
+                                                               OnSelectNode="SelectNodeAsync"
+                                                               ResolveContextActions="ResolveSupportPanelContextActions"
+                                                               OnExecuteNodeContextAction="ExecuteOutlineContextActionAsync"
+                                                               DefaultWidth="@ObjectIndexWindowDefaultWidth" />
                         }
                         @if (HealthWindowState.IsVisible)
                         {
@@ -263,14 +286,6 @@ else
                     </OverlayContent>
                 </CanvasWorkbench>
             </Canvas>
-            <Supporting>
-                <ProjectStructureSupportPanels Nodes="@outlineNodes"
-                                              SelectedNodeIds="@selectedNodeIds"
-                                              OnSelectNode="SelectNodeAsync"
-                                              ResolveContextActions="ResolveSupportPanelContextActions"
-                                              OnExecuteNodeContextAction="ExecuteOutlineContextActionAsync"
-                                              LinkCount="@surface.Links.Count" />
-            </Supporting>
         </CanvasWorkbenchStage>
 
         @if (CanShowPartyEditor)
@@ -481,7 +496,8 @@ else
             </SectionCard>
         }
 
-    </Stack>
+        </Stack>
+    </div>
 }
 
 <ProjectStructureDeferredSurface RenderKey="@SupportDialogRenderKey">
@@ -706,6 +722,7 @@ else
     private const string HealthWindowKey = "project-structure.health";
     private const double ToolboxWindowDefaultWidth = 430;
     private const double SignalsWindowDefaultWidth = 388;
+    private const double ObjectIndexWindowDefaultWidth = 392;
     private const double DefaultCanvasWindowMargin = 16;
     private const double DefaultCanvasWindowGap = 16;
     private const double SignalsWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
@@ -2389,6 +2406,7 @@ else
             SelectionWindowKey => ResolveWindowState(key),
             HealthWindowKey => ResolveHealthWindowState(),
             ToolboxWindowKey => ResolveToolboxWindowState(),
+            ObjectIndexWindowKey => ResolveObjectIndexWindowState(),
             SignalsWindowKey => ResolveSignalsWindowState(),
             _ => ResolveWindowState(key)
         };

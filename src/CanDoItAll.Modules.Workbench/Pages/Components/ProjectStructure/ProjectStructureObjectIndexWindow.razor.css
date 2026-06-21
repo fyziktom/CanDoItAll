@@ -1,3 +1,68 @@
+.project-structure-object-index-window__body {
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+    padding-right: 0;
+}
+
+.project-structure-object-index-window {
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.7rem;
+    overflow: hidden;
+}
+
+.project-structure-object-index-window__toolbar {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.project-structure-object-index-window__search {
+    width: 100%;
+}
+
+.project-structure-object-index-window__badges {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.project-structure-object-index-window__tree-scroller {
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.3rem;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+}
+
+.project-structure-object-index-window ::deep .project-structure-object-index-window__tree {
+    min-width: 0;
+}
+
+.project-structure-object-index-window__empty,
+.project-structure-object-index-window__unloaded {
+    min-height: 7rem;
+    display: grid;
+    place-items: center;
+    border: 1px dashed rgba(148, 163, 184, 0.42);
+    border-radius: 0.8rem;
+    background: rgba(248, 250, 252, 0.86);
+    color: rgba(71, 85, 105, 0.9);
+    font-size: 0.86rem;
+    font-weight: 650;
+    text-align: center;
+    padding: 1rem;
+}
+
 .project-structure-outline-context-menu__scrim {
     position: fixed;
     inset: 0;

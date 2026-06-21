@@ -50,6 +50,7 @@ public sealed partial class AppSmokeTests
         await addParticipantButton.ClickAsync();
         await page.WaitForSelectorAsync("text=Autoselected Freelancer");
 
+        await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
         await page.WaitForTimeoutAsync(200);
         await EnsureStructureToolboxWindowExpandedAsync(page);
@@ -113,6 +114,7 @@ public sealed partial class AppSmokeTests
             $"Expected the online meeting repeat select to expose the shared cadence options, but only found {repeatOptionCount} selectable options.");
 
         await page.Keyboard.PressAsync("Escape");
+        await EnsureStructureObjectIndexWindowExpandedAsync(page);
         await page.GetByTestId($"project-structure-outline-node-project-{projectId}").ClickAsync();
         await page.WaitForTimeoutAsync(200);
         await EnsureStructureToolboxWindowExpandedAsync(page);

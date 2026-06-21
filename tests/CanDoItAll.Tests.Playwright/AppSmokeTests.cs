@@ -1986,7 +1986,10 @@ public sealed partial class AppSmokeTests
 
     private static async Task SelectStructureOutlineNodeAsync(IPage page, string title)
     {
-        var outlineItem = page.Locator(".project-structure-support-card--outline .cda-treeview__row")
+        await EnsureStructureObjectIndexWindowExpandedAsync(page);
+
+        var outlineItem = page.GetByTestId("project-structure-object-index-window")
+            .Locator(".cda-treeview__row")
             .Filter(new LocatorFilterOptions
             {
                 HasText = title
@@ -4617,6 +4620,23 @@ public sealed partial class AppSmokeTests
             await WaitForLocatorAsync(window, 5_000),
             "Expected the project structure toolbox window to be open before asserting its contents.");
         await EnsureFloatingWindowExpandedAsync(page, "project-structure-toolbox-window");
+    }
+
+    private static async Task EnsureStructureObjectIndexWindowExpandedAsync(IPage page)
+    {
+        var window = page.GetByTestId("project-structure-object-index-window");
+        if (!await window.IsVisibleAsync())
+        {
+            var toolbarToggle = page.GetByTestId("project-structure-object-index-toggle");
+            await toolbarToggle.WaitForAsync();
+            await toolbarToggle.ClickAsync();
+        }
+
+        Assert.True(
+            await WaitForLocatorAsync(window, 5_000),
+            "Expected the project object index window to be open before asserting its contents.");
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-object-index-window");
+        await page.GetByTestId("project-structure-object-index-content").WaitForAsync();
     }
 
     private static async Task DragFloatingWindowAsync(IPage page, string testId, float deltaX, float deltaY)
