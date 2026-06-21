@@ -490,6 +490,60 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task ProjectWorkbenchService_DeleteObjectAsync_hides_projected_process_definition_without_seed_link()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
+
+        var projectId = await CreateProjectAsync(projects, "Direct project scoped process definition removal");
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Build removable process definition",
+                "Blazor delivery target",
+                "Implement the app.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery"));
+
+        var launchResult = await launchService.LaunchAsync(
+            new ProcessLaunchRequest(
+                DefinitionKey: "software-delivery",
+                ProcessDefinitionId: null,
+                LiveRunProfileKey: null,
+                projectId,
+                deliveryNode.Id,
+                RequestedBy: "integration-test",
+                Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+                RunReadiness: false,
+                Execute: false));
+
+        Assert.True(launchResult.RunId.HasValue);
+        var runNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(launchResult.RunId.Value.Value);
+        var definitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+        var definitionNodeId = ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId);
+        var initialSurface = await workbench.GetStructureAsync(projectId);
+        Assert.Contains(initialSurface.Nodes, node => string.Equals(node.Id, definitionNodeId, StringComparison.Ordinal));
+        Assert.Contains(initialSurface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
+
+        var deletedCount = await workbench.DeleteObjectAsync(projectId, definitionNodeId);
+
+        Assert.Equal(1, deletedCount);
+        var refreshedSurface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(refreshedSurface.Nodes, node => string.Equals(node.Id, definitionNodeId, StringComparison.Ordinal));
+        Assert.Contains(refreshedSurface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task StartProcessNodeAsync_reports_missing_project_as_project_structure_error()
     {
         await using var application = await TestApplication.CreateAsync();

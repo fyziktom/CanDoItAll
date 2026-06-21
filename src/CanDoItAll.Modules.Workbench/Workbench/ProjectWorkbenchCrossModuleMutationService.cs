@@ -26,7 +26,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var root = records.FirstOrDefault(item => item.NodeKey == nodeKey && !item.IsSystemManaged);
         if (root is null)
         {
-            return await HideProjectedProcessRunNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
+            return await HideProjectedNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
         }
 
         var keysToDelete = CollectEditableDescendantKeys(records, root.NodeKey);
@@ -67,67 +67,75 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         return recordsToDelete.Count;
     }
 
-    private async Task<int> HideProjectedProcessRunNodeAsync(
+    private async Task<int> HideProjectedNodeAsync(
         AppDbContext dbContext,
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken)
     {
-        if (!IsProjectedProcessRunDeleteCandidate(nodeKey))
-        {
-            return 0;
-        }
-
         var snapshot = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
         var root = snapshot.Nodes.FirstOrDefault(item =>
             item.IsSystemManaged &&
             string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal));
-        if (root is null || !IsProjectedProcessRunDeleteCandidate(root))
+        if (root is null || !IsProjectedDeleteCandidate(root))
         {
             return 0;
         }
 
         var removedNodeKeys = CollectSystemManagedDescendantKeys(snapshot.Nodes, root.NodeKey);
+        var removedNodeKeyArray = removedNodeKeys.ToArray();
+        var removedNodesByKey = snapshot.Nodes
+            .Where(item => removedNodeKeys.Contains(item.NodeKey))
+            .ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
         var userLinksToDelete = await dbContext.Set<ProjectObjectLinkRecord>()
             .Where(item =>
                 item.ProjectId == projectId &&
                 !item.IsSystemManaged &&
-                (removedNodeKeys.Contains(item.SourceNodeKey) || removedNodeKeys.Contains(item.TargetNodeKey)))
+                (removedNodeKeyArray.Contains(item.SourceNodeKey) || removedNodeKeyArray.Contains(item.TargetNodeKey)))
             .ToListAsync(cancellationToken);
         if (userLinksToDelete.Count > 0)
         {
             dbContext.RemoveRange(userLinksToDelete);
         }
 
-        var layout = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
-            .SingleOrDefaultAsync(
-                item => item.ProjectId == projectId && item.NodeKey == root.NodeKey,
-                cancellationToken);
+        var layoutsByNodeKey = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .Where(item => item.ProjectId == projectId && removedNodeKeyArray.Contains(item.NodeKey))
+            .ToDictionaryAsync(item => item.NodeKey, StringComparer.Ordinal, cancellationToken);
         var updatedAtUtc = clock.GetUtcNow();
-        if (layout is null)
+        foreach (var removedNodeKey in removedNodeKeyArray)
         {
-            await dbContext.Set<ProjectStructureProjectionLayoutRecord>().AddAsync(
-                new ProjectStructureProjectionLayoutRecord
-                {
-                    ProjectId = projectId,
-                    NodeKey = root.NodeKey,
-                    PositionX = root.PositionX,
-                    PositionY = root.PositionY,
-                    IsHidden = true,
-                    UpdatedAtUtc = updatedAtUtc
-                },
-                cancellationToken);
-        }
-        else
-        {
-            layout.PositionX = root.PositionX;
-            layout.PositionY = root.PositionY;
-            layout.IsHidden = true;
-            layout.UpdatedAtUtc = updatedAtUtc;
+            if (removedNodesByKey.TryGetValue(removedNodeKey, out var removedNode))
+            {
+                UpsertHiddenProjectionLayout(dbContext, projectId, removedNode, updatedAtUtc, layoutsByNodeKey);
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return removedNodeKeys.Count;
+    }
+
+    private static void UpsertHiddenProjectionLayout(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProjectObjectRecord node,
+        DateTimeOffset updatedAtUtc,
+        IDictionary<string, ProjectStructureProjectionLayoutRecord> layoutsByNodeKey)
+    {
+        if (!layoutsByNodeKey.TryGetValue(node.NodeKey, out var layout))
+        {
+            layout = new ProjectStructureProjectionLayoutRecord
+            {
+                ProjectId = projectId,
+                NodeKey = node.NodeKey
+            };
+            dbContext.Set<ProjectStructureProjectionLayoutRecord>().Add(layout);
+            layoutsByNodeKey[node.NodeKey] = layout;
+        }
+
+        layout.PositionX = node.PositionX;
+        layout.PositionY = node.PositionY;
+        layout.IsHidden = true;
+        layout.UpdatedAtUtc = updatedAtUtc;
     }
 
     public async Task<ProjectStructureSubprojectTransferResult?> MoveDescendantsToProjectAsync(
@@ -415,20 +423,9 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         return collectedKeys;
     }
 
-    private static bool IsProjectedProcessRunDeleteCandidate(string nodeKey)
-    {
-        return ProjectStructureProcessNodeKeys.TryParseProcessRunNodeKey(nodeKey, out _) ||
-               ProjectStructureProcessNodeKeys.TryParseProcessRunOutputNodeKey(nodeKey, out _);
-    }
-
-    private static bool IsProjectedProcessRunDeleteCandidate(ProjectObjectRecord node)
-    {
-        return node.IsSystemManaged &&
-               (node.ObjectType == ProjectObjectType.ProcessRun ||
-                string.Equals(node.Binding.ExternalArtifactKind, "process-run", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(node.Binding.ExternalArtifactKind, "process-run-output-folder", StringComparison.OrdinalIgnoreCase) ||
-                ProjectStructureProcessNodeKeys.TryParseProcessRunOutputNodeKey(node.NodeKey, out _));
-    }
+    private static bool IsProjectedDeleteCandidate(ProjectObjectRecord node)
+        => node.IsSystemManaged &&
+           node.ObjectType is not ProjectObjectType.ProjectRoot and not ProjectObjectType.Phase;
 
     private static (HashSet<string> MovedNodeKeys, HashSet<string> MovedRootKeys) CollectEditableMoveKeys(
         IReadOnlyCollection<ProjectObjectRecord> sourceRecords,
