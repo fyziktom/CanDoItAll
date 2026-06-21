@@ -2433,14 +2433,23 @@ else
     }
 
     private static string ResolveCreatedTitle(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchCreateActionRequest request)
-        => !string.IsNullOrWhiteSpace(request.Title)
-            ? request.Title.Trim()
-            : definition.ObjectType switch
-            {
-            ProjectObjectType.Note when string.Equals(request.CreateMode, "quick-note", StringComparison.OrdinalIgnoreCase) => ProjectStructureNodeHelpers.BuildSimpleNoteTitle(request.Notes),
-                _ when request.UploadedFile is not null && !string.IsNullOrWhiteSpace(request.UploadedFile.FileName) => System.IO.Path.GetFileNameWithoutExtension(request.UploadedFile.FileName),
-                _ => definition.DefaultTitle
-            };
+    {
+        if (definition.ObjectType == ProjectObjectType.Note &&
+            string.Equals(request.CreateMode, "quick-note", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProjectStructureNodeHelpers.BuildSimpleNoteTitle(
+                !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes : request.Title);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Title))
+        {
+            return request.Title.Trim();
+        }
+
+        return request.UploadedFile is not null && !string.IsNullOrWhiteSpace(request.UploadedFile.FileName)
+            ? System.IO.Path.GetFileNameWithoutExtension(request.UploadedFile.FileName)
+            : definition.DefaultTitle;
+    }
 
     private static string ResolveCreatedNotes(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchCreateActionRequest request)
         => !string.IsNullOrWhiteSpace(request.Notes)

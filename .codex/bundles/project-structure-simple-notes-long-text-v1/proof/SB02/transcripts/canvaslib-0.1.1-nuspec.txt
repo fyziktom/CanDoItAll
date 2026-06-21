@@ -1,0 +1,27 @@
+Command: tar -xOf ExternalPackages\CanDoItAll.Components.CanvasLib.0.1.1.nupkg CanDoItAll.Components.CanvasLib.nuspec
+ExitCode: 0
+
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>CanDoItAll.Components.CanvasLib</id>
+    <version>0.1.1</version>
+    <authors>CanDoItAll</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/fyziktom/CanDoItAll</projectUrl>
+    <description>Canonical shared canvas runtime for active CanDoItAll workbench surfaces.</description>
+    <tags>CanDoItAll Blazor Components</tags>
+    <repository type="git" url="https://github.com/fyziktom/CanDoItAll.Components" commit="da6f2c7af364bd80225736c0ee1f138c930dde83" />
+    <dependencies>
+      <group targetFramework="net10.0">
+        <dependency id="CanDoItAll.Components.BaseLib" version="0.1.0" exclude="Build,Analyzers" />
+        <dependency id="CanDoItAll.Components.Common" version="0.1.0" exclude="Build,Analyzers" />
+        <dependency id="CanDoItAll.Components.OverlayLib" version="0.1.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.AspNetCore.Components.Web" version="10.0.4" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+

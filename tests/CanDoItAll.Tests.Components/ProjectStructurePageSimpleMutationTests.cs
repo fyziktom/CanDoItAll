@@ -68,6 +68,65 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Quick_note_create_uses_derived_title_and_persists_full_long_body()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Long quick note body");
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, $"project:{projectId}");
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        string projectRootId = string.Empty;
+        cut.WaitForAssertion(() =>
+        {
+            projectRootId = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => node.Id.StartsWith("project:", StringComparison.Ordinal)).Id;
+        });
+
+        const string longNoteBody =
+            "Long simple note first line that deliberately exceeds the short title limit and should be derived.\r\n" +
+            "Second line keeps important context that must stay in the note body.\r\n" +
+            "Final line includes symbols #release @owner and punctuation.";
+        const string expectedTitle = "Long simple note first line that deliberately exceeds the sho...";
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+            new CanvasWorkbenchCreateActionRequest(
+                "add-note",
+                projectRootId,
+                420,
+                260,
+                projectRootId,
+                longNoteBody,
+                string.Empty,
+                longNoteBody,
+                "child",
+                "quick-note",
+                string.Empty,
+                null))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var createdNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Title, expectedTitle, StringComparison.Ordinal));
+
+            Assert.Equal(longNoteBody, createdNode.InlineText);
+        });
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(
+            persistedSurface.Nodes,
+            node => string.Equals(node.Title, expectedTitle, StringComparison.Ordinal));
+        Assert.Equal(longNoteBody, persistedNode.Notes);
+    }
+
+    [Fact]
     public async Task Quick_sibling_note_insertion_persists_downward_stack_shift()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);

@@ -26,7 +26,7 @@
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.1" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.0" />

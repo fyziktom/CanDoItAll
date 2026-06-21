@@ -241,12 +241,14 @@ public sealed partial class AppSmokeTests
         var noteEditor = await OpenInlineNoteEditorAsync(page);
         await page.WaitForTimeoutAsync(120);
         await noteEditor.ClickAsync();
-        await page.Keyboard.TypeAsync("Site survey");
+        const string noteTitle = "Site survey requires AP placement review across warehouse aisles";
+        const string noteBody = $"{noteTitle}\nCheck AP placement and cable drops";
+        await page.Keyboard.TypeAsync(noteTitle);
         await page.Keyboard.PressAsync("Shift+Enter");
-        await page.Keyboard.TypeAsync("Check AP placement");
+        await page.Keyboard.TypeAsync("Check AP placement and cable drops");
 
         var editorValue = NormalizeLineEndings(await noteEditor.InputValueAsync());
-        Assert.Equal("Site survey\nCheck AP placement", editorValue);
+        Assert.Equal(noteBody, editorValue);
         await CaptureLocatorAsync(noteEditor, Path.Combine(artifactsDir, "03-multiline-note-editor.png"));
 
         await noteEditor.PressAsync("Enter");
@@ -261,8 +263,15 @@ public sealed partial class AppSmokeTests
             page,
             noteId,
             node => node.IsInlineTextNode &&
-                string.Equals(NormalizeLineEndings(node.Title), "Site survey\nCheck AP placement", StringComparison.Ordinal),
+                string.Equals(node.Title, noteTitle, StringComparison.Ordinal) &&
+                string.Equals(NormalizeLineEndings(node.InlineText), noteBody, StringComparison.Ordinal),
             "multiline note stored");
+
+        await FocusCanvasNodeAsync(page, noteId);
+        var noteBounds = await WaitForCanvasRenderedNodeBoundsAsync(page, noteId);
+        Assert.NotNull(noteBounds);
+        Assert.InRange(noteBounds!.Width, 300, 380);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "04-inline-note-width.png"));
 
         await ClickSelectionWindowActionAsync(page, "Convert");
         blockMutationDialog = page.GetByTestId("project-structure-block-mutation-dialog");
@@ -270,7 +279,7 @@ public sealed partial class AppSmokeTests
         blockMutationSelect = blockMutationDialog.Locator("[data-testid='project-structure-block-mutation-select']");
         await blockMutationSelect.SelectOptionAsync("add-work-task");
         Assert.Equal("add-work-task", await blockMutationSelect.InputValueAsync());
-        await CaptureLocatorAsync(blockMutationDialog, Path.Combine(artifactsDir, "04-convert-note-dialog.png"));
+        await CaptureLocatorAsync(blockMutationDialog, Path.Combine(artifactsDir, "05-convert-note-dialog.png"));
         await blockMutationDialog
             .GetByTestId("project-structure-block-mutation-submit")
             .EvaluateAsync("button => button.click()");
@@ -281,13 +290,13 @@ public sealed partial class AppSmokeTests
             noteId,
             node => !node.IsInlineTextNode &&
                 string.Equals(node.PaletteKey, "warning", StringComparison.Ordinal) &&
-                string.Equals(node.Title, "Site survey", StringComparison.Ordinal),
+                string.Equals(node.Title, noteTitle, StringComparison.Ordinal),
             "note converted to task");
         await page.GetByTestId("project-structure-selection-badge-task")
             .WaitForAsync();
         Assert.Equal("warning", convertedNote.PaletteKey);
 
-        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "05-mutation-results.png"));
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "06-mutation-results.png"));
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -447,7 +456,7 @@ public sealed partial class AppSmokeTests
         var button = page.GetByTestId("project-structure-selection-window")
             .GetByRole(AriaRole.Button, new() { Name = label, Exact = true });
         await button.WaitForAsync();
-        await button.ClickAsync();
+        await button.EvaluateAsync("button => button.click()");
     }
 
     private async Task PressCanvasShortcutAsync(IPage page, string shortcut)
@@ -707,6 +716,7 @@ public sealed partial class AppSmokeTests
                     id: node.id || '',
                     title: node.title || '',
                     notes: node.notes || '',
+                    inlineText: node.inlineText || '',
                     objectSubtype: node.objectSubtype || '',
                     paletteKey: node.paletteKey || '',
                     route: node.route || '',
@@ -723,6 +733,46 @@ public sealed partial class AppSmokeTests
         var snapshot = await TryReadWorkbenchNodeStateAsync(page, nodeId);
         Assert.NotNull(snapshot);
         return snapshot!;
+    }
+
+    private static async Task<CanvasNodeRenderedBoundsSnapshot?> TryReadCanvasRenderedNodeBoundsAsync(IPage page, string nodeId)
+        => await page.EvaluateAsync<CanvasNodeRenderedBoundsSnapshot?>(
+            @"requestedNodeId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const node = host?.__canvasWorkbenchState?.sceneGeometry?.nodes?.get(requestedNodeId);
+                if (!node) {
+                    return null;
+                }
+
+                return {
+                    left: node.left || 0,
+                    top: node.top || 0,
+                    width: node.width || 0,
+                    height: node.height || 0,
+                    right: node.right || 0,
+                    bottom: node.bottom || 0
+                };
+            }",
+            nodeId);
+
+    private static async Task<CanvasNodeRenderedBoundsSnapshot> WaitForCanvasRenderedNodeBoundsAsync(IPage page, string nodeId, int timeoutMs = 6_000)
+    {
+        var attempts = Math.Max(1, timeoutMs / 120);
+        CanvasNodeRenderedBoundsSnapshot? lastSnapshot = null;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            lastSnapshot = await TryReadCanvasRenderedNodeBoundsAsync(page, nodeId);
+            if (lastSnapshot is { Width: > 0, Height: > 0 })
+            {
+                return lastSnapshot;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        throw new InvalidOperationException(
+            $"Timed out waiting for rendered canvas bounds on '{nodeId}'. " +
+            $"Last width={lastSnapshot?.Width}, height={lastSnapshot?.Height}.");
     }
 
     private static async Task<CanvasWorkbenchNodeRuntimeSnapshot> WaitForWorkbenchNodeStateAsync(
@@ -747,7 +797,8 @@ public sealed partial class AppSmokeTests
 
         throw new InvalidOperationException(
             $"Timed out waiting for workbench node state '{description}' on '{nodeId}'. " +
-            $"Last snapshot title='{lastSnapshot?.Title ?? string.Empty}', subtype='{lastSnapshot?.ObjectSubtype ?? string.Empty}', " +
+            $"Last snapshot title='{lastSnapshot?.Title ?? string.Empty}', notes='{lastSnapshot?.Notes ?? string.Empty}', " +
+            $"inlineText='{lastSnapshot?.InlineText ?? string.Empty}', subtype='{lastSnapshot?.ObjectSubtype ?? string.Empty}', " +
             $"palette='{lastSnapshot?.PaletteKey ?? string.Empty}', inline={lastSnapshot?.IsInlineTextNode}, " +
             $"x={lastSnapshot?.X}, y={lastSnapshot?.Y}.");
     }
@@ -794,6 +845,8 @@ public sealed partial class AppSmokeTests
 
         public string Notes { get; set; } = string.Empty;
 
+        public string InlineText { get; set; } = string.Empty;
+
         public string ObjectSubtype { get; set; } = string.Empty;
 
         public string PaletteKey { get; set; } = string.Empty;
@@ -807,5 +860,20 @@ public sealed partial class AppSmokeTests
         public bool IsInlineTextNode { get; set; }
 
         public string[] AnnotationActionIds { get; set; } = [];
+    }
+
+    private sealed class CanvasNodeRenderedBoundsSnapshot
+    {
+        public double Left { get; set; }
+
+        public double Top { get; set; }
+
+        public double Width { get; set; }
+
+        public double Height { get; set; }
+
+        public double Right { get; set; }
+
+        public double Bottom { get; set; }
     }
 }
