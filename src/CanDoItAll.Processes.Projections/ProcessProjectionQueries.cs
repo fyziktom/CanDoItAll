@@ -5,7 +5,29 @@ namespace CanDoItAll.Processes.Projections;
 public sealed record ProcessLiveProcessesQuery(
     DateTimeOffset NowUtc,
     TimeSpan Window,
-    int Take);
+    int Take,
+    ProcessLiveProcessesLoadOptions? LoadOptions = null);
+
+public sealed record ProcessLiveProcessesLoadOptions
+{
+    public static ProcessLiveProcessesLoadOptions Full { get; } = new();
+
+    public static ProcessLiveProcessesLoadOptions SnapshotOnly { get; } = new()
+    {
+        IncludeAttentionReconciliation = false,
+        IncludeOperatorActions = false,
+        IncludeCurrentSteps = false,
+        IncludeChildRunWaits = false
+    };
+
+    public bool IncludeAttentionReconciliation { get; init; } = true;
+
+    public bool IncludeOperatorActions { get; init; } = true;
+
+    public bool IncludeCurrentSteps { get; init; } = true;
+
+    public bool IncludeChildRunWaits { get; init; } = true;
+}
 
 public sealed record ProcessLiveProcessesResult(
     IReadOnlyList<ProcessLiveProcessSnapshot> Runs,
@@ -32,7 +54,35 @@ public sealed record ProcessRuntimeWorkspaceQuery(
     int EventPageSize,
     int TakeRuns,
     ProcessRunId? SelectedRunId,
-    bool AutoSelectRun = true);
+    bool AutoSelectRun = true,
+    ProcessRuntimeWorkspaceLoadOptions? LoadOptions = null);
+
+public sealed record ProcessRuntimeWorkspaceLoadOptions
+{
+    public static ProcessRuntimeWorkspaceLoadOptions Full { get; } = new();
+
+    public static ProcessRuntimeWorkspaceLoadOptions ListOnly { get; } = new()
+    {
+        LiveProcesses = ProcessLiveProcessesLoadOptions.SnapshotOnly,
+        IncludeSelectedRun = false,
+        IncludeHistory = false,
+        IncludeMetricHistory = false,
+        IncludeActiveAgents = false,
+        IncludeUsageTelemetry = false
+    };
+
+    public ProcessLiveProcessesLoadOptions LiveProcesses { get; init; } = ProcessLiveProcessesLoadOptions.Full;
+
+    public bool IncludeSelectedRun { get; init; } = true;
+
+    public bool IncludeHistory { get; init; } = true;
+
+    public bool IncludeMetricHistory { get; init; } = true;
+
+    public bool IncludeActiveAgents { get; init; } = true;
+
+    public bool IncludeUsageTelemetry { get; init; } = true;
+}
 
 public sealed record ProcessRuntimeWorkspaceResult(
     IReadOnlyList<ProcessLiveProcessSnapshot> Runs,

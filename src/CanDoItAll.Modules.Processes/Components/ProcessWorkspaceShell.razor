@@ -248,6 +248,7 @@
     private const string AllDefinitionsTreeNodeId = "processes:scope:all";
     private const string ScopeTreeNodePrefix = "processes:scope:";
     private const string DefinitionTreeNodePrefix = "processes:definition:";
+    private const int SelectedRunGraphsViewIndex = 4;
 
     private ProcessWorkspaceShellProjection? shell;
     private int activeDetailTabIndex;
@@ -479,6 +480,9 @@
 
         try
         {
+            var detailTabKey = ResolveRequestedDetailTabKey();
+            var definitionLoadOptions = CreateDefinitionLoadOptions(detailTabKey);
+            var runtimeLoadOptions = CreateRuntimeLoadOptions(detailTabKey);
             var request = new ProcessWorkspaceShellRequest(
                 ResolveScope(),
                 new ProcessWorkspaceSelectionProjection(ProcessIdQuery, selectedRuntimeRunId ?? RunIdQuery, LaunchPlanIdQuery),
@@ -502,7 +506,9 @@
                     RuntimeEventPageSize,
                     selectedRuntimeRunId ?? RunIdQuery,
                     AutoSelectRun: (selectedRuntimeRunId ?? RunIdQuery).HasValue,
-                    TakeRuns: 50));
+                    TakeRuns: 50,
+                    runtimeLoadOptions),
+                definitionLoadOptions);
 
             shell = await ProjectionClient.GetShellAsync(request);
             selectedRuntimeRunId = shell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
@@ -512,8 +518,16 @@
                 activeDetailTabInitialized = true;
             }
 
-            SyncDefinitionEditor(shell.DefinitionCatalog.SelectedEditor);
-            SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
+            if (definitionLoadOptions.IncludeSelectedEditor || shell.DefinitionCatalog.SelectedEditor is not null)
+            {
+                SyncDefinitionEditor(shell.DefinitionCatalog.SelectedEditor);
+            }
+
+            if (definitionLoadOptions.IncludeTemplateCatalog || shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog is not null)
+            {
+                SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
+            }
+
             if (activeDetailTabIndex == ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat))
             {
                 await EnsureManagerChatLoadedAsync();
@@ -540,6 +554,63 @@
             ? ProcessWorkspaceDetailTabKey.Runs
             : ProcessWorkspaceDetailTabKey.Definition;
 
+    private ProcessWorkspaceDetailTabKey ResolveRequestedDetailTabKey()
+    {
+        if (!activeDetailTabInitialized)
+        {
+            return ResolvePreferredDetailTab();
+        }
+
+        return DetailTabs.ElementAtOrDefault(activeDetailTabIndex)?.Key ?? ResolvePreferredDetailTab();
+    }
+
+    private ProcessDefinitionWorkspaceLoadOptions CreateDefinitionLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey)
+        => detailTabKey switch
+        {
+            ProcessWorkspaceDetailTabKey.Definition => ProcessDefinitionWorkspaceLoadOptions.Basics,
+            ProcessWorkspaceDetailTabKey.Roles => ProcessDefinitionWorkspaceLoadOptions.Roles,
+            ProcessWorkspaceDetailTabKey.Steps => ProcessDefinitionWorkspaceLoadOptions.Steps,
+            ProcessWorkspaceDetailTabKey.Analytics => ProcessDefinitionWorkspaceLoadOptions.Basics,
+            ProcessWorkspaceDetailTabKey.Exchange => ProcessDefinitionWorkspaceLoadOptions.Exchange,
+            _ => ProcessDefinitionWorkspaceLoadOptions.CatalogOnly
+        };
+
+    private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey)
+    {
+        var hasExplicitRuntimeSelection = (selectedRuntimeRunId ?? RunIdQuery).HasValue || LiveRoute || LaunchPlanIdQuery.HasValue;
+        return detailTabKey switch
+        {
+            ProcessWorkspaceDetailTabKey.Runs => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeMetricHistory = SelectedRunViewNeedsMetrics,
+                IncludeUsageTelemetry = SelectedRunViewNeedsMetrics,
+                IncludeActiveAgents = SelectedRunViewNeedsActiveAgents
+            },
+            ProcessWorkspaceDetailTabKey.Graphs or ProcessWorkspaceDetailTabKey.Analytics => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeActiveAgents = false
+            },
+            ProcessWorkspaceDetailTabKey.ManagerChat => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeHistory = false,
+                IncludeMetricHistory = false,
+                IncludeUsageTelemetry = false
+            },
+            _ when hasExplicitRuntimeSelection => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeMetricHistory = false,
+                IncludeUsageTelemetry = false
+            },
+            _ => ProcessRuntimeWorkspaceLoadOptions.ListOnly
+        };
+    }
+
+    private bool SelectedRunViewNeedsMetrics
+        => selectedRunViewIndex == SelectedRunGraphsViewIndex;
+
+    private bool SelectedRunViewNeedsActiveAgents
+        => selectedRunViewIndex is 1 or 2 or 3 or 5 or 6;
+
     private int ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey key)
     {
         var index = DetailTabs
@@ -552,16 +623,13 @@
     private async Task HandleDetailTabChangedAsync(int index)
     {
         activeDetailTabIndex = index;
-        if (DetailTabs.ElementAtOrDefault(index)?.Key == ProcessWorkspaceDetailTabKey.ManagerChat)
-        {
-            await EnsureManagerChatLoadedAsync();
-        }
+        await LoadAsync(forceRefresh: false);
     }
 
-    private Task HandleSelectedRunViewChangedAsync(int index)
+    private async Task HandleSelectedRunViewChangedAsync(int index)
     {
         selectedRunViewIndex = index;
-        return Task.CompletedTask;
+        await LoadAsync(forceRefresh: false);
     }
 
     private async Task ExecuteCommandAsync(ProcessWorkspaceCommandProjection command)

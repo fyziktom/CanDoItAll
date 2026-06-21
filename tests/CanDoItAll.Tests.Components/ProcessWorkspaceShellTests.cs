@@ -1,4 +1,5 @@
 using Bunit;
+using System.Globalization;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Configuration;
@@ -39,6 +40,86 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='processes-command-strip']"));
         Assert.NotNull(cut.Find("[data-testid='processes-detail-tabs']"));
         Assert.NotNull(cut.Find("[data-testid='processes-definition-tree']"));
+    }
+
+    [Fact]
+    public void Initial_shell_requests_lean_definition_and_runtime_projection()
+    {
+        using var context = CreateContext(out var client);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(client.LastRequest));
+        var request = client.LastRequest!;
+        var definitionOptions = request.DefinitionLoadOptions;
+        var runtimeOptions = request.RuntimeQuery?.LoadOptions;
+
+        Assert.NotNull(definitionOptions);
+        Assert.True(definitionOptions.IncludeSelectedEditor);
+        Assert.False(definitionOptions.IncludeRoleEditor);
+        Assert.False(definitionOptions.IncludeStepEditor);
+        Assert.False(definitionOptions.IncludeCanvas);
+        Assert.False(definitionOptions.IncludeTemplateCatalog);
+        Assert.NotNull(runtimeOptions);
+        Assert.False(runtimeOptions.IncludeSelectedRun);
+        Assert.False(runtimeOptions.IncludeHistory);
+        Assert.False(runtimeOptions.IncludeMetricHistory);
+        Assert.False(runtimeOptions.IncludeActiveAgents);
+        Assert.False(runtimeOptions.IncludeUsageTelemetry);
+        Assert.False(runtimeOptions.LiveProcesses.IncludeAttentionReconciliation);
+        Assert.False(runtimeOptions.LiveProcesses.IncludeOperatorActions);
+        Assert.False(runtimeOptions.LiveProcesses.IncludeCurrentSteps);
+        Assert.False(runtimeOptions.LiveProcesses.IncludeChildRunWaits);
+    }
+
+    [Fact]
+    public void Detail_tabs_request_heavy_projection_shapes_on_demand()
+    {
+        using var context = CreateContext(out var client);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
+        var rolesOptions = client.LastRequest?.DefinitionLoadOptions;
+        Assert.NotNull(rolesOptions);
+        Assert.True(rolesOptions.IncludeRoleEditor);
+        Assert.False(rolesOptions.IncludeStepEditor);
+        Assert.False(rolesOptions.IncludeCanvas);
+        Assert.False(rolesOptions.IncludeTemplateCatalog);
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
+        var stepsOptions = client.LastRequest?.DefinitionLoadOptions;
+        Assert.NotNull(stepsOptions);
+        Assert.False(stepsOptions.IncludeRoleEditor);
+        Assert.True(stepsOptions.IncludeStepEditor);
+        Assert.True(stepsOptions.IncludeCanvas);
+        Assert.False(stepsOptions.IncludeTemplateCatalog);
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-exchange", "processes-detail-panel-exchange");
+        var exchangeOptions = client.LastRequest?.DefinitionLoadOptions;
+        Assert.NotNull(exchangeOptions);
+        Assert.False(exchangeOptions.IncludeRoleEditor);
+        Assert.False(exchangeOptions.IncludeStepEditor);
+        Assert.False(exchangeOptions.IncludeCanvas);
+        Assert.True(exchangeOptions.IncludeTemplateCatalog);
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-runs", "processes-detail-panel-runs");
+        var runsRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+        Assert.NotNull(runsRuntimeOptions);
+        Assert.True(runsRuntimeOptions.IncludeSelectedRun);
+        Assert.True(runsRuntimeOptions.IncludeHistory);
+        Assert.False(runsRuntimeOptions.IncludeMetricHistory);
+        Assert.True(runsRuntimeOptions.IncludeActiveAgents);
+        Assert.False(runsRuntimeOptions.IncludeUsageTelemetry);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeSelectedEditor);
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-graphs", "processes-detail-panel-graphs");
+        var graphRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+        Assert.NotNull(graphRuntimeOptions);
+        Assert.True(graphRuntimeOptions.IncludeSelectedRun);
+        Assert.True(graphRuntimeOptions.IncludeHistory);
+        Assert.True(graphRuntimeOptions.IncludeMetricHistory);
+        Assert.False(graphRuntimeOptions.IncludeActiveAgents);
+        Assert.True(graphRuntimeOptions.IncludeUsageTelemetry);
     }
 
     [Fact]
@@ -857,7 +938,11 @@ public sealed class ProcessWorkspaceShellTests
             ProcessWorkspaceShellRequest request,
             ProcessDefinitionCatalogCommandReceipt? lastReceipt)
         {
-            var catalog = CreateDefinitionCatalog(request.DefinitionCatalogQuery, request.TemplateCatalogQuery, lastReceipt);
+            var catalog = CreateDefinitionCatalog(
+                request.DefinitionCatalogQuery,
+                request.TemplateCatalogQuery,
+                lastReceipt,
+                request.DefinitionLoadOptions ?? ProcessDefinitionWorkspaceLoadOptions.Full);
             var authorization = new ProcessWorkspaceAuthorizationProjection(
                 CanReadDefinitions: true,
                 CanRefreshProjections: true,
@@ -893,22 +978,30 @@ public sealed class ProcessWorkspaceShellTests
 
         private static ProcessRuntimeWorkspaceProjection CreateRuntimeWorkspace(ProcessWorkspaceShellRequest request)
         {
+            var loadOptions = request.RuntimeQuery?.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full;
             var runId = new ProcessRunId(Guid.Parse("77777777-7777-7777-7777-777777777777"));
             var secondRunId = new ProcessRunId(Guid.Parse("88888888-8888-8888-8888-888888888888"));
-            ProcessRunId? selectedRunId = request.RuntimeQuery?.SelectedRunId == secondRunId.Value
-                ? secondRunId
-                : request.RuntimeQuery?.SelectedRunId == runId.Value
-                    ? runId
-                    : request.RuntimeQuery?.AutoSelectRun != false
+            var shouldResolveSelectedRun = loadOptions.IncludeSelectedRun ||
+                loadOptions.IncludeHistory ||
+                loadOptions.IncludeMetricHistory ||
+                loadOptions.IncludeActiveAgents;
+            ProcessRunId? selectedRunId = shouldResolveSelectedRun
+                ? request.RuntimeQuery?.SelectedRunId == secondRunId.Value
+                    ? secondRunId
+                    : request.RuntimeQuery?.SelectedRunId == runId.Value
                         ? runId
-                        : null;
+                        : request.RuntimeQuery?.AutoSelectRun != false
+                            ? runId
+                            : null
+                : null;
             var freshness = new ProcessProjectionFreshness(
                 Now,
                 SourceGlobalSequence: 12,
                 new ProcessProjectionLag(12, 12, BacklogEventCount: 0));
             var eventRunId = selectedRunId ?? runId;
-            var events = CreateRuntimeEvents(eventRunId);
-            var selectedRun = selectedRunId is null
+            var events = loadOptions.IncludeHistory ? CreateRuntimeEvents(eventRunId) : [];
+            var metricEvents = loadOptions.IncludeMetricHistory ? CreateRuntimeEvents(eventRunId) : [];
+            var selectedRun = selectedRunId is null || !loadOptions.IncludeSelectedRun
                 ? null
                 : new ProcessRunDetailProjection(
                     selectedRunId.Value,
@@ -917,10 +1010,10 @@ public sealed class ProcessWorkspaceShellTests
                     Now.AddMinutes(-35),
                     Now.AddMinutes(-2),
                     freshness,
-                    events.Select(ToLiveRunEvent).ToArray());
+                    CreateRuntimeEvents(selectedRunId.Value).Select(ToLiveRunEvent).ToArray());
             var runs = new[]
             {
-                CreateLiveRun(runId, ProcessProjectedRunStatus.NeedsAttention, freshness, events),
+                CreateLiveRun(runId, ProcessProjectedRunStatus.NeedsAttention, freshness, CreateRuntimeEvents(runId)),
                 CreateLiveRun(secondRunId, ProcessProjectedRunStatus.Active, freshness, CreateRuntimeEvents(secondRunId, startSequence: 20))
             };
             var historyWindow = request.RuntimeQuery?.HistoryWindow ?? ProcessRuntimeHistoryWindow.OneDay;
@@ -937,43 +1030,49 @@ public sealed class ProcessWorkspaceShellTests
                 runs,
                 events,
                 runs.SelectMany(run => run.Incidents).ToArray(),
-                [
-                    new ProcessManagerMessageProjection(
-                        "manager-message-test",
-                        eventRunId,
-                        eventRunId,
-                        "Manager Incident Raised",
-                        "Manager incident raised; operator review is required.",
-                        Now.AddMinutes(-2),
-                        ProcessProjectedSensitivity.Normal,
-                        RestrictedDiagnosticReference: null)
-                ],
-                [
-                    new ProcessRuntimeActiveAgentProjection(
-                        eventRunId.Value,
-                        Guid.Parse("99999999-9999-9999-9999-999999999999"),
-                        $"Run {eventRunId.Value.ToString("N")[..8]}",
-                        "implementation",
-                        "lead-engineer",
-                        "agent",
-                        "agent-dotnet-developer",
-                        ".NET Developer",
-                        "Running",
-                        IsWorking: true,
-                        IsLeaseExpired: false,
-                        Now.AddMinutes(-1),
-                        Now.AddMinutes(-30),
-                        Now.AddMinutes(20),
-                        ".NET Developer is Running on implementation as lead-engineer.")
-                ],
+                loadOptions.IncludeMetricHistory
+                    ?
+                    [
+                        new ProcessManagerMessageProjection(
+                            "manager-message-test",
+                            eventRunId,
+                            eventRunId,
+                            "Manager Incident Raised",
+                            "Manager incident raised; operator review is required.",
+                            Now.AddMinutes(-2),
+                            ProcessProjectedSensitivity.Normal,
+                            RestrictedDiagnosticReference: null)
+                    ]
+                    : [],
+                loadOptions.IncludeActiveAgents
+                    ?
+                    [
+                        new ProcessRuntimeActiveAgentProjection(
+                            eventRunId.Value,
+                            Guid.Parse("99999999-9999-9999-9999-999999999999"),
+                            $"Run {eventRunId.Value.ToString("N")[..8]}",
+                            "implementation",
+                            "lead-engineer",
+                            "agent",
+                            "agent-dotnet-developer",
+                            ".NET Developer",
+                            "Running",
+                            IsWorking: true,
+                            IsLeaseExpired: false,
+                            Now.AddMinutes(-1),
+                            Now.AddMinutes(-30),
+                            Now.AddMinutes(20),
+                            ".NET Developer is Running on implementation as lead-engineer.")
+                    ]
+                    : [],
                 new ProcessRuntimeStatsProjection(
                     ObservedRunCount: runs.Length,
                     ActiveRunCount: 2,
                     AttentionRunCount: 1,
                     FailedRunCount: 0,
-                    EventCount: events.Count,
-                    ManagerEventCount: 1,
-                    ToolCallCount: events.Count,
+                    EventCount: loadOptions.IncludeMetricHistory ? metricEvents.Count : events.Count,
+                    ManagerEventCount: loadOptions.IncludeMetricHistory ? 1 : 0,
+                    ToolCallCount: loadOptions.IncludeMetricHistory ? metricEvents.Count : events.Count,
                     DurationMs: 33 * 60 * 1000,
                     InputTokens: 0,
                     CachedInputTokens: 0,
@@ -981,7 +1080,7 @@ public sealed class ProcessWorkspaceShellTests
                     TotalTokens: 0,
                     EstimatedCost: 0m,
                     ActualCost: 0m),
-                events.Select(runtimeEvent => new ProcessRuntimeMetricPointProjection(
+                metricEvents.Select(runtimeEvent => new ProcessRuntimeMetricPointProjection(
                     runtimeEvent.OccurredAtUtc,
                     EventCount: 1,
                     ManagerEventCount: runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal) ? 1 : 0,
@@ -993,12 +1092,15 @@ public sealed class ProcessWorkspaceShellTests
                     TotalTokens: 0,
                     EstimatedCost: 0m,
                     ActualCost: 0m)).ToArray(),
-                [
-                    new ProcessRuntimeToolUsageProjection("Step Running", 1, Now.AddMinutes(-30), "1 event, latest test."),
-                    new ProcessRuntimeToolUsageProjection("Manager Incident Raised", 1, Now.AddMinutes(-2), "1 event, latest test.")
-                ],
+                loadOptions.IncludeMetricHistory
+                    ?
+                    [
+                        new ProcessRuntimeToolUsageProjection("Step Running", 1, Now.AddMinutes(-30), "1 event, latest test."),
+                        new ProcessRuntimeToolUsageProjection("Manager Incident Raised", 1, Now.AddMinutes(-2), "1 event, latest test.")
+                    ]
+                    : [],
                 freshness,
-                "2 run(s), 2 active, 1 needing attention, 3 event(s) on this page.",
+                $"2 run(s), 2 active, 1 needing attention, {events.Count.ToString(CultureInfo.InvariantCulture)} event(s) on this page.",
                 "Cause: Manager incident raised. Next action: open the selected run and review manager messages.");
         }
 
@@ -1114,7 +1216,8 @@ public sealed class ProcessWorkspaceShellTests
         private static ProcessDefinitionCatalogProjection CreateDefinitionCatalog(
             ProcessDefinitionCatalogQueryProjection query,
             ProcessTemplateCatalogQueryProjection templateQuery,
-            ProcessDefinitionCatalogCommandReceipt? lastReceipt)
+            ProcessDefinitionCatalogCommandReceipt? lastReceipt,
+            ProcessDefinitionWorkspaceLoadOptions loadOptions)
         {
             var items = new[]
             {
@@ -1168,14 +1271,16 @@ public sealed class ProcessWorkspaceShellTests
                 ],
                 filtered,
                 selected,
-                selected is null ? null : CreateEditor(selected.Key, templateQuery),
+                selected is null || !loadOptions.IncludeSelectedEditor ? null : CreateEditor(selected.Key, templateQuery, loadOptions),
                 lastReceipt);
         }
 
         private static ProcessDefinitionEditorProjection CreateEditor(
             ProcessDefinitionCatalogItemKey key,
-            ProcessTemplateCatalogQueryProjection? templateQuery = null)
+            ProcessTemplateCatalogQueryProjection? templateQuery = null,
+            ProcessDefinitionWorkspaceLoadOptions? loadOptions = null)
         {
+            loadOptions ??= ProcessDefinitionWorkspaceLoadOptions.Full;
             var draft = new ProcessDefinitionEditorDraftProjection(
                 key,
                 new ProcessDefinitionEditorIdentityProjection(
@@ -1205,24 +1310,30 @@ public sealed class ProcessWorkspaceShellTests
                     RequiredArtifactExpectationCount: 3,
                     IsReadyForSimulation: true));
 
-            return CreateEditor(
+            var editor = CreateEditor(
                 key,
                 draft,
                 ProcessDefinitionAuthoringStatus.TemplateDefault,
                 new ProcessDefinitionEditorVersionToken($"template:{key.Value}"),
                 new ProcessDefinitionEditorLintProjection([]),
-                lastReceipt: null) with
+                lastReceipt: null);
+            return editor with
             {
-                TemplateCatalog = CreateTemplateCatalog(
-                    key,
-                    templateQuery ?? new ProcessTemplateCatalogQueryProjection(
-                        SearchText: null,
-                        ProcessTemplateCatalogCategoryKind.All,
-                        SelectedItemKey: null,
-                        ProcessTemplateCatalogPreviewTabKind.Overview,
-                        Take: 50),
-                    lastReceipt: null,
-                    importedComponents: [])
+                RoleEditor = loadOptions.IncludeRoleEditor ? editor.RoleEditor : null,
+                Canvas = loadOptions.IncludeCanvas ? editor.Canvas : null,
+                StepEditor = loadOptions.IncludeStepEditor ? editor.StepEditor : null,
+                TemplateCatalog = loadOptions.IncludeTemplateCatalog
+                    ? CreateTemplateCatalog(
+                        key,
+                        templateQuery ?? new ProcessTemplateCatalogQueryProjection(
+                            SearchText: null,
+                            ProcessTemplateCatalogCategoryKind.All,
+                            SelectedItemKey: null,
+                            ProcessTemplateCatalogPreviewTabKind.Overview,
+                            Take: 50),
+                        lastReceipt: null,
+                        importedComponents: [])
+                    : null
             };
         }
 

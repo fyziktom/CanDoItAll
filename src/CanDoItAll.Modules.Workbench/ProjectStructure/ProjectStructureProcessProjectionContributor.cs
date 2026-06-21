@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
@@ -11,6 +12,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     IDbContextFactory<ProcessPersistenceDbContext> processDbContextFactory,
     ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService) : IProjectStructureProjectionContributor
 {
+    private const string ProjectIdVariableName = "ProjectId";
+    private const string ProjectNodeIdVariableName = "ProjectNodeId";
+    private const string ProcessRunIdVariableName = "ProcessRunId";
+    private const string CurrentProcessRunIdVariableName = "CurrentProcessRunId";
+    private const string ProcessRunNodeIdVariableName = "ProcessRunNodeId";
+    private const string CurrentProcessRunNodeIdVariableName = "CurrentProcessRunNodeId";
+    private const string ProcessRunOutputFolderArtifactKind = "process-run-output-folder";
+
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
         var userAuthoredLinks = await context.DbContext.Set<ProjectObjectLinkRecord>()
@@ -28,10 +37,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 item.LinkKind,
                 item.CreatedAtUtc))
             .ToListAsync(cancellationToken);
-        if (userAuthoredLinks.Count == 0)
-        {
-            return;
-        }
 
         var linkedDefinitionIds = userAuthoredLinks
             .SelectMany(link => new[] { link.SourceNodeKey, link.TargetNodeKey })
@@ -45,6 +50,19 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             .Where(runId => runId.HasValue)
             .Select(runId => runId!.Value)
             .ToHashSet();
+
+        await using var processDbContext = await processDbContextFactory
+            .CreateDbContextAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var projectScopedRunReferences = await LoadProjectScopedRunReferencesAsync(
+                processDbContext,
+                context.ProjectId,
+                cancellationToken)
+            .ConfigureAwait(false);
+        foreach (var reference in projectScopedRunReferences)
+        {
+            linkedRunIds.Add(reference.RunId);
+        }
 
         if (linkedDefinitionIds.Count == 0 && linkedRunIds.Count == 0)
         {
@@ -64,9 +82,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 item => ProcessDefinitionCatalogProjectionService.CreateDefinitionId(item.Key).Value,
                 item => item);
 
-        await using var processDbContext = await processDbContextFactory
-            .CreateDbContextAsync(cancellationToken)
-            .ConfigureAwait(false);
         var linkedRunIdArray = linkedRunIds.ToArray();
         var linkedRuntimeStates = linkedRunIdArray.Length == 0
             ? []
@@ -147,9 +162,12 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         }
 
         var preferredDefinitionParentByNodeKey = BuildPreferredDefinitionParentMap(userAuthoredLinks);
-        var preferredRunParentByNodeKey = BuildPreferredRunParentMap(
-            userAuthoredLinks,
-            projectedRunNodeKeyByLinkedRunNodeKey);
+        var preferredRunParentByNodeKey = MergePreferredRunParentMaps(
+            BuildPreferredRunParentMap(
+                userAuthoredLinks,
+                projectedRunNodeKeyByLinkedRunNodeKey),
+            projectScopedRunReferences);
+        var outputFoldersByRunId = BuildOutputFolderMap(projectScopedRunReferences);
 
         foreach (var definition in linkedDefinitionIds
             .OrderBy(definitionId => ResolveDefinitionSortName(definitionId, catalogItemsByDefinitionId), StringComparer.OrdinalIgnoreCase)
@@ -177,6 +195,11 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 stepStatsByRunId.GetValueOrDefault(run.State.RunId, ProcessRunProjectionStats.Empty(run.State.RunId)),
                 run.Index,
                 preferredRunParentByNodeKey);
+            AddRunOutputNodes(
+                context,
+                run.State,
+                run.Index,
+                outputFoldersByRunId.GetValueOrDefault(run.State.RunId, []));
         }
     }
 
@@ -279,6 +302,61 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         context.AddLink(parentNodeKey, runNodeKey, ProjectObjectLinkKind.Contains);
     }
 
+    private static void AddRunOutputNodes(
+        ProjectStructureProjectionContext context,
+        ProjectStructureProcessRuntimeState state,
+        int runIndex,
+        IReadOnlyList<ProjectStructureProcessRunFolderProjection> outputFolders)
+    {
+        var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
+        if (!context.ContainsNode(runNodeKey))
+        {
+            return;
+        }
+
+        var projectableFolders = outputFolders.Count == 0
+            ? [ProjectStructureProcessRunFolderProjectionPolicy.Resolve(BuildManagedArtifactRoot(state.RunId), state.RunId)]
+            : outputFolders;
+        var folderIndex = 0;
+        foreach (var outputFolder in projectableFolders
+            .Where(folder => folder.ShouldProject)
+            .GroupBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase))
+        {
+            var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(state.RunId, outputFolder.DirectoryPath);
+            var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.File, (runIndex * 4) + folderIndex);
+            context.AddNode(new ProjectObjectRecord
+            {
+                ProjectId = context.ProjectId,
+                NodeKey = nodeKey,
+                ObjectType = ProjectObjectType.File,
+                ObjectSubtype = "folder",
+                Title = ResolveRunOutputTitle(outputFolder.Kind),
+                Subtitle = ResolveRunOutputSubtitle(outputFolder.Kind),
+                Status = state.Status.ToString(),
+                Notes = BuildRunOutputNotes(state.RunId, outputFolder),
+                MetadataJson = BuildRunOutputMetadataJson(outputFolder),
+                Binding = ProjectStructureProjectionBindingFactory.Create(
+                    $"/projects/{context.ProjectId:D}/structure",
+                    ProcessRunOutputFolderArtifactKind,
+                    state.RunId),
+                ParentNodeKey = runNodeKey,
+                PositionX = position.X,
+                PositionY = position.Y,
+                CreatedAtUtc = state.UpdatedAtUtc,
+                UpdatedAtUtc = state.UpdatedAtUtc
+            });
+
+            if (context.ContainsNode(nodeKey))
+            {
+                context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
+            }
+
+            folderIndex++;
+        }
+    }
+
     private static IReadOnlyDictionary<string, string> BuildPreferredDefinitionParentMap(
         IReadOnlyList<ProjectStructureProcessLink> userAuthoredLinks)
     {
@@ -320,6 +398,169 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             .ThenBy(link => link.SourceNodeKey, StringComparer.Ordinal)
             .GroupBy(link => link.TargetNodeKey, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().SourceNodeKey, StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyDictionary<string, string> MergePreferredRunParentMaps(
+        IReadOnlyDictionary<string, string> userAuthoredParentByNodeKey,
+        IReadOnlyList<ProjectScopedProcessRunReference> projectScopedRunReferences)
+    {
+        var merged = new Dictionary<string, string>(userAuthoredParentByNodeKey, StringComparer.Ordinal);
+        foreach (var reference in projectScopedRunReferences
+            .Where(reference => !string.IsNullOrWhiteSpace(reference.ProjectNodeKey))
+            .OrderByDescending(reference => reference.CreatedAtUtc)
+            .ThenBy(reference => reference.ProjectNodeKey, StringComparer.Ordinal)
+            .GroupBy(reference => ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(reference.RunId), StringComparer.Ordinal)
+            .Select(group => group.First()))
+        {
+            merged.TryAdd(ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(reference.RunId), reference.ProjectNodeKey);
+        }
+
+        return merged;
+    }
+
+    private static IReadOnlyDictionary<Guid, IReadOnlyList<ProjectStructureProcessRunFolderProjection>> BuildOutputFolderMap(
+        IReadOnlyList<ProjectScopedProcessRunReference> projectScopedRunReferences)
+    {
+        return projectScopedRunReferences
+            .GroupBy(reference => reference.RunId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ProjectStructureProcessRunFolderProjection>)group
+                    .SelectMany(reference => reference.OutputFolders)
+                    .Where(folder => folder.ShouldProject)
+                    .GroupBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
+                    .Select(folderGroup => folderGroup.First())
+                    .OrderBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
+                    .ToArray());
+    }
+
+    private static async Task<IReadOnlyList<ProjectScopedProcessRunReference>> LoadProjectScopedRunReferencesAsync(
+        ProcessPersistenceDbContext processDbContext,
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        var projectIdText = projectId.ToString("D");
+        var projectIdSnippet = BuildLaunchVariableJsonSnippet(ProjectIdVariableName, projectIdText);
+        var rows = await processDbContext.RuntimeStepAssignments
+            .AsNoTracking()
+            .Where(assignment => assignment.LaunchVariablesJson.Contains(projectIdSnippet))
+            .Select(assignment => new ProjectStructureProcessAssignmentScope(
+                assignment.RunId,
+                assignment.LaunchVariablesJson,
+                assignment.CreatedAtUtc))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var references = new List<ProjectScopedProcessRunReference>();
+        foreach (var row in rows)
+        {
+            var variables = DeserializeLaunchVariables(row.LaunchVariablesJson);
+            if (!IsMatchingProjectScope(projectIdText, variables) ||
+                !IsRootProjectRunAssignment(row.RunId, variables) ||
+                string.IsNullOrWhiteSpace(ResolveLaunchVariable(variables, ProjectNodeIdVariableName)))
+            {
+                continue;
+            }
+
+            references.Add(new ProjectScopedProcessRunReference(
+                row.RunId,
+                ResolveLaunchVariable(variables, ProjectNodeIdVariableName),
+                EnumerateProjectableOutputFolders(row.RunId, variables),
+                row.CreatedAtUtc));
+        }
+
+        return references
+            .OrderBy(reference => reference.CreatedAtUtc)
+            .ThenBy(reference => reference.RunId)
+            .ToArray();
+    }
+
+    private static bool IsMatchingProjectScope(
+        string projectIdText,
+        IReadOnlyDictionary<string, string> variables)
+        => string.Equals(ResolveLaunchVariable(variables, ProjectIdVariableName), projectIdText, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsRootProjectRunAssignment(
+        Guid runId,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        if (TryResolveLaunchVariableGuid(variables, CurrentProcessRunIdVariableName, out var currentRunId) &&
+            currentRunId != runId)
+        {
+            return false;
+        }
+
+        if (TryResolveLaunchVariableGuid(variables, ProcessRunIdVariableName, out var processRunId) &&
+            processRunId != runId)
+        {
+            return false;
+        }
+
+        var currentRunNodeId = ResolveLaunchVariable(variables, CurrentProcessRunNodeIdVariableName);
+        var processRunNodeId = ResolveLaunchVariable(variables, ProcessRunNodeIdVariableName);
+        return string.IsNullOrWhiteSpace(currentRunNodeId) ||
+               string.IsNullOrWhiteSpace(processRunNodeId) ||
+               string.Equals(currentRunNodeId, processRunNodeId, StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<ProjectStructureProcessRunFolderProjection> EnumerateProjectableOutputFolders(
+        Guid runId,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        var folders = new List<ProjectStructureProcessRunFolderProjection>
+        {
+            ProjectStructureProcessRunFolderProjectionPolicy.Resolve(BuildManagedArtifactRoot(runId), runId)
+        };
+
+        foreach (var value in variables.Values)
+        {
+            var folder = ProjectStructureProcessRunFolderProjectionPolicy.Resolve(value, runId);
+            if (folder.ShouldProject)
+            {
+                folders.Add(folder);
+            }
+        }
+
+        return folders
+            .Where(folder => folder.ShouldProject)
+            .GroupBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, string> DeserializeLaunchVariables(string launchVariablesJson)
+    {
+        if (string.IsNullOrWhiteSpace(launchVariablesJson))
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var parsed = JsonSerializer.Deserialize<Dictionary<string, string>>(launchVariablesJson);
+        return parsed is null
+            ? new Dictionary<string, string>(StringComparer.Ordinal)
+            : new Dictionary<string, string>(parsed, StringComparer.Ordinal);
+    }
+
+    private static string ResolveLaunchVariable(
+        IReadOnlyDictionary<string, string> variables,
+        string key)
+        => variables.TryGetValue(key, out var value)
+            ? value.Trim()
+            : string.Empty;
+
+    private static bool TryResolveLaunchVariableGuid(
+        IReadOnlyDictionary<string, string> variables,
+        string key,
+        out Guid value)
+        => Guid.TryParse(ResolveLaunchVariable(variables, key), out value);
+
+    private static string BuildLaunchVariableJsonSnippet(string key, string value)
+    {
+        var json = JsonSerializer.Serialize(new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [key] = value
+        });
+        return json.Trim('{', '}');
     }
 
     private static Guid? TryResolveProcessDefinitionId(string nodeKey)
@@ -394,8 +635,62 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             });
     }
 
+    private static string ResolveRunOutputTitle(ProjectStructureProcessRunFolderProjectionKind kind)
+        => kind switch
+        {
+            ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot => "Product output",
+            ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot => "Run artifacts",
+            _ => "Run output"
+        };
+
+    private static string ResolveRunOutputSubtitle(ProjectStructureProcessRunFolderProjectionKind kind)
+        => kind switch
+        {
+            ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot => "Managed product output folder",
+            ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot => "Managed artifact folder",
+            _ => "Managed process run folder"
+        };
+
+    private static string BuildRunOutputNotes(
+        Guid runId,
+        ProjectStructureProcessRunFolderProjection outputFolder)
+        => string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                $"Process run output for {runId:D}.",
+                $"Folder kind: {outputFolder.Kind}.",
+                $"Managed path: {outputFolder.DirectoryPath}"
+            });
+
+    private static string BuildRunOutputMetadataJson(ProjectStructureProcessRunFolderProjection outputFolder)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            processRunOutput = new
+            {
+                outputFolder.DirectoryPath,
+                Kind = outputFolder.Kind.ToString()
+            }
+        });
+    }
+
+    private static string BuildManagedArtifactRoot(Guid runId)
+        => $"artifacts/process-runs/{runId:D}";
+
     private static string ShortId(Guid value)
         => value.ToString("N")[..8];
+
+    private sealed record ProjectStructureProcessAssignmentScope(
+        Guid RunId,
+        string LaunchVariablesJson,
+        DateTimeOffset CreatedAtUtc);
+
+    private sealed record ProjectScopedProcessRunReference(
+        Guid RunId,
+        string ProjectNodeKey,
+        IReadOnlyList<ProjectStructureProcessRunFolderProjection> OutputFolders,
+        DateTimeOffset CreatedAtUtc);
 
     private sealed record ProjectStructureProcessLink(
         string SourceNodeKey,

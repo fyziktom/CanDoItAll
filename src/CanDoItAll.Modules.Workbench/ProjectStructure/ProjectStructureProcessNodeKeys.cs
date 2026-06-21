@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectStructureProcessNodeKeys
@@ -14,6 +17,19 @@ internal static class ProjectStructureProcessNodeKeys
     public static string BuildProcessRunNodeKey(Guid runId)
     {
         return $"{ProcessRunPrefix}{runId:D}";
+    }
+
+    public static string BuildProcessRunOutputNodeKey(Guid runId, string directoryPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);
+
+        var normalizedPath = directoryPath
+            .Trim()
+            .Replace('\\', '/')
+            .Trim('/');
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedPath)))
+            .ToLowerInvariant()[..16];
+        return $"{ProcessRunOutputPrefix}{runId:D}:{hash}";
     }
 
     public static bool TryParseProcessDefinitionNodeKey(string nodeKey, out Guid definitionId)

@@ -431,6 +431,65 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task ProcessLaunchApplicationService_LaunchAsync_projects_run_and_managed_artifact_folder_without_seed_link()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
+
+        var projectId = await CreateProjectAsync(projects, "Direct project scoped process projection");
+        var deliveryNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Build TetrisGame",
+                "Blazor delivery target",
+                "Implement the TetrisGame app.",
+                $"project:{projectId:D}",
+                320,
+                220,
+                null,
+                null,
+                "delivery"));
+
+        var result = await launchService.LaunchAsync(
+            new ProcessLaunchRequest(
+                DefinitionKey: "software-delivery",
+                ProcessDefinitionId: null,
+                LiveRunProfileKey: null,
+                projectId,
+                deliveryNode.Id,
+                RequestedBy: "integration-test",
+                Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+                RunReadiness: false,
+                Execute: false));
+
+        Assert.True(result.RunId.HasValue);
+        var runId = result.RunId.Value;
+        var runNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId.Value);
+        var managedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(runId);
+        var outputNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId.Value, managedArtifactRoot);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var runNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ProcessRun, runNode.ObjectType);
+        Assert.Equal(deliveryNode.Id, runNode.ParentId);
+        var outputNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, outputNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.File, outputNode.ObjectType);
+        Assert.Equal("folder", outputNode.ObjectSubtype);
+        Assert.Equal(runNodeId, outputNode.ParentId);
+        Assert.Equal("process-run-output-folder", outputNode.ArtifactKind);
+        Assert.Equal(runId.Value, outputNode.ArtifactId);
+        Assert.Contains(managedArtifactRoot, outputNode.Notes, StringComparison.Ordinal);
+
+        var refreshedSurface = await workbench.GetStructureAsync(projectId);
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, outputNodeId, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task StartProcessNodeAsync_reports_missing_project_as_project_structure_error()
     {
         await using var application = await TestApplication.CreateAsync();

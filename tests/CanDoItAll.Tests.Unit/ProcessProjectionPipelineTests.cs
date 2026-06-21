@@ -220,6 +220,46 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Runtime_workspace_list_only_skips_detail_history_metrics_and_runtime_enrichment()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var countingStore = new CountingProjectionStore(store);
+        var query = new ProcessRuntimeProjectionQueryService(
+            countingStore,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new ThrowingRuntimeStateStore(),
+            new ThrowingAssignmentStore(),
+            new ThrowingObservationReader());
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            runId,
+            AutoSelectRun: true,
+            ProcessRuntimeWorkspaceLoadOptions.ListOnly));
+
+        var run = Assert.Single(workspace.Runs);
+        Assert.Equal(runId, run.RunId);
+        Assert.Null(workspace.SelectedRun);
+        Assert.Empty(workspace.Events);
+        Assert.Empty(workspace.MetricEvents);
+        Assert.Empty(workspace.ActiveAgents);
+        Assert.Equal(1, countingStore.ReadSnapshotsCallCount);
+        Assert.Equal(0, countingStore.LoadSnapshotCallCount);
+        Assert.Equal(0, countingStore.ReadHistoryCallCount);
+    }
+
+    [Fact]
     public async Task Live_process_query_projects_parent_waiting_on_active_child_run()
     {
         await using var dbContext = CreateDbContext();
@@ -1612,6 +1652,115 @@ public sealed class ProcessProjectionPipelineTests
                 .ToArray();
             return ValueTask.FromResult(result);
         }
+    }
+
+    private sealed class CountingProjectionStore(IProcessProjectionStore inner) : IProcessProjectionStore
+    {
+        public int ReadSnapshotsCallCount { get; private set; }
+
+        public int LoadSnapshotCallCount { get; private set; }
+
+        public int ReadHistoryCallCount { get; private set; }
+
+        public Task UpsertSnapshotAsync(
+            ProcessProjectionSnapshot snapshot,
+            CancellationToken cancellationToken = default)
+            => inner.UpsertSnapshotAsync(snapshot, cancellationToken);
+
+        public Task<ProcessProjectionSnapshot?> LoadSnapshotAsync(
+            ProcessProjectorName projectorName,
+            ProcessProjectionKey projectionKey,
+            CancellationToken cancellationToken = default)
+        {
+            LoadSnapshotCallCount++;
+            return inner.LoadSnapshotAsync(projectorName, projectionKey, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
+            ProcessProjectorName projectorName,
+            ProcessProjectionKeyPrefix projectionKeyPrefix,
+            int take,
+            CancellationToken cancellationToken = default)
+        {
+            ReadSnapshotsCallCount++;
+            return inner.ReadSnapshotsAsync(projectorName, projectionKeyPrefix, take, cancellationToken);
+        }
+
+        public Task AppendHistoryAsync(
+            ProcessProjectionHistoryRecord history,
+            CancellationToken cancellationToken = default)
+            => inner.AppendHistoryAsync(history, cancellationToken);
+
+        public Task<IReadOnlyList<ProcessProjectionHistoryRecord>> ReadHistoryAsync(
+            ProcessProjectionHistoryQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            ReadHistoryCallCount++;
+            return inner.ReadHistoryAsync(query, cancellationToken);
+        }
+
+        public Task SaveOffsetAsync(
+            ProcessProjectorOffset offset,
+            CancellationToken cancellationToken = default)
+            => inner.SaveOffsetAsync(offset, cancellationToken);
+
+        public Task<ProcessProjectorOffset?> LoadOffsetAsync(
+            ProcessProjectorName projectorName,
+            ProcessProjectionShardKey shardKey,
+            CancellationToken cancellationToken = default)
+            => inner.LoadOffsetAsync(projectorName, shardKey, cancellationToken);
+
+        public Task WriteDeadLetterAsync(
+            ProcessProjectionDeadLetter deadLetter,
+            CancellationToken cancellationToken = default)
+            => inner.WriteDeadLetterAsync(deadLetter, cancellationToken);
+
+        public Task<IReadOnlyList<ProcessProjectionDeadLetter>> ReadDeadLettersAsync(
+            ProcessProjectorName projectorName,
+            ProcessProjectionShardKey shardKey,
+            int take,
+            CancellationToken cancellationToken = default)
+            => inner.ReadDeadLettersAsync(projectorName, shardKey, take, cancellationToken);
+    }
+
+    private sealed class ThrowingRuntimeStateStore : IProcessRuntimeStateStore
+    {
+        public Task<ProcessRuntimeStateSnapshot?> LoadAsync(
+            ProcessRunId runId,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("List-only runtime workspace must not load runtime state.");
+    }
+
+    private sealed class ThrowingAssignmentStore : IProcessRuntimeStepAssignmentStore
+    {
+        public ValueTask SaveAsync(
+            IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("List-only runtime workspace must not save assignments.");
+
+        public ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunAsync(
+            ProcessRunId runId,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("List-only runtime workspace must not load assignments.");
+
+        public ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
+            IReadOnlyDictionary<string, string> requiredVariables,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("List-only runtime workspace must not search assignments.");
+
+        public ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
+            ProcessRunId runId,
+            ProcessStepInstanceId stepInstanceId,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("List-only runtime workspace must not load assignments.");
+    }
+
+    private sealed class ThrowingObservationReader : IProcessExecutionObservationReader
+    {
+        public ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
+            ProcessExecutionObservationQuery query,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("List-only runtime workspace must not read active-agent observations.");
     }
 
     private sealed class InMemoryUsageTelemetryReader(params ProcessRuntimeUsageObservation[] observations) : IProcessRuntimeUsageTelemetryReader

@@ -221,7 +221,60 @@ public sealed record ProcessWorkspaceShellRequest(
     ProcessDefinitionCatalogQueryProjection DefinitionCatalogQuery,
     ProcessTemplateCatalogQueryProjection TemplateCatalogQuery,
     bool ForceRefresh,
-    ProcessRuntimeWorkspaceQueryProjection? RuntimeQuery = null);
+    ProcessRuntimeWorkspaceQueryProjection? RuntimeQuery = null,
+    ProcessDefinitionWorkspaceLoadOptions? DefinitionLoadOptions = null);
+
+public sealed record ProcessDefinitionWorkspaceLoadOptions
+{
+    public static ProcessDefinitionWorkspaceLoadOptions Full { get; } = new();
+
+    public static ProcessDefinitionWorkspaceLoadOptions CatalogOnly { get; } = new()
+    {
+        IncludeSelectedEditor = false,
+        IncludeRoleEditor = false,
+        IncludeStepEditor = false,
+        IncludeCanvas = false,
+        IncludeTemplateCatalog = false
+    };
+
+    public static ProcessDefinitionWorkspaceLoadOptions Basics { get; } = new()
+    {
+        IncludeRoleEditor = false,
+        IncludeStepEditor = false,
+        IncludeCanvas = false,
+        IncludeTemplateCatalog = false
+    };
+
+    public static ProcessDefinitionWorkspaceLoadOptions Roles { get; } = new()
+    {
+        IncludeStepEditor = false,
+        IncludeCanvas = false,
+        IncludeTemplateCatalog = false
+    };
+
+    public static ProcessDefinitionWorkspaceLoadOptions Steps { get; } = new()
+    {
+        IncludeRoleEditor = false,
+        IncludeTemplateCatalog = false
+    };
+
+    public static ProcessDefinitionWorkspaceLoadOptions Exchange { get; } = new()
+    {
+        IncludeRoleEditor = false,
+        IncludeStepEditor = false,
+        IncludeCanvas = false
+    };
+
+    public bool IncludeSelectedEditor { get; init; } = true;
+
+    public bool IncludeRoleEditor { get; init; } = true;
+
+    public bool IncludeStepEditor { get; init; } = true;
+
+    public bool IncludeCanvas { get; init; } = true;
+
+    public bool IncludeTemplateCatalog { get; init; } = true;
+}
 
 public sealed record ProcessWorkspaceTabProjection(
     ProcessWorkspaceTabKey Key,
@@ -405,7 +458,8 @@ public sealed record ProcessRuntimeWorkspaceQueryProjection(
     int EventPageSize,
     Guid? SelectedRunId,
     bool AutoSelectRun = true,
-    int TakeRuns = 100);
+    int TakeRuns = 100,
+    ProcessRuntimeWorkspaceLoadOptions? LoadOptions = null);
 
 public sealed record ProcessRuntimeStatsProjection(
     int ObservedRunCount,

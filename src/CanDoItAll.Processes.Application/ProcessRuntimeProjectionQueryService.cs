@@ -45,11 +45,27 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs.Add(run);
         }
 
+        var loadOptions = query.LoadOptions ?? ProcessLiveProcessesLoadOptions.Full;
         var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
-        runs = (await ReconcileLiveActivityAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
-        runs = (await EnrichOperatorActionsAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
-        runs = (await EnrichCurrentStepsAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
-        runs = (await EnrichChildRunWaitsAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        if (loadOptions.IncludeAttentionReconciliation)
+        {
+            runs = (await ReconcileLiveActivityAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        }
+
+        if (loadOptions.IncludeOperatorActions)
+        {
+            runs = (await EnrichOperatorActionsAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        }
+
+        if (loadOptions.IncludeCurrentSteps)
+        {
+            runs = (await EnrichCurrentStepsAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        }
+
+        if (loadOptions.IncludeChildRunWaits)
+        {
+            runs = (await EnrichChildRunWaitsAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        }
 
         runs.Sort(static (left, right) =>
         {
@@ -120,34 +136,43 @@ public sealed class ProcessRuntimeProjectionQueryService(
         }
 
         var nowUtc = query.NowUtc == default ? clock.GetUtcNow() : query.NowUtc;
+        var loadOptions = query.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full;
         var liveProcesses = await GetLiveProcessesAsync(
-            new ProcessLiveProcessesQuery(nowUtc, query.Window, query.TakeRuns),
+            new ProcessLiveProcessesQuery(nowUtc, query.Window, query.TakeRuns, loadOptions.LiveProcesses),
             cancellationToken).ConfigureAwait(false);
-        var selectedRunId = ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId, query.AutoSelectRun);
+        var selectedRunId = RequiresSelectedRunId(loadOptions)
+            ? ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId, query.AutoSelectRun)
+            : query.SelectedRunId;
         ProcessRunDetailProjection? selectedRun = null;
-        if (selectedRunId is not null)
+        if (loadOptions.IncludeSelectedRun && selectedRunId is not null)
         {
             selectedRun = await GetRunDetailAsync(new ProcessRunDetailQuery(selectedRunId.Value), cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        var history = await GetRunHistoryAsync(
-            new ProcessRunHistoryQuery(
-                selectedRunId,
-                nowUtc - query.Window,
-                nowUtc,
-                Take: query.EventPageSize + 1,
-                Skip: checked(query.EventPage * query.EventPageSize)),
-            cancellationToken).ConfigureAwait(false);
-        var metricHistory = await GetRunHistoryAsync(
-            new ProcessRunHistoryQuery(
-                selectedRunId,
-                nowUtc - query.Window,
-                nowUtc,
-                Take: RuntimeMetricEventReadLimit),
-            cancellationToken).ConfigureAwait(false);
+        var history = loadOptions.IncludeHistory
+            ? await GetRunHistoryAsync(
+                new ProcessRunHistoryQuery(
+                    selectedRunId,
+                    nowUtc - query.Window,
+                    nowUtc,
+                    Take: query.EventPageSize + 1,
+                    Skip: checked(query.EventPage * query.EventPageSize)),
+                cancellationToken).ConfigureAwait(false)
+            : new ProcessRunHistoryResult([], Freshness: null);
+        var metricHistory = loadOptions.IncludeMetricHistory
+            ? await GetRunHistoryAsync(
+                new ProcessRunHistoryQuery(
+                    selectedRunId,
+                    nowUtc - query.Window,
+                    nowUtc,
+                    Take: RuntimeMetricEventReadLimit),
+                cancellationToken).ConfigureAwait(false)
+            : new ProcessRunHistoryResult([], Freshness: null);
         var events = history.Events.Take(query.EventPageSize).ToArray();
-        var activeAgents = await LoadActiveAgentsAsync(liveProcesses.Runs, nowUtc, cancellationToken).ConfigureAwait(false);
+        var activeAgents = loadOptions.IncludeActiveAgents
+            ? await LoadActiveAgentsAsync(liveProcesses.Runs, nowUtc, cancellationToken).ConfigureAwait(false)
+            : [];
         var freshness = CombineFreshness(liveProcesses.Freshness, history.Freshness, metricHistory.Freshness, selectedRun?.Freshness);
 
         return new ProcessRuntimeWorkspaceResult(
@@ -159,6 +184,12 @@ public sealed class ProcessRuntimeProjectionQueryService(
             activeAgents,
             freshness);
     }
+
+    private static bool RequiresSelectedRunId(ProcessRuntimeWorkspaceLoadOptions loadOptions)
+        => loadOptions.IncludeSelectedRun ||
+            loadOptions.IncludeHistory ||
+            loadOptions.IncludeMetricHistory ||
+            loadOptions.IncludeActiveAgents;
 
     public async Task<ProcessRunDetailProjection?> GetRunDetailAsync(
         ProcessRunDetailQuery query,

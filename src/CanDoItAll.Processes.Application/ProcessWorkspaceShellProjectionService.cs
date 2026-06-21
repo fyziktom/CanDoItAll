@@ -37,32 +37,42 @@ public sealed class ProcessWorkspaceShellProjectionService(
             CanLaunchRuns: true);
         var runtimeWorkspace = await LoadRuntimeWorkspaceAsync(request, observedAtUtc, cancellationToken).ConfigureAwait(false);
 
+        var definitionLoadOptions = request.DefinitionLoadOptions ?? ProcessDefinitionWorkspaceLoadOptions.Full;
         var definitionCatalog = await definitionCatalogProjectionService
             .GetCatalogAsync(request.Scope, request.DefinitionCatalogQuery, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
-        var selectedEditor = definitionCatalog.SelectedItem is null
-            ? null
-            : await definitionEditorProjectionService
-                .GetEditorAsync(request.Scope, definitionCatalog.SelectedItem.Key, cancellationToken)
+        ProcessDefinitionEditorProjection? selectedEditor = null;
+        if (definitionLoadOptions.IncludeSelectedEditor && definitionCatalog.SelectedItem is { } selectedItem)
+        {
+            selectedEditor = await definitionEditorProjectionService
+                .GetEditorAsync(request.Scope, selectedItem.Key, cancellationToken)
                 .ConfigureAwait(false);
+        }
         if (selectedEditor is not null)
         {
-            var selectedRoleEditor = await definitionRoleEditorProjectionService
-                .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
-                .ConfigureAwait(false);
-            var selectedStepEditor = await definitionStepEditorProjectionService
-                .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
-                .ConfigureAwait(false);
+            var selectedStepEditor = definitionLoadOptions.IncludeStepEditor || definitionLoadOptions.IncludeTemplateCatalog
+                ? await definitionStepEditorProjectionService
+                    .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+                    .ConfigureAwait(false)
+                : null;
             selectedEditor = selectedEditor with
             {
-                RoleEditor = selectedRoleEditor,
-                Canvas = await definitionCanvasEditorProjectionService
-                    .GetCanvasAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
-                    .ConfigureAwait(false),
-                StepEditor = selectedStepEditor,
-                TemplateCatalog = await templateCatalogProjectionService
-                    .GetCatalogAsync(request.Scope, selectedEditor.DefinitionKey, request.TemplateCatalogQuery, selectedStepEditor, cancellationToken)
-                    .ConfigureAwait(false)
+                RoleEditor = definitionLoadOptions.IncludeRoleEditor
+                    ? await definitionRoleEditorProjectionService
+                        .GetEditorAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+                        .ConfigureAwait(false)
+                    : null,
+                Canvas = definitionLoadOptions.IncludeCanvas
+                    ? await definitionCanvasEditorProjectionService
+                        .GetCanvasAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken)
+                        .ConfigureAwait(false)
+                    : null,
+                StepEditor = definitionLoadOptions.IncludeStepEditor ? selectedStepEditor : null,
+                TemplateCatalog = definitionLoadOptions.IncludeTemplateCatalog && selectedStepEditor is not null
+                    ? await templateCatalogProjectionService
+                        .GetCatalogAsync(request.Scope, selectedEditor.DefinitionKey, request.TemplateCatalogQuery, selectedStepEditor, cancellationToken)
+                        .ConfigureAwait(false)
+                    : null
             };
         }
 
@@ -184,7 +194,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
                     runtimeQuery.EventPageSize,
                     TakeRuns: Math.Clamp(runtimeQuery.TakeRuns, 1, 100),
                     ResolveRunId(runtimeQuery.SelectedRunId ?? request.Selection.RunId),
-                    runtimeQuery.AutoSelectRun),
+                    runtimeQuery.AutoSelectRun,
+                    runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -204,7 +215,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
         DateTimeOffset observedAtUtc,
         CancellationToken cancellationToken)
     {
-        if (runtimeUsageTelemetryReader is null || result.Runs.Count == 0)
+        var loadOptions = runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full;
+        if (!loadOptions.IncludeUsageTelemetry || runtimeUsageTelemetryReader is null || result.Runs.Count == 0)
         {
             return [];
         }
