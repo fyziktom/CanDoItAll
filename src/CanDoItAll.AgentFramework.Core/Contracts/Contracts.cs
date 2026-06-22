@@ -19,6 +19,7 @@ public interface ISandboxWorkspaceExecutionStore
 {
     Task<SandboxWorkspaceExecutionState> LoadExecutionAsync(CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default);
+    Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default);
     Task SaveExecutionAsync(SandboxWorkspaceExecutionState executionState, CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceExecutionState> UpdateExecutionAsync(
         Func<SandboxWorkspaceExecutionState, SandboxWorkspaceExecutionState> update,
@@ -326,6 +327,10 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
 
     Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default);
+    Task<AgentOverviewSnapshot> GetAgentOverviewAsync(CancellationToken cancellationToken = default);
+    Task<AgentUsageDetailSnapshot> GetAgentUsageDetailsAsync(CancellationToken cancellationToken = default);
+    Task<ProviderUsageDetailSnapshot> GetProviderUsageDetailsAsync(CancellationToken cancellationToken = default);
+    Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default);
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default);

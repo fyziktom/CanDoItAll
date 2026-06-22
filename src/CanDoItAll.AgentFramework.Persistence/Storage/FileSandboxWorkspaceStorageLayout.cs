@@ -24,6 +24,8 @@ internal sealed class FileSandboxWorkspaceStorageLayout(string rootPath, Workspa
 
     public string ExecutionChatIndexPath => Path.Combine(ExecutionStorageRoot, "chat-index.json");
 
+    public string ExecutionUsageIndexPath => Path.Combine(ExecutionStorageRoot, "usage-index.json");
+
     public string ExecutionSessionsRoot => Path.Combine(ExecutionStorageRoot, "sessions");
 
     public string ExecutionRunsRoot => Path.Combine(ExecutionStorageRoot, "runs");

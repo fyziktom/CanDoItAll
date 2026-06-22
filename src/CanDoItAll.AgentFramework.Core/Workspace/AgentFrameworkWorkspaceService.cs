@@ -85,4 +85,165 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
             FailedRuns: executionSummary.FailedRuns,
             ToolExecutionBoundary: toolExecutionBoundary);
     }
+
+    public async Task<AgentOverviewSnapshot> GetAgentOverviewAsync(CancellationToken cancellationToken = default)
+    {
+        var catalogTask = store.LoadCatalogAsync(cancellationToken);
+        var executionSummaryTask = store.LoadExecutionSummaryAsync(cancellationToken);
+        var usageProjectionTask = store.LoadUsageProjectionAsync(cancellationToken);
+        await Task.WhenAll(catalogTask, executionSummaryTask, usageProjectionTask);
+
+        var catalog = await catalogTask;
+        var executionSummary = await executionSummaryTask;
+        var usageProjection = await usageProjectionTask;
+        var totals = CreateOverviewTotals(catalog, executionSummary, usageProjection);
+
+        return new AgentOverviewSnapshot(
+            totals,
+            MapAgentRows(catalog, usageProjection.Agents).Take(5).ToList(),
+            MapProviderRows(usageProjection.Providers),
+            MapModelRows(usageProjection.Models),
+            usageProjection.UpdatedAtUtc,
+            toolExecutionBoundary);
+    }
+
+    public async Task<AgentUsageDetailSnapshot> GetAgentUsageDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        var catalogTask = store.LoadCatalogAsync(cancellationToken);
+        var executionSummaryTask = store.LoadExecutionSummaryAsync(cancellationToken);
+        var usageProjectionTask = store.LoadUsageProjectionAsync(cancellationToken);
+        await Task.WhenAll(catalogTask, executionSummaryTask, usageProjectionTask);
+
+        var catalog = await catalogTask;
+        var executionSummary = await executionSummaryTask;
+        var usageProjection = await usageProjectionTask;
+        return new AgentUsageDetailSnapshot(
+            MapAgentRows(catalog, usageProjection.Agents),
+            CreateOverviewTotals(catalog, executionSummary, usageProjection),
+            usageProjection.UpdatedAtUtc);
+    }
+
+    public async Task<ProviderUsageDetailSnapshot> GetProviderUsageDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        var catalogTask = store.LoadCatalogAsync(cancellationToken);
+        var executionSummaryTask = store.LoadExecutionSummaryAsync(cancellationToken);
+        var usageProjectionTask = store.LoadUsageProjectionAsync(cancellationToken);
+        await Task.WhenAll(catalogTask, executionSummaryTask, usageProjectionTask);
+
+        var catalog = await catalogTask;
+        var executionSummary = await executionSummaryTask;
+        var usageProjection = await usageProjectionTask;
+        return new ProviderUsageDetailSnapshot(
+            MapProviderRows(usageProjection.Providers),
+            CreateOverviewTotals(catalog, executionSummary, usageProjection),
+            usageProjection.UpdatedAtUtc);
+    }
+
+    public async Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        var catalogTask = store.LoadCatalogAsync(cancellationToken);
+        var executionSummaryTask = store.LoadExecutionSummaryAsync(cancellationToken);
+        var usageProjectionTask = store.LoadUsageProjectionAsync(cancellationToken);
+        await Task.WhenAll(catalogTask, executionSummaryTask, usageProjectionTask);
+
+        var catalog = await catalogTask;
+        var executionSummary = await executionSummaryTask;
+        var usageProjection = await usageProjectionTask;
+        return new ModelUsageDetailSnapshot(
+            MapModelRows(usageProjection.Models),
+            CreateOverviewTotals(catalog, executionSummary, usageProjection),
+            usageProjection.UpdatedAtUtc);
+    }
+
+    private static AgentOverviewTotals CreateOverviewTotals(
+        SandboxWorkspaceCatalog catalog,
+        SandboxWorkspaceExecutionSummary executionSummary,
+        AgentUsageProjection usageProjection)
+    {
+        return new AgentOverviewTotals(
+            AgentCount: catalog.Agents.Count(item => !item.IsTemplate),
+            TemplateCount: catalog.Agents.Count(item => item.IsTemplate),
+            TeamCount: catalog.AgentTeams.Count,
+            ProviderCount: catalog.Providers.Count,
+            CapabilityCount: catalog.Capabilities.Count,
+            SessionCount: executionSummary.SessionCount,
+            MemoryCount: catalog.Memory.Count,
+            ActiveRuns: executionSummary.ActiveRuns,
+            FailedRuns: executionSummary.FailedRuns,
+            UsageObservationCount: usageProjection.UsageObservationCount,
+            KnownUsageObservationCount: usageProjection.KnownUsageObservationCount,
+            UnknownUsageObservationCount: usageProjection.UnknownUsageObservationCount,
+            InputTokens: usageProjection.InputTokens,
+            CachedInputTokens: usageProjection.CachedInputTokens,
+            OutputTokens: usageProjection.OutputTokens,
+            ReasoningTokens: usageProjection.ReasoningTokens,
+            TotalTokens: usageProjection.TotalTokens,
+            KnownCostUsd: usageProjection.KnownCostUsd);
+    }
+
+    private static IReadOnlyList<AgentOverviewUsageRow> MapAgentRows(
+        SandboxWorkspaceCatalog catalog,
+        IReadOnlyList<AgentUsageProjectionRow> rows)
+    {
+        var agentsById = catalog.Agents.ToDictionary(item => item.Id);
+        return rows
+            .Select(row => new AgentOverviewUsageRow(
+                row.AgentId,
+                agentsById.TryGetValue(row.AgentId, out var agent) ? agent.Name : "Unknown agent",
+                row.RunCount,
+                row.FailedRunCount,
+                row.UsageObservationCount,
+                row.KnownUsageObservationCount,
+                row.UnknownUsageObservationCount,
+                row.InputTokens,
+                row.CachedInputTokens,
+                row.OutputTokens,
+                row.ReasoningTokens,
+                row.TotalTokens,
+                row.KnownCostUsd,
+                row.LastUsedAtUtc))
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProviderOverviewUsageRow> MapProviderRows(
+        IReadOnlyList<ProviderUsageProjectionRow> rows)
+    {
+        return rows
+            .Select(row => new ProviderOverviewUsageRow(
+                row.ProviderName,
+                row.ProviderKind,
+                row.UsageObservationCount,
+                row.KnownUsageObservationCount,
+                row.UnknownUsageObservationCount,
+                row.InputTokens,
+                row.CachedInputTokens,
+                row.OutputTokens,
+                row.ReasoningTokens,
+                row.TotalTokens,
+                row.KnownCostUsd,
+                row.FailedRunCount,
+                row.LastUsedAtUtc))
+            .ToList();
+    }
+
+    private static IReadOnlyList<ModelOverviewUsageRow> MapModelRows(
+        IReadOnlyList<ModelUsageProjectionRow> rows)
+    {
+        return rows
+            .Select(row => new ModelOverviewUsageRow(
+                row.ProviderName,
+                row.ProviderKind,
+                row.Model,
+                row.UsageObservationCount,
+                row.KnownUsageObservationCount,
+                row.UnknownUsageObservationCount,
+                row.InputTokens,
+                row.CachedInputTokens,
+                row.OutputTokens,
+                row.ReasoningTokens,
+                row.TotalTokens,
+                row.KnownCostUsd,
+                row.LastUsedAtUtc))
+            .ToList();
+    }
 }

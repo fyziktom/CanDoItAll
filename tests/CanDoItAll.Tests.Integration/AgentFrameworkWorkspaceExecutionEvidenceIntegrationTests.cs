@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -55,6 +56,177 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         Assert.Equal(baseline.SessionCount, dashboard.SessionCount);
         Assert.Equal(baseline.ActiveRuns + 1, dashboard.ActiveRuns);
         Assert.Equal(baseline.FailedRuns + 1, dashboard.FailedRuns);
+    }
+
+    [Fact]
+    public async Task GetAgentOverviewAsync_projects_usage_statistics_from_split_execution_projection()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var workspaceStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunStore>(
+            scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        var agents = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .OrderBy(item => item.Name, StringComparer.Ordinal)
+            .Take(2)
+            .ToArray();
+        Assert.True(agents.Length >= 2);
+
+        var now = DateTimeOffset.UtcNow;
+        var topAgent = agents[0];
+        var secondAgent = agents[1];
+        var firstRunId = Guid.NewGuid();
+        var secondRunId = Guid.NewGuid();
+        var thirdRunId = Guid.NewGuid();
+
+        await workspaceStore.SaveExecutionRunDetailAsync(
+            CreateExecutionRunDetail(
+                topAgent.Id,
+                firstRunId,
+                now,
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                updatedAtUtc: now,
+                providerName: "OpenAI default",
+                model: "gpt-4.1") with
+            {
+                UsageObservations =
+                [
+                    CreateUsageObservation(
+                        firstRunId,
+                        topAgent.Id,
+                        now,
+                        "OpenAI default",
+                        ProviderKind.OpenAi,
+                        "gpt-4.1",
+                        ProviderUsageObservationStatus.Observed,
+                        inputTokens: 100,
+                        outputTokens: 40,
+                        costUsd: 0.015m)
+                ]
+            },
+            CancellationToken.None);
+
+        await workspaceStore.SaveExecutionRunDetailAsync(
+            CreateExecutionRunDetail(
+                topAgent.Id,
+                secondRunId,
+                now.AddMinutes(1),
+                ExecutionState.Completed,
+                RunOutcome.Failed,
+                updatedAtUtc: now.AddMinutes(1),
+                providerName: "OpenAI default",
+                model: "gpt-4.1") with
+            {
+                UsageObservations =
+                [
+                    CreateUsageObservation(
+                        secondRunId,
+                        topAgent.Id,
+                        now.AddMinutes(1),
+                        "OpenAI default",
+                        ProviderKind.OpenAi,
+                        "gpt-4.1",
+                        ProviderUsageObservationStatus.MissingAfterProviderActivity,
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        costUsd: null)
+                ]
+            },
+            CancellationToken.None);
+
+        await workspaceStore.SaveExecutionRunDetailAsync(
+            CreateExecutionRunDetail(
+                secondAgent.Id,
+                thirdRunId,
+                now.AddMinutes(2),
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                updatedAtUtc: now.AddMinutes(2),
+                providerName: "Azure OpenAI default",
+                model: "gpt-4o") with
+            {
+                UsageObservations =
+                [
+                    CreateUsageObservation(
+                        thirdRunId,
+                        secondAgent.Id,
+                        now.AddMinutes(2),
+                        "Azure OpenAI default",
+                        ProviderKind.AzureOpenAi,
+                        "gpt-4o",
+                        ProviderUsageObservationStatus.Observed,
+                        inputTokens: 80,
+                        outputTokens: 30,
+                        costUsd: 0.01m)
+                ]
+            },
+            CancellationToken.None);
+
+        var overview = await workspaceService.GetAgentOverviewAsync();
+        var agentDetails = await workspaceService.GetAgentUsageDetailsAsync();
+        var providerDetails = await workspaceService.GetProviderUsageDetailsAsync();
+        var modelDetails = await workspaceService.GetModelUsageDetailsAsync();
+
+        Assert.True(overview.Totals.UsageObservationCount >= 3);
+        Assert.True(overview.Totals.KnownUsageObservationCount >= 2);
+        Assert.True(overview.Totals.UnknownUsageObservationCount >= 1);
+        Assert.True(overview.Totals.TotalTokens >= 250);
+        Assert.Contains(overview.TopAgents, item =>
+            item.AgentId == topAgent.Id &&
+            item.AgentName == topAgent.Name &&
+            item.RunCount == 2 &&
+            item.FailedRunCount == 1 &&
+            item.UsageObservationCount == 2 &&
+            item.UnknownUsageObservationCount == 1);
+
+        var topAgentDetail = Assert.Single(agentDetails.Agents, item => item.AgentId == topAgent.Id);
+        Assert.Equal(topAgent.Name, topAgentDetail.AgentName);
+        Assert.Equal(2, topAgentDetail.RunCount);
+
+        var openAiProvider = Assert.Single(providerDetails.Providers, item =>
+            item.ProviderName == "OpenAI default" &&
+            item.ProviderKind == ProviderKind.OpenAi);
+        Assert.Equal(2, openAiProvider.UsageObservationCount);
+        Assert.Equal(1, openAiProvider.KnownUsageObservationCount);
+        Assert.Equal(1, openAiProvider.UnknownUsageObservationCount);
+        Assert.Equal(1, openAiProvider.FailedRunCount);
+
+        var model = Assert.Single(modelDetails.Models, item =>
+            item.ProviderName == "OpenAI default" &&
+            item.Model == "gpt-4.1");
+        Assert.Equal(2, model.UsageObservationCount);
+        Assert.Equal(140, model.TotalTokens);
+    }
+
+    [Fact]
+    public async Task LoadUsageProjectionAsync_returns_empty_projection_without_execution_usage()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cda-empty-agent-usage-{Guid.NewGuid():N}");
+        try
+        {
+            var store = new FileSandboxWorkspaceStore(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Organization("empty-agent-usage-test"));
+
+            var projection = await store.LoadUsageProjectionAsync();
+
+            Assert.Equal(0, projection.Agents.Sum(item => item.RunCount));
+            Assert.Equal(0, projection.UsageObservationCount);
+            Assert.Equal(0, projection.KnownUsageObservationCount);
+            Assert.Equal(0, projection.UnknownUsageObservationCount);
+            Assert.Equal(0, projection.TotalTokens);
+            Assert.Empty(projection.Agents);
+            Assert.Empty(projection.Providers);
+            Assert.Empty(projection.Models);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
     }
 
     [Fact]
@@ -291,7 +463,9 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         DateTimeOffset createdAtUtc,
         ExecutionState state,
         RunOutcome? outcome,
-        DateTimeOffset updatedAtUtc)
+        DateTimeOffset updatedAtUtc,
+        string providerName = "OpenAI default",
+        string model = "gpt-4.1")
     {
         return new ExecutionRunDetail(
             new ExecutionRunRecord(
@@ -308,8 +482,8 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                 MetadataJson: "{}",
                 InputSummary: "summary",
                 ResultSummary: outcome?.ToString() ?? state.ToString(),
-                ProviderName: "OpenAI default",
-                Model: "gpt-4.1",
+                ProviderName: providerName,
+                Model: model,
                 State: state,
                 Outcome: outcome,
                 CreatedAtUtc: createdAtUtc,
@@ -322,6 +496,40 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
             null,
             [],
             []);
+    }
+
+    private static ProviderUsageObservation CreateUsageObservation(
+        Guid executionRunId,
+        Guid agentId,
+        DateTimeOffset createdAtUtc,
+        string providerName,
+        ProviderKind providerKind,
+        string model,
+        ProviderUsageObservationStatus status,
+        int inputTokens,
+        int outputTokens,
+        decimal? costUsd)
+    {
+        return new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: createdAtUtc,
+            ProviderName: providerName,
+            ProviderKind: providerKind,
+            Model: model,
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: status,
+            InputTokens: inputTokens,
+            CachedInputTokens: 0,
+            OutputTokens: outputTokens,
+            ReasoningTokens: 0,
+            TotalTokens: inputTokens + outputTokens,
+            ToolCallCount: 0)
+        {
+            ExecutionRunId = executionRunId,
+            AgentId = agentId,
+            CalculatedCostUsd = costUsd
+        };
     }
 
     private static string BuildSerializedSessionState(params (string ToolName, IReadOnlyDictionary<string, object?> Arguments, object Result)[] toolCalls)

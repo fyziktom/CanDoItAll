@@ -143,6 +143,26 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         }
     }
 
+    public async Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
+    {
+        if (CanReadExecutionWithoutWorkspaceLock())
+        {
+            return await LoadUsageProjectionCoreAsync(cancellationToken);
+        }
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureExecutionSummaryReadCoreAsync(cancellationToken);
+            return await LoadUsageProjectionCoreAsync(cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     public async Task SaveExecutionAsync(SandboxWorkspaceExecutionState executionState, CancellationToken cancellationToken = default)
     {
         await UpdateWorkspaceAsync(
@@ -677,6 +697,9 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     private Task<SandboxWorkspaceExecutionState> LoadExecutionCoreAsync(CancellationToken cancellationToken)
         => executionSliceStore.LoadAsync(cancellationToken);
+
+    private Task<AgentUsageProjection> LoadUsageProjectionCoreAsync(CancellationToken cancellationToken)
+        => executionSliceStore.LoadUsageProjectionAsync(cancellationToken);
 
     private async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryCoreAsync(CancellationToken cancellationToken)
     {

@@ -29,6 +29,26 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return ResolveService().GetDashboardAsync(cancellationToken);
     }
 
+    public Task<AgentOverviewSnapshot> GetAgentOverviewAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetAgentOverviewAsync(cancellationToken);
+    }
+
+    public Task<AgentUsageDetailSnapshot> GetAgentUsageDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetAgentUsageDetailsAsync(cancellationToken);
+    }
+
+    public Task<ProviderUsageDetailSnapshot> GetProviderUsageDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetProviderUsageDetailsAsync(cancellationToken);
+    }
+
+    public Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetModelUsageDetailsAsync(cancellationToken);
+    }
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListAgentsAsync(includeTemplates, cancellationToken);

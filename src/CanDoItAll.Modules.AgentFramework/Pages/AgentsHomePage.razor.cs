@@ -1,8 +1,10 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.Charts;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,6 +43,9 @@ public partial class AgentsHomePage
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
     [SupplyParameterFromQuery(Name = "tab")]
     public string? RequestedTab { get; set; }
 
@@ -57,6 +62,8 @@ public partial class AgentsHomePage
     private Guid? effectiveRequestedAgentId;
     private bool isLoaded;
     private bool isFeedingDefaults;
+    private bool hasOverviewLoadError;
+    private string? overviewLoadError;
     private SandboxDashboardSnapshot dashboard = new(
         0,
         0,
@@ -67,6 +74,36 @@ public partial class AgentsHomePage
         0,
         0,
         ExecutionBoundaryDescriptor.Unknown);
+    private AgentOverviewSnapshot overview = AgentOverviewSnapshot.Empty;
+
+    private static readonly CdaChartOptions ProviderUsageBarChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "observations",
+        YAxisTitle = "Usage observations",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = false,
+        ValuePrecision = 0,
+        TooltipPrecision = 0,
+        Palette = CdaChartPalette.Calm
+    };
+
+    private static readonly CdaChartOptions ProviderUsageDistributionChartOptions = new()
+    {
+        Type = CdaChartType.Donut,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "observations",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = true,
+        ShowDataLabels = true,
+        ValuePrecision = 0,
+        TooltipPrecision = 0,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = CdaChartPalette.Energetic
+    };
 
     private IReadOnlyList<SecondaryTabItem> Tabs =>
     [
@@ -81,9 +118,45 @@ public partial class AgentsHomePage
         new("diagnostics", "Diagnostics", ResolveSummaryValue(failedRunCount))
     ];
 
-    private bool ShouldShowOverviewLoadingCard =>
-        !isLoaded &&
-        string.Equals(selectedTab, "overview", StringComparison.Ordinal);
+    private IReadOnlyList<ProviderOverviewUsageRow> OverviewProviderRows =>
+        overview.ProviderUsage
+            .OrderByDescending(AgentUsageDisplay.ResolveProviderUsageValue)
+            .Take(6)
+            .ToArray();
+
+    private IReadOnlyList<CdaChartSeries> ProviderUsageBarSeries =>
+        OverviewProviderRows.Count == 0
+            ? []
+            :
+            [
+                new CdaChartSeries
+                {
+                    Name = "Provider usage",
+                    Type = CdaChartType.Bar,
+                    Points = OverviewProviderRows
+                        .Select(item => new CdaChartPoint(
+                            AgentUsageDisplay.TrimLabel(item.ProviderName, 22),
+                            AgentUsageDisplay.ResolveProviderUsageValue(item)))
+                        .ToArray()
+                }
+            ];
+
+    private IReadOnlyList<CdaChartSeries> ProviderUsageDistributionSeries =>
+        OverviewProviderRows.Count == 0
+            ? []
+            :
+            [
+                new CdaChartSeries
+                {
+                    Name = "Provider share",
+                    Type = CdaChartType.Donut,
+                    Points = OverviewProviderRows
+                        .Select(item => new CdaChartPoint(
+                            AgentUsageDisplay.TrimLabel(item.ProviderName, 22),
+                            AgentUsageDisplay.ResolveProviderUsageValue(item)))
+                        .ToArray()
+                }
+            ];
 
     protected override Task OnInitializedAsync()
     {
@@ -115,10 +188,14 @@ public partial class AgentsHomePage
     {
         try
         {
+            hasOverviewLoadError = false;
+            overviewLoadError = null;
             await LoadDashboardAsync();
         }
         catch (Exception exception)
         {
+            hasOverviewLoadError = true;
+            overviewLoadError = exception.Message;
             SetStatusError($"Failed to load agent runtime summary. {exception.Message}");
         }
         finally
@@ -130,15 +207,17 @@ public partial class AgentsHomePage
     private async Task LoadDashboardAsync()
     {
         var dashboardTask = WorkspaceService.GetDashboardAsync();
+        var overviewTask = WorkspaceService.GetAgentOverviewAsync();
         var boundResourceCountTask = LoadBoundResourceCountAsync();
-        await Task.WhenAll(dashboardTask, boundResourceCountTask);
+        await Task.WhenAll(dashboardTask, overviewTask, boundResourceCountTask);
 
         dashboard = await dashboardTask;
-        technicalAgentCount = dashboard.AgentCount;
-        providerCount = dashboard.ProviderCount;
-        capabilityCount = dashboard.CapabilityCount;
-        activeRunCount = dashboard.ActiveRuns;
-        failedRunCount = dashboard.FailedRuns;
+        overview = await overviewTask;
+        technicalAgentCount = overview.Totals.AgentCount;
+        providerCount = overview.Totals.ProviderCount;
+        capabilityCount = overview.Totals.CapabilityCount;
+        activeRunCount = overview.Totals.ActiveRuns;
+        failedRunCount = overview.Totals.FailedRuns;
         boundResourceCount = await boundResourceCountTask;
 
         isLoaded = true;
@@ -267,6 +346,87 @@ public partial class AgentsHomePage
     private string ResolveSummaryValue(int value)
     {
         return isLoaded ? value.ToString() : "...";
+    }
+
+    private string ResolveOverviewValue(int value)
+    {
+        return isLoaded ? AgentUsageDisplay.FormatCount(value) : "...";
+    }
+
+    private string ResolveOverviewTokens(int value)
+    {
+        return isLoaded ? AgentUsageDisplay.FormatTokens(value) : "...";
+    }
+
+    private string ResolveOverviewCost(decimal value)
+    {
+        return isLoaded ? AgentUsageDisplay.FormatCost(value) : "...";
+    }
+
+    private async Task OpenAgentUsageDialogAsync()
+    {
+        try
+        {
+            await DialogService.OpenAsync<AgentUsageDialog>(
+                "Agent usage",
+                options: new DialogOptions
+                {
+                    Eyebrow = "Usage analytics",
+                    Subtitle = "Rank technical agents by executions, known usage, failed runs, and last activity.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    AriaLabel = "Agent usage details",
+                    TestId = "agents-usage-dialog-shell"
+                });
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Agent usage failed", exception.Message);
+        }
+    }
+
+    private async Task OpenProviderUsageDialogAsync()
+    {
+        try
+        {
+            await DialogService.OpenAsync<ProviderUsageDialog>(
+                "Provider usage",
+                options: new DialogOptions
+                {
+                    Eyebrow = "Provider distribution",
+                    Subtitle = "Inspect provider usage, token totals, unknown observations, cost, and failed runs.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    AriaLabel = "Provider usage details",
+                    TestId = "provider-usage-dialog-shell"
+                });
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider usage failed", exception.Message);
+        }
+    }
+
+    private async Task OpenModelUsageDialogAsync()
+    {
+        try
+        {
+            await DialogService.OpenAsync<ModelUsageDialog>(
+                "Model usage",
+                options: new DialogOptions
+                {
+                    Eyebrow = "Model distribution",
+                    Subtitle = "Inspect model-level usage without adding model detail to the default dashboard.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    AriaLabel = "Model usage details",
+                    TestId = "model-usage-dialog-shell"
+                });
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Model usage failed", exception.Message);
+        }
     }
 
     private void SetStatusMessage(string value)

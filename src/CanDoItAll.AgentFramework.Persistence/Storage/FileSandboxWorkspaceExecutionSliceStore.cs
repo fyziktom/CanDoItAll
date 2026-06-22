@@ -25,6 +25,11 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return ResolveExecutionIndexAsync(cancellationToken);
     }
 
+    public Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken)
+    {
+        return LoadOrBuildUsageProjectionAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ExecutionRunRecord>> ListRunsAsync(CancellationToken cancellationToken)
     {
         if (!ExecutionStorageExists())
@@ -181,6 +186,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         {
             await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionIndexPath, nextIndex, cancellationToken);
         }
+
+        await SaveUsageProjectionAsync(previousDetail, normalizedDetail, nextIndex, cancellationToken);
 
         return new ExecutionSliceSaveResult(changed, nextIndex, normalizedDetail);
     }
@@ -348,6 +355,16 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         if (changed || currentChatIndex is null || jsonStore.RequiresSave(currentChatIndex, nextChatIndex))
         {
             await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionChatIndexPath, nextChatIndex, cancellationToken);
+        }
+
+        var currentUsageProjection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(layout.ExecutionUsageIndexPath, cancellationToken);
+        var nextUsageProjection = BuildUsageProjection(executionState, nextIndex);
+        if (changed ||
+            currentUsageProjection is null ||
+            !File.Exists(layout.ExecutionUsageIndexPath) ||
+            jsonStore.RequiresSave(currentUsageProjection, nextUsageProjection))
+        {
+            await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionUsageIndexPath, nextUsageProjection, cancellationToken);
         }
 
         return changed;
@@ -648,6 +665,506 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return run.Outcome == RunOutcome.Failed;
     }
 
+    private async Task<AgentUsageProjection> LoadOrBuildUsageProjectionAsync(CancellationToken cancellationToken)
+    {
+        var executionIndex = await ResolveExecutionIndexAsync(cancellationToken);
+        var projection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(layout.ExecutionUsageIndexPath, cancellationToken);
+        if (projection is not null &&
+            projection.Revision == executionIndex.Revision &&
+            string.Equals(projection.Version, executionIndex.Version, StringComparison.Ordinal))
+        {
+            return projection;
+        }
+
+        var rebuilt = BuildUsageProjection(await LoadAsync(cancellationToken), executionIndex);
+        if (projection is null ||
+            !File.Exists(layout.ExecutionUsageIndexPath) ||
+            jsonStore.RequiresSave(projection, rebuilt))
+        {
+            await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionUsageIndexPath, rebuilt, cancellationToken);
+        }
+
+        return rebuilt;
+    }
+
+    private async Task SaveUsageProjectionAsync(
+        ExecutionRunDetail? previousDetail,
+        ExecutionRunDetail normalizedDetail,
+        ExecutionStorageIndex executionIndex,
+        CancellationToken cancellationToken)
+    {
+        var currentProjection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(layout.ExecutionUsageIndexPath, cancellationToken);
+        var canApplyDelta = currentProjection is not null &&
+                            (currentProjection.Revision == executionIndex.Revision ||
+                             currentProjection.Revision == executionIndex.Revision - 1);
+        var nextProjection = canApplyDelta
+            ? ApplyUsageProjectionDelta(currentProjection!, previousDetail, normalizedDetail, executionIndex)
+            : BuildUsageProjection(await LoadAsync(cancellationToken), executionIndex);
+
+        if (currentProjection is null ||
+            !File.Exists(layout.ExecutionUsageIndexPath) ||
+            jsonStore.RequiresSave(currentProjection, nextProjection))
+        {
+            await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionUsageIndexPath, nextProjection, cancellationToken);
+        }
+    }
+
+    private static AgentUsageProjection ApplyUsageProjectionDelta(
+        AgentUsageProjection currentProjection,
+        ExecutionRunDetail? previousDetail,
+        ExecutionRunDetail normalizedDetail,
+        ExecutionStorageIndex executionIndex)
+    {
+        var agentRows = currentProjection.Agents
+            .Select(CreateAgentAccumulator)
+            .ToDictionary(item => item.AgentId);
+        var providerRows = currentProjection.Providers
+            .Select(CreateProviderAccumulator)
+            .ToDictionary(item => CreateProviderKey(item.ProviderName, item.ProviderKind), StringComparer.OrdinalIgnoreCase);
+        var modelRows = currentProjection.Models
+            .Select(CreateModelAccumulator)
+            .ToDictionary(item => CreateModelKey(item.ProviderName, item.ProviderKind, item.Model), StringComparer.OrdinalIgnoreCase);
+
+        if (previousDetail is not null)
+        {
+            SubtractRunContribution(agentRows, providerRows, modelRows, previousDetail);
+        }
+
+        AddRunContribution(agentRows, providerRows, modelRows, normalizedDetail);
+
+        return new AgentUsageProjection(
+            Version: string.IsNullOrWhiteSpace(executionIndex.Version) ? currentProjection.Version : executionIndex.Version,
+            Revision: executionIndex.Revision,
+            UpdatedAtUtc: executionIndex.UpdatedAtUtc,
+            Agents: OrderAgentRows(agentRows.Values),
+            Providers: OrderProviderRows(providerRows.Values),
+            Models: OrderModelRows(modelRows.Values));
+    }
+
+    private static AgentUsageProjection BuildUsageProjection(
+        SandboxWorkspaceExecutionState executionState,
+        ExecutionStorageIndex executionIndex)
+    {
+        var agentRows = new Dictionary<Guid, AgentUsageProjectionAccumulator>();
+        var providerRows = new Dictionary<string, ProviderUsageProjectionAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var modelRows = new Dictionary<string, ModelUsageProjectionAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var details = executionState.ExecutionRuns
+            .Select(run => new ExecutionRunDetail(
+                run,
+                ChatSession: null,
+                ExecutionLog: [],
+                Metrics: []))
+            .ToDictionary(detail => detail.Run.Id);
+
+        foreach (var usageGroup in executionState.ProviderUsageObservations
+                     .Where(item => item.ExecutionRunId.HasValue)
+                     .GroupBy(item => item.ExecutionRunId!.Value))
+        {
+            if (details.TryGetValue(usageGroup.Key, out var detail))
+            {
+                details[usageGroup.Key] = detail with
+                {
+                    UsageObservations = usageGroup.ToList()
+                };
+            }
+        }
+
+        foreach (var detail in details.Values)
+        {
+            AddRunContribution(agentRows, providerRows, modelRows, detail);
+        }
+
+        foreach (var orphanUsage in executionState.ProviderUsageObservations.Where(item => !item.ExecutionRunId.HasValue))
+        {
+            AddProviderUsage(providerRows, orphanUsage, failedRunDelta: 0);
+            AddModelUsage(modelRows, orphanUsage);
+        }
+
+        return new AgentUsageProjection(
+            Version: string.IsNullOrWhiteSpace(executionIndex.Version) ? executionState.Version : executionIndex.Version,
+            Revision: executionIndex.Revision,
+            UpdatedAtUtc: executionIndex.UpdatedAtUtc,
+            Agents: OrderAgentRows(agentRows.Values),
+            Providers: OrderProviderRows(providerRows.Values),
+            Models: OrderModelRows(modelRows.Values));
+    }
+
+    private static void AddRunContribution(
+        IDictionary<Guid, AgentUsageProjectionAccumulator> agentRows,
+        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        ExecutionRunDetail detail)
+    {
+        AddAgentRun(agentRows, detail, delta: 1);
+        foreach (var observation in detail.UsageObservations)
+        {
+            AddAgentUsage(agentRows, detail.Run.AgentId, observation, delta: 1);
+            AddProviderUsage(providerRows, observation, failedRunDelta: 0);
+            AddModelUsage(modelRows, observation);
+        }
+
+        if (detail.Run.Outcome == RunOutcome.Failed)
+        {
+            AddProviderFailure(providerRows, detail.Run.ProviderName, failedRunDelta: 1);
+        }
+    }
+
+    private static void SubtractRunContribution(
+        IDictionary<Guid, AgentUsageProjectionAccumulator> agentRows,
+        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        ExecutionRunDetail detail)
+    {
+        AddAgentRun(agentRows, detail, delta: -1);
+        foreach (var observation in detail.UsageObservations)
+        {
+            AddAgentUsage(agentRows, detail.Run.AgentId, observation, delta: -1);
+            SubtractProviderUsage(providerRows, observation);
+            SubtractModelUsage(modelRows, observation);
+        }
+
+        if (detail.Run.Outcome == RunOutcome.Failed)
+        {
+            AddProviderFailure(providerRows, detail.Run.ProviderName, failedRunDelta: -1);
+        }
+    }
+
+    private static void AddAgentRun(
+        IDictionary<Guid, AgentUsageProjectionAccumulator> agentRows,
+        ExecutionRunDetail detail,
+        int delta)
+    {
+        var row = GetOrAddAgent(agentRows, detail.Run.AgentId);
+        row.RunCount = Math.Max(0, row.RunCount + delta);
+        row.FailedRunCount = Math.Max(0, row.FailedRunCount + (detail.Run.Outcome == RunOutcome.Failed ? delta : 0));
+        row.LastUsedAtUtc = MaxDate(row.LastUsedAtUtc, detail.Run.UpdatedAtUtc);
+        RemoveIfEmpty(agentRows, detail.Run.AgentId, row);
+    }
+
+    private static void AddAgentUsage(
+        IDictionary<Guid, AgentUsageProjectionAccumulator> agentRows,
+        Guid agentId,
+        ProviderUsageObservation observation,
+        int delta)
+    {
+        var row = GetOrAddAgent(agentRows, agentId);
+        ApplyUsage(row, observation, delta);
+        row.LastUsedAtUtc = MaxDate(row.LastUsedAtUtc, observation.CreatedAtUtc);
+        RemoveIfEmpty(agentRows, agentId, row);
+    }
+
+    private static void AddProviderUsage(
+        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        ProviderUsageObservation observation,
+        int failedRunDelta)
+    {
+        var key = CreateProviderKey(observation.ProviderName, observation.ProviderKind);
+        var row = GetOrAddProvider(providerRows, observation.ProviderName, observation.ProviderKind);
+        ApplyUsage(row, observation, delta: 1);
+        row.FailedRunCount = Math.Max(0, row.FailedRunCount + failedRunDelta);
+        row.LastUsedAtUtc = MaxDate(row.LastUsedAtUtc, observation.CreatedAtUtc);
+        providerRows[key] = row;
+    }
+
+    private static void SubtractProviderUsage(
+        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        ProviderUsageObservation observation)
+    {
+        var key = CreateProviderKey(observation.ProviderName, observation.ProviderKind);
+        if (!providerRows.TryGetValue(key, out var row))
+        {
+            return;
+        }
+
+        ApplyUsage(row, observation, delta: -1);
+        RemoveIfEmpty(providerRows, key, row);
+    }
+
+    private static void AddProviderFailure(
+        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        string providerName,
+        int failedRunDelta)
+    {
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return;
+        }
+
+        var match = providerRows.Values.FirstOrDefault(item =>
+            string.Equals(item.ProviderName, providerName, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            return;
+        }
+
+        match.FailedRunCount = Math.Max(0, match.FailedRunCount + failedRunDelta);
+    }
+
+    private static void AddModelUsage(
+        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        ProviderUsageObservation observation)
+    {
+        var key = CreateModelKey(observation.ProviderName, observation.ProviderKind, observation.Model);
+        var row = GetOrAddModel(modelRows, observation.ProviderName, observation.ProviderKind, observation.Model);
+        ApplyUsage(row, observation, delta: 1);
+        row.LastUsedAtUtc = MaxDate(row.LastUsedAtUtc, observation.CreatedAtUtc);
+        modelRows[key] = row;
+    }
+
+    private static void SubtractModelUsage(
+        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        ProviderUsageObservation observation)
+    {
+        var key = CreateModelKey(observation.ProviderName, observation.ProviderKind, observation.Model);
+        if (!modelRows.TryGetValue(key, out var row))
+        {
+            return;
+        }
+
+        ApplyUsage(row, observation, delta: -1);
+        RemoveIfEmpty(modelRows, key, row);
+    }
+
+    private static void ApplyUsage(UsageProjectionAccumulator row, ProviderUsageObservation observation, int delta)
+    {
+        var known = ProviderPricingCalculator.IsKnownUsageStatus(observation.UsageStatus);
+        row.UsageObservationCount = Math.Max(0, row.UsageObservationCount + delta);
+        row.KnownUsageObservationCount = Math.Max(0, row.KnownUsageObservationCount + (known ? delta : 0));
+        row.UnknownUsageObservationCount = Math.Max(0, row.UnknownUsageObservationCount + (known ? 0 : delta));
+
+        if (!known)
+        {
+            return;
+        }
+
+        row.InputTokens = Math.Max(0, row.InputTokens + observation.InputTokens * delta);
+        row.CachedInputTokens = Math.Max(0, row.CachedInputTokens + observation.CachedInputTokens * delta);
+        row.OutputTokens = Math.Max(0, row.OutputTokens + observation.OutputTokens * delta);
+        row.ReasoningTokens = Math.Max(0, row.ReasoningTokens + observation.ReasoningTokens * delta);
+        row.TotalTokens = Math.Max(0, row.TotalTokens + ResolveTotalTokens(observation) * delta);
+        row.KnownCostUsd = Math.Max(0m, row.KnownCostUsd + ResolveKnownCost(observation) * delta);
+    }
+
+    private static int ResolveTotalTokens(ProviderUsageObservation observation)
+    {
+        return observation.TotalTokens > 0
+            ? observation.TotalTokens
+            : Math.Max(0, observation.InputTokens) + Math.Max(0, observation.OutputTokens);
+    }
+
+    private static decimal ResolveKnownCost(ProviderUsageObservation observation)
+    {
+        return observation.ProviderCostUsd ?? observation.CalculatedCostUsd ?? 0m;
+    }
+
+    private static DateTimeOffset? MaxDate(DateTimeOffset? current, DateTimeOffset candidate)
+    {
+        return current.HasValue && current.Value >= candidate
+            ? current
+            : candidate;
+    }
+
+    private static AgentUsageProjectionAccumulator GetOrAddAgent(
+        IDictionary<Guid, AgentUsageProjectionAccumulator> rows,
+        Guid agentId)
+    {
+        if (!rows.TryGetValue(agentId, out var row))
+        {
+            row = new AgentUsageProjectionAccumulator(agentId);
+            rows[agentId] = row;
+        }
+
+        return row;
+    }
+
+    private static AgentUsageProjectionAccumulator CreateAgentAccumulator(AgentUsageProjectionRow row)
+    {
+        return new AgentUsageProjectionAccumulator(row.AgentId)
+        {
+            RunCount = row.RunCount,
+            FailedRunCount = row.FailedRunCount,
+            UsageObservationCount = row.UsageObservationCount,
+            KnownUsageObservationCount = row.KnownUsageObservationCount,
+            UnknownUsageObservationCount = row.UnknownUsageObservationCount,
+            InputTokens = row.InputTokens,
+            CachedInputTokens = row.CachedInputTokens,
+            OutputTokens = row.OutputTokens,
+            ReasoningTokens = row.ReasoningTokens,
+            TotalTokens = row.TotalTokens,
+            KnownCostUsd = row.KnownCostUsd,
+            LastUsedAtUtc = row.LastUsedAtUtc
+        };
+    }
+
+    private static ProviderUsageProjectionAccumulator GetOrAddProvider(
+        IDictionary<string, ProviderUsageProjectionAccumulator> rows,
+        string providerName,
+        ProviderKind providerKind)
+    {
+        var key = CreateProviderKey(providerName, providerKind);
+        if (!rows.TryGetValue(key, out var row))
+        {
+            row = new ProviderUsageProjectionAccumulator(
+                NormalizeProviderName(providerName),
+                providerKind);
+            rows[key] = row;
+        }
+
+        return row;
+    }
+
+    private static ProviderUsageProjectionAccumulator CreateProviderAccumulator(ProviderUsageProjectionRow row)
+    {
+        return new ProviderUsageProjectionAccumulator(row.ProviderName, row.ProviderKind)
+        {
+            UsageObservationCount = row.UsageObservationCount,
+            KnownUsageObservationCount = row.KnownUsageObservationCount,
+            UnknownUsageObservationCount = row.UnknownUsageObservationCount,
+            InputTokens = row.InputTokens,
+            CachedInputTokens = row.CachedInputTokens,
+            OutputTokens = row.OutputTokens,
+            ReasoningTokens = row.ReasoningTokens,
+            TotalTokens = row.TotalTokens,
+            KnownCostUsd = row.KnownCostUsd,
+            FailedRunCount = row.FailedRunCount,
+            LastUsedAtUtc = row.LastUsedAtUtc
+        };
+    }
+
+    private static ModelUsageProjectionAccumulator GetOrAddModel(
+        IDictionary<string, ModelUsageProjectionAccumulator> rows,
+        string providerName,
+        ProviderKind providerKind,
+        string model)
+    {
+        var key = CreateModelKey(providerName, providerKind, model);
+        if (!rows.TryGetValue(key, out var row))
+        {
+            row = new ModelUsageProjectionAccumulator(
+                NormalizeProviderName(providerName),
+                providerKind,
+                NormalizeModel(model));
+            rows[key] = row;
+        }
+
+        return row;
+    }
+
+    private static ModelUsageProjectionAccumulator CreateModelAccumulator(ModelUsageProjectionRow row)
+    {
+        return new ModelUsageProjectionAccumulator(row.ProviderName, row.ProviderKind, row.Model)
+        {
+            UsageObservationCount = row.UsageObservationCount,
+            KnownUsageObservationCount = row.KnownUsageObservationCount,
+            UnknownUsageObservationCount = row.UnknownUsageObservationCount,
+            InputTokens = row.InputTokens,
+            CachedInputTokens = row.CachedInputTokens,
+            OutputTokens = row.OutputTokens,
+            ReasoningTokens = row.ReasoningTokens,
+            TotalTokens = row.TotalTokens,
+            KnownCostUsd = row.KnownCostUsd,
+            LastUsedAtUtc = row.LastUsedAtUtc
+        };
+    }
+
+    private static string CreateProviderKey(ProviderUsageProjectionRow row)
+    {
+        return CreateProviderKey(row.ProviderName, row.ProviderKind);
+    }
+
+    private static string CreateProviderKey(string providerName, ProviderKind providerKind)
+    {
+        return $"{providerKind:D}:{NormalizeProviderName(providerName)}";
+    }
+
+    private static string CreateModelKey(ModelUsageProjectionRow row)
+    {
+        return CreateModelKey(row.ProviderName, row.ProviderKind, row.Model);
+    }
+
+    private static string CreateModelKey(string providerName, ProviderKind providerKind, string model)
+    {
+        return $"{providerKind:D}:{NormalizeProviderName(providerName)}:{NormalizeModel(model)}";
+    }
+
+    private static string NormalizeProviderName(string providerName)
+    {
+        return string.IsNullOrWhiteSpace(providerName) ? "Unknown provider" : providerName.Trim();
+    }
+
+    private static string NormalizeModel(string model)
+    {
+        return string.IsNullOrWhiteSpace(model) ? "Unknown model" : model.Trim();
+    }
+
+    private static IReadOnlyList<AgentUsageProjectionRow> OrderAgentRows(IEnumerable<AgentUsageProjectionAccumulator> rows)
+    {
+        return rows
+            .Where(item => !item.IsEmpty)
+            .Select(item => item.ToRow())
+            .OrderByDescending(item => item.UsageObservationCount)
+            .ThenByDescending(item => item.RunCount)
+            .ThenByDescending(item => item.TotalTokens)
+            .ThenBy(item => item.AgentId)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProviderUsageProjectionRow> OrderProviderRows(IEnumerable<ProviderUsageProjectionAccumulator> rows)
+    {
+        return rows
+            .Where(item => !item.IsEmpty)
+            .Select(item => item.ToRow())
+            .OrderByDescending(item => item.UsageObservationCount)
+            .ThenByDescending(item => item.TotalTokens)
+            .ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ModelUsageProjectionRow> OrderModelRows(IEnumerable<ModelUsageProjectionAccumulator> rows)
+    {
+        return rows
+            .Where(item => !item.IsEmpty)
+            .Select(item => item.ToRow())
+            .OrderByDescending(item => item.UsageObservationCount)
+            .ThenByDescending(item => item.TotalTokens)
+            .ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void RemoveIfEmpty(
+        IDictionary<Guid, AgentUsageProjectionAccumulator> rows,
+        Guid key,
+        AgentUsageProjectionAccumulator row)
+    {
+        if (row.IsEmpty)
+        {
+            rows.Remove(key);
+        }
+    }
+
+    private static void RemoveIfEmpty(
+        IDictionary<string, ProviderUsageProjectionAccumulator> rows,
+        string key,
+        ProviderUsageProjectionAccumulator row)
+    {
+        if (row.IsEmpty)
+        {
+            rows.Remove(key);
+        }
+    }
+
+    private static void RemoveIfEmpty(
+        IDictionary<string, ModelUsageProjectionAccumulator> rows,
+        string key,
+        ModelUsageProjectionAccumulator row)
+    {
+        if (row.IsEmpty)
+        {
+            rows.Remove(key);
+        }
+    }
+
     private static ExecutionRunDetail NormalizeRunDetail(ExecutionRunDetail detail)
     {
         return new ExecutionRunDetail(
@@ -751,3 +1268,116 @@ internal sealed record ExecutionChatIndex(
     DateTimeOffset UpdatedAtUtc,
     IReadOnlyList<ChatSessionSummaryRecord> SessionSummaries,
     IReadOnlyList<ChatRunSummaryRecord> RunSummaries);
+
+internal abstract class UsageProjectionAccumulator
+{
+    public int UsageObservationCount { get; set; }
+
+    public int KnownUsageObservationCount { get; set; }
+
+    public int UnknownUsageObservationCount { get; set; }
+
+    public int InputTokens { get; set; }
+
+    public int CachedInputTokens { get; set; }
+
+    public int OutputTokens { get; set; }
+
+    public int ReasoningTokens { get; set; }
+
+    public int TotalTokens { get; set; }
+
+    public decimal KnownCostUsd { get; set; }
+
+    public DateTimeOffset? LastUsedAtUtc { get; set; }
+
+    public virtual bool IsEmpty => UsageObservationCount == 0;
+}
+
+internal sealed class AgentUsageProjectionAccumulator(Guid agentId) : UsageProjectionAccumulator
+{
+    public Guid AgentId { get; } = agentId;
+
+    public int RunCount { get; set; }
+
+    public int FailedRunCount { get; set; }
+
+    public override bool IsEmpty => RunCount == 0 && UsageObservationCount == 0;
+
+    public AgentUsageProjectionRow ToRow()
+    {
+        return new AgentUsageProjectionRow(
+            AgentId,
+            RunCount,
+            FailedRunCount,
+            UsageObservationCount,
+            KnownUsageObservationCount,
+            UnknownUsageObservationCount,
+            InputTokens,
+            CachedInputTokens,
+            OutputTokens,
+            ReasoningTokens,
+            TotalTokens,
+            decimal.Round(KnownCostUsd, 6, MidpointRounding.AwayFromZero),
+            LastUsedAtUtc);
+    }
+}
+
+internal sealed class ProviderUsageProjectionAccumulator(
+    string providerName,
+    ProviderKind providerKind) : UsageProjectionAccumulator
+{
+    public string ProviderName { get; } = providerName;
+
+    public ProviderKind ProviderKind { get; } = providerKind;
+
+    public int FailedRunCount { get; set; }
+
+    public ProviderUsageProjectionRow ToRow()
+    {
+        return new ProviderUsageProjectionRow(
+            ProviderName,
+            ProviderKind,
+            UsageObservationCount,
+            KnownUsageObservationCount,
+            UnknownUsageObservationCount,
+            InputTokens,
+            CachedInputTokens,
+            OutputTokens,
+            ReasoningTokens,
+            TotalTokens,
+            decimal.Round(KnownCostUsd, 6, MidpointRounding.AwayFromZero),
+            FailedRunCount,
+            LastUsedAtUtc);
+    }
+}
+
+internal sealed class ModelUsageProjectionAccumulator(
+    string providerName,
+    ProviderKind providerKind,
+    string model) : UsageProjectionAccumulator
+{
+    public string ProviderName { get; } = providerName;
+
+    public ProviderKind ProviderKind { get; } = providerKind;
+
+    public string Model { get; } = model;
+
+    public ModelUsageProjectionRow ToRow()
+    {
+        return new ModelUsageProjectionRow(
+            ProviderName,
+            ProviderKind,
+            Model,
+            UsageObservationCount,
+            KnownUsageObservationCount,
+            UnknownUsageObservationCount,
+            InputTokens,
+            CachedInputTokens,
+            OutputTokens,
+            ReasoningTokens,
+            TotalTokens,
+            decimal.Round(KnownCostUsd, 6, MidpointRounding.AwayFromZero),
+            LastUsedAtUtc);
+    }
+}

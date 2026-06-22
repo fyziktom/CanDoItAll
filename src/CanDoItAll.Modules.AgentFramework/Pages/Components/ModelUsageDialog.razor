@@ -1,0 +1,170 @@
+@inject IAgentFrameworkWorkspaceService WorkspaceService
+
+@if (isLoading)
+{
+    <LoadingState Eyebrow="Model usage"
+                  Title="Loading model usage"
+                  Description="Reading model-level usage aggregates only for this dialog." />
+}
+else if (!string.IsNullOrWhiteSpace(loadError))
+{
+    <EmptyState Eyebrow="Usage unavailable"
+                Title="Model usage could not be loaded"
+                Description="@loadError" />
+}
+else
+{
+    <Stack GapScale="LayoutGap.Large"
+           data-testid="model-usage-dialog">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fit,minmax(9rem,1fr))">
+            <MetricCard Label="Models" Value="@AgentUsageDisplay.FormatCount(snapshot.Models.Count)" />
+            <MetricCard Label="Usage observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UsageObservationCount)" />
+            <MetricCard Label="Unknown observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnknownUsageObservationCount)" />
+            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.TotalTokens)" />
+            <MetricCard Label="Known cost" Value="@AgentUsageDisplay.FormatCost(snapshot.Totals.KnownCostUsd)" />
+        </Grid>
+
+        <CdaChart Title="Model usage"
+                  Description="Model-level usage stays lazy-loaded so the default Agents overview stays light."
+                  Series="@ModelUsageSeries"
+                  Options="@ModelUsageChartOptions"
+                  Height="340"
+                  Class="w-full"
+                  EmptyText="No model usage has been recorded." />
+
+        <SurfaceCard Soft="true">
+            @if (snapshot.Models.Count == 0)
+            {
+                <EmptyState Eyebrow="No usage"
+                            Title="No model usage rows"
+                            Description="Model usage rows appear after executions report provider model metadata." />
+            }
+            else
+            {
+                <DataGrid TItem="ModelOverviewUsageRow"
+                          Data="@ModelRows"
+                          AllowPaging="true"
+                          PageSize="10"
+                          data-testid="model-usage-dialog-grid">
+                    <Columns>
+                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Model">
+                            <Template Context="model">
+                                <Stack Gap="0.15rem">
+                                    <span class="font-medium text-slate-950">@model.Model</span>
+                                    <span class="text-xs text-slate-500">@model.ProviderName · @model.ProviderKind</span>
+                                </Stack>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Share">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatUsageShare(AgentUsageDisplay.ResolveModelUsageValue(model), TotalModelUsage)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Observations">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatCount(model.UsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Unknown">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatCount(model.UnknownUsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Tokens">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatTokens(model.TotalTokens)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Known cost">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatCost(model.KnownCostUsd)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Last used">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatLastUsed(model.LastUsedAtUtc)</span>
+                            </Template>
+                        </DataGridColumn>
+                    </Columns>
+                </DataGrid>
+            }
+        </SurfaceCard>
+
+        <Cluster JustifyContent="JustifyContent.End">
+            <Button Text="Close"
+                    Icon="close"
+                    Variant="Variant.Outlined"
+                    Click="CloseAsync" />
+        </Cluster>
+    </Stack>
+}
+
+@code {
+    private static readonly CdaChartOptions ModelUsageChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "observations",
+        YAxisTitle = "Usage observations",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = false,
+        ValuePrecision = 0,
+        TooltipPrecision = 0,
+        Palette = CdaChartPalette.Calm
+    };
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    private ModelUsageDetailSnapshot snapshot = ModelUsageDetailSnapshot.Empty;
+    private bool isLoading = true;
+    private string? loadError;
+
+    private IReadOnlyList<ModelOverviewUsageRow> ModelRows =>
+        snapshot.Models
+            .OrderByDescending(AgentUsageDisplay.ResolveModelUsageValue)
+            .ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private decimal TotalModelUsage => ModelRows.Sum(AgentUsageDisplay.ResolveModelUsageValue);
+
+    private IReadOnlyList<CdaChartSeries> ModelUsageSeries =>
+        ModelRows.Count == 0
+            ? []
+            :
+            [
+                new CdaChartSeries
+                {
+                    Name = "Model usage",
+                    Type = CdaChartType.Bar,
+                    Points = ModelRows
+                        .Take(12)
+                        .Select(item => new CdaChartPoint(
+                            AgentUsageDisplay.TrimLabel(item.Model, 24),
+                            AgentUsageDisplay.ResolveModelUsageValue(item)))
+                        .ToArray()
+                }
+            ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            snapshot = await WorkspaceService.GetModelUsageDetailsAsync();
+        }
+        catch (Exception exception)
+        {
+            loadError = exception.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Task CloseAsync()
+        => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+}

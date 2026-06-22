@@ -3395,6 +3395,18 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         public Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default)
             => NotSupported<SandboxDashboardSnapshot>();
 
+        public Task<AgentOverviewSnapshot> GetAgentOverviewAsync(CancellationToken cancellationToken = default)
+            => NotSupported<AgentOverviewSnapshot>();
+
+        public Task<AgentUsageDetailSnapshot> GetAgentUsageDetailsAsync(CancellationToken cancellationToken = default)
+            => NotSupported<AgentUsageDetailSnapshot>();
+
+        public Task<ProviderUsageDetailSnapshot> GetProviderUsageDetailsAsync(CancellationToken cancellationToken = default)
+            => NotSupported<ProviderUsageDetailSnapshot>();
+
+        public Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default)
+            => NotSupported<ModelUsageDetailSnapshot>();
+
         public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
             => NotSupported<IReadOnlyList<AgentDefinition>>();
 
