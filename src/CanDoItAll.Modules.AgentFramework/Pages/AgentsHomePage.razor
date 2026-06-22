@@ -114,7 +114,8 @@
         }
         else
         {
-            <Stack GapScale="LayoutGap.Large"
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="agents-overview-dashboard"
                    data-testid="agents-overview-dashboard">
                 @if (hasOverviewLoadError)
                 {
@@ -126,39 +127,30 @@
                     </SurfaceCard>
                 }
 
-                <Grid Gap="LayoutGap.Medium"
-                      ColumnTemplate="repeat(auto-fit,minmax(9.5rem,1fr))"
-                      data-testid="agents-overview-metrics">
-                    <MetricCard Label="Agents"
-                                Value="@ResolveOverviewValue(overview.Totals.AgentCount)"
-                                data-testid="agents-overview-metric-agents" />
-                    <MetricCard Label="Teams"
-                                Value="@ResolveOverviewValue(overview.Totals.TeamCount)"
-                                data-testid="agents-overview-metric-teams" />
-                    <MetricCard Label="Providers"
-                                Value="@ResolveOverviewValue(overview.Totals.ProviderCount)"
-                                data-testid="agents-overview-metric-providers" />
-                    <MetricCard Label="Capabilities"
-                                Value="@ResolveOverviewValue(overview.Totals.CapabilityCount)"
-                                data-testid="agents-overview-metric-capabilities" />
-                    <MetricCard Label="Sessions"
-                                Value="@ResolveOverviewValue(overview.Totals.SessionCount)"
-                                data-testid="agents-overview-metric-sessions" />
-                    <MetricCard Label="Usage observations"
-                                Value="@ResolveOverviewValue(overview.Totals.UsageObservationCount)"
-                                data-testid="agents-overview-metric-usage" />
-                    <MetricCard Label="Tokens"
-                                Value="@ResolveOverviewTokens(overview.Totals.TotalTokens)"
-                                data-testid="agents-overview-metric-tokens" />
-                    <MetricCard Label="Known cost"
-                                Value="@ResolveOverviewCost(overview.Totals.KnownCostUsd)"
-                                data-testid="agents-overview-metric-cost" />
-                </Grid>
+                <div class="agents-overview-stat-strip w-full"
+                     data-testid="agents-overview-metrics">
+                    @foreach (var metric in OverviewMetricBadges)
+                    {
+                        <div class="@ResolveOverviewMetricBadgeClass(metric.Tone)"
+                             title="@metric.TooltipText"
+                             data-testid="@metric.TestId">
+                            <span class="agents-overview-stat-badge__icon" aria-hidden="true">
+                                <Icon Name="@metric.Icon" />
+                            </span>
+                            <span class="agents-overview-stat-badge__body">
+                                <span class="agents-overview-stat-badge__label">@metric.Label</span>
+                                <strong class="agents-overview-stat-badge__value">@metric.Value</strong>
+                            </span>
+                        </div>
+                    }
+                </div>
 
                 <Grid Gap="LayoutGap.Large"
+                      Class="agents-overview-main-grid"
                       ColumnTemplateLg="repeat(2,minmax(0,1fr))"
                       ColumnTemplateXl="minmax(20rem,0.95fr) minmax(0,1.1fr) minmax(16rem,0.72fr) minmax(20rem,0.95fr)">
                     <SurfaceCard Soft="true"
+                                 Class="agents-overview-main-card agents-overview-list-card"
                                  data-testid="agents-overview-top-agents">
                         <Cluster JustifyContent="JustifyContent.SpaceBetween"
                                  AlignItems="AlignItems.Start"
@@ -179,28 +171,31 @@
                     </SurfaceCard>
 
                     <Stack GapScale="LayoutGap.Medium"
+                           Class="agents-overview-main-card agents-overview-chart-shell"
                            data-testid="agents-overview-provider-bar">
                         <CdaChart Title="Usage per provider"
                                   Description="Provider usage observations captured from technical executions."
                                   Series="@ProviderUsageBarSeries"
                                   Options="@ProviderUsageBarChartOptions"
-                                  Height="300"
-                                  class="box-border w-full max-w-full min-w-0 overflow-hidden"
+                                  Height="310"
+                                  class="agents-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
                                   EmptyText="No provider usage has been recorded." />
                     </Stack>
 
                     <Stack GapScale="LayoutGap.Medium"
+                           Class="agents-overview-main-card agents-overview-chart-shell"
                            data-testid="agents-overview-provider-distribution">
                         <CdaChart Title="Provider distribution"
                                   Description="Share of total provider usage observations across the current workspace."
                                   Series="@ProviderUsageDistributionSeries"
                                   Options="@ProviderUsageDistributionChartOptions"
-                                  Height="300"
-                                  class="box-border w-full max-w-full min-w-0 overflow-hidden"
+                                  Height="310"
+                                  class="agents-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
                                   EmptyText="Provider distribution is not available yet." />
                     </Stack>
 
                     <SurfaceCard Soft="true"
+                                 Class="agents-overview-main-card agents-overview-list-card"
                                  data-testid="agents-overview-failing-agents">
                         <Cluster JustifyContent="JustifyContent.SpaceBetween"
                                  AlignItems="AlignItems.Start"
@@ -225,9 +220,11 @@
                     </SurfaceCard>
                 </Grid>
 
-                <Grid Gap="LayoutGap.Large"
+                <Grid Gap="LayoutGap.Medium"
+                      Class="agents-overview-secondary-grid"
                       ColumnTemplateLg="minmax(0,1fr) minmax(20rem,0.55fr)">
                     <SurfaceCard Soft="true"
+                                 Class="agents-overview-secondary-card"
                                  data-testid="agents-overview-team-shortcuts">
                         <Cluster JustifyContent="JustifyContent.SpaceBetween"
                                  AlignItems="AlignItems.Start"
@@ -259,12 +256,12 @@
                                   ColumnsSm="2"
                                   ColumnsLg="3"
                                   ColumnsXl="6"
-                                  Class="mt-4"
+                                  Class="mt-3"
                                   data-testid="agents-overview-team-shortcuts-grid">
                                 @foreach (var team in overview.TeamShortcuts.Take(6))
                                 {
                                     <button type="button"
-                                            class="flex aspect-square min-w-0 flex-col items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2 text-center text-slate-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                                            class="agents-overview-team-shortcut"
                                             title="@team.Name"
                                             @onclick="@(() => OpenAgentsForTeamAsync(team.TeamId))"
                                             data-testid="agents-overview-team-shortcut">
@@ -278,30 +275,37 @@
                     </SurfaceCard>
 
                     <SurfaceCard Soft="true"
+                                 Class="agents-overview-secondary-card"
                                  data-testid="agents-overview-demand-details">
-                        <Stack GapScale="LayoutGap.Medium">
+                        <Stack GapScale="LayoutGap.Small">
                             <Stack Gap="0.25rem">
                                 <p class="cda-eyebrow">Load on demand</p>
                                 <h2 class="text-base font-semibold text-slate-950">Deeper usage views stay out of default load</h2>
                             </Stack>
                             <Cluster Gap="LayoutGap.Small"
                                      Wrap="FlexWrap.Wrap">
-                                <Button Text="Agent usage"
+                                <Button Text="Agents"
                                         Icon="analytics"
+                                        Size="ButtonSize.Small"
                                         ButtonStyle="ButtonStyle.Light"
                                         Variant="Variant.Outlined"
+                                        title="Open agent usage details"
                                         Click="OpenAgentUsageDialogAsync"
                                         data-testid="agents-overview-open-agent-usage" />
-                                <Button Text="Provider usage"
+                                <Button Text="Providers"
                                         Icon="bar_chart"
+                                        Size="ButtonSize.Small"
                                         ButtonStyle="ButtonStyle.Light"
                                         Variant="Variant.Outlined"
+                                        title="Open provider usage details"
                                         Click="OpenProviderUsageDialogAsync"
                                         data-testid="agents-overview-open-provider-usage" />
-                                <Button Text="Model usage"
+                                <Button Text="Models"
                                         Icon="query_stats"
+                                        Size="ButtonSize.Small"
                                         ButtonStyle="ButtonStyle.Light"
                                         Variant="Variant.Outlined"
+                                        title="Open model usage details"
                                         Click="OpenModelUsageDialogAsync"
                                         data-testid="agents-overview-open-model-usage" />
                             </Cluster>

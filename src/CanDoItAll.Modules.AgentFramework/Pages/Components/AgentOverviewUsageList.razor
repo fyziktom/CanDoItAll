@@ -19,15 +19,15 @@
     {
         @foreach (var agent in Rows.Take(5))
         {
-            <div class="flex w-full max-w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5 shadow-sm"
+            <div class="flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-white/80 px-2.5 py-1.5 shadow-sm"
                  data-testid="@($"{TestId}-row")">
-                <span class="h-10 w-10 shrink-0"
+                <span class="h-9 w-9 shrink-0"
                       data-testid="@($"{TestId}-avatar")">
                     <Avatar Alt="@agent.AgentName"
                             ImageUrl="@agent.AvatarImageUrl"
                             FallbackText="@ResolveInitials(agent.AgentName)"
                             DefaultImageSeed="@ResolveAvatarSeed(agent)"
-                            Size="AvatarSize.Medium"
+                            Size="AvatarSize.Small"
                             Shape="AvatarShape.Rounded" />
                 </span>
 
@@ -36,7 +36,7 @@
                     <div class="truncate text-xs text-slate-500">@ResolveSubtitle(agent)</div>
                 </div>
 
-                <div class="flex max-w-[5rem] shrink-0 flex-col items-end gap-1">
+                <div class="flex max-w-[5rem] shrink-0 flex-col items-end gap-0.5">
                     <StatusBadge Tone="@ResolvePrimaryTone(agent)"
                                  Text="@ResolvePrimaryText(agent)"
                                  NoWrap="true" />

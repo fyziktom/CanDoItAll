@@ -122,6 +122,66 @@ public partial class AgentsHomePage
         new("diagnostics", "Diagnostics", ResolveSummaryValue(failedRunCount))
     ];
 
+    private IReadOnlyList<OverviewMetricBadge> OverviewMetricBadges =>
+    [
+        new(
+            "Agents",
+            ResolveOverviewValue(overview.Totals.AgentCount),
+            "groups",
+            "info",
+            "Organization-scoped technical runtime records.",
+            "agents-overview-metric-agents"),
+        new(
+            "Teams",
+            ResolveOverviewValue(overview.Totals.TeamCount),
+            "hub",
+            "success",
+            "Agent teams available from the technical catalog.",
+            "agents-overview-metric-teams"),
+        new(
+            "Providers",
+            ResolveOverviewValue(overview.Totals.ProviderCount),
+            "cloud",
+            "accent",
+            "Workspace-owned providers executed through AgentFramework.",
+            "agents-overview-metric-providers"),
+        new(
+            "Capabilities",
+            ResolveOverviewValue(overview.Totals.CapabilityCount),
+            "extension",
+            "warning",
+            "Reusable skills, MCP servers, and other runtime capabilities.",
+            "agents-overview-metric-capabilities"),
+        new(
+            "Sessions",
+            ResolveOverviewValue(overview.Totals.SessionCount),
+            "forum",
+            "neutral",
+            "Chat and runtime sessions associated with the workspace.",
+            "agents-overview-metric-sessions"),
+        new(
+            "Usage",
+            ResolveOverviewValue(overview.Totals.UsageObservationCount),
+            "monitor_heart",
+            "info",
+            "Usage observations captured from technical executions.",
+            "agents-overview-metric-usage"),
+        new(
+            "Tokens",
+            ResolveOverviewTokens(overview.Totals.TotalTokens),
+            "token",
+            "success",
+            "Provider-reported total token usage.",
+            "agents-overview-metric-tokens"),
+        new(
+            "Cost",
+            ResolveOverviewCost(overview.Totals.KnownCostUsd),
+            "paid",
+            "danger",
+            "Known provider cost from execution telemetry.",
+            "agents-overview-metric-cost")
+    ];
+
     private IReadOnlyList<ProviderOverviewUsageRow> OverviewProviderRows =>
         overview.ProviderUsage
             .OrderByDescending(AgentUsageDisplay.ResolveProviderUsageValue)
@@ -161,6 +221,19 @@ public partial class AgentsHomePage
                         .ToArray()
                 }
             ];
+
+    private static string ResolveOverviewMetricBadgeClass(string tone)
+    {
+        return tone switch
+        {
+            "success" => "agents-overview-stat-badge agents-overview-stat-badge--success",
+            "warning" => "agents-overview-stat-badge agents-overview-stat-badge--warning",
+            "danger" => "agents-overview-stat-badge agents-overview-stat-badge--danger",
+            "accent" => "agents-overview-stat-badge agents-overview-stat-badge--accent",
+            "neutral" => "agents-overview-stat-badge agents-overview-stat-badge--neutral",
+            _ => "agents-overview-stat-badge agents-overview-stat-badge--info"
+        };
+    }
 
     protected override Task OnInitializedAsync()
     {
@@ -500,4 +573,12 @@ public partial class AgentsHomePage
     {
         Navigation.NavigateTo("/agents/workflows");
     }
+
+    private sealed record OverviewMetricBadge(
+        string Label,
+        string Value,
+        string Icon,
+        string Tone,
+        string TooltipText,
+        string TestId);
 }
