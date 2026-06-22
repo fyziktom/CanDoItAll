@@ -290,23 +290,13 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var mappedKind = provider.ConnectorPluginKey switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            _ => AgentFrameworkProviderKind.Ollama
-        };
-        var legacyMappedTransport = provider.ConnectorPluginKey switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            ProcessMockProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            OpenAiProviderAdapter.PluginKey when IsOpenAiChatCompletionsProvider(provider) => ProviderTransportKind.ChatCompletions,
-            OpenAiProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            _ => ProviderTransportKind.ChatCompletions
-        };
+        var mappedKind = ResolveMappedProviderKind(provider.ConnectorPluginKey);
+        var legacyMappedTransport = ResolveLegacyMappedTransport(provider);
         var mappedTransport = AgentFrameworkProviderMetadata.ResolveTransport(provider, legacyMappedTransport);
-        var preferFrameworkManagedChatHistory = mappedKind == AgentFrameworkProviderKind.Ollama ||
+        var mappedPurpose = provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey
+            ? ProviderProfilePurpose.ImageGeneration
+            : ProviderProfilePurpose.Chat;
+        var preferFrameworkManagedChatHistory = mappedKind is AgentFrameworkProviderKind.Ollama or AgentFrameworkProviderKind.ComfyUi ||
                                                 mappedTransport == ProviderTransportKind.ChatCompletions;
         var supportsBackgroundResponses = mappedKind == AgentFrameworkProviderKind.OpenAi &&
                                           mappedTransport == ProviderTransportKind.Responses;
@@ -327,7 +317,8 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             providerRegistry.Resolve(provider)?.Manifest.DisplayName ?? provider.ConnectorPluginKey,
             provider.LastHealthStatus ?? "Not checked",
             provider.LastHealthCheckAtUtc,
-            string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel])
+            string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel],
+            mappedPurpose)
         {
             Tags = ResolveWorkspaceProviderTags(provider, mappedKind, mappedTransport)
         };
@@ -347,17 +338,49 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         }
 
         var tags = new List<string>();
-        tags.Add(mappedKind == AgentFrameworkProviderKind.Ollama ? "ollama" : "openai");
+        tags.Add(mappedKind switch
+        {
+            AgentFrameworkProviderKind.Ollama => "ollama",
+            AgentFrameworkProviderKind.ComfyUi => "comfyui",
+            _ => "openai"
+        });
         tags.Add(provider.BaseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
                  provider.BaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
             ? "local"
             : "cloud");
         tags.Add(mappedTransport == ProviderTransportKind.Responses ? "responses" : "chat-completions");
-        tags.Add("chat");
+        tags.Add(mappedKind == AgentFrameworkProviderKind.ComfyUi ? "image-generation" : "chat");
         return tags
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static AgentFrameworkProviderKind ResolveMappedProviderKind(string connectorPluginKey)
+    {
+        return connectorPluginKey switch
+        {
+            ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            ComfyUiProviderAdapter.PluginKey => AgentFrameworkProviderKind.ComfyUi,
+            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => AgentFrameworkProviderKind.Ollama,
+            _ => throw new InvalidOperationException($"No AgentFramework provider kind mapping exists for connector plugin '{connectorPluginKey}'.")
+        };
+    }
+
+    private static ProviderTransportKind ResolveLegacyMappedTransport(WorkspaceProviderProfile provider)
+    {
+        return provider.ConnectorPluginKey switch
+        {
+            ScenarioHarnessProviderAdapter.PluginKey => ProviderTransportKind.Responses,
+            ProcessMockProviderAdapter.PluginKey => ProviderTransportKind.Responses,
+            OpenAiProviderAdapter.PluginKey when IsOpenAiChatCompletionsProvider(provider) => ProviderTransportKind.ChatCompletions,
+            OpenAiProviderAdapter.PluginKey => ProviderTransportKind.Responses,
+            ComfyUiProviderAdapter.PluginKey => ProviderTransportKind.ChatCompletions,
+            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => ProviderTransportKind.ChatCompletions,
+            _ => throw new InvalidOperationException($"No AgentFramework provider transport mapping exists for connector plugin '{provider.ConnectorPluginKey}'.")
+        };
     }
 
     private static string ResolveApiKeyEnvironmentVariable(
@@ -445,6 +468,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
             ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
             OpenAiProviderAdapter.PluginKey => OpenAiProviderAdapter.DefaultModel,
+            ComfyUiProviderAdapter.PluginKey => ComfyUiProviderAdapter.DefaultModel,
             _ => "llama3.1"
         };
     }

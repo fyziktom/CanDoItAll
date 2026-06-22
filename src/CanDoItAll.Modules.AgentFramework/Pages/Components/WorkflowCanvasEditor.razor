@@ -489,7 +489,8 @@
                                 <span>Capture output as workflow artifact</span>
                             </label>
 
-                            @if (descriptor?.ConfigurationSchema.Fields.Count > 0)
+                            @if (descriptor?.ConfigurationSchema.Fields.Count > 0 &&
+                                 selected.ExecutorId != WorkflowExecutorIds.ImageGeneration)
                             {
                                 <SettingsRendererHost RendererKey="@descriptor.SetupRendererKey"
                                                       Schema="@descriptor.ConfigurationSchema"
@@ -866,10 +867,25 @@
                                         </select>
                                     </label>
                                     <label class="workflow-canvas-field">
-                                        <span>Provider profile id</span>
-                                        <input class="cda-input"
-                                               value="@settings.ProviderProfileId?.ToString("D")"
-                                               @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { ProviderProfileId = Guid.TryParse(ReadString(args), out var providerId) ? providerId : null })" />
+                                        <span>Image provider</span>
+                                        <select class="cda-input"
+                                                value="@settings.ProviderProfileId?.ToString("D")"
+                                                @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { ProviderProfileId = Guid.TryParse(ReadString(args), out var providerId) ? providerId : null })"
+                                                data-testid="workflow-image-provider-select">
+                                            <option value="">Default image provider</option>
+                                            @foreach (var providerOption in ImageProviderOptions)
+                                            {
+                                                <option value="@providerOption.ProviderProfileId.ToString("D")">@BuildProviderOptionLabel(providerOption)</option>
+                                            }
+                                        </select>
+                                        @if (settings.ProviderProfileId.HasValue && ResolveImageProviderOption(settings.ProviderProfileId) is null)
+                                        {
+                                            <small class="text-rose-700">Selected provider is not an image-generation provider.</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-slate-500">@BuildImageProviderOptionsSummary()</small>
+                                        }
                                     </label>
                                     <label class="workflow-canvas-field">
                                         <span>Model</span>

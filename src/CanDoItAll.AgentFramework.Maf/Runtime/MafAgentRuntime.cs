@@ -29,6 +29,10 @@ public sealed partial class MafAgentRuntime(
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
     private readonly IServiceProvider services = services;
     private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
+    private readonly IMafProviderRuntimeGateway providerRuntimeGateway =
+        services.GetService(typeof(IMafProviderRuntimeGateway)) is IMafProviderRuntimeGateway gateway
+            ? gateway
+            : MafProviderRuntimeGateway.CreateFallback(services);
     private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
 
     public async Task<AgentRuntimeResponse> RunAsync(

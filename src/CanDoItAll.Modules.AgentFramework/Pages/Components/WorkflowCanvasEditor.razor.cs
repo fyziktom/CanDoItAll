@@ -60,6 +60,12 @@ public partial class WorkflowCanvasEditor
     [Parameter]
     public IReadOnlyList<WorkflowProviderOption> ProviderOptions { get; set; } = [];
 
+    private IReadOnlyList<WorkflowProviderOption> ImageProviderOptions => ProviderOptions
+        .Where(option => option.Purpose == ProviderProfilePurpose.ImageGeneration)
+        .OrderByDescending(option => option.IsEnabled)
+        .ThenBy(option => option.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
     [Parameter]
     public EventCallback<WorkflowDefinition> DefinitionSaved { get; set; }
 
@@ -2858,6 +2864,24 @@ public partial class WorkflowCanvasEditor
     {
         var label = $"{option.Name} - {option.Kind} - {option.Transport}";
         return option.IsEnabled ? label : $"{label} (disabled)";
+    }
+
+    private WorkflowProviderOption? ResolveImageProviderOption(Guid? providerProfileId)
+    {
+        return providerProfileId.HasValue
+            ? ImageProviderOptions.FirstOrDefault(option => option.ProviderProfileId == providerProfileId.Value)
+            : null;
+    }
+
+    private string BuildImageProviderOptionsSummary()
+    {
+        if (ImageProviderOptions.Count == 0)
+        {
+            return "No image-generation providers are available.";
+        }
+
+        var enabledCount = ImageProviderOptions.Count(option => option.IsEnabled);
+        return $"{enabledCount} enabled image provider(s) available.";
     }
 
     private void SyncNewComponentDefaults()

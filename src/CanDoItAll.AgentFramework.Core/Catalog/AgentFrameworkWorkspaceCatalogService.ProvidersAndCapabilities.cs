@@ -68,20 +68,20 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return await providerDiagnosticsService.RunProviderTestChatAsync(provider, request, cancellationToken);
     }
 
-    public async Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+    public async Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         Guid providerId,
-        OllamaModelfileRequest request,
+        ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
         var provider = await providerRegistry.GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
 
-        var result = await providerDiagnosticsService.CreateOrUpdateOllamaModelAsync(provider, request, cancellationToken);
+        var result = await providerDiagnosticsService.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
         var checkedAtUtc = DateTimeOffset.UtcNow;
 
         await providerRegistry.UpdateProviderAsync(
             providerId,
-            currentProvider => providerProfileService.ApplyOllamaModelResult(currentProvider, result, checkedAtUtc),
+            currentProvider => providerProfileService.ApplyProviderModelMaintenanceResult(currentProvider, result, checkedAtUtc),
             cancellationToken);
 
         return result;

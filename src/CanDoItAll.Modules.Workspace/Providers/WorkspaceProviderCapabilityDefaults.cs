@@ -36,6 +36,11 @@ internal sealed record WorkspaceProviderCapabilityDefaults(
                 SupportsToolCalling: true,
                 SupportsStructuredOutput: true,
                 SupportsVision: false),
+            ComfyUiProviderAdapter.PluginKey => new(
+                SupportsStreaming: false,
+                SupportsToolCalling: false,
+                SupportsStructuredOutput: false,
+                SupportsVision: false),
             OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => new(
                 SupportsStreaming: true,
                 SupportsToolCalling: true,

@@ -15,8 +15,8 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         using var services = new ServiceCollection().BuildServiceProvider();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new ThrowingProviderProfileRegistry(),
-            new StaticProviderCredentialResolver(),
             new StaticWorkspacePathResolver(Path.GetTempPath()),
+            new FakeAgentImageGenerationService(),
             services);
         var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
@@ -47,8 +47,8 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         using var services = new ServiceCollection().BuildServiceProvider();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new ThrowingProviderProfileRegistry(),
-            new StaticProviderCredentialResolver(),
             new StaticWorkspacePathResolver(Path.GetTempPath()),
+            new FakeAgentImageGenerationService(),
             services);
         var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
         var agent = CreateAgent(
@@ -167,14 +167,6 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         }
     }
 
-    private sealed class StaticProviderCredentialResolver : IAgentProviderCredentialResolver
-    {
-        public ProviderCredentialResolution Resolve(ProviderProfile provider)
-        {
-            return new ProviderCredentialResolution("unit-api-key", "unit", string.Empty);
-        }
-    }
-
     private sealed class StaticWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
     {
         public string ResolveWorkspaceRoot()
@@ -200,6 +192,23 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         public string ResolveManagerArtifactsRoot()
         {
             return workspaceRoot;
+        }
+    }
+
+    private sealed class FakeAgentImageGenerationService : IAgentImageGenerationService
+    {
+        public List<AgentImageGenerationRequest> Requests { get; } = [];
+
+        public Task<AgentImageGenerationResult> GenerateAsync(
+            AgentImageGenerationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Requests.Add(request);
+            return Task.FromResult(new AgentImageGenerationResult(
+                request.Model,
+                request.Format,
+                [new AgentGeneratedImage("image/png", [1, 2, 3], "revised")]));
         }
     }
 }

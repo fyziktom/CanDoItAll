@@ -814,9 +814,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ProviderTestChatRequest request,
             CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             Guid providerId,
-            OllamaModelfileRequest request,
+            ProviderModelMaintenanceEditorRequest request,
             CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default) => throw Unused();

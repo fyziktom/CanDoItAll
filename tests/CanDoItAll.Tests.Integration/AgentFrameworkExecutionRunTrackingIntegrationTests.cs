@@ -1065,12 +1065,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             return Task.FromResult(new ProviderTestChatResult(provider.DefaultModel, "ok", 1, 1));
         }
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             ProviderProfile provider,
-            OllamaModelfileRequest request,
+            ProviderModelMaintenanceEditorRequest request,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new OllamaModelfileResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
+            return Task.FromResult(new ProviderModelMaintenanceEditorResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
         }
 
         public async Task<AgentRuntimeResponse> RunAsync(
@@ -1196,12 +1196,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             return Task.FromResult(new ProviderTestChatResult(provider.DefaultModel, "ok", 1, 1));
         }
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             ProviderProfile provider,
-            OllamaModelfileRequest request,
+            ProviderModelMaintenanceEditorRequest request,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new OllamaModelfileResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
+            return Task.FromResult(new ProviderModelMaintenanceEditorResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
         }
 
         public Task<AgentRuntimeResponse> RunAsync(

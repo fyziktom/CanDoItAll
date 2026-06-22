@@ -3461,8 +3461,8 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
             => NotSupported<ProviderHealthResult>();
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(Guid providerId, OllamaModelfileRequest request, CancellationToken cancellationToken = default)
-            => NotSupported<OllamaModelfileResult>();
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default)
+            => NotSupported<ProviderModelMaintenanceEditorResult>();
 
         public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)
             => NotSupported<IReadOnlyList<CapabilityCatalogItem>>();

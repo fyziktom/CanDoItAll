@@ -1,7 +1,4 @@
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -17,25 +14,24 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
     private const int ProviderOrder = 950;
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-    private static readonly TimeSpan ModelNetworkTimeout = TimeSpan.FromMinutes(10);
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
-    private readonly IAgentProviderCredentialResolver providerCredentialResolver;
+    private readonly IAgentImageGenerationService imageGenerationService;
     private readonly string workspaceRoot;
     private readonly ImageGenerationToolBuilder toolBuilder;
 
     public ImageGenerationAgentRuntimeToolProvider(
         IProviderProfileRegistry providerRegistry,
-        IAgentProviderCredentialResolver providerCredentialResolver,
         IWorkspacePathResolver workspacePathResolver,
+        IAgentImageGenerationService imageGenerationService,
         IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(providerRegistry);
-        ArgumentNullException.ThrowIfNull(providerCredentialResolver);
         ArgumentNullException.ThrowIfNull(workspacePathResolver);
+        ArgumentNullException.ThrowIfNull(imageGenerationService);
         ArgumentNullException.ThrowIfNull(services);
 
-        this.providerCredentialResolver = providerCredentialResolver;
+        this.imageGenerationService = imageGenerationService;
         workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
 
         toolBuilder = new ImageGenerationToolBuilder(
@@ -65,35 +61,6 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         cancellationToken.ThrowIfCancellationRequested();
 
         return ValueTask.FromResult(toolBuilder.CreateTools(context.Agent));
-    }
-
-    private ProviderCredentialResolution ResolveProviderCredential(ProviderProfile provider)
-        => providerCredentialResolver.Resolve(provider);
-
-    private static TimeSpan ResolveProviderNetworkTimeout(ProviderProfile provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        if (string.IsNullOrWhiteSpace(provider.ConfigurationJson))
-        {
-            return ModelNetworkTimeout;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(provider.ConfigurationJson);
-            if (!document.RootElement.TryGetProperty("timeoutSeconds", out var timeoutElement) ||
-                !timeoutElement.TryGetInt32(out var timeoutSeconds))
-            {
-                return ModelNetworkTimeout;
-            }
-
-            return TimeSpan.FromSeconds(Math.Clamp(timeoutSeconds, 5, 3600));
-        }
-        catch (JsonException)
-        {
-            return ModelNetworkTimeout;
-        }
     }
 
     private sealed class ImageGenerationToolBuilder(
@@ -153,15 +120,22 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             var outputFormat = NormalizeOption(request.OutputFormat, providerConfiguration.DefaultOutputFormat, "png", ValidImageOutputFormats, "image output format");
             var outputPath = owner.ResolveImageGenerationOutputPath(request.OutputWorkspacePath, outputFormat);
             var sourceImages = await ResolveSourceImagesAsync(agent, request, cancellationToken);
-            var credential = owner.ResolveProviderCredential(provider);
-            if (!credential.IsResolved)
-            {
-                throw new InvalidOperationException(credential.FailureMessage);
-            }
-
-            var imageBytes = sourceImages.Count == 0
-                ? await GenerateOpenAiImageAsync(provider, credential, model, request.Prompt.Trim(), size, quality, outputFormat, cancellationToken)
-                : await EditOpenAiImageAsync(provider, credential, model, request.Prompt.Trim(), size, quality, outputFormat, sourceImages, cancellationToken);
+            var generated = await owner.imageGenerationService.GenerateAsync(
+                new AgentImageGenerationRequest(
+                    provider,
+                    model,
+                    request.Prompt.Trim(),
+                    size,
+                    quality,
+                    ParseOutputFormat(outputFormat),
+                    sourceImages),
+                cancellationToken);
+            var generatedImage = generated.Images.FirstOrDefault()
+                ?? throw new InvalidOperationException("Image generation completed without image data.");
+            var imageBytes = generatedImage.Bytes;
+            var contentType = string.IsNullOrWhiteSpace(generatedImage.ContentType)
+                ? ResolveOutputContentType(outputFormat)
+                : generatedImage.ContentType.Trim();
 
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath.FullPath)!);
             await File.WriteAllBytesAsync(outputPath.FullPath, imageBytes, cancellationToken);
@@ -170,10 +144,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 Success: true,
                 ProviderProfileId: provider.Id,
                 ProviderName: provider.Name,
-                Model: model,
+                Model: generated.Model,
                 Operation: sourceImages.Count == 0 ? "generation" : "edit",
                 OutputWorkspacePath: outputPath.RelativePath,
-                ContentType: ResolveOutputContentType(outputFormat),
+                ContentType: contentType,
                 ContentLength: imageBytes.LongLength,
                 Size: size,
                 Quality: quality,
@@ -213,20 +187,15 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 throw new InvalidOperationException($"Provider '{provider.Name}' is not an image-generation provider profile.");
             }
 
-            if (provider.Kind != ProviderKind.OpenAi)
-            {
-                throw new InvalidOperationException($"Image generation currently supports OpenAI provider profiles only. Provider '{provider.Name}' uses '{provider.Kind}'.");
-            }
-
             return provider;
         }
 
-        private async Task<IReadOnlyList<ImageGenerationSourceImage>> ResolveSourceImagesAsync(
+        private async Task<IReadOnlyList<AgentImageGenerationSource>> ResolveSourceImagesAsync(
             AgentDefinition agent,
             ImageGenerationCreateInput request,
             CancellationToken cancellationToken)
         {
-            var sourceImages = new List<ImageGenerationSourceImage>();
+            var sourceImages = new List<AgentImageGenerationSource>();
             foreach (var sourcePath in request.SourceWorkspacePaths ?? [])
             {
                 if (string.IsNullOrWhiteSpace(sourcePath))
@@ -237,10 +206,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 var resolution = owner.ResolveWorkspaceImagePath(sourcePath);
                 var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
                 var fileName = Path.GetFileName(resolution.FullPath);
-                sourceImages.Add(new ImageGenerationSourceImage(
-                    bytes,
+                sourceImages.Add(new AgentImageGenerationSource(
                     fileName,
                     ResolveInputContentType(fileName),
+                    bytes,
                     $"workspace:{resolution.RelativePath}"));
             }
 
@@ -271,10 +240,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                     throw new InvalidOperationException($"Project asset '{sourceAsset.NodeId}' did not contain valid base64 image content.", exception);
                 }
 
-                sourceImages.Add(new ImageGenerationSourceImage(
-                    bytes,
+                sourceImages.Add(new AgentImageGenerationSource(
                     content.Asset.MediaOriginalFileName,
                     content.Asset.MediaContentType,
+                    bytes,
                     $"project:{sourceAsset.ProjectId:D}/{sourceAsset.NodeId}"));
             }
 
@@ -297,152 +266,6 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             }
 
             throw new InvalidOperationException($"Project '{projectId:D}' is outside the agent's allowed project-structure scope.");
-        }
-
-        private static async Task<byte[]> GenerateOpenAiImageAsync(
-            ProviderProfile provider,
-            ProviderCredentialResolution credential,
-            string model,
-            string prompt,
-            string size,
-            string quality,
-            string outputFormat,
-            CancellationToken cancellationToken)
-        {
-            using var httpClient = CreateImageGenerationHttpClient(provider, credential);
-            using var response = await httpClient.PostAsJsonAsync(
-                BuildOpenAiImagesEndpoint(provider, "generations"),
-                new
-                {
-                    model,
-                    prompt,
-                    n = 1,
-                    size,
-                    quality,
-                    output_format = outputFormat
-                },
-                SerializerOptions,
-                cancellationToken);
-
-            return await ReadOpenAiImageResponseAsync(response, cancellationToken);
-        }
-
-        private static async Task<byte[]> EditOpenAiImageAsync(
-            ProviderProfile provider,
-            ProviderCredentialResolution credential,
-            string model,
-            string prompt,
-            string size,
-            string quality,
-            string outputFormat,
-            IReadOnlyList<ImageGenerationSourceImage> sourceImages,
-            CancellationToken cancellationToken)
-        {
-            using var httpClient = CreateImageGenerationHttpClient(provider, credential);
-            using var form = new MultipartFormDataContent();
-            AddFormString(form, "model", model);
-            AddFormString(form, "prompt", prompt);
-            AddFormString(form, "n", "1");
-            AddFormString(form, "size", size);
-            AddFormString(form, "quality", quality);
-            AddFormString(form, "output_format", outputFormat);
-
-            foreach (var sourceImage in sourceImages)
-            {
-                var content = new ByteArrayContent(sourceImage.Bytes);
-                content.Headers.ContentType = MediaTypeHeaderValue.Parse(sourceImage.ContentType);
-                form.Add(content, "image[]", sourceImage.FileName);
-            }
-
-            using var response = await httpClient.PostAsync(
-                BuildOpenAiImagesEndpoint(provider, "edits"),
-                form,
-                cancellationToken);
-
-            return await ReadOpenAiImageResponseAsync(response, cancellationToken);
-        }
-
-        private static HttpClient CreateImageGenerationHttpClient(
-            ProviderProfile provider,
-            ProviderCredentialResolution credential)
-        {
-            var httpClient = new HttpClient
-            {
-                Timeout = ResolveProviderNetworkTimeout(provider)
-            };
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", credential.ApiKey);
-            return httpClient;
-        }
-
-        private static async Task<byte[]> ReadOpenAiImageResponseAsync(
-            HttpResponseMessage response,
-            CancellationToken cancellationToken)
-        {
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                var message = TryReadOpenAiErrorMessage(errorContent);
-                throw new InvalidOperationException($"OpenAI image generation failed with HTTP {(int)response.StatusCode}: {message}");
-            }
-
-            var payload = await response.Content.ReadFromJsonAsync<OpenAiImageResponse>(SerializerOptions, cancellationToken);
-            var imageBase64 = payload?.Data.FirstOrDefault()?.B64Json;
-            if (string.IsNullOrWhiteSpace(imageBase64))
-            {
-                throw new InvalidOperationException("OpenAI image generation completed without image data.");
-            }
-
-            try
-            {
-                return Convert.FromBase64String(imageBase64);
-            }
-            catch (FormatException exception)
-            {
-                throw new InvalidOperationException("OpenAI image generation returned invalid base64 image data.", exception);
-            }
-        }
-
-        private static string TryReadOpenAiErrorMessage(string errorContent)
-        {
-            if (string.IsNullOrWhiteSpace(errorContent))
-            {
-                return "The response body was empty.";
-            }
-
-            try
-            {
-                var envelope = JsonSerializer.Deserialize<OpenAiErrorEnvelope>(errorContent, SerializerOptions);
-                if (!string.IsNullOrWhiteSpace(envelope?.Error?.Message))
-                {
-                    return envelope.Error.Message.Trim();
-                }
-            }
-            catch (JsonException)
-            {
-            }
-
-            return errorContent.Length <= 800
-                ? errorContent.Trim()
-                : errorContent[..800].Trim() + "...";
-        }
-
-        private static string BuildOpenAiImagesEndpoint(ProviderProfile provider, string endpoint)
-        {
-            var baseUrl = provider.BaseUrl.Trim().TrimEnd('/');
-            if (baseUrl.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
-            {
-                return $"{baseUrl}/images/{endpoint}";
-            }
-
-            return $"{baseUrl}/v1/images/{endpoint}";
-        }
-
-        private static void AddFormString(
-            MultipartFormDataContent form,
-            string name,
-            string value)
-        {
-            form.Add(new StringContent(value), name);
         }
 
         private static string ResolveImageModel(
@@ -565,26 +388,15 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             public string DefaultOutputFormat { get; init; } = string.Empty;
         }
 
-        private sealed record ImageGenerationSourceImage(
-            byte[] Bytes,
-            string FileName,
-            string ContentType,
-            string Summary);
-
-        private sealed record OpenAiImageResponse
+        private static AgentGeneratedImageFormat ParseOutputFormat(string outputFormat)
         {
-            public List<OpenAiImageData> Data { get; init; } = [];
+            return outputFormat.Trim().ToLowerInvariant() switch
+            {
+                "jpeg" => AgentGeneratedImageFormat.Jpeg,
+                "webp" => AgentGeneratedImageFormat.Webp,
+                _ => AgentGeneratedImageFormat.Png
+            };
         }
-
-        private sealed record OpenAiImageData
-        {
-            [JsonPropertyName("b64_json")]
-            public string? B64Json { get; init; }
-        }
-
-        private sealed record OpenAiErrorEnvelope(OpenAiError? Error);
-
-        private sealed record OpenAiError(string? Message);
     }
 
     private WorkspaceImagePathResolution ResolveWorkspaceImagePath(string path)

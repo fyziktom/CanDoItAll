@@ -89,17 +89,17 @@ internal sealed partial class ProcessMockAgentRuntime(
             OutputTokens: 22));
     }
 
-    public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         ProviderProfile provider,
-        OllamaModelfileRequest request,
+        ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
         if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
         {
-            return inner.CreateOrUpdateOllamaModelAsync(provider, request, cancellationToken);
+            return inner.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
         }
 
-        throw new InvalidOperationException("The process mock provider does not support Ollama model creation.");
+        throw new InvalidOperationException("The process mock provider does not support provider model maintenance.");
     }
 
     public async Task<AgentRuntimeResponse> RunAsync(

@@ -27,8 +27,7 @@ public partial class ProviderManagementPanel
     private int providerEditorTabIndex;
 
     private ConnectorPluginManifest? SelectedProviderManifest => providerManifests.FirstOrDefault(manifest =>
-            string.Equals(manifest.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
-        ?? providerManifests.FirstOrDefault();
+        string.Equals(manifest.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase));
 
     private IReadOnlyList<ConfigurationFieldDescriptor> SelectedProviderFields => SelectedProviderManifest?.ConfigurationSchema.Fields ?? [];
 
@@ -193,10 +192,10 @@ public partial class ProviderManagementPanel
         bool resetCapabilities)
     {
         var manifest = providerManifests.FirstOrDefault(candidate =>
-                string.Equals(candidate.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
-            ?? providerManifests.FirstOrDefault();
+            string.Equals(candidate.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase));
         if (manifest is null)
         {
+            providerModel.ConfigSchemaVersion = string.Empty;
             return;
         }
 
@@ -205,12 +204,15 @@ public partial class ProviderManagementPanel
 
         var existingConfiguration = providerModel.Configuration?.Clone() ?? new ConnectorConfigState();
         var mergedConfiguration = BuildDefaultProviderConfiguration(manifest.PluginKey);
-        foreach (var field in manifest.ConfigurationSchema.Fields)
+        if (!resetCapabilities)
         {
-            var existingValue = existingConfiguration.GetText(field.Key);
-            if (!string.IsNullOrWhiteSpace(existingValue))
+            foreach (var field in manifest.ConfigurationSchema.Fields)
             {
-                mergedConfiguration.SetText(field.Key, existingValue);
+                var existingValue = existingConfiguration.GetText(field.Key);
+                if (!string.IsNullOrWhiteSpace(existingValue))
+                {
+                    mergedConfiguration.SetText(field.Key, existingValue);
+                }
             }
         }
 
@@ -234,7 +236,10 @@ public partial class ProviderManagementPanel
         string pluginKey,
         bool resetPricing)
     {
-        var pricingKind = ResolveAgentFrameworkProviderKind(pluginKey);
+        if (!TryResolveAgentFrameworkProviderKind(pluginKey, out var pricingKind))
+        {
+            return;
+        }
         var defaultModel = providerModel.Configuration.GetText(ProviderConnectorFieldKeys.DefaultModel);
         if (resetPricing || providerModel.ModelPrices.Count == 0)
         {
@@ -276,6 +281,14 @@ public partial class ProviderManagementPanel
                 [ProviderConnectorFieldKeys.DefaultModel] = "llama3.1",
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             }),
+            ComfyUiProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProviderConnectorFieldKeys.BaseUrl] = "http://127.0.0.1:8188",
+                [ProviderConnectorFieldKeys.DefaultModel] = ComfyUiProviderAdapter.DefaultModel,
+                [ProviderConnectorFieldKeys.TimeoutSeconds] = "120",
+                [ProviderConnectorFieldKeys.ComfyUiPositivePromptNodeId] = "6",
+                [ProviderConnectorFieldKeys.ComfyUiPollIntervalMilliseconds] = "1000"
+            }),
             _ => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
@@ -296,18 +309,36 @@ public partial class ProviderManagementPanel
 
     private static AgentFrameworkProviderKind ResolveAgentFrameworkProviderKind(string? connectorPluginKey)
     {
-        return connectorPluginKey?.Trim() switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            _ => AgentFrameworkProviderKind.Ollama
-        };
+        return TryResolveAgentFrameworkProviderKind(connectorPluginKey, out var kind)
+            ? kind
+            : throw new InvalidOperationException($"No provider pricing kind is registered for connector plugin '{connectorPluginKey}'.");
     }
 
-    private AgentFrameworkProviderKind ResolveProviderPricingKind()
+    private static bool TryResolveAgentFrameworkProviderKind(string? connectorPluginKey, out AgentFrameworkProviderKind kind)
     {
-        return ResolveAgentFrameworkProviderKind(providerModel.ConnectorPluginKey);
+        switch (connectorPluginKey?.Trim())
+        {
+            case ScenarioHarnessProviderAdapter.PluginKey:
+            case ProcessMockProviderAdapter.PluginKey:
+            case OpenAiProviderAdapter.PluginKey:
+                kind = AgentFrameworkProviderKind.OpenAi;
+                return true;
+            case ComfyUiProviderAdapter.PluginKey:
+                kind = AgentFrameworkProviderKind.ComfyUi;
+                return true;
+            case OllamaProviderAdapter.PluginKey:
+            case OllamaRemoteProviderAdapter.PluginKey:
+                kind = AgentFrameworkProviderKind.Ollama;
+                return true;
+            default:
+                kind = default;
+                return false;
+        }
+    }
+
+    private bool TryResolveProviderPricingKind(out AgentFrameworkProviderKind pricingKind)
+    {
+        return TryResolveAgentFrameworkProviderKind(providerModel.ConnectorPluginKey, out pricingKind);
     }
 
     private string ResolveProviderDefaultModel()

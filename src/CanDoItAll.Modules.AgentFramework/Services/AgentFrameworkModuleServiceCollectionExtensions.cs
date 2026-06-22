@@ -34,6 +34,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddSingleton<IProviderProfileService, ProviderProfileService>();
         services.AddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();
+        services.AddMafProviderRuntimeServices();
         services.AddScoped<ISandboxWorkspaceStore>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);

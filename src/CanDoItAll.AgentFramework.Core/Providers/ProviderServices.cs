@@ -138,7 +138,7 @@ public sealed class ProviderProfileService : IProviderProfileService
         });
     }
 
-    public ProviderProfile ApplyOllamaModelResult(ProviderProfile provider, OllamaModelfileResult result, DateTimeOffset checkedAtUtc)
+    public ProviderProfile ApplyProviderModelMaintenanceResult(ProviderProfile provider, ProviderModelMaintenanceEditorResult result, DateTimeOffset checkedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(result);
@@ -406,12 +406,12 @@ public sealed class ProviderDiagnosticsService(IAgentRuntime runtime) : IProvide
         return runtime.RunProviderTestChatAsync(provider, request, cancellationToken);
     }
 
-    public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         ProviderProfile provider,
-        OllamaModelfileRequest request,
+        ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
-        return runtime.CreateOrUpdateOllamaModelAsync(provider, request, cancellationToken);
+        return runtime.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
     }
 }
 

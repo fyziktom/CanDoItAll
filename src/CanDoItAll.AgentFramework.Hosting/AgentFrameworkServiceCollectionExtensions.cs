@@ -37,6 +37,7 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>(),
             resolvedScope));
         services.TryAddSingleton<IAgentProviderCredentialResolver, EnvironmentVariableAgentProviderCredentialResolver>();
+        services.AddMafProviderRuntimeServices();
         services.TryAddSingleton<IProviderProfileService, ProviderProfileService>();
         services.TryAddSingleton<IProviderProfileRegistry>(serviceProvider => new WorkspaceBackedProviderProfileRegistry(
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),

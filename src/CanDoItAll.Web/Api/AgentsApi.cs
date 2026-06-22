@@ -232,11 +232,11 @@ internal static class AgentsApi
 
         agents.MapPost("/providers/{providerId:guid}/ollama-modelfile", async (
                 Guid providerId,
-                OllamaModelfileRequest request,
+                ProviderModelMaintenanceEditorRequest request,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.CreateOrUpdateOllamaModelAsync(providerId, request, cancellationToken)))
-            .WithName("CreateAgentProviderOllamaModelfile");
+            Results.Ok(await workspaceService.CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken)))
+            .WithName("CreateAgentProviderModelMaintenance");
     }
 
     private static void MapCapabilityEndpoints(RouteGroupBuilder agents)

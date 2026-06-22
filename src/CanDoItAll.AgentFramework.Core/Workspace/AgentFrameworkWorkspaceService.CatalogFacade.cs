@@ -79,11 +79,11 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.RunProviderTestChatAsync(providerId, request, cancellationToken);
 
-    public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         Guid providerId,
-        OllamaModelfileRequest request,
+        ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
-        => catalogService.CreateOrUpdateOllamaModelAsync(providerId, request, cancellationToken);
+        => catalogService.CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken);
 
     public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)
         => catalogService.ListCapabilitiesAsync(cancellationToken);

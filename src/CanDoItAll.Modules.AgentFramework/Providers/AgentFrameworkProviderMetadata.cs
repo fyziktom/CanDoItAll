@@ -188,9 +188,11 @@ internal static class AgentFrameworkProviderMetadata
 
         return model.Kind switch
         {
+            AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdapter.PluginKey,
             AgentFrameworkProviderKind.Ollama when LooksLikeLocalOllama(model.BaseUrl) => OllamaProviderAdapter.PluginKey,
             AgentFrameworkProviderKind.Ollama => OllamaRemoteProviderAdapter.PluginKey,
-            _ => OpenAiProviderAdapter.PluginKey
+            AgentFrameworkProviderKind.OpenAi or AgentFrameworkProviderKind.AzureOpenAi => OpenAiProviderAdapter.PluginKey,
+            _ => throw new InvalidOperationException($"No workspace connector plugin mapping exists for provider kind '{model.Kind}'.")
         };
     }
 

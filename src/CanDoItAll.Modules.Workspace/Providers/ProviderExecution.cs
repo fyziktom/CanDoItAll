@@ -34,6 +34,12 @@ public static class ProviderConnectorFieldKeys
     public const string BaseUrl = "baseUrl";
     public const string DefaultModel = "defaultModel";
     public const string TimeoutSeconds = "timeoutSeconds";
+    public const string ComfyUiWorkflowTemplateJson = "workflowTemplateJson";
+    public const string ComfyUiWorkflowTemplatePath = "workflowTemplatePath";
+    public const string ComfyUiPositivePromptNodeId = "positivePromptNodeId";
+    public const string ComfyUiNegativePromptNodeId = "negativePromptNodeId";
+    public const string ComfyUiOutputNodeId = "outputNodeId";
+    public const string ComfyUiPollIntervalMilliseconds = "pollIntervalMilliseconds";
 }
 
 public interface IProviderAdapter : IConnectorPlugin
@@ -578,6 +584,69 @@ public sealed class ProcessMockProviderAdapter : IProviderAdapter
         return string.IsNullOrWhiteSpace(profile.DefaultModel)
             ? DefaultModel
             : profile.DefaultModel;
+    }
+}
+
+public sealed class ComfyUiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
+{
+    public const string PluginKey = "provider.comfyui.local";
+    public const string DefaultModel = "comfyui-workflow";
+
+    private static readonly ConnectorPluginManifest PluginManifest = new(
+        PluginKey,
+        "ComfyUI local image provider",
+        "1.0.0",
+        ConnectorManifestCapability.ProviderExecution | ConnectorManifestCapability.AgentExposure,
+        new ConnectorConfigurationSchema(
+            "1.0",
+            [
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.BaseUrl, "Base URL", ConnectorConfigFieldType.Url, true, "ComfyUI API root, usually http://127.0.0.1:8188."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.DefaultModel, "Workflow alias", ConnectorConfigFieldType.Text, true, "Human-readable workflow/model alias stored on the provider profile."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.TimeoutSeconds, "Timeout", ConnectorConfigFieldType.Number, true, "Maximum image-generation wait time in seconds."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.ComfyUiWorkflowTemplateJson, "Workflow template JSON", ConnectorConfigFieldType.Json, false, "ComfyUI API workflow JSON. Leave empty when using a workflow template path."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.ComfyUiWorkflowTemplatePath, "Workflow template path", ConnectorConfigFieldType.Text, false, "Local path to a ComfyUI API workflow JSON file. Used when inline workflow JSON is empty."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.ComfyUiPositivePromptNodeId, "Positive prompt node", ConnectorConfigFieldType.Text, true, "ComfyUI workflow node id whose inputs.text receives the image prompt."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.ComfyUiNegativePromptNodeId, "Negative prompt node", ConnectorConfigFieldType.Text, false, "Optional ComfyUI workflow node id whose inputs.text receives the configured negative prompt."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.ComfyUiOutputNodeId, "Output node", ConnectorConfigFieldType.Text, false, "Optional node id to restrict image outputs read from history."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.ComfyUiPollIntervalMilliseconds, "Poll interval", ConnectorConfigFieldType.Number, true, "History polling interval in milliseconds.")
+            ]),
+        [],
+        new ConnectorHealthCheckDescriptor("GET /system_stats", "Verifies that the local ComfyUI endpoint is reachable."),
+        new ConnectorAgentExposure("image_generation", true, true, "Allows image generation through a configured ComfyUI workflow provider profile."),
+        null);
+
+    public ConnectorPluginManifest Manifest => PluginManifest;
+
+    public ProviderKind? LegacyProviderKind => null;
+
+    public async Task<ProviderHealthResult> CheckHealthAsync(
+        ProviderProfile profile,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(Math.Max(5, profile.TimeoutSeconds));
+        try
+        {
+            using var response = await client.GetAsync($"{profile.BaseUrl.TrimEnd('/')}/system_stats", cancellationToken);
+            return new ProviderHealthResult(
+                response.IsSuccessStatusCode,
+                response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return new ProviderHealthResult(false, $"ComfyUI health check failed: {exception.Message}");
+        }
+    }
+
+    public Task<Result<ProviderExecutionResponse>> SendAsync(
+        ProviderProfile profile,
+        ProviderExecutionRequest request,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Result<ProviderExecutionResponse>.Failure(
+            Error.Validation("ComfyUI provider profiles are image-generation only and cannot run generic chat prompt execution.")));
     }
 }
 

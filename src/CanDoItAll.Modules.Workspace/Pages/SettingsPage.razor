@@ -305,6 +305,13 @@
                                                 <p class="mt-1">@SelectedProviderManifest.HealthCheck.Summary</p>
                                             </Alert>
                                         }
+                                        else
+                                        {
+                                            <Alert AlertStyle="AlertStyle.Warning">
+                                                <p class="font-semibold">Unknown provider plugin</p>
+                                                <p class="mt-1 break-all">Plugin key: @providerModel.ConnectorPluginKey</p>
+                                            </Alert>
+                                        }
 
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             @foreach (var field in SelectedProviderFields)
@@ -319,10 +326,19 @@
                                     </FormSection>
                                 </TabsItem>
                                 <TabsItem Text="Prices" Icon="paid" data-testid="provider-editor-tab-prices">
-                                    <ProviderModelPricingEditor Model="providerModel"
-                                                                PricingKind="@ResolveProviderPricingKind()"
-                                                                DefaultModel="@ResolveProviderDefaultModel()"
-                                                                OnRefreshPrices="RefreshProviderModelPricesAsync" />
+                                    @if (TryResolveProviderPricingKind(out var pricingKind))
+                                    {
+                                        <ProviderModelPricingEditor Model="providerModel"
+                                                                    PricingKind="@pricingKind"
+                                                                    DefaultModel="@ResolveProviderDefaultModel()"
+                                                                    OnRefreshPrices="RefreshProviderModelPricesAsync" />
+                                    }
+                                    else
+                                    {
+                                        <Alert AlertStyle="AlertStyle.Warning">
+                                            <p>Pricing controls are unavailable until this provider uses a registered connector plugin.</p>
+                                        </Alert>
+                                    }
                                 </TabsItem>
                                 <TabsItem Text="Access" Icon="shield" data-testid="provider-editor-tab-access">
                                     <FormSection Title="Auth and capabilities"

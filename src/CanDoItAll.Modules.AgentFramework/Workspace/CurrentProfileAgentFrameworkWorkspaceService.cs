@@ -151,9 +151,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return ResolveService().RunProviderTestChatAsync(providerId, request, cancellationToken);
     }
 
-    public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(Guid providerId, OllamaModelfileRequest request, CancellationToken cancellationToken = default)
+    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default)
     {
-        return ResolveService().CreateOrUpdateOllamaModelAsync(providerId, request, cancellationToken);
+        return ResolveService().CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken);
     }
 
     public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)

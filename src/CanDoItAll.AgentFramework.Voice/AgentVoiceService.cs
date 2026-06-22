@@ -59,7 +59,6 @@ public sealed class AgentVoiceService(
 
         var provider = await ResolveProviderAsync(
             settings.ProviderProfileId,
-            settings.DriverKind,
             "speech-to-text",
             cancellationToken);
         var driver = driverFactory.CreateSpeechToTextDriver(settings.DriverKind);
@@ -179,7 +178,6 @@ public sealed class AgentVoiceService(
 
     private async Task<ProviderProfile> ResolveProviderAsync(
         Guid? providerProfileId,
-        AgentVoiceDriverKind driverKind,
         string capabilityName,
         CancellationToken cancellationToken)
     {
@@ -195,7 +193,6 @@ public sealed class AgentVoiceService(
             throw new InvalidOperationException($"Provider profile '{provider.Name}' configured for {capabilityName} is disabled.");
         }
 
-        ValidateProviderForDriver(provider, driverKind, capabilityName);
         return provider;
     }
 
@@ -223,7 +220,6 @@ public sealed class AgentVoiceService(
 
         var provider = await ResolveProviderAsync(
             settings.ProviderProfileId,
-            settings.DriverKind,
             "text-to-speech",
             cancellationToken);
         var driver = driverFactory.CreateTextToSpeechDriver(settings.DriverKind);
@@ -270,19 +266,6 @@ public sealed class AgentVoiceService(
                 request.AudioBytes,
                 NormalizeFileName(request.FileName),
                 NormalizeContentType(request.ContentType))];
-    }
-
-    private static void ValidateProviderForDriver(
-        ProviderProfile provider,
-        AgentVoiceDriverKind driverKind,
-        string capabilityName)
-    {
-        if (driverKind == AgentVoiceDriverKind.OpenAi &&
-            (provider.Kind != ProviderKind.OpenAi || provider.Purpose != ProviderProfilePurpose.Chat))
-        {
-            throw new InvalidOperationException(
-                $"OpenAI {capabilityName} requires an enabled OpenAI chat provider profile. Provider '{provider.Name}' is '{provider.Kind}' with purpose '{provider.Purpose}'.");
-        }
     }
 
     private static string NormalizeFileName(string fileName)

@@ -1,7 +1,9 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Voice;
 
 namespace CanDoItAll.Tests.Unit;
@@ -141,25 +143,20 @@ public sealed class AgentVoiceTests
     }
 
     [Fact]
-    public async Task OpenAiVoiceDriver_Transcription_BuildsExpectedRequest()
+    public async Task OpenAiProviderDriver_Transcription_BuildsExpectedRequest()
     {
         var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent("""{"text":"hello world"}""")
         });
-        var driver = new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"));
+        var driver = new OpenAiProviderDriver(new HttpClient(handler), new FixedProviderDriverCredentialResolver("test-key"));
 
-        var result = await driver.TranscribeAsync(new SpeechToTextDriverRequest(
+        var result = await driver.TranscribeSpeechAsync(new ProviderSpeechToTextRequest(
             CreateProvider(),
-            new AgentSpeechToTextSettings
-            {
-                Model = "gpt-4o-mini-transcribe",
-                Language = "en",
-                Prompt = "The phrase may contain the words testing record."
-            },
-            [1, 2, 3],
-            "voice.webm",
-            "audio/webm"));
+            "gpt-4o-mini-transcribe",
+            [new ProviderSpeechToTextAudio("voice.webm", "audio/webm", [1, 2, 3])],
+            "en",
+            "The phrase may contain the words testing record."));
 
         Assert.Equal("hello world", result.Text);
         Assert.Equal(HttpMethod.Post, handler.Request!.Method);
@@ -173,23 +170,21 @@ public sealed class AgentVoiceTests
     }
 
     [Fact]
-    public async Task OpenAiVoiceDriver_Synthesis_BuildsExpectedRequest()
+    public async Task OpenAiProviderDriver_Synthesis_BuildsExpectedRequest()
     {
         var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent([1, 2, 3, 4])
         });
-        var driver = new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"));
+        var driver = new OpenAiProviderDriver(new HttpClient(handler), new FixedProviderDriverCredentialResolver("test-key"));
 
-        var result = await driver.SynthesizeAsync(new TextToSpeechDriverRequest(
+        var result = await driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
             CreateProvider(),
-            new AgentTextToSpeechSettings
-            {
-                Model = "gpt-4o-mini-tts",
-                ResponseFormat = "mp3"
-            },
+            "gpt-4o-mini-tts",
             "hello",
-            "cedar"));
+            "cedar",
+            "mp3",
+            string.Empty));
 
         using var json = JsonDocument.Parse(handler.RequestBody);
 
@@ -207,7 +202,7 @@ public sealed class AgentVoiceTests
     [InlineData("aac", "audio/aac")]
     [InlineData("flac", "audio/flac")]
     [InlineData("wav", "audio/wav")]
-    public async Task OpenAiVoiceDriver_Synthesis_ReturnsBrowserPlayableContentType(
+    public async Task OpenAiProviderDriver_Synthesis_ReturnsBrowserPlayableContentType(
         string responseFormat,
         string expectedContentType)
     {
@@ -215,17 +210,15 @@ public sealed class AgentVoiceTests
         {
             Content = new ByteArrayContent([1, 2, 3, 4])
         });
-        var driver = new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"));
+        var driver = new OpenAiProviderDriver(new HttpClient(handler), new FixedProviderDriverCredentialResolver("test-key"));
 
-        var result = await driver.SynthesizeAsync(new TextToSpeechDriverRequest(
+        var result = await driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
             CreateProvider(),
-            new AgentTextToSpeechSettings
-            {
-                Model = "gpt-4o-mini-tts",
-                ResponseFormat = responseFormat
-            },
+            "gpt-4o-mini-tts",
             "hello",
-            "cedar"));
+            "cedar",
+            responseFormat,
+            string.Empty));
 
         using var json = JsonDocument.Parse(handler.RequestBody);
 
@@ -236,23 +229,21 @@ public sealed class AgentVoiceTests
     }
 
     [Fact]
-    public async Task OpenAiVoiceDriver_Synthesis_WrapsPcmForBrowserPlayback()
+    public async Task OpenAiProviderDriver_Synthesis_WrapsPcmForBrowserPlayback()
     {
         var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent([1, 0, 2, 0])
         });
-        var driver = new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"));
+        var driver = new OpenAiProviderDriver(new HttpClient(handler), new FixedProviderDriverCredentialResolver("test-key"));
 
-        var result = await driver.SynthesizeAsync(new TextToSpeechDriverRequest(
+        var result = await driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
             CreateProvider(),
-            new AgentTextToSpeechSettings
-            {
-                Model = "gpt-4o-mini-tts",
-                ResponseFormat = "pcm"
-            },
+            "gpt-4o-mini-tts",
             "hello",
-            "cedar"));
+            "cedar",
+            "pcm",
+            string.Empty));
 
         using var json = JsonDocument.Parse(handler.RequestBody);
 
@@ -277,7 +268,7 @@ public sealed class AgentVoiceTests
                 }
             }),
             new EmptyProviderRegistry(),
-            new AgentVoiceDriverFactory(new OpenAiVoiceDriver(new HttpClient(new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK))), new FixedCredentialResolver("test-key"))),
+            new StaticVoiceDriverFactory(new CapturingVoiceDriver([]), new CapturingVoiceDriver([])),
             new AgentVoiceSpeechTextPreprocessor());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -290,6 +281,9 @@ public sealed class AgentVoiceTests
     public async Task AgentVoiceService_Synthesize_RejectsImageGenerationProvider()
     {
         var provider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        await using var harness = CreateRuntimeVoiceDriverFactory(new OpenAiProviderDriver(
+            new HttpClient(new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK))),
+            new FixedProviderDriverCredentialResolver("test-key")));
         var service = new AgentVoiceService(
             new InMemoryWorkflowSettingsService(new AgentVoiceSettings
             {
@@ -300,7 +294,7 @@ public sealed class AgentVoiceTests
                 }
             }),
             new InMemoryProviderRegistry([provider]),
-            new AgentVoiceDriverFactory(new OpenAiVoiceDriver(new HttpClient(new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK))), new FixedCredentialResolver("test-key"))),
+            harness,
             new AgentVoiceSpeechTextPreprocessor());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -317,6 +311,9 @@ public sealed class AgentVoiceTests
         {
             Content = new ByteArrayContent([1, 2, 3, 4])
         });
+        await using var harness = CreateRuntimeVoiceDriverFactory(new OpenAiProviderDriver(
+            new HttpClient(handler),
+            new FixedProviderDriverCredentialResolver("test-key")));
         var service = new AgentVoiceService(
             new InMemoryWorkflowSettingsService(new AgentVoiceSettings
             {
@@ -330,7 +327,7 @@ public sealed class AgentVoiceTests
                 }
             }),
             new InMemoryProviderRegistry([provider]),
-            new AgentVoiceDriverFactory(new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"))),
+            harness,
             new AgentVoiceSpeechTextPreprocessor());
 
         var result = await service.SynthesizeAsync(new AgentVoiceSynthesisRequest(
@@ -345,6 +342,68 @@ public sealed class AgentVoiceTests
         Assert.Contains(AgentVoiceSpeechTextPreprocessor.IdentifierOmissionNotice, input, StringComparison.Ordinal);
         Assert.DoesNotContain("5128a19c-2c76-4ea6-9458-349616e2c383", input, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("bf8ba85a", input, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AgentVoiceService_Synthesize_UnsupportedProviderCapabilityFailsExplicitly()
+    {
+        var provider = CreateProvider(kind: ProviderKind.Ollama, baseUrl: "http://localhost:11434");
+        await using var harness = CreateRuntimeVoiceDriverFactory(new OpenAiProviderDriver(
+            new HttpClient(new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK))),
+            new FixedProviderDriverCredentialResolver("test-key")));
+        var service = new AgentVoiceService(
+            new InMemoryWorkflowSettingsService(new AgentVoiceSettings
+            {
+                TextToSpeech = new AgentTextToSpeechSettings
+                {
+                    IsEnabled = true,
+                    ProviderProfileId = provider.Id,
+                    Model = "gpt-4o-mini-tts",
+                    ResponseFormat = "mp3",
+                    VoiceId = "cedar"
+                }
+            }),
+            new InMemoryProviderRegistry([provider]),
+            harness,
+            new AgentVoiceSpeechTextPreprocessor());
+
+        var exception = await Assert.ThrowsAsync<UnsupportedProviderCapabilityException>(() =>
+            service.SynthesizeSampleAsync("hello"));
+
+        Assert.Equal(ProviderKind.Ollama, exception.ProviderKind);
+        Assert.Equal(AgentProviderCapabilityKind.TextToSpeech, exception.Capability);
+    }
+
+    [Fact]
+    public async Task AgentVoiceService_Synthesize_ConcurrentRuntimeRequestsReturnIndependentResults()
+    {
+        var provider = CreateProvider();
+        var driver = new ConcurrentTextToSpeechProviderDriver(expectedConcurrentRequests: 8);
+        await using var harness = CreateRuntimeVoiceDriverFactory(driver);
+        var service = new AgentVoiceService(
+            new InMemoryWorkflowSettingsService(new AgentVoiceSettings
+            {
+                TextToSpeech = new AgentTextToSpeechSettings
+                {
+                    IsEnabled = true,
+                    ProviderProfileId = provider.Id,
+                    Model = "gpt-4o-mini-tts",
+                    ResponseFormat = "mp3",
+                    VoiceId = "cedar"
+                }
+            }),
+            new InMemoryProviderRegistry([provider]),
+            harness,
+            new AgentVoiceSpeechTextPreprocessor());
+
+        var tasks = Enumerable.Range(0, 8)
+            .Select(index => service.SynthesizeAsync(new AgentVoiceSynthesisRequest($"voice request {index}")))
+            .ToArray();
+
+        var results = await Task.WhenAll(tasks);
+
+        Assert.Equal(8, results.Select(result => Encoding.UTF8.GetString(result.AudioBytes)).Distinct(StringComparer.Ordinal).Count());
+        Assert.True(driver.MaxObservedInFlight > 1);
     }
 
     [Fact]
@@ -461,13 +520,15 @@ public sealed class AgentVoiceTests
     }
 
     private static ProviderProfile CreateProvider(
-        ProviderProfilePurpose purpose = ProviderProfilePurpose.Chat)
+        ProviderProfilePurpose purpose = ProviderProfilePurpose.Chat,
+        ProviderKind kind = ProviderKind.OpenAi,
+        string baseUrl = "https://api.openai.com/v1/models")
     {
         return new ProviderProfile(
             Guid.NewGuid(),
-            "OpenAI",
-            ProviderKind.OpenAi,
-            "https://api.openai.com/v1/models",
+            kind.ToString(),
+            kind,
+            baseUrl,
             "OPENAI_API_KEY",
             "gpt-5-mini",
             ProviderTransportKind.Responses,
@@ -504,11 +565,48 @@ public sealed class AgentVoiceTests
         }
     }
 
-    private sealed class FixedCredentialResolver(string apiKey) : IAgentProviderCredentialResolver
+    private static RuntimeVoiceDriverHarness CreateRuntimeVoiceDriverFactory(params IAgentProviderDriver[] drivers)
     {
-        public ProviderCredentialResolution Resolve(ProviderProfile provider)
+        var descriptorStore = new ProviderProfileRuntimeDescriptorStore();
+        var builder = new AgentProviderDriverRegistryBuilder();
+        foreach (var driver in drivers)
         {
-            return new ProviderCredentialResolution(apiKey, "test", string.Empty);
+            builder.AddDriver(driver);
+        }
+
+        var runtimePool = new ProviderRuntimePool(
+            descriptorStore,
+            new ProviderRuntimeHandleFactory(builder.Build()));
+        return new RuntimeVoiceDriverHarness(
+            runtimePool,
+            new AgentVoiceDriverFactory(new ProviderRuntimeVoiceDriver(descriptorStore, runtimePool)));
+    }
+
+    private sealed class FixedProviderDriverCredentialResolver(string apiKey) : IProviderDriverCredentialResolver
+    {
+        public ProviderDriverCredential Resolve(ProviderProfile provider)
+        {
+            return ProviderDriverCredential.Resolved(apiKey);
+        }
+    }
+
+    private sealed class RuntimeVoiceDriverHarness(
+        ProviderRuntimePool runtimePool,
+        IAgentVoiceDriverFactory innerFactory) : IAgentVoiceDriverFactory, IAsyncDisposable
+    {
+        public ISpeechToTextVoiceDriver CreateSpeechToTextDriver(AgentVoiceDriverKind driverKind)
+        {
+            return innerFactory.CreateSpeechToTextDriver(driverKind);
+        }
+
+        public ITextToSpeechVoiceDriver CreateTextToSpeechDriver(AgentVoiceDriverKind driverKind)
+        {
+            return innerFactory.CreateTextToSpeechDriver(driverKind);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return runtimePool.DisposeAsync();
         }
     }
 
@@ -560,6 +658,74 @@ public sealed class AgentVoiceTests
                 request.Settings.Model,
                 request.VoiceId,
                 request.Settings.ResponseFormat));
+        }
+    }
+
+    private sealed class ConcurrentTextToSpeechProviderDriver(int expectedConcurrentRequests) : IProviderTextToSpeechDriver
+    {
+        private static readonly IReadOnlySet<AgentProviderCapabilityKind> SupportedCapabilities = new HashSet<AgentProviderCapabilityKind>
+        {
+            AgentProviderCapabilityKind.TextToSpeech
+        };
+
+        private int inFlight;
+        private int startedRequests;
+        private int maxObservedInFlight;
+        private readonly TaskCompletionSource releaseConcurrentRequests = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ProviderKind ProviderKind => ProviderKind.OpenAi;
+
+        public IReadOnlySet<AgentProviderCapabilityKind> Capabilities => SupportedCapabilities;
+
+        public int MaxObservedInFlight => Volatile.Read(ref maxObservedInFlight);
+
+        public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query)
+        {
+            return ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(30));
+        }
+
+        public async Task<ProviderTextToSpeechResult> SynthesizeSpeechAsync(
+            ProviderTextToSpeechRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var current = Interlocked.Increment(ref inFlight);
+            TrackMaxObservedInFlight(current);
+            try
+            {
+                if (Interlocked.Increment(ref startedRequests) >= expectedConcurrentRequests)
+                {
+                    releaseConcurrentRequests.TrySetResult();
+                }
+
+                await releaseConcurrentRequests.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                return new ProviderTextToSpeechResult(
+                    request.Model,
+                    request.VoiceId,
+                    request.ResponseFormat,
+                    "audio/mpeg",
+                    Encoding.UTF8.GetBytes(request.Text));
+            }
+            finally
+            {
+                Interlocked.Decrement(ref inFlight);
+            }
+        }
+
+        private void TrackMaxObservedInFlight(int current)
+        {
+            while (true)
+            {
+                var observed = Volatile.Read(ref maxObservedInFlight);
+                if (current <= observed)
+                {
+                    return;
+                }
+
+                if (Interlocked.CompareExchange(ref maxObservedInFlight, current, observed) == observed)
+                {
+                    return;
+                }
+            }
         }
     }
 

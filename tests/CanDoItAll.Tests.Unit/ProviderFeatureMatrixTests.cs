@@ -118,6 +118,30 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
+    public void ResolveFeatureMatrix_marks_comfyui_as_private_image_provider_without_chat_tools()
+    {
+        var service = new ProviderProfileService();
+        var provider = CreateProvider(
+            ProviderKind.ComfyUi,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: false,
+            preferFrameworkManagedHistory: true) with
+        {
+            DefaultModel = "comfyui-workflow",
+            Purpose = ProviderProfilePurpose.ImageGeneration
+        };
+
+        var matrix = service.ResolveFeatureMatrix(provider);
+
+        Assert.Equal(ProviderKind.ComfyUi, matrix.Kind);
+        Assert.True(matrix.SupportsImageGeneration);
+        Assert.False(matrix.SupportsStructuredOutput);
+        Assert.False(matrix.SupportsFunctionTools);
+        Assert.False(matrix.SupportsVision);
+        Assert.False(matrix.SupportsToolApprovalRequests);
+    }
+
+    [Fact]
     public void Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata()
     {
         var source = ReadRepositoryFile(
@@ -136,6 +160,147 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("ResolveFeatureMatrix", source, StringComparison.Ordinal);
         Assert.Contains("ResolveTransport", source, StringComparison.Ordinal);
         Assert.Contains("providerTransport", metadataSource, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiProviderAdapter.PluginKey", source, StringComparison.Ordinal);
+        Assert.Contains("ProviderProfilePurpose.ImageGeneration", source, StringComparison.Ordinal);
+        Assert.Contains("AgentFrameworkProviderKind.ComfyUi", metadataSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Provider_settings_ui_has_explicit_plugin_mapping_and_comfyui_typed_fields()
+    {
+        var workspaceModelsSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Models",
+            "WorkspaceModels.cs");
+        var settingsPageSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Pages",
+            "SettingsPage.razor.cs");
+        var settingsPageMarkup = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Pages",
+            "SettingsPage.razor");
+        var providerPanelSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Pages",
+            "Components",
+            "ProviderManagementPanel.razor.cs");
+        var providerPanelMarkup = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Pages",
+            "Components",
+            "ProviderManagementPanel.razor");
+        var providerExecutionSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Providers",
+            "ProviderExecution.cs");
+
+        Assert.Contains("TryResolveAgentFrameworkProviderKind", workspaceModelsSource, StringComparison.Ordinal);
+        Assert.Contains("TryResolveAgentFrameworkProviderKind", settingsPageSource, StringComparison.Ordinal);
+        Assert.Contains("TryResolveAgentFrameworkProviderKind", providerPanelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", workspaceModelsSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", settingsPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", providerPanelSource, StringComparison.Ordinal);
+        Assert.Contains("No AgentFramework provider kind mapping exists for connector plugin", workspaceModelsSource, StringComparison.Ordinal);
+        Assert.Contains("No provider pricing kind is registered for connector plugin", settingsPageSource, StringComparison.Ordinal);
+        Assert.Contains("No provider pricing kind is registered for connector plugin", providerPanelSource, StringComparison.Ordinal);
+        Assert.Contains("Unknown provider plugin", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.Contains("Unknown provider plugin", providerPanelMarkup, StringComparison.Ordinal);
+        Assert.Contains("Pricing controls are unavailable", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.Contains("Pricing controls are unavailable", providerPanelMarkup, StringComparison.Ordinal);
+
+        Assert.Contains("ComfyUiProviderAdapter.PluginKey", settingsPageSource, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiProviderAdapter.PluginKey", providerPanelSource, StringComparison.Ordinal);
+        Assert.Contains("http://127.0.0.1:8188", settingsPageSource, StringComparison.Ordinal);
+        Assert.Contains("http://127.0.0.1:8188", providerPanelSource, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiWorkflowTemplateJson", providerExecutionSource, StringComparison.Ordinal);
+        Assert.Contains("ConnectorConfigFieldType.Json", providerExecutionSource, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiWorkflowTemplatePath", providerExecutionSource, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiPositivePromptNodeId", providerExecutionSource, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiPollIntervalMilliseconds", providerExecutionSource, StringComparison.Ordinal);
+        Assert.Contains("ConnectorAgentExposure(\"image_generation\"", providerExecutionSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Agent_framework_provider_mapping_and_workflow_image_selection_do_not_fallback_to_chat_providers()
+    {
+        var registrySource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.AgentFramework",
+            "Providers",
+            "WorkspaceBackedAgentProviderProfileRegistry.cs");
+        var metadataSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.AgentFramework",
+            "Providers",
+            "AgentFrameworkProviderMetadata.cs");
+        var workflowSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "WorkflowCanvasEditor.razor.cs");
+        var workflowMarkup = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "WorkflowCanvasEditor.razor");
+        var treeNodeBuilderSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "ProviderProfileTreeNodeBuilder.cs");
+
+        Assert.Contains("ResolveMappedProviderKind", registrySource, StringComparison.Ordinal);
+        Assert.Contains("No AgentFramework provider kind mapping exists for connector plugin", registrySource, StringComparison.Ordinal);
+        Assert.Contains("No AgentFramework provider transport mapping exists for connector plugin", registrySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", registrySource, StringComparison.Ordinal);
+        Assert.Contains("AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdapter.PluginKey", metadataSource, StringComparison.Ordinal);
+        Assert.Contains("No workspace connector plugin mapping exists for provider kind", metadataSource, StringComparison.Ordinal);
+
+        Assert.Contains("ImageProviderOptions", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("option.Purpose == ProviderProfilePurpose.ImageGeneration", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("workflow-image-provider-select", workflowMarkup, StringComparison.Ordinal);
+        Assert.Contains("selected.ExecutorId != WorkflowExecutorIds.ImageGeneration", workflowMarkup, StringComparison.Ordinal);
+        Assert.Contains("Selected provider is not an image-generation provider", workflowMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Provider profile id", workflowMarkup, StringComparison.Ordinal);
+        Assert.Contains("ProviderKind.ComfyUi => \"image\"", treeNodeBuilderSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Provider_settings_ui_does_not_expose_non_persisted_batch_controls()
+    {
+        var settingsPageMarkup = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Pages",
+            "SettingsPage.razor");
+        var providerPanelMarkup = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Workspace",
+            "Pages",
+            "Components",
+            "ProviderManagementPanel.razor");
+        var providerDispatchModels = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.AgentFramework.Models",
+            "Providers",
+            "ProviderDispatchModels.cs");
+
+        Assert.Contains("SupportsBatching", providerDispatchModels, StringComparison.Ordinal);
+        Assert.Contains("MaxBatchSize", providerDispatchModels, StringComparison.Ordinal);
+        Assert.DoesNotContain("Max batch size", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Max batch size", providerPanelMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Max queue delay", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Max queue delay", providerPanelMarkup, StringComparison.Ordinal);
     }
 
     [Fact]
