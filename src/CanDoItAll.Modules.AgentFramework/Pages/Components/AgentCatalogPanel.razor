@@ -114,24 +114,26 @@
                 }
                 else
                 {
-                    <Grid Gap="LayoutGap.Medium"
-                          ColumnTemplate="repeat(auto-fit,minmax(17rem,1fr))"
-                          Class="agent-catalog-panel__grid"
-                          data-testid="agents-catalog-card-grid">
-                        @foreach (var agent in FilteredAgents)
-                        {
-                            <AgentSelectionCard Agent="@agent"
-                                                IsSelected="@(selectedAgentId == agent.Id)"
-                                                IsPrivateProvider="@UsesPrivateProvider(agent)"
-                                                SelectedLabel="Selected"
-                                                ShowChatHistory="true"
-                                                ShowDetailsTooltip="true"
-                                                ShellTestId="agents-catalog-card-shell"
-                                                SelectTestId="agents-catalog-card"
-                                                OnSelect="@(() => SelectAgent(agent.Id))"
-                                                OnDoubleClick="@(() => QueueAgentDetailsDialogAsync(agent.Id))" />
-                        }
-                    </Grid>
+                    <div class="agent-catalog-panel__agent-scroll">
+                        <Grid Gap="LayoutGap.Medium"
+                              ColumnTemplate="repeat(auto-fit,minmax(17rem,1fr))"
+                              Class="agent-catalog-panel__grid"
+                              data-testid="agents-catalog-card-grid">
+                            @foreach (var agent in FilteredAgents)
+                            {
+                                <AgentSelectionCard Agent="@agent"
+                                                    IsSelected="@(selectedAgentId == agent.Id)"
+                                                    IsPrivateProvider="@UsesPrivateProvider(agent)"
+                                                    SelectedLabel="Selected"
+                                                    ShowChatHistory="true"
+                                                    ShowDetailsTooltip="true"
+                                                    ShellTestId="agents-catalog-card-shell"
+                                                    SelectTestId="agents-catalog-card"
+                                                    OnSelect="@(() => SelectAgent(agent.Id))"
+                                                    OnDoubleClick="@(() => QueueAgentDetailsDialogAsync(agent.Id))" />
+                            }
+                        </Grid>
+                    </div>
                 }
             </section>
         </Grid>

@@ -86,6 +86,15 @@
     width: 100%;
 }
 
+.agent-catalog-panel__agent-scroll {
+    --agent-catalog-card-row-height: 15rem;
+
+    max-height: min(calc((var(--agent-catalog-card-row-height) * 3) + 2rem), calc(100vh - 17rem));
+    min-width: 0;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+}
+
 @media (min-width: 1024px) {
     .agent-catalog-panel__team-panel {
         max-height: 46rem;
@@ -109,5 +118,11 @@
         max-width: none;
         min-width: 0;
         width: 100%;
+    }
+
+    .agent-catalog-panel__agent-scroll {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
     }
 }

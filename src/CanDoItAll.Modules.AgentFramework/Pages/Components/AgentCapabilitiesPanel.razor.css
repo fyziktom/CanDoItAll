@@ -2,6 +2,43 @@
     align-items: stretch;
 }
 
+.agent-capabilities-panel__tree-scroll {
+    max-height: min(34rem, calc(100vh - 20rem));
+    min-width: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.agent-capabilities-panel__detail-header {
+    align-items: center;
+    display: grid;
+    gap: 0.75rem 1rem;
+    grid-template-columns: minmax(12rem, auto) minmax(0, 1fr) auto;
+    min-width: 0;
+}
+
+.agent-capabilities-panel__detail-title {
+    min-width: 0;
+}
+
+.agent-capabilities-panel__heading {
+    color: rgb(15 23 42);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.agent-capabilities-panel__header-stats {
+    min-width: 0;
+}
+
+.agent-capabilities-panel__header-actions {
+    justify-content: flex-end;
+    min-width: max-content;
+}
+
 .agent-capabilities-panel__filters {
     align-items: start;
     display: grid;
@@ -14,6 +51,15 @@
 .agent-capabilities-panel__filter-select {
     min-width: 0;
     width: 100%;
+}
+
+.agent-capabilities-panel__card-scroll {
+    --agent-capabilities-card-row-height: 17.25rem;
+
+    max-height: min(calc((var(--agent-capabilities-card-row-height) * 3) + 2rem), calc(100vh - 24rem));
+    min-width: 0;
+    overflow-y: auto;
+    padding-right: 0.35rem;
 }
 
 .agent-capabilities-panel__card {
@@ -56,4 +102,28 @@
     line-height: 1.45;
     margin: 0.75rem 0 0;
     overflow-wrap: anywhere;
+}
+
+@media (max-width: 1279px) {
+    .agent-capabilities-panel__detail-header {
+        grid-template-columns: 1fr;
+    }
+
+    .agent-capabilities-panel__header-actions {
+        justify-content: flex-start;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .agent-capabilities-panel__filters {
+        grid-template-columns: 1fr;
+    }
+
+    .agent-capabilities-panel__tree-scroll,
+    .agent-capabilities-panel__card-scroll {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
 }
