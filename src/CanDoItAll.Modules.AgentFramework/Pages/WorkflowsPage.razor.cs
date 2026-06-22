@@ -10,6 +10,11 @@ public partial class WorkflowsPage
 {
     private const int HistoryRunPageSize = 8;
     private const int HistoryEventPageSize = 8;
+    private const int WorkflowsTabIndex = 1;
+    private const int EditorTabIndex = 2;
+    private const int TemplatesTabIndex = 3;
+    private const int HistoryTabIndex = 4;
+    private const int AnalyticsTabIndex = 5;
     private static readonly string[] RunResultPreviewPropertyNames =
     [
         "summary",
@@ -64,6 +69,7 @@ public partial class WorkflowsPage
     private IReadOnlyList<WorkflowValidationIssue> validationIssues = [];
     private WorkflowTemplatePack? templatePack;
     private WorkflowSettings settings = WorkflowSettings.Default;
+    private WorkflowId? selectedDefinitionId;
     private WorkflowDefinition? selectedDefinition;
     private WorkflowRunSnapshot? selectedRun;
     private WorkflowRunSnapshot? runDetail;
@@ -87,29 +93,66 @@ public partial class WorkflowsPage
     private bool isRunningTest;
     private bool isPreviewInputDialogOpen;
     private bool componentLibraryLoaded;
+    private bool historyLoaded;
+    private bool selectedDefinitionDetailLoaded;
+    private bool selectedDefinitionDetailUnavailable;
     private Task? componentLibraryLoadTask;
     private readonly HashSet<string> expandedWorkflowTreeNodeIds = [];
 
-    private string SelectedDefinitionTitle => selectedDefinition?.Name ?? "Workflow detail";
+    private WorkflowId? CurrentDefinitionId => selectedDefinition?.Id ?? selectedDefinitionId;
+
+    private WorkflowCatalogItem? SelectedDefinitionSummary
+        => CurrentDefinitionId is { } definitionId
+            ? definitions.FirstOrDefault(definition => definition.Id == definitionId)
+            : null;
+
+    private string SelectedDefinitionTitle => selectedDefinition?.Name ?? SelectedDefinitionSummary?.Name ?? "Workflow detail";
+
+    private bool IsSelectedDefinitionDetailPending
+        => CurrentDefinitionId.HasValue && !selectedDefinitionDetailLoaded && !selectedDefinitionDetailUnavailable;
+
+    private bool IsSelectedDefinitionDetailUnavailable
+        => CurrentDefinitionId.HasValue && selectedDefinition is null && selectedDefinitionDetailUnavailable;
+
+    private string EditorDefinitionKey
+        => selectedDefinition is null
+            ? "draft"
+            : $"{selectedDefinition.Id.Value:D}:{selectedDefinition.VersionId.Value:D}";
 
     private string ComponentCountText => componentLibraryLoaded ? components.Count.ToString() : "-";
+
+    private string HistoryRunCountText => historyLoaded ? historyRunTotalCount.ToString() : "-";
+
+    private string PendingRequestCountText => historyLoaded ? pendingRequests.Count.ToString() : "-";
+
+    private string ArtifactCountText => historyLoaded ? artifacts.Count.ToString() : "-";
 
     private IReadOnlyList<WorkflowTemplateDefinition> WorkflowTemplates => templatePack?.Workflows ?? [];
 
     private string WorkflowTemplateSeedText => templatePack?.Manifest.SeedVersion ?? "-";
 
-    private string ValidationText => validationIssues.Count == 0 ? "Valid" : $"{validationIssues.Count} issue(s)";
+    private string ValidationText
+        => selectedDefinitionDetailUnavailable
+            ? "Unavailable"
+            : selectedDefinitionId.HasValue && !selectedDefinitionDetailLoaded
+            ? "Deferred"
+            : validationIssues.Count == 0 ? "Valid" : $"{validationIssues.Count} issue(s)";
 
-    private string ValidationTone => validationIssues.Count == 0 ? "success" : "warning";
+    private string ValidationTone
+        => selectedDefinitionDetailUnavailable
+            ? "warning"
+            : selectedDefinitionId.HasValue && !selectedDefinitionDetailLoaded
+            ? "neutral"
+            : validationIssues.Count == 0 ? "success" : "warning";
 
-    private string RunText => selectedRun is null ? "No run selected" : selectedRun.State.ToString();
+    private string RunText => !historyLoaded ? "History deferred" : selectedRun is null ? "No run selected" : selectedRun.State.ToString();
 
-    private string RunTone => selectedRun is null ? "neutral" : ResolveRunTone(selectedRun.State);
+    private string RunTone => !historyLoaded || selectedRun is null ? "neutral" : ResolveRunTone(selectedRun.State);
 
     private IReadOnlyList<TreeViewNode> WorkflowDefinitionTreeNodes
         => WorkflowDefinitionTreeNodeBuilder.Build(
             definitions,
-            selectedDefinition?.Id,
+            CurrentDefinitionId,
             expandedWorkflowTreeNodeIds);
 
     private int HistoryRunTotalPages => CalculateTotalPages(historyRunTotalCount, HistoryRunPageSize);
@@ -142,7 +185,7 @@ public partial class WorkflowsPage
 
         try
         {
-            await LoadPageAsync(preferredDefinitionId: selectedDefinition?.Id, preferredRunId: selectedRun?.RunId);
+            await LoadPageAsync(preferredDefinitionId: CurrentDefinitionId, preferredRunId: selectedRun?.RunId);
         }
         catch (Exception exception)
         {
@@ -162,29 +205,35 @@ public partial class WorkflowsPage
     {
         var settingsTask = SettingsService.GetSettingsAsync();
         var definitionsTask = CatalogService.ListDefinitionsAsync();
-        templatePack ??= TemplatePackLoader.Load();
         await Task.WhenAll(settingsTask, definitionsTask);
 
         settings = await settingsTask;
         definitions = await definitionsTask;
 
         var definitionId = preferredDefinitionId ??
-                           selectedDefinition?.Id ??
+                           CurrentDefinitionId ??
                            definitions.FirstOrDefault()?.Id;
         if (definitionId.HasValue)
         {
-            await LoadDefinitionAsync(definitionId.Value);
+            SetSelectedDefinitionPlaceholder(definitionId.Value);
         }
         else
         {
-            selectedDefinition = null;
-            validationIssues = [];
+            ClearSelectedDefinitionState();
         }
 
-        await LoadRunsPageAsync(
-            selectedDefinition?.Id,
-            pageIndex: 0,
-            preferredRunId);
+        if (ShouldLoadHistory(preferredRunId))
+        {
+            await EnsureSelectedDefinitionLoadedAsync();
+            await LoadRunsPageAsync(
+                CurrentDefinitionId,
+                pageIndex: 0,
+                preferredRunId);
+        }
+        else
+        {
+            ClearHistoryState(markLoaded: false);
+        }
 
         if (componentLibraryLoaded)
         {
@@ -195,8 +244,16 @@ public partial class WorkflowsPage
     private async Task SelectDefinitionAsync(WorkflowId definitionId)
     {
         errorMessage = string.Empty;
-        await LoadDefinitionAsync(definitionId);
-        await LoadRunsPageAsync(definitionId, pageIndex: 0);
+        SetSelectedDefinitionPlaceholder(definitionId);
+        await EnsureSelectedDefinitionLoadedAsync();
+        if (historyLoaded || WorkflowTabRequiresHistory(activeWorkflowTabIndex))
+        {
+            await LoadRunsPageAsync(definitionId, pageIndex: 0);
+        }
+        else
+        {
+            ClearHistoryState(markLoaded: false);
+        }
     }
 
     private async Task HandleWorkflowTreeSelectAsync(string nodeId)
@@ -224,13 +281,20 @@ public partial class WorkflowsPage
         var detail = await CatalogService.GetDefinitionAsync(definitionId);
         if (detail is null)
         {
+            selectedDefinitionId = definitionId;
             selectedDefinition = null;
             validationIssues = [];
+            selectedDefinitionDetailLoaded = false;
+            selectedDefinitionDetailUnavailable = true;
+            errorMessage = $"Workflow definition '{definitionId}' was not found.";
             return;
         }
 
         selectedDefinition = detail.Definition;
         validationIssues = detail.Validation.Issues;
+        selectedDefinitionId = detail.Definition.Id;
+        selectedDefinitionDetailLoaded = true;
+        selectedDefinitionDetailUnavailable = false;
     }
 
     private async Task CreateStarterWorkflowAsync()
@@ -292,7 +356,13 @@ public partial class WorkflowsPage
 
     private async Task RunSelectedWorkflowAsync()
     {
-        if (selectedDefinition is null || isRunningTest)
+        if (isRunningTest)
+        {
+            return;
+        }
+
+        await EnsureSelectedDefinitionLoadedAsync();
+        if (selectedDefinition is null)
         {
             return;
         }
@@ -456,11 +526,7 @@ public partial class WorkflowsPage
         selectedRun = await RuntimeManager.GetRunAsync(runId);
         if (selectedRun is null)
         {
-            runEvents = [];
-            artifacts = [];
-            pendingRequests = [];
-            historyEventPageIndex = 0;
-            historyEventTotalCount = 0;
+            ClearSelectedRunState();
             return;
         }
 
@@ -496,6 +562,7 @@ public partial class WorkflowsPage
         runs = runPage.Items;
         historyRunPageIndex = runPage.PageIndex;
         historyRunTotalCount = runPage.TotalCount;
+        historyLoaded = true;
 
         WorkflowRunId? retainedRunId = selectedRun is not null && selectedRun.WorkflowId == workflowId
             ? selectedRun.RunId
@@ -509,12 +576,7 @@ public partial class WorkflowsPage
             return;
         }
 
-        selectedRun = null;
-        runEvents = [];
-        artifacts = [];
-        pendingRequests = [];
-        historyEventPageIndex = 0;
-        historyEventTotalCount = 0;
+        ClearSelectedRunState();
     }
 
     private async Task ChangeRunPageAsync(int delta)
@@ -525,7 +587,7 @@ public partial class WorkflowsPage
             return;
         }
 
-        await LoadRunsPageAsync(selectedDefinition?.Id, nextPage);
+        await LoadRunsPageAsync(CurrentDefinitionId, nextPage);
     }
 
     private async Task ChangeEventPageAsync(int delta)
@@ -583,7 +645,7 @@ public partial class WorkflowsPage
         {
             selectedRun = await RuntimeManager.CancelAsync(selectedRun.RunId);
             NotificationService.Success("Workflow run cancelled", selectedRun.Summary);
-            await LoadPageAsync(preferredDefinitionId: selectedDefinition?.Id, preferredRunId: selectedRun.RunId);
+            await LoadPageAsync(preferredDefinitionId: CurrentDefinitionId, preferredRunId: selectedRun.RunId);
         }
         catch (Exception exception)
         {
@@ -598,7 +660,7 @@ public partial class WorkflowsPage
         {
             selectedRun = await RuntimeManager.RespondToExternalRequestAsync(request.Id, pendingResponseJson);
             NotificationService.Success("Workflow request answered", selectedRun.Summary);
-            await LoadPageAsync(preferredDefinitionId: selectedDefinition?.Id, preferredRunId: selectedRun.RunId);
+            await LoadPageAsync(preferredDefinitionId: CurrentDefinitionId, preferredRunId: selectedRun.RunId);
         }
         catch (Exception exception)
         {
@@ -621,10 +683,35 @@ public partial class WorkflowsPage
     private async Task HandleWorkflowTabChangedAsync(int index)
     {
         activeWorkflowTabIndex = index;
+        if (WorkflowTabRequiresDefinitionDetail(index))
+        {
+            await EnsureSelectedDefinitionLoadedAsync();
+        }
+
         if (WorkflowTabRequiresComponentLibrary(index))
         {
             await EnsureComponentLibraryLoadedAsync();
         }
+
+        if (WorkflowTabRequiresTemplatePack(index))
+        {
+            await EnsureTemplatePackLoadedAsync();
+        }
+
+        if (WorkflowTabRequiresHistory(index))
+        {
+            await EnsureHistoryLoadedAsync();
+        }
+    }
+
+    private async Task EnsureHistoryLoadedAsync()
+    {
+        if (historyLoaded)
+        {
+            return;
+        }
+
+        await LoadRunsPageAsync(CurrentDefinitionId, pageIndex: 0);
     }
 
     private async Task EnsureComponentLibraryLoadedAsync()
@@ -671,12 +758,88 @@ public partial class WorkflowsPage
         providerOptions = await ComponentLibrary.ListProviderOptionsAsync();
     }
 
+    private Task EnsureTemplatePackLoadedAsync()
+    {
+        templatePack ??= TemplatePackLoader.Load();
+        return Task.CompletedTask;
+    }
+
     private static bool WorkflowTabRequiresComponentLibrary(int index)
-        => index is 2 or 3 or 5;
+        => index is EditorTabIndex or TemplatesTabIndex or AnalyticsTabIndex;
+
+    private static bool WorkflowTabRequiresHistory(int index)
+        => index is HistoryTabIndex or AnalyticsTabIndex;
+
+    private static bool WorkflowTabRequiresDefinitionDetail(int index)
+        => index is WorkflowsTabIndex or EditorTabIndex or AnalyticsTabIndex;
+
+    private static bool WorkflowTabRequiresTemplatePack(int index)
+        => index is TemplatesTabIndex;
+
+    private bool ShouldLoadHistory(WorkflowRunId? preferredRunId)
+        => preferredRunId.HasValue ||
+           historyLoaded ||
+           WorkflowTabRequiresHistory(activeWorkflowTabIndex);
+
+    private async Task EnsureSelectedDefinitionLoadedAsync()
+    {
+        if (selectedDefinitionDetailLoaded ||
+            selectedDefinitionDetailUnavailable ||
+            CurrentDefinitionId is not { } definitionId)
+        {
+            return;
+        }
+
+        await LoadDefinitionAsync(definitionId);
+        StateHasChanged();
+    }
+
+    private void SetSelectedDefinitionPlaceholder(WorkflowId definitionId)
+    {
+        if (selectedDefinition?.Id == definitionId && selectedDefinitionDetailLoaded)
+        {
+            selectedDefinitionId = definitionId;
+            return;
+        }
+
+        selectedDefinitionId = definitionId;
+        selectedDefinition = null;
+        validationIssues = [];
+        selectedDefinitionDetailLoaded = false;
+        selectedDefinitionDetailUnavailable = false;
+    }
+
+    private void ClearSelectedDefinitionState()
+    {
+        selectedDefinitionId = null;
+        selectedDefinition = null;
+        validationIssues = [];
+        selectedDefinitionDetailLoaded = false;
+        selectedDefinitionDetailUnavailable = false;
+    }
+
+    private void ClearHistoryState(bool markLoaded)
+    {
+        runs = [];
+        historyRunPageIndex = 0;
+        historyRunTotalCount = 0;
+        ClearSelectedRunState();
+        historyLoaded = markLoaded;
+    }
+
+    private void ClearSelectedRunState()
+    {
+        selectedRun = null;
+        runEvents = [];
+        artifacts = [];
+        pendingRequests = [];
+        historyEventPageIndex = 0;
+        historyEventTotalCount = 0;
+    }
 
     private bool IsSelectedDefinition(WorkflowCatalogItem item)
     {
-        return selectedDefinition?.Id == item.Id;
+        return CurrentDefinitionId == item.Id;
     }
 
     private static bool IsTerminalRun(WorkflowRunSnapshot? run)

@@ -25,13 +25,26 @@ public sealed class PersistentWorkflowCatalogService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var query = dbContext.Set<WorkflowDefinitionRecord>()
-            .AsNoTracking();
-        var orderedRecords = await query
+        var latestUpdatedAtQuery = dbContext.Set<WorkflowDefinitionRecord>()
+            .AsNoTracking()
+            .GroupBy(item => item.WorkflowId)
+            .Select(group => new
+            {
+                WorkflowId = group.Key,
+                UpdatedAtUtc = group.Max(item => item.UpdatedAtUtc)
+            });
+        var latestRecordQuery =
+            from record in dbContext.Set<WorkflowDefinitionRecord>().AsNoTracking()
+            join latest in latestUpdatedAtQuery
+                on new { record.WorkflowId, record.UpdatedAtUtc }
+                equals new { latest.WorkflowId, latest.UpdatedAtUtc }
+            select record;
+        var latestRecords = await latestRecordQuery
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ThenByDescending(item => item.CreatedAtUtc)
+            .ThenByDescending(item => item.VersionId)
             .ToListAsync(cancellationToken);
-        var records = orderedRecords
+        var records = latestRecords
             .GroupBy(item => item.WorkflowId)
             .Select(group => group.First())
             .OrderByDescending(item => item.UpdatedAtUtc)
@@ -79,6 +92,7 @@ public sealed class PersistentWorkflowCatalogService(
         var current = await currentQuery
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ThenByDescending(item => item.CreatedAtUtc)
+            .ThenByDescending(item => item.VersionId)
             .FirstOrDefaultAsync(cancellationToken);
         if (request.ExpectedVersionId is { } expectedVersionId &&
             current is not null &&
@@ -448,6 +462,7 @@ public sealed class PersistentWorkflowCatalogService(
             : await query
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .ThenByDescending(item => item.CreatedAtUtc)
+                .ThenByDescending(item => item.VersionId)
                 .FirstOrDefaultAsync(cancellationToken);
 
         return record is null
@@ -570,16 +585,23 @@ public sealed class PersistentWorkflowCatalogService(
     {
         var referencedComponentIds = definition.Graph.Nodes
             .Where(node => node.Kind == WorkflowNodeKind.LlmCall && node.Settings.ComponentId.HasValue)
-            .Select(node => node.Settings.ComponentId!.Value)
+            .Select(node => node.Settings.ComponentId!.Value.Value)
             .ToHashSet();
         if (referencedComponentIds.Count == 0)
         {
             return [];
         }
 
-        var allComponents = await ListComponentsAsync(cancellationToken);
-        return allComponents
-            .Where(component => referencedComponentIds.Contains(component.Id))
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var records = await dbContext.Set<WorkflowComponentRecord>()
+            .AsNoTracking()
+            .Where(item => referencedComponentIds.Contains(item.Id))
+            .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken);
+
+        return records
+            .Select(item => Deserialize<LlmCallComponent>(item.ComponentJson))
+            .Where(component => referencedComponentIds.Contains(component.Id.Value))
             .ToArray();
     }
 

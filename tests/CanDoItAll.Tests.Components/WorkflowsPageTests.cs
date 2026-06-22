@@ -7,9 +7,11 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -107,6 +109,162 @@ public sealed class WorkflowsPageTests
         cut.WaitForElement("[data-testid='workflows-components']");
         Assert.Equal(1, counter.ListComponentsCount);
         Assert.Equal(1, counter.ListProviderOptionsCount);
+    }
+
+    [Fact]
+    public async Task Workflows_page_loads_full_selected_definition_before_rendering_editor_canvas()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var definition = await CreateCanvasLoadDefinitionAsync(catalogService);
+        await CreateHistoryDefinitionAsync(catalogService);
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.WaitForAssertion(() =>
+        {
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.DoesNotContain(surface.Nodes, node => node.Id == "work");
+        });
+
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForElement("[data-testid='workflows-catalog']");
+        cut.FindAll("button")
+            .First(button => button.TextContent.Contains(definition.Name, StringComparison.Ordinal))
+            .Click();
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+
+        cut.WaitForAssertion(() =>
+        {
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Equal(definition.Graph.Nodes.Count, surface.Nodes.Count);
+            Assert.Contains(surface.Nodes, node => node.Id == "work");
+            Assert.Contains(surface.Links, link => link.SourceId == "start" && link.TargetId == "work");
+            Assert.Contains(surface.Links, link => link.SourceId == "work" && link.TargetId == "end");
+        });
+    }
+
+    [Fact]
+    public async Task Persistent_workflow_catalog_uses_same_latest_version_for_summary_and_detail()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var workflowId = WorkflowId.New();
+        var timestamp = DateTimeOffset.UtcNow;
+        var oldVersion = new WorkflowVersionId(Guid.Parse("00000000-0000-0000-0000-000000000001"));
+        var latestVersion = new WorkflowVersionId(Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+        var oldDefinition = CreateCanvasLoadDefinition(
+            workflowId,
+            oldVersion,
+            "Older tied workflow version",
+            includeWorkNode: false,
+            timestamp);
+        var latestDefinition = CreateCanvasLoadDefinition(
+            workflowId,
+            latestVersion,
+            "Latest tied workflow version",
+            includeWorkNode: true,
+            timestamp);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<WorkflowDefinitionRecord>().AddRange(
+                WorkflowDefinitionRecord.FromDefinition(oldDefinition),
+                WorkflowDefinitionRecord.FromDefinition(latestDefinition));
+            await dbContext.SaveChangesAsync();
+        }
+
+        var summary = Assert.Single(await catalogService.ListDefinitionsAsync(), item => item.Id == workflowId);
+        var detail = await catalogService.GetDefinitionAsync(workflowId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(summary.VersionId, detail.Definition.VersionId);
+        Assert.Equal(summary.Name, detail.Definition.Name);
+        Assert.Contains(detail.Definition.Graph.Nodes, node => node.Id.Value == "work");
+    }
+
+    [Fact]
+    public async Task Workflows_page_defers_runtime_history_until_history_needs_it()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterCountingWorkflowRunStore);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
+        var counter = harness.Context.Services.GetRequiredService<WorkflowRunStoreCallCounter>();
+        var definition = await CreateHistoryDefinitionAsync(catalogService);
+        var runId = WorkflowRunId.New();
+        var now = DateTimeOffset.UtcNow;
+        await runStore.SaveRunAsync(new WorkflowRunSnapshot(
+            runId,
+            definition.Id,
+            definition.VersionId,
+            WorkflowRunState.Completed,
+            WorkflowRuntimeBackendKind.InProcess,
+            "lazy-history-run",
+            "Lazy history run should load only after History is selected.",
+            now,
+            now));
+        await runStore.SaveEventAsync(new WorkflowEventRecord(
+            Guid.NewGuid(),
+            runId,
+            WorkflowEventKind.Completed,
+            new WorkflowNodeId("lazy-node"),
+            "Lazy history event loaded on demand.",
+            "{\"loaded\":true}",
+            now));
+        await runStore.SaveArtifactAsync(new WorkflowArtifactRecord(
+            WorkflowArtifactId.New(),
+            runId,
+            WorkflowArtifactKind.Text,
+            new WorkflowNodeId("lazy-node"),
+            "lazy-history.txt",
+            "text/plain",
+            "workflow-runs/lazy-history/lazy-history.txt",
+            "Lazy history artifact.",
+            now));
+        await runStore.SaveExternalRequestAsync(new WorkflowExternalRequestRecord(
+            WorkflowExternalRequestId.New(),
+            runId,
+            WorkflowExternalRequestKind.Approval,
+            new WorkflowNodeId("lazy-node"),
+            "approval:lazy-history",
+            "{}",
+            string.Empty,
+            now,
+            RespondedAtUtc: null));
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tabs']");
+
+        Assert.Equal(0, counter.ListRunPageCount);
+        Assert.Equal(0, counter.GetRunCount);
+        Assert.Equal(0, counter.ListEventPageCount);
+        Assert.Equal(0, counter.ListArtifactsCount);
+        Assert.Equal(0, counter.ListPendingExternalRequestsCount);
+        Assert.DoesNotContain("Lazy history run", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='workflows-tab-history']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, counter.ListRunPageCount);
+            Assert.Equal(1, counter.GetRunCount);
+            Assert.Equal(1, counter.ListEventPageCount);
+            Assert.Equal(1, counter.ListArtifactsCount);
+            Assert.Equal(1, counter.ListPendingExternalRequestsCount);
+            Assert.Single(cut.FindAll("[data-testid='workflows-run-item']"));
+            Assert.Single(cut.FindAll("[data-testid='workflows-run-event']"));
+            Assert.Contains("Lazy history run", cut.Markup, StringComparison.Ordinal);
+        });
     }
 
     [Fact]
@@ -870,6 +1028,20 @@ public sealed class WorkflowsPageTests
             serviceProvider.GetRequiredService<WorkflowComponentLibraryCallCounter>()));
     }
 
+    private static void RegisterCountingWorkflowRunStore(IServiceCollection services)
+    {
+        services.AddSingleton<WorkflowRunStoreCallCounter>();
+        services.RemoveAll<IWorkflowRunStore>();
+        services.RemoveAll<IWorkflowArtifactStore>();
+        services.RemoveAll<IWorkflowExternalRequestStore>();
+        services.RemoveAll<IWorkflowCheckpointStore>();
+        services.AddSingleton<CountingWorkflowRunStore>();
+        services.AddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
+        services.AddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
+        services.AddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
+        services.AddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<CountingWorkflowRunStore>());
+    }
+
     private static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(CanDoItAllTestEnvironment environment)
     {
         var profile = environment.CreateInMemoryProfile("primary");
@@ -909,6 +1081,120 @@ public sealed class WorkflowsPageTests
     {
         var errors = cut.FindAll("[data-testid='workflows-error']");
         Assert.True(errors.Count == 0, string.Join(" | ", errors.Select(error => error.TextContent.Trim())));
+    }
+
+    private static WorkflowDefinition CreateCanvasLoadDefinition(
+        WorkflowId workflowId,
+        WorkflowVersionId versionId,
+        string name,
+        bool includeWorkNode,
+        DateTimeOffset timestamp)
+    {
+        var start = new WorkflowNodeId("start");
+        var work = new WorkflowNodeId("work");
+        var end = new WorkflowNodeId("end");
+        var graph = includeWorkNode
+            ? new WorkflowGraph(
+                start,
+                [
+                    CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(work, WorkflowNodeKind.StrictLogic, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-work"),
+                        start,
+                        SourcePortId: null,
+                        work,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty),
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("work-to-end"),
+                        work,
+                        SourcePortId: null,
+                        end,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ])
+            : new WorkflowGraph(
+                start,
+                [
+                    CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-end"),
+                        start,
+                        SourcePortId: null,
+                        end,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ]);
+
+        return new WorkflowDefinition(
+            workflowId,
+            versionId,
+            name,
+            "Workflow definition used to verify selected editor loading.",
+            WorkflowLifecycleStatus.Active,
+            graph,
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            timestamp,
+            timestamp);
+    }
+
+    private static Task<WorkflowDefinition> CreateCanvasLoadDefinitionAsync(IWorkflowCatalogService catalogService)
+    {
+        var start = new WorkflowNodeId("start");
+        var work = new WorkflowNodeId("work");
+        var end = new WorkflowNodeId("end");
+        return catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: "Editor full load workflow",
+            Description: "Workflow definition used to verify selected editor loading.",
+            WorkflowLifecycleStatus.Active,
+            new WorkflowGraph(
+                start,
+                [
+                    CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(work, WorkflowNodeKind.StrictLogic, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-work"),
+                        start,
+                        SourcePortId: null,
+                        work,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty),
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("work-to-end"),
+                        work,
+                        SourcePortId: null,
+                        end,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)));
     }
 
     private static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
@@ -1184,6 +1470,190 @@ public sealed class WorkflowsPageTests
             WorkflowComponentId componentId,
             CancellationToken cancellationToken = default)
             => inner.DeleteComponentAsync(componentId, cancellationToken);
+    }
+
+    private sealed class WorkflowRunStoreCallCounter
+    {
+        private int getRunCount;
+        private int listRunPageCount;
+        private int listEventsCount;
+        private int listEventPageCount;
+        private int listArtifactsCount;
+        private int listPendingExternalRequestsCount;
+
+        public int GetRunCount => getRunCount;
+
+        public int ListRunPageCount => listRunPageCount;
+
+        public int ListEventsCount => listEventsCount;
+
+        public int ListEventPageCount => listEventPageCount;
+
+        public int ListArtifactsCount => listArtifactsCount;
+
+        public int ListPendingExternalRequestsCount => listPendingExternalRequestsCount;
+
+        public void IncrementGetRun()
+        {
+            Interlocked.Increment(ref getRunCount);
+        }
+
+        public void IncrementListRunPage()
+        {
+            Interlocked.Increment(ref listRunPageCount);
+        }
+
+        public void IncrementListEvents()
+        {
+            Interlocked.Increment(ref listEventsCount);
+        }
+
+        public void IncrementListEventPage()
+        {
+            Interlocked.Increment(ref listEventPageCount);
+        }
+
+        public void IncrementListArtifacts()
+        {
+            Interlocked.Increment(ref listArtifactsCount);
+        }
+
+        public void IncrementListPendingExternalRequests()
+        {
+            Interlocked.Increment(ref listPendingExternalRequestsCount);
+        }
+    }
+
+    private sealed class CountingWorkflowRunStore(WorkflowRunStoreCallCounter counter) :
+        IWorkflowRunStore,
+        IWorkflowArtifactStore,
+        IWorkflowExternalRequestStore
+    {
+        private readonly InMemoryWorkflowRunStore inner = new();
+
+        public Task SaveRunAsync(
+            WorkflowRunSnapshot run,
+            CancellationToken cancellationToken = default)
+            => inner.SaveRunAsync(run, cancellationToken);
+
+        public Task<WorkflowRunSnapshot?> GetRunAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+        {
+            counter.IncrementGetRun();
+            return inner.GetRunAsync(runId, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<WorkflowRunSnapshot>> ListRunsAsync(
+            WorkflowId? workflowId = null,
+            CancellationToken cancellationToken = default)
+            => inner.ListRunsAsync(workflowId, cancellationToken);
+
+        public Task<WorkflowListPage<WorkflowRunSnapshot>> ListRunPageAsync(
+            WorkflowRunPageRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            counter.IncrementListRunPage();
+            return inner.ListRunPageAsync(request, cancellationToken);
+        }
+
+        public Task SaveEventAsync(
+            WorkflowEventRecord workflowEvent,
+            CancellationToken cancellationToken = default)
+            => inner.SaveEventAsync(workflowEvent, cancellationToken);
+
+        public Task<IReadOnlyList<WorkflowEventRecord>> ListEventsAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+        {
+            counter.IncrementListEvents();
+            return inner.ListEventsAsync(runId, cancellationToken);
+        }
+
+        public Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
+            WorkflowEventPageRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            counter.IncrementListEventPage();
+            return inner.ListEventPageAsync(request, cancellationToken);
+        }
+
+        public Task<WorkflowCheckpointRecord> SaveCheckpointAsync(
+            WorkflowCheckpointRecord checkpoint,
+            CancellationToken cancellationToken = default)
+            => inner.SaveCheckpointAsync(checkpoint, cancellationToken);
+
+        public Task<WorkflowCheckpointRecord?> GetCheckpointAsync(
+            WorkflowCheckpointId checkpointId,
+            CancellationToken cancellationToken = default)
+            => inner.GetCheckpointAsync(checkpointId, cancellationToken);
+
+        public Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+            => inner.ListCheckpointsAsync(runId, cancellationToken);
+
+        public Task<WorkflowCheckpointRecord> MarkCheckpointResumedAsync(
+            WorkflowCheckpointId checkpointId,
+            DateTimeOffset resumedAtUtc,
+            CancellationToken cancellationToken = default)
+            => inner.MarkCheckpointResumedAsync(checkpointId, resumedAtUtc, cancellationToken);
+
+        public Task SaveExternalRequestAsync(
+            WorkflowExternalRequestRecord request,
+            CancellationToken cancellationToken = default)
+            => inner.SaveExternalRequestAsync(request, cancellationToken);
+
+        public Task<WorkflowExternalRequestRecord?> GetExternalRequestAsync(
+            WorkflowExternalRequestId requestId,
+            CancellationToken cancellationToken = default)
+            => inner.GetExternalRequestAsync(requestId, cancellationToken);
+
+        public Task<IReadOnlyList<WorkflowExternalRequestRecord>> ListPendingExternalRequestsAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+        {
+            counter.IncrementListPendingExternalRequests();
+            return inner.ListPendingExternalRequestsAsync(runId, cancellationToken);
+        }
+
+        public Task SaveArtifactAsync(
+            WorkflowArtifactRecord artifact,
+            CancellationToken cancellationToken = default)
+            => inner.SaveArtifactAsync(artifact, cancellationToken);
+
+        public Task<IReadOnlyList<WorkflowArtifactRecord>> ListArtifactsAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken = default)
+        {
+            counter.IncrementListArtifacts();
+            return inner.ListArtifactsAsync(runId, cancellationToken);
+        }
+
+        async Task<WorkflowArtifactRecord> IWorkflowArtifactStore.SaveArtifactAsync(
+            WorkflowArtifactRecord artifact,
+            CancellationToken cancellationToken)
+        {
+            await inner.SaveArtifactAsync(artifact, cancellationToken);
+            return artifact;
+        }
+
+        Task<IReadOnlyList<WorkflowExternalRequestRecord>> IWorkflowExternalRequestStore.ListPendingRequestsAsync(
+            WorkflowRunId runId,
+            CancellationToken cancellationToken)
+            => ListPendingExternalRequestsAsync(runId, cancellationToken);
+
+        Task<WorkflowExternalRequestRecord> IWorkflowExternalRequestStore.SaveRequestAsync(
+            WorkflowExternalRequestRecord request,
+            CancellationToken cancellationToken)
+            => ((IWorkflowExternalRequestStore)inner).SaveRequestAsync(request, cancellationToken);
+
+        Task<WorkflowExternalRequestRecord> IWorkflowExternalRequestStore.MarkRespondedAsync(
+            WorkflowExternalRequestId requestId,
+            string responseJson,
+            DateTimeOffset respondedAtUtc,
+            CancellationToken cancellationToken)
+            => ((IWorkflowExternalRequestStore)inner).MarkRespondedAsync(requestId, responseJson, respondedAtUtc, cancellationToken);
     }
 
     private sealed class CapturingWorkflowTestRunner : IWorkflowTestRunner

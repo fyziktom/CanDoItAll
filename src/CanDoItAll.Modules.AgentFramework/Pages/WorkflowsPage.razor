@@ -18,11 +18,11 @@
                              TooltipText="Prepared LLM Call Components available to workflow nodes."
                              Tone="success" />
                 <CompactStat Label="runs"
-                             Value="@historyRunTotalCount.ToString()"
+                             Value="@HistoryRunCountText"
                              TooltipText="Paged workflow runs for the selected workflow history."
                              Tone="accent" />
                 <CompactStat Label="pending input"
-                             Value="@pendingRequests.Count.ToString()"
+                             Value="@PendingRequestCountText"
                              TooltipText="Human-in-loop or approval requests waiting for a response."
                              Tone="warning" />
                 <CompactStat Label="backend"
@@ -69,8 +69,8 @@
         {
             <SurfaceCard data-testid="workflows-loading">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
-                <h2 class="workflows-card-title">Refreshing workflow runtime state</h2>
-                <p class="workflows-muted">Loading definitions, settings, runs, artifacts, and pending requests.</p>
+                <h2 class="workflows-card-title">Refreshing workflow catalog</h2>
+                <p class="workflows-muted">Loading definitions and settings.</p>
             </SurfaceCard>
         }
         else
@@ -99,9 +99,23 @@
 
                             @if (selectedDefinition is null)
                             {
-                                <EmptyState Eyebrow="No workflow selected"
-                                            Title="Choose a workflow"
-                                            Description="Select a workflow definition or create the starter workflow to populate the dashboard." />
+                                @if (SelectedDefinitionSummary is { } summary)
+                                {
+                                    <p class="workflows-muted mt-3">@summary.Description</p>
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Wrap="FlexWrap.Wrap"
+                                             Class="mt-4">
+                                        <StatusBadge Tone="secondary" Text="@($"Status {summary.Status}")" />
+                                        <StatusBadge Tone="info" Text="@($"Backend {summary.PreferredBackend}")" />
+                                        <StatusBadge Tone="neutral" Text="Detail loading" />
+                                    </Cluster>
+                                }
+                                else
+                                {
+                                    <EmptyState Eyebrow="No workflow selected"
+                                                Title="Choose a workflow"
+                                                Description="Select a workflow definition or create the starter workflow to populate the dashboard." />
+                                }
                             }
                             else
                             {
@@ -124,8 +138,8 @@
                                      Wrap="FlexWrap.Wrap"
                                      Class="mt-4">
                                 <StatusBadge Tone="@ValidationTone" Text="@($"Validation {ValidationText}")" />
-                                <StatusBadge Tone="warning" Text="@($"{pendingRequests.Count} pending input")" />
-                                <StatusBadge Tone="info" Text="@($"{artifacts.Count} artifact(s)")" />
+                                <StatusBadge Tone="warning" Text="@($"{PendingRequestCountText} pending input")" />
+                                <StatusBadge Tone="info" Text="@($"{ArtifactCountText} artifact(s)")" />
                                 <StatusBadge Tone="secondary" Text="@($"Backend {settings.DefaultRuntimePolicy.PreferredBackend}")" />
                             </Cluster>
                         </SurfaceCard>
@@ -180,9 +194,23 @@
 
                             @if (selectedDefinition is null)
                             {
-                                <EmptyState Eyebrow="Select workflow"
-                                            Title="No workflow selected"
-                                            Description="Choose a workflow definition to inspect validation, settings, and runtime state." />
+                                @if (SelectedDefinitionSummary is { } summary)
+                                {
+                                    <p class="workflows-muted mt-3">@summary.Description</p>
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Wrap="FlexWrap.Wrap"
+                                             Class="mt-4">
+                                        <StatusBadge Tone="secondary" Text="@($"Status {summary.Status}")" />
+                                        <StatusBadge Tone="info" Text="@($"Backend {summary.PreferredBackend}")" />
+                                        <StatusBadge Tone="neutral" Text="Detail loading" />
+                                    </Cluster>
+                                }
+                                else
+                                {
+                                    <EmptyState Eyebrow="Select workflow"
+                                                Title="No workflow selected"
+                                                Description="Choose a workflow definition to inspect validation, settings, and runtime state." />
+                                }
                             }
                             else
                             {
@@ -228,12 +256,32 @@
                 <TabsItem Text="Editor"
                           Icon="edit_square"
                           data-testid="workflows-tab-editor">
-                    <WorkflowCanvasEditor Definition="selectedDefinition"
-                                          Components="components"
-                                          ProviderOptions="providerOptions"
-                                          DefinitionSaved="HandleCanvasDefinitionSavedAsync"
-                                          PreviewRunCompleted="HandleCanvasPreviewRunCompletedAsync"
-                                          ComponentLibraryChanged="RefreshComponentLibraryAsync" />
+                    @if (IsSelectedDefinitionDetailPending)
+                    {
+                        <SurfaceCard data-testid="workflows-editor-loading">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Editor" />
+                            <h2 class="workflows-card-title">Loading workflow definition</h2>
+                            <p class="workflows-muted">@SelectedDefinitionTitle</p>
+                        </SurfaceCard>
+                    }
+                    else if (IsSelectedDefinitionDetailUnavailable)
+                    {
+                        <SurfaceCard data-testid="workflows-editor-unavailable">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Editor" />
+                            <h2 class="workflows-card-title">Workflow definition unavailable</h2>
+                            <p class="workflows-muted">@SelectedDefinitionTitle</p>
+                        </SurfaceCard>
+                    }
+                    else
+                    {
+                        <WorkflowCanvasEditor @key="EditorDefinitionKey"
+                                              Definition="selectedDefinition"
+                                              Components="components"
+                                              ProviderOptions="providerOptions"
+                                              DefinitionSaved="HandleCanvasDefinitionSavedAsync"
+                                              PreviewRunCompleted="HandleCanvasPreviewRunCompletedAsync"
+                                              ComponentLibraryChanged="RefreshComponentLibraryAsync" />
+                    }
                 </TabsItem>
 
                 <TabsItem Text="Templates"
@@ -309,7 +357,7 @@
 
                 <TabsItem Text="History"
                           Icon="history"
-                          BadgeText="@historyRunTotalCount.ToString()"
+                          BadgeText="@HistoryRunCountText"
                           data-testid="workflows-tab-history">
                     <Grid Gap="LayoutGap.Large"
                           Class="workflows-layout workflows-history-layout"
@@ -333,7 +381,7 @@
                                         title="Run test"
                                         aria-label="Run test"
                                         Click="RunSelectedWorkflowAsync"
-                                        Disabled="@(selectedDefinition is null || isRunningTest)"
+                                        Disabled="@(CurrentDefinitionId is null || isRunningTest)"
                                         IsBusy="@isRunningTest"
                                         data-testid="workflows-run-test" />
                                 <Button Icon="stop"
