@@ -16,6 +16,9 @@ public partial class AgentCatalogPanel
     public Guid? RequestedAgentId { get; set; }
 
     [Parameter]
+    public Guid? RequestedTeamId { get; set; }
+
+    [Parameter]
     public IReadOnlyList<AgentDefinition>? InitialAgents { get; set; }
 
     [Parameter]
@@ -47,6 +50,7 @@ public partial class AgentCatalogPanel
     private Task? loadTask;
     private Guid? selectedAgentId;
     private Guid? selectedTeamId;
+    private Guid? appliedRequestedTeamId;
     private Guid? openedRequestedAgentId;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
@@ -75,7 +79,7 @@ public partial class AgentCatalogPanel
                     {
                         Id = teamNodeId,
                         Text = team.Name,
-                        Icon = "groups",
+                        Icon = AgentTeamIconCatalog.Normalize(team.Icon),
                         Tooltip = $"{team.Name}. {team.AgentIds.Count} agent(s).",
                         BadgeText = team.AgentIds.Count.ToString(),
                         IsExpanded = expandedTreeNodeIds.Contains(teamNodeId),
@@ -138,6 +142,7 @@ public partial class AgentCatalogPanel
     protected override async Task OnParametersSetAsync()
     {
         await EnsureLoadedAsync();
+        ApplyRequestedTeam();
         OpenRequestedAgentDialogIfNeeded();
     }
 
@@ -200,6 +205,8 @@ public partial class AgentCatalogPanel
             {
                 selectedAgentId = RequestedAgentId.Value;
             }
+
+            ApplyRequestedTeam(force: true);
 
             hasLoaded = true;
         }
@@ -497,6 +504,31 @@ public partial class AgentCatalogPanel
     {
         var team = SelectedTeam;
         return team is null || team.AgentIds.Contains(agent.Id);
+    }
+
+    private void ApplyRequestedTeam(bool force = false)
+    {
+        if (!force &&
+            appliedRequestedTeamId == RequestedTeamId)
+        {
+            return;
+        }
+
+        appliedRequestedTeamId = RequestedTeamId;
+        if (!RequestedTeamId.HasValue)
+        {
+            selectedTeamId = null;
+            return;
+        }
+
+        selectedTeamId = teams.Any(item => item.Id == RequestedTeamId.Value)
+            ? RequestedTeamId.Value
+            : null;
+
+        if (selectedTeamId.HasValue)
+        {
+            expandedTreeNodeIds.Add(BuildTeamTreeNodeId(selectedTeamId.Value));
+        }
     }
 
     private bool UsesPrivateProvider(AgentDefinition agent)

@@ -97,12 +97,21 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
         var executionSummary = await executionSummaryTask;
         var usageProjection = await usageProjectionTask;
         var totals = CreateOverviewTotals(catalog, executionSummary, usageProjection);
+        var agentRows = MapAgentRows(catalog, usageProjection.Agents);
 
         return new AgentOverviewSnapshot(
             totals,
-            MapAgentRows(catalog, usageProjection.Agents).Take(5).ToList(),
+            agentRows.Take(5).ToList(),
+            agentRows
+                .Where(item => item.FailedRunCount > 0)
+                .OrderByDescending(item => item.FailedRunCount)
+                .ThenByDescending(item => item.RunCount)
+                .ThenBy(item => item.AgentName, StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .ToList(),
             MapProviderRows(usageProjection.Providers),
             MapModelRows(usageProjection.Models),
+            MapTeamShortcutRows(catalog.AgentTeams),
             usageProjection.UpdatedAtUtc,
             toolExecutionBoundary);
     }
@@ -187,21 +196,41 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
     {
         var agentsById = catalog.Agents.ToDictionary(item => item.Id);
         return rows
-            .Select(row => new AgentOverviewUsageRow(
-                row.AgentId,
-                agentsById.TryGetValue(row.AgentId, out var agent) ? agent.Name : "Unknown agent",
-                row.RunCount,
-                row.FailedRunCount,
-                row.UsageObservationCount,
-                row.KnownUsageObservationCount,
-                row.UnknownUsageObservationCount,
-                row.InputTokens,
-                row.CachedInputTokens,
-                row.OutputTokens,
-                row.ReasoningTokens,
-                row.TotalTokens,
-                row.KnownCostUsd,
-                row.LastUsedAtUtc))
+            .Select(row =>
+            {
+                agentsById.TryGetValue(row.AgentId, out var agent);
+                return new AgentOverviewUsageRow(
+                    row.AgentId,
+                    agent?.Name ?? "Unknown agent",
+                    agent?.AvatarImageUrl,
+                    row.RunCount,
+                    row.FailedRunCount,
+                    row.UsageObservationCount,
+                    row.KnownUsageObservationCount,
+                    row.UnknownUsageObservationCount,
+                    row.InputTokens,
+                    row.CachedInputTokens,
+                    row.OutputTokens,
+                    row.ReasoningTokens,
+                    row.TotalTokens,
+                    row.KnownCostUsd,
+                    row.LastUsedAtUtc);
+            })
+            .ToList();
+    }
+
+    private static IReadOnlyList<AgentTeamOverviewShortcutRow> MapTeamShortcutRows(
+        IReadOnlyList<AgentTeamDefinition> teams)
+    {
+        return teams
+            .OrderByDescending(item => item.AgentIds.Count)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new AgentTeamOverviewShortcutRow(
+                item.Id,
+                item.Name,
+                item.Description,
+                AgentTeamIconCatalog.Normalize(item.Icon),
+                item.AgentIds.Count))
             .ToList();
     }
 

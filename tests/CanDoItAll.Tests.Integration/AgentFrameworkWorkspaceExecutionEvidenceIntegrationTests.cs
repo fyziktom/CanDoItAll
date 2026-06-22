@@ -175,10 +175,18 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         Assert.Contains(overview.TopAgents, item =>
             item.AgentId == topAgent.Id &&
             item.AgentName == topAgent.Name &&
+            item.AvatarImageUrl == topAgent.AvatarImageUrl &&
             item.RunCount == 2 &&
             item.FailedRunCount == 1 &&
             item.UsageObservationCount == 2 &&
             item.UnknownUsageObservationCount == 1);
+        Assert.Contains(overview.TopFailingAgents, item =>
+            item.AgentId == topAgent.Id &&
+            item.FailedRunCount == 1);
+        Assert.All(overview.TopFailingAgents, item => Assert.True(item.FailedRunCount > 0));
+        Assert.True(overview.TopFailingAgents.Count <= 5);
+        Assert.NotEmpty(overview.TeamShortcuts);
+        Assert.All(overview.TeamShortcuts, item => Assert.True(AgentTeamIconCatalog.IsAllowed(item.Icon)));
 
         var topAgentDetail = Assert.Single(agentDetails.Agents, item => item.AgentId == topAgent.Id);
         Assert.Equal(topAgent.Name, topAgentDetail.AgentName);

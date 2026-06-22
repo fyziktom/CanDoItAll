@@ -645,7 +645,8 @@ internal static class SandboxWorkspaceSeedBuilder
                     .Select(member => RequireAgentId(agentsByTemplateKey, member.Settings.TemplateKey))
                     .ToList(),
                 now,
-                now))
+                now,
+                ResolveSeedTeamIcon(team.Key)))
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -722,6 +723,19 @@ internal static class SandboxWorkspaceSeedBuilder
         return settings.ApplyDefaultReasoningEffort
             ? WithDefaultReasoningEffort(configurationJson)
             : configurationJson;
+    }
+
+    private static string ResolveSeedTeamIcon(string? teamKey)
+    {
+        return (teamKey ?? string.Empty).Trim() switch
+        {
+            "delivery-platform" => "rocket_launch",
+            "dotnet-delivery" => "code",
+            "javascript-delivery" => "integration_instructions",
+            "business-and-research" => "science",
+            "visual-automation-templates" => "visibility",
+            _ => AgentTeamIconCatalog.DefaultIcon
+        };
     }
 
     private static IReadOnlyList<AgentCapabilityAssignment> ResolveCapabilityAssignments(

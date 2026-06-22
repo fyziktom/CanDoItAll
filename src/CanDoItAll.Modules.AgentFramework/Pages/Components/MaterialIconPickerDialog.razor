@@ -1,0 +1,97 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+
+<div class="min-w-0" data-testid="material-icon-picker-dialog">
+    <Stack GapScale="LayoutGap.Medium">
+        <FilterBar ResultText="@($"{FilteredIcons.Count} of {AgentTeamIconCatalog.Options.Count} icon(s)")">
+            <input @bind="searchText"
+                   @bind:event="oninput"
+                   class="cda-input min-w-[14rem] flex-1"
+                   placeholder="Search icons"
+                   data-testid="material-icon-picker-search" />
+            <StatusBadge Tone="info" Text="@selectedIcon" />
+        </FilterBar>
+
+        <Grid Gap="LayoutGap.Small"
+              ColumnTemplate="repeat(auto-fit,minmax(6.5rem,1fr))"
+              data-testid="material-icon-picker-grid">
+            @foreach (var option in FilteredIcons)
+            {
+                <button type="button"
+                        class="@ResolveIconCardClass(option.Icon)"
+                        title="@option.Label"
+                        @onclick="@(() => SelectIcon(option.Icon))"
+                        data-testid="material-icon-picker-option">
+                    <span class="material-icons text-2xl" aria-hidden="true">@option.Icon</span>
+                    <span class="max-w-full truncate text-xs font-semibold">@option.Label</span>
+                </button>
+            }
+        </Grid>
+
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End" Wrap="FlexWrap.Wrap">
+            <Button Text="Cancel"
+                    Icon="close"
+                    Variant="Variant.Outlined"
+                    Click="CancelAsync" />
+            <Button Text="Use icon"
+                    Icon="check"
+                    Click="ConfirmAsync"
+                    data-testid="material-icon-picker-confirm" />
+        </Cluster>
+    </Stack>
+</div>
+
+@code {
+    [Parameter]
+    public string? SelectedIcon { get; set; }
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    private string selectedIcon = AgentTeamIconCatalog.DefaultIcon;
+    private string searchText = string.Empty;
+
+    private IReadOnlyList<AgentTeamIconOption> FilteredIcons => AgentTeamIconCatalog.Options
+        .Where(MatchesSearch)
+        .ToList();
+
+    protected override void OnParametersSet()
+    {
+        selectedIcon = AgentTeamIconCatalog.Normalize(SelectedIcon);
+    }
+
+    private void SelectIcon(string icon)
+    {
+        selectedIcon = AgentTeamIconCatalog.Normalize(icon);
+    }
+
+    private Task ConfirmAsync()
+    {
+        return DialogReference?.CloseAsync(selectedIcon) ?? Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        return DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    }
+
+    private bool MatchesSearch(AgentTeamIconOption option)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return true;
+        }
+
+        var query = searchText.Trim();
+        return option.Icon.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               option.Label.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ResolveIconCardClass(string icon)
+    {
+        const string baseClass = "flex aspect-square min-w-0 flex-col items-center justify-center gap-2 rounded-lg border px-2 text-center transition";
+        return string.Equals(selectedIcon, icon, StringComparison.OrdinalIgnoreCase)
+            ? $"{baseClass} border-sky-500 bg-sky-50 text-sky-700 shadow-sm ring-2 ring-sky-100"
+            : $"{baseClass} border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
+    }
+}

@@ -53,7 +53,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 Description: NormalizeTeamDescription(model.Description),
                 AgentIds: NormalizeRequestedTeamAgentIds(model.AgentIds, catalog.Agents),
                 CreatedAtUtc: existingTeam?.CreatedAtUtc ?? now,
-                UpdatedAtUtc: now);
+                UpdatedAtUtc: now,
+                Icon: AgentTeamIconCatalog.Normalize(model.Icon));
 
             return catalog with
             {

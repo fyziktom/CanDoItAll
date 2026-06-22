@@ -1,0 +1,133 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+
+<Stack GapScale="LayoutGap.Small"
+       data-testid="@TestId">
+    @if (!IsLoaded)
+    {
+        <EmptyState Eyebrow="Loading"
+                    Title="@LoadingTitle"
+                    Description="The overview shell is already available while compact usage aggregates are read." />
+    }
+    else if (Rows.Count == 0)
+    {
+        <EmptyState Eyebrow="@EmptyEyebrow"
+                    Title="@EmptyTitle"
+                    Description="@EmptyDescription" />
+    }
+    else
+    {
+        @foreach (var agent in Rows.Take(5))
+        {
+            <div class="flex w-full max-w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5 shadow-sm"
+                 data-testid="@($"{TestId}-row")">
+                @if (!string.IsNullOrWhiteSpace(agent.AvatarImageUrl))
+                {
+                    <img class="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-slate-200"
+                         src="@agent.AvatarImageUrl"
+                         alt=""
+                         data-testid="@($"{TestId}-avatar-image")" />
+                }
+                else
+                {
+                    <span class="@ResolveAvatarClass(agent.AgentId)"
+                          data-testid="@($"{TestId}-avatar-fallback")">
+                        @ResolveInitials(agent.AgentName)
+                    </span>
+                }
+
+                <div class="min-w-0 flex-1">
+                    <div class="truncate text-sm font-semibold text-slate-950">@agent.AgentName</div>
+                    <div class="truncate text-xs text-slate-500">@ResolveSubtitle(agent)</div>
+                </div>
+
+                <div class="flex max-w-[5rem] shrink-0 flex-col items-end gap-1">
+                    <StatusBadge Tone="@ResolvePrimaryTone(agent)"
+                                 Text="@ResolvePrimaryText(agent)"
+                                 NoWrap="true" />
+                    @if (!ShowFailureRank && agent.FailedRunCount > 0)
+                    {
+                        <StatusBadge Tone="danger"
+                                     Text="@($"{agent.FailedRunCount} failed")"
+                                     NoWrap="true" />
+                    }
+                </div>
+            </div>
+        }
+    }
+</Stack>
+
+@code {
+    private static readonly string[] AvatarToneClasses =
+    [
+        "bg-sky-100 text-sky-700 ring-sky-200",
+        "bg-emerald-100 text-emerald-700 ring-emerald-200",
+        "bg-violet-100 text-violet-700 ring-violet-200",
+        "bg-amber-100 text-amber-700 ring-amber-200",
+        "bg-rose-100 text-rose-700 ring-rose-200",
+        "bg-cyan-100 text-cyan-700 ring-cyan-200"
+    ];
+
+    [Parameter]
+    public bool IsLoaded { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<AgentOverviewUsageRow> Rows { get; set; } = [];
+
+    [Parameter]
+    public bool ShowFailureRank { get; set; }
+
+    [Parameter]
+    public string TestId { get; set; } = "agents-overview-usage-list";
+
+    [Parameter]
+    public string LoadingTitle { get; set; } = "Usage ranking is loading";
+
+    [Parameter]
+    public string EmptyEyebrow { get; set; } = "No usage";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No agent usage has been recorded";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Run an agent or process-backed execution to populate this ranking.";
+
+    private static string ResolveInitials(string value)
+    {
+        var words = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(item => char.ToUpperInvariant(item[0]))
+            .ToArray();
+
+        return words.Length == 0 ? "A" : new string(words);
+    }
+
+    private static string ResolveAvatarClass(Guid agentId)
+    {
+        var index = (int)((uint)agentId.GetHashCode() % AvatarToneClasses.Length);
+        return $"flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 {AvatarToneClasses[index]}";
+    }
+
+    private string ResolveSubtitle(AgentOverviewUsageRow agent)
+    {
+        if (ShowFailureRank)
+        {
+            return $"{AgentUsageDisplay.FormatCount(agent.RunCount)} run(s) total";
+        }
+
+        return AgentUsageDisplay.FormatLastUsed(agent.LastUsedAtUtc);
+    }
+
+    private string ResolvePrimaryText(AgentOverviewUsageRow agent)
+    {
+        return ShowFailureRank
+            ? $"{AgentUsageDisplay.FormatCount(agent.FailedRunCount)} failed"
+            : $"{AgentUsageDisplay.FormatCount(agent.RunCount)} runs";
+    }
+
+    private string ResolvePrimaryTone(AgentOverviewUsageRow agent)
+    {
+        return ShowFailureRank || agent.FailedRunCount > 0 ? "danger" : "success";
+    }
+}

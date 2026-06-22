@@ -3,13 +3,17 @@ namespace CanDoItAll.AgentFramework.Models;
 public sealed record AgentOverviewSnapshot(
     AgentOverviewTotals Totals,
     IReadOnlyList<AgentOverviewUsageRow> TopAgents,
+    IReadOnlyList<AgentOverviewUsageRow> TopFailingAgents,
     IReadOnlyList<ProviderOverviewUsageRow> ProviderUsage,
     IReadOnlyList<ModelOverviewUsageRow> ModelUsage,
+    IReadOnlyList<AgentTeamOverviewShortcutRow> TeamShortcuts,
     DateTimeOffset UpdatedAtUtc,
     ExecutionBoundaryDescriptor ToolExecutionBoundary)
 {
     public static AgentOverviewSnapshot Empty { get; } = new(
         AgentOverviewTotals.Empty,
+        [],
+        [],
         [],
         [],
         [],
@@ -61,6 +65,7 @@ public sealed record AgentOverviewTotals(
 public sealed record AgentOverviewUsageRow(
     Guid AgentId,
     string AgentName,
+    string? AvatarImageUrl,
     int RunCount,
     int FailedRunCount,
     int UsageObservationCount,
@@ -73,6 +78,13 @@ public sealed record AgentOverviewUsageRow(
     int TotalTokens,
     decimal KnownCostUsd,
     DateTimeOffset? LastUsedAtUtc);
+
+public sealed record AgentTeamOverviewShortcutRow(
+    Guid TeamId,
+    string Name,
+    string Description,
+    string Icon,
+    int AgentCount);
 
 public sealed record ProviderOverviewUsageRow(
     string ProviderName,

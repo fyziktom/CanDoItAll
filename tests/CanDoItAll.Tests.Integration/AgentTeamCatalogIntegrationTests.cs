@@ -23,6 +23,7 @@ public sealed class AgentTeamCatalogIntegrationTests
         {
             Name = "Delivery Team",
             Description = "Owns implementation and review.",
+            Icon = "rocket_launch",
             AgentIds = [builderId, reviewerId]
         });
         var reviewTeamId = await workspaceService.SaveAgentTeamAsync(new AgentTeamEditorModel
@@ -37,10 +38,12 @@ public sealed class AgentTeamCatalogIntegrationTests
 
         Assert.Equal("Delivery Team", deliveryTeam.Name);
         Assert.Equal("Owns implementation and review.", deliveryTeam.Description);
+        Assert.Equal("rocket_launch", deliveryTeam.Icon);
         Assert.Equal(
             new[] { builderId, reviewerId }.OrderBy(item => item).ToList(),
             deliveryTeam.AgentIds.OrderBy(item => item).ToList());
         Assert.Equal([reviewerId], reviewTeam.AgentIds);
+        Assert.Equal(AgentTeamIconCatalog.DefaultIcon, reviewTeam.Icon);
 
         var updatedDeliveryTeam = await workspaceService.UpdateAgentTeamMembersAsync(
             deliveryTeamId,
@@ -70,7 +73,8 @@ public sealed class AgentTeamCatalogIntegrationTests
             Description: " Keeps real agents only. ",
             AgentIds: [Guid.Empty, agent.Id, agent.Id, Guid.NewGuid()],
             CreatedAtUtc: DateTimeOffset.UtcNow,
-            UpdatedAtUtc: DateTimeOffset.UtcNow);
+            UpdatedAtUtc: DateTimeOffset.UtcNow,
+            Icon: "not_real_icon");
         var catalog = seed.ToCatalog() with
         {
             AgentTeams = [team]
@@ -81,6 +85,7 @@ public sealed class AgentTeamCatalogIntegrationTests
 
         Assert.Equal("Normalized Team", normalizedTeam.Name);
         Assert.Equal("Keeps real agents only.", normalizedTeam.Description);
+        Assert.Equal(AgentTeamIconCatalog.DefaultIcon, normalizedTeam.Icon);
         Assert.Equal([agent.Id], normalizedTeam.AgentIds);
     }
 
@@ -116,6 +121,7 @@ public sealed class AgentTeamCatalogIntegrationTests
 
         var agentsByTemplateKey = seed.Agents.ToDictionary(item => item.TemplateKey, StringComparer.OrdinalIgnoreCase);
         var deliveryTeam = Assert.Single(teams, item => string.Equals(item.Name, "Delivery Platform Team", StringComparison.Ordinal));
+        Assert.Equal("rocket_launch", deliveryTeam.Icon);
         Assert.Contains(agentsByTemplateKey["portfolio-architect"].Id, deliveryTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["programming-workspace-analyst"].Id, deliveryTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["delivery-qa-observer"].Id, deliveryTeam.AgentIds);

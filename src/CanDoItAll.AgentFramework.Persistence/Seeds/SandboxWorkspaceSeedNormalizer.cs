@@ -813,6 +813,7 @@ internal static class SandboxWorkspaceSeedNormalizer
             {
                 Name = team.Name.Trim(),
                 Description = (team.Description ?? string.Empty).Trim(),
+                Icon = AgentTeamIconCatalog.Normalize(team.Icon),
                 AgentIds = (team.AgentIds ?? [])
                     .Where(item => item != Guid.Empty && activeAgentIds.Contains(item))
                     .Distinct()

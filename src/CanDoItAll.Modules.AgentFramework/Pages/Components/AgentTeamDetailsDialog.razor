@@ -3,6 +3,7 @@
 @using CanDoItAll.Components.BaseLib
 @inject IAgentFrameworkWorkspaceService WorkspaceService
 @inject NotificationService NotificationService
+@inject DialogService DialogService
 
 <div class="agent-team-details-dialog" data-testid="agents-team-details-dialog">
     @if (isLoading)
@@ -15,6 +16,22 @@
     else
     {
         <Stack GapScale="LayoutGap.Medium">
+            <div class="grid gap-2">
+                <span class="text-xs font-bold text-slate-600">Icon</span>
+                <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700"
+                          data-testid="agents-team-selected-icon">
+                        <span class="material-icons text-2xl" aria-hidden="true">@AgentTeamIconCatalog.Normalize(editorModel.Icon)</span>
+                    </span>
+                    <Button Text="Choose icon"
+                            Icon="widgets"
+                            ButtonStyle="ButtonStyle.Light"
+                            Variant="Variant.Outlined"
+                            Click="OpenIconPickerAsync"
+                            data-testid="agents-team-choose-icon" />
+                </Cluster>
+            </div>
+
             <label class="agent-team-details-dialog__field">
                 <span>Name</span>
                 <input @bind="editorModel.Name"
@@ -76,6 +93,7 @@
         isBusy = true;
         try
         {
+            editorModel.Icon = AgentTeamIconCatalog.Normalize(editorModel.Icon);
             var teamId = await WorkspaceService.SaveAgentTeamAsync(editorModel);
             NotificationService.Success("Team saved", "Agent team details were saved.");
             if (DialogReference is not null)
@@ -95,4 +113,28 @@
 
     private Task CancelAsync()
         => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+
+    private async Task OpenIconPickerAsync()
+    {
+        var result = await DialogService.OpenAsync<MaterialIconPickerDialog>(
+            "Choose team icon",
+            new Dictionary<string, object?>
+            {
+                [nameof(MaterialIconPickerDialog.SelectedIcon)] = editorModel.Icon
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Team identity",
+                Subtitle = "Pick a Material icon for this AgentFramework team.",
+                Size = ModalSize.Wide,
+                DenseChrome = true,
+                AriaLabel = "Choose team icon",
+                TestId = "material-icon-picker-dialog-shell"
+            });
+
+        if (result is string icon)
+        {
+            editorModel.Icon = AgentTeamIconCatalog.Normalize(icon);
+        }
+    }
 }

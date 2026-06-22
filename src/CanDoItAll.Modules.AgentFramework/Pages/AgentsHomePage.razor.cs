@@ -52,6 +52,9 @@ public partial class AgentsHomePage
     [SupplyParameterFromQuery(Name = "agentId")]
     public Guid? RequestedAgentId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "teamId")]
+    public Guid? RequestedTeamId { get; set; }
+
     private int technicalAgentCount;
     private int providerCount;
     private int boundResourceCount;
@@ -60,6 +63,7 @@ public partial class AgentsHomePage
     private int failedRunCount;
     private string selectedTab = "overview";
     private Guid? effectiveRequestedAgentId;
+    private Guid? effectiveRequestedTeamId;
     private bool isLoaded;
     private bool isFeedingDefaults;
     private bool hasOverviewLoadError;
@@ -264,7 +268,12 @@ public partial class AgentsHomePage
         string key)
     {
         selectedTab = key;
-        Navigation.NavigateTo(BuildAgentsRoute(key, effectiveRequestedAgentId), replace: true);
+        Navigation.NavigateTo(
+            BuildAgentsRoute(
+                key,
+                effectiveRequestedAgentId,
+                string.Equals(key, "agents", StringComparison.Ordinal) ? effectiveRequestedTeamId : null),
+            replace: true);
         return Task.CompletedTask;
     }
 
@@ -272,6 +281,7 @@ public partial class AgentsHomePage
     {
         var requestedTab = ResolveRequestedTab();
         effectiveRequestedAgentId = ResolveRequestedAgentId();
+        effectiveRequestedTeamId = ResolveRequestedTeamId();
         selectedTab = !string.IsNullOrWhiteSpace(requestedTab) &&
                       AllowedTabs.Contains(requestedTab)
             ? requestedTab
@@ -297,6 +307,18 @@ public partial class AgentsHomePage
 
         return Guid.TryParse(TryGetQueryValue("agentId"), out var agentId)
             ? agentId
+            : null;
+    }
+
+    private Guid? ResolveRequestedTeamId()
+    {
+        if (RequestedTeamId.HasValue)
+        {
+            return RequestedTeamId;
+        }
+
+        return Guid.TryParse(TryGetQueryValue("teamId"), out var teamId)
+            ? teamId
             : null;
     }
 
@@ -327,20 +349,32 @@ public partial class AgentsHomePage
 
     private static string BuildAgentsRoute(
         string tab,
-        Guid? agentId)
+        Guid? agentId,
+        Guid? teamId)
     {
         if (!agentId.HasValue &&
+            !teamId.HasValue &&
             string.Equals(tab, "overview", StringComparison.Ordinal))
         {
             return "/agents";
         }
 
+        var query = new List<string>
+        {
+            $"tab={Uri.EscapeDataString(tab)}"
+        };
+
         if (agentId.HasValue)
         {
-            return $"/agents?tab={Uri.EscapeDataString(tab)}&agentId={agentId.Value:D}";
+            query.Add($"agentId={agentId.Value:D}");
         }
 
-        return $"/agents?tab={Uri.EscapeDataString(tab)}";
+        if (teamId.HasValue)
+        {
+            query.Add($"teamId={teamId.Value:D}");
+        }
+
+        return $"/agents?{string.Join("&", query)}";
     }
 
     private string ResolveSummaryValue(int value)
@@ -427,6 +461,15 @@ public partial class AgentsHomePage
         {
             NotificationService.Error("Model usage failed", exception.Message);
         }
+    }
+
+    private Task OpenAgentsForTeamAsync(Guid teamId)
+    {
+        selectedTab = "agents";
+        effectiveRequestedAgentId = null;
+        effectiveRequestedTeamId = teamId;
+        Navigation.NavigateTo(BuildAgentsRoute("agents", null, teamId));
+        return Task.CompletedTask;
     }
 
     private void SetStatusMessage(string value)

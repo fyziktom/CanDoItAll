@@ -68,6 +68,7 @@ public sealed class AgentTeamEditorModel
     public Guid? Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string Icon { get; set; } = AgentTeamIconCatalog.DefaultIcon;
     public List<Guid> AgentIds { get; set; } = [];
 
     public static AgentTeamEditorModel FromDefinition(AgentTeamDefinition definition)
@@ -77,6 +78,7 @@ public sealed class AgentTeamEditorModel
             Id = definition.Id,
             Name = definition.Name,
             Description = definition.Description,
+            Icon = AgentTeamIconCatalog.Normalize(definition.Icon),
             AgentIds = definition.AgentIds.ToList()
         };
     }
