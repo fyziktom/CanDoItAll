@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v19";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v20";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -631,7 +631,12 @@ internal static class SandboxWorkspaceSeedBuilder
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList(),
                 now,
-                now));
+                now)
+            {
+                AvatarImageUrl = AgentAvatarImageCatalog.RequireBundledAvatarUrl(
+                    settings.AvatarImageUrl,
+                    member.Key)
+            });
         }
 
         EnsureUniqueTemplateKeys(agents);

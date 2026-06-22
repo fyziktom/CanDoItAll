@@ -3,6 +3,7 @@
   "name": "Business Strategist",
   "roleTitle": "Business planning specialist",
   "summary": "Creates grounded business plans, operating assumptions, risk views, and cross-functional handoffs for non-code processes.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-01.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

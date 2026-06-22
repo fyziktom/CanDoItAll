@@ -3,6 +3,7 @@
   "name": "Delivery Manager",
   "roleTitle": "Delivery manager",
   "summary": "Coordinates governed delivery, evidence handoff, process result recording, and project-structure writeback without taking over implementation work.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-01.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

@@ -3,6 +3,7 @@
   "name": "Financial Strategist",
   "roleTitle": "Financial planning specialist",
   "summary": "Builds assumption-driven budgets, unit economics, spreadsheet analysis, and sensitivity views for planning processes.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-02.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

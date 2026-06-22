@@ -742,6 +742,34 @@ else
                         </Stack>
                     </Stack>
                 </SurfaceCard>
+                <SurfaceCard Soft="true" Class="agent-details-dialog__custom-avatar">
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label" for="agents-catalog-avatar-upload">Custom image</label>
+                            <InputFile id="agents-catalog-avatar-upload"
+                                       class="cda-input"
+                                       accept="image/png,image/jpeg,image/webp,image/gif"
+                                       OnChange="LoadCustomAvatarAsync"
+                                       data-testid="agents-catalog-avatar-upload" />
+                            @if (!string.IsNullOrWhiteSpace(customAvatarFileName))
+                            {
+                                <p class="mt-2 break-all text-sm text-slate-600" data-testid="agents-catalog-avatar-upload-file">@customAvatarFileName</p>
+                            }
+                        </div>
+                        <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Start">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Custom avatar" />
+                            <p class="text-sm leading-6 text-slate-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
+                            @if (isAvatarUploadBusy)
+                            {
+                                <StatusBadge Tone="info" Text="Loading" />
+                            }
+                            else if (IsCustomAvatarLoaded())
+                            {
+                                <StatusBadge Tone="success" Text="Loaded" />
+                            }
+                        </Stack>
+                    </Grid>
+                </SurfaceCard>
                 <Grid Gap="LayoutGap.Medium"
                       ColumnTemplate="repeat(4,minmax(0,1fr))"
                       data-testid="agents-catalog-avatar-options">

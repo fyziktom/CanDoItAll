@@ -1,8 +1,9 @@
-﻿{
+{
   "stableIdKey": "agents/hr-staffing-manager",
   "name": "HR Staffing Manager",
   "roleTitle": "HR staffing and assignment manager",
   "summary": "Matches governed process roles to actual project assignments, workforce records, and AI agents using factual fit instead of convenience or guesswork.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-02.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

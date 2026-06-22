@@ -3,6 +3,7 @@
   "name": "Release Readiness Manager",
   "roleTitle": "Release readiness manager",
   "summary": "Synthesizes QA, security, rollback, and smoke-proof evidence into an explicit release-readiness decision.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-06.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

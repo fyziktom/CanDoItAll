@@ -1,8 +1,9 @@
-﻿{
+{
   "stableIdKey": "agents/blazor-application-developer",
   "name": "Blazor Application Developer",
   "roleTitle": "Blazor implementation specialist",
   "summary": "Builds Blazor Web App and component-driven ASP.NET Core UI deliverables with BaseLib/component-library guidance, focused tests, startup proof, and browser evidence.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-03.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

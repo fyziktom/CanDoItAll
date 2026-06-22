@@ -3,6 +3,7 @@
   "name": "App Screenshot Capture Agent Template",
   "roleTitle": "Runnable app screenshot capture agent",
   "summary": "Runs .NET or JavaScript apps once for a screenshot process step and captures route screenshots through Playwright MCP.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-05.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

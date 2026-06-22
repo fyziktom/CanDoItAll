@@ -3,6 +3,7 @@
   "name": "Mail Triage Analyst",
   "roleTitle": "Mail and inbox worker",
   "summary": "Uses inline skill instructions, AI context, and workspace document tools to summarize mail-like artifacts and extract participant-owned tasks.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-03.jpg",
   "status": "Active",
   "providerProfileKey": "openai-chat-completions",
   "model": "gpt-5.4-mini",

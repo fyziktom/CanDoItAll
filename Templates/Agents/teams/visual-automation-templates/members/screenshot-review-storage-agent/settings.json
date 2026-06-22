@@ -3,6 +3,7 @@
   "name": "Screenshot Review Storage Agent Template",
   "roleTitle": "Screenshot reviewer and asset writer",
   "summary": "Reviews captured screenshots and writes accepted images back to project structure as managed image asset nodes.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-07.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

@@ -21,20 +21,15 @@
         {
             <div class="flex w-full max-w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5 shadow-sm"
                  data-testid="@($"{TestId}-row")">
-                @if (!string.IsNullOrWhiteSpace(agent.AvatarImageUrl))
-                {
-                    <img class="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-slate-200"
-                         src="@agent.AvatarImageUrl"
-                         alt=""
-                         data-testid="@($"{TestId}-avatar-image")" />
-                }
-                else
-                {
-                    <span class="@ResolveAvatarClass(agent.AgentId)"
-                          data-testid="@($"{TestId}-avatar-fallback")">
-                        @ResolveInitials(agent.AgentName)
-                    </span>
-                }
+                <span class="h-10 w-10 shrink-0"
+                      data-testid="@($"{TestId}-avatar")">
+                    <Avatar Alt="@agent.AgentName"
+                            ImageUrl="@agent.AvatarImageUrl"
+                            FallbackText="@ResolveInitials(agent.AgentName)"
+                            DefaultImageSeed="@ResolveAvatarSeed(agent)"
+                            Size="AvatarSize.Medium"
+                            Shape="AvatarShape.Rounded" />
+                </span>
 
                 <div class="min-w-0 flex-1">
                     <div class="truncate text-sm font-semibold text-slate-950">@agent.AgentName</div>
@@ -58,16 +53,6 @@
 </Stack>
 
 @code {
-    private static readonly string[] AvatarToneClasses =
-    [
-        "bg-sky-100 text-sky-700 ring-sky-200",
-        "bg-emerald-100 text-emerald-700 ring-emerald-200",
-        "bg-violet-100 text-violet-700 ring-violet-200",
-        "bg-amber-100 text-amber-700 ring-amber-200",
-        "bg-rose-100 text-rose-700 ring-rose-200",
-        "bg-cyan-100 text-cyan-700 ring-cyan-200"
-    ];
-
     [Parameter]
     public bool IsLoaded { get; set; }
 
@@ -103,11 +88,10 @@
         return words.Length == 0 ? "A" : new string(words);
     }
 
-    private static string ResolveAvatarClass(Guid agentId)
-    {
-        var index = (int)((uint)agentId.GetHashCode() % AvatarToneClasses.Length);
-        return $"flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 {AvatarToneClasses[index]}";
-    }
+    private static string ResolveAvatarSeed(AgentOverviewUsageRow agent)
+        => string.IsNullOrWhiteSpace(agent.AgentName)
+            ? agent.AgentId.ToString("D")
+            : agent.AgentName;
 
     private string ResolveSubtitle(AgentOverviewUsageRow agent)
     {

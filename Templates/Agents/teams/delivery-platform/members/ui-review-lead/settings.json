@@ -3,6 +3,7 @@
   "name": "UI Review Lead",
   "roleTitle": "UI reviewer",
   "summary": "Reviews rendered Blazor UI with Playwright, screenshot analysis, and component-library expectations.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-08.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

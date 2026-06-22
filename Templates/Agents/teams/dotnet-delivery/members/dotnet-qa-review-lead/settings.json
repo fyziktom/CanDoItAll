@@ -1,8 +1,9 @@
-﻿{
+{
   "stableIdKey": "agents/dotnet-qa-review-lead",
   "name": ".NET QA Review Lead",
   "roleTitle": ".NET QA specialist",
   "summary": "Reviews C#, ASP.NET Core, and Blazor deliverables with build, test, launch, browser, and durable artifact proof.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-08.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

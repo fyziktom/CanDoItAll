@@ -3,6 +3,7 @@
   "name": "Delivery QA Observer",
   "roleTitle": "QA lead and browser-proof reviewer",
   "summary": "Owns validation depth, screenshot-backed browser proof, and explicit QA gating for governed delivery work.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-08.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

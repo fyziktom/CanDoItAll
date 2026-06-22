@@ -100,6 +100,7 @@ public sealed class AgentTeamCatalogIntegrationTests
             {
                 Assert.False(string.IsNullOrWhiteSpace(member.Instructions));
                 Assert.False(string.IsNullOrWhiteSpace(member.Settings.ProviderProfileKey));
+                Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(member.Settings.AvatarImageUrl));
                 Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, member.Settings.Model);
                 Assert.NotNull(member.Settings.Access.ProjectStructure);
                 Assert.True(member.Settings.Access.ProjectStructure.CanRead);
@@ -120,6 +121,10 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(teams, item => string.Equals(item.Name, "Visual Automation Template Team", StringComparison.Ordinal));
 
         var agentsByTemplateKey = seed.Agents.ToDictionary(item => item.TemplateKey, StringComparer.OrdinalIgnoreCase);
+        Assert.All(
+            agentsByTemplateKey.Values,
+            agent => Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(agent.AvatarImageUrl)));
+
         var deliveryTeam = Assert.Single(teams, item => string.Equals(item.Name, "Delivery Platform Team", StringComparison.Ordinal));
         Assert.Equal("rocket_launch", deliveryTeam.Icon);
         Assert.Contains(agentsByTemplateKey["portfolio-architect"].Id, deliveryTeam.AgentIds);
@@ -130,6 +135,89 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(agentsByTemplateKey["app-screenshot-capture-agent"].Id, visualTemplateTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["screenshot-review-storage-agent"].Id, visualTemplateTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["layout-image-generation-agent"].Id, visualTemplateTeam.AgentIds);
+    }
+
+    [Fact]
+    public void Managed_agent_normalization_backfills_missing_seed_avatar_and_preserves_custom_avatar()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var deliveryManager = seed.Agents.Single(item => string.Equals(item.TemplateKey, "delivery-manager", StringComparison.OrdinalIgnoreCase));
+        var architect = seed.Agents.Single(item => string.Equals(item.TemplateKey, "portfolio-architect", StringComparison.OrdinalIgnoreCase));
+        const string customAvatar = "data:image/png;base64,AQID";
+
+        var oldAgents = seed.Agents
+            .Select(agent =>
+            {
+                var oldAgent = agent with
+                {
+                    ConfigurationJson = agent.ConfigurationJson.Replace("2026-06-agent-template-teams-v20", "2026-06-agent-template-teams-v19", StringComparison.Ordinal)
+                };
+
+                if (oldAgent.Id == deliveryManager.Id)
+                {
+                    return oldAgent with { AvatarImageUrl = null };
+                }
+
+                if (oldAgent.Id == architect.Id)
+                {
+                    return oldAgent with { AvatarImageUrl = customAvatar };
+                }
+
+                return oldAgent;
+            })
+            .ToList();
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = oldAgents
+        });
+
+        var normalizedDeliveryManager = normalized.Agents.Single(item => item.Id == deliveryManager.Id);
+        var normalizedArchitect = normalized.Agents.Single(item => item.Id == architect.Id);
+
+        Assert.Equal(deliveryManager.AvatarImageUrl, normalizedDeliveryManager.AvatarImageUrl);
+        Assert.Equal(customAvatar, normalizedArchitect.AvatarImageUrl);
+
+        var clearedAfterUpgrade = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized with
+        {
+            Agents = normalized.Agents
+                .Select(agent => agent.Id == deliveryManager.Id
+                    ? agent with { AvatarImageUrl = null }
+                    : agent)
+                .ToList()
+        });
+
+        Assert.Null(clearedAfterUpgrade.Agents.Single(item => item.Id == deliveryManager.Id).AvatarImageUrl);
+    }
+
+    [Fact]
+    public async Task Agent_catalog_persists_custom_avatar_image_url()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        const string customAvatar = "data:image/png;base64,AQID";
+
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Custom Avatar Agent";
+        editor.RoleTitle = "Avatar persistence specialist";
+        editor.Summary = "Keeps a custom avatar image.";
+        editor.Instructions = "Use the configured custom avatar.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        editor.AvatarImageUrl = customAvatar;
+
+        var agentId = await workspaceService.SaveAgentAsync(editor);
+
+        var storedAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            agent => agent.Id == agentId);
+        var storedEditor = await workspaceService.GetAgentEditorAsync(agentId);
+
+        Assert.Equal(customAvatar, storedAgent.AvatarImageUrl);
+        Assert.Equal(customAvatar, storedEditor.AvatarImageUrl);
     }
 
     private static async Task<Guid> CreateAgentAsync(

@@ -168,6 +168,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         var providerDetails = await workspaceService.GetProviderUsageDetailsAsync();
         var modelDetails = await workspaceService.GetModelUsageDetailsAsync();
 
+        Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(topAgent.AvatarImageUrl));
         Assert.True(overview.Totals.UsageObservationCount >= 3);
         Assert.True(overview.Totals.KnownUsageObservationCount >= 2);
         Assert.True(overview.Totals.UnknownUsageObservationCount >= 1);

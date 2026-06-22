@@ -3,6 +3,7 @@
   "name": "Layout Image Generation Agent Template",
   "roleTitle": "Layout image generator and asset writer",
   "summary": "Reads stored app screenshots, generates improved layout recommendation images through the preferred image provider, and stores generated images as managed project assets.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-06.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

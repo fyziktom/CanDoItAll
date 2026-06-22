@@ -3,6 +3,7 @@
   "name": "JavaScript Application Developer",
   "roleTitle": "JavaScript implementation specialist",
   "summary": "Implements JavaScript and TypeScript deliverables with package-script validation and browser proof when needed.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-03.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

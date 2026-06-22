@@ -3,6 +3,7 @@
   "name": "Portfolio Architect",
   "roleTitle": "Architecture steward",
   "summary": "Owns architecture direction, source-of-truth choices, and bounded design guidance for governed delivery work.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-04.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

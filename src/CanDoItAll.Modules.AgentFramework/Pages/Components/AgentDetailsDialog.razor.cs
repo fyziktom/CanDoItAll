@@ -6,6 +6,7 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -49,10 +50,12 @@ public partial class AgentDetailsDialog
     private string newCapabilityName = string.Empty;
     private string newCapabilityEndpointOrPath = string.Empty;
     private string newCapabilityDescription = string.Empty;
+    private string customAvatarFileName = string.Empty;
     private CapabilityKind newCapabilityKind = CapabilityKind.Skill;
     private Guid? linkedPartyId;
     private bool isLoading = true;
     private bool isBusy;
+    private bool isAvatarUploadBusy;
     private bool areProvidersLoaded;
     private bool areProjectStructureProjectsLoaded;
     private bool isLoadingProjectStructureProjects;
@@ -66,7 +69,7 @@ public partial class AgentDetailsDialog
     private int selectedTabIndex;
     private bool avatarSelectorOpen;
 
-    private static IReadOnlyList<string> AvatarOptions => AvatarFallbackResolver.GetBundledAvatarUrls();
+    private static IReadOnlyList<string> AvatarOptions => AgentAvatarImageCatalog.BundledAvatarUrls;
 
     private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
     [
@@ -332,16 +335,43 @@ public partial class AgentDetailsDialog
     private Task ClearAvatarAsync()
     {
         editorModel.AvatarImageUrl = string.Empty;
+        customAvatarFileName = string.Empty;
         return Task.CompletedTask;
+    }
+
+    private async Task LoadCustomAvatarAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        customAvatarFileName = file.Name;
+        isAvatarUploadBusy = true;
+
+        try
+        {
+            editorModel.AvatarImageUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(file);
+            NotificationService.Success("Custom avatar loaded", "Save the agent to persist the loaded avatar.");
+        }
+        catch (Exception exception)
+        {
+            customAvatarFileName = string.Empty;
+            NotificationService.Error("Avatar upload failed", exception.Message);
+        }
+        finally
+        {
+            isAvatarUploadBusy = false;
+        }
     }
 
     private void SelectAvatar(string avatarImageUrl)
     {
         editorModel.AvatarImageUrl = avatarImageUrl.Trim();
+        customAvatarFileName = string.Empty;
     }
 
     private bool IsSelectedAvatar(string avatarImageUrl)
         => string.Equals(editorModel.AvatarImageUrl?.Trim(), avatarImageUrl.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private bool IsCustomAvatarLoaded()
+        => editorModel.AvatarImageUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
 
     private string ResolveAvatarOptionClass(string avatarImageUrl)
         => IsSelectedAvatar(avatarImageUrl)
@@ -349,9 +379,24 @@ public partial class AgentDetailsDialog
             : "agent-details-dialog__avatar-option";
 
     private string ResolveAvatarSelectionText()
-        => string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)
-            ? "Default generated avatar"
-            : "Custom selected avatar";
+    {
+        if (string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl))
+        {
+            return "Default generated avatar";
+        }
+
+        if (AgentAvatarImageCatalog.IsBundledAvatarUrl(editorModel.AvatarImageUrl))
+        {
+            return "Bundled avatar selected";
+        }
+
+        if (editorModel.AvatarImageUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Custom avatar loaded";
+        }
+
+        return "Custom avatar selected";
+    }
 
     private string ResolveAvatarAltText()
         => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");

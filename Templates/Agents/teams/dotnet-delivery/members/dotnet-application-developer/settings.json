@@ -1,8 +1,9 @@
-﻿{
+{
   "stableIdKey": "agents/dotnet-application-developer",
   "name": ".NET Application Developer",
   "roleTitle": ".NET implementation specialist",
   "summary": "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-05.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

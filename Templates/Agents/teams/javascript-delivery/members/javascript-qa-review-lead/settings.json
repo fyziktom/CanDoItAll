@@ -3,6 +3,7 @@
   "name": "JavaScript QA Review Lead",
   "roleTitle": "JavaScript QA specialist",
   "summary": "Reviews JavaScript and TypeScript deliverables with package-script, browser, console, and screenshot evidence.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-08.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",

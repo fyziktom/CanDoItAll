@@ -71,6 +71,47 @@ DateTimeOffset UpdatedAtUtc)
     public string? AvatarImageUrl { get; init; }
 }
 
+public static class AgentAvatarImageCatalog
+{
+    public const string BundledAvatarBasePath = "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/";
+
+    public static IReadOnlyList<string> BundledAvatarUrls { get; } =
+    [
+        CreateBundledAvatarUrl(1),
+        CreateBundledAvatarUrl(2),
+        CreateBundledAvatarUrl(3),
+        CreateBundledAvatarUrl(4),
+        CreateBundledAvatarUrl(5),
+        CreateBundledAvatarUrl(6),
+        CreateBundledAvatarUrl(7),
+        CreateBundledAvatarUrl(8)
+    ];
+
+    private static readonly HashSet<string> BundledAvatarUrlSet = BundledAvatarUrls
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    public static bool IsBundledAvatarUrl(string? avatarImageUrl)
+    {
+        return !string.IsNullOrWhiteSpace(avatarImageUrl) &&
+               BundledAvatarUrlSet.Contains(avatarImageUrl.Trim());
+    }
+
+    public static string RequireBundledAvatarUrl(string? avatarImageUrl, string owner)
+    {
+        var normalized = avatarImageUrl?.Trim() ?? string.Empty;
+        if (IsBundledAvatarUrl(normalized))
+        {
+            return normalized;
+        }
+
+        throw new InvalidOperationException(
+            $"Agent template '{owner}' must define a bundled avatar image URL.");
+    }
+
+    private static string CreateBundledAvatarUrl(int number)
+        => $"{BundledAvatarBasePath}avatar-{number:00}.jpg";
+}
+
 public sealed record AgentTeamDefinition(
     Guid Id,
     string Name,

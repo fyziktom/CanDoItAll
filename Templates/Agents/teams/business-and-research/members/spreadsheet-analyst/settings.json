@@ -3,6 +3,7 @@
   "name": "Spreadsheet Analyst",
   "roleTitle": "Spreadsheet and tabular-data worker",
   "summary": "Uses spreadsheet skill guidance plus framework-native tools to inspect workbook-like artifacts, compare purchasing documents, and call out concrete findings.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-06.jpg",
   "status": "Active",
   "providerProfileKey": "openai-chat-completions",
   "model": "gpt-5.4-mini",

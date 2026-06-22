@@ -1,0 +1,127 @@
+using Bunit;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace CanDoItAll.Tests.Components;
+
+public sealed class AgentAvatarRenderingTests
+{
+    [Fact]
+    public void Overview_usage_list_renders_shared_avatar_with_image_url()
+    {
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+        var avatarUrl = AgentAvatarImageCatalog.BundledAvatarUrls[0];
+
+        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+            .Add(component => component.IsLoaded, true)
+            .Add(component => component.TestId, "agent-avatar-test")
+            .Add(component => component.Rows, [
+                CreateRow("Delivery Manager", avatarUrl)
+            ]));
+
+        Assert.Contains(avatarUrl, cut.Markup, StringComparison.Ordinal);
+        Assert.NotNull(cut.Find("[data-testid='agent-avatar-test-avatar']"));
+        Assert.Empty(cut.FindAll("[data-testid='agent-avatar-test-avatar-fallback']"));
+    }
+
+    [Fact]
+    public void Overview_usage_list_keeps_accessible_fallback_when_image_url_is_missing()
+    {
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+
+        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+            .Add(component => component.IsLoaded, true)
+            .Add(component => component.TestId, "agent-avatar-test")
+            .Add(component => component.Rows, [
+                CreateRow("Fallback Agent", null)
+            ]));
+
+        Assert.Contains("Fallback Agent", cut.Markup, StringComparison.Ordinal);
+        Assert.NotNull(cut.Find("[data-testid='agent-avatar-test-avatar']"));
+    }
+
+    [Fact]
+    public async Task Avatar_upload_formatter_accepts_supported_image()
+    {
+        var dataUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(
+            new FakeBrowserFile("avatar.png", "image/png", [1, 2, 3]));
+
+        Assert.Equal("data:image/png;base64,AQID", dataUrl);
+    }
+
+    [Fact]
+    public async Task Avatar_upload_formatter_normalizes_jpg_content_type()
+    {
+        var dataUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(
+            new FakeBrowserFile("avatar.jpg", "image/jpg", [1, 2, 3]));
+
+        Assert.Equal("data:image/jpeg;base64,AQID", dataUrl);
+    }
+
+    [Fact]
+    public async Task Avatar_upload_formatter_rejects_unsupported_file_type()
+    {
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => AgentAvatarUploadFormatter.BuildDataUrlAsync(
+                new FakeBrowserFile("avatar.txt", "text/plain", [1, 2, 3])));
+
+        Assert.Contains("PNG, JPEG, WebP, or GIF", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Avatar_upload_formatter_rejects_oversized_image()
+    {
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => AgentAvatarUploadFormatter.BuildDataUrlAsync(
+                new FakeBrowserFile(
+                    "avatar.png",
+                    "image/png",
+                    [1, 2, 3],
+                    AgentAvatarUploadFormatter.MaxAvatarUploadBytes + 1)));
+
+        Assert.Contains("128 KB or smaller", exception.Message, StringComparison.Ordinal);
+    }
+
+    private static AgentOverviewUsageRow CreateRow(string name, string? avatarImageUrl)
+    {
+        return new AgentOverviewUsageRow(
+            Guid.NewGuid(),
+            name,
+            avatarImageUrl,
+            RunCount: 12,
+            FailedRunCount: 1,
+            UsageObservationCount: 3,
+            KnownUsageObservationCount: 2,
+            UnknownUsageObservationCount: 1,
+            InputTokens: 100,
+            CachedInputTokens: 0,
+            OutputTokens: 40,
+            ReasoningTokens: 0,
+            TotalTokens: 140,
+            KnownCostUsd: 0.02m,
+            LastUsedAtUtc: DateTimeOffset.UtcNow);
+    }
+
+    private sealed class FakeBrowserFile(
+        string name,
+        string contentType,
+        byte[] content,
+        long? size = null) : IBrowserFile
+    {
+        public string Name { get; } = name;
+
+        public DateTimeOffset LastModified { get; } = DateTimeOffset.UtcNow;
+
+        public long Size { get; } = size ?? content.LongLength;
+
+        public string ContentType { get; } = contentType;
+
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default)
+            => new MemoryStream(content, writable: false);
+    }
+}

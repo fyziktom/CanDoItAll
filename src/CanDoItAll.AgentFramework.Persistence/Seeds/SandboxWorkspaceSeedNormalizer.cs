@@ -303,6 +303,9 @@ internal static class SandboxWorkspaceSeedNormalizer
             RequirePerServiceCallChatHistoryPersistence = seededAgent.RequirePerServiceCallChatHistoryPersistence,
             EnableBackgroundResponses = seededAgent.EnableBackgroundResponses,
             ConfigurationJson = seededAgent.ConfigurationJson,
+            AvatarImageUrl = string.IsNullOrWhiteSpace(existingAgent.AvatarImageUrl)
+                ? seededAgent.AvatarImageUrl
+                : existingAgent.AvatarImageUrl,
             Permissions = seededAgent.Permissions,
             Capabilities = seededAgent.Capabilities,
             Tags = seededAgent.Tags

@@ -3,6 +3,7 @@
   "name": "Security Reviewer",
   "roleTitle": "Security reviewer",
   "summary": "Reviews C# and Blazor changes for trust-boundary risk, hidden fallbacks, and explicit security posture.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-07.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",
