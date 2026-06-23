@@ -64,6 +64,12 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task SaveCatalogAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken = default)
     {
+        if (executionSliceStore.ExecutionStorageExists())
+        {
+            await SaveCatalogOnlyAsync(catalog, expectedRevision: null, cancellationToken);
+            return;
+        }
+
         await UpdateWorkspaceAsync(
             document => SandboxWorkspaceDocument.Combine(
                 SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog),
@@ -76,6 +82,11 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(update);
+
+        if (executionSliceStore.ExecutionStorageExists())
+        {
+            return await UpdateCatalogOnlyAsync(update, expectedRevision: null, cancellationToken);
+        }
 
         var updatedDocument = await UpdateWorkspaceAsync(
             document => SandboxWorkspaceDocument.Combine(
@@ -93,6 +104,11 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
     {
         ArgumentNullException.ThrowIfNull(update);
 
+        if (executionSliceStore.ExecutionStorageExists())
+        {
+            return await UpdateCatalogOnlyAsync(update, expectedRevision, cancellationToken);
+        }
+
         var updatedDocument = await UpdateWorkspaceAsync(
             document => SandboxWorkspaceDocument.Combine(
                 SandboxWorkspaceSeedFactory.NormalizeCatalog(update(document.ToCatalog())),
@@ -101,6 +117,55 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
             cancellationToken);
 
         return updatedDocument.ToCatalog();
+    }
+
+    private async Task<SandboxWorkspaceCatalog> SaveCatalogOnlyAsync(
+        SandboxWorkspaceCatalog catalog,
+        long? expectedRevision,
+        CancellationToken cancellationToken)
+    {
+        return await UpdateCatalogOnlyAsync(
+            _ => catalog,
+            expectedRevision,
+            cancellationToken);
+    }
+
+    private async Task<SandboxWorkspaceCatalog> UpdateCatalogOnlyAsync(
+        Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
+        long? expectedRevision,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureCatalogReadCoreAsync(cancellationToken);
+            var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
+            if (expectedRevision.HasValue && workspaceIndex.Revision != expectedRevision.Value)
+            {
+                throw new SandboxWorkspaceConcurrencyException(expectedRevision.Value, workspaceIndex.Revision);
+            }
+
+            var currentCatalog = await LoadNormalizedCatalogCoreAsync(cancellationToken);
+            var updatedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(update(currentCatalog));
+            SandboxWorkspaceDocumentInvariantValidator.Validate(
+                SandboxWorkspaceDocument.Combine(updatedCatalog, SandboxWorkspaceExecutionState.Empty));
+
+            var changed = await SaveCatalogCoreAsync(updatedCatalog, cancellationToken);
+            var nextWorkspaceIndex = new WorkspaceStorageIndex(
+                Revision: changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
+                UpdatedAtUtc: changed ? DateTimeOffset.UtcNow : workspaceIndex.UpdatedAtUtc);
+            if (changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
+            {
+                await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
+            }
+
+            return updatedCatalog;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     public async Task<SandboxWorkspaceExecutionState> LoadExecutionAsync(CancellationToken cancellationToken = default)

@@ -165,15 +165,57 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("Prompt is required.");
         }
 
+        if (store is ISandboxWorkspaceExecutionRunStore &&
+            store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+        {
+            var splitCatalog = await store.LoadCatalogAsync(cancellationToken);
+            var splitAgent = EnsureAgentExists(splitCatalog, agentId);
+            var splitProvider = await ResolveProviderForAgentAsync(splitAgent, splitCatalog, cancellationToken);
+            var splitSession = chatSessionId.HasValue
+                ? EnsureAgentOwnsSession(
+                    await chatQueryStore.GetChatSessionAsync(chatSessionId.Value, cancellationToken),
+                    agentId,
+                    chatSessionId.Value)
+                : null;
+
+            return await SendMessageCoreAsync(
+                splitAgent,
+                splitProvider,
+                splitCatalog,
+                SandboxWorkspaceExecutionState.Empty,
+                splitSession,
+                prompt,
+                cancellationToken);
+        }
+
         var document = await store.LoadAsync(cancellationToken);
-        var catalog = document.ToCatalog();
-        var executionState = document.ToExecutionState();
-        var agent = EnsureAgentExists(catalog, agentId);
-        var provider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
-        var session = chatSessionId.HasValue
-            ? EnsureAgentOwnsSession(executionState, agentId, chatSessionId.Value)
+        var fallbackCatalog = document.ToCatalog();
+        var fallbackExecutionState = document.ToExecutionState();
+        var fallbackAgent = EnsureAgentExists(fallbackCatalog, agentId);
+        var fallbackProvider = await ResolveProviderForAgentAsync(fallbackAgent, fallbackCatalog, cancellationToken);
+        var fallbackSession = chatSessionId.HasValue
+            ? EnsureAgentOwnsSession(fallbackExecutionState, agentId, chatSessionId.Value)
             : null;
 
+        return await SendMessageCoreAsync(
+            fallbackAgent,
+            fallbackProvider,
+            fallbackCatalog,
+            fallbackExecutionState,
+            fallbackSession,
+            prompt,
+            cancellationToken);
+    }
+
+    private async Task<AgentChatRunResult> SendMessageCoreAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        SandboxWorkspaceCatalog catalog,
+        SandboxWorkspaceExecutionState executionState,
+        ChatSessionRecord? session,
+        string prompt,
+        CancellationToken cancellationToken)
+    {
         var result = await ExecuteRunCoreAsync(
             agent,
             provider,
@@ -181,7 +223,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             executionState,
             session,
             new ExecutionRunRequest(
-                AgentId: agentId,
+                AgentId: agent.Id,
                 Prompt: prompt.Trim(),
                 ChatSessionId: session?.Id,
                 Context: new ExecutionInvocationContext(

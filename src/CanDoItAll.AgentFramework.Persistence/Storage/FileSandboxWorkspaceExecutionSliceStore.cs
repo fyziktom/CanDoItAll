@@ -676,7 +676,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             return projection;
         }
 
-        var rebuilt = BuildUsageProjection(await LoadAsync(cancellationToken), executionIndex);
+        var rebuilt = BuildUsageProjection(await LoadUsageProjectionSourceAsync(cancellationToken), executionIndex);
         if (projection is null ||
             !File.Exists(layout.ExecutionUsageIndexPath) ||
             jsonStore.RequiresSave(projection, rebuilt))
@@ -699,7 +699,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                              currentProjection.Revision == executionIndex.Revision - 1);
         var nextProjection = canApplyDelta
             ? ApplyUsageProjectionDelta(currentProjection!, previousDetail, normalizedDetail, executionIndex)
-            : BuildUsageProjection(await LoadAsync(cancellationToken), executionIndex);
+            : BuildUsageProjection(await LoadUsageProjectionSourceAsync(cancellationToken), executionIndex);
 
         if (currentProjection is null ||
             !File.Exists(layout.ExecutionUsageIndexPath) ||
@@ -707,6 +707,44 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         {
             await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionUsageIndexPath, nextProjection, cancellationToken);
         }
+    }
+
+    private async Task<SandboxWorkspaceExecutionState> LoadUsageProjectionSourceAsync(CancellationToken cancellationToken)
+    {
+        if (!ExecutionStorageExists())
+        {
+            return await LoadAsync(cancellationToken);
+        }
+
+        var usageObservations = new List<ProviderUsageObservation>();
+        if (Directory.Exists(layout.ExecutionRunsRoot))
+        {
+            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot).OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!Guid.TryParse(Path.GetFileName(runDirectory), out var runId))
+                {
+                    continue;
+                }
+
+                usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(
+                    layout.RunUsageRoot(runId),
+                    cancellationToken));
+            }
+        }
+
+        usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(
+            layout.OrphanUsageRoot,
+            cancellationToken));
+
+        return new SandboxWorkspaceExecutionState(
+            Version: "3.0",
+            ChatSessions: [],
+            ExecutionLog: [],
+            Metrics: [])
+        {
+            ExecutionRuns = await ListRunsAsync(cancellationToken),
+            ProviderUsageObservations = usageObservations
+        };
     }
 
     private static AgentUsageProjection ApplyUsageProjectionDelta(

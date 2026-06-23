@@ -17,11 +17,35 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("Prompt is required.");
         }
 
-        if (!request.ChatSessionId.HasValue && TryGetExecutionRunStore() is not null)
+        if (TryGetExecutionRunStore() is not null)
         {
             var catalogOnly = await store.LoadCatalogAsync(cancellationToken);
             var agentOnly = EnsureAgentExists(catalogOnly, request.AgentId);
             var providerOnly = await ResolveProviderForAgentAsync(agentOnly, catalogOnly, cancellationToken);
+
+            if (request.ChatSessionId.HasValue &&
+                store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+            {
+                var sessionOnly = EnsureAgentOwnsSession(
+                    await chatQueryStore.GetChatSessionAsync(request.ChatSessionId.Value, cancellationToken),
+                    request.AgentId,
+                    request.ChatSessionId.Value);
+
+                return await ExecuteRunCoreAsync(
+                    agentOnly,
+                    providerOnly,
+                    catalogOnly,
+                    SandboxWorkspaceExecutionState.Empty,
+                    sessionOnly,
+                    request,
+                    persistTranscript: true,
+                    cancellationToken);
+            }
+
+            if (request.ChatSessionId.HasValue)
+            {
+                return await ExecuteRunWithWorkspaceDocumentAsync(request, cancellationToken);
+            }
 
             return await ExecuteRunCoreAsync(
                 agentOnly,
@@ -34,6 +58,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 cancellationToken);
         }
 
+        return await ExecuteRunWithWorkspaceDocumentAsync(request, cancellationToken);
+    }
+
+    private async Task<ExecutionRunResult> ExecuteRunWithWorkspaceDocumentAsync(
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken)
+    {
         var document = await store.LoadAsync(cancellationToken);
         var catalog = document.ToCatalog();
         var executionState = document.ToExecutionState();
