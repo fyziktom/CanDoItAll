@@ -385,9 +385,12 @@ internal static class SandboxWorkspaceSeedNormalizer
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Final product-validation order")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never make validation pass by writing fake package")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim contextual examples, source files, templates, or implementation references were reviewed")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "leave `keepAlive` false unless this same step immediately needs browser tools")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "When writing xUnit tests, include a visible `using Xunit;`")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "custom route backed only by scaffold-default `app.css` and layout CSS")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "custom class names without matching loaded styles")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "one run-app proof node, one run-tests proof node, and one manager summary node");
         }
 
@@ -401,7 +404,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not cite files, paths, examples, source artifacts, or tool results as evidence")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For documents, render/export/open the produced file")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "For spreadsheets, inspect workbook structure")
-                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim completion with chat-only evidence")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Do not claim completion with chat-only evidence")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "computed styles apply to the primary surface")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "one run-app proof node, one run-tests proof node, and one manager summary node");
         }
 
@@ -427,6 +431,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "waitForHttp: false")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Leave `keepAlive` false for startup proof")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "When writing xUnit tests, include a visible `using Xunit;`")
+                   || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "domain-specific classes but only stock template CSS")
                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "one run-app proof node, one run-tests proof node, and one manager summary node");
         }
 

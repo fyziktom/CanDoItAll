@@ -150,7 +150,7 @@ public sealed class AgentTeamCatalogIntegrationTests
             {
                 var oldAgent = agent with
                 {
-                    ConfigurationJson = agent.ConfigurationJson.Replace("2026-06-agent-template-teams-v20", "2026-06-agent-template-teams-v19", StringComparison.Ordinal)
+                    ConfigurationJson = agent.ConfigurationJson.Replace("2026-06-agent-template-teams-v23", "2026-06-agent-template-teams-v19", StringComparison.Ordinal)
                 };
 
                 if (oldAgent.Id == deliveryManager.Id)

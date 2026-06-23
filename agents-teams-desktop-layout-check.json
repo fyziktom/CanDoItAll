@@ -1,0 +1,396 @@
+{
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "sectionText": "TEAMS\n\n5 team(s)\nrocket_launch\nDelivery Platform Team\n9 agent(s)\nscience\nBusiness And Research Team\n6 agent(s)\ncode\n.NET Delivery Team\n4 agent(s)\nintegration_instructions\nJavaScript Delivery Team\n3 agent(s)\nvisibility\nVisual Automation Template Team\n3 agent(s)",
+  "removedHeadingPresent": false,
+  "gridRect": {
+    "x": 146,
+    "y": 741.59375,
+    "width": 1072.1875,
+    "height": 75.1953125,
+    "top": 741.59375,
+    "right": 1218.1875,
+    "bottom": 816.7890625,
+    "left": 146
+  },
+  "buttonCount": 5,
+  "buttons": [
+    {
+      "text": "rocket_launch\nDelivery Platform Team\n9 agent(s)",
+      "rect": {
+        "x": 146,
+        "y": 741.59375,
+        "width": 172.03125,
+        "height": 75.1953125,
+        "top": 741.59375,
+        "right": 318.03125,
+        "bottom": 816.7890625,
+        "left": 146
+      },
+      "clientHeight": 73,
+      "scrollHeight": 73,
+      "clientWidth": 170,
+      "scrollWidth": 170,
+      "children": [
+        {
+          "text": "rocket_launch",
+          "className": "material-icons text-2xl",
+          "clientHeight": 20,
+          "scrollHeight": 20,
+          "clientWidth": 20,
+          "scrollWidth": 20,
+          "rect": {
+            "x": 222.015625,
+            "y": 753.4296875,
+            "width": 20,
+            "height": 20,
+            "top": 753.4296875,
+            "right": 242.015625,
+            "bottom": 773.4296875,
+            "left": 222.015625
+          }
+        },
+        {
+          "text": "Delivery Platform Team",
+          "className": "agents-overview-team-shortcut__name",
+          "clientHeight": 14,
+          "scrollHeight": 15,
+          "clientWidth": 133,
+          "scrollWidth": 133,
+          "rect": {
+            "x": 165.7578125,
+            "y": 776.3046875,
+            "width": 132.515625,
+            "height": 13.796875,
+            "top": 776.3046875,
+            "right": 298.2734375,
+            "bottom": 790.1015625,
+            "left": 165.7578125
+          }
+        },
+        {
+          "text": "9 agent(s)",
+          "className": "agents-overview-team-shortcut__count",
+          "clientHeight": 12,
+          "scrollHeight": 13,
+          "clientWidth": 49,
+          "scrollWidth": 49,
+          "rect": {
+            "x": 207.375,
+            "y": 792.9765625,
+            "width": 49.2734375,
+            "height": 11.96875,
+            "top": 792.9765625,
+            "right": 256.6484375,
+            "bottom": 804.9453125,
+            "left": 207.375
+          }
+        }
+      ],
+      "clippedVertically": false,
+      "clippedHorizontally": false
+    },
+    {
+      "text": "science\nBusiness And Research Team\n6 agent(s)",
+      "rect": {
+        "x": 326.03125,
+        "y": 741.59375,
+        "width": 172.03125,
+        "height": 75.1953125,
+        "top": 741.59375,
+        "right": 498.0625,
+        "bottom": 816.7890625,
+        "left": 326.03125
+      },
+      "clientHeight": 73,
+      "scrollHeight": 73,
+      "clientWidth": 170,
+      "scrollWidth": 170,
+      "children": [
+        {
+          "text": "science",
+          "className": "material-icons text-2xl",
+          "clientHeight": 20,
+          "scrollHeight": 20,
+          "clientWidth": 20,
+          "scrollWidth": 20,
+          "rect": {
+            "x": 402.046875,
+            "y": 753.4296875,
+            "width": 20,
+            "height": 20,
+            "top": 753.4296875,
+            "right": 422.046875,
+            "bottom": 773.4296875,
+            "left": 402.046875
+          }
+        },
+        {
+          "text": "Business And Research Team",
+          "className": "agents-overview-team-shortcut__name",
+          "clientHeight": 14,
+          "scrollHeight": 15,
+          "clientWidth": 156,
+          "scrollWidth": 161,
+          "rect": {
+            "x": 334.2265625,
+            "y": 776.3046875,
+            "width": 155.640625,
+            "height": 13.796875,
+            "top": 776.3046875,
+            "right": 489.8671875,
+            "bottom": 790.1015625,
+            "left": 334.2265625
+          }
+        },
+        {
+          "text": "6 agent(s)",
+          "className": "agents-overview-team-shortcut__count",
+          "clientHeight": 12,
+          "scrollHeight": 13,
+          "clientWidth": 49,
+          "scrollWidth": 49,
+          "rect": {
+            "x": 387.40625,
+            "y": 792.9765625,
+            "width": 49.2734375,
+            "height": 11.96875,
+            "top": 792.9765625,
+            "right": 436.6796875,
+            "bottom": 804.9453125,
+            "left": 387.40625
+          }
+        }
+      ],
+      "clippedVertically": false,
+      "clippedHorizontally": false
+    },
+    {
+      "text": "code\n.NET Delivery Team\n4 agent(s)",
+      "rect": {
+        "x": 506.0625,
+        "y": 741.59375,
+        "width": 172.03125,
+        "height": 75.1953125,
+        "top": 741.59375,
+        "right": 678.09375,
+        "bottom": 816.7890625,
+        "left": 506.0625
+      },
+      "clientHeight": 73,
+      "scrollHeight": 73,
+      "clientWidth": 170,
+      "scrollWidth": 170,
+      "children": [
+        {
+          "text": "code",
+          "className": "material-icons text-2xl",
+          "clientHeight": 20,
+          "scrollHeight": 20,
+          "clientWidth": 20,
+          "scrollWidth": 20,
+          "rect": {
+            "x": 582.078125,
+            "y": 753.4296875,
+            "width": 20,
+            "height": 20,
+            "top": 753.4296875,
+            "right": 602.078125,
+            "bottom": 773.4296875,
+            "left": 582.078125
+          }
+        },
+        {
+          "text": ".NET Delivery Team",
+          "className": "agents-overview-team-shortcut__name",
+          "clientHeight": 14,
+          "scrollHeight": 15,
+          "clientWidth": 109,
+          "scrollWidth": 109,
+          "rect": {
+            "x": 537.59375,
+            "y": 776.3046875,
+            "width": 108.9609375,
+            "height": 13.796875,
+            "top": 776.3046875,
+            "right": 646.5546875,
+            "bottom": 790.1015625,
+            "left": 537.59375
+          }
+        },
+        {
+          "text": "4 agent(s)",
+          "className": "agents-overview-team-shortcut__count",
+          "clientHeight": 12,
+          "scrollHeight": 13,
+          "clientWidth": 49,
+          "scrollWidth": 49,
+          "rect": {
+            "x": 567.3359375,
+            "y": 792.9765625,
+            "width": 49.4765625,
+            "height": 11.96875,
+            "top": 792.9765625,
+            "right": 616.8125,
+            "bottom": 804.9453125,
+            "left": 567.3359375
+          }
+        }
+      ],
+      "clippedVertically": false,
+      "clippedHorizontally": false
+    },
+    {
+      "text": "integration_instructions\nJavaScript Delivery Team\n3 agent(s)",
+      "rect": {
+        "x": 686.09375,
+        "y": 741.59375,
+        "width": 172.03125,
+        "height": 75.1953125,
+        "top": 741.59375,
+        "right": 858.125,
+        "bottom": 816.7890625,
+        "left": 686.09375
+      },
+      "clientHeight": 73,
+      "scrollHeight": 73,
+      "clientWidth": 170,
+      "scrollWidth": 170,
+      "children": [
+        {
+          "text": "integration_instructions",
+          "className": "material-icons text-2xl",
+          "clientHeight": 20,
+          "scrollHeight": 20,
+          "clientWidth": 20,
+          "scrollWidth": 20,
+          "rect": {
+            "x": 762.109375,
+            "y": 753.4296875,
+            "width": 20,
+            "height": 20,
+            "top": 753.4296875,
+            "right": 782.109375,
+            "bottom": 773.4296875,
+            "left": 762.109375
+          }
+        },
+        {
+          "text": "JavaScript Delivery Team",
+          "className": "agents-overview-team-shortcut__name",
+          "clientHeight": 14,
+          "scrollHeight": 15,
+          "clientWidth": 140,
+          "scrollWidth": 140,
+          "rect": {
+            "x": 701.8984375,
+            "y": 776.3046875,
+            "width": 140.4140625,
+            "height": 13.796875,
+            "top": 776.3046875,
+            "right": 842.3125,
+            "bottom": 790.1015625,
+            "left": 701.8984375
+          }
+        },
+        {
+          "text": "3 agent(s)",
+          "className": "agents-overview-team-shortcut__count",
+          "clientHeight": 12,
+          "scrollHeight": 13,
+          "clientWidth": 49,
+          "scrollWidth": 49,
+          "rect": {
+            "x": 747.484375,
+            "y": 792.9765625,
+            "width": 49.2421875,
+            "height": 11.96875,
+            "top": 792.9765625,
+            "right": 796.7265625,
+            "bottom": 804.9453125,
+            "left": 747.484375
+          }
+        }
+      ],
+      "clippedVertically": false,
+      "clippedHorizontally": false
+    },
+    {
+      "text": "visibility\nVisual Automation Template Team\n3 agent(s)",
+      "rect": {
+        "x": 866.125,
+        "y": 741.59375,
+        "width": 172.03125,
+        "height": 75.1953125,
+        "top": 741.59375,
+        "right": 1038.15625,
+        "bottom": 816.7890625,
+        "left": 866.125
+      },
+      "clientHeight": 73,
+      "scrollHeight": 73,
+      "clientWidth": 170,
+      "scrollWidth": 170,
+      "children": [
+        {
+          "text": "visibility",
+          "className": "material-icons text-2xl",
+          "clientHeight": 20,
+          "scrollHeight": 20,
+          "clientWidth": 20,
+          "scrollWidth": 20,
+          "rect": {
+            "x": 942.140625,
+            "y": 753.4296875,
+            "width": 20,
+            "height": 20,
+            "top": 753.4296875,
+            "right": 962.140625,
+            "bottom": 773.4296875,
+            "left": 942.140625
+          }
+        },
+        {
+          "text": "Visual Automation Template Team",
+          "className": "agents-overview-team-shortcut__name",
+          "clientHeight": 14,
+          "scrollHeight": 15,
+          "clientWidth": 156,
+          "scrollWidth": 193,
+          "rect": {
+            "x": 874.3203125,
+            "y": 776.3046875,
+            "width": 155.640625,
+            "height": 13.796875,
+            "top": 776.3046875,
+            "right": 1029.9609375,
+            "bottom": 790.1015625,
+            "left": 874.3203125
+          }
+        },
+        {
+          "text": "3 agent(s)",
+          "className": "agents-overview-team-shortcut__count",
+          "clientHeight": 12,
+          "scrollHeight": 13,
+          "clientWidth": 49,
+          "scrollWidth": 49,
+          "rect": {
+            "x": 927.515625,
+            "y": 792.9765625,
+            "width": 49.2421875,
+            "height": 11.96875,
+            "top": 792.9765625,
+            "right": 976.7578125,
+            "bottom": 804.9453125,
+            "left": 927.515625
+          }
+        }
+      ],
+      "clippedVertically": false,
+      "clippedHorizontally": false
+    }
+  ]
+}

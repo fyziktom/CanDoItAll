@@ -543,6 +543,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Before any scaffold call", instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", instructions, StringComparison.Ordinal);
         Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as current-run evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("When writing xUnit tests, include a visible `using Xunit;`", instructions, StringComparison.Ordinal);
+        Assert.Contains("custom route backed only by scaffold-default `app.css` and layout CSS", instructions, StringComparison.Ordinal);
+        Assert.Contains("custom class names without matching loaded styles", instructions, StringComparison.Ordinal);
         Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
         Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
     }
@@ -570,6 +573,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Final delivery order is strict", instructions, StringComparison.Ordinal);
         Assert.Contains("Do not claim completion with chat-only evidence", instructions, StringComparison.Ordinal);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("computed styles apply to the primary surface", instructions, StringComparison.Ordinal);
+        Assert.Contains("product-specific class names but the accepted screenshot or state output shows only unstyled DOM", instructions, StringComparison.Ordinal);
         Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
         Assert.Contains("store accepted screenshots as ImageAsset nodes or record the exact project-structure asset handoff", instructions, StringComparison.Ordinal);
         Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
@@ -591,6 +596,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", instructions, StringComparison.Ordinal);
         Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", instructions, StringComparison.Ordinal);
+        Assert.Contains("When writing xUnit tests, include a visible `using Xunit;`", instructions, StringComparison.Ordinal);
+        Assert.Contains("domain-specific classes but only stock template CSS", instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", instructions, StringComparison.Ordinal);
         Assert.Contains("cleanup.json", instructions, StringComparison.Ordinal);
         Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
@@ -866,6 +873,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("stale evidence", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Treat untouched scaffold styling, flat stacked forms, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("loaded CSS or scoped CSS applies to the primary route classes with computed styles", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("rendered as unstyled DOM is a QA failure", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("meaningful filled, selected, or changed state", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
@@ -882,6 +891,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Back every claim with visible proof", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("mark conflicting prior screenshots or notes as stale evidence", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Call out flat Bootstrap-default composition, bare stacked form sections, or template navigation chrome", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("backed by loaded CSS or scoped CSS", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("rendered by stock scaffold CSS only", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("stock scaffold", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-theme", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-skill", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -892,7 +903,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("filesystem assumptions", securityEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Keep the decision explicit: ready, blocked, or ready-with-residual-risk", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not accept stale prior-run artifacts as proof for the current release", releaseEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Treat obviously template-looking UI, unresolved screenshot quality concerns, or ambiguous artifact handoff as release blockers", releaseEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("missing active styles for custom visual surfaces", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("For visible browser workflows, release readiness requires process-visible current-run browser artifacts", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("missing, empty, detached, stale, or chat-only browser proof", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("build-system fragility", releaseEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -1191,6 +1202,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("scaffold directly into it instead of adding an extra nested", refreshedInstructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Before any scaffold call", refreshedInstructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("When writing xUnit tests, include a visible `using Xunit;`", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("custom route backed only by scaffold-default `app.css` and layout CSS", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("custom class names without matching loaded styles", refreshedInstructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1232,7 +1246,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase));
 
         Assert.Equal(seededSnapshot.Description, refreshedSnapshot.Description);
-        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
+        Assert.Contains(GetExpectedSeriousDeliveryManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1272,11 +1286,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var refreshedStopSnapshot = ReadCapabilitySnapshotFromCatalog(catalogPath, "workspace-dotnet-stop");
 
         Assert.Contains("stdout/stderr diagnostics", refreshedSnapshot.Description, StringComparison.Ordinal);
-        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
+        Assert.Contains(GetExpectedSeriousDeliveryManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
         Assert.Contains("startup.json receipt", refreshedStopSnapshot.Description, StringComparison.Ordinal);
         Assert.Contains("cleanup.json proof", refreshedStopSnapshot.Description, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", refreshedStopSnapshot.ConfigurationJson, StringComparison.Ordinal);
-        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedStopSnapshot.ConfigurationJson, StringComparison.Ordinal);
+        Assert.Contains(GetExpectedSeriousDeliveryManagedSeedVersion(), refreshedStopSnapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
     private static void AssertOpenAiBacked(AgentDefinition agent, Guid providerId, string expectedModel)
@@ -1300,6 +1314,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         using var configuration = JsonDocument.Parse(seededAgent.ConfigurationJson);
         return configuration.RootElement.GetProperty("managedSeedVersion").GetString()
                ?? throw new InvalidOperationException("Managed seed version is missing from the default software delivery agent configuration.");
+    }
+
+    private static string GetExpectedSeriousDeliveryManagedSeedVersion()
+    {
+        var seededCapability = Assert.Single(
+            SandboxWorkspaceSeedFactory.Create().Capabilities,
+            item => string.Equals(item.Key, "dotnet-app-delivery-inline-skill", StringComparison.Ordinal));
+        using var configuration = JsonDocument.Parse(seededCapability.ConfigurationJson);
+        return configuration.RootElement.GetProperty("managedSeedVersion").GetString()
+               ?? throw new InvalidOperationException("Managed seed version is missing from the serious delivery capability configuration.");
     }
 
     private static void AssertHasCapabilities(AgentDefinition agent, params Guid[] capabilityIds)

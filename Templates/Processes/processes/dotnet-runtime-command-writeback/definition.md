@@ -25,7 +25,7 @@ Every step declares explicit operations and target scope so role permissions rem
 - Operation target scope: ExternalActionControlled
 - Depends on: resolve-dotnet-run-commands
 - Outputs: Runtime-capable Run app and Run tests nodes under the process run node, plus a grouping node only when needed for organization.
-- Evidence: Project-structure write receipts, node ids, commands, and unresolved blockers.
+- Evidence: Project-structure write receipts, node ids, commands, launcher-compatibility receipts, and unresolved blockers written to `steps/run-command-node-receipts.md`.
 
 ### 3. Hand off runtime command nodes (`runtime-command-handoff`)
 - Step kind: End
