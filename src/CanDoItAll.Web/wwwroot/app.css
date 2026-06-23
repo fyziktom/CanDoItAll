@@ -53,3 +53,40 @@ a {
 [data-testid="project-structure-process-assignment-agent-switch-confirmation-dialog"] {
     z-index: 1900 !important;
 }
+
+.cda-shell-root {
+    --cda-canvas-maximize-top-offset: 3.25rem;
+    --cda-canvas-maximize-height: calc(100dvh - var(--cda-canvas-maximize-top-offset));
+}
+
+.cda-shell-workbar {
+    position: relative;
+    z-index: 260;
+}
+
+.cda-shell-root .cw-workbench-shell.cw-workbench-shell.is-maximized {
+    top: var(--cda-canvas-maximize-top-offset) !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: var(--cda-canvas-maximize-height) !important;
+    min-height: var(--cda-canvas-maximize-height) !important;
+    max-height: var(--cda-canvas-maximize-height) !important;
+}
+
+.cda-shell-root .cw-workbench-shell.cw-workbench-shell.is-maximized .cw-workbench-frame,
+.cda-shell-root .cw-workbench-shell.cw-workbench-shell.is-maximized .cw-stage-surface,
+.cda-shell-root .cw-workbench-shell.cw-workbench-shell.is-maximized .cw-canvas-host,
+.cda-shell-root .cw-workbench-shell.cw-workbench-shell.is-maximized .cw-workbench,
+.cda-shell-root .cw-workbench-shell.cw-workbench-shell.is-maximized .cw-workbench__canvas {
+    height: var(--cda-canvas-maximize-height) !important;
+    min-height: var(--cda-canvas-maximize-height) !important;
+    max-height: var(--cda-canvas-maximize-height) !important;
+}
+
+@media (max-width: 1279px) {
+    .cda-shell-root {
+        --cda-canvas-maximize-top-offset: 6.5rem;
+    }
+}
