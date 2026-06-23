@@ -221,12 +221,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
             return [];
         }
 
-        var runIds = new HashSet<ProcessRunId>();
-        foreach (var run in result.Runs)
-        {
-            runIds.Add(run.RootRunId);
-            runIds.Add(run.RunId);
-        }
+        var runIds = ResolveUsageTelemetryRunIds(runtimeQuery, result);
 
         if (runIds.Count == 0)
         {
@@ -242,6 +237,40 @@ public sealed class ProcessWorkspaceShellProjectionService(
                     ResolveUsageTelemetryTakePerRun(runtimeQuery.HistoryWindow)),
                 cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    private static HashSet<ProcessRunId> ResolveUsageTelemetryRunIds(
+        ProcessRuntimeWorkspaceQueryProjection runtimeQuery,
+        ProcessRuntimeWorkspaceResult result)
+    {
+        var runIds = new HashSet<ProcessRunId>();
+        var selectedRunId = result.SelectedRun?.RunId ?? ResolveRunId(runtimeQuery.SelectedRunId);
+        if (selectedRunId is not { } selected)
+        {
+            foreach (var run in result.Runs)
+            {
+                runIds.Add(run.RootRunId);
+                runIds.Add(run.RunId);
+            }
+
+            return runIds;
+        }
+
+        var selectedRootRunId = result.SelectedRun?.RootRunId ??
+            result.Runs.FirstOrDefault(run => run.RunId == selected)?.RootRunId ??
+            selected;
+        foreach (var run in result.Runs.Where(run =>
+                     run.RootRunId == selectedRootRunId ||
+                     run.RunId == selectedRootRunId ||
+                     run.RunId == selected))
+        {
+            runIds.Add(run.RootRunId);
+            runIds.Add(run.RunId);
+        }
+
+        runIds.Add(selectedRootRunId);
+        runIds.Add(selected);
+        return runIds;
     }
 
     private static ProcessRuntimeWorkspaceQueryProjection NormalizeRuntimeQuery(ProcessWorkspaceShellRequest request)

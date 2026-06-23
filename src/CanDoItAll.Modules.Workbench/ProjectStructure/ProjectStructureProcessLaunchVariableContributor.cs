@@ -238,6 +238,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         builder.AppendLine($"AppTemplateOptions: {appArchetype.TemplateOptions}");
         builder.AppendLine($"AllowedTemplateSwitches: {appArchetype.AllowedTemplateSwitches}");
         builder.AppendLine($"ScaffoldToolContract: use workspace_dotnet_new with template '{BuildTemplateSpec(appArchetype)}' for the app project; do not hand-author SDK/package scaffolding unless repairing an existing project in place.");
+        builder.AppendLine("ExternalTargetScriptRule: external-target/... aliases are only for structured workspace tool path arguments. Do not put external-target aliases inside PowerShell, Python, or shell script content; scripts must use the native absolute ProductRoot or DotNet* launch variable paths.");
         builder.AppendLine("ExistingScaffoldRule: existing files are not enough; if the app project already exists, compare template-critical files to the current template baseline and repair stale or hand-authored scaffold drift before first build validation.");
         if (string.Equals(appArchetype.Template, "blazorwasm", StringComparison.OrdinalIgnoreCase) &&
             ContainsAny(appArchetype.AllowedTemplateSwitches, "--pwa"))

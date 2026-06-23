@@ -447,6 +447,7 @@
 
     private async Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, Guid? runId)
     {
+        var runtimeLoadOptions = CreateRuntimeLoadOptions();
         var request = new ProcessWorkspaceShellRequest(
             ResolveScope(),
             new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
@@ -468,7 +469,9 @@
                 RuntimeEventPageSize,
                 runId,
                 AutoSelectRun: runId.HasValue,
-                TakeRuns: 40));
+                TakeRuns: 40,
+                runtimeLoadOptions),
+            ProcessDefinitionWorkspaceLoadOptions.CatalogOnly);
 
         var baseline = await ProjectionClient.GetShellAsync(request).ConfigureAwait(false);
         if (!MockProjectionFactory.TryParseScenario(MockScenarioQuery, out var scenario))
@@ -488,10 +491,53 @@
             ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
             : ProcessWorkspaceShellScope.Global;
 
-    private Task HandleTabChangedAsync(int index)
+    private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions()
+        => selectedTabIndex switch
+        {
+            1 => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = false,
+                IncludeMetricHistory = false,
+                IncludeActiveAgents = true,
+                IncludeUsageTelemetry = false
+            },
+            2 => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = true,
+                IncludeMetricHistory = true,
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = true
+            },
+            3 => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = true,
+                IncludeMetricHistory = true,
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = false
+            },
+            _ => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = true,
+                IncludeMetricHistory = false,
+                IncludeActiveAgents = true,
+                IncludeUsageTelemetry = false
+            }
+        };
+
+    private async Task HandleTabChangedAsync(int index)
     {
+        if (selectedTabIndex == index)
+        {
+            return;
+        }
+
         selectedTabIndex = index;
-        return Task.CompletedTask;
+        runtimeEventPage = 0;
+        await LoadAsync(forceRefresh: false);
     }
 
     private IReadOnlyList<ProcessLiveProcessSnapshot> SelectableRuns

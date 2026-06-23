@@ -240,6 +240,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
         AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile
     };
+    private static readonly HashSet<string> ExternalTargetAliasLiteralUnsafeScriptTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+        AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile,
+        AgentToolInvocationPolicyMetadata.RunSkillScript
+    };
     private static readonly HashSet<string> DirectProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
     {
         ToolContractCatalog.WorkspaceWriteFile,
@@ -364,6 +370,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (externalTargetDecision is not null)
         {
             return ValueTask.FromResult(externalTargetDecision);
+        }
+
+        var scriptExternalTargetAliasDecision = EvaluateGovernedScriptExternalTargetAliasLiteral(context, signature);
+        if (scriptExternalTargetAliasDecision is not null)
+        {
+            return ValueTask.FromResult(scriptExternalTargetAliasDecision);
         }
 
         var staleProductCopyDecision = staleProofPolicy.EvaluateGovernedStaleExternalProductCopySource(context, signature);
@@ -710,6 +722,35 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedScriptExternalTargetAliasLiteral(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            !ExternalTargetAliasLiteralUnsafeScriptTools.Contains(context.ToolName) ||
+            string.IsNullOrWhiteSpace(context.InspectedScriptContent))
+        {
+            return null;
+        }
+
+        var referencedAliases = ResolveExternalTargetAliasesFromText(context.InspectedScriptContent);
+        if (referencedAliases.Count == 0)
+        {
+            return null;
+        }
+
+        var readableAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases)
+            .Concat(NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var matchedAlias = referencedAliases.FirstOrDefault(alias => IsAllowedExternalTargetAlias(alias, readableAliases))
+            ?? referencedAliases[0];
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"Governed scripts must not use external-target aliases as literal OS paths. Alias '{matchedAlias}' is only valid in structured workspace tool path arguments; PowerShell and Python treat it as a relative path and can create a wrong nested external-target folder. Use structured workspace tools such as {ToolContractCatalog.WorkspaceDotNetNew}, {ToolContractCatalog.WorkspaceReadFile}, or {ToolContractCatalog.WorkspaceCopyPath} with the alias, or use the native absolute ProductRoot/DotNet* launch variable inside a ProductMutation script.");
     }
 
     private static bool IsExternalArtifactDestinationPath(string normalizedAlias)

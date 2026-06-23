@@ -1902,6 +1902,31 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_governed_script_with_external_target_alias_literal()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetMutable,
+            inspectedScriptContent: "dotnet new blazorwasm -o 'external-target/C/programovani/dotnet/output/src/TetrisGame'",
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ProductMutation,
+                declaredWritePaths: ["external-target/C/programovani/dotnet/output/src/TetrisGame"]));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("must not use external-target aliases as literal OS paths", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_new", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("native absolute ProductRoot", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BlockGuard_does_not_reclassify_allowed_tool_exceptions()
     {
         var decision = ToolInvocationPolicyDecision.Allow("workspace_read_file|path=artifact.md");

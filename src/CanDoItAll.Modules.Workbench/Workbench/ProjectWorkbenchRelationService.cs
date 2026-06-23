@@ -65,8 +65,12 @@ public sealed class ProjectWorkbenchRelationService(
 
     private static bool IsProcessProjectionNodeKey(string nodeKey)
     {
-        return TryResolveProcessDefinitionId(nodeKey).HasValue ||
-               TryResolveProcessRunId(nodeKey).HasValue;
+        return ProjectStructureProcessNodeKeys.TryParseProcessDefinitionNodeKey(nodeKey, out _) ||
+               ProjectStructureProcessNodeKeys.TryParseProcessRunNodeKey(nodeKey, out _) ||
+               ProjectStructureProcessNodeKeys.TryParseProcessRunOutputNodeKey(nodeKey, out _) ||
+               ProjectStructureProcessNodeKeys.TryParseProcessRunSummaryNodeKey(nodeKey, out _) ||
+               ProjectStructureProcessNodeKeys.TryParseProcessRunScreenshotNodeKey(nodeKey, out _) ||
+               ProjectStructureProcessNodeKeys.TryParseProcessRunRuntimeNodeKey(nodeKey, out _);
     }
 
     private static string BuildProcessDefinitionNodeKey(Guid definitionId)

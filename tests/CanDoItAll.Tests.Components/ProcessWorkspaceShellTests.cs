@@ -120,6 +120,19 @@ public sealed class ProcessWorkspaceShellTests
         Assert.True(graphRuntimeOptions.IncludeMetricHistory);
         Assert.False(graphRuntimeOptions.IncludeActiveAgents);
         Assert.True(graphRuntimeOptions.IncludeUsageTelemetry);
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        var managerRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+        Assert.NotNull(managerRuntimeOptions);
+        Assert.True(managerRuntimeOptions.IncludeSelectedRun);
+        Assert.True(managerRuntimeOptions.IncludeHistory);
+        Assert.False(managerRuntimeOptions.IncludeMetricHistory);
+        Assert.False(managerRuntimeOptions.IncludeActiveAgents);
+        Assert.True(managerRuntimeOptions.IncludeUsageTelemetry);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeAttentionReconciliation);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeOperatorActions);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeCurrentSteps);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeChildRunWaits);
     }
 
     [Fact]
@@ -624,6 +637,18 @@ public sealed class ProcessWorkspaceShellTests
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
         Assert.False(client.LastRequest?.RuntimeQuery?.AutoSelectRun);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeSelectedEditor);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeRoleEditor);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeStepEditor);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeCanvas);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeTemplateCatalog);
+        var runtimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+        Assert.NotNull(runtimeOptions);
+        Assert.False(runtimeOptions.IncludeSelectedRun);
+        Assert.True(runtimeOptions.IncludeHistory);
+        Assert.False(runtimeOptions.IncludeMetricHistory);
+        Assert.True(runtimeOptions.IncludeActiveAgents);
+        Assert.False(runtimeOptions.IncludeUsageTelemetry);
         Assert.NotNull(cut.Find("[data-testid='live-processes-page']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-command-strip']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']"));
@@ -631,10 +656,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']"));
         Assert.NotEmpty(cut.FindAll("[data-testid='live-processes-run-progress']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-tool-history-chart']"));
-        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-family-card']"));
-        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-card']"));
         Assert.Contains("Tool history", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Process cost over time", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='live-processes-request-rework']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-attention-decision']"));

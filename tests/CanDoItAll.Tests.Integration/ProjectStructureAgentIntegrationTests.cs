@@ -431,7 +431,7 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
-    public async Task ProcessLaunchApplicationService_LaunchAsync_projects_run_and_managed_artifact_folder_without_seed_link()
+    public async Task ProcessLaunchApplicationService_LaunchAsync_projects_run_evidence_and_runtime_nodes_without_seed_link()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -440,6 +440,29 @@ public sealed class ProjectStructureAgentIntegrationTests
         var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
 
         var projectId = await CreateProjectAsync(projects, "Direct project scoped process projection");
+        var productRoot = Path.Combine(application.ActiveProfile.WorkspaceRootPath, "external-output", Guid.NewGuid().ToString("N"));
+        var appProjectPath = Path.Combine(productRoot, "src", "TetrisGame", "TetrisGame.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(appProjectPath)!);
+        await File.WriteAllTextAsync(
+            appProjectPath,
+            """
+            <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
+        var testProjectPath = Path.Combine(productRoot, "tests", "TetrisGame.Tests", "TetrisGame.Tests.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(testProjectPath)!);
+        await File.WriteAllTextAsync(
+            testProjectPath,
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
         var deliveryNode = await workbench.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -462,7 +485,11 @@ public sealed class ProjectStructureAgentIntegrationTests
                 projectId,
                 deliveryNode.Id,
                 RequestedBy: "integration-test",
-                Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+                Variables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["ProductRoot"] = productRoot,
+                    ["OutputRoot"] = productRoot
+                },
                 RunReadiness: false,
                 Execute: false));
 
@@ -471,6 +498,12 @@ public sealed class ProjectStructureAgentIntegrationTests
         var runNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId.Value);
         var managedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(runId);
         var outputNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId.Value, managedArtifactRoot);
+        var screenshotRelativePath = $"{managedArtifactRoot}/browser/desktop.png";
+        var screenshotFullPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, screenshotRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(screenshotFullPath)!);
+        await File.WriteAllBytesAsync(
+            screenshotFullPath,
+            Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="));
 
         var surface = await workbench.GetStructureAsync(projectId);
         var runNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
@@ -483,10 +516,39 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("process-run-output-folder", outputNode.ArtifactKind);
         Assert.Equal(runId.Value, outputNode.ArtifactId);
         Assert.Contains(managedArtifactRoot, outputNode.Notes, StringComparison.Ordinal);
+        var summaryNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(runId.Value), StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.Note, summaryNode.ObjectType);
+        Assert.Equal("process-summary", summaryNode.ObjectSubtype);
+        Assert.Equal(runNodeId, summaryNode.ParentId);
+        Assert.Equal("process-run-summary", summaryNode.ArtifactKind);
+        Assert.Contains("Projected process run summary.", summaryNode.Notes, StringComparison.Ordinal);
+        var screenshotNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(runId.Value, screenshotRelativePath);
+        var screenshotNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, screenshotNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ImageAsset, screenshotNode.ObjectType);
+        Assert.Equal("screenshot", screenshotNode.ObjectSubtype);
+        Assert.Equal(runNodeId, screenshotNode.ParentId);
+        Assert.Equal("process-run-screenshot", screenshotNode.ArtifactKind);
+        Assert.Equal(screenshotRelativePath, screenshotNode.MediaRelativePath);
+        Assert.Equal("image/png", screenshotNode.MediaContentType);
+        Assert.False(string.IsNullOrWhiteSpace(screenshotNode.StorageObjectReferenceJson));
+        var runtimeNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunRuntimeNodeKey(runId.Value, appProjectPath);
+        var runtimeNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, runtimeNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.Environment, runtimeNode.ObjectType);
+        Assert.Equal("dotnet-watch", runtimeNode.ObjectSubtype);
+        Assert.Equal(runNodeId, runtimeNode.ParentId);
+        Assert.Equal("process-run-runtime", runtimeNode.ArtifactKind);
+        Assert.Contains(appProjectPath, runtimeNode.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain(testProjectPath, runtimeNode.Notes, StringComparison.Ordinal);
+        var runtimeMetadata = ProjectObjectMetadataSerializer.Parse(runtimeNode.MetadataJson);
+        Assert.Equal(ProjectEnvironmentKind.DotNetWatch, runtimeMetadata.Environment?.EnvironmentKind);
+        Assert.Equal(appProjectPath, runtimeMetadata.Environment?.ProjectPath);
 
         var refreshedSurface = await workbench.GetStructureAsync(projectId);
         Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
         Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, outputNodeId, StringComparison.Ordinal));
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, summaryNode.Id, StringComparison.Ordinal));
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, screenshotNodeId, StringComparison.Ordinal));
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, runtimeNodeId, StringComparison.Ordinal));
     }
 
     [Fact]

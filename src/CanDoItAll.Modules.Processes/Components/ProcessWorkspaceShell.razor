@@ -4,6 +4,7 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Modules.AgentFramework
 @using CanDoItAll.Processes.Application
 @using Microsoft.Extensions.DependencyInjection
 @inject IProcessWorkspaceProjectionClient ProjectionClient
@@ -592,9 +593,12 @@
             },
             ProcessWorkspaceDetailTabKey.ManagerChat => new ProcessRuntimeWorkspaceLoadOptions
             {
-                IncludeHistory = false,
+                LiveProcesses = ProcessLiveProcessesLoadOptions.SnapshotOnly,
+                IncludeSelectedRun = true,
+                IncludeHistory = true,
                 IncludeMetricHistory = false,
-                IncludeUsageTelemetry = false
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = true
             },
             _ when hasExplicitRuntimeSelection => new ProcessRuntimeWorkspaceLoadOptions
             {
@@ -2028,7 +2032,7 @@
             return;
         }
 
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null)
         {
             managerChatErrorMessage = "Agent workspace service is not registered for this module instance.";
@@ -2092,7 +2096,7 @@
 
     private async Task SendManagerChatMessageAsync()
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatAgentId is null)
         {
             managerChatErrorMessage = "Select a manager agent before sending a message.";
@@ -2148,7 +2152,7 @@
 
     private async Task ContinueManagerChatApprovalAsync(bool approved, bool autoApprovePendingToolCalls)
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
         {
             return;
@@ -2179,7 +2183,7 @@
 
     private async Task RenameManagerChatSessionAsync(string title)
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
         {
             return;
@@ -2204,7 +2208,7 @@
 
     private async Task StageManagerChatRunArtifactsAsync()
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatWorkspace?.SelectedRun is null)
         {
             managerChatDraftAttachmentPaths = [];
@@ -2217,6 +2221,18 @@
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private IAgentFrameworkWorkspaceService? ResolveManagerChatWorkspaceService()
+    {
+        var directWorkspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        if (directWorkspaceService is not null)
+        {
+            return directWorkspaceService;
+        }
+
+        var workspaceFactory = Services.GetService<ICanDoItAllAgentWorkspaceFactory>();
+        return workspaceFactory?.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
     }
 
     private Guid? ResolveManagerAgentId(IReadOnlyList<AgentDefinition> agents, Guid? currentAgentId)
@@ -2262,6 +2278,7 @@
     {
         var selectedRun = CurrentShell.Runtime.SelectedRun;
         var runId = selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId;
+        var stats = CurrentShell.Runtime.Stats;
         var recentEvents = CurrentShell.Runtime.Events.Take(8)
             .Select(runtimeEvent => $"- {runtimeEvent.OccurredAtUtc:u} {runtimeEvent.EventType}: {runtimeEvent.Summary}")
             .ToArray();
@@ -2276,6 +2293,17 @@
             Status: {selectedRun?.Status.ToString() ?? "unknown"}
             Attention summary: {CurrentShell.Runtime.AttentionSummary}
             History window: {FormatHistoryWindow(CurrentShell.Runtime.HistoryWindow)}
+
+            Runtime usage telemetry:
+            - Scope: {(runId.HasValue ? "selected run/root scope" : "loaded runtime scope")}
+            - Observed runs: {stats.ObservedRunCount.ToString("N0", CultureInfo.CurrentCulture)}
+            - Runtime events: {stats.EventCount.ToString("N0", CultureInfo.CurrentCulture)}
+            - Input tokens: {FormatTokenCount(stats.InputTokens)}
+            - Cached input tokens: {FormatTokenCount(stats.CachedInputTokens)}
+            - Output tokens: {FormatTokenCount(stats.OutputTokens)}
+            - Total tokens: {FormatTokenCount(ResolveRuntimeTotalTokens(stats))}
+            - Estimated cost: {FormatCurrency(stats.EstimatedCost)}
+            - Actual cost: {FormatCurrency(stats.ActualCost)}
 
             Recent runtime events:
             {eventText}
