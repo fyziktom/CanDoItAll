@@ -217,7 +217,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
-    public async Task Structure_canvas_maximize_locks_viewport_without_residual_document_scroll()
+    public async Task Structure_canvas_maximize_reserves_workbar_and_locks_viewport_without_residual_document_scroll()
     {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "maximize-lock");
@@ -252,9 +252,13 @@ public sealed partial class AppSmokeTests
         Assert.True(maximized.IsMaximized);
         Assert.True(maximized.BodyLock);
         Assert.InRange(Math.Abs(maximized.HostLeft), 0, 1);
-        Assert.InRange(Math.Abs(maximized.HostTop), 0, 1);
+        Assert.True(maximized.WorkbarBottom > 0, "Expected the app workbar to remain visible above the maximized canvas.");
+        Assert.True(
+            maximized.HostTop >= maximized.WorkbarBottom - 1,
+            $"Expected maximized canvas to start at or below the app workbar. HostTop={maximized.HostTop}, workbarBottom={maximized.WorkbarBottom}.");
+        Assert.InRange(Math.Abs(maximized.HostBottom - maximized.ViewportHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
-        Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
+        Assert.InRange(Math.Abs(maximized.HostHeight - (maximized.ViewportHeight - maximized.HostTop)), 0, 1);
         Assert.Equal(3, maximized.CanvasLayerCount);
         Assert.InRange(Math.Abs(maximized.MinCanvasLayerHeight - maximized.HostHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.MaxCanvasLayerHeight - maximized.HostHeight), 0, 1);
@@ -590,9 +594,13 @@ public sealed partial class AppSmokeTests
         Assert.True(maximized.IsMaximized);
         Assert.True(maximized.BodyLock);
         Assert.InRange(Math.Abs(maximized.HostLeft), 0, 1);
-        Assert.InRange(Math.Abs(maximized.HostTop), 0, 1);
+        Assert.True(maximized.WorkbarBottom > 0, "Expected the app workbar to remain visible above the maximized canvas.");
+        Assert.True(
+            maximized.HostTop >= maximized.WorkbarBottom - 1,
+            $"Expected maximized canvas to start at or below the app workbar. HostTop={maximized.HostTop}, workbarBottom={maximized.WorkbarBottom}.");
+        Assert.InRange(Math.Abs(maximized.HostBottom - maximized.ViewportHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
-        Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
+        Assert.InRange(Math.Abs(maximized.HostHeight - (maximized.ViewportHeight - maximized.HostTop)), 0, 1);
         Assert.InRange(Math.Abs(maximized.DocumentClientHeight - maximized.ViewportHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.DocumentScrollHeight - maximized.ViewportHeight), 0, 1);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-centered-pan.png"), FullPage = true });
@@ -2521,15 +2529,20 @@ public sealed partial class AppSmokeTests
             @"() => {
                 const shell = document.querySelector('.cw-workbench-shell');
                 const host = document.querySelector('.cw-canvas-host');
+                const workbar = document.querySelector('.cda-shell-workbar');
+                const hostBounds = host?.getBoundingClientRect();
+                const workbarBounds = workbar?.getBoundingClientRect();
                 const canvasLayers = Array.from(document.querySelectorAll('.cw-workbench__canvas'));
                 const canvasLayerHeights = canvasLayers.map(layer => layer.getBoundingClientRect().height);
                 return {
                     isMaximized: shell?.classList.contains('is-maximized') === true,
                     bodyLock: document.body.classList.contains('cw-body-lock'),
-                    hostLeft: host?.getBoundingClientRect().left ?? 0,
-                    hostTop: host?.getBoundingClientRect().top ?? 0,
-                    hostWidth: host?.getBoundingClientRect().width ?? 0,
-                    hostHeight: host?.getBoundingClientRect().height ?? 0,
+                    hostLeft: hostBounds?.left ?? 0,
+                    hostTop: hostBounds?.top ?? 0,
+                    hostWidth: hostBounds?.width ?? 0,
+                    hostHeight: hostBounds?.height ?? 0,
+                    hostBottom: hostBounds?.bottom ?? 0,
+                    workbarBottom: workbarBounds?.bottom ?? 0,
                     canvasLayerCount: canvasLayers.length,
                     minCanvasLayerHeight: canvasLayerHeights.length > 0 ? Math.min(...canvasLayerHeights) : 0,
                     maxCanvasLayerHeight: canvasLayerHeights.length > 0 ? Math.max(...canvasLayerHeights) : 0,
@@ -4711,6 +4724,10 @@ public sealed partial class AppSmokeTests
         public double HostWidth { get; set; }
 
         public double HostHeight { get; set; }
+
+        public double HostBottom { get; set; }
+
+        public double WorkbarBottom { get; set; }
 
         public int CanvasLayerCount { get; set; }
 
