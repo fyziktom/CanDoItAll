@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Models;
@@ -6,6 +7,13 @@ public static class AgentProviderModelParameterPolicy
 {
     public const string ModelParametersConfigurationPropertyName = "modelParameters";
     public const string ReasoningEffortConfigurationPropertyName = "reasoningEffort";
+    public const string MaxOutputTokensConfigurationPropertyName = "maxOutputTokens";
+    public const string OllamaNumPredictConfigurationPropertyName = "numPredict";
+    public const string OllamaNumPredictSnakeConfigurationPropertyName = "num_predict";
+    public const string OllamaThinkConfigurationPropertyName = "think";
+
+    private const int MinMaxOutputTokens = 1;
+    private const int MaxMaxOutputTokens = 8192;
 
     private static readonly string[] OpenAiDefaultTemperatureModelPrefixes =
     [
@@ -74,6 +82,23 @@ public static class AgentProviderModelParameterPolicy
                IsOpenAiDefaultTemperatureModel(model);
     }
 
+    public static int? ResolveMaxOutputTokens(
+        ProviderKind providerKind,
+        string providerConfigurationJson,
+        string agentConfigurationJson)
+    {
+        return TryReadMaxOutputTokens(agentConfigurationJson, "agent", providerKind) ??
+               TryReadMaxOutputTokens(providerConfigurationJson, "provider", providerKind);
+    }
+
+    public static bool? ResolveOllamaThink(
+        string providerConfigurationJson,
+        string agentConfigurationJson)
+    {
+        return TryReadOllamaThink(agentConfigurationJson, "agent") ??
+               TryReadOllamaThink(providerConfigurationJson, "provider");
+    }
+
     public static bool IsOpenAiLikeProvider(ProviderKind providerKind)
     {
         return providerKind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
@@ -113,6 +138,7 @@ public static class AgentProviderModelParameterPolicy
             }
 
             if (TryGetPropertyIgnoreCase(root, ModelParametersConfigurationPropertyName, out var modelParametersElement) &&
+                modelParametersElement.ValueKind == JsonValueKind.Object &&
                 TryReadReasoningEffortProperty(modelParametersElement, out var nestedEffort))
             {
                 return nestedEffort;
@@ -128,6 +154,198 @@ public static class AgentProviderModelParameterPolicy
                 $"The {configurationOwner} model-parameter configuration contains '{ReasoningEffortConfigurationPropertyName}' but is not valid JSON.",
                 exception);
         }
+    }
+
+    private static bool? TryReadOllamaThink(
+        string configurationJson,
+        string configurationOwner)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson) ||
+            !configurationJson.Contains(OllamaThinkConfigurationPropertyName, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (TryGetPropertyIgnoreCase(root, ModelParametersConfigurationPropertyName, out var modelParametersElement))
+            {
+                if (modelParametersElement.ValueKind != JsonValueKind.Object)
+                {
+                    throw new InvalidOperationException(
+                        $"The {configurationOwner} model-parameter configuration property '{ModelParametersConfigurationPropertyName}' must be a JSON object.");
+                }
+
+                var nestedValue = TryReadBooleanProperty(
+                    modelParametersElement,
+                    OllamaThinkConfigurationPropertyName,
+                    configurationOwner);
+                if (nestedValue is not null)
+                {
+                    return nestedValue;
+                }
+            }
+
+            return TryReadBooleanProperty(root, OllamaThinkConfigurationPropertyName, configurationOwner);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"The {configurationOwner} model-parameter configuration contains '{OllamaThinkConfigurationPropertyName}' but is not valid JSON.",
+                exception);
+        }
+    }
+
+    private static bool? TryReadBooleanProperty(
+        JsonElement element,
+        string propertyName,
+        string configurationOwner)
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var valueElement))
+        {
+            return null;
+        }
+
+        return valueElement.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(valueElement.GetString(), out var value) => value,
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            _ => throw new InvalidOperationException(
+                $"The {configurationOwner} model-parameter configuration property '{propertyName}' must be a boolean.")
+        };
+    }
+
+    private static int? TryReadMaxOutputTokens(
+        string configurationJson,
+        string configurationOwner,
+        ProviderKind providerKind)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson) ||
+            !ConfigurationMayContainMaxOutputTokens(configurationJson, providerKind))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (TryGetPropertyIgnoreCase(root, ModelParametersConfigurationPropertyName, out var modelParametersElement))
+            {
+                if (modelParametersElement.ValueKind != JsonValueKind.Object)
+                {
+                    throw new InvalidOperationException(
+                        $"The {configurationOwner} model-parameter configuration property '{ModelParametersConfigurationPropertyName}' must be a JSON object.");
+                }
+
+                var nestedValue = TryReadMaxOutputTokensProperty(modelParametersElement, configurationOwner, providerKind);
+                if (nestedValue is not null)
+                {
+                    return nestedValue;
+                }
+            }
+
+            return TryReadMaxOutputTokensProperty(root, configurationOwner, providerKind);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"The {configurationOwner} model-parameter configuration contains output-token settings but is not valid JSON.",
+                exception);
+        }
+    }
+
+    private static bool ConfigurationMayContainMaxOutputTokens(
+        string configurationJson,
+        ProviderKind providerKind)
+    {
+        return configurationJson.Contains(MaxOutputTokensConfigurationPropertyName, StringComparison.OrdinalIgnoreCase) ||
+               (providerKind == ProviderKind.Ollama &&
+                (configurationJson.Contains(OllamaNumPredictConfigurationPropertyName, StringComparison.OrdinalIgnoreCase) ||
+                 configurationJson.Contains(OllamaNumPredictSnakeConfigurationPropertyName, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static int? TryReadMaxOutputTokensProperty(
+        JsonElement element,
+        string configurationOwner,
+        ProviderKind providerKind)
+    {
+        if (TryReadIntegerProperty(
+                element,
+                MaxOutputTokensConfigurationPropertyName,
+                configurationOwner,
+                out var maxOutputTokens))
+        {
+            return maxOutputTokens;
+        }
+
+        if (providerKind != ProviderKind.Ollama)
+        {
+            return null;
+        }
+
+        if (TryReadIntegerProperty(
+                element,
+                OllamaNumPredictConfigurationPropertyName,
+                configurationOwner,
+                out var numPredict))
+        {
+            return numPredict;
+        }
+
+        return TryReadIntegerProperty(
+            element,
+            OllamaNumPredictSnakeConfigurationPropertyName,
+            configurationOwner,
+            out numPredict)
+            ? numPredict
+            : null;
+    }
+
+    private static bool TryReadIntegerProperty(
+        JsonElement element,
+        string propertyName,
+        string configurationOwner,
+        out int value)
+    {
+        value = default;
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var valueElement))
+        {
+            return false;
+        }
+
+        value = valueElement.ValueKind switch
+        {
+            JsonValueKind.Number when valueElement.TryGetInt32(out var number) => number,
+            JsonValueKind.String when int.TryParse(
+                valueElement.GetString(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var number) => number,
+            _ => throw new InvalidOperationException(
+                $"The {configurationOwner} model-parameter configuration property '{propertyName}' must be an integer.")
+        };
+        if (value is < MinMaxOutputTokens or > MaxMaxOutputTokens)
+        {
+            throw new InvalidOperationException(
+                $"The {configurationOwner} model-parameter configuration property '{propertyName}' must be between {MinMaxOutputTokens} and {MaxMaxOutputTokens}.");
+        }
+
+        return true;
     }
 
     private static bool TryReadReasoningEffortProperty(

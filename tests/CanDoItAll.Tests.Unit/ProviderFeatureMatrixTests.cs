@@ -95,6 +95,98 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
+    public void ResolveFeatureMatrix_marks_ollama_vision_model_as_vision_capable()
+    {
+        var service = new ProviderProfileService();
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: true,
+            preferFrameworkManagedHistory: true) with
+        {
+            DefaultModel = "gemma4:12b",
+            SuggestedModels = ["gemma4:12b"]
+        };
+
+        var matrix = service.ResolveFeatureMatrix(provider);
+
+        Assert.True(matrix.SupportsVision);
+        Assert.True(matrix.SupportsFunctionTools);
+        Assert.False(matrix.SupportsStructuredOutput);
+        Assert.False(matrix.SupportsNativeWebSearch);
+    }
+
+    [Fact]
+    public void ResolveFeatureMatrixForModel_uses_selected_model_instead_of_provider_suggestions()
+    {
+        var service = new ProviderProfileService();
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: true,
+            preferFrameworkManagedHistory: true) with
+        {
+            DefaultModel = "gptoss32k:latest",
+            SuggestedModels = ["gptoss32k:latest", "gemma4:12b"]
+        };
+
+        var defaultMatrix = service.ResolveFeatureMatrix(provider);
+        var textModelMatrix = service.ResolveFeatureMatrixForModel(provider, "gptoss32k:latest");
+        var visionModelMatrix = service.ResolveFeatureMatrixForModel(provider, "gemma4:12b");
+        var qwenVisionModelMatrix = service.ResolveFeatureMatrixForModel(provider, "qwen3.5:2b");
+
+        Assert.True(defaultMatrix.SupportsVision);
+        Assert.False(textModelMatrix.SupportsVision);
+        Assert.True(visionModelMatrix.SupportsVision);
+        Assert.True(qwenVisionModelMatrix.SupportsVision);
+    }
+
+    [Fact]
+    public void ResolveFeatureMatrixForModel_does_not_let_ollama_provider_wide_vision_metadata_override_text_model()
+    {
+        var service = new ProviderProfileService();
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: true,
+            preferFrameworkManagedHistory: true) with
+        {
+            DefaultModel = "gptoss32k:latest",
+            SuggestedModels = ["gptoss32k:latest", "qwen3.5:9b"],
+            ConfigurationJson = """{"supportsVision":true}""",
+            Tags = ["chat", "vision"]
+        };
+
+        var providerSummary = service.ResolveFeatureMatrix(provider);
+        var textModelMatrix = service.ResolveFeatureMatrixForModel(provider, "gptoss32k:latest");
+        var visionModelMatrix = service.ResolveFeatureMatrixForModel(provider, "qwen3.5:9b");
+
+        Assert.True(providerSummary.SupportsVision);
+        Assert.False(textModelMatrix.SupportsVision);
+        Assert.True(visionModelMatrix.SupportsVision);
+    }
+
+    [Fact]
+    public void ResolveFeatureMatrix_marks_configured_ollama_provider_as_vision_capable()
+    {
+        var service = new ProviderProfileService();
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: true,
+            preferFrameworkManagedHistory: true) with
+        {
+            ConfigurationJson = """{"supportsVision":true}""",
+            Tags = ["multimodal"]
+        };
+
+        var matrix = service.ResolveFeatureMatrix(provider);
+
+        Assert.True(matrix.SupportsVision);
+        Assert.False(matrix.SupportsStructuredOutput);
+    }
+
+    [Fact]
     public void ResolveFeatureMatrix_marks_image_generation_provider_by_explicit_purpose()
     {
         var service = new ProviderProfileService();
@@ -158,8 +250,10 @@ public sealed class ProviderFeatureMatrixTests
         Assert.DoesNotContain("SupportsStructuredOutput = model.Transport == ProviderTransportKind.Responses", source, StringComparison.Ordinal);
         Assert.Contains("var selectedTransport = model.Transport;", source, StringComparison.Ordinal);
         Assert.Contains("ResolveFeatureMatrix", source, StringComparison.Ordinal);
+        Assert.Contains("entity.SupportsVision = featureMatrix.SupportsVision;", source, StringComparison.Ordinal);
         Assert.Contains("ResolveTransport", source, StringComparison.Ordinal);
         Assert.Contains("providerTransport", metadataSource, StringComparison.Ordinal);
+        Assert.Contains("supportsVision", metadataSource, StringComparison.Ordinal);
         Assert.Contains("ComfyUiProviderAdapter.PluginKey", source, StringComparison.Ordinal);
         Assert.Contains("ProviderProfilePurpose.ImageGeneration", source, StringComparison.Ordinal);
         Assert.Contains("AgentFrameworkProviderKind.ComfyUi", metadataSource, StringComparison.Ordinal);

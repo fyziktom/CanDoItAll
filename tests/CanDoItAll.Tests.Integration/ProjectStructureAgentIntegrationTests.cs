@@ -363,11 +363,15 @@ public sealed class ProjectStructureAgentIntegrationTests
         var assignment = Assert.Single(assignments, item => item.StepKey == "feature-intake");
         var currentRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId.Value);
         var currentArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(result.RunId.Value));
+        var outputRootAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot);
         Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
         Assert.Equal(deliveryNode.Title, assignment.LaunchVariables["ProjectNodeTitle"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["ProductRoot"]);
-        Assert.Equal(outputRoot, assignment.LaunchVariables["ExternalTargetRoot"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["ExternalTargetRoot"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["OutputRootAlias"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["ProductRootAlias"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["WorkspaceAlias"]);
         Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["CurrentProcessRunId"]);
         Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["ProcessRunId"]);
         Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["processRunId"]);
@@ -427,6 +431,49 @@ public sealed class ProjectStructureAgentIntegrationTests
         {
             Assert.Equal(projectId.ToString("D"), assignment.LaunchVariables["ProjectId"]);
             Assert.Equal(projectNodeId, assignment.LaunchVariables["ProjectNodeId"]);
+        });
+    }
+
+    [Fact]
+    public async Task ProcessLaunchApplicationService_LaunchAsync_normalizes_output_folder_to_product_root_variables()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+
+        var projectId = await CreateProjectAsync(projects, "Direct output folder launch");
+        const string outputFolder = @"C:\temp\CanDoItAll\OutputFolderOnly";
+
+        var result = await launchService.LaunchAsync(
+            new ProcessLaunchRequest(
+                DefinitionKey: "software-delivery",
+                ProcessDefinitionId: null,
+                LiveRunProfileKey: null,
+                projectId,
+                ProjectNodeId: null,
+                RequestedBy: "integration-test",
+                Variables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["OutputFolder"] = outputFolder
+                },
+                RunReadiness: false,
+                Execute: false));
+
+        Assert.True(result.RunId.HasValue);
+        var assignments = await assignmentStore.LoadByRunAsync(result.RunId.Value);
+        Assert.NotEmpty(assignments);
+        var outputFolderAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputFolder);
+        Assert.All(assignments, assignment =>
+        {
+            Assert.Equal(outputFolder, assignment.LaunchVariables["OutputFolder"]);
+            Assert.Equal(outputFolder, assignment.LaunchVariables["OutputRoot"]);
+            Assert.Equal(outputFolder, assignment.LaunchVariables["ProductRoot"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["ExternalTargetRoot"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["OutputRootAlias"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["ProductRootAlias"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["WorkspaceAlias"]);
         });
     }
 
@@ -863,6 +910,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("AppTemplate: blazorwasm", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("AllowedTemplateSwitches: --pwa", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("WorkspaceAlias: external-target/C/temp/CanDoItAll/TetrisGame", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("StructuredWorkspacePathRule: use WorkspaceAlias or external-target/... aliases in workspace_* tool path arguments", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("ExistingScaffoldRule: existing files are not enough", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("PackageRule: do not add PackageReference Include=\"Microsoft.AspNetCore.Components.WebAssembly.PWA\"", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("BlazorWasmTemplateIntegrityRule: Program.cs, App.razor, and _Imports.razor", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
@@ -1270,7 +1319,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("xunit", scaffoldAssignment.LaunchVariables["DotNetTestTemplate"]);
         Assert.Equal("xUnit", scaffoldAssignment.LaunchVariables["DotNetTestFrameworkPreference"]);
         Assert.Equal("net10.0", scaffoldAssignment.LaunchVariables["DotNetTargetFramework"]);
+        Assert.Equal("external-target/C/temp/CanDoItAll/TetrisGame", scaffoldAssignment.LaunchVariables["DotNetWorkspaceAlias"]);
         Assert.Contains("SolutionName: TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("WorkspaceAlias: external-target/C/temp/CanDoItAll/TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("StructuredWorkspacePathRule: use WorkspaceAlias or external-target/... aliases in workspace_* tool path arguments", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("AppTemplate: blazorwasm", scaffoldAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("AllowedTemplateSwitches: --pwa", scaffoldAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", scaffoldAssignment.Prompt, StringComparison.Ordinal);

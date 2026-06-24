@@ -2118,7 +2118,16 @@
 
         try
         {
-            var result = await workspaceService.SendMessageAsync(managerChatAgentId.Value, managerChatSessionId, prompt);
+            var disableManagerTelemetryTools = ProcessManagerChatPromptClassifier.ShouldDisableRuntimeTools(previousDraft);
+            var options = new AgentChatRunOptions(
+                RuntimeToolProvidersEnabled: !disableManagerTelemetryTools,
+                WorkspaceToolsEnabled: !disableManagerTelemetryTools);
+            var result = await workspaceService.SendMessageAsync(
+                managerChatAgentId.Value,
+                managerChatSessionId,
+                prompt,
+                attachmentPaths: managerChatDraftAttachmentPaths,
+                options: options);
             managerChatSessionId = result.ChatSessionId;
             managerChatDraftAttachmentPaths = [];
             managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
@@ -2265,13 +2274,32 @@
 
     private string BuildManagerChatPromptWithContext()
     {
-        var prompt = managerChatDraftPrompt.Trim();
+        var prompt = BuildManagerChatPromptWithAttachments();
         if (string.IsNullOrWhiteSpace(prompt))
         {
             return string.Empty;
         }
 
         return $"{BuildManagerChatPrompt()}{Environment.NewLine}{Environment.NewLine}User request:{Environment.NewLine}{prompt}";
+    }
+
+    private string BuildManagerChatPromptWithAttachments()
+    {
+        if (managerChatDraftAttachmentPaths.Count == 0)
+        {
+            return managerChatDraftPrompt.Trim();
+        }
+
+        var attachmentText = string.Join(
+            Environment.NewLine,
+            managerChatDraftAttachmentPaths.Select(item => $"- {item}"));
+
+        return $"""
+            Use these workspace artifacts as input:
+            {attachmentText}
+
+            {managerChatDraftPrompt.Trim()}
+            """;
     }
 
     private string BuildManagerChatPrompt()
@@ -2304,6 +2332,9 @@
             - Total tokens: {FormatTokenCount(ResolveRuntimeTotalTokens(stats))}
             - Estimated cost: {FormatCurrency(stats.EstimatedCost)}
             - Actual cost: {FormatCurrency(stats.ActualCost)}
+
+            Manager response rule:
+            Answer questions about runtime tokens, usage, cost, run status, and operator actions directly from the telemetry and attention summary above. Do not call project structure artifact tools for these values unless the user asks to inspect artifacts.
 
             Recent runtime events:
             {eventText}

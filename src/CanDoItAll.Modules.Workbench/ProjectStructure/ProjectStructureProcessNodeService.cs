@@ -400,7 +400,11 @@ public sealed class ProjectStructureProcessNodeService(
             childStepsArtifactRoot,
             childLiveProcessesRoute,
             expectedChildEvidenceRefs,
-            warnings);
+            warnings)
+        {
+            ParentDeferredOutcomeInstruction = BuildParentDeferredOutcomeInstruction(launch.RunId),
+            ParentDeferredOutcomeJson = BuildParentDeferredOutcomeJson(launch.RunId, expectedChildEvidenceRefs, childLiveProcessesRoute)
+        };
     }
 
     private static IReadOnlyDictionary<string, string> CreateSubprocessIdentityVariables(
@@ -449,6 +453,43 @@ public sealed class ProjectStructureProcessNodeService(
         }
 
         return evidenceRefs;
+    }
+
+    private static string BuildParentDeferredOutcomeInstruction(ProcessRunId? childRunId)
+    {
+        if (childRunId is null)
+        {
+            return "No child run was started, so no parent deferral outcome is available.";
+        }
+
+        return "If the child run is still active, call submit_process_step_outcome with ParentDeferredOutcomeJson exactly. Do not inspect child evidence or return a hand-written blocked result until the child run stops.";
+    }
+
+    private static string BuildParentDeferredOutcomeJson(
+        ProcessRunId? childRunId,
+        IReadOnlyList<string> expectedChildEvidenceRefs,
+        string childLiveProcessesRoute)
+    {
+        if (childRunId is null)
+        {
+            return string.Empty;
+        }
+
+        var childRunIdText = childRunId.Value.ToString();
+        var nextActions = string.IsNullOrWhiteSpace(childLiveProcessesRoute)
+            ? new[] { $"Wait for active child process run {childRunIdText} to produce required evidence." }
+            : new[] { $"Wait for active child process run {childRunIdText} to produce required evidence at {childLiveProcessesRoute}." };
+        return JsonSerializer.Serialize(
+            new
+            {
+                status = "Blocked",
+                reason = $"Waiting for active child process run {childRunIdText} to finish and materialize required evidence.",
+                branchOutcomeKey = string.Empty,
+                branchOutcomeTitle = string.Empty,
+                evidenceRefs = expectedChildEvidenceRefs,
+                nextActions,
+                humanReadableSummaryMarkdown = $"Waiting for active child process run `{childRunIdText}`. The parent step should be deferred until the child run is no longer active."
+            });
     }
 
     private static async Task<ProjectStructureSurface> LoadSurfaceAsync(
@@ -528,9 +569,7 @@ public sealed class ProjectStructureProcessNodeService(
         var outputRoot = ResolveOutputRoot(surface, targetNode);
         if (!string.IsNullOrWhiteSpace(outputRoot))
         {
-            variables["OutputRoot"] = outputRoot;
-            variables["ProductRoot"] = outputRoot;
-            variables["ExternalTargetRoot"] = outputRoot;
+            ApplyProductRootLaunchVariables(variables, outputRoot);
         }
 
         ApplyLaunchVariableContributors(
@@ -856,6 +895,26 @@ public sealed class ProjectStructureProcessNodeService(
         }
 
         return string.Empty;
+    }
+
+    private static void ApplyProductRootLaunchVariables(
+        IDictionary<string, string> variables,
+        string outputRoot)
+    {
+        var normalizedOutputRoot = outputRoot.Trim();
+        variables["OutputRoot"] = normalizedOutputRoot;
+        variables["ProductRoot"] = normalizedOutputRoot;
+
+        var externalTargetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(normalizedOutputRoot);
+        if (string.IsNullOrWhiteSpace(externalTargetAlias))
+        {
+            return;
+        }
+
+        variables["ExternalTargetRoot"] = externalTargetAlias;
+        variables["OutputRootAlias"] = externalTargetAlias;
+        variables["ProductRootAlias"] = externalTargetAlias;
+        variables["WorkspaceAlias"] = externalTargetAlias;
     }
 
     private static string ResolveOutputRoot(ProjectStructureNode? node)

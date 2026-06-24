@@ -31,16 +31,33 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var sessionSummaries = await LoadChatSessionSummariesAsync(agentId, cancellationToken);
 
         Guid? selectedSessionId = null;
-        if (preferredSessionId.HasValue && sessionSummaries.Any(item => item.Id == preferredSessionId.Value))
+        ChatSessionRecord? selectedSession = null;
+        if (preferredSessionId.HasValue)
         {
-            selectedSessionId = preferredSessionId.Value;
+            selectedSession = await LoadChatSessionAsync(preferredSessionId.Value, cancellationToken);
+            if (selectedSession?.AgentId == agentId)
+            {
+                selectedSessionId = preferredSessionId.Value;
+                if (sessionSummaries.All(item => item.Id != selectedSessionId.Value))
+                {
+                    sessionSummaries = sessionSummaries
+                        .Append(WorkspaceChatProjectionBuilder.CreateChatSessionSummary(selectedSession))
+                        .OrderByDescending(item => item.UpdatedAtUtc)
+                        .ToList();
+                }
+            }
+            else
+            {
+                selectedSession = null;
+            }
         }
-        else if (sessionSummaries.Count > 0)
+
+        if (!selectedSessionId.HasValue && sessionSummaries.Count > 0)
         {
             selectedSessionId = sessionSummaries[0].Id;
         }
 
-        var selectedSession = selectedSessionId.HasValue
+        selectedSession ??= selectedSessionId.HasValue
             ? await LoadChatSessionAsync(selectedSessionId.Value, cancellationToken)
             : null;
 

@@ -100,9 +100,18 @@ public sealed class ProcessStepOutcomeValidator : IAgentOutputValidator<ProcessS
             nextActions = [];
         }
 
-        if (output.EvidenceRefs is null)
+        var evidenceRefs = output.EvidenceRefs;
+        if (evidenceRefs is null)
         {
             errors.Add(Error("process.step_outcome.evidence_refs_required", "Process step outcome evidence references are required.", "$.evidenceRefs"));
+        }
+        else if (output.Status == ProcessStepOutcomeStatus.Completed &&
+                 !evidenceRefs.Any(evidenceRef => !string.IsNullOrWhiteSpace(evidenceRef)))
+        {
+            errors.Add(Error(
+                "process.step_outcome.completed_evidence_ref_required",
+                "Completed process outcomes must include at least one concrete current-run evidence reference.",
+                "$.evidenceRefs"));
         }
 
         RequireText(output.Reason, "process.step_outcome.reason_required", "Process step outcome reason is required.", "$.reason", errors);

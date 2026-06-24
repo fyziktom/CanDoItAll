@@ -9,7 +9,8 @@ internal static class ProcessesApi
     public static RouteGroupBuilder MapProcessesApi(this RouteGroupBuilder group)
     {
         var processes = group.MapGroup("/processes")
-            .WithTags("Processes");
+            .WithTags("Processes")
+            .DisableAntiforgery();
 
         processes.MapGet("/contract", () => Results.Ok(new ProcessApiContractResponse(
             [

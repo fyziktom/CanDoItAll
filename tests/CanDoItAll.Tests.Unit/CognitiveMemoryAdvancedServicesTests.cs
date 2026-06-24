@@ -3494,7 +3494,13 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
             => NotSupported<ExecutionRunResult>();
 
-        public Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default)
+        public Task<AgentChatRunResult> SendMessageAsync(
+            Guid agentId,
+            Guid? chatSessionId,
+            string prompt,
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<string>? attachmentPaths = null,
+            AgentChatRunOptions? options = null)
             => NotSupported<AgentChatRunResult>();
 
         public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)

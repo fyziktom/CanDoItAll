@@ -13,12 +13,19 @@ public sealed record ProviderModelDescriptor(
     AgentProviderCapabilityKind Capability,
     ProviderDispatchLimits DispatchLimits);
 
+public sealed record ProviderChatAttachment(
+    string Name,
+    string ContentType,
+    byte[] Bytes);
+
 public sealed record ProviderChatCompletionRequest(
     ProviderProfile Provider,
     string Model,
     string SystemPrompt,
     IReadOnlyList<ProviderTestChatMessage> Messages,
-    string Prompt);
+    string Prompt,
+    IReadOnlyList<ProviderChatAttachment>? Attachments = null,
+    string ModelParameterConfigurationJson = "");
 
 public sealed record ProviderChatCompletionResult(
     string Model,

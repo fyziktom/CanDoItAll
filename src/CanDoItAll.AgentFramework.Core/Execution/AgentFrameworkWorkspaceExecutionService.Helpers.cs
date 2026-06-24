@@ -539,6 +539,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentDefinition agent,
         ProviderProfile provider)
     {
+        if (agent.ProviderProfileId.HasValue &&
+            agent.ProviderProfileId.Value != provider.Id &&
+            !string.IsNullOrWhiteSpace(provider.DefaultModel))
+        {
+            return provider.DefaultModel;
+        }
+
         return ManagedSeedProviderFallbacks.ResolveModel(
             agent,
             provider,

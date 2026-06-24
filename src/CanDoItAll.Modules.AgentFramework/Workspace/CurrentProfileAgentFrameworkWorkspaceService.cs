@@ -216,9 +216,15 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return ResolveService().ContinueExecutionRunAsync(executionRunId, approved, autoApprovePendingToolCalls, cancellationToken);
     }
 
-    public Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default)
+    public Task<AgentChatRunResult> SendMessageAsync(
+        Guid agentId,
+        Guid? chatSessionId,
+        string prompt,
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? attachmentPaths = null,
+        AgentChatRunOptions? options = null)
     {
-        return ResolveService().SendMessageAsync(agentId, chatSessionId, prompt, cancellationToken);
+        return ResolveService().SendMessageAsync(agentId, chatSessionId, prompt, cancellationToken, attachmentPaths, options);
     }
 
     public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)

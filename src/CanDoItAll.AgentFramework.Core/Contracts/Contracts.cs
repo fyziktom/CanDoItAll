@@ -234,6 +234,7 @@ public interface IProviderProfileService
     ProviderProfile ApplyHealthResult(ProviderProfile provider, ProviderHealthResult result, DateTimeOffset checkedAtUtc);
     ProviderProfile ApplyProviderModelMaintenanceResult(ProviderProfile provider, ProviderModelMaintenanceEditorResult result, DateTimeOffset checkedAtUtc);
     ProviderFeatureMatrix ResolveFeatureMatrix(ProviderProfile provider);
+    ProviderFeatureMatrix ResolveFeatureMatrixForModel(ProviderProfile provider, string? model);
 }
 
 public interface IProviderProfileRegistry
@@ -363,7 +364,13 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default);
-    Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default);
+    Task<AgentChatRunResult> SendMessageAsync(
+        Guid agentId,
+        Guid? chatSessionId,
+        string prompt,
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? attachmentPaths = null,
+        AgentChatRunOptions? options = null);
     Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,
         Guid chatSessionId,

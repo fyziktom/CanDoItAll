@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -7,19 +8,35 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed partial class MafAgentRuntime
 {
+    private static readonly string[] ImageAnalysisModelConfigurationKeys =
+    [
+        "imageAnalysisModel",
+        "visionModel",
+        "defaultVisionModel"
+    ];
+
     private sealed class WorkspaceRuntimePlugin(
         IWorkspaceFileService fileService,
         IWorkspaceCommandExecutionService commandExecutionService,
         IWorkspaceArtifactToolService artifactToolService,
         string workspaceRoot,
-        AgentWorkspaceToolAccessSettings accessSettings)
+        WorkspaceScopeDescriptor workspaceScope,
+        AgentWorkspaceToolAccessSettings accessSettings,
+        ProviderProfile provider,
+        string runtimeModel,
+        IMafProviderRuntimeGateway providerRuntimeGateway)
     {
         private readonly IWorkspaceFileService fileService = fileService;
         private readonly IWorkspaceCommandExecutionService commandExecutionService = commandExecutionService;
         private readonly IWorkspaceArtifactToolService artifactToolService = artifactToolService;
         private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
         private readonly string workspaceRootWithSeparator = EnsureTrailingSeparator(Path.GetFullPath(workspaceRoot));
+        private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope;
         private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
+        private readonly ProviderProfile provider = provider;
+        private readonly string runtimeModel = runtimeModel;
+        private readonly IMafProviderRuntimeGateway providerRuntimeGateway = providerRuntimeGateway;
+        private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512,"think":false}}""";
         private static readonly JsonSerializerOptions ScriptManifestJsonOptions = CreateScriptManifestJsonOptions();
         private static readonly HashSet<string> ProtectedExternalTargetDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -200,10 +217,190 @@ public sealed partial class MafAgentRuntime
             return artifactToolService.InspectImageFile(allowedPath);
         }
 
+        public async Task<WorkspaceImageAnalysisResult> AnalyzeImageFile(string path, string prompt)
+        {
+            var allowedPath = PrepareArtifactTransformationReadPath(path) ?? path;
+            var image = await artifactToolService.ReadImageFile(allowedPath).ConfigureAwait(false);
+            if (!image.Succeeded)
+            {
+                return CreateImageAnalysisResult(
+                    succeeded: false,
+                    image,
+                    NormalizeImageAnalysisPrompt(prompt),
+                    analysis: string.Empty,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    diagnostics: image.Diagnostics);
+            }
+
+            var selectedModel = ResolveImageAnalysisModel();
+            var featureMatrix = ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel);
+            if (!featureMatrix.SupportsVision)
+            {
+                return CreateImageAnalysisResult(
+                    succeeded: false,
+                    image,
+                    NormalizeImageAnalysisPrompt(prompt),
+                    analysis: string.Empty,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    diagnostics: $"Provider '{provider.Name}' model '{selectedModel}' does not support vision/image input.");
+            }
+
+            var analysisPrompt = NormalizeImageAnalysisPrompt(prompt);
+            try
+            {
+                var result = await providerRuntimeGateway.RunProviderImageChatAsync(
+                        provider,
+                        new ProviderTestChatRequest(
+                            selectedModel,
+                            string.Empty,
+                            [],
+                            analysisPrompt),
+                        selectedModel,
+                        [new ProviderChatAttachment(
+                            ResolveImageAttachmentName(image.Path),
+                            image.ContentType,
+                            image.Bytes)],
+                        ImageAnalysisModelParameterConfigurationJson)
+                    .ConfigureAwait(false);
+
+                return CreateImageAnalysisResult(
+                    succeeded: true,
+                    image,
+                    analysisPrompt,
+                    result.ResponseText,
+                    result.InputTokens,
+                    result.OutputTokens,
+                    diagnostics: string.Empty);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                return CreateImageAnalysisResult(
+                    succeeded: false,
+                    image,
+                    analysisPrompt,
+                    analysis: string.Empty,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    diagnostics: exception.Message);
+            }
+        }
+
+        public async Task<WorkspaceImagesAnalysisResult> AnalyzeImageFiles(string[] paths, string prompt)
+        {
+            var normalizedPaths = (paths ?? [])
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (normalizedPaths.Length == 0)
+            {
+                return CreateImagesAnalysisResult(
+                    succeeded: false,
+                    [],
+                    NormalizeImageSetAnalysisPrompt(prompt, normalizedPaths.Length, string.Empty),
+                    analysis: string.Empty,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    diagnostics: "At least one image path is required.");
+            }
+
+            if (normalizedPaths.Length > 8)
+            {
+                return CreateImagesAnalysisResult(
+                    succeeded: false,
+                    [],
+                    NormalizeImageSetAnalysisPrompt(prompt, normalizedPaths.Length, string.Empty),
+                    analysis: string.Empty,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    diagnostics: "Image set analysis accepts at most 8 image paths per call.");
+            }
+
+            var images = new List<WorkspaceImageContentResult>(normalizedPaths.Length);
+            foreach (var path in normalizedPaths)
+            {
+                var allowedPath = PrepareArtifactTransformationReadPath(path) ?? path;
+                var image = await artifactToolService
+                    .ReadImageFile(allowedPath, operationName: "workspace_analyze_images")
+                    .ConfigureAwait(false);
+                images.Add(image);
+                if (!image.Succeeded)
+                {
+                    return CreateImagesAnalysisResult(
+                        succeeded: false,
+                        images,
+                        NormalizeImageSetAnalysisPrompt(prompt, normalizedPaths.Length, string.Empty),
+                        analysis: string.Empty,
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        diagnostics: image.Diagnostics);
+                }
+            }
+
+            var selectedModel = ResolveImageAnalysisModel();
+            var featureMatrix = ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel);
+            if (!featureMatrix.SupportsVision)
+            {
+                return CreateImagesAnalysisResult(
+                    succeeded: false,
+                    images,
+                    NormalizeImageSetAnalysisPrompt(prompt, normalizedPaths.Length, string.Empty),
+                    analysis: string.Empty,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    diagnostics: $"Provider '{provider.Name}' model '{selectedModel}' does not support vision/image input.");
+            }
+
+            var deterministicEvidence = WorkspaceImageSetEvidenceBuilder.Build(images);
+            var analysisPrompt = NormalizeImageSetAnalysisPrompt(prompt, images.Count, deterministicEvidence);
+            try
+            {
+                var attachments = images
+                    .Select((image, index) => new ProviderChatAttachment(
+                        $"{index + 1:D2}-{ResolveImageAttachmentName(image.Path)}",
+                        image.ContentType,
+                        image.Bytes))
+                    .ToList();
+                var result = await providerRuntimeGateway.RunProviderImageChatAsync(
+                        provider,
+                        new ProviderTestChatRequest(
+                            selectedModel,
+                            string.Empty,
+                            [],
+                            analysisPrompt),
+                        selectedModel,
+                        attachments,
+                        ImageAnalysisModelParameterConfigurationJson)
+                    .ConfigureAwait(false);
+
+                return CreateImagesAnalysisResult(
+                    succeeded: true,
+                    images,
+                    analysisPrompt,
+                    result.ResponseText,
+                    result.InputTokens,
+                    result.OutputTokens,
+                    diagnostics: string.Empty);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                return CreateImagesAnalysisResult(
+                    succeeded: false,
+                    images,
+                    analysisPrompt,
+                    analysis: string.Empty,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    diagnostics: exception.Message);
+            }
+        }
+
         private string? PrepareFileReadPath(string? path)
         {
             EnsureFileReadAllowed(path);
-            return NormalizeAllowedExternalPathForWorkspaceTools(path);
+            return NormalizeRecoverableCurrentRunArtifactPath(NormalizeAllowedExternalPathForWorkspaceTools(path));
         }
 
         private string? PrepareFileWritePath(string? path)
@@ -312,6 +509,134 @@ public sealed partial class MafAgentRuntime
             EnsureFileReadAllowed(path);
         }
 
+        private WorkspaceImageAnalysisResult CreateImageAnalysisResult(
+            bool succeeded,
+            WorkspaceImageContentResult image,
+            string prompt,
+            string analysis,
+            int inputTokens,
+            int outputTokens,
+            string diagnostics)
+        {
+            var message = succeeded
+                ? $"Analyzed image '{image.Path}' with provider '{provider.Name}' model '{ResolveImageAnalysisModel()}'."
+                : string.IsNullOrWhiteSpace(diagnostics)
+                    ? $"Image analysis failed for '{image.Path}'."
+                    : diagnostics;
+
+            return new WorkspaceImageAnalysisResult(
+                Succeeded: succeeded,
+                Message: message,
+                Receipt: image.Receipt,
+                Path: image.Path,
+                Prompt: prompt,
+                ProviderName: provider.Name,
+                Model: ResolveImageAnalysisModel(),
+                Analysis: analysis,
+                InputTokens: inputTokens,
+                OutputTokens: outputTokens,
+                Diagnostics: diagnostics);
+        }
+
+        private WorkspaceImagesAnalysisResult CreateImagesAnalysisResult(
+            bool succeeded,
+            IReadOnlyList<WorkspaceImageContentResult> images,
+            string prompt,
+            string analysis,
+            int inputTokens,
+            int outputTokens,
+            string diagnostics)
+        {
+            var paths = images
+                .Select(image => image.Path)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .ToList();
+            var message = succeeded
+                ? $"Analyzed {images.Count:N0} image(s) with provider '{provider.Name}' model '{ResolveImageAnalysisModel()}'."
+                : string.IsNullOrWhiteSpace(diagnostics)
+                    ? "Image set analysis failed."
+                    : diagnostics;
+
+            return new WorkspaceImagesAnalysisResult(
+                Succeeded: succeeded,
+                Message: message,
+                Images: images.Select(CreateAnalyzedImageRecord).ToList(),
+                Paths: paths,
+                Prompt: prompt,
+                ProviderName: provider.Name,
+                Model: ResolveImageAnalysisModel(),
+                Analysis: analysis,
+                InputTokens: inputTokens,
+                OutputTokens: outputTokens,
+                Diagnostics: diagnostics);
+        }
+
+        private static WorkspaceAnalyzedImageRecord CreateAnalyzedImageRecord(
+            WorkspaceImageContentResult image)
+        {
+            return new WorkspaceAnalyzedImageRecord(
+                image.Path,
+                image.Format,
+                image.ContentType,
+                image.SizeBytes,
+                image.Width,
+                image.Height,
+                image.Message,
+                image.Diagnostics);
+        }
+
+        private string ResolveImageAnalysisModel()
+            => ResolveProviderImageAnalysisModel(provider, runtimeModel);
+
+        private static string NormalizeImageAnalysisPrompt(string prompt)
+        {
+            var userPrompt = string.IsNullOrWhiteSpace(prompt)
+                ? "Analyze the attached image. Describe the visible UI state and any defects that are directly observable."
+                : prompt.Trim();
+            return
+                "You receive one software-delivery screenshot image. Analyze only visible evidence in the image. " +
+                "For UI state claims, use visible text, object positions, landmarks, and controls. " +
+                "State uncertainty only when the requested evidence cannot be seen. " +
+                "Do not describe provider, model, token, or cost metadata; the tool wrapper returns that separately." +
+                Environment.NewLine +
+                Environment.NewLine +
+                $"User question: {userPrompt}";
+        }
+
+        private static string NormalizeImageSetAnalysisPrompt(
+            string prompt,
+            int imageCount,
+            string deterministicEvidence)
+        {
+            var normalizedCount = Math.Max(2, imageCount);
+            var userPrompt = string.IsNullOrWhiteSpace(prompt)
+                ? "Describe visible differences and whether the evidence proves the requested UI state changed over time."
+                : prompt.Trim();
+            var evidenceSection = string.IsNullOrWhiteSpace(deterministicEvidence)
+                ? string.Empty
+                : Environment.NewLine +
+                  Environment.NewLine +
+                  deterministicEvidence.Trim();
+            return
+                $"You receive {normalizedCount:N0} ordered screenshots of the same software UI. " +
+                "The first attached image is frame 1, the second attached image is frame 2, and later images continue in attachment order. " +
+                "Compare only visible evidence across images. For position, motion, progress, or animation claims, compare the same visible target against fixed landmarks, grid lines, labels, or coordinates. " +
+                "In screen coordinates and grid rows, larger row/y positions are lower/downward. " +
+                "If visible labels or positions differ, report the difference directly; do not call it unchanged. " +
+                "Use uncertain only when the requested target or its position cannot be seen in at least one frame. " +
+                "Do not describe provider, model, token, or cost metadata; the tool wrapper returns that separately." +
+                evidenceSection +
+                Environment.NewLine +
+                Environment.NewLine +
+                $"User question: {userPrompt}";
+        }
+
+        private static string ResolveImageAttachmentName(string path)
+        {
+            var fileName = Path.GetFileName(path);
+            return string.IsNullOrWhiteSpace(fileName) ? "image" : fileName;
+        }
+
         private void EnsureExternalAliasAllowed(string? path, bool requireWrite)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -399,6 +724,25 @@ public sealed partial class MafAgentRuntime
             return string.IsNullOrWhiteSpace(normalizedAlias)
                 ? path
                 : normalizedAlias;
+        }
+
+        private string? NormalizeRecoverableCurrentRunArtifactPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+
+            var auditScope = WorkspaceExecutionAuditContext.Current;
+            var currentRunId = auditScope?.ProcessRunId;
+            var currentWorkspaceScope = auditScope?.ContextWorkspaceScope ?? workspaceScope;
+            return WorkspaceProcessRunArtifactPath.TryBuildRecoverableCurrentRunPath(
+                path,
+                currentRunId,
+                currentWorkspaceScope,
+                out var currentRunPath)
+                ? currentRunPath
+                : path;
         }
 
         private IReadOnlyList<string> ResolveAllowedExternalTargetAliases()
@@ -555,5 +899,81 @@ public sealed partial class MafAgentRuntime
 
         private string FormatEffectiveWorkspaceProfile()
             => AgentWorkspaceToolAccessProfiles.GetProfileKey(accessSettings.Profile);
+    }
+
+    internal static string ResolveProviderImageAnalysisModel(
+        ProviderProfile provider,
+        string? runtimeModel)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        if (IsVisionCapableProviderModel(provider, runtimeModel))
+        {
+            return runtimeModel!.Trim();
+        }
+
+        foreach (var configurationKey in ImageAnalysisModelConfigurationKeys)
+        {
+            var configuredModel = TryReadConfigurationString(provider.ConfigurationJson, configurationKey);
+            if (IsVisionCapableProviderModel(provider, configuredModel))
+            {
+                return configuredModel!.Trim();
+            }
+        }
+
+        if (IsVisionCapableProviderModel(provider, provider.DefaultModel))
+        {
+            return provider.DefaultModel.Trim();
+        }
+
+        foreach (var suggestedModel in provider.SuggestedModels)
+        {
+            if (IsVisionCapableProviderModel(provider, suggestedModel))
+            {
+                return suggestedModel.Trim();
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(runtimeModel)
+            ? provider.DefaultModel.Trim()
+            : runtimeModel.Trim();
+    }
+
+    private static bool IsVisionCapableProviderModel(
+        ProviderProfile provider,
+        string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return false;
+        }
+
+        return ProviderFeatureService
+            .ResolveFeatureMatrixForModel(provider, model.Trim())
+            .SupportsVision;
+    }
+
+    private static string? TryReadConfigurationString(
+        string? configurationJson,
+        string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty(propertyName, out var property) &&
+                   property.ValueKind == JsonValueKind.String
+                ? property.GetString()
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

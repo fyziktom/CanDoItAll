@@ -271,7 +271,7 @@
       "Key": "review-and-store-screenshot",
       "Title": "Review and store screenshot",
       "Subtitle": "Image asset node",
-      "Notes": "Review the screenshot for blank output, wrong route, fatal error page, obvious layout corruption, and missing primary UI. Call workspace_inspect_image for the screenshot file before storage and include format, dimensions, and byte size in the review findings. If accepted, store it through the project-structure asset path as an image asset node under the delivery area and record the node id and storage locator. Use project_structure_asset_create with sourceWorkspacePath for managed workspace screenshot files; do not try to read binary screenshots as text just to base64-encode them.",
+      "Notes": "Review the screenshot for blank output, wrong route, fatal error page, obvious layout corruption, and missing primary UI. Call workspace_inspect_image for the screenshot file before storage and include format, dimensions, and byte size in the review findings. When workspace_analyze_image is available, call it and ground the visual acceptance or rejection reason in the provider-backed image analysis result. If the assigned provider/model is not vision-capable, block with that capability gap instead of accepting an image from metadata alone. If accepted, store it through the project-structure asset path as an image asset node under the delivery area and record the node id and storage locator. Use project_structure_asset_create with sourceWorkspacePath for managed workspace screenshot files; do not try to read binary screenshots as text just to base64-encode them.",
       "StepKind": "Review",
       "DependsOnStepKey": "capture-page-screenshot",
       "DecisionRoleKey": "screenshot-review-storage-agent",
@@ -315,7 +315,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by layout generation and QA.",
-          "ValidationRequirementSummary": "Must state accepted or rejected with the visual reason and include workspace_inspect_image format, dimensions, and byte size."
+          "ValidationRequirementSummary": "Must state accepted or rejected with the visual reason, include workspace_inspect_image format, dimensions, and byte size, and include workspace_analyze_image provider/model/token evidence when the assigned provider/model supports vision."
         },
         {
           "Key": "image-asset-storage-receipt",

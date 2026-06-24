@@ -100,7 +100,7 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
         httpRequest.Content = JsonContent.Create(
             new
             {
-                messages = ProviderDriverProtocol.BuildChatMessages(request),
+                messages = ProviderDriverProtocol.BuildOpenAiChatMessages(request),
                 stream = false
             },
             options: ProviderDriverJson.Options);

@@ -10,6 +10,8 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
     IProviderChatCompletionDriver,
     IProviderModelMaintenanceDriver
 {
+    private const string NumPredictSnakePropertyName = "num_predict";
+
     private static readonly IReadOnlySet<AgentProviderCapabilityKind> SupportedCapabilities = new HashSet<AgentProviderCapabilityKind>
     {
         AgentProviderCapabilityKind.Health,
@@ -82,14 +84,29 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
         ProviderChatCompletionRequest request,
         CancellationToken cancellationToken = default)
     {
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = request.Model,
+            ["messages"] = ProviderDriverProtocol.BuildOllamaChatMessages(request),
+            ["stream"] = false
+        };
+        var options = ResolveChatOptions(request.Provider, request.ModelParameterConfigurationJson);
+        if (options.Count > 0)
+        {
+            payload["options"] = options;
+        }
+
+        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(
+            request.Provider.ConfigurationJson,
+            request.ModelParameterConfigurationJson);
+        if (think is not null)
+        {
+            payload["think"] = think.Value;
+        }
+
         using var response = await httpClient.PostAsJsonAsync(
             BuildEndpoint(request.Provider, "api/chat"),
-            new
-            {
-                model = request.Model,
-                messages = ProviderDriverProtocol.BuildChatMessages(request),
-                stream = false
-            },
+            payload,
             ProviderDriverJson.Options,
             cancellationToken).ConfigureAwait(false);
         await ProviderDriverProtocol.EnsureSuccessAsync(response, "Ollama chat completion", cancellationToken).ConfigureAwait(false);
@@ -100,7 +117,7 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             : default;
         return new ProviderChatCompletionResult(
             request.Model,
-            message.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadString(message, "content") : string.Empty,
+            ReadMessageText(message),
             ProviderDriverJson.ReadInt(document.RootElement, "prompt_eval_count"),
             ProviderDriverJson.ReadInt(document.RootElement, "eval_count"));
     }
@@ -162,5 +179,38 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
 
         return suggestedModels.FirstOrDefault(model => !string.IsNullOrWhiteSpace(model))?.Trim()
             ?? fallbackModel;
+    }
+
+    private static string ReadMessageText(JsonElement message)
+    {
+        if (message.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
+        var content = ProviderDriverJson.ReadString(message, "content");
+        if (!string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+
+        return ProviderDriverJson.ReadString(message, "thinking");
+    }
+
+    private static Dictionary<string, object> ResolveChatOptions(
+        ProviderProfile provider,
+        string requestModelParameterConfigurationJson)
+    {
+        var options = new Dictionary<string, object>(StringComparer.Ordinal);
+        var numPredict = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+            provider.Kind,
+            provider.ConfigurationJson,
+            requestModelParameterConfigurationJson);
+        if (numPredict is not null)
+        {
+            options[NumPredictSnakePropertyName] = numPredict.Value;
+        }
+
+        return options;
     }
 }

@@ -95,6 +95,71 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_allows_tool_capable_local_provider_for_governed_process_finalizer()
+    {
+        var providerId = Guid.Parse("1e7f1a94-42b6-46e3-8f24-0342cb31c980");
+        var developerAgent = CreateAgent(
+            providerId,
+            Guid.Parse("b327b3f0-0d70-4119-bf53-2cd6c7b4a9f6"),
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
+            AgentWorkloadKind.Programming,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["dotnet", "programming", "blazor"]);
+        var localProvider = CreateProvider(providerId, ProviderKind.Ollama);
+        var featureMatrix = new ProviderProfileService().ResolveFeatureMatrix(localProvider);
+        var workspace = new ResolverWorkspaceService([developerAgent], [localProvider]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            CreateBlazorImplementationDefinition(),
+            CreatePlan("implement-blazor-change"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.False(featureMatrix.SupportsStructuredOutput);
+        Assert.True(featureMatrix.SupportsFunctionTools);
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal("implement-blazor-change", binding.StepKey);
+        Assert.Equal("blazor-engineer", binding.RoleKey);
+        Assert.Equal(developerAgent.Id.ToString("D"), binding.ExecutorId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_local_provider_without_tool_finalizer_support()
+    {
+        var providerId = Guid.Parse("388d2d44-e423-4d26-8b92-7d260089a0b0");
+        var developerAgent = CreateAgent(
+            providerId,
+            Guid.Parse("7987805f-cf9c-4089-9b84-5eb26f0459d8"),
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
+            AgentWorkloadKind.Programming,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["dotnet", "programming", "blazor"]);
+        var localProvider = CreateProvider(providerId, ProviderKind.Ollama, supportsTools: false);
+        var workspace = new ResolverWorkspaceService([developerAgent], [localProvider]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            CreateBlazorImplementationDefinition(),
+            CreatePlan("implement-blazor-change"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "process.launch.agent_missing" &&
+            finding.Message.Contains("governed-output-capable provider", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ResolveAsync_selects_dotnet_developer_for_software_engineer_solution_scaffold_step()
     {
         var providerId = Guid.Parse("c90be131-77c4-4393-89d6-3e2b29128950");
@@ -907,26 +972,35 @@ public sealed class ProcessLaunchExecutorResolverTests
             UpdatedAtUtc: Now);
     }
 
-    private static ProviderProfile CreateProvider(Guid providerId)
+    private static ProviderProfile CreateProvider(
+        Guid providerId,
+        ProviderKind kind = ProviderKind.OpenAi,
+        ProviderTransportKind transport = ProviderTransportKind.Responses,
+        bool supportsTools = true)
     {
+        var isOllama = kind == ProviderKind.Ollama;
+        var effectiveTransport = isOllama ? ProviderTransportKind.ChatCompletions : transport;
+        var defaultModel = isOllama ? "gptoss32k:latest" : "gpt-5-mini";
+        IReadOnlyList<string> suggestedModels = isOllama ? ["gptoss32k:latest"] : ["gpt-5-mini"];
+
         return new ProviderProfile(
             Id: providerId,
-            Name: "OpenAI default",
-            Kind: ProviderKind.OpenAi,
-            BaseUrl: "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable: "OPENAI_API_KEY",
-            DefaultModel: "gpt-5-mini",
-            Transport: ProviderTransportKind.Responses,
+            Name: isOllama ? "Remote Ollama" : "OpenAI default",
+            Kind: kind,
+            BaseUrl: isOllama ? "http://localhost:11434" : "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable: isOllama ? string.Empty : "OPENAI_API_KEY",
+            DefaultModel: defaultModel,
+            Transport: effectiveTransport,
             IsEnabled: true,
             SupportsStreaming: true,
-            SupportsTools: true,
-            PreferFrameworkManagedChatHistory: false,
-            SupportsBackgroundResponses: true,
+            SupportsTools: supportsTools,
+            PreferFrameworkManagedChatHistory: isOllama || effectiveTransport != ProviderTransportKind.Responses,
+            SupportsBackgroundResponses: !isOllama && effectiveTransport == ProviderTransportKind.Responses,
             ConfigurationJson: "{}",
             Notes: "Unit-test provider.",
             HealthStatus: "Not checked",
             LastCheckedAtUtc: null,
-            SuggestedModels: ["gpt-5-mini"]);
+            SuggestedModels: suggestedModels);
     }
 
     private static string FindRepositoryRoot()
@@ -1048,7 +1122,14 @@ public sealed class ProcessLaunchExecutorResolverTests
 
         public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<AgentChatRunResult> SendMessageAsync(
+            Guid agentId,
+            Guid? chatSessionId,
+            string prompt,
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<string>? attachmentPaths = null,
+            AgentChatRunOptions? options = null)
+            => throw Unused();
 
         public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
 

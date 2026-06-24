@@ -569,9 +569,7 @@ public partial class ProjectStructurePage
             : ResolveOutputRoot(surface, targetNode);
         if (!string.IsNullOrWhiteSpace(outputRoot))
         {
-            variables["OutputRoot"] = outputRoot;
-            variables["ProductRoot"] = outputRoot;
-            variables["ExternalTargetRoot"] = outputRoot;
+            ApplyProductRootLaunchVariables(variables, outputRoot);
         }
 
         return variables;
@@ -1158,6 +1156,26 @@ public partial class ProjectStructurePage
         return match.Success
             ? match.Value.Trim().TrimEnd('.', ',', ';', ')', ']')
             : string.Empty;
+    }
+
+    private static void ApplyProductRootLaunchVariables(
+        IDictionary<string, string> variables,
+        string outputRoot)
+    {
+        var normalizedOutputRoot = outputRoot.Trim();
+        variables["OutputRoot"] = normalizedOutputRoot;
+        variables["ProductRoot"] = normalizedOutputRoot;
+
+        var externalTargetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(normalizedOutputRoot);
+        if (string.IsNullOrWhiteSpace(externalTargetAlias))
+        {
+            return;
+        }
+
+        variables["ExternalTargetRoot"] = externalTargetAlias;
+        variables["OutputRootAlias"] = externalTargetAlias;
+        variables["ProductRootAlias"] = externalTargetAlias;
+        variables["WorkspaceAlias"] = externalTargetAlias;
     }
 
     private static string ResolveOutputRoot(ProjectStructureSurface currentSurface, ProjectStructureNode targetNode)

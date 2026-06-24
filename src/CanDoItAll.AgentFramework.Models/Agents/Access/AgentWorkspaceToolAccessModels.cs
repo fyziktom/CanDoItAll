@@ -446,6 +446,8 @@ public static class AgentWorkspaceToolAccessMetadata
                 permission = AgentWorkspaceToolPermissionKind.RunLocalScripts;
                 return true;
             case "workspace_convert_document":
+            case "workspace_analyze_image":
+            case "workspace_analyze_images":
                 permission = AgentWorkspaceToolPermissionKind.TransformArtifacts;
                 return true;
             default:

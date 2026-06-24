@@ -1,7 +1,10 @@
 using System.Text.Json;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -56,6 +59,32 @@ public sealed class AgentFinalizerPolicyTests
         Assert.False(result.Succeeded);
         Assert.Equal(2, result.MatchingInvocationCount);
         Assert.Contains(result.Errors, error => error.Code == "agent.finalizer.multiple_calls");
+    }
+
+    [Fact]
+    public void NormalizeRequired_selects_last_valid_required_finalizer_call()
+    {
+        var validator = new DefaultAgentFinalizerValidator();
+        var policy = CreatePolicy();
+        var first = new AgentFinalizerInvocation(
+            policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Blocked, "Earlier decision."),
+            Sequence: 1);
+        var second = new AgentFinalizerInvocation(
+            policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Final decision."),
+            Sequence: 2);
+
+        var rawResult = validator.Validate(policy, [first, second]);
+        var normalized = AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, [first, second]);
+        var normalizedResult = validator.Validate(policy, normalized);
+
+        Assert.False(rawResult.Succeeded);
+        var invocation = Assert.Single(normalized);
+        Assert.Equal(second, invocation);
+        Assert.True(normalizedResult.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(normalizedResult.Output);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, output.Status);
     }
 
     [Fact]
@@ -237,6 +266,379 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void Required_finalizer_repair_options_are_constrained_to_finalizer_tool()
+    {
+        var policy = CreatePolicy();
+        var unrelatedTool = AIFunctionFactory.Create(
+            () => "ok",
+            "workspace_read_file",
+            "Test tool.");
+        var finalizerTool = AIFunctionFactory.Create(
+            (ProcessStepOutcomeResult result) => "captured",
+            policy.ToolName,
+            "Test finalizer tool.");
+        var chatOptions = new ChatOptions
+        {
+            AllowMultipleToolCalls = true,
+            ToolMode = ChatToolMode.Auto,
+            Tools = [unrelatedTool, finalizerTool]
+        };
+
+        var resolvedTool = MafAgentRuntime.ResolveRequiredFinalizerTool(
+            policy,
+            [finalizerTool]);
+        MafAgentRuntime.ConfigureRequiredFinalizerRepairChatOptions(
+            chatOptions,
+            policy,
+            resolvedTool);
+        var repairOptions = MafAgentRuntime.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool);
+
+        Assert.Same(finalizerTool, resolvedTool);
+        Assert.False(chatOptions.AllowMultipleToolCalls);
+        Assert.NotNull(chatOptions.Tools);
+        var repairTool = Assert.Single(chatOptions.Tools!);
+        Assert.Equal(policy.ToolName, repairTool.Name);
+        var configuredToolMode = Assert.IsType<RequiredChatToolMode>(chatOptions.ToolMode);
+        Assert.Equal(policy.ToolName, configuredToolMode.RequiredFunctionName);
+        Assert.DoesNotContain(chatOptions.Tools!, tool => tool.Name == unrelatedTool.Name);
+        Assert.False(repairOptions.AllowBackgroundResponses);
+        Assert.NotNull(repairOptions.ChatOptions);
+        var repairChatOptions = repairOptions.ChatOptions!;
+        Assert.False(repairChatOptions.AllowMultipleToolCalls);
+        Assert.Contains(policy.OutputContract.ContractKey, repairChatOptions.Instructions, StringComparison.Ordinal);
+        Assert.NotNull(repairChatOptions.Tools);
+        var repairRunTool = Assert.Single(repairChatOptions.Tools!);
+        Assert.Equal(policy.ToolName, repairRunTool.Name);
+        var requiredToolMode = Assert.IsType<RequiredChatToolMode>(repairChatOptions.ToolMode);
+        Assert.Equal(policy.ToolName, requiredToolMode.RequiredFunctionName);
+    }
+
+    [Fact]
+    public void Required_finalizer_json_repair_normalizes_direct_and_wrapped_payloads()
+    {
+        var policy = CreatePolicy();
+        const string directPayload = """
+        {
+          "status": "Completed",
+          "reason": "Contract resolved.",
+          "branchOutcomeKey": "",
+          "branchOutcomeTitle": "",
+          "evidenceRefs": [
+            "artifacts/process-runs/run-1/steps/feature-intake.md"
+          ],
+          "nextActions": [],
+          "humanReadableSummaryMarkdown": "Done."
+        }
+        """;
+        var wrappedPayload = $$"""
+        {
+          "result": {{directPayload}}
+        }
+        """;
+
+        var directResult = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+            policy,
+            directPayload,
+            out var directJson,
+            out var directFailure);
+        var wrappedResult = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+            policy,
+            wrappedPayload,
+            out var wrappedJson,
+            out var wrappedFailure);
+
+        Assert.True(directResult, directFailure);
+        Assert.True(wrappedResult, wrappedFailure);
+        Assert.Equal(directJson, wrappedJson);
+        var output = JsonSerializer.Deserialize<ProcessStepOutcomeResult>(directJson, AgentOutputJson.SerializerOptions);
+        Assert.NotNull(output);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, output!.Status);
+        Assert.Equal("Contract resolved.", output.Reason);
+    }
+
+    [Fact]
+    public void Required_finalizer_json_repair_normalizes_process_step_string_array_objects()
+    {
+        var policy = CreatePolicy();
+        const string payload = """
+        {
+          "result": {
+            "status": "Completed",
+            "reason": "Contract resolved.",
+            "branchOutcomeKey": "",
+            "branchOutcomeTitle": "",
+            "evidenceRefs": [
+              {
+                "path": "artifacts/process-runs/run-1/steps/feature-intake.md",
+                "kind": "managed artifact"
+              }
+            ],
+            "nextActions": [
+              {
+                "owner": "solution-architect",
+                "action": "Review the scoped delivery boundary."
+              }
+            ],
+            "humanReadableSummaryMarkdown": "Done."
+          }
+        }
+        """;
+
+        var result = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+            policy,
+            payload,
+            out var argumentsJson,
+            out var failure);
+
+        Assert.True(result, failure);
+        var output = JsonSerializer.Deserialize<ProcessStepOutcomeResult>(argumentsJson, AgentOutputJson.SerializerOptions);
+        Assert.NotNull(output);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, output!.Status);
+        var evidenceRef = Assert.Single(output.EvidenceRefs);
+        Assert.Contains("path: artifacts/process-runs/run-1/steps/feature-intake.md", evidenceRef, StringComparison.Ordinal);
+        var nextAction = Assert.Single(output.NextActions);
+        Assert.Contains("owner: solution-architect", nextAction, StringComparison.Ordinal);
+        Assert.Contains("action: Review the scoped delivery boundary.", nextAction, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Required_finalizer_json_repair_normalizes_missing_reason_from_human_summary()
+    {
+        var policy = CreatePolicy();
+        const string payload = """
+        {
+          "status": "Completed",
+          "branchOutcomeKey": "",
+          "branchOutcomeTitle": "",
+          "evidenceRefs": [
+            "artifacts/process-runs/run-1/steps/feature-intake.md"
+          ],
+          "nextActions": [],
+          "humanReadableSummaryMarkdown": "Scope packet was produced and stored for downstream architecture review."
+        }
+        """;
+
+        var result = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+            policy,
+            payload,
+            out var argumentsJson,
+            out var failure);
+
+        Assert.True(result, failure);
+        var validation = new DefaultAgentFinalizerValidator().Validate(
+            policy,
+            [new AgentFinalizerInvocation(policy.ToolName, argumentsJson, Sequence: 1)]);
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal("Scope packet was produced and stored for downstream architecture review.", output.Reason);
+    }
+
+    [Fact]
+    public void Streamed_finalizer_recorder_captures_complete_later_chunk_for_same_call()
+    {
+        var policy = CreatePolicy();
+        var recorder = new MafAgentRuntime.StreamedFinalizerInvocationRecorder(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required);
+        const string outcomeJson = """
+        {
+          "status": "Completed",
+          "reason": "Scope clarified.",
+          "branchOutcomeKey": "",
+          "branchOutcomeTitle": "",
+          "evidenceRefs": [
+            "artifacts/process-runs/run-1/steps/feature-intake.md"
+          ],
+          "nextActions": [],
+          "humanReadableSummaryMarkdown": "Scope clarified."
+        }
+        """;
+
+        recorder.Record(new FunctionCallContent("finalizer-1", policy.ToolName));
+        recorder.Record(new FunctionCallContent(
+            "finalizer-1",
+            policy.ToolName,
+            new Dictionary<string, object?>
+            {
+                ["result"] = outcomeJson
+            }));
+
+        var invocation = Assert.Single(recorder.SnapshotFinalizerInvocations());
+        Assert.Equal(policy.ToolName, invocation.ToolName);
+        Assert.Equal(2, invocation.Sequence);
+
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
+
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, output.Status);
+        Assert.Equal("Scope clarified.", output.Reason);
+    }
+
+    [Fact]
+    public void Finalizer_capture_accepts_process_step_outcome_result_as_json_string_argument()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        var submitMethod = capture.GetType().GetMethod("SubmitProcessStepOutcome")
+            ?? throw new InvalidOperationException("SubmitProcessStepOutcome method was not found.");
+        var snapshotMethod = capture.GetType().GetMethod("Snapshot")
+            ?? throw new InvalidOperationException("Snapshot method was not found.");
+        var outcomeJson = SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Provider sent result as a JSON string.");
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
+
+        var response = submitMethod.Invoke(capture, [document.RootElement]);
+        var snapshot = snapshotMethod.Invoke(capture, []);
+
+        Assert.Equal("Process step outcome finalizer captured.", response);
+        var invocations = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(snapshot);
+        var invocation = Assert.Single(invocations);
+        Assert.Equal(policy.ToolName, invocation.ToolName);
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, output.Status);
+        Assert.Equal("Provider sent result as a JSON string.", output.Reason);
+    }
+
+    [Fact]
+    public void Finalizer_capture_normalizes_json_string_argument_missing_reason()
+    {
+        var policy = CreatePolicy();
+        var capture = CreateFinalizerCapture(policy);
+        var submitMethod = capture.GetType().GetMethod("SubmitProcessStepOutcome")
+            ?? throw new InvalidOperationException("SubmitProcessStepOutcome method was not found.");
+        var snapshotMethod = capture.GetType().GetMethod("Snapshot")
+            ?? throw new InvalidOperationException("Snapshot method was not found.");
+        const string outcomeJson = """
+        {
+          "status": "Completed",
+          "branchOutcomeKey": "",
+          "branchOutcomeTitle": "",
+          "evidenceRefs": [
+            "artifacts/process-runs/run-1/steps/feature-intake.md"
+          ],
+          "nextActions": [],
+          "humanReadableSummaryMarkdown": "Feature intake completed with current-run evidence."
+        }
+        """;
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
+
+        submitMethod.Invoke(capture, [document.RootElement]);
+        var snapshot = snapshotMethod.Invoke(capture, []);
+
+        var invocations = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(snapshot);
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal("Feature intake completed with current-run evidence.", output.Reason);
+    }
+
+    [Fact]
+    public void Effective_finalizer_invocations_prefer_valid_json_repair_over_invalid_captured_attempt()
+    {
+        var policy = CreatePolicy();
+        var invalidCaptured = new AgentFinalizerInvocation(
+            policy.ToolName,
+            "not-json",
+            Sequence: 1);
+        var synthesizedRepair = new AgentFinalizerInvocation(
+            policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Repair produced a valid outcome."),
+            Sequence: 2);
+
+        var effective = MafAgentRuntime.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required,
+            [invalidCaptured],
+            [],
+            [],
+            [synthesizedRepair]);
+
+        var invocation = Assert.Single(effective);
+        Assert.Equal(2, invocation.Sequence);
+
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, effective);
+
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, output.Status);
+    }
+
+    [Fact]
+    public void Effective_finalizer_invocations_collapse_repeated_valid_captured_calls_to_last_valid_call()
+    {
+        var policy = CreatePolicy();
+        var first = new AgentFinalizerInvocation(
+            policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "First valid outcome."),
+            Sequence: 1);
+        var second = new AgentFinalizerInvocation(
+            policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Second valid outcome."),
+            Sequence: 2);
+        var third = new AgentFinalizerInvocation(
+            policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Third valid outcome."),
+            Sequence: 3);
+
+        var effective = MafAgentRuntime.CreateEffectiveFinalizerInvocations(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required,
+            [first, second, third],
+            [],
+            [],
+            []);
+
+        var invocation = Assert.Single(effective);
+        Assert.Equal(3, invocation.Sequence);
+
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, effective);
+
+        Assert.True(validation.Succeeded);
+        var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        Assert.Equal("Third valid outcome.", output.Reason);
+    }
+
+    [Fact]
+    public void Required_finalizer_repair_prompts_bound_previous_assistant_text()
+    {
+        var policy = CreatePolicy();
+        var previousText = "START-" + new string('x', 30_000) + "-TAIL";
+
+        var toolRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerRepairPrompt(policy, previousText);
+        var jsonRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerJsonRepairPrompt(policy, previousText);
+
+        AssertBoundedRepairPrompt(toolRepairPrompt);
+        AssertBoundedRepairPrompt(jsonRepairPrompt);
+    }
+
+    [Fact]
+    public void Governed_process_steps_force_framework_managed_history_for_responses_provider()
+    {
+        var agent = CreateAgent(AgentChatHistoryMode.ProviderManaged);
+        var provider = CreateProvider(
+            ProviderTransportKind.Responses,
+            preferFrameworkManagedHistory: false);
+        var options = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Required,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 1,
+            ContextIntent: AgentRuntimeContextIntent.Empty with
+            {
+                IsGovernedProcessStep = true
+            });
+
+        var useFrameworkHistory = MafAgentRuntime.ShouldUseFrameworkManagedHistory(
+            agent,
+            provider,
+            options);
+
+        Assert.True(useFrameworkHistory);
+    }
+
+    [Fact]
     public void ExecutionInvocationMetadata_builds_required_finalizer_and_repair_policy()
     {
         var metadataJson = ExecutionInvocationMetadata.Build(
@@ -355,7 +757,7 @@ public sealed class AgentFinalizerPolicyTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
 
-        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null]));
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
 
         Assert.NotNull(options.ContextWorkspaceScope);
         Assert.Equal(WorkspaceScopeKind.Project, options.ContextWorkspaceScope!.Kind);
@@ -368,6 +770,19 @@ public sealed class AgentFinalizerPolicyTests
             "submit_process_step_outcome",
             AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
             "Final process-step outcome.");
+    }
+
+    private static object CreateFinalizerCapture(AgentFinalizerPolicy policy)
+    {
+        var captureType = typeof(MafAgentRuntime).GetNestedType("FinalizerCapture", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("FinalizerCapture nested type was not found.");
+        return Activator.CreateInstance(
+                captureType,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                binder: null,
+                args: [policy],
+                culture: null)
+            ?? throw new InvalidOperationException("FinalizerCapture instance was not created.");
     }
 
     private static string SerializeOutcome(
@@ -403,6 +818,15 @@ public sealed class AgentFinalizerPolicyTests
             FailureMessage: string.Empty);
     }
 
+    private static void AssertBoundedRepairPrompt(string prompt)
+    {
+        Assert.True(prompt.Length < 14_000, $"Repair prompt length was {prompt.Length:N0}.");
+        Assert.Contains("START-", prompt, StringComparison.Ordinal);
+        Assert.Contains("-TAIL", prompt, StringComparison.Ordinal);
+        Assert.Contains("middle of previous assistant text omitted", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(new string('x', 20_000), prompt, StringComparison.Ordinal);
+    }
+
     private static ExecutionRunRecord CreateRun(string metadataJson)
     {
         return new ExecutionRunRecord(
@@ -432,6 +856,57 @@ public sealed class AgentFinalizerPolicyTests
             PendingApprovals: [],
             ProcessRunId: "run-001",
             ProcessStepId: "step-001");
+    }
+
+    private static AgentDefinition CreateAgent(
+        AgentChatHistoryMode chatHistoryMode)
+    {
+        return new AgentDefinition(
+            Guid.NewGuid(),
+            "Agent",
+            "Role",
+            "Summary",
+            "Instructions",
+            AgentLifecycleStatus.Active,
+            ProviderProfileId: null,
+            Model: "gpt-5.4-mini",
+            AgentWorkloadKind.General,
+            chatHistoryMode,
+            Temperature: 0.2,
+            RequirePerServiceCallChatHistoryPersistence: false,
+            EnableBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            AgentPermissionsPolicy.Default,
+            Capabilities: [],
+            Tags: [],
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+    }
+
+    private static ProviderProfile CreateProvider(
+        ProviderTransportKind transport,
+        bool preferFrameworkManagedHistory)
+    {
+        return new ProviderProfile(
+            Guid.NewGuid(),
+            "OpenAI",
+            ProviderKind.OpenAi,
+            "https://api.openai.com/v1",
+            "OPENAI_API_KEY",
+            "gpt-5.4-mini",
+            transport,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            preferFrameworkManagedHistory,
+            SupportsBackgroundResponses: true,
+            ConfigurationJson: "{}",
+            Notes: string.Empty,
+            HealthStatus: string.Empty,
+            LastCheckedAtUtc: null,
+            SuggestedModels: []);
     }
 
     private sealed class UnknownOutputContract

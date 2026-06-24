@@ -12,6 +12,9 @@
     "workspace-create-directory",
     "workspace-write-file",
     "workspace-append-file",
+    "workspace-inspect-image",
+    "workspace-analyze-image",
+    "workspace-analyze-images",
     "workspace-python-run-file",
     "workspace-pwsh-run-script"
   ],

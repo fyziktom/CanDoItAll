@@ -34,6 +34,13 @@ public sealed class ProcessLaunchApplicationService(
     private const string ManagedArtifactRootVariableName = "ManagedArtifactRoot";
     private const string ProjectIdVariableName = "ProjectId";
     private const string ProjectNodeIdVariableName = "ProjectNodeId";
+    private const string OutputFolderVariableName = "OutputFolder";
+    private const string OutputRootVariableName = "OutputRoot";
+    private const string ProductRootVariableName = "ProductRoot";
+    private const string ExternalTargetRootVariableName = "ExternalTargetRoot";
+    private const string OutputRootAliasVariableName = "OutputRootAlias";
+    private const string ProductRootAliasVariableName = "ProductRootAlias";
+    private const string WorkspaceAliasVariableName = "WorkspaceAlias";
     private const string LegacyProcessRunIdVariableName = "processRunId";
     private const string LegacyManagedArtifactRootVariableName = "managedArtifactRoot";
     private const string ParentManagedArtifactRootVariableName = "ParentManagedArtifactRoot";
@@ -757,7 +764,78 @@ public sealed class ProcessLaunchApplicationService(
             normalized[key.Trim()] = value?.Trim() ?? string.Empty;
         }
 
+        NormalizeProductRootSynonyms(normalized);
         return normalized;
+    }
+
+    private static void NormalizeProductRootSynonyms(IDictionary<string, string> variables)
+    {
+        var productRoot = FirstNonEmpty(
+            TryGetNonEmptyLaunchVariable(variables, ProductRootVariableName),
+            TryGetNonEmptyLaunchVariable(variables, OutputRootVariableName),
+            TryGetNonEmptyLaunchVariable(variables, OutputFolderVariableName));
+        var externalTargetRoot = TryGetNonEmptyLaunchVariable(variables, ExternalTargetRootVariableName);
+        if (string.IsNullOrWhiteSpace(productRoot) &&
+            !IsExternalTargetAlias(externalTargetRoot))
+        {
+            productRoot = externalTargetRoot;
+        }
+
+        if (!string.IsNullOrWhiteSpace(productRoot))
+        {
+            SetCanonicalLaunchVariableIfMissing(variables, ProductRootVariableName, productRoot);
+            SetCanonicalLaunchVariableIfMissing(variables, OutputRootVariableName, productRoot);
+            SetCanonicalLaunchVariableIfMissing(variables, OutputFolderVariableName, productRoot);
+        }
+
+        var externalTargetAlias = FirstNonEmpty(
+            NormalizeExternalTargetAlias(productRoot),
+            NormalizeExternalTargetAlias(externalTargetRoot));
+        if (string.IsNullOrWhiteSpace(externalTargetAlias))
+        {
+            return;
+        }
+
+        SetCanonicalLaunchVariable(variables, ExternalTargetRootVariableName, externalTargetAlias);
+        SetCanonicalLaunchVariableIfMissing(variables, OutputRootAliasVariableName, externalTargetAlias);
+        SetCanonicalLaunchVariableIfMissing(variables, ProductRootAliasVariableName, externalTargetAlias);
+        SetCanonicalLaunchVariableIfMissing(variables, WorkspaceAliasVariableName, externalTargetAlias);
+    }
+
+    private static string NormalizeExternalTargetAlias(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim().Replace('\\', '/').TrimEnd('/', '.', ',', ';', ')', ']');
+        if (normalized.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized;
+        }
+
+        if (normalized.Length < 4 ||
+            normalized[1] != ':' ||
+            normalized[2] != '/' ||
+            !char.IsAsciiLetter(normalized[0]))
+        {
+            return string.Empty;
+        }
+
+        var suffix = normalized[3..].Trim('/');
+        if (string.IsNullOrWhiteSpace(suffix))
+        {
+            return string.Empty;
+        }
+
+        return $"external-target/{char.ToUpperInvariant(normalized[0])}/{suffix}";
+    }
+
+    private static bool IsExternalTargetAlias(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               value.Trim().Replace('\\', '/').StartsWith("external-target/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyDictionary<string, string> EnrichLaunchScopeVariables(
@@ -792,6 +870,37 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         variables[key] = value;
+    }
+
+    private static void SetCanonicalLaunchVariableIfMissing(
+        IDictionary<string, string> variables,
+        string key,
+        string value)
+    {
+        var existingValue = TryGetNonEmptyLaunchVariable(variables, key);
+        if (!string.IsNullOrWhiteSpace(existingValue))
+        {
+            SetCanonicalLaunchVariable(variables, key, existingValue);
+            return;
+        }
+
+        SetCanonicalLaunchVariable(variables, key, value);
+    }
+
+    private static string TryGetNonEmptyLaunchVariable(
+        IEnumerable<KeyValuePair<string, string>> variables,
+        string key)
+    {
+        foreach (var (candidateKey, candidateValue) in variables)
+        {
+            if (string.Equals(candidateKey, key, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(candidateValue))
+            {
+                return candidateValue.Trim();
+            }
+        }
+
+        return string.Empty;
     }
 
     private static IReadOnlyDictionary<string, string> EnrichRunLaunchVariables(

@@ -91,6 +91,8 @@ public sealed record ToolInvocationPolicyContext(
     string ScriptInspectionFailure = "",
     string ScriptSideEffectManifestJson = "")
 {
+    public string SourceId { get; init; } = string.Empty;
+
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
         ApplicationApprovalAvailable;
@@ -163,7 +165,7 @@ public static class AgentToolPolicyBlockGuard
             return false;
         }
 
-        result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments.";
+        result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments. When the denial gives a replacement external-target alias, retry the same structured workspace tool with that alias before finalizing Blocked. If this was only an optional context probe for an evidence-producing step, continue from launch variables or project-structure context and create the managed artifact instead of blocking.";
         return true;
     }
 
@@ -218,10 +220,19 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         ToolContractCatalog.WorkspaceDotNetStop,
         ToolContractCatalog.WorkspacePowerShellRunScript,
         ToolContractCatalog.WorkspacePythonRunFile,
-        ToolContractCatalog.WorkspaceInspectImage
+        ToolContractCatalog.WorkspaceInspectImage,
+        ToolContractCatalog.WorkspaceAnalyzeImage,
+        ToolContractCatalog.WorkspaceAnalyzeImages
     };
     private static readonly HashSet<string> BroadManagedWorkspaceDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
     {
+        ToolContractCatalog.WorkspaceListFiles,
+        ToolContractCatalog.WorkspaceSearch
+    };
+    private static readonly HashSet<string> CurrentStepOwnManagedOutputReadTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolContractCatalog.WorkspaceReadFile,
+        ToolContractCatalog.WorkspaceStatPath,
         ToolContractCatalog.WorkspaceListFiles,
         ToolContractCatalog.WorkspaceSearch
     };
@@ -360,6 +371,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(operationDecision);
         }
 
+        var currentStepOwnOutputReadDecision = EvaluateGovernedCurrentStepOwnOutputRead(context, signature);
+        if (currentStepOwnOutputReadDecision is not null)
+        {
+            return ValueTask.FromResult(currentStepOwnOutputReadDecision);
+        }
+
         var governedBrowserDecision = browserProofPolicy.EvaluateGovernedToolBounds(context, signature);
         if (governedBrowserDecision is not null)
         {
@@ -460,6 +477,33 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private static IReadOnlyList<OperationRequirement> ResolveOperationRequirements(ToolInvocationPolicyContext context)
         => operationRequirementResolver.Resolve(context);
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedCurrentStepOwnOutputRead(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            context.Classification != ToolInvocationClassification.Read ||
+            !CurrentStepOwnManagedOutputReadTools.Contains(context.ToolName) ||
+            string.IsNullOrWhiteSpace(context.ProcessRunId) ||
+            string.IsNullOrWhiteSpace(context.SourceId))
+        {
+            return null;
+        }
+
+        var matchedPath = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+            .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
+            .FirstOrDefault(path => IsCurrentStepPrimaryManagedArtifactPath(context, path));
+        if (string.IsNullOrWhiteSpace(matchedPath))
+        {
+            return null;
+        }
+
+        var primaryRef = BuildCurrentStepPrimaryManagedArtifactPath(context);
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"Governed process step '{context.SourceId}' cannot read, stat, list, or search its own primary managed output '{primaryRef}' before creating it. Use workspace_write_file or workspace_append_file to create that managed artifact, then return submit_process_step_outcome with evidenceRefs containing the same managed ref.");
+    }
 
     private sealed class ToolOperationRequirementResolver
     {
@@ -1590,6 +1634,15 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                     $"This governed run has a grounded external product target. Broad process-run artifact discovery at '{normalizedPath}' is denied because it can pull stale artifacts from unrelated runs; list or search a specific current-run or child-run artifact folder instead.");
             }
 
+            var processRunArtifactBoundaryDecision = EvaluateManagedProcessRunArtifactBoundary(
+                context,
+                signature,
+                normalizedPath);
+            if (processRunArtifactBoundaryDecision is not null)
+            {
+                return processRunArtifactBoundaryDecision;
+            }
+
             if (IsManagedOutputPath(normalizedPath) &&
                 context.Classification is ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation)
             {
@@ -1620,6 +1673,50 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateManagedProcessRunArtifactBoundary(
+        ToolInvocationPolicyContext context,
+        string signature,
+        string normalizedPath)
+    {
+        if (!WorkspaceProcessRunArtifactPath.TryResolveRunId(normalizedPath, out var referencedRunId, out _))
+        {
+            return null;
+        }
+
+        var currentRunId = NormalizeToolArgument(context.ProcessRunId);
+        if (string.Equals(referencedRunId, currentRunId, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (WorkspaceProcessRunArtifactPath.IsMalformedRunId(referencedRunId))
+        {
+            if (context.Classification == ToolInvocationClassification.Read &&
+                WorkspaceProcessRunArtifactPath.IsRecoverableMalformedCurrentRunPath(normalizedPath, currentRunId))
+            {
+                return null;
+            }
+
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed run cannot use malformed managed process-run artifact ref '{normalizedPath}'. Copy the exact current-run artifact ref from the step brief or a successful subprocess launch result; do not abbreviate, ellipsize, or guess process run ids.");
+        }
+
+        if (!Guid.TryParse(currentRunId, out _))
+        {
+            return null;
+        }
+
+        if (ProcessStepAllows(context, OperationExecuteExternalAction))
+        {
+            return null;
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"This governed step cannot read managed artifacts for process run '{referencedRunId}' from '{normalizedPath}'. Use the current-run artifact root '{BuildCurrentRunManagedArtifactRoot(context)}' or a required upstream artifact ref listed in the step brief. Child-run artifacts require an external-action subprocess coordinator step.");
     }
 
     private static ToolInvocationPolicyDecision? EvaluateNativeAbsoluteWorkspaceToolPath(
@@ -1653,7 +1750,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         {
             return ToolInvocationPolicyDecision.Deny(
                 signature,
-                $"This governed run has a grounded external product target. Workspace tools must use grounded external-target aliases, not native absolute paths. Use '{normalizedAlias}' instead of '{rawPath}'.");
+                $"This governed run has a grounded external product target. Workspace tools must use grounded external-target aliases, not native absolute paths. Retry this structured workspace tool with '{normalizedAlias}' instead of '{rawPath}' before treating the access problem as a blocker.");
         }
 
         return ToolInvocationPolicyDecision.Deny(
@@ -1911,6 +2008,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                    string.Equals(operation, OperationMutateProductTarget, StringComparison.OrdinalIgnoreCase)) ?? false);
     }
 
+    private static bool ProcessStepAllows(ToolInvocationPolicyContext context, string operation)
+    {
+        return !string.IsNullOrWhiteSpace(operation) &&
+               (context.ProcessStepAllowedOperations?.Any(candidate =>
+                   string.Equals(candidate, operation, StringComparison.OrdinalIgnoreCase)) ?? false);
+    }
+
     private static bool IsExternalProductArchiveSourceAlias(string normalizedAlias)
     {
         return normalizedAlias
@@ -2117,6 +2221,52 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 normalizedPath.StartsWith(currentRunRoot + "/", StringComparison.OrdinalIgnoreCase));
     }
 
+    private static bool IsCurrentStepPrimaryManagedArtifactPath(
+        ToolInvocationPolicyContext context,
+        string normalizedPath)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            return false;
+        }
+
+        var unscopedPath = NormalizeScopedProcessRunArtifactPath(normalizedPath);
+        return string.Equals(
+            unscopedPath,
+            BuildCurrentStepPrimaryManagedArtifactPath(context),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildCurrentStepPrimaryManagedArtifactPath(ToolInvocationPolicyContext context)
+        => $"{BuildCurrentRunManagedArtifactRoot(context)}/steps/{SanitizeProcessStepPathSegment(context.SourceId)}.md";
+
+    private static string NormalizeScopedProcessRunArtifactPath(string normalizedPath)
+    {
+        if (!normalizedPath.StartsWith("artifacts/scopes/", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalizedPath;
+        }
+
+        var processRunsIndex = normalizedPath.IndexOf("/process-runs/", StringComparison.OrdinalIgnoreCase);
+        return processRunsIndex < 0
+            ? normalizedPath
+            : "artifacts" + normalizedPath[processRunsIndex..];
+    }
+
+    private static string SanitizeProcessStepPathSegment(string value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value)
+            ? "step"
+            : value.Trim();
+        var builder = new StringBuilder(normalized.Length);
+        foreach (var character in normalized)
+        {
+            builder.Append(char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '-');
+        }
+
+        return builder.Length == 0 ? "step" : builder.ToString();
+    }
+
     private static string NormalizeManagedWorkspacePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -2172,6 +2322,8 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateLiveRunProfilesList = "processes_template_live_run_profiles_list";
     public const string ImageGenerationCreate = "image_generation_create";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
+    public const string WorkspaceAnalyzeImage = "workspace_analyze_image";
+    public const string WorkspaceAnalyzeImages = "workspace_analyze_images";
     public const string ProjectStructureProjectsList = "project_structure_projects_list";
     public const string ProjectStructureProjectCreate = "project_structure_project_create";
     public const string ProjectStructureProjectUpdate = "project_structure_project_update";

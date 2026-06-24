@@ -339,6 +339,12 @@ public sealed record ExecutionInvocationPolicy(
     int? MaxStructuredOutputRepairAttempts = null,
     bool RequireStructuredOutputValidation = true);
 
+public sealed record AgentRuntimeInputAttachment(
+    string Name,
+    string ContentType,
+    byte[] Bytes,
+    string SourcePath);
+
 public sealed record AgentRuntimeExecutionOptions(
     AgentStructuredOutputContract? StructuredOutput,
     AgentFinalizerMode FinalizerMode,
@@ -350,7 +356,8 @@ public sealed record AgentRuntimeExecutionOptions(
     string ResponseFormatJsonSchema = "",
     string ResponseFormatSchemaName = "",
     string ResponseFormatSchemaDescription = "",
-    AgentRuntimeContextIntent? ContextIntent = null);
+    AgentRuntimeContextIntent? ContextIntent = null,
+    IReadOnlyList<AgentRuntimeInputAttachment>? InputAttachments = null);
 
 public sealed record AgentRuntimeHandoffExecutionOptions(
     AgentHandoffSettings Settings,
@@ -415,13 +422,18 @@ public sealed record ExecutionApprovalRecord(
     string DecisionSourceId,
     string DecisionNotes);
 
+public sealed record AgentChatRunOptions(
+    bool RuntimeToolProvidersEnabled = true,
+    bool WorkspaceToolsEnabled = true);
+
 public sealed record ExecutionRunRequest(
     Guid AgentId,
     string Prompt,
     Guid? ChatSessionId = null,
     ExecutionInvocationContext? Context = null,
     bool AutoApprovePendingToolCalls = false,
-    AgentStructuredOutputContract? StructuredOutput = null);
+    AgentStructuredOutputContract? StructuredOutput = null,
+    IReadOnlyList<string>? InputAttachmentPaths = null);
 
 public sealed record ExecutionRunQuery(
     Guid? AgentId = null,

@@ -102,7 +102,7 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
             new
             {
                 model = request.Model,
-                messages = ProviderDriverProtocol.BuildChatMessages(request),
+                messages = ProviderDriverProtocol.BuildOpenAiChatMessages(request),
                 stream = false
             },
             options: ProviderDriverJson.Options);

@@ -780,7 +780,12 @@ public sealed record ProjectStructureProcessSubprocessLaunchResult(
     string ChildStepsArtifactRoot,
     string ChildLiveProcessesRoute,
     IReadOnlyList<string> ExpectedChildEvidenceRefs,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings)
+{
+    public string ParentDeferredOutcomeInstruction { get; init; } = string.Empty;
+
+    public string ParentDeferredOutcomeJson { get; init; } = string.Empty;
+}
 
 public enum ProjectStructureImportSourceKind
 {

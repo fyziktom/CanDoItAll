@@ -254,6 +254,18 @@ public sealed class MafAgentRuntimeProviderHealthTests
             return Task.FromResult(new ProviderTestChatResult(model, "chat", 1, 2));
         }
 
+        public Task<ProviderTestChatResult> RunProviderImageChatAsync(
+            ProviderProfile provider,
+            ProviderTestChatRequest request,
+            string model,
+            IReadOnlyList<ProviderChatAttachment> attachments,
+            string modelParameterConfigurationJson = "",
+            CancellationToken cancellationToken = default)
+        {
+            ChatCalls++;
+            return Task.FromResult(new ProviderTestChatResult(model, "image chat", 1, 2));
+        }
+
         public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             ProviderProfile provider,
             ProviderModelMaintenanceEditorRequest request,
@@ -327,7 +339,12 @@ public sealed class MafAgentRuntimeProviderHealthTests
 
         public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query)
         {
-            return ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(30));
+            return ProviderDispatchLimits.Batched(
+                maxBatchSize: expectedConcurrentRequests,
+                maxInFlightBatches: 1,
+                maxQueueDepth: expectedConcurrentRequests,
+                maxQueueDelay: TimeSpan.Zero,
+                requestTimeout: TimeSpan.FromSeconds(30));
         }
 
         public Task<ProviderHealthResult> TestHealthAsync(

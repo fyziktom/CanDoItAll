@@ -250,27 +250,53 @@ public interface IProviderRuntimePool : IAsyncDisposable
         CancellationToken cancellationToken = default);
 }
 
-public sealed class ProviderRuntimeHandleFactory(IAgentProviderFactory providerFactory) : IProviderRuntimeHandleFactory
+public sealed class ProviderRuntimeHandleFactory : IProviderRuntimeHandleFactory
 {
+    private readonly IAgentProviderFactory providerFactory;
+    private readonly IProviderDispatchLaneGate dispatchLaneGate;
+
+    public ProviderRuntimeHandleFactory(IAgentProviderFactory providerFactory)
+        : this(providerFactory, new ProviderDispatchLaneGate(providerFactory))
+    {
+    }
+
+    public ProviderRuntimeHandleFactory(
+        IAgentProviderFactory providerFactory,
+        IProviderDispatchLaneGate dispatchLaneGate)
+    {
+        this.providerFactory = providerFactory ?? throw new ArgumentNullException(nameof(providerFactory));
+        this.dispatchLaneGate = dispatchLaneGate ?? throw new ArgumentNullException(nameof(dispatchLaneGate));
+    }
+
     public IProviderRuntimeHandle Create(ProviderRuntimeDescriptor descriptor)
     {
         ArgumentNullException.ThrowIfNull(descriptor);
 
-        return new ProviderRuntimeHandle(descriptor, providerFactory);
+        return new ProviderRuntimeHandle(descriptor, providerFactory, dispatchLaneGate);
     }
 }
 
 public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
 {
     private readonly ConcurrentDictionary<Guid, IProviderRuntimePendingRequest> pendingRequests = new();
+    private readonly IProviderDispatchLaneGate dispatchLaneGate;
     private readonly CancellationTokenSource disposeCancellation = new();
 
     public ProviderRuntimeHandle(
         ProviderRuntimeDescriptor descriptor,
         IAgentProviderFactory providerFactory)
+        : this(descriptor, providerFactory, new ProviderDispatchLaneGate(providerFactory))
+    {
+    }
+
+    public ProviderRuntimeHandle(
+        ProviderRuntimeDescriptor descriptor,
+        IAgentProviderFactory providerFactory,
+        IProviderDispatchLaneGate dispatchLaneGate)
     {
         Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
         ProviderFactory = providerFactory ?? throw new ArgumentNullException(nameof(providerFactory));
+        this.dispatchLaneGate = dispatchLaneGate ?? throw new ArgumentNullException(nameof(dispatchLaneGate));
         Key = descriptor.Key;
     }
 
@@ -307,21 +333,39 @@ public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
             throw new InvalidOperationException($"A provider runtime request with correlation id '{correlationId}' is already in flight.");
         }
 
-        var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, disposeCancellation.Token);
-        linkedCancellation.Token.Register(
-            static state =>
-            {
-                var tuple = (Tuple<ProviderRuntimeHandle, Guid>)state!;
-                tuple.Item1.CancelPendingRequest(tuple.Item2);
-            },
-            Tuple.Create(this, correlationId));
-
         var context = new ProviderRuntimeDispatchContext<TPayload>(
             Descriptor,
             request.Query,
             request.Payload,
             correlationId);
-        _ = ExecuteDispatchAsync(correlationId, context, sendAsync, linkedCancellation);
+        var timeoutCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Clamp(Descriptor.TimeoutSeconds, 5, 3600)));
+        var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            disposeCancellation.Token,
+            timeoutCancellation.Token);
+        linkedCancellation.Token.Register(
+            static state =>
+            {
+                var registration = (ProviderRuntimeCancellationRegistration)state!;
+                registration.Handle.CompletePendingRequestOnCancellation(
+                    registration.CorrelationId,
+                    registration.Query,
+                    registration.TimeoutCancellationSource,
+                    registration.CallerCancellationToken);
+            },
+            new ProviderRuntimeCancellationRegistration(
+                this,
+                correlationId,
+                context.Query,
+                timeoutCancellation,
+                cancellationToken));
+        _ = ExecuteDispatchAsync(
+            correlationId,
+            context,
+            sendAsync,
+            linkedCancellation,
+            timeoutCancellation,
+            cancellationToken);
 
         return pending.Task;
     }
@@ -348,17 +392,31 @@ public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
         Guid correlationId,
         ProviderRuntimeDispatchContext<TPayload> context,
         Func<ProviderRuntimeDispatchContext<TPayload>, CancellationToken, Task<TResult>> sendAsync,
-        CancellationTokenSource cancellationSource)
+        CancellationTokenSource cancellationSource,
+        CancellationTokenSource timeoutCancellationSource,
+        CancellationToken callerCancellationToken)
     {
+        IAsyncDisposable? dispatchLaneLease = null;
         try
         {
             var cancellationToken = cancellationSource.Token;
+            dispatchLaneLease = await dispatchLaneGate.EnterAsync(
+                context.Query,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
             var result = await sendAsync(context, cancellationToken).ConfigureAwait(false);
             if (pendingRequests.TryRemove(correlationId, out var pending) &&
                 pending is ProviderRuntimePendingRequest<TResult> typedPending)
             {
                 typedPending.TrySetResult(result);
             }
+        }
+        catch (OperationCanceledException exception)
+            when (timeoutCancellationSource.IsCancellationRequested &&
+                  !callerCancellationToken.IsCancellationRequested &&
+                  !disposeCancellation.IsCancellationRequested)
+        {
+            CompletePendingRequestAsTimeout(correlationId, context.Query, exception);
         }
         catch (OperationCanceledException) when (cancellationSource.Token.IsCancellationRequested)
         {
@@ -373,7 +431,13 @@ public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
         }
         finally
         {
+            if (dispatchLaneLease is not null)
+            {
+                await dispatchLaneLease.DisposeAsync().ConfigureAwait(false);
+            }
+
             cancellationSource.Dispose();
+            timeoutCancellationSource.Dispose();
         }
     }
 
@@ -383,6 +447,43 @@ public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
         {
             pending.TrySetCanceled();
         }
+    }
+
+    private void CompletePendingRequestOnCancellation(
+        Guid correlationId,
+        ProviderDispatchQuery query,
+        CancellationTokenSource timeoutCancellationSource,
+        CancellationToken callerCancellationToken)
+    {
+        if (timeoutCancellationSource.IsCancellationRequested &&
+            !callerCancellationToken.IsCancellationRequested &&
+            !disposeCancellation.IsCancellationRequested)
+        {
+            CompletePendingRequestAsTimeout(correlationId, query);
+            return;
+        }
+
+        CancelPendingRequest(correlationId);
+    }
+
+    private void CompletePendingRequestAsTimeout(
+        Guid correlationId,
+        ProviderDispatchQuery query,
+        Exception? innerException = null)
+    {
+        if (pendingRequests.TryRemove(correlationId, out var pending))
+        {
+            pending.TrySetException(CreateTimeoutException(query, innerException));
+        }
+    }
+
+    private TimeoutException CreateTimeoutException(
+        ProviderDispatchQuery query,
+        Exception? innerException)
+    {
+        return new TimeoutException(
+            $"Provider '{Descriptor.ProviderName}' operation '{query.Operation}' for model '{query.Model}' exceeded the configured timeout of {Descriptor.TimeoutSeconds:N0} second(s).",
+            innerException);
     }
 
     private void ThrowIfDisposed()
@@ -421,4 +522,11 @@ public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
             completion.TrySetException(exception);
         }
     }
+
+    private sealed record ProviderRuntimeCancellationRegistration(
+        ProviderRuntimeHandle Handle,
+        Guid CorrelationId,
+        ProviderDispatchQuery Query,
+        CancellationTokenSource TimeoutCancellationSource,
+        CancellationToken CallerCancellationToken);
 }

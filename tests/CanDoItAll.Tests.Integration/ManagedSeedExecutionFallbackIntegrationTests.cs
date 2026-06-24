@@ -95,4 +95,38 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
             Environment.SetEnvironmentVariable("OPENAI_API_KEY", originalOpenAiApiKey);
         }
     }
+
+    [Fact]
+    public async Task Organization_catalog_repair_preserves_managed_seed_agents_on_fallback_provider_with_explicit_override()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var repairService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkOrganizationCatalogRepairService>();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var providers = await workspaceService.ListProvidersAsync();
+        var remoteOllamaProvider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Remote Ollama", StringComparison.Ordinal));
+        var qaAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
+        var editor = await workspaceService.GetAgentEditorAsync(qaAgent.Id);
+        editor.ProviderProfileId = remoteOllamaProvider.Id;
+        editor.Model = remoteOllamaProvider.DefaultModel;
+        editor.EnableBackgroundResponses = false;
+        editor.ConfigurationJson = ManagedSeedProviderFallbacks.EnableProviderRepairFallbackOverride(editor.ConfigurationJson);
+        await workspaceService.SaveAgentAsync(editor);
+
+        await repairService.EnsureCurrentOrganizationCatalogAsync();
+
+        var qaAgentAfterRepair = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
+
+        Assert.Equal(remoteOllamaProvider.Id, qaAgentAfterRepair.ProviderProfileId);
+        Assert.Equal(remoteOllamaProvider.DefaultModel, qaAgentAfterRepair.Model);
+        Assert.False(qaAgentAfterRepair.EnableBackgroundResponses);
+    }
 }

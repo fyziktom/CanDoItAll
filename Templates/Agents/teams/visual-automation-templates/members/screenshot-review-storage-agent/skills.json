@@ -10,6 +10,8 @@
     "workspace-write-file",
     "workspace-append-file",
     "workspace-inspect-image",
+    "workspace-analyze-image",
+    "workspace-analyze-images",
     "workspace-source-rag"
   ],
   "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."

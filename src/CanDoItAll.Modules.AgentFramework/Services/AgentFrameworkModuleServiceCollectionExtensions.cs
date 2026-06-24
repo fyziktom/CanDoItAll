@@ -65,6 +65,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<CanDoItAllAgentWorkspaceFactory>(serviceProvider =>
             (CanDoItAllAgentWorkspaceFactory)serviceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>());
         services.AddScoped<IAgentFrameworkWorkspaceService, CurrentProfileAgentFrameworkWorkspaceService>();
+        services.AddScoped<IAgentChatAttachmentStagingService, AgentChatAttachmentStagingService>();
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());

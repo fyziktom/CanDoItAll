@@ -158,7 +158,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid agentId,
         Guid? chatSessionId,
         string prompt,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? attachmentPaths = null,
+        AgentChatRunOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(prompt))
         {
@@ -185,6 +187,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 SandboxWorkspaceExecutionState.Empty,
                 splitSession,
                 prompt,
+                attachmentPaths,
+                options,
                 cancellationToken);
         }
 
@@ -204,6 +208,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             fallbackExecutionState,
             fallbackSession,
             prompt,
+            attachmentPaths,
+            options,
             cancellationToken);
     }
 
@@ -214,6 +220,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         SandboxWorkspaceExecutionState executionState,
         ChatSessionRecord? session,
         string prompt,
+        IReadOnlyList<string>? attachmentPaths,
+        AgentChatRunOptions? options,
         CancellationToken cancellationToken)
     {
         var result = await ExecuteRunCoreAsync(
@@ -233,8 +241,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     CausationId: string.Empty,
                     RequestedBy: "sandbox-chat",
                     RequestedByKind: "interactive",
-                    MetadataJson: "{}"),
-                AutoApprovePendingToolCalls: false),
+                    MetadataJson: BuildChatMetadataJson(options)),
+                AutoApprovePendingToolCalls: false,
+                InputAttachmentPaths: attachmentPaths),
             persistTranscript: true,
             cancellationToken);
 
@@ -245,6 +254,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             ExecutionRunId = result.ExecutionRunId
         };
+    }
+
+    private static string BuildChatMetadataJson(AgentChatRunOptions? options)
+    {
+        var metadataJson = "{}";
+        if (options?.RuntimeToolProvidersEnabled == false)
+        {
+            metadataJson = ExecutionInvocationMetadata.ApplyRuntimeToolProvidersEnabled(metadataJson, enabled: false);
+        }
+
+        if (options?.WorkspaceToolsEnabled == false)
+        {
+            metadataJson = ExecutionInvocationMetadata.ApplyWorkspaceToolsEnabled(metadataJson, enabled: false);
+        }
+
+        return metadataJson;
     }
 
     public async Task<AgentChatRunResult> RespondToPendingApprovalsAsync(

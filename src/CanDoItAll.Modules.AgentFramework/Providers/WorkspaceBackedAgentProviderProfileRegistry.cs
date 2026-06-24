@@ -151,8 +151,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         entity.SupportsStreaming = model.SupportsStreaming;
         entity.SupportsToolCalling = model.SupportsTools;
         entity.SupportsStructuredOutput = featureMatrix.SupportsStructuredOutput;
-        entity.SupportsVision = !string.IsNullOrWhiteSpace(model.ConfigurationJson) &&
-                                model.ConfigurationJson.Contains("vision", StringComparison.OrdinalIgnoreCase);
+        entity.SupportsVision = featureMatrix.SupportsVision;
         var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
             capabilityProfile.Kind,
             entity.DefaultModel,
@@ -435,12 +434,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             true,
             true,
             false,
-            System.Text.Json.JsonSerializer.Serialize(new
-            {
-                history = "framework-managed",
-                fallback = "runtime-remote-ollama",
-                timeoutSeconds = ManagedSeedProviderFallbacks.FallbackTimeoutSeconds
-            }),
+            ManagedSeedProviderFallbacks.CreateFallbackConfigurationJson("runtime-remote-ollama"),
             "Remote Ollama fallback provider kept available for seeded agents.",
             "Not checked",
             null,

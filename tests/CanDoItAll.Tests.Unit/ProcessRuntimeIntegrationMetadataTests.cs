@@ -18,6 +18,8 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
 
         var metadataJson = BuildProcessExecutionMetadata(assignment);
         var run = CreateTrustedProcessRun(metadataJson);
+        using var metadataDocument = System.Text.Json.JsonDocument.Parse(metadataJson);
+        var metadataRoot = metadataDocument.RootElement;
 
         var scope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
         var launchAgent = ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run);
@@ -37,6 +39,13 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Contains(ProcessOperationContractNames.ReadProjectStructure, allowedOperations);
         Assert.Contains(ProcessOperationContractNames.ExecuteExternalAction, allowedOperations);
         Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+        Assert.Equal(
+            AgentFinalizerPolicies.RequiredFinalizerModeValue,
+            metadataRoot.GetProperty(AgentFinalizerPolicies.FinalizerModeMetadataKey).GetString());
+        Assert.Equal(
+            ExecutionInvocationMetadata.DefaultGovernedRepairAttempts,
+            metadataRoot.GetProperty(ExecutionInvocationMetadata.MaxStructuredOutputRepairAttemptsMetadataKey).GetInt32());
+        Assert.True(metadataRoot.GetProperty(ExecutionInvocationMetadata.RequireStructuredOutputValidationMetadataKey).GetBoolean());
 
         using (WorkspaceExecutionAuditContext.BeginScope(run))
         {
@@ -45,6 +54,43 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             Assert.NotNull(auditScope.ContextWorkspaceScope);
             Assert.Equal(WorkspaceScopeKind.Project, auditScope.ContextWorkspaceScope!.Kind);
             Assert.Equal(projectId.ToString("D"), auditScope.ContextWorkspaceScope.Key);
+        }
+    }
+
+    [Fact]
+    public void Process_execution_metadata_maps_project_structure_process_node_context()
+    {
+        var projectId = Guid.Parse("3324868f-66e2-478a-bb8f-14f32a5db1e9");
+        var parentRunNodeId = "process-run:154fb190-7fad-491a-93e9-52d6bed977f5";
+        var childRunNodeId = "process-run:107fffa9-d72e-4f4e-b838-5b02ad24c5a7";
+        var assignment = CreateAssignment(
+            projectId,
+            launchVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProjectId"] = projectId.ToString("D"),
+                ["CurrentProcessRunNodeId"] = childRunNodeId,
+                ["ProcessRunNodeId"] = parentRunNodeId,
+                ["ParentProcessRunNodeId"] = parentRunNodeId,
+                ["TargetProcessRunNodeId"] = parentRunNodeId
+            });
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        var context = ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run);
+
+        Assert.NotNull(context);
+        Assert.Equal(childRunNodeId, context!.CurrentProcessRunNodeId);
+        Assert.Equal(parentRunNodeId, context.ProcessRunNodeId);
+        Assert.Equal(parentRunNodeId, context.ParentProcessRunNodeId);
+        Assert.Equal(parentRunNodeId, context.TargetProcessRunNodeId);
+        Assert.Equal(parentRunNodeId, context.PreferredWritebackNodeId);
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            var auditScope = Assert.IsType<WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState>(
+                WorkspaceExecutionAuditContext.Current);
+            Assert.Equal(parentRunNodeId, auditScope.ProjectStructureProcessNodeContext?.PreferredWritebackNodeId);
         }
     }
 
@@ -155,7 +201,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
 
-        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null]));
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
 
         Assert.NotNull(options.ContextIntent);
         Assert.True(options.ContextIntent!.IsGovernedProcessStep);
@@ -165,8 +211,29 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Equal(assignment.StepInstanceId.Value.ToString("D"), options.ContextIntent.ProcessStepId);
         Assert.Equal(ProcessOperationContractNames.ExternalProductTargetReadOnly, options.ContextIntent.TargetScope);
         Assert.False(options.ContextIntent.AllowsProductMutation);
+        Assert.True(options.ContextIntent.RuntimeToolProvidersEnabled);
+        Assert.True(options.ContextIntent.WorkspaceToolsEnabled);
         Assert.Contains(ProcessOperationContractNames.ReadProcessContext, options.ContextIntent.AllowedOperations);
         Assert.Contains(ProcessOperationContractNames.RunValidation, options.ContextIntent.AllowedOperations);
+    }
+
+    [Fact]
+    public void Agent_runtime_options_preserve_disabled_runtime_tool_provider_metadata()
+    {
+        var metadataJson = ExecutionInvocationMetadata.ApplyWorkspaceToolsEnabled(
+            ExecutionInvocationMetadata.ApplyRuntimeToolProvidersEnabled("{}", enabled: false),
+            enabled: false);
+        var run = CreateTrustedProcessRun(metadataJson);
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "CreateRuntimeExecutionOptions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
+
+        Assert.NotNull(options.ContextIntent);
+        Assert.False(options.ContextIntent!.RuntimeToolProvidersEnabled);
+        Assert.False(options.ContextIntent.WorkspaceToolsEnabled);
     }
 
     [Fact]
@@ -257,6 +324,30 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
 
         Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
         Assert.DoesNotContain("external-target/C/repositories/CanDoItAll", writableAliases);
+    }
+
+    [Fact]
+    public void Process_execution_metadata_trusts_output_folder_as_product_target_alias()
+    {
+        var assignment = CreateAssignment(
+            Guid.NewGuid(),
+            [
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.MutateProductTarget
+            ],
+            ProcessOperationContractNames.ExternalProductTargetMutable,
+            launchVariables: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProjectId"] = Guid.NewGuid().ToString("D"),
+                ["OutputFolder"] = @"C:\programovani\dotnet\output"
+            });
+
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
+
+        Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
     }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(

@@ -255,13 +255,31 @@
     <div class="mt-4 border-t border-slate-200 pt-4">
         <FormField>
             <Stack Orientation="Orientation.Horizontal" Gap="0.5rem">
-                <TextArea @key="ComposerKey"
-                          Value="@DraftPrompt"
-                          ValueChanged="HandleDraftChanged"
-                          Rows="4"
-                          Placeholder="Ask for a plan, a diagnosis, or a concrete next step."
-                          data-testid="chat-prompt-input" />
+                <ChatPromptTextArea @key="ComposerKey"
+                                    Value="@DraftPrompt"
+                                    ValueChanged="HandleDraftChanged"
+                                    Rows="4"
+                                    Placeholder="Ask for a plan, a diagnosis, or a concrete next step."
+                                    data-testid="chat-prompt-input" />
                 <Stack Orientation="Orientation.Vertical" Gap="0.5rem">
+                    @if (AttachmentFilesSelected.HasDelegate)
+                    {
+                        <label for="@ResolveAttachmentInputId()"
+                               class="@ResolveAttachmentUploadButtonClass()"
+                               aria-label="Attach image file"
+                               aria-disabled="@IsBusy"
+                               title="Attach image file"
+                               data-testid="chat-image-attachment-button">
+                            <Icon Name="image" />
+                        </label>
+                        <InputFile id="@attachmentInputId"
+                                   class="chat-attachment-file-input"
+                                   OnChange="HandleAttachmentFilesSelectedAsync"
+                                   accept="image/png,image/jpeg,image/gif,image/webp"
+                                   multiple
+                                   disabled="@IsBusy"
+                                   data-testid="chat-image-attachment-input" />
+                    }
                     <Button Icon="add"
                             ButtonStyle="ButtonStyle.Light"
                             Size="ButtonSize.Small"
@@ -444,6 +462,9 @@
     public EventCallback AttachmentRequested { get; set; }
 
     [Parameter]
+    public EventCallback<InputFileChangeEventArgs> AttachmentFilesSelected { get; set; }
+
+    [Parameter]
     public EventCallback<string> SessionTitleChanged { get; set; }
 
     [Parameter]
@@ -460,6 +481,7 @@
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
     private readonly EditableThreadTitleModel titleEditor = new();
+    private readonly string attachmentInputId = $"chat-attachment-file-input-{Guid.NewGuid():N}";
     private Guid? titleEditorSessionId;
     private string titleEditorSessionTitle = string.Empty;
 
@@ -486,6 +508,17 @@
 
     private Task HandleDraftChanged(string? value)
         => DraftPromptChanged.InvokeAsync(value ?? string.Empty);
+
+    private Task HandleAttachmentFilesSelectedAsync(InputFileChangeEventArgs args)
+        => AttachmentFilesSelected.InvokeAsync(args);
+
+    private string ResolveAttachmentInputId()
+        => IsBusy ? string.Empty : attachmentInputId;
+
+    private string ResolveAttachmentUploadButtonClass()
+        => IsBusy
+            ? "chat-attachment-upload-button chat-attachment-upload-button--disabled"
+            : "chat-attachment-upload-button";
 
     private Task ToggleVoiceModeAsync()
         => VoiceModeChanged.InvokeAsync(!IsVoiceModeEnabled);

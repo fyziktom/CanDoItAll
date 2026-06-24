@@ -11,12 +11,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IProviderProfileRegistry providerRegistry,
     IAgentProviderCredentialResolver providerCredentialResolver,
     IAgentExecutionCancellationRegistry? executionCancellationRegistry = null,
-    IAgentOutputRepairService? outputRepairService = null)
+    IAgentOutputRepairService? outputRepairService = null,
+    IWorkspacePathResolutionService? workspacePathResolutionService = null)
 {
     private readonly IAgentOutputRepairService outputRepairService =
         outputRepairService ?? JsonObjectExtractionAgentOutputRepairService.Instance;
     private readonly IAgentExecutionCancellationRegistry executionCancellationRegistry =
         executionCancellationRegistry ?? new AgentExecutionCancellationRegistry();
+    private readonly IWorkspacePathResolutionService? workspacePathResolutionService = workspacePathResolutionService;
+    private static readonly ProviderProfileService ProviderFeatureService = new();
 
     public event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
 }

@@ -21,7 +21,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var catalogOnly = await store.LoadCatalogAsync(cancellationToken);
             var agentOnly = EnsureAgentExists(catalogOnly, request.AgentId);
-            var providerOnly = await ResolveProviderForAgentAsync(agentOnly, catalogOnly, cancellationToken);
+            var providerOnly = await ResolveProviderForExecutionRequestAsync(
+                agentOnly,
+                catalogOnly,
+                request,
+                await ResolveProviderForAgentAsync(agentOnly, catalogOnly, cancellationToken).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
 
             if (request.ChatSessionId.HasValue &&
                 store is ISandboxWorkspaceChatQueryStore chatQueryStore)
@@ -69,7 +74,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var catalog = document.ToCatalog();
         var executionState = document.ToExecutionState();
         var agent = EnsureAgentExists(catalog, request.AgentId);
-        var provider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
+        var provider = await ResolveProviderForExecutionRequestAsync(
+            agent,
+            catalog,
+            request,
+            await ResolveProviderForAgentAsync(agent, catalog, cancellationToken).ConfigureAwait(false),
+            cancellationToken).ConfigureAwait(false);
         var session = request.ChatSessionId.HasValue
             ? EnsureAgentOwnsSession(executionState, request.AgentId, request.ChatSessionId.Value)
             : null;
@@ -337,14 +347,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         catch (Exception exception)
         {
-            var wasCancelled = WasRequestedThroughExecutionRegistry(exception, executionCancellation, cancellationToken);
+            var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
+            var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
             var failureDisplay = wasCancelled
                 ? null
                 : AgentProviderFailureDisplayFormatter.Format(provider, exception);
-            var resultSummary = wasCancelled
-                ? "Execution run cancelled because the owning process run was cancelled."
-                : failureDisplay!.Message;
+            var resultSummary = cancellationKind switch
+            {
+                ExecutionCancellationKind.ProcessRegistry => "Execution run cancelled because the owning process run was cancelled.",
+                ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
+                _ => failureDisplay!.Message
+            };
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -376,6 +390,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ResultSummary = CreateExecutionSummary(resultSummary),
                 PendingApprovals = []
             };
+            var terminalPersistenceToken = CancellationToken.None;
 
             if (session is not null)
             {
@@ -389,7 +404,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Session: updatedSession,
                             Metric: failureMetric,
                             UsageObservations: failureUsageObservations),
-                        cancellationToken);
+                        terminalPersistenceToken);
             }
             else
             {
@@ -398,7 +413,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Run: failedRun,
                         Metric: failureMetric,
                         UsageObservations: failureUsageObservations),
-                    cancellationToken);
+                    terminalPersistenceToken);
             }
             AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
 
@@ -411,11 +426,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 wasCancelled
                     ? resultSummary
                     : $"Execution run approval continuation failed for {provider.Name}: {failureDisplay!.Message}",
-                cancellationToken);
+                terminalPersistenceToken);
 
-            if (wasCancelled)
+            if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
+            }
+
+            if (cancellationKind == ExecutionCancellationKind.CallerRequest)
+            {
+                throw new OperationCanceledException(resultSummary, exception, cancellationToken);
             }
 
             throw session is not null
@@ -668,9 +688,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         CancellationToken cancellationToken)
     {
         var prompt = request.Prompt.Trim();
+        var runtimeAgent = CreateProviderCompatibleRuntimeAgent(agent, provider);
         var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
         var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
         var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
+        var inputAttachments = await ResolveRuntimeInputAttachmentsAsync(request.InputAttachmentPaths, cancellationToken);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run", run);
 
         PrimeProviderCredentialEnvironment(provider);
@@ -697,7 +719,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             {
                 runtimeResponse = await runtime.RunAsync(
-                    agent,
+                    runtimeAgent,
                     provider,
                     runtimeSession,
                     attachedCapabilities,
@@ -708,7 +730,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeCancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
-                    executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput, handoffOptions));
+                    executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput, handoffOptions, inputAttachments));
                 lastRuntimeResponse = runtimeResponse;
 
                 var totalInputTokens = runtimeResponse.InputTokens;
@@ -720,7 +742,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     var continuation = await ContinueAutoApprovedRunAsync(
                         run,
-                        agent,
+                        runtimeAgent,
                         provider,
                         runtimeSession,
                         run.ChatSessionId,
@@ -849,14 +871,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         catch (Exception exception)
         {
-            var wasCancelled = WasRequestedThroughExecutionRegistry(exception, executionCancellation, cancellationToken);
+            var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
+            var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
             var failureDisplay = wasCancelled
                 ? null
                 : AgentProviderFailureDisplayFormatter.Format(provider, exception);
-            var resultSummary = wasCancelled
-                ? "Execution run cancelled because the owning process run was cancelled."
-                : failureDisplay!.Message;
+            var resultSummary = cancellationKind switch
+            {
+                ExecutionCancellationKind.ProcessRegistry => "Execution run cancelled because the owning process run was cancelled.",
+                ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
+                _ => failureDisplay!.Message
+            };
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -887,6 +913,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ResultSummary = CreateExecutionSummary(resultSummary),
                 PendingApprovals = []
             };
+            var terminalPersistenceToken = CancellationToken.None;
 
             if (session is not null)
             {
@@ -900,7 +927,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Session: updatedSession,
                             Metric: failureMetric,
                             UsageObservations: failureUsageObservations),
-                        cancellationToken);
+                        terminalPersistenceToken);
             }
             else
             {
@@ -909,7 +936,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         Run: failedRun,
                         Metric: failureMetric,
                         UsageObservations: failureUsageObservations),
-                    cancellationToken);
+                    terminalPersistenceToken);
             }
             AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
 
@@ -922,11 +949,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 wasCancelled
                     ? resultSummary
                     : $"Execution run failed for {provider.Name}: {failureDisplay!.Message}",
-                cancellationToken);
+                terminalPersistenceToken);
 
-            if (wasCancelled)
+            if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
+            }
+
+            if (cancellationKind == ExecutionCancellationKind.CallerRequest)
+            {
+                throw new OperationCanceledException(resultSummary, exception, cancellationToken);
             }
 
             throw session is not null
@@ -983,14 +1015,32 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             : metric;
     }
 
-    private static bool WasRequestedThroughExecutionRegistry(
+    private enum ExecutionCancellationKind
+    {
+        None,
+        ProcessRegistry,
+        CallerRequest
+    }
+
+    private static ExecutionCancellationKind ClassifyExecutionCancellation(
         Exception exception,
         IAgentExecutionCancellationRegistration? executionCancellation,
         CancellationToken callerCancellationToken)
     {
-        return exception is OperationCanceledException &&
-               executionCancellation?.IsCancellationRequested == true &&
-               !callerCancellationToken.IsCancellationRequested;
+        if (exception is not OperationCanceledException)
+        {
+            return ExecutionCancellationKind.None;
+        }
+
+        if (executionCancellation?.IsCancellationRequested == true &&
+            !callerCancellationToken.IsCancellationRequested)
+        {
+            return ExecutionCancellationKind.ProcessRegistry;
+        }
+
+        return callerCancellationToken.IsCancellationRequested
+            ? ExecutionCancellationKind.CallerRequest
+            : ExecutionCancellationKind.None;
     }
 
     private static ExecutionRunRecord UpdateRunFromResponse(
@@ -1237,7 +1287,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private static AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
         ExecutionRunRecord run,
         AgentStructuredOutputContract? structuredOutput,
-        AgentRuntimeHandoffExecutionOptions? handoffOptions = null)
+        AgentRuntimeHandoffExecutionOptions? handoffOptions = null,
+        IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
@@ -1248,7 +1299,153 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run),
             Handoff: handoffOptions,
             ContextWorkspaceScope: ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
-            ContextIntent: CreateRuntimeContextIntent(run));
+            ContextIntent: CreateRuntimeContextIntent(run),
+            InputAttachments: inputAttachments);
+    }
+
+    private async Task<ProviderProfile> ResolveProviderForExecutionRequestAsync(
+        AgentDefinition agent,
+        SandboxWorkspaceCatalog? catalog,
+        ExecutionRunRequest request,
+        ProviderProfile configuredProvider,
+        CancellationToken cancellationToken)
+    {
+        if (!ShouldOverrideProviderForGovernedProcessStep(request, configuredProvider))
+        {
+            return configuredProvider;
+        }
+
+        var candidates = await ResolveGovernedProcessProviderOverrideCandidatesAsync(catalog, cancellationToken).ConfigureAwait(false);
+        var selected = candidates.FirstOrDefault();
+        return selected is null ? configuredProvider : selected;
+    }
+
+    private bool ShouldOverrideProviderForGovernedProcessStep(
+        ExecutionRunRequest request,
+        ProviderProfile configuredProvider)
+    {
+        if (!string.Equals(request.Context?.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            request.StructuredOutput?.OutputType != typeof(ProcessStepOutcomeResult))
+        {
+            return false;
+        }
+
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(configuredProvider);
+        return !featureMatrix.SupportsStructuredOutput;
+    }
+
+    private async Task<IReadOnlyList<ProviderProfile>> ResolveGovernedProcessProviderOverrideCandidatesAsync(
+        SandboxWorkspaceCatalog? catalog,
+        CancellationToken cancellationToken)
+    {
+        var providers = catalog?.Providers ?? await providerRegistry.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        return providers
+            .Where(provider => provider.IsEnabled)
+            .Where(provider => provider.Purpose == ProviderProfilePurpose.Chat)
+            .Where(provider => !IsScenarioHarnessProvider(provider))
+            .Select(provider => new
+            {
+                Provider = provider,
+                FeatureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider)
+            })
+            .Where(item => item.FeatureMatrix.SupportsStructuredOutput)
+            .OrderByDescending(item => string.Equals(item.Provider.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(item => item.Provider.Transport == ProviderTransportKind.Responses)
+            .ThenByDescending(item => item.Provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
+            .ThenBy(item => item.Provider.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(item => item.Provider)
+            .ToArray();
+    }
+
+    private static bool IsScenarioHarnessProvider(ProviderProfile provider)
+    {
+        return provider.Tags.Any(tag => tag.Contains("scenario", StringComparison.OrdinalIgnoreCase)) ||
+               provider.Name.Contains("Scenario Harness", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static AgentDefinition CreateProviderCompatibleRuntimeAgent(
+        AgentDefinition agent,
+        ProviderProfile provider)
+    {
+        if (agent.ProviderProfileId == provider.Id)
+        {
+            return agent;
+        }
+
+        return agent with
+        {
+            ProviderProfileId = provider.Id,
+            Model = provider.DefaultModel
+        };
+    }
+
+    private async Task<IReadOnlyList<AgentRuntimeInputAttachment>> ResolveRuntimeInputAttachmentsAsync(
+        IReadOnlyList<string>? attachmentPaths,
+        CancellationToken cancellationToken)
+    {
+        var requestedPaths = attachmentPaths?
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? [];
+        if (requestedPaths.Count == 0)
+        {
+            return [];
+        }
+
+        if (workspacePathResolutionService is null)
+        {
+            throw new InvalidOperationException("Workspace attachment resolution is not available for this agent workspace.");
+        }
+
+        const int maxImageAttachmentCount = 8;
+        const long maxImageAttachmentBytes = 10 * 1024 * 1024;
+        var attachments = new List<AgentRuntimeInputAttachment>();
+        foreach (var requestedPath in requestedPaths)
+        {
+            if (!TryResolveImageContentType(requestedPath, out var contentType))
+            {
+                continue;
+            }
+
+            if (attachments.Count >= maxImageAttachmentCount)
+            {
+                throw new InvalidOperationException(
+                    $"A single agent request can include at most {maxImageAttachmentCount:N0} image attachment(s).");
+            }
+
+            var resolved = workspacePathResolutionService.ResolveFilePath(requestedPath, allowMissing: false);
+            var info = new FileInfo(resolved.FullPath);
+            if (info.Length > maxImageAttachmentBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Image attachment '{resolved.RelativePath}' is {info.Length:N0} bytes, which exceeds the {maxImageAttachmentBytes:N0}-byte per-image limit.");
+            }
+
+            attachments.Add(new AgentRuntimeInputAttachment(
+                Name: Path.GetFileName(resolved.FullPath),
+                ContentType: contentType,
+                Bytes: await File.ReadAllBytesAsync(resolved.FullPath, cancellationToken).ConfigureAwait(false),
+                SourcePath: resolved.RelativePath));
+        }
+
+        return attachments;
+    }
+
+    private static bool TryResolveImageContentType(
+        string path,
+        out string contentType)
+    {
+        contentType = Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => string.Empty
+        };
+        return !string.IsNullOrWhiteSpace(contentType);
     }
 
     private static AgentRuntimeContextIntent CreateRuntimeContextIntent(ExecutionRunRecord run)
@@ -1272,7 +1469,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AllowsProductMutation: ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run),
             WorkspaceToolProfile: ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run),
             WorkspaceScope: workspaceScope,
-            AllowedOperations: ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run));
+            AllowedOperations: ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run),
+            RuntimeToolProvidersEnabled: ExecutionInvocationMetadata.ResolveRuntimeToolProvidersEnabled(run),
+            WorkspaceToolsEnabled: ExecutionInvocationMetadata.ResolveWorkspaceToolsEnabled(run));
     }
 
     private async Task AppendProcessCooperationLogAsync(
@@ -1343,8 +1542,31 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return response;
         }
 
+        var effectiveFinalizerInvocations = finalizerMode == AgentFinalizerMode.Required
+            ? AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, response.FinalizerInvocations, registry)
+            : response.FinalizerInvocations;
+        activity?.SetTag("agentframework.effective_finalizer_invocation_count", effectiveFinalizerInvocations.Count);
+        var effectiveResponse = ReferenceEquals(effectiveFinalizerInvocations, response.FinalizerInvocations)
+            ? response
+            : response with
+            {
+                FinalizerInvocations = effectiveFinalizerInvocations
+            };
+        if (finalizerMode == AgentFinalizerMode.Required &&
+            effectiveFinalizerInvocations.Count != response.FinalizerInvocations.Count)
+        {
+            await AppendExecutionLogAsync(
+                run.Id,
+                run.AgentId,
+                run.ChatSessionId,
+                ExecutionState.Persisting,
+                "Finalizer validation",
+                $"Required finalizer tool '{policy.ToolName}' was observed {response.FinalizerInvocations.Count} times; using the last valid invocation for completion validation.",
+                cancellationToken);
+        }
+
         var validator = new DefaultAgentFinalizerValidator(registry);
-        var result = validator.Validate(policy, response.FinalizerInvocations);
+        var result = validator.Validate(policy, effectiveFinalizerInvocations);
         activity?.SetTag("agentframework.finalizer_matching_invocation_count", result.MatchingInvocationCount);
         activity?.SetTag("agentframework.finalizer_raw_hash", result.RawOutputHash);
         activity?.SetTag("agentframework.finalizer_status", result.Succeeded ? "valid" : "invalid");
@@ -1376,7 +1598,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             run,
             finalizerMode,
             policy,
-            response,
+            effectiveResponse,
             cancellationToken);
 
         var finalizerOutputJson = SerializeMachineOutput(result.Output, policy.OutputType);
@@ -1391,13 +1613,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 $"Required finalizer tool '{policy.ToolName}' produced a valid '{structuredOutput.ContractKey}' result. Raw output hash: {result.RawOutputHash}.",
                 cancellationToken);
 
-            return response with
+            return effectiveResponse with
             {
                 ResponseText = finalizerOutputJson
             };
         }
 
-        var structuredValidation = structuredOutputValidator.DeserializeAndValidate(response.ResponseText);
+        var structuredValidation = structuredOutputValidator.DeserializeAndValidate(effectiveResponse.ResponseText);
         var finalizerMatchesStructuredOutput = structuredValidation.Succeeded &&
                                                string.Equals(
                                                    SerializeMachineOutput(structuredValidation.Output, structuredValidation.OutputType),

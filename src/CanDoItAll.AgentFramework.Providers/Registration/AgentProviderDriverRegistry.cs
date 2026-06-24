@@ -149,7 +149,11 @@ public sealed class AgentProviderDriverRegistry : IAgentProviderFactory
         return capability switch
         {
             AgentProviderCapabilityKind.ModelCatalog => new HashSet<AgentProviderOperationKind> { AgentProviderOperationKind.ListModels },
-            AgentProviderCapabilityKind.ChatCompletion => new HashSet<AgentProviderOperationKind> { AgentProviderOperationKind.CompleteChat },
+            AgentProviderCapabilityKind.ChatCompletion => new HashSet<AgentProviderOperationKind>
+            {
+                AgentProviderOperationKind.CompleteChat,
+                AgentProviderOperationKind.AnalyzeImage
+            },
             AgentProviderCapabilityKind.ImageGeneration => new HashSet<AgentProviderOperationKind>
             {
                 AgentProviderOperationKind.GenerateImage,

@@ -58,6 +58,17 @@ internal sealed class StandardProcessRuntimeStrategyFactoryResolver(
     }
 }
 
+internal static class ProcessProviderReadinessRules
+{
+    public static bool CanExecuteGovernedProcessStep(
+        ProviderProfile provider,
+        IProviderProfileService providerProfileService)
+    {
+        var featureMatrix = providerProfileService.ResolveFeatureMatrix(provider);
+        return featureMatrix.SupportsStructuredOutput || featureMatrix.SupportsFunctionTools;
+    }
+}
+
 internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     ProcessMockAgentCatalogService processMockAgentCatalogService,
@@ -160,7 +171,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             findings.Add(new ProcessLaunchReadinessFinding(
                 ProcessLaunchReadinessSeverity.Info,
                 "process.launch.readiness_ok",
-                "All executable steps have active agent bindings with enabled structured-output-capable providers."));
+                "All executable steps have active agent bindings with enabled governed-output-capable providers."));
         }
 
         return new ProcessLaunchExecutorResolution(bindings, findings);
@@ -232,7 +243,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             ? string.Empty
             : $" Shared role aliases checked: {string.Join(", ", aliases)}.";
 
-        return $"No active agent with an enabled structured-output-capable provider is available for role '{roleQuery.BindingRoleKey}' on step '{stepKey}'.{aliasSummary}";
+        return $"No active agent with an enabled governed-output-capable provider is available for role '{roleQuery.BindingRoleKey}' on step '{stepKey}'.{aliasSummary}";
     }
 
     private static string ResolveAssignmentReason(
@@ -275,7 +286,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             if (agent.ProviderProfileId is not { } providerId ||
                 !providerById.TryGetValue(providerId, out var provider) ||
                 !provider.IsEnabled ||
-                !providerProfileService.ResolveFeatureMatrix(provider).SupportsStructuredOutput)
+                !ProcessProviderReadinessRules.CanExecuteGovernedProcessStep(provider, providerProfileService))
             {
                 continue;
             }
@@ -344,12 +355,12 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         if (agent.ProviderProfileId is not { } providerId ||
             !providerById.TryGetValue(providerId, out var provider) ||
             !provider.IsEnabled ||
-            !providerProfileService.ResolveFeatureMatrix(provider).SupportsStructuredOutput)
+            !ProcessProviderReadinessRules.CanExecuteGovernedProcessStep(provider, providerProfileService))
         {
             findings.Add(new ProcessLaunchReadinessFinding(
                 ProcessLaunchReadinessSeverity.Error,
                 "process.launch.override_provider_unavailable",
-                $"Step '{stepKey}' role '{roleKey}' selected agent '{agent.Name}' without an enabled structured-output-capable provider.",
+                $"Step '{stepKey}' role '{roleKey}' selected agent '{agent.Name}' without an enabled governed-output-capable provider.",
                 stepKey,
                 roleKey));
             return null;
@@ -503,7 +514,7 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             if (agent.ProviderProfileId is not { } providerId ||
                 !providerById.TryGetValue(providerId, out var provider) ||
                 !provider.IsEnabled ||
-                !providerProfileService.ResolveFeatureMatrix(provider).SupportsStructuredOutput)
+                !ProcessProviderReadinessRules.CanExecuteGovernedProcessStep(provider, providerProfileService))
             {
                 continue;
             }
@@ -595,12 +606,15 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
 
         var genericBrief = genericBuilder.Build(request);
         var subprocessGuidance = BuildSubprocessGuidance(request.Step);
+        var dependencyArtifactGuidance = BuildDependencyArtifactGuidance(request);
+        var ownOutputBootstrapGuidance = BuildOwnOutputBootstrapGuidance(request);
+        var projectStructureContextGuidance = BuildProjectStructureContextGuidance(request);
 
         return $"""
         {genericBrief}
 
         AgentFramework execution contract:
-        Return only JSON matching the process_step_outcome_result structured output contract.
+        This is a tool-backed process step, not a chat-only response. First use the available workspace, project-structure, subprocess, runtime, validation, or browser tools needed by the step contract. Only after the required evidence exists, submit the final process_step_outcome_result through the required finalizer tool. If the runtime explicitly asks for a JSON fallback, return one JSON object matching that same contract.
         Use Status Completed when the step is done, Blocked when required input or tools are missing, Failed for unrecoverable execution failure, or WaitingApproval when a human approval is required.
         If branch outcomes are listed, set BranchOutcomeKey to exactly one listed outcome key.
 
@@ -611,8 +625,21 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         Project id: {request.LaunchRequest.ProjectId?.ToString("D") ?? "not scoped"}
         Project node id: {request.LaunchRequest.ProjectNodeId ?? "not scoped"}
 
+        AgentFramework project-structure context source:
+        {projectStructureContextGuidance}
+
         AgentFramework evidence write rule:
         Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths from this brief in evidenceRefs; if a workspace tool echoes a longer scoped storage path for the same artifact, keep the managed relative ref in evidenceRefs and use the scoped echo only as extra context. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
+        If Produced artifact slots are listed, the first workspace mutation for that produced output must be workspace_write_file or workspace_append_file to the listed Primary write ref. Do not list, search, stat, or read this run's managed artifact root to discover your own missing output before that write. For intake, planning, scope, architecture, review, governance, or summary steps with no required upstream slot, write a managed Markdown artifact with assumptions and known gaps instead of blocking on optional context. Do not finalize Completed with an empty evidenceRefs array.
+
+        AgentFramework own-output bootstrap:
+        {ownOutputBootstrapGuidance}
+
+        AgentFramework dependency artifact refs:
+        {dependencyArtifactGuidance}
+
+        AgentFramework upstream artifact read rule:
+        When Required upstream artifact slots or AgentFramework dependency artifact refs list managed refs, call workspace_stat_path or workspace_read_file on those exact refs before using project-structure hierarchy as fallback context. Project-structure nodes may summarize a run, but upstream process artifacts are read through workspace file tools. Do not abbreviate, ellipsize, shorten, or guess managed refs; copy the full ref from this brief into the workspace tool call. Do not return Blocked for missing intake, design, implementation, QA, screenshot, runtime, or release evidence until every listed managed ref for the needed slot has a current failed workspace file-tool receipt.
 
         Project-structure evidence hygiene:
         Do not create project-structure nodes for every subprocess, intermediate screenshot, log, or step detail. Keep subprocess detail in managed artifacts and live-process history. For multi-team app delivery, the visible project structure should contain one root process run plus only the durable handoff nodes the process asks for: the final accepted screenshot ImageAsset, one run-app proof node, one run-tests proof node, and one manager summary node describing what was built, how it works, and current validation state.
@@ -620,6 +647,188 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         AgentFramework subprocess adapter guidance:
         {subprocessGuidance}
         """;
+    }
+
+    private static string BuildProjectStructureContextGuidance(ProcessStepBriefBuildRequest request)
+    {
+        var lines = new List<string>();
+        var canReadProjectStructure = request.Step.AllowedOperations.Contains(
+            ProcessOperationContractNames.ReadProjectStructure,
+            StringComparer.OrdinalIgnoreCase);
+
+        if (TryResolveLaunchVariable(request.LaunchVariables, "ProjectStructureContextSummary", out _))
+        {
+            lines.Add("ProjectStructureContextSummary in Launch variables is the current project-structure context for this run; treat it as authoritative project-structure evidence when no richer project-structure tool result is required by the step.");
+        }
+        else if (canReadProjectStructure)
+        {
+            lines.Add("This step may read project structure, but no ProjectStructureContextSummary launch variable was supplied; use available project-structure tools or the supplied launch variables instead of inventing a managed file path.");
+        }
+
+        if (TryResolveLaunchVariable(request.LaunchVariables, "DotNetScaffoldContract", out _))
+        {
+            lines.Add("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts for .NET subprocesses; use them for app type, product root, scaffold layout, test project, and target framework decisions.");
+        }
+
+        if (TryResolveLaunchVariable(request.LaunchVariables, "ProductRoot", out _) ||
+            TryResolveLaunchVariable(request.LaunchVariables, "OutputRoot", out _) ||
+            TryResolveLaunchVariable(request.LaunchVariables, "ExternalTargetRoot", out _))
+        {
+            var aliases = ResolveLaunchExternalTargetAliases(request.LaunchVariables);
+            var aliasSummary = aliases.Count == 0
+                ? "No normalized external-target alias was resolved from launch variables; use only managed artifact refs unless a tool result supplies a grounded alias."
+                : $"Grounded external-target aliases for structured workspace tool path arguments: {string.Join("; ", aliases)}.";
+            lines.Add($"ProductRoot, OutputRoot, and ExternalTargetRoot launch variables identify the product target. {aliasSummary} Do not call workspace_read_file, workspace_stat_path, workspace_list_files, workspace_search, workspace_copy_path, workspace_analyze_image, or other structured workspace path tools with native absolute ProductRoot or OutputRoot paths. If a workspace-tool denial supplies a replacement external-target alias, retry the same structured workspace tool with that alias before returning Blocked.");
+        }
+
+        if (TryResolveLaunchVariable(request.LaunchVariables, "ParentProcessRunId", out _) ||
+            TryResolveLaunchVariable(request.LaunchVariables, "SubprocessDefinitionKey", out _))
+        {
+            lines.Add("For subprocess runs, parent launch variables are copied into the child run; ParentProcessRunId, ParentProcessStepKey, and SubprocessDefinitionKey are metadata, not managed artifact refs.");
+        }
+
+        if (lines.Count == 0)
+        {
+            lines.Add("No project-structure launch summary was supplied for this step.");
+        }
+
+        lines.Add($"Do not call workspace_read_file on artifacts/process-runs/{request.RunId}/project-structure.json or any other invented project-structure snapshot path unless that exact file is listed in Required upstream artifact slots or AgentFramework dependency artifact refs. Project-structure context is not materialized as a managed JSON file by default.");
+        lines.Add("If a durable project-structure summary is useful for this step, write the relevant facts into the step's primary managed artifact instead of treating a missing snapshot file as a blocker.");
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static bool TryResolveLaunchVariable(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string key,
+        out string value)
+    {
+        value = string.Empty;
+        if (!launchVariables.TryGetValue(key, out var candidate) ||
+            string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        value = candidate.Trim();
+        return true;
+    }
+
+    private static IReadOnlyList<string> ResolveLaunchExternalTargetAliases(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        return launchVariables
+            .Where(item => TrustedExternalTargetVariableNames.Contains(item.Key))
+            .Select(item => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(item.Value))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Cast<string>()
+            .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static readonly HashSet<string> TrustedExternalTargetVariableNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ExternalTargetAlias",
+        "ExternalTargetRoot",
+        "OutputFolder",
+        "OutputRoot",
+        "OutputRootAlias",
+        "ProductRoot",
+        "ProductRootAlias",
+        "WorkspaceAlias"
+    };
+
+    private static string BuildOwnOutputBootstrapGuidance(ProcessStepBriefBuildRequest request)
+    {
+        if (request.ProducedSlots.Count == 0)
+        {
+            return "No produced artifact slots; no own-output bootstrap is required.";
+        }
+
+        var primaryWriteRef = BuildManagedStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key);
+        if (request.RequiredSlots.Count == 0)
+        {
+            return $"""
+            This step has produced artifact slots and no required upstream artifact slots. It is an evidence producer. Do not return Blocked for missing upstream artifacts, insufficient evidence, missing prior logs, or absent screenshots before creating your own managed artifact. Your first evidence action must be workspace_write_file or workspace_append_file to the exact primary write ref below.
+            Primary own-output write ref: {primaryWriteRef}
+            Completion rule: after writing that artifact, return Completed with evidenceRefs containing the exact primary own-output write ref. If optional project context is missing, include assumptions and known gaps inside the artifact instead of blocking. Do not read or stat ProductRoot, OutputRoot, ExternalTargetRoot, or their external-target aliases looking for a same-named own-output packet before writing this managed artifact; own process outputs are generated under managed artifact refs, not discovered from the product target. Do not require build, test, runtime, screenshot, deployment, approval, or downstream handoff evidence that belongs to later steps before completing this producer step. Blocked is valid only when you cannot create the primary managed artifact or the step contract's own immediate inputs are contradictory.
+            """;
+        }
+
+        return $"""
+        This step has required upstream artifact slots and produced artifact slots. Read required upstream refs first, then create or update your own primary managed artifact before returning Completed.
+        Primary own-output write ref: {primaryWriteRef}
+        """;
+    }
+
+    private static string BuildDependencyArtifactGuidance(ProcessStepBriefBuildRequest request)
+    {
+        var dependencyStepKeys = ResolveDependencyStepKeys(request.Step);
+        if (dependencyStepKeys.Count == 0)
+        {
+            return "No direct dependency step artifact refs.";
+        }
+
+        var stepsByKey = request.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
+        var lines = new List<string>();
+        foreach (var dependencyStepKey in dependencyStepKeys)
+        {
+            stepsByKey.TryGetValue(dependencyStepKey, out var dependencyStep);
+            var title = string.IsNullOrWhiteSpace(dependencyStep?.Title)
+                ? dependencyStepKey
+                : dependencyStep.Title.Trim();
+            lines.Add($"""
+            - Dependency step: {dependencyStepKey} - {title}
+              Primary completed-step artifact ref: {BuildManagedStepArtifactPath(request.ManagedArtifactRoot, dependencyStepKey)}
+              Dependency step artifact root: {BuildManagedStepArtifactRoot(request.ManagedArtifactRoot, dependencyStepKey)}
+              Runtime rule: before listing, searching, or using project-structure fallback context, call workspace_stat_path or workspace_read_file on the exact primary ref above. If the primary ref is missing, inspect the listed dependency step artifact root before blocking.
+            """);
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static IReadOnlyList<string> ResolveDependencyStepKeys(ProcessTemplateDefinitionStepDocument step)
+    {
+        var keys = new List<string>();
+        foreach (var dependency in step.Dependencies)
+        {
+            if (!string.IsNullOrWhiteSpace(dependency.DependsOnStepKey))
+            {
+                keys.Add(dependency.DependsOnStepKey.Trim());
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.DependsOnStepKey))
+        {
+            keys.Add(step.DependsOnStepKey.Trim());
+        }
+
+        return keys
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string BuildManagedStepArtifactPath(string artifactRoot, string stepKey)
+        => $"{artifactRoot}/steps/{SanitizeManagedArtifactPathSegment(stepKey)}.md";
+
+    private static string BuildManagedStepArtifactRoot(string artifactRoot, string stepKey)
+        => $"{artifactRoot}/{SanitizeManagedArtifactPathSegment(stepKey)}/";
+
+    private static string SanitizeManagedArtifactPathSegment(string value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value)
+            ? "step"
+            : value.Trim();
+        var builder = new StringBuilder(normalized.Length);
+        foreach (var character in normalized)
+        {
+            builder.Append(char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '-');
+        }
+
+        return builder.Length == 0 ? "step" : builder.ToString();
     }
 
     private static string BuildSubprocessGuidance(ProcessTemplateDefinitionStepDocument step)
@@ -651,7 +860,8 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         - Scope rule: use the parent step's assigned project node. Leave ParentProjectNodeId empty unless the parent launch context has no project node. Do not pass ProcessRunNodeId as ParentProjectNodeId.
         - Retry rule: repeated launch-tool calls for the same parent run, parent step, project node, and child definition return the existing child run instead of creating another child.
         - Stopped-child rule: a Completed, Failed, Cancelled, or Blocked child run is not an active wait. Inspect stopped-child evidence, then either complete from valid evidence or relaunch when required evidence is missing and launch is allowed. Do not return Blocked only because a stopped child run exists.
-        - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, and ExpectedChildEvidenceRefs. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root. ExpectedChildEvidenceRefs are preferred lookup candidates, not an all-or-nothing checklist; if one expected ref is missing, inspect sibling files under ChildManagedArtifactRoot and child step directories before blocking.
+        - Active-child defer rule: when the launch tool result has RunId and Stage Running, call submit_process_step_outcome with ParentDeferredOutcomeJson exactly if that field is present. Do not inspect child evidence or write a hand-authored blocked finalizer while the child run is active; the process runtime will defer the parent step until the child run stops.
+        - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, ExpectedChildEvidenceRefs, ParentDeferredOutcomeInstruction, and ParentDeferredOutcomeJson. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root. ExpectedChildEvidenceRefs are preferred lookup candidates after the child run is stopped, not an all-or-nothing checklist while it is still active; if one expected ref is missing after the child stops, inspect sibling files under ChildManagedArtifactRoot and child step directories before blocking.
         """;
     }
 }
@@ -659,7 +869,8 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
 internal sealed partial class AgentFrameworkProcessExecutionAdapter(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProcessRuntimeStepAssignmentStore assignmentStore,
-    IProcessRuntimeStateStore stateStore) : IProcessExecutionAdapter
+    IProcessRuntimeStateStore stateStore,
+    IWorkspaceFileService workspaceFiles) : IProcessExecutionAdapter
 {
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
 
@@ -775,7 +986,25 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
             }
 
-            return ToAdapterResult(assignment, validation.Output, validation.RawOutputHash);
+            var executionDetail = await workspaceService
+                .GetExecutionRunDetailAsync(result.ExecutionRunId, cancellationToken)
+                .ConfigureAwait(false);
+
+            var materialization = MaterializeManagedOutcomeArtifactIfNeeded(
+                assignment,
+                validation.Output,
+                result.ExecutionRunId,
+                executionDetail.ToolReceipts);
+            if (materialization.Issue is { } materializationIssue)
+            {
+                return NeedsManagerForCompletionIssue(assignment, validation.RawOutputHash, materializationIssue);
+            }
+
+            return ToAdapterResult(
+                assignment,
+                materialization.Output,
+                validation.RawOutputHash,
+                materialization.ToolReceipts);
         }
         catch (ProcessRuntimeDispatchDeferredException)
         {
@@ -799,11 +1028,322 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
             }
 
+            if (TryBuildRetryableAgentOutputContractIssue(assignment, exception, out var outputContractIssue))
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash(exception.GetType().FullName + ":" + exception.Message),
+                    outputContractIssue);
+            }
+
             return Failed(
                 "process.adapter.agent_execution_failed",
                 $"Agent execution failed for step '{assignment.StepKey}': {exception.Message}",
                 ComputeHash(exception.GetType().FullName + ":" + exception.Message));
         }
+    }
+
+    private ManagedOutcomeArtifactMaterialization MaterializeManagedOutcomeArtifactIfNeeded(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        Guid executionRunId,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+    {
+        var isSelfEvidenceBlocker = IsPureManagedArtifactSelfEvidenceBlocker(assignment, output);
+        if (output.Status != ProcessStepOutcomeStatus.Completed &&
+            !isSelfEvidenceBlocker)
+        {
+            return ManagedOutcomeArtifactMaterialization.Unchanged(output, toolReceipts);
+        }
+
+        if (assignment.ProducedArtifactSlotIds.Count == 0)
+        {
+            return ManagedOutcomeArtifactMaterialization.Unchanged(output, toolReceipts);
+        }
+
+        var hasManagedEvidence = HasAllManagedArtifactEvidence(assignment, output.EvidenceRefs);
+        var hasWriteReceipt = HasManagedArtifactWriteReceipt(assignment, toolReceipts);
+        if (hasManagedEvidence && hasWriteReceipt)
+        {
+            return ManagedOutcomeArtifactMaterialization.Unchanged(output, toolReceipts);
+        }
+
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        IReadOnlyList<ToolExecutionReceiptRecord> effectiveReceipts = toolReceipts;
+        if (!hasWriteReceipt)
+        {
+            var writeResult = workspaceFiles.WriteTextFile(
+                primaryRef,
+                BuildManagedOutcomeArtifactContent(assignment, output, primaryRef),
+                overwrite: true);
+            if (!writeResult.Succeeded)
+            {
+                return ManagedOutcomeArtifactMaterialization.Failed(
+                    output,
+                    toolReceipts,
+                    new ProcessCompletionIssue(
+                        "process.adapter.managed_artifact_materialization_failed",
+                        $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not persist the primary managed artifact '{primaryRef}': {writeResult.Message}",
+                        $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-materialization-failed:{primaryRef}:{writeResult.Message}",
+                        assignment.ProducedArtifactSlotIds,
+                        ProcessDiagnosticRetrySafety.SafeToRetry,
+                        ProcessDiagnosticIdempotencyClassification.Idempotent));
+            }
+
+            effectiveReceipts = toolReceipts
+                .Append(CreateManagedOutcomeArtifactReceipt(executionRunId, primaryRef, writeResult.Message))
+                .ToArray();
+        }
+
+        var effectiveOutput = isSelfEvidenceBlocker
+            ? CopyAsCompletedWithEvidenceRef(output, primaryRef)
+            : hasManagedEvidence
+                ? output
+                : CopyWithEvidenceRef(output, primaryRef);
+        return ManagedOutcomeArtifactMaterialization.Succeeded(effectiveOutput, effectiveReceipts);
+    }
+
+    private static bool IsPureManagedArtifactSelfEvidenceBlocker(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            assignment.ProducedArtifactSlotIds.Count == 0 ||
+            assignment.RequiredArtifactSlotIds.Count > 0)
+        {
+            return false;
+        }
+
+        var operations = NormalizeOperations(assignment.AllowedOperations);
+        if (operations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.LaunchRuntime, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.RunValidation, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase) ||
+            AllowsProductMutation(operations, assignment.OperationTargetScope))
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (LooksLikeRightsOrToolBoundary(text))
+        {
+            return false;
+        }
+
+        if (LooksLikeMissingOwnPrimaryManagedArtifact(assignment, text))
+        {
+            return true;
+        }
+
+        return ContainsAny(
+            text,
+            "concrete current-run evidence",
+            "current run evidence",
+            "current-run evidence",
+            "managed artifact evidence",
+            "managed artifact ref",
+            "own-output write ref",
+            "evidence reference");
+    }
+
+    private static bool LooksLikeMissingOwnPrimaryManagedArtifact(
+        ProcessRuntimeStepAssignment assignment,
+        string text)
+    {
+        if (!ContainsAny(
+                text,
+                "does not exist",
+                "not found",
+                "failed to find",
+                "could not find",
+                "cannot find",
+                "missing file"))
+        {
+            return false;
+        }
+
+        var normalizedText = text.Replace('\\', '/');
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        if (normalizedText.Contains(primaryRef, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var processRunSuffix = $"process-runs/{assignment.RunId.Value:D}/steps/{SanitizeManagedArtifactPathSegment(assignment.StepKey)}.md";
+        return normalizedText.Contains(processRunSuffix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasAllManagedArtifactEvidence(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<string> evidenceRefs)
+    {
+        var normalizedEvidenceRefs = evidenceRefs
+            .Where(evidenceRef => !string.IsNullOrWhiteSpace(evidenceRef))
+            .Select(NormalizeManagedArtifactRef)
+            .Where(evidenceRef => evidenceRef.Length > 0)
+            .ToArray();
+        return assignment.ProducedArtifactSlotIds.All(slotId =>
+            HasManagedArtifactEvidence(assignment, slotId, normalizedEvidenceRefs));
+    }
+
+    private static ProcessStepOutcomeResult CopyWithEvidenceRef(
+        ProcessStepOutcomeResult output,
+        string evidenceRef)
+    {
+        var evidenceRefs = output.EvidenceRefs
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Append(evidenceRef)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return new ProcessStepOutcomeResult
+        {
+            Status = output.Status,
+            Reason = output.Reason,
+            BranchOutcomeKey = output.BranchOutcomeKey,
+            BranchOutcomeTitle = output.BranchOutcomeTitle,
+            EvidenceRefs = evidenceRefs,
+            NextActions = output.NextActions,
+            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
+        };
+    }
+
+    private static ProcessStepOutcomeResult CopyAsCompletedWithEvidenceRef(
+        ProcessStepOutcomeResult output,
+        string evidenceRef)
+    {
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The agent reported a self-evidence blocker for a pure managed-artifact producer step."
+            : output.Reason.Trim();
+        return new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = $"Runtime materialized the pure managed-artifact producer outcome after the agent reported a self-evidence blocker. Original reason: {originalReason}",
+            BranchOutcomeKey = output.BranchOutcomeKey,
+            BranchOutcomeTitle = output.BranchOutcomeTitle,
+            EvidenceRefs = [evidenceRef],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
+        };
+    }
+
+    private static string BuildManagedOutcomeArtifactContent(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        string primaryRef)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"# {assignment.StepKey} Process Step Outcome");
+        builder.AppendLine();
+        builder.AppendLine("Runtime persisted this managed artifact from the validated structured process step outcome.");
+        builder.AppendLine();
+        builder.AppendLine($"- Run id: {assignment.RunId.Value:D}");
+        builder.AppendLine($"- Step id: {assignment.StepInstanceId.Value:D}");
+        builder.AppendLine($"- Step key: {assignment.StepKey}");
+        builder.AppendLine($"- Executor: {assignment.ExecutorDisplayName}");
+        builder.AppendLine($"- Status: {output.Status}");
+        builder.AppendLine($"- Primary managed ref: {primaryRef}");
+        builder.AppendLine($"- Persisted at UTC: {DateTimeOffset.UtcNow:u}");
+        builder.AppendLine();
+        builder.AppendLine("## Reason");
+        builder.AppendLine();
+        builder.AppendLine(output.Reason.Trim());
+        builder.AppendLine();
+        if (!string.IsNullOrWhiteSpace(output.BranchOutcomeKey) ||
+            !string.IsNullOrWhiteSpace(output.BranchOutcomeTitle))
+        {
+            builder.AppendLine("## Branch Outcome");
+            builder.AppendLine();
+            if (!string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
+            {
+                builder.AppendLine($"- Key: {output.BranchOutcomeKey.Trim()}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(output.BranchOutcomeTitle))
+            {
+                builder.AppendLine($"- Title: {output.BranchOutcomeTitle.Trim()}");
+            }
+
+            builder.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(output.HumanReadableSummaryMarkdown))
+        {
+            builder.AppendLine("## Summary");
+            builder.AppendLine();
+            builder.AppendLine(output.HumanReadableSummaryMarkdown.Trim());
+            builder.AppendLine();
+        }
+
+        AppendList(builder, "Agent Evidence Refs", output.EvidenceRefs);
+        AppendList(builder, "Next Actions", output.NextActions);
+        return builder.ToString();
+    }
+
+    private static void AppendList(
+        StringBuilder builder,
+        string heading,
+        IReadOnlyList<string> values)
+    {
+        var items = values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine($"## {heading}");
+        builder.AppendLine();
+        foreach (var item in items)
+        {
+            builder.AppendLine($"- {item}");
+        }
+
+        builder.AppendLine();
+    }
+
+    private static ToolExecutionReceiptRecord CreateManagedOutcomeArtifactReceipt(
+        Guid executionRunId,
+        string primaryRef,
+        string writeMessage)
+        => new(
+            Guid.NewGuid(),
+            executionRunId,
+            "process-runtime",
+            "workspace_write_file",
+            "ManagedProcessArtifact",
+            "NotRequired",
+            "Process runtime persisted validated structured step outcome.",
+            primaryRef,
+            ".",
+            $"Succeeded: {writeMessage}",
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
+    private sealed record ManagedOutcomeArtifactMaterialization(
+        ProcessStepOutcomeResult Output,
+        IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts,
+        ProcessCompletionIssue? Issue)
+    {
+        public static ManagedOutcomeArtifactMaterialization Unchanged(
+            ProcessStepOutcomeResult output,
+            IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+            => new(output, toolReceipts, null);
+
+        public static ManagedOutcomeArtifactMaterialization Succeeded(
+            ProcessStepOutcomeResult output,
+            IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+            => new(output, toolReceipts, null);
+
+        public static ManagedOutcomeArtifactMaterialization Failed(
+            ProcessStepOutcomeResult output,
+            IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+            ProcessCompletionIssue issue)
+            => new(output, toolReceipts, issue);
     }
 
     private static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
@@ -835,6 +1375,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         return ExecutionInvocationMetadata.Build(
             metadataJson,
             new ExecutionInvocationPolicy(
+                FinalizerMode: AgentFinalizerMode.Required,
                 MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts));
     }
 
@@ -845,9 +1386,12 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
             metadataJson,
             ResolveProjectWorkspaceScope(launchVariables));
-        return ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(
+        metadataJson = ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(
             metadataJson,
             ResolveProjectStructureLaunchAgent(launchVariables));
+        return ExecutionInvocationMetadata.ApplyProjectStructureProcessNodeContext(
+            metadataJson,
+            ResolveProjectStructureProcessNodeContext(launchVariables));
     }
 
     private static WorkspaceScopeDescriptor? ResolveProjectWorkspaceScope(
@@ -869,6 +1413,17 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ResolveLaunchVariable(launchVariables, ProcessLaunchVariableNames.BranchName),
             ResolveLaunchVariable(launchVariables, ProcessLaunchVariableNames.SessionId));
         return descriptor.HasLeaseOwnerIdentity ? descriptor : null;
+    }
+
+    private static ProjectStructureProcessNodeContextDescriptor? ResolveProjectStructureProcessNodeContext(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        var descriptor = new ProjectStructureProcessNodeContextDescriptor(
+            ResolveLaunchVariable(launchVariables, ProcessLaunchVariableNames.CurrentProcessRunNodeId),
+            ResolveLaunchVariable(launchVariables, ProcessLaunchVariableNames.ProcessRunNodeId),
+            ResolveLaunchVariable(launchVariables, ProcessLaunchVariableNames.ParentProcessRunNodeId),
+            ResolveLaunchVariable(launchVariables, ProcessLaunchVariableNames.TargetProcessRunNodeId));
+        return descriptor.HasAnyProcessRunNode ? descriptor : null;
     }
 
     private static bool TryResolveLaunchGuid(
@@ -973,6 +1528,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
     {
         "ExternalTargetAlias",
         "ExternalTargetRoot",
+        "OutputFolder",
         "OutputRoot",
         "OutputRootAlias",
         "ProductRoot",
@@ -1164,16 +1720,21 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         public const string AgentId = "AgentId";
         public const string AgentName = "AgentName";
         public const string BranchName = "BranchName";
+        public const string CurrentProcessRunNodeId = "CurrentProcessRunNodeId";
         public const string MachineName = "MachineName";
+        public const string ParentProcessRunNodeId = "ParentProcessRunNodeId";
         public const string ProjectId = "ProjectId";
+        public const string ProcessRunNodeId = "ProcessRunNodeId";
         public const string RepositoryRoot = "RepositoryRoot";
         public const string SessionId = "SessionId";
+        public const string TargetProcessRunNodeId = "TargetProcessRunNodeId";
     }
 
     internal static ProcessExecutionAdapterResult ToAdapterResult(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
-        string rawOutputHash)
+        string rawOutputHash,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null)
     {
         var outcome = output.Status switch
         {
@@ -1193,6 +1754,12 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ValidateManagedArtifactCompletion(assignment, output) is { } managedArtifactIssue)
         {
             return NeedsManagerForCompletionIssue(assignment, rawOutputHash, managedArtifactIssue);
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateManagedArtifactWriteReceipt(assignment, toolReceipts) is { } managedArtifactWriteIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, managedArtifactWriteIssue);
         }
 
         IReadOnlyList<ProducedArtifactRef> artifacts = outcome == StrategyOutcome.Succeeded
@@ -1414,6 +1981,64 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
+    private static ProcessCompletionIssue? ValidateManagedArtifactWriteReceipt(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        if (assignment.ProducedArtifactSlotIds.Count == 0 ||
+            toolReceipts is null)
+        {
+            return null;
+        }
+
+        var primaryRef = NormalizeManagedArtifactRef(BuildManagedStepArtifactPath(assignment));
+        if (HasManagedArtifactWriteReceipt(toolReceipts, primaryRef))
+        {
+            return null;
+        }
+
+        return new ProcessCompletionIssue(
+            "process.adapter.produced_artifact_write_receipt_missing",
+            $"Step '{assignment.StepKey}' claimed completion but did not produce a successful workspace_write_file or workspace_append_file receipt for primary managed artifact '{BuildManagedStepArtifactPath(assignment)}'.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:produced-artifact-write-receipt-missing:{string.Join("|", toolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static bool HasManagedArtifactWriteReceipt(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+        => HasManagedArtifactWriteReceipt(
+            toolReceipts,
+            NormalizeManagedArtifactRef(BuildManagedStepArtifactPath(assignment)));
+
+    private static bool HasManagedArtifactWriteReceipt(
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+        string primaryRef)
+        => toolReceipts.Any(receipt =>
+            IsManagedArtifactWriteTool(receipt.ToolName) &&
+            IsSuccessfulReceipt(receipt.ExitSummary) &&
+            ReceiptTargetsManagedRef(receipt.RequestSummary, primaryRef));
+
+    private static bool IsManagedArtifactWriteTool(string toolName)
+        => string.Equals(toolName, "workspace_write_file", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_append_file", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSuccessfulReceipt(string exitSummary)
+        => exitSummary.StartsWith("Succeeded", StringComparison.OrdinalIgnoreCase);
+
+    private static bool ReceiptTargetsManagedRef(string requestSummary, string expectedRef)
+    {
+        var normalizedRequest = NormalizeManagedArtifactRef(requestSummary);
+        var expectedTail = expectedRef.StartsWith("artifacts/", StringComparison.OrdinalIgnoreCase)
+            ? expectedRef["artifacts".Length..]
+            : expectedRef;
+        return string.Equals(normalizedRequest, expectedRef, StringComparison.OrdinalIgnoreCase) ||
+               normalizedRequest.Contains(expectedRef, StringComparison.OrdinalIgnoreCase) ||
+               normalizedRequest.Contains(expectedTail, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool HasManagedArtifactEvidence(
         ProcessRuntimeStepAssignment assignment,
         ArtifactSlotId slotId,
@@ -1526,11 +2151,56 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ComputeHash($"{rawOutputHash}:{issue.Code}:{issue.Evidence}"));
     }
 
+    private static bool TryBuildRetryableAgentOutputContractIssue(
+        ProcessRuntimeStepAssignment assignment,
+        Exception exception,
+        out ProcessCompletionIssue issue)
+    {
+        issue = null!;
+        if (!LooksLikeAgentOutputContractFailure(exception))
+        {
+            return false;
+        }
+
+        var expectedRefs = assignment.ProducedArtifactSlotIds.Count > 0
+            ? assignment.ProducedArtifactSlotIds
+                .SelectMany(slotId => EnumerateManagedArtifactEvidenceRefs(assignment, slotId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+            : [BuildManagedStepArtifactPath(assignment)];
+        var expectedRefSummary = expectedRefs.Length == 0
+            ? "the concrete current-run evidence ref required by the process step brief"
+            : string.Join("; ", expectedRefs);
+        issue = new ProcessCompletionIssue(
+            "process.adapter.agent_output_contract_retryable",
+            $"Agent execution for step '{assignment.StepKey}' did not produce a valid process-step finalizer outcome. Retry the step, create the required current-run evidence first, and only return Completed after submit_process_step_outcome evidenceRefs contains one of: {expectedRefSummary}. Runtime detail: {exception.Message}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-output-contract:{exception.GetType().FullName}:{exception.Message}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        return true;
+    }
+
+    private static bool LooksLikeAgentOutputContractFailure(Exception exception)
+    {
+        var text = exception.ToString();
+        return ContainsAny(
+            text,
+            "submit_process_step_outcome",
+            "Required finalizer tool",
+            "process_step_outcome_result",
+            "ProcessStepOutcomeResult",
+            "process.step_outcome",
+            "agent.finalizer",
+            "agent.output");
+    }
+
     private static bool TryResolveInspectableProductRoot(
         IReadOnlyDictionary<string, string> launchVariables,
         out string productRoot)
     {
         productRoot = FirstNonEmpty(
+            ResolveLaunchVariable(launchVariables, "OutputFolder"),
             ResolveLaunchVariable(launchVariables, "OutputRoot"),
             ResolveLaunchVariable(launchVariables, "ProductRoot"),
             ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"));

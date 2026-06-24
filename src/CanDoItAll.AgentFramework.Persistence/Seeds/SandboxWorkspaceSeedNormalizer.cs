@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -29,7 +30,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         var seeded = SandboxWorkspaceSeedFactory.Create();
         var providers = MergeProviders(catalog.Providers, seeded.Providers);
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
-        var agents = MergeAgents(catalog.Agents, seeded.Agents, providers.IdMap, capabilities.IdMap);
+        var agents = MergeAgents(catalog.Agents, seeded.Agents, providers.Items, providers.IdMap, capabilities.IdMap);
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
         var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
@@ -129,11 +130,13 @@ internal static class SandboxWorkspaceSeedNormalizer
     }
 
     private static bool IsManagedSeedOpenAiProvider(ProviderProfile existingProvider, ProviderProfile seededProvider)
+        => IsManagedSeedOpenAiProvider(existingProvider) &&
+           IsManagedSeedOpenAiProvider(seededProvider);
+
+    private static bool IsManagedSeedOpenAiProvider(ProviderProfile provider)
     {
-        return existingProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
-               seededProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
-               ManagedSeedOpenAiProviderNames.Contains(existingProvider.Name) &&
-               ManagedSeedOpenAiProviderNames.Contains(seededProvider.Name);
+        return provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
+               ManagedSeedOpenAiProviderNames.Contains(provider.Name);
     }
 
     private static bool ShouldUseSeedProviderPurpose(ProviderProfile existingProvider, ProviderProfile seededProvider)
@@ -193,11 +196,13 @@ internal static class SandboxWorkspaceSeedNormalizer
     private static MergeResult<AgentDefinition> MergeAgents(
         IReadOnlyList<AgentDefinition> existingAgents,
         IReadOnlyList<AgentDefinition> seededAgents,
+        IReadOnlyList<ProviderProfile> providers,
         IReadOnlyDictionary<Guid, Guid> providerIdMap,
         IReadOnlyDictionary<Guid, Guid> capabilityIdMap)
     {
         var merged = existingAgents.ToList();
         var idMap = new Dictionary<Guid, Guid>();
+        var providersById = providers.ToDictionary(provider => provider.Id);
 
         foreach (var seededAgent in seededAgents.Select(agent => RemapSeedAgent(agent, providerIdMap, capabilityIdMap)))
         {
@@ -231,7 +236,7 @@ internal static class SandboxWorkspaceSeedNormalizer
 
             if (ShouldRefreshManagedAgentFromSeed(match, seededAgent))
             {
-                mergedAgent = RefreshManagedAgentFromSeed(mergedAgent, seededAgent);
+                mergedAgent = RefreshManagedAgentFromSeed(mergedAgent, seededAgent, providersById);
             }
 
             ReplaceById(merged, match.Id, mergedAgent);
@@ -288,21 +293,32 @@ internal static class SandboxWorkspaceSeedNormalizer
         return !string.IsNullOrWhiteSpace(seededAgent.TemplateKey);
     }
 
-    private static AgentDefinition RefreshManagedAgentFromSeed(AgentDefinition existingAgent, AgentDefinition seededAgent)
+    private static AgentDefinition RefreshManagedAgentFromSeed(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent,
+        IReadOnlyDictionary<Guid, ProviderProfile> providersById)
     {
+        var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(existingAgent, seededAgent, providersById);
+
         return existingAgent with
         {
             RoleTitle = seededAgent.RoleTitle,
             Summary = seededAgent.Summary,
             Instructions = seededAgent.Instructions,
-            ProviderProfileId = seededAgent.ProviderProfileId,
-            Model = seededAgent.Model,
+            ProviderProfileId = preserveProviderAssignment ? existingAgent.ProviderProfileId : seededAgent.ProviderProfileId,
+            Model = preserveProviderAssignment ? existingAgent.Model : seededAgent.Model,
             Workload = seededAgent.Workload,
-            ChatHistoryMode = seededAgent.ChatHistoryMode,
+            ChatHistoryMode = preserveProviderAssignment ? existingAgent.ChatHistoryMode : seededAgent.ChatHistoryMode,
             Temperature = seededAgent.Temperature,
-            RequirePerServiceCallChatHistoryPersistence = seededAgent.RequirePerServiceCallChatHistoryPersistence,
-            EnableBackgroundResponses = seededAgent.EnableBackgroundResponses,
-            ConfigurationJson = seededAgent.ConfigurationJson,
+            RequirePerServiceCallChatHistoryPersistence = preserveProviderAssignment
+                ? existingAgent.RequirePerServiceCallChatHistoryPersistence
+                : seededAgent.RequirePerServiceCallChatHistoryPersistence,
+            EnableBackgroundResponses = preserveProviderAssignment
+                ? existingAgent.EnableBackgroundResponses
+                : seededAgent.EnableBackgroundResponses,
+            ConfigurationJson = preserveProviderAssignment
+                ? CopyManagedSeedVersion(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson)
+                : seededAgent.ConfigurationJson,
             AvatarImageUrl = string.IsNullOrWhiteSpace(existingAgent.AvatarImageUrl)
                 ? seededAgent.AvatarImageUrl
                 : existingAgent.AvatarImageUrl,
@@ -310,6 +326,54 @@ internal static class SandboxWorkspaceSeedNormalizer
             Capabilities = seededAgent.Capabilities,
             Tags = seededAgent.Tags
         };
+    }
+
+    private static bool ShouldPreserveExplicitProviderAssignment(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent,
+        IReadOnlyDictionary<Guid, ProviderProfile> providersById)
+    {
+        if (!existingAgent.ProviderProfileId.HasValue ||
+            existingAgent.ProviderProfileId == seededAgent.ProviderProfileId ||
+            !providersById.TryGetValue(existingAgent.ProviderProfileId.Value, out var provider))
+        {
+            return false;
+        }
+
+        return !IsManagedSeedOpenAiProvider(provider);
+    }
+
+    private static string CopyManagedSeedVersion(
+        string targetConfigurationJson,
+        string sourceConfigurationJson)
+    {
+        var target = ParseConfigurationObject(targetConfigurationJson);
+        var source = ParseConfigurationObject(sourceConfigurationJson);
+        if (source["managedSeedVersion"] is JsonValue sourceVersion &&
+            sourceVersion.TryGetValue<string>(out var version) &&
+            !string.IsNullOrWhiteSpace(version))
+        {
+            target["managedSeedVersion"] = version;
+        }
+
+        return target.ToJsonString();
+    }
+
+    private static JsonObject ParseConfigurationObject(string configurationJson)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonNode.Parse(configurationJson) as JsonObject ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 
     private static bool TryGetManagedSeedVersion(AgentDefinition agent, out string version)

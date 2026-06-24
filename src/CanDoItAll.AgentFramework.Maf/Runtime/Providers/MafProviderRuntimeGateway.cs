@@ -18,6 +18,14 @@ internal interface IMafProviderRuntimeGateway
         string model,
         CancellationToken cancellationToken = default);
 
+    Task<ProviderTestChatResult> RunProviderImageChatAsync(
+        ProviderProfile provider,
+        ProviderTestChatRequest request,
+        string model,
+        IReadOnlyList<ProviderChatAttachment> attachments,
+        string modelParameterConfigurationJson = "",
+        CancellationToken cancellationToken = default);
+
     Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         ProviderProfile provider,
         ProviderModelMaintenanceEditorRequest request,
@@ -37,15 +45,12 @@ public static class MafProviderRuntimeServiceCollectionExtensions
         services.TryAddSingleton<MafProviderDriverHttpClientPool>();
         services.TryAddSingleton<IAgentProviderFactory>(serviceProvider =>
         {
-            var httpClients = serviceProvider.GetRequiredService<MafProviderDriverHttpClientPool>();
-            var credentialResolver = serviceProvider.GetRequiredService<IProviderDriverCredentialResolver>();
-            return new AgentProviderDriverRegistryBuilder()
-                .AddOpenAiProviderDriver(httpClients.OpenAi, credentialResolver)
-                .AddAzureOpenAiProviderDriver(httpClients.AzureOpenAi, credentialResolver)
-                .AddOllamaProviderDriver(httpClients.Ollama)
-                .AddComfyUiProviderDriver(httpClients.ComfyUi)
-                .Build();
+            return CreateDefaultProviderFactory(
+                serviceProvider.GetRequiredService<MafProviderDriverHttpClientPool>(),
+                serviceProvider.GetRequiredService<IProviderDriverCredentialResolver>());
         });
+        services.TryAddSingleton<IProviderDispatchLaneGate, ProviderDispatchLaneGate>();
+        services.TryAddSingleton<IMafProviderStreamingDispatchGate, MafProviderStreamingDispatchGate>();
         services.TryAddSingleton<IProviderRuntimeHandleFactory, ProviderRuntimeHandleFactory>();
         services.TryAddSingleton<IProviderRuntimePool, ProviderRuntimePool>();
         services.TryAddSingleton<IProviderBatchJobBalancer, ProviderBatchJobBalancer>();
@@ -53,6 +58,28 @@ public static class MafProviderRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IMafProviderRuntimeGateway, MafProviderRuntimeGateway>();
 
         return services;
+    }
+
+    internal static IAgentProviderFactory CreateDefaultProviderFactory(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var httpClients = new MafProviderDriverHttpClientPool();
+        var credentialResolver = new MafProviderDriverCredentialResolver(
+            services.GetService<IAgentProviderCredentialResolver>() ?? new EnvironmentVariableAgentProviderCredentialResolver());
+        return CreateDefaultProviderFactory(httpClients, credentialResolver);
+    }
+
+    private static IAgentProviderFactory CreateDefaultProviderFactory(
+        MafProviderDriverHttpClientPool httpClients,
+        IProviderDriverCredentialResolver credentialResolver)
+    {
+        return new AgentProviderDriverRegistryBuilder()
+            .AddOpenAiProviderDriver(httpClients.OpenAi, credentialResolver)
+            .AddAzureOpenAiProviderDriver(httpClients.AzureOpenAi, credentialResolver)
+            .AddOllamaProviderDriver(httpClients.Ollama)
+            .AddComfyUiProviderDriver(httpClients.ComfyUi)
+            .Build();
     }
 }
 
@@ -65,18 +92,11 @@ internal sealed class MafProviderRuntimeGateway(
         ArgumentNullException.ThrowIfNull(services);
 
         var descriptorStore = new ProviderProfileRuntimeDescriptorStore();
-        var credentialResolver = new MafProviderDriverCredentialResolver(
-            services.GetService<IAgentProviderCredentialResolver>() ?? new EnvironmentVariableAgentProviderCredentialResolver());
-        var httpClients = new MafProviderDriverHttpClientPool();
-        var providerFactory = new AgentProviderDriverRegistryBuilder()
-            .AddOpenAiProviderDriver(httpClients.OpenAi, credentialResolver)
-            .AddAzureOpenAiProviderDriver(httpClients.AzureOpenAi, credentialResolver)
-            .AddOllamaProviderDriver(httpClients.Ollama)
-            .AddComfyUiProviderDriver(httpClients.ComfyUi)
-            .Build();
+        var providerFactory = MafProviderRuntimeServiceCollectionExtensions.CreateDefaultProviderFactory(services);
+        var dispatchLaneGate = new ProviderDispatchLaneGate(providerFactory);
         var runtimePool = new ProviderRuntimePool(
             descriptorStore,
-            new ProviderRuntimeHandleFactory(providerFactory));
+            new ProviderRuntimeHandleFactory(providerFactory, dispatchLaneGate));
         return new MafProviderRuntimeGateway(descriptorStore, runtimePool);
     }
 
@@ -151,6 +171,63 @@ internal sealed class MafProviderRuntimeGateway(
             result.InputTokens,
             result.OutputTokens);
     }
+
+    public async Task<ProviderTestChatResult> RunProviderImageChatAsync(
+        ProviderProfile provider,
+        ProviderTestChatRequest request,
+        string model,
+        IReadOnlyList<ProviderChatAttachment> attachments,
+        string modelParameterConfigurationJson = "",
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (attachments.Count == 0)
+        {
+            throw new InvalidOperationException("Add at least one image attachment before running provider image chat.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Prompt) && (request.Messages is null || request.Messages.Count == 0))
+        {
+            throw new InvalidOperationException("Add a prompt before running provider image chat.");
+        }
+
+        var handle = await GetRuntimeHandleAsync(provider, cancellationToken).ConfigureAwait(false);
+        var query = new ProviderDispatchQuery(
+            provider,
+            AgentProviderCapabilityKind.ChatCompletion,
+            AgentProviderOperationKind.AnalyzeImage,
+            model);
+        var payload = new ProviderChatCompletionRequest(
+            provider,
+            model,
+            string.IsNullOrWhiteSpace(request.SystemPrompt) ? string.Empty : request.SystemPrompt.Trim(),
+            request.Messages ?? [],
+            request.Prompt,
+            attachments,
+            modelParameterConfigurationJson);
+        var result = await handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<ProviderChatCompletionRequest>(query, payload),
+            async (context, token) =>
+            {
+                EnsureProviderKindMatches(context.Descriptor, context.Query.Provider);
+                var driver = handle.ProviderFactory.Resolve<IProviderChatCompletionDriver>(context.Query.Provider.Kind);
+                return await driver.CompleteChatAsync(context.Payload, token).ConfigureAwait(false);
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(result.ResponseText))
+        {
+            throw new InvalidOperationException("The provider returned an empty image analysis response.");
+        }
+
+        return new ProviderTestChatResult(
+            result.Model,
+            result.ResponseText,
+            result.InputTokens,
+            result.OutputTokens);
+    }
+
 
     public async Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         ProviderProfile provider,

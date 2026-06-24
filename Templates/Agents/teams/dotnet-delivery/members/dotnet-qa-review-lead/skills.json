@@ -24,6 +24,9 @@
     "workspace-dotnet-test",
     "workspace-dotnet-run",
     "workspace-dotnet-stop",
+    "workspace-inspect-image",
+    "workspace-analyze-image",
+    "workspace-analyze-images",
     "workspace-pwsh-run-script"
   ],
   "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."

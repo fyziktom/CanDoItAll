@@ -1,0 +1,137 @@
+{
+  "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+  "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+  "status": "Active",
+  "firstEventAtUtc": "2026-06-24T12:55:15.121102-04:00",
+  "lastEventAtUtc": "2026-06-24T12:58:38.456575-04:00",
+  "freshness": {
+    "observedAtUtc": "2026-06-24T12:58:47.3357435-04:00",
+    "sourceGlobalSequence": 27931,
+    "latestKnownGlobalSequence": 27931,
+    "lastProcessedGlobalSequence": 27931,
+    "backlogEventCount": 0
+  },
+  "recentEvents": [
+    {
+      "eventId": "367ad90a-7024-41f5-a493-c65666e8eae1",
+      "globalSequence": 27921,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "ProcessRunCreated",
+      "occurredAtUtc": "2026-06-24T12:55:15.121102-04:00",
+      "sensitivity": "Normal",
+      "summary": "ProcessRunCreated",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "380894a7-ea12-44b6-b64c-e982fec3b916",
+      "globalSequence": 27922,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "ProcessRunActivated",
+      "occurredAtUtc": "2026-06-24T12:55:16.292757-04:00",
+      "sensitivity": "Normal",
+      "summary": "ProcessRunActivated",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "a35147d6-b787-4c5c-8dbc-d4f560fb6a6a",
+      "globalSequence": 27923,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "StepReady",
+      "occurredAtUtc": "2026-06-24T12:55:16.351662-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepReady",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "a58b25b0-8e86-41a8-bc57-eb3e1b08ab99",
+      "globalSequence": 27924,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "StepClaimed",
+      "occurredAtUtc": "2026-06-24T12:55:17.26207-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepClaimed",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "8d29adde-8e80-434f-a2d9-a640cdb260cd",
+      "globalSequence": 27925,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-06-24T12:55:17.26207-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "287ebd6f-63d1-443c-b207-96f11f6d8420",
+      "globalSequence": 27926,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-06-24T12:55:17.453644-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "90749bb4-1010-4a61-bd7f-07214fb23628",
+      "globalSequence": 27927,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "DispatchClaimCompleted",
+      "occurredAtUtc": "2026-06-24T12:58:38.123855-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCompleted",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "23a8eb73-8207-4643-901f-6fd4a453d557",
+      "globalSequence": 27928,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "StepReady",
+      "occurredAtUtc": "2026-06-24T12:58:38.123855-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepReady",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "5cf98ecb-fa38-4d63-ba7b-9bcf62574aba",
+      "globalSequence": 27929,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "StepClaimed",
+      "occurredAtUtc": "2026-06-24T12:58:38.304429-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepClaimed",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "15a9f811-f386-4ea8-a1ce-63b3d8cc1262",
+      "globalSequence": 27930,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "DispatchClaimCreated",
+      "occurredAtUtc": "2026-06-24T12:58:38.304429-04:00",
+      "sensitivity": "Normal",
+      "summary": "DispatchClaimCreated",
+      "restrictedDiagnosticReference": null
+    },
+    {
+      "eventId": "a8f10257-b1a3-4cff-851c-22b4186588e7",
+      "globalSequence": 27931,
+      "rootRunId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "runId": "31a2d895-e6f3-4fab-abb5-89e454393ea3",
+      "eventType": "StepRunning",
+      "occurredAtUtc": "2026-06-24T12:58:38.456575-04:00",
+      "sensitivity": "Normal",
+      "summary": "StepRunning",
+      "restrictedDiagnosticReference": null
+    }
+  ]
+}

@@ -640,9 +640,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var appendFileCapabilityId = capabilityIdsByKey["workspace-append-file"];
         var workspaceDotnetRunCapabilityId = capabilityIdsByKey["workspace-dotnet-run"];
         var workspaceDotnetStopCapabilityId = capabilityIdsByKey["workspace-dotnet-stop"];
+        var workspaceDotnetNewCapabilityId = capabilityIdsByKey["workspace-dotnet-new"];
         var pwshRunScriptCapabilityId = capabilityIdsByKey["workspace-pwsh-run-script"];
         var convertDocumentCapabilityId = capabilityIdsByKey["workspace-convert-document"];
         var inspectSpreadsheetCapabilityId = capabilityIdsByKey["workspace-inspect-spreadsheet"];
+        var inspectImageCapabilityId = capabilityIdsByKey["workspace-inspect-image"];
+        var analyzeImageCapabilityId = capabilityIdsByKey["workspace-analyze-image"];
+        var analyzeImagesCapabilityId = capabilityIdsByKey["workspace-analyze-images"];
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         var architectAgent = Assert.Single(agents, item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
         var programmingAgent = Assert.Single(agents, item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
@@ -681,19 +685,19 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(marketingSpecialistAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(qaAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(qaAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(codeReviewAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(uiReviewAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(uiReviewAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(securityReviewerAgent, codeanalyticsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(releaseManagerAgent, playwrightCapabilityId, playwrightWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(dotnetArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(dotnetDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(blazorDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(dotnetQaAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(dotnetDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(blazorDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(dotnetQaAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(javascriptArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(javascriptDeveloperAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(businessStrategistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(marketingSpecialistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
@@ -879,6 +883,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a .NET app is not already running", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("provider/model is not vision-capable", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("A single static screenshot is insufficient", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a non-.NET app is not already running and only PowerShell execution is available", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not call `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for non-.NET deliverables", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", qaEditor.Instructions, StringComparison.Ordinal);
@@ -889,6 +897,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Back every claim with visible proof", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("provider/model is not vision-capable", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("mark conflicting prior screenshots or notes as stale evidence", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Call out flat Bootstrap-default composition, bare stacked form sections, or template navigation chrome", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("backed by loaded CSS or scoped CSS", uiReviewEditor.Instructions, StringComparison.Ordinal);
@@ -936,6 +947,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Assert.Single(agents, item => string.Equals(item.Name, "JavaScript Application Developer", StringComparison.Ordinal)).Id);
         var javascriptQa = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "JavaScript QA Review Lead", StringComparison.Ordinal)).Id);
+        var dotnetQa = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, ".NET QA Review Lead", StringComparison.Ordinal)).Id);
         var businessStrategist = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "Business Strategist", StringComparison.Ordinal)).Id);
         var financialStrategist = await workspaceService.GetAgentEditorAsync(
@@ -961,6 +974,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not satisfy a behavior defect by adding manifests", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", dotnetQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", dotnetQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("A single static screenshot is insufficient", dotnetQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not submit Completed or Blocked for missing browser receipts from file inspection alone", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", javascriptQa.Instructions, StringComparison.Ordinal);

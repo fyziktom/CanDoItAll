@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v23";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v24";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -90,6 +90,8 @@ internal static class SandboxWorkspaceSeedBuilder
         var workspaceConvertDocumentCapabilityId = CreateStableGuid("capabilities/workspace-convert-document");
         var workspaceInspectSpreadsheetCapabilityId = CreateStableGuid("capabilities/workspace-inspect-spreadsheet");
         var workspaceInspectImageCapabilityId = CreateStableGuid("capabilities/workspace-inspect-image");
+        var workspaceAnalyzeImageCapabilityId = CreateStableGuid("capabilities/workspace-analyze-image");
+        var workspaceAnalyzeImagesCapabilityId = CreateStableGuid("capabilities/workspace-analyze-images");
         var localDocsCapabilityId = CreateStableGuid("capabilities/workspace-source-rag");
         var architectureDocsCapabilityId = CreateStableGuid("capabilities/architecture-source-rag");
         var mailContextCapabilityId = CreateStableGuid("capabilities/mail-triage-context");
@@ -363,6 +365,8 @@ internal static class SandboxWorkspaceSeedBuilder
             CreateToolCapability(workspaceConvertDocumentCapabilityId, "workspace-convert-document", "Workspace Convert Document", "Converts a workspace document such as a PDF into markdown using markitdown.", "workspace_convert_document", approvalRequired: true),
             CreateToolCapability(workspaceInspectSpreadsheetCapabilityId, "workspace-inspect-spreadsheet", "Workspace Inspect Spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview.", "workspace_inspect_spreadsheet", approvalRequired: true),
             CreateToolCapability(workspaceInspectImageCapabilityId, "workspace-inspect-image", "Workspace Inspect Image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before project asset storage.", "workspace_inspect_image"),
+            CreateToolCapability(workspaceAnalyzeImageCapabilityId, "workspace-analyze-image", "Workspace Analyze Image", "Analyzes a workspace PNG, JPEG, or GIF image through the current vision-capable provider/model and returns visible evidence plus provider token counts.", "workspace_analyze_image"),
+            CreateToolCapability(workspaceAnalyzeImagesCapabilityId, "workspace-analyze-images", "Workspace Analyze Images", "Analyzes multiple workspace screenshots together through the current vision-capable provider/model and returns visible comparison evidence plus provider token counts.", "workspace_analyze_images"),
             new(
                 localDocsCapabilityId,
                 CapabilityKind.Rag,

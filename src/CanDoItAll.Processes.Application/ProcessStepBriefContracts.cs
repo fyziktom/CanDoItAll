@@ -169,7 +169,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
           Producer step: {sourceStep.Key} - {sourceStep.Title}
           Artifact expectation: {expectationKey} - {expectationTitle} ({artifactKind})
           Artifact refs to inspect (alternatives for this same slot): {BuildStepArtifactPath(request.ManagedArtifactRoot, sourceStep.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, sourceStep.Key)}
-          Runtime rule: this slot is available only after the producer completed. Use the first existing readable ref for this slot; do not block only because one alternative ref is missing when another listed ref exists.
+          Runtime rule: this slot is available only after the producer completed. Use workspace_stat_path or workspace_read_file on the listed refs and use the first existing readable ref for this slot; do not block only because one alternative ref is missing when another listed ref exists. Project structure is supplemental context, not a substitute for probing these managed artifact refs. If every listed ref is unreadable, cite the failed workspace file-tool receipt before returning Blocked.
           Validation: {validation}
         """;
     }
@@ -201,8 +201,10 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         {
             lines.Add($"""
             - Slot {slotId}
-              Write refs (choose at least one concrete managed ref for this slot): {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}
-              Completion rule: write at least one listed managed ref for the slot and include each written concrete artifact ref in evidenceRefs before returning Completed.
+              Primary write ref: {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}
+              Additional write root: {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}
+              Runtime rule: this is your own output, so your first workspace mutation for this slot must create the primary write ref with workspace_write_file or workspace_append_file. Do not list, search, stat, or read this run's managed artifact root to discover your own missing output before that write. Absence of your own output before you write it is expected and is not a blocker.
+              Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed. Do not invent sibling output files for this slot unless the step contract explicitly lists them here.
             """);
         }
 
@@ -227,8 +229,10 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         return $"""
         - Slot {slotId}
           Artifact expectation: {expectation.Key} - {title} ({artifactKind})
-          Write refs (choose at least one concrete managed ref for this slot): {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, request.Step.Key)}
-          Completion rule: write at least one listed managed ref for the slot and include each written concrete artifact ref in evidenceRefs before returning Completed. If writing under the step directory, include the exact file path, not only the directory.
+          Primary write ref: {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}
+          Additional write roots: {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, request.Step.Key)}
+          Runtime rule: this is your own output, so your first workspace mutation for this slot must create the primary write ref with workspace_write_file or workspace_append_file. Do not list, search, stat, or read this run's managed artifact root to discover your own missing output before that write. Absence of your own output before you write it is expected and is not a blocker.
+          Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed. Do not invent sibling output files for this slot unless the step contract explicitly lists them here.
           Validation: {validation}
         """;
     }

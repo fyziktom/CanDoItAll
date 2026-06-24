@@ -71,6 +71,8 @@ public static class ManagedSeedProviderFallbacks
     public const string FallbackBaseUrl = "http://192.168.10.132:11434";
     public const string FallbackModel = "gptoss32k:latest";
     public const int FallbackTimeoutSeconds = 600;
+    public const int FallbackMaxOutputTokens = 4096;
+    public const bool FallbackThinkEnabled = false;
 
     public static ProviderProfile Apply(
         AgentDefinition agent,
@@ -79,13 +81,6 @@ public static class ManagedSeedProviderFallbacks
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(provider);
-
-        if (IsFallbackProvider(provider) &&
-            IsManagedSeedAgent(agent) &&
-            !HasProviderRepairFallbackOverride(agent))
-        {
-            return CreateOpenAiDefaultProvider(provider);
-        }
 
         if (!ShouldUseFallback(agent, provider, openAiApiKeyOverride))
         {
@@ -143,7 +138,6 @@ public static class ManagedSeedProviderFallbacks
         ArgumentNullException.ThrowIfNull(provider);
 
         if (IsFallbackProvider(provider) &&
-            HasProviderRepairFallbackOverride(agent) &&
             !IsProviderSupportedModel(agent.Model, provider))
         {
             return provider.DefaultModel;
@@ -245,7 +239,7 @@ public static class ManagedSeedProviderFallbacks
                provider.BaseUrl.Contains("api.openai.com", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsGeneratedManagedSeedFallbackProvider(ProviderProfile provider)
+    public static bool IsGeneratedManagedSeedFallbackProvider(ProviderProfile provider)
     {
         return provider.ConfigurationJson.Contains("\"fallback\"", StringComparison.OrdinalIgnoreCase) ||
                provider.Notes.Contains("managed-seed fallback", StringComparison.OrdinalIgnoreCase);
@@ -293,14 +287,21 @@ public static class ManagedSeedProviderFallbacks
         };
     }
 
-    private static string CreateFallbackConfigurationJson(string fallbackReason)
+    public static string CreateFallbackConfigurationJson(string fallbackReason)
+        => EnsureFallbackRuntimeConfigurationJson("{}", fallbackReason);
+
+    public static string EnsureFallbackRuntimeConfigurationJson(string configurationJson, string fallbackReason)
     {
-        var configuration = new JsonObject
-        {
-            ["history"] = "framework-managed",
-            ["fallback"] = fallbackReason,
-            ["timeoutSeconds"] = FallbackTimeoutSeconds
-        };
+        var configuration = ParseConfigurationObject(configurationJson);
+
+        configuration["history"] = "framework-managed";
+        configuration["fallback"] = fallbackReason;
+        configuration["timeoutSeconds"] = FallbackTimeoutSeconds;
+
+        var modelParameters = configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] as JsonObject ?? [];
+        modelParameters[AgentProviderModelParameterPolicy.OllamaNumPredictConfigurationPropertyName] = FallbackMaxOutputTokens;
+        modelParameters[AgentProviderModelParameterPolicy.OllamaThinkConfigurationPropertyName] = FallbackThinkEnabled;
+        configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] = modelParameters;
 
         return configuration.ToJsonString();
     }
@@ -308,16 +309,6 @@ public static class ManagedSeedProviderFallbacks
     private static string CreateOpenAiConfigurationJson(string history)
     {
         return EnsureDefaultReasoningConfigurationJson("{}", history);
-    }
-
-    private static string EnsureFallbackTimeout(string configurationJson, string fallbackReason)
-    {
-        var configuration = ParseConfigurationObject(configurationJson);
-
-        configuration["history"] ??= "framework-managed";
-        configuration["fallback"] ??= fallbackReason;
-        configuration["timeoutSeconds"] = FallbackTimeoutSeconds;
-        return configuration.ToJsonString();
     }
 
     private static JsonObject ParseConfigurationObject(string configurationJson)

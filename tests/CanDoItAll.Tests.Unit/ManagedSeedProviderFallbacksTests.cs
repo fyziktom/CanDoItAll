@@ -108,15 +108,12 @@ public sealed class ManagedSeedProviderFallbacksTests
             openAiApiKeyOverride: "present");
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
 
-        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, effectiveProvider.Name);
-        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiBaseUrl, effectiveProvider.BaseUrl);
-        Assert.Equal(ProviderKind.OpenAi, effectiveProvider.Kind);
-        Assert.Equal(ProviderTransportKind.Responses, effectiveProvider.Transport);
-        Assert.Equal("gpt-4.1", effectiveModel);
+        Assert.Equal(registryProvider, effectiveProvider);
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
     }
 
     [Fact]
-    public void Remote_ollama_registry_provider_is_remapped_to_openai_and_uses_openai_model_for_ollama_model_assignments()
+    public void Remote_ollama_registry_provider_is_preserved_for_managed_seed_agent()
     {
         var agent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.FallbackModel);
         var registryProvider = CreateFallbackProvider();
@@ -129,10 +126,26 @@ public sealed class ManagedSeedProviderFallbacksTests
             openAiApiKeyOverride: "present");
         var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
 
-        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, effectiveProvider.Name);
-        Assert.Equal(ProviderKind.OpenAi, effectiveProvider.Kind);
-        Assert.Equal(ProviderTransportKind.Responses, effectiveProvider.Transport);
-        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, effectiveModel);
+        Assert.Equal(registryProvider, effectiveProvider);
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+    }
+
+    [Fact]
+    public void Remote_ollama_registry_provider_uses_default_model_for_openai_model_assignments()
+    {
+        var agent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        var registryProvider = CreateFallbackProvider();
+        var catalogShadowProvider = CreateOpenAiProvider();
+
+        var effectiveProvider = ManagedSeedProviderFallbacks.ResolvePreferredProvider(
+            agent,
+            registryProvider,
+            catalogShadowProvider,
+            openAiApiKeyOverride: "present");
+        var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiApiKeyOverride: "present");
+
+        Assert.Equal(registryProvider, effectiveProvider);
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
     }
 
     [Fact]
@@ -173,6 +186,50 @@ public sealed class ManagedSeedProviderFallbacksTests
             openAiApiKeyOverride: "present");
 
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackModel, effectiveModel);
+    }
+
+    [Fact]
+    public void Fallback_runtime_configuration_sets_bounded_ollama_generation_parameters()
+    {
+        var configurationJson = ManagedSeedProviderFallbacks.CreateFallbackConfigurationJson("unit-test");
+
+        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+            ProviderKind.Ollama,
+            configurationJson,
+            string.Empty);
+        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(configurationJson, string.Empty);
+
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackMaxOutputTokens, maxOutputTokens);
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackThinkEnabled, think);
+
+        using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
+        Assert.Equal("framework-managed", document.RootElement.GetProperty("history").GetString());
+        Assert.Equal("unit-test", document.RootElement.GetProperty("fallback").GetString());
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackTimeoutSeconds, document.RootElement.GetProperty("timeoutSeconds").GetInt32());
+    }
+
+    [Fact]
+    public void Fallback_runtime_configuration_repairs_existing_unbounded_ollama_generation_parameters()
+    {
+        const string existingConfigurationJson = "{\"history\":\"custom\",\"fallback\":\"old\",\"timeoutSeconds\":1,\"modelParameters\":{\"numPredict\":100,\"think\":true}}";
+
+        var configurationJson = ManagedSeedProviderFallbacks.EnsureFallbackRuntimeConfigurationJson(
+            existingConfigurationJson,
+            "repair");
+
+        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+            ProviderKind.Ollama,
+            configurationJson,
+            string.Empty);
+        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(configurationJson, string.Empty);
+
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackMaxOutputTokens, maxOutputTokens);
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackThinkEnabled, think);
+
+        using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
+        Assert.Equal("framework-managed", document.RootElement.GetProperty("history").GetString());
+        Assert.Equal("repair", document.RootElement.GetProperty("fallback").GetString());
+        Assert.Equal(ManagedSeedProviderFallbacks.FallbackTimeoutSeconds, document.RootElement.GetProperty("timeoutSeconds").GetInt32());
     }
 
     [Fact]

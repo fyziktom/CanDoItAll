@@ -349,7 +349,12 @@ internal static class AgentsApi
                 AgentChatApiRequest request,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.SendMessageAsync(agentId, request.ChatSessionId, request.Prompt, cancellationToken)))
+            Results.Ok(await workspaceService.SendMessageAsync(
+                agentId,
+                request.ChatSessionId,
+                request.Prompt,
+                cancellationToken,
+                request.AttachmentPaths)))
             .WithName("SendAgentChatMessage");
 
         agents.MapPost("/execution-runs/{executionRunId:guid}/pending-approvals", async (
@@ -386,7 +391,8 @@ internal static class AgentsApi
                     request.ChatSessionId,
                     request.Context,
                     request.AutoApprovePendingToolCalls,
-                    request.StructuredOutput),
+                    request.StructuredOutput,
+                    request.InputAttachmentPaths),
                 cancellationToken)))
             .WithName("StartAgentScopedExecutionRun");
 
@@ -572,7 +578,10 @@ internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds);
 
 internal sealed record ChatSessionRenameApiRequest(string Title);
 
-internal sealed record AgentChatApiRequest(Guid? ChatSessionId, string Prompt);
+internal sealed record AgentChatApiRequest(
+    Guid? ChatSessionId,
+    string Prompt,
+    IReadOnlyList<string>? AttachmentPaths = null);
 
 internal sealed record PendingApprovalApiRequest(bool Approved, bool AutoApprovePendingToolCalls);
 
@@ -581,7 +590,8 @@ internal sealed record AgentExecutionRunStartApiRequest(
     Guid? ChatSessionId = null,
     ExecutionInvocationContext? Context = null,
     bool AutoApprovePendingToolCalls = false,
-    AgentStructuredOutputContract? StructuredOutput = null);
+    AgentStructuredOutputContract? StructuredOutput = null,
+    IReadOnlyList<string>? InputAttachmentPaths = null);
 
 internal sealed class AgentExecutionRunApiQuery
 {

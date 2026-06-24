@@ -79,6 +79,69 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteRunAsync_finalizes_run_when_caller_cancels_after_runtime_started()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-run-caller-cancel");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton<FakeProgressAgentRuntime>();
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<FakeProgressAgentRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+        using var callerCancellation = new CancellationTokenSource();
+
+        var executionTask = workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Run a slow provider-backed validation.",
+                session.Id,
+                new ExecutionInvocationContext(
+                    SourceKind: "chat-session",
+                    SourceId: session.Id.ToString("N"),
+                    CorrelationId: "corr-caller-cancel",
+                    CausationId: "cause-caller-cancel",
+                    RequestedBy: "integration-test",
+                    RequestedByKind: "test",
+                    MetadataJson: "{}"),
+                AutoApprovePendingToolCalls: true),
+            callerCancellation.Token);
+
+        var executionRunId = await WaitForExecutionRunIdAsync(runtime, executionTask);
+        await runtime.ProgressPersisted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        callerCancellation.Cancel();
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() => executionTask);
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRunId);
+
+        Assert.Contains("caller request was cancelled", exception.Message, StringComparison.Ordinal);
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Failed, detail.Run.State);
+        Assert.Equal(RunOutcome.Cancelled, detail.Run.Outcome);
+        Assert.Contains("caller request was cancelled", detail.Run.ResultSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            detail.ExecutionLog,
+            entry => entry.ExecutionRunId == executionRunId &&
+                     entry.State == ExecutionState.Failed &&
+                     entry.Phase == "Cancelled" &&
+                     entry.Message.Contains("caller request was cancelled", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ExecuteRunAsync_starts_chat_backed_run_without_loading_unrelated_run_slices()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-chat-split-store");

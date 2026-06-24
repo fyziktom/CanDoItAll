@@ -112,6 +112,133 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
+    public async Task OpenAiProviderDriver_SerializesImageAttachmentsAsVisionContent()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"vision response"}}],"usage":{"prompt_tokens":11,"completion_tokens":12}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(ProviderKind.OpenAi, "https://api.openai.test/v1", "gpt-4o");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "gpt-4o",
+            "system",
+            [],
+            "Describe the screenshot.",
+            [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])]));
+
+        Assert.Equal("vision response", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        Assert.Contains("\"type\":\"text\"", request.Body, StringComparison.Ordinal);
+        Assert.Contains("\"type\":\"image_url\"", request.Body, StringComparison.Ordinal);
+        Assert.Contains("\"url\":\"data:image/png;base64,AQID\"", request.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_SerializesImageAttachmentsAsNativeImages()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"vision response"},"prompt_eval_count":13,"eval_count":14}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "llava");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "llava",
+            "system",
+            [],
+            "Describe the screenshot.",
+            [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])]));
+
+        Assert.Equal("vision response", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/api/chat", request.PathAndQuery);
+        Assert.Contains("\"content\":\"Describe the screenshot.\"", request.Body, StringComparison.Ordinal);
+        Assert.Contains("\"images\":[\"AQID\"]", request.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_UsesThinkingWhenContentIsEmpty()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"","thinking":"red circle and blue square"},"prompt_eval_count":13,"eval_count":14}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "qwen3.5:2b");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "qwen3.5:2b",
+            "system",
+            [],
+            "Describe the screenshot.",
+            [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])]));
+
+        Assert.Equal("red circle and blue square", result.ResponseText);
+        Assert.Equal(13, result.InputTokens);
+        Assert.Equal(14, result.OutputTokens);
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_SerializesConfiguredNumPredictAsChatOptions()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"vision response"},"prompt_eval_count":13,"eval_count":14}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            "http://ollama.test",
+            "qwen3.5:2b",
+            """{"modelParameters":{"numPredict":80,"think":false}}""");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "qwen3.5:2b",
+            "system",
+            [],
+            "Describe the screenshot.",
+            [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])]));
+
+        Assert.Equal("vision response", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.Equal(80, body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32());
+        Assert.False(body.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_PrefersRequestModelParametersOverProviderDefaults()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"vision response"},"prompt_eval_count":13,"eval_count":14}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            "http://ollama.test",
+            "qwen3.5:2b",
+            """{"modelParameters":{"numPredict":4096,"think":true}}""");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "qwen3.5:2b",
+            "system",
+            [],
+            "Describe the screenshot.",
+            [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])],
+            """{"modelParameters":{"numPredict":512,"think":false}}"""));
+
+        Assert.Equal("vision response", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.Equal(512, body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32());
+        Assert.False(body.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
     public async Task ConcreteDrivers_HealthReturnsStructuredFailureInsteadOfThrowing()
     {
         var handler = new CapturingHandler((request, body) =>

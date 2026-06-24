@@ -81,7 +81,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             new NullAgentExecutionEventSink(),
             checkpointBridge,
             processHost,
-            serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>());
+            serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
+            workspacePathResolutionService: new WorkspacePathResolutionService(workspaceRoot, scope));
 
         workspaceServices[key] = workspaceService;
         return workspaceService;

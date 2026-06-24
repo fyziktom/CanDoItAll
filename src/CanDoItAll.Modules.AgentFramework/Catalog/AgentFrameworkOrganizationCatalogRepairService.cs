@@ -161,9 +161,10 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 cancellationToken);
         }
 
+        var providersById = providers.ToDictionary(provider => provider.Id);
         var agents = await currentWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var agentsNeedingRepair = agents
-            .Where(RequiresOpenAiAssignmentRepair)
+            .Where(agent => RequiresOpenAiAssignmentRepair(agent, providersById))
             .Where(agent =>
                 agent.ProviderProfileId != openAiProvider.Id ||
                 !string.Equals(agent.Model, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.Ordinal) ||
@@ -246,11 +247,24 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     }
 
     private static bool RequiresOpenAiAssignmentRepair(
-        AgentDefinition agent)
+        AgentDefinition agent,
+        IReadOnlyDictionary<Guid, ProviderProfile> providersById)
     {
-        return !ManagedSeedProviderFallbacks.HasProviderRepairFallbackOverride(agent) &&
-               (ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent) ||
-                IsCrmHrRuntimeAgent(agent));
+        if (ManagedSeedProviderFallbacks.HasProviderRepairFallbackOverride(agent) ||
+            !ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent) &&
+            !IsCrmHrRuntimeAgent(agent))
+        {
+            return false;
+        }
+
+        if (!agent.ProviderProfileId.HasValue ||
+            !providersById.TryGetValue(agent.ProviderProfileId.Value, out var provider))
+        {
+            return true;
+        }
+
+        return IsManagedSeedOpenAiProvider(provider) ||
+               ManagedSeedProviderFallbacks.IsGeneratedManagedSeedFallbackProvider(provider);
     }
 
     private static bool IsCrmHrRuntimeAgent(

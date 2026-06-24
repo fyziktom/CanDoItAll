@@ -26,9 +26,12 @@ public sealed partial class MafAgentRuntime
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false)
-        => await CreateCapabilityStateCoreAsync(
+    {
+        var model = ResolveRuntimeModel(agent, provider);
+        return await CreateCapabilityStateCoreAsync(
             agent,
             provider,
+            model,
             capabilities,
             memory,
             progressCallback,
@@ -36,10 +39,12 @@ public sealed partial class MafAgentRuntime
             suppressApprovalRequirements,
             workspaceScope,
             AgentRuntimeContextIntent.Empty);
+    }
 
     private async Task<RuntimeCapabilityState> CreateCapabilityStateCoreAsync(
         AgentDefinition agent,
         ProviderProfile provider,
+        string model,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyList<AgentMemoryRecord> memory,
         Func<ExecutionState, string, string, Task> progressCallback,
@@ -48,7 +53,7 @@ public sealed partial class MafAgentRuntime
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent)
     {
-        var composition = CreateCapabilityComposition(agent, capabilities, contextIntent);
+        var composition = CreateCapabilityComposition(agent, provider, model, capabilities, contextIntent);
 
         await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
         await AttachContextContributorsAsync(
@@ -59,7 +64,7 @@ public sealed partial class MafAgentRuntime
             suppressApprovalRequirements,
             contextWorkspaceScope);
         await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements, contextIntent);
-        await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
+        await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements, contextIntent);
         await AttachRegisteredRuntimeToolProvidersAsync(
             composition,
             agent,
@@ -78,7 +83,8 @@ public sealed partial class MafAgentRuntime
             capabilities,
             progressCallback,
             cancellationToken,
-            suppressApprovalRequirements);
+            suppressApprovalRequirements,
+            contextIntent);
         await AttachCompactionAsync(composition, agent, progressCallback, suppressApprovalRequirements);
 
         DeduplicateTools(composition.State.Tools);
@@ -87,6 +93,8 @@ public sealed partial class MafAgentRuntime
 
     private RuntimeCapabilityComposition CreateCapabilityComposition(
         AgentDefinition agent,
+        ProviderProfile provider,
+        string model,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentRuntimeContextIntent contextIntent)
     {
@@ -98,7 +106,7 @@ public sealed partial class MafAgentRuntime
             ?? new WorkspaceCommandExecutionService(workspaceRoot, new LocalWorkspaceProcessHost(), workspaceScope);
         var workspaceArtifactToolService = services.GetService(typeof(IWorkspaceArtifactToolService)) as IWorkspaceArtifactToolService
             ?? new WorkspaceArtifactToolService(workspaceRoot, workspaceCommandExecutionService, workspaceScope);
-        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceFileService, workspaceCommandExecutionService, workspaceArtifactToolService, workspaceRoot, workspaceToolAccess);
+        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceFileService, workspaceCommandExecutionService, workspaceArtifactToolService, workspaceRoot, contextIntent.WorkspaceScope ?? workspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(this);
         var contextBuilder = new ContextCapabilityBuilder(this);
@@ -174,10 +182,13 @@ public sealed partial class MafAgentRuntime
                            allowedOperations.Contains(ProcessOperationContractNames.StartProjectNodeProcess) ||
                            allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget);
         var wantsScaffold = contextIntent.ScaffoldToolOnly ||
-                            allowedOperations.Contains(ProcessOperationContractNames.StartProjectNodeProcess);
+                            (contextIntent.AllowsProductMutation &&
+                             (allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget) ||
+                              allowedOperations.Contains(ProcessOperationContractNames.StartProjectNodeProcess)));
         var wantsTransform = wantsMutation ||
                              allowedOperations.Contains(ProcessOperationContractNames.WriteManagedProcessArtifacts) ||
-                             allowedOperations.Contains(ProcessOperationContractNames.ReadUpstreamArtifacts);
+                             allowedOperations.Contains(ProcessOperationContractNames.ReadUpstreamArtifacts) ||
+                             allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof);
 
         return AgentWorkspaceToolAccessMetadata.Normalize(new AgentWorkspaceToolAccessSettings
         {
@@ -381,10 +392,20 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        AgentRuntimeContextIntent contextIntent)
     {
         foreach (var capability in capabilities)
         {
+            if (!contextIntent.WorkspaceToolsEnabled && IsWorkspaceCatalogToolCapability(capability))
+            {
+                composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
+                    AgentRuntimeContextSourceCategories.CatalogCapability,
+                    capability.Key,
+                    "catalog workspace tool disabled by execution context"));
+                continue;
+            }
+
             await AttachCapabilityAsync(
                 composition,
                 capability,
@@ -396,12 +417,46 @@ public sealed partial class MafAgentRuntime
         }
     }
 
+    private static bool IsWorkspaceCatalogToolCapability(CapabilityCatalogItem capability)
+    {
+        if (capability.Kind != CapabilityKind.Tool)
+        {
+            return false;
+        }
+
+        var configuration = DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson);
+        return IsWorkspaceToolKey(configuration?.Tool) || IsWorkspaceToolKey(capability.Key);
+    }
+
+    private static bool IsWorkspaceToolKey(string? toolKey)
+    {
+        if (string.IsNullOrWhiteSpace(toolKey))
+        {
+            return false;
+        }
+
+        var normalized = toolKey.Replace('-', '_');
+        return string.Equals(normalized, "workspace_plugin", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) ||
+               ToolContractCatalog.WorkspaceToolNames.Contains(normalized, StringComparer.OrdinalIgnoreCase);
+    }
+
     private async Task AttachConfiguredWorkspaceToolsAsync(
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
         Func<ExecutionState, string, string, Task> progressCallback,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        AgentRuntimeContextIntent contextIntent)
     {
+        if (!contextIntent.WorkspaceToolsEnabled)
+        {
+            composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
+                AgentRuntimeContextSourceCategories.WorkspaceTools,
+                "configured-workspace-tools",
+                "configured workspace tools disabled by execution context"));
+            return;
+        }
+
         if (!agent.Permissions.CanUseTools)
         {
             return;

@@ -18,6 +18,7 @@ internal static class AgentFrameworkProviderMetadata
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
     private const string TransportPropertyName = "providerTransport";
     private const string TagsPropertyName = "tags";
+    private const string SupportsVisionPropertyName = "supportsVision";
 
     public static string BuildConfigurationJson(
         WorkspaceProviderProfile provider)
@@ -39,6 +40,15 @@ internal static class AgentFrameworkProviderMetadata
         else
         {
             configuration.Remove(SecretRecordIdPropertyName);
+        }
+
+        if (provider.SupportsVision)
+        {
+            configuration[SupportsVisionPropertyName] = true;
+        }
+        else
+        {
+            configuration.Remove(SupportsVisionPropertyName);
         }
 
         return configuration.ToJsonString();

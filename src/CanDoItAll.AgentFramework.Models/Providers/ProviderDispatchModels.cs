@@ -15,6 +15,7 @@ public enum AgentProviderOperationKind
 {
     ListModels,
     CompleteChat,
+    AnalyzeImage,
     GenerateImage,
     EditImage,
     TranscribeSpeech,

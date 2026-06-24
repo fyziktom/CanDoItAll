@@ -6,14 +6,16 @@ namespace CanDoItAll.Tests.Unit.AgentFramework.Providers;
 
 public sealed class ProviderRuntimeLifecycleTests
 {
-    private static readonly IAgentProviderFactory EmptyProviderFactory = new AgentProviderDriverRegistryBuilder().Build();
+    private static readonly IAgentProviderFactory TestProviderFactory = new AgentProviderDriverRegistryBuilder()
+        .AddDriver(new RuntimeLifecycleProviderDriver())
+        .Build();
 
     [Fact]
     public async Task RuntimePool_ReusesHandleUntilConfigFingerprintChanges()
     {
         var providerId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var descriptorSource = new MutableDescriptorSource(CreateDescriptor(providerId, configurationJson: """{"version":1}"""));
-        var pool = new ProviderRuntimePool(descriptorSource, new ProviderRuntimeHandleFactory(EmptyProviderFactory));
+        var pool = new ProviderRuntimePool(descriptorSource, new ProviderRuntimeHandleFactory(TestProviderFactory));
 
         await using (pool)
         {
@@ -38,7 +40,7 @@ public sealed class ProviderRuntimeLifecycleTests
     {
         var providerId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var descriptorSource = new MutableDescriptorSource(CreateDescriptor(providerId));
-        var pool = new ProviderRuntimePool(descriptorSource, new ProviderRuntimeHandleFactory(EmptyProviderFactory));
+        var pool = new ProviderRuntimePool(descriptorSource, new ProviderRuntimeHandleFactory(TestProviderFactory));
 
         await using (pool)
         {
@@ -59,7 +61,7 @@ public sealed class ProviderRuntimeLifecycleTests
         var provider = CreateProvider(Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"));
         await using var handle = new ProviderRuntimeHandle(
             ProviderRuntimeDescriptor.FromProfile(provider),
-            EmptyProviderFactory);
+            TestProviderFactory);
 
         var tasks = Enumerable.Range(0, 50)
             .Select(index => handle.DispatchAsync(
@@ -88,7 +90,7 @@ public sealed class ProviderRuntimeLifecycleTests
         var provider = CreateProvider(Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"));
         await using var handle = new ProviderRuntimeHandle(
             ProviderRuntimeDescriptor.FromProfile(provider),
-            EmptyProviderFactory);
+            TestProviderFactory);
         using var canceledRequest = new CancellationTokenSource();
         var neverCompletes = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -115,6 +117,96 @@ public sealed class ProviderRuntimeLifecycleTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceledTask);
         Assert.Equal(42, await unrelatedTask);
+        Assert.Equal(0, handle.InFlightRequestCount);
+    }
+
+    [Fact]
+    public async Task RuntimeHandle_SerializesDispatchesForSameProviderOperationAndModel()
+    {
+        var provider = CreateProvider(Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+        await using var handle = new ProviderRuntimeHandle(
+            ProviderRuntimeDescriptor.FromProfile(provider),
+            TestProviderFactory);
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var first = handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<int>(
+                CreateDispatchQuery(provider, "single-model"),
+                1,
+                Guid.NewGuid()),
+            async (context, cancellationToken) =>
+            {
+                firstStarted.SetResult();
+                await releaseFirst.Task.WaitAsync(cancellationToken);
+                return context.Payload;
+            });
+
+        await firstStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var second = handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<int>(
+                CreateDispatchQuery(provider, "single-model"),
+                2,
+                Guid.NewGuid()),
+            (context, cancellationToken) =>
+            {
+                secondStarted.SetResult();
+                return Task.FromResult(context.Payload);
+            });
+
+        var secondWasStartedEarly = await Task.WhenAny(secondStarted.Task, Task.Delay(100)) == secondStarted.Task;
+
+        releaseFirst.SetResult();
+
+        Assert.False(secondWasStartedEarly);
+        Assert.Equal(1, await first);
+        Assert.Equal(2, await second);
+        Assert.Equal(0, handle.InFlightRequestCount);
+    }
+
+    [Fact]
+    public async Task RuntimeHandle_AllowsIndependentDispatchLanesForDifferentModels()
+    {
+        var provider = CreateProvider(Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+        await using var handle = new ProviderRuntimeHandle(
+            ProviderRuntimeDescriptor.FromProfile(provider),
+            TestProviderFactory);
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var first = handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<int>(
+                CreateDispatchQuery(provider, "single-model"),
+                1,
+                Guid.NewGuid()),
+            async (context, cancellationToken) =>
+            {
+                firstStarted.SetResult();
+                await releaseFirst.Task.WaitAsync(cancellationToken);
+                return context.Payload;
+            });
+
+        await firstStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var second = handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<int>(
+                CreateDispatchQuery(provider, "other-model"),
+                2,
+                Guid.NewGuid()),
+            (context, cancellationToken) =>
+            {
+                secondStarted.SetResult();
+                return Task.FromResult(context.Payload);
+            });
+
+        await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        releaseFirst.SetResult();
+
+        Assert.Equal(1, await first);
+        Assert.Equal(2, await second);
         Assert.Equal(0, handle.InFlightRequestCount);
     }
 
@@ -207,7 +299,7 @@ public sealed class ProviderRuntimeLifecycleTests
             Notes: string.Empty,
             HealthStatus: "Not checked",
             LastCheckedAtUtc: null,
-            SuggestedModels: ["single-model", "batch-model"]);
+        SuggestedModels: ["single-model", "batch-model"]);
     }
 
     private static ProviderDispatchQuery CreateDispatchQuery(
@@ -251,6 +343,26 @@ public sealed class ProviderRuntimeLifecycleTests
             }
 
             return Task.FromResult(Descriptor);
+        }
+    }
+
+    private sealed class RuntimeLifecycleProviderDriver : IProviderChatCompletionDriver
+    {
+        public ProviderKind ProviderKind => ProviderKind.OpenAi;
+
+        public IReadOnlySet<AgentProviderCapabilityKind> Capabilities { get; } =
+            new HashSet<AgentProviderCapabilityKind> { AgentProviderCapabilityKind.ChatCompletion };
+
+        public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query)
+        {
+            return ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(30));
+        }
+
+        public Task<ProviderChatCompletionResult> CompleteChatAsync(
+            ProviderChatCompletionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new ProviderChatCompletionResult(request.Model, "ok", 1, 1));
         }
     }
 }

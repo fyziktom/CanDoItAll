@@ -109,7 +109,7 @@ public sealed class AgentOutputContractTests
         {
             Status = ProcessStepOutcomeStatus.Completed,
             Reason = "The implementation was completed.",
-            EvidenceRefs = [],
+            EvidenceRefs = ["execution://run-001"],
             NextActions = ["Ask the user what to do next."]
         };
 
@@ -117,6 +117,24 @@ public sealed class AgentOutputContractTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Code == "process.step_outcome.completed_next_action_inconsistent");
+    }
+
+    [Fact]
+    public void ProcessStepOutcomeValidator_rejects_completed_outcome_without_evidence()
+    {
+        var validator = new ProcessStepOutcomeValidator();
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "The implementation was completed.",
+            EvidenceRefs = [],
+            NextActions = []
+        };
+
+        var result = validator.Validate(output);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Code == "process.step_outcome.completed_evidence_ref_required");
     }
 
     [Fact]
@@ -168,7 +186,7 @@ public sealed class AgentOutputContractTests
             {
                 Status = ProcessStepOutcomeStatus.Completed,
                 Reason = "Completed.",
-                EvidenceRefs = [],
+                EvidenceRefs = ["execution://run-001"],
                 NextActions = []
             },
             AgentOutputJson.SerializerOptions);
@@ -202,7 +220,7 @@ public sealed class AgentOutputContractTests
     {
         var rawOutput = """
             The final result is:
-            {"status":"Completed","reason":"Completed and validated.","evidenceRefs":[],"nextActions":[]}
+            {"status":"Completed","reason":"Completed and validated.","evidenceRefs":["execution://run-001"],"nextActions":[]}
             """;
 
         var repair = await JsonObjectExtractionAgentOutputRepairService.Instance.TryRepairAsync(
@@ -228,7 +246,7 @@ public sealed class AgentOutputContractTests
     public async Task JsonObjectExtractionAgentOutputRepairService_uses_first_balanced_object_when_multiple_objects_are_present()
     {
         var rawOutput = """
-            first: {"status":"Completed","reason":"First object.","evidenceRefs":[],"nextActions":[]}
+            first: {"status":"Completed","reason":"First object.","evidenceRefs":["execution://run-001"],"nextActions":[]}
             second: {"status":"Failed","reason":"Second object.","evidenceRefs":[],"nextActions":["Investigate."]}
             """;
 

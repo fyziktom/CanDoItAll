@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
+using OllamaSharp;
+using OllamaSharp.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -41,6 +43,26 @@ public sealed partial class MafAgentRuntime
             {
                 Effort = MapReasoningEffort(reasoningEffort.Value)
             };
+        }
+
+        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+            provider.Kind,
+            provider.ConfigurationJson,
+            agentConfigurationJson ?? string.Empty);
+        if (maxOutputTokens is not null)
+        {
+            options.MaxOutputTokens = maxOutputTokens.Value;
+        }
+
+        if (provider.Kind == ProviderKind.Ollama)
+        {
+            var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(
+                provider.ConfigurationJson,
+                agentConfigurationJson ?? string.Empty);
+            if (think is not null)
+            {
+                options.AddOllamaOption(OllamaOption.Think, think.Value);
+            }
         }
 
         return options;

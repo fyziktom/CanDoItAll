@@ -1,8 +1,10 @@
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
 @implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService WorkspaceService
+@inject IAgentChatAttachmentStagingService AttachmentStagingService
 @inject IAgentVoiceService VoiceService
 @inject DialogService DialogService
 @inject NotificationService NotificationService
@@ -205,6 +207,7 @@
                                 ApprovalDecisionRequested="HandleApprovalDecisionAsync"
                                 ApprovalDecisionForConversationRequested="ApproveConversationAsync"
                                 AttachmentRequested="StageAttachmentsAsync"
+                                AttachmentFilesSelected="StageUploadedAttachmentFilesAsync"
                                 SessionTitleChanged="HandleSessionTitleChangedAsync"
                                 VoiceModeChanged="HandleVoiceModeChangedAsync"
                                 VoiceRecordingToggled="ToggleVoiceRecordingAsync"
@@ -622,7 +625,8 @@
                     Prompt: BuildContextualPrompt(prompt),
                     ChatSessionId: selectedSessionId,
                     Context: BuildInvocationContext(),
-                    AutoApprovePendingToolCalls: false));
+                    AutoApprovePendingToolCalls: false,
+                    InputAttachmentPaths: draftAttachmentPaths));
             draftAttachmentPaths = [];
             await LoadWorkspaceAsync(selectedAgentId.Value, result.ChatSessionId ?? selectedSessionId);
             await NotifyWorkspaceRefreshRequestedAsync(result.ExecutionRunId);
@@ -710,6 +714,40 @@
 
         draftAttachmentPaths = artifactPaths;
         Notify("Artifacts staged", "success", $"Staged {artifactPaths.Count} artifact path(s) for the next prompt.");
+    }
+
+    private async Task StageUploadedAttachmentFilesAsync(InputFileChangeEventArgs args)
+    {
+        const int maxFiles = 8;
+
+        isChatBusy = true;
+        try
+        {
+            var stagedPaths = new List<string>(draftAttachmentPaths);
+            foreach (var file in args.GetMultipleFiles(maxFiles))
+            {
+                await using var stream = file.OpenReadStream(AgentChatAttachmentStagingService.MaxImageAttachmentBytes);
+                var staged = await AttachmentStagingService.StageImageAsync(
+                    file.Name,
+                    file.ContentType,
+                    file.Size,
+                    stream);
+                stagedPaths.Add(staged.RelativePath);
+            }
+
+            draftAttachmentPaths = stagedPaths
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            Notify("Attachments staged", "success", $"Staged {draftAttachmentPaths.Count} attachment path(s) for the next prompt.");
+        }
+        catch (Exception exception)
+        {
+            Notify("Attachment failed", "danger", exception.Message);
+        }
+        finally
+        {
+            isChatBusy = false;
+        }
     }
 
     private async Task HandleSessionTitleChangedAsync(string title)
