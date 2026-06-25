@@ -189,6 +189,47 @@ public sealed class AgentChatModalTests
         Assert.Equal(second.Id, Assert.IsType<Guid>(result));
     }
 
+    [Fact]
+    public void Chat_workspace_collapses_automatic_user_context()
+    {
+        using var context = CreateContext();
+        var agent = CreateAgent("Process Manager", "Manager");
+        var now = new DateTimeOffset(2026, 6, 25, 17, 20, 0, TimeSpan.Zero);
+        var session = CreateSession(agent.Id, "Process manager thread", now) with
+        {
+            Messages =
+            [
+                new ChatMessageRecord(
+                    Id: Guid.NewGuid(),
+                    Role: ChatMessageRole.User,
+                    Content: """
+                    Process manager context
+                    Scope: processes:workspace:run:abc
+                    Runtime usage telemetry:
+                    - Total tokens: 7,644,302
+
+                    User request:
+                    how much did this run cost?
+                    """,
+                    CreatedAtUtc: now,
+                    TokenEstimate: 42)
+            ]
+        };
+
+        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+            .Add(component => component.Agent, agent)
+            .Add(component => component.Session, session)
+            .Add(component => component.ExecutionLog, Array.Empty<ExecutionLogEntry>())
+            .Add(component => component.DraftPrompt, string.Empty));
+
+        Assert.Equal("how much did this run cost?", cut.Find(".chat-message-bubble > p").TextContent.Trim());
+        var hiddenContext = cut.Find("[data-testid='chat-message-hidden-context']");
+
+        Assert.Contains("...more", hiddenContext.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Process manager context", hiddenContext.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Runtime usage telemetry", hiddenContext.TextContent, StringComparison.Ordinal);
+    }
+
     private static TestContext CreateContext()
     {
         var context = new TestContext();

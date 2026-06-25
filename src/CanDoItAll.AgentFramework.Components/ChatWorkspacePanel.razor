@@ -100,6 +100,9 @@
                 @foreach (var message in Session?.Messages.OrderBy(item => item.CreatedAtUtc) ?? Enumerable.Empty<ChatMessageRecord>())
                 {
                     var isUserMessage = message.Role == ChatMessageRole.User;
+                    var userMessageDisplay = isUserMessage
+                        ? ResolveUserMessageDisplay(message.Content)
+                        : null;
 
                     <div class="flex @(isUserMessage ? "justify-end" : "justify-start")">
                         <div class="flex max-w-[44rem] flex-col gap-2 @(isUserMessage ? "items-end" : "items-start")">
@@ -119,9 +122,16 @@
                             </Cluster>
 
                             <div class="chat-message-bubble rounded-[1.4rem] border px-4 py-3.5 shadow-sm @(ResolveBubbleClass(isUserMessage))">
-                                @if (isUserMessage)
+                                @if (isUserMessage && userMessageDisplay is not null)
                                 {
-                                    <p class="text-sm leading-6">@message.Content</p>
+                                    <p class="text-sm leading-6">@userMessageDisplay.VisibleContent</p>
+                                    @if (!string.IsNullOrWhiteSpace(userMessageDisplay.HiddenContext))
+                                    {
+                                        <details class="chat-message-context chat-message-context--user" data-testid="chat-message-hidden-context">
+                                            <summary>...more</summary>
+                                            <pre>@userMessageDisplay.HiddenContext</pre>
+                                        </details>
+                                    }
                                 }
                                 else
                                 {
@@ -198,6 +208,8 @@
 
                 @if (hasPendingPrompt)
                 {
+                    var pendingUserMessageDisplay = ResolveUserMessageDisplay(PendingUserPrompt);
+
                     <div class="flex justify-end">
                         <div class="flex max-w-[44rem] flex-col items-end gap-2">
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -207,7 +219,14 @@
                             </Cluster>
 
                             <div class="rounded-[1.4rem] border border-slate-900 bg-slate-900 px-4 py-3.5 text-white shadow-sm opacity-90">
-                                <p class="text-sm leading-6">@PendingUserPrompt</p>
+                                <p class="text-sm leading-6">@pendingUserMessageDisplay.VisibleContent</p>
+                                @if (!string.IsNullOrWhiteSpace(pendingUserMessageDisplay.HiddenContext))
+                                {
+                                    <details class="chat-message-context chat-message-context--user" data-testid="chat-pending-hidden-context">
+                                        <summary>...more</summary>
+                                        <pre>@pendingUserMessageDisplay.HiddenContext</pre>
+                                    </details>
+                                }
                             </div>
                         </div>
                     </div>
@@ -400,6 +419,8 @@
     private static MarkupString RenderAssistantMessage(string? content)
         => new(ChatMarkdownRenderer.RenderHtml(content));
 
+    private const string UserRequestMarker = "User request:";
+
     [Parameter]
     public AgentDefinition? Agent { get; set; }
 
@@ -539,6 +560,30 @@
 
     private string ResolveVoiceRecordingLabel()
         => IsVoiceRecording ? "Stop voice recording" : "Start voice recording";
+
+    private static UserMessageDisplay ResolveUserMessageDisplay(string? content)
+    {
+        var normalizedContent = content?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedContent))
+        {
+            return new UserMessageDisplay(string.Empty, null);
+        }
+
+        var markerIndex = normalizedContent.LastIndexOf(UserRequestMarker, StringComparison.OrdinalIgnoreCase);
+        if (markerIndex < 0)
+        {
+            return new UserMessageDisplay(normalizedContent, null);
+        }
+
+        var visibleContent = normalizedContent[(markerIndex + UserRequestMarker.Length)..].Trim();
+        if (string.IsNullOrWhiteSpace(visibleContent))
+        {
+            return new UserMessageDisplay(normalizedContent, null);
+        }
+
+        var hiddenContext = normalizedContent[..markerIndex].Trim();
+        return new UserMessageDisplay(visibleContent, hiddenContext.Length == 0 ? null : hiddenContext);
+    }
 
     private async Task HandleSessionTitleChangedAsync(EditableThreadTitleModel editor)
     {
@@ -878,6 +923,8 @@
 
         return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
     }
+
+    private sealed record UserMessageDisplay(string VisibleContent, string? HiddenContext);
 
     private sealed class EditableThreadTitleModel
     {
