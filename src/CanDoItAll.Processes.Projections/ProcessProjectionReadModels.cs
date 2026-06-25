@@ -57,6 +57,8 @@ public sealed record ProcessLiveProcessSnapshot(
     IReadOnlyList<ProcessLiveRunEventProjection> RecentEvents,
     IReadOnlyList<ProcessIncidentProjection> Incidents)
 {
+    public string ProcessName { get; init; } = string.Empty;
+
     public IReadOnlyList<ProcessRuntimeOperatorActionProjection> OperatorActions { get; init; } = [];
 
     public IReadOnlyList<ProcessRuntimeChildRunWaitProjection> WaitingOnChildRuns { get; init; } = [];

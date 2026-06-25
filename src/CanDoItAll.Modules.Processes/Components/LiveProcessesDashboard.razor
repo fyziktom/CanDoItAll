@@ -10,6 +10,7 @@
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 @inject NotificationService Notifications
+@inject TooltipService TooltipService
 
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -266,6 +267,15 @@
         Storage,
         Other
     }
+
+    private const int ProcessNameDisplayLength = 34;
+
+    private sealed record RunDisplayModel(
+        string ProcessName,
+        string ShortProcessName,
+        string RunLabel,
+        string Title,
+        bool IsProcessNameTruncated);
 
     private sealed record LiveRunProgressModel(
         int Percent,
@@ -863,7 +873,7 @@
                                     <StatusBadge Tone="info" Text="@FormatCount(ResolveManagerMessages(run.RunId).Count, "manager message", "manager messages")" />
                                 }
                             </Cluster>
-                            <h3 class="live-processes-attention-card__title">@BuildRunTitle(run)</h3>
+                            <h3 class="live-processes-attention-card__title">@RenderRunTitleContent(run)</h3>
                             <p class="live-processes-attention-card__summary">@BuildAttentionSummary(run)</p>
                             @if (action is not null)
                             {
@@ -979,7 +989,7 @@
                 </Cluster>
                 <span class="live-processes-activity-card__percent">@($"{progress.Percent}%")</span>
             </Split>
-            <h3 class="live-processes-activity-card__title">@BuildRunTitle(run)</h3>
+            <h3 class="live-processes-activity-card__title">@RenderRunTitleContent(run)</h3>
             <div class="live-processes-activity-card__fields">
                 <span>
                     <Icon Name="route" />
@@ -1061,7 +1071,7 @@
                             class="live-processes-run-card__body"
                             @onclick="@(() => SelectRuntimeRunAsync(run.RunId.Value))">
                         <span class="live-processes-run-card__header">
-                            <span class="live-processes-run-card__title">@BuildRunTitle(run)</span>
+                            <span class="live-processes-run-card__title">@RenderRunTitleContent(run)</span>
                             <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
                         </span>
                         <span class="live-processes-run-card__summary">@BuildRunCardSummary(run)</span>
@@ -1192,6 +1202,7 @@
                 {
                     <div class="live-processes-event-row" data-testid="live-processes-event-row">
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            @RenderEventRunTitleContent(runtimeEvent)
                             <StatusBadge Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.EventType" />
                             <StatusBadge Tone="neutral" Text="@runtimeEvent.Sensitivity.ToString()" />
                             <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
@@ -1318,7 +1329,7 @@
                             <StatusBadge Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" />
                         }
                     </Cluster>
-                    <h2>@BuildRunTitle(run)</h2>
+                    <h2>@RenderRunTitleContent(run)</h2>
                     <p>@BuildRunCardSummary(run)</p>
                     <div class="live-processes-run-progress live-processes-run-progress--detail"
                          title="@progress.Tooltip">
@@ -1407,6 +1418,7 @@
                 {
                     <div class="live-processes-event-row">
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            @RenderRunTitleContent(run)
                             <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@runtimeEvent.EventType" />
                             <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                         </Cluster>
@@ -2016,8 +2028,70 @@
             : $"{instruction}{Environment.NewLine}{Environment.NewLine}Operator note:{Environment.NewLine}{note}";
     }
 
+    private RenderFragment RenderRunTitleContent(ProcessLiveProcessSnapshot run)
+        => RenderRunTitleContent(BuildRunDisplay(run));
+
+    private RenderFragment RenderEventRunTitleContent(ProcessTimelineEventProjection runtimeEvent)
+        => RenderRunTitleContent(BuildRunDisplay(runtimeEvent));
+
+    private RenderFragment RenderRunTitleContent(RunDisplayModel display) => @<span class="live-processes-run-title">
+        <span class="live-processes-run-title__name"
+              title="@display.ProcessName"
+              @onmouseenter="@((MouseEventArgs args) => OpenProcessNameTooltip(args, display))"
+              @onmouseleave="CloseProcessNameTooltip"
+              data-testid="live-processes-run-process-name">@display.ShortProcessName</span>
+        <span class="live-processes-run-title__hash">@display.RunLabel</span>
+    </span>;
+
+    private void OpenProcessNameTooltip(MouseEventArgs args, RunDisplayModel display)
+    {
+        if (!display.IsProcessNameTruncated)
+        {
+            return;
+        }
+
+        TooltipService.Open(
+            args,
+            display.ProcessName,
+            new TooltipOptions
+            {
+                Position = TooltipPosition.Bottom,
+                Duration = null,
+                TestId = "live-processes-process-name-tooltip"
+            });
+    }
+
+    private void CloseProcessNameTooltip()
+    {
+        TooltipService.Close();
+    }
+
+    private RunDisplayModel BuildRunDisplay(ProcessTimelineEventProjection runtimeEvent)
+    {
+        var run = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId == runtimeEvent.RunId);
+        return run is null
+            ? BuildRunDisplay(runtimeEvent.RunId.Value, processName: null)
+            : BuildRunDisplay(run);
+    }
+
+    private static RunDisplayModel BuildRunDisplay(ProcessLiveProcessSnapshot run)
+        => BuildRunDisplay(run.RunId.Value, run.ProcessName);
+
+    private static RunDisplayModel BuildRunDisplay(Guid runId, string? processName)
+    {
+        var normalizedProcessName = FirstNonEmpty(processName, "Process run");
+        var shortProcessName = TrimLabel(normalizedProcessName, ProcessNameDisplayLength);
+        var runLabel = $"Run {runId.ToString("N")[..8]}";
+        return new RunDisplayModel(
+            normalizedProcessName,
+            shortProcessName,
+            runLabel,
+            $"{normalizedProcessName} / {runLabel}",
+            !string.Equals(normalizedProcessName, shortProcessName, StringComparison.Ordinal));
+    }
+
     private static string BuildRunTitle(ProcessLiveProcessSnapshot run)
-        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+        => BuildRunDisplay(run).Title;
 
     private static string BuildRunSubtitle(ProcessLiveProcessSnapshot run)
         => $"{run.Status} / {run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}";

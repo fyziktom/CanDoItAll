@@ -67,6 +67,12 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs = (await EnrichChildRunWaitsAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
         }
 
+        if (enrichmentCache.CanLoadAssignments &&
+            (loadOptions.IncludeCurrentSteps || loadOptions.IncludeOperatorActions || loadOptions.IncludeChildRunWaits))
+        {
+            runs = (await EnrichProcessNamesAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        }
+
         runs.Sort(static (left, right) =>
         {
             var lastEventComparison = right.LastEventAtUtc.CompareTo(left.LastEventAtUtc);
@@ -482,6 +488,35 @@ public sealed class ProcessRuntimeProjectionQueryService(
             .ThenByDescending(agent => agent.UpdatedAtUtc)
             .ThenBy(agent => agent.ExecutorDisplayName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichProcessNamesAsync(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        RuntimeRunEnrichmentCache enrichmentCache,
+        CancellationToken cancellationToken)
+    {
+        if (runs.Count == 0)
+        {
+            return runs;
+        }
+
+        var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            if (!string.IsNullOrWhiteSpace(run.ProcessName))
+            {
+                enriched.Add(run);
+                continue;
+            }
+
+            var assignmentsByStep = await enrichmentCache.LoadAssignmentsByStepAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var processName = ResolveProcessName(assignmentsByStep.Values);
+            enriched.Add(string.IsNullOrWhiteSpace(processName)
+                ? run
+                : run with { ProcessName = processName });
+        }
+
+        return enriched;
     }
 
     private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> ReconcileLiveActivityAsync(
@@ -1027,6 +1062,19 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
     private static bool IsAgentActiveStep(ProcessRuntimeStepState step)
         => step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
+
+    private static string ResolveProcessName(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments.OrderBy(item => item.StepKey, StringComparer.OrdinalIgnoreCase))
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadProcessDefinitionName(assignment.LaunchVariables, out var definitionName))
+            {
+                return definitionName;
+            }
+        }
+
+        return string.Empty;
+    }
 
     private static string BuildRunLabel(ProcessLiveProcessSnapshot run)
         => $"Run {run.RunId.Value.ToString("N")[..8]}";

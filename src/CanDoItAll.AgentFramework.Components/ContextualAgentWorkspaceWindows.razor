@@ -8,6 +8,7 @@
 @inject IAgentVoiceService VoiceService
 @inject DialogService DialogService
 @inject NotificationService NotificationService
+@inject TooltipService TooltipService
 @inject Microsoft.JSInterop.IJSRuntime JsRuntime
 
 @if (WindowState.IsVisible)
@@ -223,13 +224,20 @@
                             aria-label="Download agent thread history JSON"
                             title="Download agent thread history JSON"
                             data-testid="@($"{TestId}-download-thread-history-json")" />
-                    <Button Icon="runtime"
-                            Text="Runtime details"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@(!CanOpenRuntimeDetails)"
-                            Click="OpenRuntimeDetailsDialogAsync"
-                            data-testid="@($"{TestId}-open-runtime-details")" />
+                    <span class="contextual-agent-chat-window__runtime-action"
+                          @onmouseenter="OpenRuntimeDetailsTooltip"
+                          @onmousemove="OpenRuntimeDetailsTooltip"
+                          @onmouseleave="CloseRuntimeDetailsTooltip">
+                        <Button Icon="runtime"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="OpenRuntimeDetailsDialogAsync"
+                                aria-label="Runtime details"
+                                @onmouseenter="OpenRuntimeDetailsTooltip"
+                                @onmousemove="OpenRuntimeDetailsTooltip"
+                                @onmouseleave="CloseRuntimeDetailsTooltip"
+                                data-testid="@($"{TestId}-open-runtime-details")" />
+                    </span>
                 </HeaderActions>
             </ChatWorkspacePanel>
         </div>
@@ -811,6 +819,26 @@
                 ProjectId,
                 ProcessDefinitionId,
                 ContextualAgentWorkspaceContextBuilder.NormalizeSelectedNodeIds(SelectedNodeIds)));
+    }
+
+    private void OpenRuntimeDetailsTooltip(MouseEventArgs args)
+    {
+        TooltipService.Open(
+            args,
+            CanOpenRuntimeDetails
+                ? "Runtime details"
+                : "Runtime details become available after the agent starts work.",
+            new TooltipOptions
+            {
+                Position = TooltipPosition.Bottom,
+                Duration = null,
+                TestId = $"{TestId}-runtime-details-tooltip"
+            });
+    }
+
+    private void CloseRuntimeDetailsTooltip()
+    {
+        TooltipService.Close();
     }
 
     private Task OpenRuntimeDetailsDialogAsync()

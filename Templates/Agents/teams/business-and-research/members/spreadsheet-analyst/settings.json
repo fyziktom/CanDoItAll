@@ -5,7 +5,7 @@
   "summary": "Uses spreadsheet skill guidance plus framework-native tools to inspect workbook-like artifacts, compare purchasing documents, and call out concrete findings.",
   "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-06.jpg",
   "status": "Active",
-  "providerProfileKey": "openai-chat-completions",
+  "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",
   "workload": "Spreadsheet",
   "chatHistoryMode": "FrameworkManaged",

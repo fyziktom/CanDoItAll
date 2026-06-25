@@ -12,6 +12,10 @@
     overflow: hidden;
 }
 
+.contextual-agent-chat-window__runtime-action {
+    display: inline-flex;
+}
+
 .contextual-agent-window__filters {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

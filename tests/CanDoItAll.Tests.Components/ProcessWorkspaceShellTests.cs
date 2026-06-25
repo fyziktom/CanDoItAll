@@ -10,6 +10,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -708,6 +709,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Live_processes_active_card_prefers_working_agent_summary_over_stale_attention_event()
     {
         using var context = CreateContext(out _);
+        var tooltipHost = context.RenderComponent<Tooltip>();
         var activeRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
 
         var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
@@ -717,9 +719,19 @@ public sealed class ProcessWorkspaceShellTests
         var activeCard = cut
             .FindAll("[data-testid='live-processes-activity-card']")
             .Single(card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+        var processName = activeCard.QuerySelector("[data-testid='live-processes-run-process-name']");
 
+        Assert.NotNull(processName);
+        Assert.Contains("Long-running customer onboardin...", processName!.TextContent, StringComparison.Ordinal);
+        Assert.Equal(ResolveProcessName(activeRunId), processName.GetAttribute("title"));
         Assert.Contains("Active: .NET Developer is Running on implementation as lead-engineer.", activeCard.TextContent, StringComparison.Ordinal);
         Assert.DoesNotContain("ManagerIncidentRaised: ManagerIncidentRaised", activeCard.TextContent, StringComparison.Ordinal);
+
+        processName.TriggerEvent("onmouseenter", new MouseEventArgs { ClientX = 120, ClientY = 80 });
+        tooltipHost.WaitForAssertion(() =>
+        {
+            Assert.Contains(ResolveProcessName(activeRunId), tooltipHost.Markup, StringComparison.Ordinal);
+        });
     }
 
     private static TestContext CreateContext(out RecordingProcessWorkspaceProjectionClient client)
@@ -734,6 +746,11 @@ public sealed class ProcessWorkspaceShellTests
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);
         return context;
     }
+
+    private static string ResolveProcessName(Guid runId)
+        => runId == Guid.Parse("88888888-8888-8888-8888-888888888888")
+            ? "Long-running customer onboarding process with multiple external approvals"
+            : "Blazor app delivery";
 
     private sealed class StaticCurrencyFormatter(string currencyCode) : ICurrencyFormatter
     {
@@ -1158,6 +1175,7 @@ public sealed class ProcessWorkspaceShellTests
                 freshness,
                 events.Select(ToLiveRunEvent).ToArray(),
                 incidents);
+            snapshot = snapshot with { ProcessName = ResolveProcessName(runId.Value) };
 
             return status == ProcessProjectedRunStatus.NeedsAttention
                 ? snapshot with

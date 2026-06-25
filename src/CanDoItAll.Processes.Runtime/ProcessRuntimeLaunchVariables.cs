@@ -7,6 +7,8 @@ public static class ProcessRuntimeLaunchVariables
 {
     public const string ParentProcessRunId = "ParentProcessRunId";
     public const string ParentProcessStepId = "ParentProcessStepId";
+    public const string ProcessDefinitionKey = "ProcessDefinitionKey";
+    public const string ProcessDefinitionName = "ProcessDefinitionName";
 
     public static IReadOnlyDictionary<string, string> CreateParentRunLookup(ProcessRunId parentRunId)
     {
@@ -70,6 +72,20 @@ public static class ProcessRuntimeLaunchVariables
         return true;
     }
 
+    public static bool TryReadProcessDefinitionName(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out string definitionName)
+    {
+        definitionName = string.Empty;
+        if (!TryReadNonEmptyString(launchVariables, ProcessDefinitionName, out var value))
+        {
+            return false;
+        }
+
+        definitionName = value;
+        return true;
+    }
+
     public static bool TryReadParentRunId(
         string launchVariablesJson,
         out ProcessRunId parentRunId)
@@ -97,6 +113,22 @@ public static class ProcessRuntimeLaunchVariables
         return launchVariables.TryGetValue(key, out var rawValue) &&
                Guid.TryParse(rawValue, out value) &&
                value != Guid.Empty;
+    }
+
+    private static bool TryReadNonEmptyString(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string key,
+        out string value)
+    {
+        value = string.Empty;
+        if (!launchVariables.TryGetValue(key, out var rawValue) ||
+            string.IsNullOrWhiteSpace(rawValue))
+        {
+            return false;
+        }
+
+        value = rawValue.Trim();
+        return true;
     }
 
     private static bool TryDeserializeLaunchVariables(

@@ -495,6 +495,7 @@ public sealed class ProcessLaunchApplicationService(
         var launchVariables = EnrichLaunchScopeVariables(
             NormalizeLaunchVariables(request.Variables),
             request);
+        launchVariables = EnrichDefinitionLaunchVariables(launchVariables, selection.Definition);
         var runId = ProcessRunId.New();
         var managedArtifactRoot = BuildManagedProcessArtifactRoot(runId);
         var effectiveLaunchVariables = EnrichRunLaunchVariables(launchVariables, runId, managedArtifactRoot);
@@ -853,6 +854,16 @@ public sealed class ProcessLaunchApplicationService(
             SetCanonicalLaunchVariable(enriched, ProjectNodeIdVariableName, request.ProjectNodeId.Trim());
         }
 
+        return enriched;
+    }
+
+    private static IReadOnlyDictionary<string, string> EnrichDefinitionLaunchVariables(
+        IReadOnlyDictionary<string, string> variables,
+        ProcessTemplateDefinitionDocument definition)
+    {
+        var enriched = new Dictionary<string, string>(variables, StringComparer.Ordinal);
+        SetCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessDefinitionKey, definition.Key);
+        SetCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessDefinitionName, definition.DisplayName);
         return enriched;
     }
 
