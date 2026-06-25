@@ -106,6 +106,182 @@
     margin: 0.75rem 0 0;
 }
 
+.scheduler-plan-card-grid {
+    align-items: stretch;
+}
+
+.scheduler-plan-list__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.scheduler-plan-list__actions {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+}
+
+.scheduler-plan-list__actions ::deep .cda-button {
+    width: auto;
+    min-width: 7rem;
+}
+
+.scheduler-plan-card {
+    min-height: 100%;
+    padding: 1rem;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.scheduler-plan-card--enabled {
+    border-top: 3px solid rgba(5, 150, 105, 0.72);
+}
+
+.scheduler-plan-card--paused {
+    border-top: 3px solid rgba(100, 116, 139, 0.55);
+    background: #f8fafc;
+}
+
+.scheduler-plan-card__title {
+    margin: 0.65rem 0 0;
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.scheduler-plan-card__target {
+    margin: 0.2rem 0 0;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.scheduler-plan-card__cron {
+    margin: 0;
+    color: #334155;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.55;
+}
+
+.scheduler-plan-card__meta,
+.scheduler-edit-context__stats {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.scheduler-plan-card__meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 0.8rem;
+    border: 1px solid rgba(226, 232, 240, 0.88);
+    border-radius: 0.5rem;
+    background: rgba(248, 250, 252, 0.85);
+}
+
+.scheduler-plan-card__meta span,
+.scheduler-edit-context__stats span {
+    display: block;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.scheduler-plan-card__meta strong,
+.scheduler-edit-context__stats strong {
+    display: block;
+    margin-top: 0.2rem;
+    color: #0f172a;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.scheduler-plan-card__error,
+.scheduler-edit-context__error {
+    margin: 0;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgba(254, 205, 211, 0.92);
+    border-radius: 0.5rem;
+    background: #fff1f2;
+    color: #be123c;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.scheduler-plan-card__actions {
+    padding-top: 0.15rem;
+}
+
+.scheduler-edit-context {
+    min-height: 100%;
+    padding: 1rem;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 0.5rem;
+    background: #f8fafc;
+}
+
+.scheduler-edit-context h3,
+.scheduler-delete-summary h3 {
+    margin: 0.35rem 0 0;
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.scheduler-edit-context p,
+.scheduler-delete-summary p {
+    margin: 0.45rem 0 0;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.55;
+}
+
+.scheduler-edit-context__stats {
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.scheduler-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+}
+
+.scheduler-dialog-footer__actions,
+.scheduler-dialog-footer__start {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.scheduler-dialog-footer__actions {
+    justify-content: flex-end;
+}
+
+.scheduler-dialog-footer ::deep .cda-button {
+    width: auto;
+}
+
+.scheduler-delete-summary {
+    padding: 1rem;
+    border: 1px solid rgba(254, 205, 211, 0.9);
+    border-radius: 0.5rem;
+    background: #fff1f2;
+}
+
 .scheduler-target-card {
     position: relative;
     min-height: 100%;
@@ -195,5 +371,31 @@
 
     .scheduler-target-picker__filters {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .scheduler-plan-card__meta {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .scheduler-plan-list__header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .scheduler-plan-list__actions,
+    .scheduler-plan-list__actions ::deep .cda-button {
+        width: 100%;
+    }
+
+    .scheduler-dialog-footer,
+    .scheduler-dialog-footer__actions,
+    .scheduler-dialog-footer__start {
+        align-items: stretch;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .scheduler-dialog-footer ::deep .cda-button {
+        width: 100%;
     }
 }

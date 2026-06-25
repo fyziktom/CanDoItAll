@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.SchedulerPlanner.Pages;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Json;
@@ -12,6 +13,8 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class SchedulerPlannerPageTests
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     [Fact]
     public async Task Scheduler_page_renders_tabs_and_canvas_calendar_host()
     {
@@ -33,7 +36,8 @@ public sealed class SchedulerPlannerPageTests
         });
         cut.WaitForElement("[data-testid='scheduler-calendar']");
 
-        Assert.Contains("Scheduled runs", cut.Markup);
+        Assert.Contains("Calendar", cut.Markup);
+        Assert.Contains("Schedules", cut.Markup);
         Assert.Contains("New schedule", cut.Markup);
         Assert.Contains("History", cut.Markup);
         Assert.Contains("scheduler-planner-calendar", cut.Markup);
@@ -395,6 +399,79 @@ public sealed class SchedulerPlannerPageTests
             });
     }
 
+    private static SchedulerPlannerWorkspace CreateScheduledPlanWorkspace(
+        Guid planId,
+        Guid workflowId,
+        Guid workflowVersionId)
+    {
+        var updatedAtUtc = new DateTimeOffset(2026, 5, 12, 8, 0, 0, TimeSpan.Zero);
+        var nextFireAtUtc = new DateTimeOffset(2026, 5, 13, 9, 0, 0, TimeSpan.Zero);
+        var plannedEvent = new CanvasCalendarEvent
+        {
+            Id = $"planned-{planId:N}-{nextFireAtUtc.UtcTicks}",
+            EventId = $"planned-{planId:N}-{nextFireAtUtc.UtcTicks}",
+            Title = "Office365 email watch",
+            Description = "At 09:00 on Monday through Friday every month (UTC). / Workflow / Office365 email watch summary",
+            StartUtc = nextFireAtUtc,
+            EndUtc = nextFireAtUtc.AddMinutes(30),
+            Timezone = "UTC",
+            TimezoneName = "UTC",
+            EventType = SchedulerPlanTargetKind.Workflow.ToString(),
+            Status = "Scheduled",
+            Category = SchedulerPlanTargetKind.Workflow.ToString(),
+            Color = "#2563eb",
+            ReadOnly = false,
+            RepositoryId = planId.ToString("D")
+        };
+
+        return new SchedulerPlannerWorkspace(
+            [
+                new SchedulerPlanSummary(
+                    planId,
+                    "Office365 email watch",
+                    "Polls Office365 mail by sender and writes summaries into project structure.",
+                    SchedulerPlanTargetKind.Workflow,
+                    workflowId,
+                    workflowVersionId,
+                    "Office365 email watch summary",
+                    "0 0 9 ? * MON-FRI",
+                    "At 09:00 on Monday through Friday every month (UTC).",
+                    "UTC",
+                    SchedulerPlanMisfirePolicy.FireOnceNow,
+                    true,
+                    null,
+                    null,
+                    nextFireAtUtc,
+                    null,
+                    string.Empty,
+                    updatedAtUtc)
+            ],
+            [],
+            [
+                new SchedulerTargetOption(
+                    SchedulerPlanTargetKind.Workflow,
+                    workflowId,
+                    workflowVersionId,
+                    "Office365 email watch summary",
+                    "Polls Office365 mail by sender and writes summaries into project structure.",
+                    "Active / Local")
+            ],
+            new CanvasCalendarSurface
+            {
+                SurfaceId = "scheduler-planner-calendar",
+                InitialView = "week",
+                SelectedDate = "2026-05-12",
+                Timezone = "UTC",
+                Locale = "en-US",
+                AllowCreate = false,
+                AllowEdit = false,
+                AllowDelete = false,
+                AllowDragDrop = false,
+                AllowResize = false,
+                Events = [plannedEvent]
+            });
+    }
+
     private static SchedulerPlannerWorkspace CreateHistoryWorkspace(
         Guid workflowId,
         Guid workflowVersionId)
@@ -578,6 +655,14 @@ public sealed class SchedulerPlannerPageTests
     {
         public int SaveCount { get; private set; }
 
+        public int DeleteCount { get; private set; }
+
+        public Guid? LastLoadedPlanId { get; private set; }
+
+        public Guid? DeletedPlanId { get; private set; }
+
+        public SchedulerPlanEditorModel? LastSavedEditor { get; private set; }
+
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
             SchedulerHistoryQuery? historyQuery = null,
             CancellationToken cancellationToken = default)
@@ -590,13 +675,59 @@ public sealed class SchedulerPlannerPageTests
             return Task.FromResult(defaultEditor);
         }
 
+        public Task<SchedulerPlanEditorModel> GetPlanEditorAsync(
+            Guid planId,
+            CancellationToken cancellationToken = default)
+        {
+            LastLoadedPlanId = planId;
+            var plan = workspace.Plans.FirstOrDefault(item => item.Id == planId);
+            if (plan is null)
+            {
+                throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+            }
+
+            return Task.FromResult(new SchedulerPlanEditorModel
+            {
+                Id = plan.Id,
+                Name = plan.Name,
+                Description = plan.Description,
+                TargetKind = plan.TargetKind,
+                TargetId = plan.TargetId,
+                TargetVersionId = plan.TargetVersionId,
+                CronExpression = plan.CronExpression,
+                TimeZoneId = plan.TimeZoneId,
+                MisfirePolicy = plan.MisfirePolicy,
+                IsEnabled = plan.IsEnabled,
+                StartAtUtc = plan.StartAtUtc,
+                EndAtUtc = plan.EndAtUtc,
+                InputJson = "{}"
+            });
+        }
+
         public Task<SchedulerPlanSummary> SavePlanAsync(
             SchedulerPlanEditorModel editor,
             CancellationToken cancellationToken = default)
         {
             SaveCount++;
+            LastSavedEditor = new SchedulerPlanEditorModel
+            {
+                Id = editor.Id,
+                Name = editor.Name,
+                Description = editor.Description,
+                TargetKind = editor.TargetKind,
+                TargetId = editor.TargetId,
+                TargetVersionId = editor.TargetVersionId,
+                CronExpression = editor.CronExpression,
+                TimeZoneId = editor.TimeZoneId,
+                MisfirePolicy = editor.MisfirePolicy,
+                IsEnabled = editor.IsEnabled,
+                StartAtUtc = editor.StartAtUtc,
+                EndAtUtc = editor.EndAtUtc,
+                InputJson = editor.InputJson
+            };
+
             return Task.FromResult(new SchedulerPlanSummary(
-                Guid.NewGuid(),
+                editor.Id ?? Guid.NewGuid(),
                 editor.Name,
                 editor.Description,
                 editor.TargetKind,
@@ -623,6 +754,217 @@ public sealed class SchedulerPlannerPageTests
         {
             return Task.CompletedTask;
         }
+
+        public Task DeletePlanAsync(
+            Guid planId,
+            CancellationToken cancellationToken = default)
+        {
+            DeleteCount++;
+            DeletedPlanId = planId;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task Scheduler_schedules_tab_filters_cards_and_opens_edit_delete_dialogs()
+    {
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var workspace = CreateScheduledPlanWorkspace(planId, workflowId, workflowVersionId);
+        var schedulerService = new StubSchedulerPlannerService(
+            workspace,
+            new SchedulerPlanEditorModel
+            {
+                Name = "Office365 email watch",
+                TargetKind = SchedulerPlanTargetKind.Workflow,
+                TargetId = workflowId,
+                TargetVersionId = workflowVersionId,
+                CronExpression = "0 0 9 ? * MON-FRI",
+                TimeZoneId = "UTC",
+                InputJson = "{}",
+                IsEnabled = true
+            });
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+        });
+
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+
+        cut.WaitForElement("[data-testid='scheduler-tabs']");
+        cut.FindAll("button[role='tab']")
+            .Single(element => element.TextContent.Contains("Schedules", StringComparison.Ordinal))
+            .Click();
+        cut.WaitForElement("[data-testid='scheduler-plan-list']");
+
+        Assert.Single(cut.FindAll("[data-testid='scheduler-plan-card']"));
+        Assert.Contains("Office365 email watch", cut.Markup);
+        Assert.NotEmpty(cut.FindAll("[data-testid='scheduler-schedules-search']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='scheduler-schedules-target-kind']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='scheduler-schedules-state']"));
+
+        cut.Find("[data-testid='scheduler-schedules-search']").Change("missing");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='scheduler-plan-card']"));
+            Assert.Contains("No schedules match the current filters", cut.Markup);
+        });
+
+        cut.Find("[data-testid='scheduler-schedules-search']").Change("Office365");
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='scheduler-plan-card']")));
+
+        cut.Find("[data-testid='scheduler-plan-edit']").Click();
+        cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
+        Assert.Equal("Office365 email watch", cut.Find("[data-testid='scheduler-edit-name']").GetAttribute("value"));
+
+        cut.Find("[data-testid='scheduler-edit-save']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, schedulerService.SaveCount);
+            Assert.Equal(planId, schedulerService.LastSavedEditor?.Id);
+        });
+
+        cut.Find("[data-testid='scheduler-plan-delete']").Click();
+        cut.WaitForElement("[data-testid='scheduler-delete-dialog']");
+        Assert.Contains("Remove schedule", cut.Markup);
+
+        cut.Find("[data-testid='scheduler-delete-confirm']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, schedulerService.DeleteCount);
+            Assert.Equal(planId, schedulerService.DeletedPlanId);
+        });
+    }
+
+    [Fact]
+    public async Task Scheduler_calendar_double_click_opens_edit_dialog_for_selected_planned_event()
+    {
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var workspace = CreateScheduledPlanWorkspace(planId, workflowId, workflowVersionId);
+        var schedulerService = new StubSchedulerPlannerService(
+            workspace,
+            new SchedulerPlanEditorModel
+            {
+                Name = "Office365 email watch",
+                TargetKind = SchedulerPlanTargetKind.Workflow,
+                TargetId = workflowId,
+                TargetVersionId = workflowVersionId,
+                CronExpression = "0 0 9 ? * MON-FRI",
+                TimeZoneId = "UTC",
+                InputJson = "{}",
+                IsEnabled = true
+            });
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+        });
+
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+
+        cut.WaitForElement("[data-testid='scheduler-calendar']");
+        var calendarEvent = workspace.CalendarSurface.Events.Single();
+        var calendar = cut.FindComponent<CanvasCalendar>();
+        await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(
+            JsonSerializer.Serialize(calendarEvent, JsonOptions),
+            "{}"));
+
+        cut.Find("[data-testid='scheduler-calendar']").TriggerEvent("ondblclick", new MouseEventArgs());
+
+        cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
+        Assert.Equal("Office365 email watch", cut.Find("[data-testid='scheduler-edit-name']").GetAttribute("value"));
+        Assert.Equal(planId, schedulerService.LastLoadedPlanId);
+    }
+
+    [Fact]
+    public async Task Scheduler_calendar_double_click_opens_edit_dialog_when_selection_callback_arrives_after_double_click()
+    {
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var workspace = CreateScheduledPlanWorkspace(planId, workflowId, workflowVersionId);
+        var schedulerService = new StubSchedulerPlannerService(
+            workspace,
+            new SchedulerPlanEditorModel
+            {
+                Name = "Office365 email watch",
+                TargetKind = SchedulerPlanTargetKind.Workflow,
+                TargetId = workflowId,
+                TargetVersionId = workflowVersionId,
+                CronExpression = "0 0 9 ? * MON-FRI",
+                TimeZoneId = "UTC",
+                InputJson = "{}",
+                IsEnabled = true
+            });
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+        });
+
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+
+        cut.WaitForElement("[data-testid='scheduler-calendar']");
+        cut.Find("[data-testid='scheduler-calendar']").TriggerEvent("ondblclick", new MouseEventArgs());
+
+        var calendarEvent = workspace.CalendarSurface.Events.Single();
+        var calendar = cut.FindComponent<CanvasCalendar>();
+        await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(
+            JsonSerializer.Serialize(calendarEvent, JsonOptions),
+            "{}"));
+
+        cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
+        Assert.Equal("Office365 email watch", cut.Find("[data-testid='scheduler-edit-name']").GetAttribute("value"));
+        Assert.Equal(planId, schedulerService.LastLoadedPlanId);
+    }
+
+    [Fact]
+    public async Task Scheduler_calendar_repeated_event_selection_opens_edit_dialog_for_canvas_double_click()
+    {
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var workspace = CreateScheduledPlanWorkspace(planId, workflowId, workflowVersionId);
+        var schedulerService = new StubSchedulerPlannerService(
+            workspace,
+            new SchedulerPlanEditorModel
+            {
+                Name = "Office365 email watch",
+                TargetKind = SchedulerPlanTargetKind.Workflow,
+                TargetId = workflowId,
+                TargetVersionId = workflowVersionId,
+                CronExpression = "0 0 9 ? * MON-FRI",
+                TimeZoneId = "UTC",
+                InputJson = "{}",
+                IsEnabled = true
+            });
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+        });
+
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+
+        cut.WaitForElement("[data-testid='scheduler-calendar']");
+        var calendarEvent = workspace.CalendarSurface.Events.Single();
+        var calendar = cut.FindComponent<CanvasCalendar>();
+        var selectedEventJson = JsonSerializer.Serialize(calendarEvent, JsonOptions);
+
+        await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(selectedEventJson, "{}"));
+        await cut.InvokeAsync(() => calendar.Instance.OnSelectionChanged(selectedEventJson, "{}"));
+
+        cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
+        Assert.Equal("Office365 email watch", cut.Find("[data-testid='scheduler-edit-name']").GetAttribute("value"));
+        Assert.Equal(planId, schedulerService.LastLoadedPlanId);
     }
 
     private sealed class StubSchedulerWorkflowInputSchemaService(

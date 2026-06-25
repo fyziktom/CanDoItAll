@@ -1,10 +1,13 @@
 @page "/scheduler"
+@implements IAsyncDisposable
 @using System.Globalization
 @using System.Text.Json
 @using System.Text.Json.Nodes
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
+@using Microsoft.JSInterop
+@inject IJSRuntime JsRuntime
 @inject ISchedulerPlannerService SchedulerPlannerService
 @inject ICronDescriptionService CronDescriptionService
 @inject ISchedulerWorkflowInputSchemaService WorkflowInputSchemaService
@@ -63,74 +66,167 @@
                   OverflowMode="TabsOverflowMode.Wrap"
                   AriaLabel="Scheduler planner tabs"
                   data-testid="scheduler-tabs">
-                <TabsItem Text="Scheduled runs" Icon="calendar_month" BadgeText="@Plans.Count.ToString()" data-testid="scheduler-tab-scheduled">
-                    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
-                        <SurfaceCard data-testid="scheduler-calendar-card">
-                            <Split Gap="LayoutGap.Small">
-                                <div>
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" />
-                                    <h2 class="text-base font-semibold text-slate-900">Planned and dispatched runs</h2>
-                                </div>
-                                <StatusBadge Tone="info" Text="@($"{CalendarEventCount} event(s)")" />
-                            </Split>
-                            <div class="scheduler-planner-calendar-shell mt-4" data-testid="scheduler-calendar">
-                                <CanvasCalendar Surface="@workspace.CalendarSurface"
-                                                HostClass="scheduler-planner-calendar-host" />
+                <TabsItem Text="Calendar" Icon="calendar_month" BadgeText="@CalendarEventCount.ToString()" data-testid="scheduler-tab-calendar">
+                    <SurfaceCard data-testid="scheduler-calendar-card">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" />
+                                <h2 class="text-base font-semibold text-slate-900">Planned and dispatched runs</h2>
                             </div>
-                        </SurfaceCard>
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="info" Text="@($"{CalendarEventCount} event(s)")" />
+                                <StatusBadge Tone="neutral" Text="@($"{Plans.Count} schedule(s)")" />
+                            </Cluster>
+                        </Split>
+                        <div class="scheduler-planner-calendar-shell mt-4"
+                             @ref="schedulerCalendarElement"
+                             data-testid="scheduler-calendar"
+                             @ondblclick="HandleCalendarDoubleClickAsync">
+                            <CanvasCalendar Surface="@workspace.CalendarSurface"
+                                            HostClass="scheduler-planner-calendar-host"
+                                            SelectionChanged="HandleCalendarSelectionChangedAsync"
+                                            StateChanged="HandleCalendarStateChangedAsync" />
+                        </div>
+                    </SurfaceCard>
+                </TabsItem>
 
-                        <SurfaceCard data-testid="scheduler-plan-list">
-                            <Split Gap="LayoutGap.Small">
-                                <div>
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run plans" />
-                                    <h2 class="text-base font-semibold text-slate-900">Actual scheduled runs</h2>
-                                </div>
+                <TabsItem Text="Schedules" Icon="event_note" BadgeText="@Plans.Count.ToString()" data-testid="scheduler-tab-schedules">
+                    <SurfaceCard data-testid="scheduler-plan-list">
+                        <div class="scheduler-plan-list__header">
+                            <div>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Schedules" />
+                                <h2 class="text-base font-semibold text-slate-900">Saved scheduled runs</h2>
+                            </div>
+                            <div class="scheduler-plan-list__actions">
                                 <Button Text="New"
                                         Icon="add"
                                         Size="ButtonSize.Small"
-                                        Click="OpenNewScheduleTab" />
-                            </Split>
+                                        Click="OpenNewScheduleTab"
+                                        data-testid="scheduler-plan-new" />
+                            </div>
+                        </div>
 
-                            @if (Plans.Count == 0)
-                            {
-                                <div class="mt-4">
-                                    <EmptyState Eyebrow="No schedules"
-                                                Title="Create the first scheduled run"
-                                                Description="Saved plans will appear here after a workflow or process is assigned to a CRON schedule." />
-                                </div>
-                            }
-                            else
-                            {
-                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                                    @foreach (var plan in Plans)
+                        <div class="mt-4">
+                            <FilterBar ResultText="@ScheduleFilterResultText">
+                                <InputText @bind-Value="scheduleSearchText"
+                                           class="cda-input"
+                                           placeholder="Search schedules"
+                                           data-testid="scheduler-schedules-search" />
+                                <select value="@FormatScheduleTargetKindFilter()"
+                                        class="cda-input"
+                                        @onchange="HandleScheduleTargetKindFilterChanged"
+                                        data-testid="scheduler-schedules-target-kind">
+                                    <option value="">All targets</option>
+                                    @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
                                     {
-                                        <div class="cda-panel-card--soft" data-testid="scheduler-plan-item">
+                                        <option value="@kind">@kind</option>
+                                    }
+                                </select>
+                                <InputSelect @bind-Value="scheduleStateFilter"
+                                             class="cda-input"
+                                             data-testid="scheduler-schedules-state">
+                                    @foreach (var state in Enum.GetValues<ScheduleStateFilter>())
+                                    {
+                                        <option value="@state">@FormatScheduleStateFilter(state)</option>
+                                    }
+                                </InputSelect>
+                                <Button Text="Clear"
+                                        Icon="restart_alt"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(!HasScheduleFilters)"
+                                        Click="ClearScheduleFilters" />
+                            </FilterBar>
+                        </div>
+
+                        @if (Plans.Count == 0)
+                        {
+                            <div class="mt-4">
+                                <EmptyState Eyebrow="No schedules"
+                                            Title="Create the first scheduled run"
+                                            Description="Saved plans will appear here after a workflow or process is assigned to a CRON schedule." />
+                            </div>
+                        }
+                        else if (FilteredPlans.Count == 0)
+                        {
+                            <div class="mt-4">
+                                <EmptyState Eyebrow="No matches"
+                                            Title="No schedules match the current filters"
+                                            Description="Clear search, target, or state filters to review every saved schedule." />
+                            </div>
+                        }
+                        else
+                        {
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnTemplate="repeat(auto-fit,minmax(19rem,1fr))"
+                                  Class="scheduler-plan-card-grid mt-4">
+                                @foreach (var plan in FilteredPlans)
+                                {
+                                    <article class="@ResolveScheduleCardClass(plan)" data-testid="scheduler-plan-card">
+                                        <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
                                             <Split Gap="LayoutGap.Small"
                                                    AlignItems="AlignItems.Start"
                                                    JustifyContent="JustifyContent.SpaceBetween"
                                                    Wrap="FlexWrap.Wrap">
                                                 <div class="min-w-0">
-                                                    <p class="text-sm font-semibold text-slate-900">@plan.Name</p>
-                                                    <p class="mt-1 text-xs text-slate-500">@plan.TargetKind / @plan.TargetName</p>
-                                                    <p class="mt-2 text-sm leading-6 text-slate-600">@plan.CronDescription</p>
+                                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                        <StatusBadge Tone="@ResolveTargetKindTone(plan.TargetKind)" Text="@plan.TargetKind.ToString()" />
+                                                        <StatusBadge Tone="@(plan.IsEnabled ? "success" : "neutral")" Text="@(plan.IsEnabled ? "Enabled" : "Paused")" />
+                                                    </Cluster>
+                                                    <h3 class="scheduler-plan-card__title">@plan.Name</h3>
+                                                    <p class="scheduler-plan-card__target">@plan.TargetName</p>
                                                 </div>
-                                                <StatusBadge Tone="@(plan.IsEnabled ? "success" : "neutral")" Text="@(plan.IsEnabled ? "Enabled" : "Paused")" />
+                                                <Button Text="Edit"
+                                                        Icon="edit"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@isBusy"
+                                                        Click="@(() => OpenEditScheduleDialogAsync(plan))"
+                                                        data-testid="scheduler-plan-edit" />
                                             </Split>
-                                            <Cluster Gap="LayoutGap.Small" Class="mt-3">
-                                                <StatusBadge Tone="neutral" Text="@FormatNextFire(plan.NextPlannedFireAtUtc)" />
+
+                                            <p class="scheduler-plan-card__cron">@plan.CronDescription</p>
+
+                                            <div class="scheduler-plan-card__meta">
+                                                <div>
+                                                    <span>Next fire</span>
+                                                    <strong>@FormatNextFire(plan.NextPlannedFireAtUtc)</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Time zone</span>
+                                                    <strong>@plan.TimeZoneId</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Updated</span>
+                                                    <strong>@plan.UpdatedAtUtc.LocalDateTime.ToString("g")</strong>
+                                                </div>
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(plan.LastError))
+                                            {
+                                                <p class="scheduler-plan-card__error">@plan.LastError</p>
+                                            }
+
+                                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="scheduler-plan-card__actions">
                                                 <Button Text="@(plan.IsEnabled ? "Pause" : "Resume")"
                                                         Icon="@(plan.IsEnabled ? "pause" : "play_arrow")"
                                                         ButtonStyle="ButtonStyle.Light"
                                                         Size="ButtonSize.Small"
                                                         Disabled="@isBusy"
                                                         Click="@(() => TogglePlanAsync(plan))" />
+                                                <Button Text="Delete"
+                                                        Icon="delete"
+                                                        ButtonStyle="ButtonStyle.Danger"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@isBusy"
+                                                        Click="@(() => OpenDeleteScheduleDialog(plan))"
+                                                        data-testid="scheduler-plan-delete" />
                                             </Cluster>
-                                        </div>
-                                    }
-                                </Stack>
-                            }
-                        </SurfaceCard>
-                    </Stack>
+                                        </Stack>
+                                    </article>
+                                }
+                            </Grid>
+                        }
+                    </SurfaceCard>
                 </TabsItem>
 
                 <TabsItem Text="New schedule" Icon="event_repeat" data-testid="scheduler-tab-new">
@@ -558,22 +654,238 @@
                     }
                 </Stack>
             </Dialog>
+
+            @if (isEditScheduleDialogOpen && editScheduleEditor is not null)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Schedule"
+                        Title="Edit schedule"
+                        Subtitle="@EditScheduleSubtitle"
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        TestId="scheduler-edit-dialog"
+                        OnClose="CloseEditScheduleDialogAsync">
+                    <ChildContent>
+                        <Grid Gap="LayoutGap.Large" ColumnTemplateLg="minmax(0,1.25fr) minmax(18rem,0.75fr)">
+                            <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                                <label class="block">
+                                    <span class="cda-eyebrow">Name</span>
+                                    <InputText @bind-Value="editScheduleEditor.Name"
+                                               class="cda-input mt-1"
+                                               data-testid="scheduler-edit-name" />
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Description</span>
+                                    <InputTextArea @bind-Value="editScheduleEditor.Description"
+                                                   class="cda-input cda-input--textarea mt-1"
+                                                   data-testid="scheduler-edit-description" />
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Quartz CRON</span>
+                                    <InputText @bind-Value="editScheduleEditor.CronExpression"
+                                               class="cda-input mt-1 font-mono"
+                                               data-testid="scheduler-edit-cron" />
+                                </label>
+
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap"
+                                         data-testid="scheduler-edit-cron-presets">
+                                    <Button Text="Every 2 hours"
+                                            Icon="schedule"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPresetToEditor(editScheduleEditor, SchedulerCronPreset.EveryTwoHours))" />
+                                    <Button Text="Weekdays 9 AM"
+                                            Icon="work_history"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPresetToEditor(editScheduleEditor, SchedulerCronPreset.WeekdaysAtNine))" />
+                                    <Button Text="Daily 9 AM"
+                                            Icon="today"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPresetToEditor(editScheduleEditor, SchedulerCronPreset.DailyAtNine))" />
+                                </Cluster>
+
+                                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                    <label class="block">
+                                        <span class="cda-eyebrow">Time zone</span>
+                                        <InputText @bind-Value="editScheduleEditor.TimeZoneId"
+                                                   class="cda-input mt-1"
+                                                   data-testid="scheduler-edit-timezone" />
+                                    </label>
+
+                                    <label class="block">
+                                        <span class="cda-eyebrow">Misfire policy</span>
+                                        <InputSelect @bind-Value="editScheduleEditor.MisfirePolicy"
+                                                     class="cda-input mt-1"
+                                                     data-testid="scheduler-edit-misfire">
+                                            @foreach (var policy in Enum.GetValues<SchedulerPlanMisfirePolicy>())
+                                            {
+                                                <option value="@policy">@policy</option>
+                                            }
+                                        </InputSelect>
+                                    </label>
+                                </Grid>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Advanced input JSON</span>
+                                    <InputTextArea @bind-Value="editScheduleEditor.InputJson"
+                                                   class="cda-input cda-input--textarea mt-1 font-mono"
+                                                   data-testid="scheduler-edit-input-json" />
+                                </label>
+
+                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="editScheduleEditor.IsEnabled" />
+                                    Enabled after save
+                                </label>
+                            </Stack>
+
+                            <aside class="scheduler-edit-context" data-testid="scheduler-edit-context">
+                                <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Target" />
+                                        <h3>@EditScheduleTargetName</h3>
+                                        <p>@EditScheduleTargetDescription</p>
+                                    </div>
+
+                                    <div class="scheduler-edit-context__stats">
+                                        <div>
+                                            <span>State</span>
+                                            <StatusBadge Tone="@(editScheduleEditor.IsEnabled ? "success" : "neutral")" Text="@(editScheduleEditor.IsEnabled ? "Enabled" : "Paused")" />
+                                        </div>
+                                        <div>
+                                            <span>Next fire</span>
+                                            <strong>@FormatNextFire(selectedPlanForEdit?.NextPlannedFireAtUtc)</strong>
+                                        </div>
+                                        <div>
+                                            <span>Last fired</span>
+                                            <strong>@FormatLastFire(selectedPlanForEdit?.LastFiredAtUtc)</strong>
+                                        </div>
+                                        <div>
+                                            <span>Updated</span>
+                                            <strong>@FormatUpdatedAt(selectedPlanForEdit?.UpdatedAtUtc)</strong>
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(selectedPlanForEdit?.LastError))
+                                    {
+                                        <p class="scheduler-edit-context__error">@selectedPlanForEdit.LastError</p>
+                                    }
+                                </Stack>
+                            </aside>
+                        </Grid>
+                    </ChildContent>
+                    <Footer>
+                        <div class="scheduler-dialog-footer">
+                            <div class="scheduler-dialog-footer__start">
+                                <Button Text="Delete"
+                                        Icon="delete"
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Disabled="@isBusy"
+                                        Click="@(() => OpenDeleteScheduleDialog(selectedPlanForEdit))"
+                                        data-testid="scheduler-edit-delete" />
+                            </div>
+                            <div class="scheduler-dialog-footer__actions">
+                                <Button Text="Cancel"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Disabled="@isBusy"
+                                        Click="CloseEditScheduleDialogAsync"
+                                        data-testid="scheduler-edit-cancel" />
+                                <Button Text="Save changes"
+                                        Icon="save"
+                                        Disabled="@isBusy"
+                                        IsBusy="@isBusy"
+                                        Click="SaveEditScheduleAsync"
+                                        data-testid="scheduler-edit-save" />
+                            </div>
+                        </div>
+                    </Footer>
+                </Dialog>
+            }
+
+            @if (isDeleteScheduleDialogOpen && selectedPlanForDelete is not null)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Danger action"
+                        Title="Remove schedule"
+                        Subtitle="This will remove the schedule and its future triggers."
+                        Size="ModalSize.Compact"
+                        DenseChrome="true"
+                        TestId="scheduler-delete-dialog"
+                        OnClose="CloseDeleteScheduleDialogAsync">
+                    <ChildContent>
+                        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                            <div class="scheduler-delete-summary">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Schedule" />
+                                <h3>@selectedPlanForDelete.Name</h3>
+                                <p>@selectedPlanForDelete.TargetKind / @selectedPlanForDelete.TargetName</p>
+                                <p>@selectedPlanForDelete.CronDescription</p>
+                            </div>
+                        </Stack>
+                    </ChildContent>
+                    <Footer>
+                        <div class="scheduler-dialog-footer">
+                            <p class="text-sm leading-6 text-rose-700">Existing run history is not edited by this action.</p>
+                            <div class="scheduler-dialog-footer__actions">
+                                <Button Text="Cancel"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Disabled="@isBusy"
+                                        Click="CloseDeleteScheduleDialogAsync"
+                                        data-testid="scheduler-delete-cancel" />
+                                <Button Text="Remove"
+                                        Icon="delete"
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Disabled="@isBusy"
+                                        IsBusy="@isBusy"
+                                        Click="ConfirmDeleteScheduleAsync"
+                                        data-testid="scheduler-delete-confirm" />
+                            </div>
+                        </div>
+                    </Footer>
+                </Dialog>
+            }
         }
     </ChildContent>
 </PageScaffold>
 
 @code {
+    private const int CalendarTabIndex = 0;
+    private const int SchedulesTabIndex = 1;
+    private const int NewScheduleTabIndex = 2;
+    private const string PlannedCalendarEventPrefix = "planned-";
+    private const string SchedulerCalendarInteropModulePath =
+        "./_content/CanDoItAll.Modules.SchedulerPlanner/js/schedulerPlannerCalendarInterop.js";
+
     private SchedulerPlannerWorkspace? workspace;
     private SchedulerPlanEditorModel editor = new();
+    private SchedulerPlanEditorModel? editScheduleEditor;
     private SchedulerHistoryQuery historyQuery = new();
     private bool isBusy;
     private string errorMessage = string.Empty;
     private int activeTabIndex;
     private bool isTargetPickerOpen;
+    private bool isEditScheduleDialogOpen;
+    private bool isDeleteScheduleDialogOpen;
+    private SchedulerPlanSummary? selectedPlanForEdit;
+    private SchedulerPlanSummary? selectedPlanForDelete;
+    private CanvasCalendarEvent? selectedCalendarEvent;
+    private ElementReference schedulerCalendarElement;
+    private IJSObjectReference? schedulerCalendarInterop;
+    private DotNetObjectReference<SchedulerPlannerPage>? schedulerCalendarReference;
+    private bool schedulerCalendarDoubleClickAttached;
+    private DateTimeOffset? lastCalendarEventSelectionAtUtc;
+    private string? lastCalendarSelectionKey;
+    private DateTimeOffset? pendingCalendarDoubleClickAtUtc;
     private string targetSearchText = string.Empty;
+    private string scheduleSearchText = string.Empty;
     private IReadOnlyList<string> targetTagFilters = [];
     private bool showProcessTargets = true;
     private bool showWorkflowTargets = true;
+    private SchedulerPlanTargetKind? scheduleTargetKindFilter;
+    private ScheduleStateFilter scheduleStateFilter = ScheduleStateFilter.All;
     private SchedulerWorkflowInputSchema? workflowInputSchema;
     private Dictionary<string, string> workflowInputValues = new(StringComparer.Ordinal);
     private Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>> workflowInputOptionsByKey = new(StringComparer.Ordinal);
@@ -589,6 +901,13 @@
         EveryTwoHours,
         WeekdaysAtNine,
         DailyAtNine
+    }
+
+    private enum ScheduleStateFilter
+    {
+        All,
+        Enabled,
+        Paused
     }
 
     private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
@@ -607,6 +926,38 @@
     private string SelectedTargetName => SelectedTarget?.Name ?? "No target selected";
 
     private string SelectedTargetDescription => SelectedTarget?.Description ?? "Select a workflow or process target before saving the schedule.";
+
+    private IReadOnlyList<SchedulerPlanSummary> FilteredPlans
+        => Plans
+            .Where(MatchesScheduleSearch)
+            .Where(MatchesScheduleTargetKind)
+            .Where(MatchesScheduleState)
+            .OrderByDescending(item => item.IsEnabled)
+            .ThenBy(item => item.NextPlannedFireAtUtc ?? DateTimeOffset.MaxValue)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private bool HasScheduleFilters
+        => !string.IsNullOrWhiteSpace(scheduleSearchText) ||
+           scheduleTargetKindFilter.HasValue ||
+           scheduleStateFilter != ScheduleStateFilter.All;
+
+    private string ScheduleFilterResultText => $"{FilteredPlans.Count} of {Plans.Count} schedule(s)";
+
+    private SchedulerTargetOption? EditScheduleTarget => editScheduleEditor is null
+        ? null
+        : TargetOptions.FirstOrDefault(item =>
+            item.Kind == editScheduleEditor.TargetKind &&
+            item.Id == editScheduleEditor.TargetId &&
+            (item.Kind != SchedulerPlanTargetKind.Workflow || item.VersionId == editScheduleEditor.TargetVersionId));
+
+    private string EditScheduleSubtitle => selectedPlanForEdit is null
+        ? "Update scheduler details and future triggers."
+        : $"{selectedPlanForEdit.TargetKind} / {selectedPlanForEdit.TargetName}";
+
+    private string EditScheduleTargetName => EditScheduleTarget?.Name ?? selectedPlanForEdit?.TargetName ?? "Saved target";
+
+    private string EditScheduleTargetDescription => EditScheduleTarget?.Description ?? "This schedule keeps the target saved with the plan.";
 
     private string CronPreviewTitle
     {
@@ -651,6 +1002,30 @@
         });
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (workspace is null)
+        {
+            return;
+        }
+
+        schedulerCalendarReference ??= DotNetObjectReference.Create(this);
+        schedulerCalendarInterop ??= await JsRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            SchedulerCalendarInteropModulePath);
+
+        if (schedulerCalendarInterop is null)
+        {
+            return;
+        }
+
+        await schedulerCalendarInterop.InvokeVoidAsync(
+            "attachCalendarDoubleClick",
+            schedulerCalendarElement,
+            schedulerCalendarReference);
+        schedulerCalendarDoubleClickAttached = true;
+    }
+
     private async Task RefreshAsync()
     {
         await RunUiOperationAsync(async () =>
@@ -673,7 +1048,7 @@
             workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
             editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
             await LoadWorkflowInputEditorAsync();
-            activeTabIndex = 0;
+            activeTabIndex = SchedulesTabIndex;
         });
     }
 
@@ -690,12 +1065,225 @@
         {
             await SchedulerPlannerService.SetPlanEnabledAsync(plan.Id, !plan.IsEnabled);
             workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+            selectedPlanForEdit = selectedPlanForEdit?.Id == plan.Id
+                ? Plans.FirstOrDefault(item => item.Id == plan.Id)
+                : selectedPlanForEdit;
         });
+    }
+
+    private async Task OpenEditScheduleDialogAsync(SchedulerPlanSummary plan)
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            selectedPlanForEdit = plan;
+            editScheduleEditor = await SchedulerPlannerService.GetPlanEditorAsync(plan.Id);
+            isEditScheduleDialogOpen = true;
+            activeTabIndex = SchedulesTabIndex;
+        });
+    }
+
+    private Task CloseEditScheduleDialogAsync()
+    {
+        isEditScheduleDialogOpen = false;
+        editScheduleEditor = null;
+        selectedPlanForEdit = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveEditScheduleAsync()
+    {
+        if (editScheduleEditor is null)
+        {
+            return;
+        }
+
+        await RunUiOperationAsync(async () =>
+        {
+            await SchedulerPlannerService.SavePlanAsync(editScheduleEditor);
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+            selectedPlanForEdit = editScheduleEditor.Id.HasValue
+                ? Plans.FirstOrDefault(item => item.Id == editScheduleEditor.Id.Value)
+                : null;
+            isEditScheduleDialogOpen = false;
+            editScheduleEditor = null;
+            selectedPlanForEdit = null;
+            activeTabIndex = SchedulesTabIndex;
+        });
+    }
+
+    private void OpenDeleteScheduleDialog(SchedulerPlanSummary? plan)
+    {
+        if (plan is null)
+        {
+            return;
+        }
+
+        selectedPlanForDelete = plan;
+        isDeleteScheduleDialogOpen = true;
+    }
+
+    private Task CloseDeleteScheduleDialogAsync()
+    {
+        isDeleteScheduleDialogOpen = false;
+        selectedPlanForDelete = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmDeleteScheduleAsync()
+    {
+        if (selectedPlanForDelete is null)
+        {
+            return;
+        }
+
+        var deletedPlanId = selectedPlanForDelete.Id;
+        await RunUiOperationAsync(async () =>
+        {
+            await SchedulerPlannerService.DeletePlanAsync(deletedPlanId);
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+            if (selectedPlanForEdit?.Id == deletedPlanId)
+            {
+                isEditScheduleDialogOpen = false;
+                editScheduleEditor = null;
+                selectedPlanForEdit = null;
+            }
+
+            selectedCalendarEvent = null;
+            lastCalendarEventSelectionAtUtc = null;
+            lastCalendarSelectionKey = null;
+            pendingCalendarDoubleClickAtUtc = null;
+            isDeleteScheduleDialogOpen = false;
+            selectedPlanForDelete = null;
+            activeTabIndex = SchedulesTabIndex;
+        });
+    }
+
+    private async Task HandleCalendarSelectionChangedAsync(CanvasCalendarSelectionChangedEventArgs args)
+        => await TrackCalendarSelectedEventAsync(args.SelectedEvent, allowRepeatedSelectionOpen: true);
+
+    private async Task HandleCalendarStateChangedAsync(CanvasCalendarStateChangedEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.SelectedEventId))
+        {
+            return;
+        }
+
+        var calendarEvent = workspace?.CalendarSurface.Events.FirstOrDefault(item =>
+            string.Equals(item.Id, args.SelectedEventId, StringComparison.Ordinal) ||
+            string.Equals(item.EventId, args.SelectedEventId, StringComparison.Ordinal));
+
+        if (calendarEvent is not null)
+        {
+            await TrackCalendarSelectedEventAsync(calendarEvent, allowRepeatedSelectionOpen: false);
+        }
+    }
+
+    private async Task TrackCalendarSelectedEventAsync(
+        CanvasCalendarEvent? calendarEvent,
+        bool allowRepeatedSelectionOpen)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var selectionKey = ResolveCalendarSelectionKey(calendarEvent);
+        var isRepeatedEventSelection = selectionKey is not null
+            && string.Equals(selectionKey, lastCalendarSelectionKey, StringComparison.Ordinal)
+            && lastCalendarEventSelectionAtUtc is DateTimeOffset selectedAt
+            && now - selectedAt <= TimeSpan.FromMilliseconds(650);
+
+        selectedCalendarEvent = calendarEvent;
+        lastCalendarSelectionKey = selectionKey;
+        lastCalendarEventSelectionAtUtc = selectedCalendarEvent is null ? null : now;
+
+        if (selectedCalendarEvent is null || isEditScheduleDialogOpen)
+        {
+            return;
+        }
+
+        if (!IsCalendarDoubleClickPending(now) && !(allowRepeatedSelectionOpen && isRepeatedEventSelection))
+        {
+            return;
+        }
+
+        pendingCalendarDoubleClickAtUtc = null;
+        await OpenCalendarEventEditDialogAsync(selectedCalendarEvent);
+    }
+
+    private async Task HandleCalendarDoubleClickAsync()
+    {
+        if (isEditScheduleDialogOpen)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        pendingCalendarDoubleClickAtUtc = now;
+
+        if (!IsRecentCalendarEventSelection(now))
+        {
+            return;
+        }
+
+        pendingCalendarDoubleClickAtUtc = null;
+        await OpenCalendarEventEditDialogAsync(selectedCalendarEvent);
+    }
+
+    [JSInvokable]
+    public Task OnCalendarItemDoubleClickedAsync()
+        => HandleCalendarDoubleClickAsync();
+
+    private async Task<bool> OpenCalendarEventEditDialogAsync(CanvasCalendarEvent? calendarEvent)
+    {
+        if (!TryResolvePlanId(calendarEvent, out var planId))
+        {
+            return false;
+        }
+
+        var plan = Plans.FirstOrDefault(item => item.Id == planId);
+        if (plan is null)
+        {
+            return false;
+        }
+
+        await OpenEditScheduleDialogAsync(plan);
+        activeTabIndex = CalendarTabIndex;
+        return true;
+    }
+
+    private bool IsCalendarDoubleClickPending(DateTimeOffset now)
+    {
+        return pendingCalendarDoubleClickAtUtc is DateTimeOffset requestedAt
+            && now - requestedAt <= TimeSpan.FromSeconds(2);
+    }
+
+    private bool IsRecentCalendarEventSelection(DateTimeOffset now)
+    {
+        return selectedCalendarEvent is not null
+            && lastCalendarEventSelectionAtUtc is DateTimeOffset selectedAt
+            && now - selectedAt <= TimeSpan.FromMilliseconds(750);
+    }
+
+    private static string? ResolveCalendarSelectionKey(CanvasCalendarEvent? calendarEvent)
+    {
+        if (calendarEvent is null)
+        {
+            return null;
+        }
+
+        if (TryResolvePlanId(calendarEvent, out var planId))
+        {
+            return planId.ToString("D");
+        }
+
+        if (!string.IsNullOrWhiteSpace(calendarEvent.Id))
+        {
+            return calendarEvent.Id;
+        }
+
+        return string.IsNullOrWhiteSpace(calendarEvent.EventId) ? null : calendarEvent.EventId;
     }
 
     private void OpenNewScheduleTab()
     {
-        activeTabIndex = 1;
+        activeTabIndex = NewScheduleTabIndex;
     }
 
     private void OpenTargetPicker()
@@ -746,12 +1334,19 @@
 
     private void ApplyCronPreset(SchedulerCronPreset preset)
     {
-        editor.CronExpression = preset switch
+        ApplyCronPresetToEditor(editor, preset);
+    }
+
+    private static void ApplyCronPresetToEditor(
+        SchedulerPlanEditorModel targetEditor,
+        SchedulerCronPreset preset)
+    {
+        targetEditor.CronExpression = preset switch
         {
             SchedulerCronPreset.EveryTwoHours => "0 0 0/2 ? * *",
             SchedulerCronPreset.WeekdaysAtNine => "0 0 9 ? * MON-FRI",
             SchedulerCronPreset.DailyAtNine => "0 0 9 ? * *",
-            _ => editor.CronExpression
+            _ => targetEditor.CronExpression
         };
     }
 
@@ -1117,6 +1712,114 @@
         }
     }
 
+    private string FormatScheduleTargetKindFilter()
+    {
+        return scheduleTargetKindFilter?.ToString() ?? string.Empty;
+    }
+
+    private void HandleScheduleTargetKindFilterChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        scheduleTargetKindFilter = Enum.TryParse<SchedulerPlanTargetKind>(value, out var kind)
+            ? kind
+            : null;
+    }
+
+    private void ClearScheduleFilters()
+    {
+        scheduleSearchText = string.Empty;
+        scheduleTargetKindFilter = null;
+        scheduleStateFilter = ScheduleStateFilter.All;
+    }
+
+    private bool MatchesScheduleSearch(SchedulerPlanSummary plan)
+    {
+        if (string.IsNullOrWhiteSpace(scheduleSearchText))
+        {
+            return true;
+        }
+
+        var query = scheduleSearchText.Trim();
+        return plan.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.TargetName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.CronExpression.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.CronDescription.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               plan.TimeZoneId.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesScheduleTargetKind(SchedulerPlanSummary plan)
+    {
+        return !scheduleTargetKindFilter.HasValue || plan.TargetKind == scheduleTargetKindFilter.Value;
+    }
+
+    private bool MatchesScheduleState(SchedulerPlanSummary plan)
+    {
+        return scheduleStateFilter switch
+        {
+            ScheduleStateFilter.Enabled => plan.IsEnabled,
+            ScheduleStateFilter.Paused => !plan.IsEnabled,
+            _ => true
+        };
+    }
+
+    private static string FormatScheduleStateFilter(ScheduleStateFilter filter)
+    {
+        return filter switch
+        {
+            ScheduleStateFilter.Enabled => "Enabled",
+            ScheduleStateFilter.Paused => "Paused",
+            _ => "All states"
+        };
+    }
+
+    private static string ResolveScheduleCardClass(SchedulerPlanSummary plan)
+    {
+        return plan.IsEnabled
+            ? "scheduler-plan-card scheduler-plan-card--enabled"
+            : "scheduler-plan-card scheduler-plan-card--paused";
+    }
+
+    private static bool TryResolvePlanId(
+        CanvasCalendarEvent? calendarEvent,
+        out Guid planId)
+    {
+        planId = Guid.Empty;
+        if (calendarEvent is null)
+        {
+            return false;
+        }
+
+        if (Guid.TryParse(calendarEvent.RepositoryId, out planId))
+        {
+            return true;
+        }
+
+        return TryResolvePlanIdFromCalendarEventId(calendarEvent.Id, out planId) ||
+               TryResolvePlanIdFromCalendarEventId(calendarEvent.EventId, out planId);
+    }
+
+    private static bool TryResolvePlanIdFromCalendarEventId(
+        string? eventId,
+        out Guid planId)
+    {
+        planId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(eventId) ||
+            !eventId.StartsWith(PlannedCalendarEventPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var remaining = eventId[PlannedCalendarEventPrefix.Length..];
+        var separatorIndex = remaining.IndexOf('-', StringComparison.Ordinal);
+        if (separatorIndex <= 0)
+        {
+            return false;
+        }
+
+        return Guid.TryParseExact(remaining[..separatorIndex], "N", out planId);
+    }
+
     private bool IsTargetSelected(SchedulerTargetOption target)
     {
         return target.Kind == editor.TargetKind &&
@@ -1251,6 +1954,20 @@
             : "No next fire";
     }
 
+    private static string FormatLastFire(DateTimeOffset? lastFireAtUtc)
+    {
+        return lastFireAtUtc.HasValue
+            ? lastFireAtUtc.Value.LocalDateTime.ToString("g")
+            : "Never";
+    }
+
+    private static string FormatUpdatedAt(DateTimeOffset? updatedAtUtc)
+    {
+        return updatedAtUtc.HasValue
+            ? updatedAtUtc.Value.LocalDateTime.ToString("g")
+            : "Not saved";
+    }
+
     private static string ResolveRunTone(SchedulerPlanRunDispatchStatus status)
     {
         return status switch
@@ -1305,5 +2022,34 @@
         return string.IsNullOrWhiteSpace(run.Summary)
             ? run.TargetRunId?.ToString("D") ?? "No target run id"
             : run.Summary;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (schedulerCalendarDoubleClickAttached && schedulerCalendarInterop is not null)
+        {
+            try
+            {
+                await schedulerCalendarInterop.InvokeVoidAsync(
+                    "detachCalendarDoubleClick",
+                    schedulerCalendarElement);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        if (schedulerCalendarInterop is not null)
+        {
+            try
+            {
+                await schedulerCalendarInterop.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        schedulerCalendarReference?.Dispose();
     }
 }
