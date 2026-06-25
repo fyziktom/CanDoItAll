@@ -16,7 +16,7 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 ## Catalog And Configuration
 
 - Agents: `GET /api/agents`, `GET /api/agents/bootstrap`, `GET /api/agents/{agentId}`, `POST /api/agents`, `DELETE /api/agents/{agentId}`, clone, convert-to-template, export, and import routes.
-- Teams: `GET /api/agents/teams`, `GET /api/agents/teams/{teamId}`, `POST /api/agents/teams`, `PUT /api/agents/teams/{teamId}`, `DELETE /api/agents/teams/{teamId}`, `GET /api/agents/teams/{teamId}/agents`, `PUT /api/agents/teams/{teamId}/members`.
+- Teams: `GET /api/agents/teams`, `GET /api/agents/teams/{teamId}`, `GET /api/agents/teams/{teamId}/editor`, `POST /api/agents/teams`, `PUT /api/agents/teams/{teamId}`, `DELETE /api/agents/teams/{teamId}`, `GET /api/agents/teams/{teamId}/agents`, `POST /api/agents/teams/{teamId}/members`, and `PUT /api/agents/teams/{teamId}/members`.
 - Providers: `/api/agents/providers`, `/providers/{providerId}/editor`, create/delete/test/test-chat, and Ollama modelfile routes.
 - Capabilities: `/api/agents/capabilities`, `/capabilities/{capabilityId}/editor`, create/delete, and per-agent capability verification.
 - Memory: `/api/agents/{agentId}/memory`, `POST /api/agents/memory`, and delete memory routes.
@@ -24,7 +24,7 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 ## Chat And Execution
 
 - Chat sessions: `/api/agents/{agentId}/chat-sessions`, rename, chat workspace, and `/chat`.
-- Execution runs: `POST /api/agents/execution-runs`, `POST /api/agents/{agentId}/execution-runs`, list routes, and run detail routes.
+- Execution runs: `POST /api/agents/execution-runs`, `POST /api/agents/{agentId}/execution-runs`, list routes, run detail routes, and agent-scoped/global evidence routes.
 - Approvals: `/api/agents/execution-runs/{executionRunId}/pending-approvals` and run approval listing.
 - Evidence: execution artifacts, checkpoints, tool receipts, execution log, runtime snapshot, and metrics routes.
 

@@ -24,7 +24,7 @@ Use this skill when a task needs Cognitive Memory control through the CanDoItAll
 - Active profile: `GET /api/cognitive-memory/database/selection`.
 - Profiles: `GET /api/cognitive-memory/database/profiles`.
 - Transfer sources: `GET /api/cognitive-memory/database/transfer/sources/{targetProfileId}`.
-- Transfer preview: `POST /api/cognitive-memory/database/transfer/preview`.
+- Transfer preview: `GET /api/cognitive-memory/database/transfer/preview`.
 - Transfer execute: `POST /api/cognitive-memory/database/transfer`.
 - Create PostgreSQL profile: `POST /api/cognitive-memory/database/profiles/postgresql`.
 - Switch profile: `POST /api/cognitive-memory/database/switch/{profileId}`.

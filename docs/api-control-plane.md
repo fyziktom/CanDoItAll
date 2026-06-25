@@ -103,7 +103,7 @@ New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitiv
 
 ### Plugins And Projects
 
-`/api/projects` and `/api/plugins` are documented here as control-plane route families, but they do not currently have dedicated repo-managed API skills. Use OpenAPI plus the owning source files until a dedicated skill is justified.
+`/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
 
 ### Internal Agent Tools
 
