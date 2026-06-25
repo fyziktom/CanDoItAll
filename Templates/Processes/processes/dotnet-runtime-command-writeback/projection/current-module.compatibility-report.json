@@ -1,8 +1,0 @@
-{
-  "ProcessKey": "dotnet-runtime-command-writeback",
-  "Status": "Compatible",
-  "Notes": [
-    "Uses current process definition fields and explicit operation contracts.",
-    "Subprocess references are resolved by definition name during import or synchronization."
-  ]
-}

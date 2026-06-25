@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -8,6 +9,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentTeamCatalogIntegrationTests
 {
+    private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
+
     [Fact]
     public async Task Agent_team_catalog_persists_many_to_many_memberships_and_prunes_deleted_agents()
     {
@@ -143,6 +146,7 @@ public sealed class AgentTeamCatalogIntegrationTests
         var seed = SandboxWorkspaceSeedFactory.Create();
         var deliveryManager = seed.Agents.Single(item => string.Equals(item.TemplateKey, "delivery-manager", StringComparison.OrdinalIgnoreCase));
         var architect = seed.Agents.Single(item => string.Equals(item.TemplateKey, "portfolio-architect", StringComparison.OrdinalIgnoreCase));
+        var currentManagedSeedVersion = ReadManagedSeedVersion(deliveryManager.ConfigurationJson);
         const string customAvatar = "data:image/png;base64,AQID";
 
         var oldAgents = seed.Agents
@@ -150,7 +154,7 @@ public sealed class AgentTeamCatalogIntegrationTests
             {
                 var oldAgent = agent with
                 {
-                    ConfigurationJson = agent.ConfigurationJson.Replace("2026-06-agent-template-teams-v23", "2026-06-agent-template-teams-v19", StringComparison.Ordinal)
+                    ConfigurationJson = agent.ConfigurationJson.Replace(currentManagedSeedVersion, "2026-06-agent-template-teams-v19", StringComparison.Ordinal)
                 };
 
                 if (oldAgent.Id == deliveryManager.Id)
@@ -188,6 +192,13 @@ public sealed class AgentTeamCatalogIntegrationTests
         });
 
         Assert.Null(clearedAfterUpgrade.Agents.Single(item => item.Id == deliveryManager.Id).AvatarImageUrl);
+    }
+
+    private static string ReadManagedSeedVersion(string configurationJson)
+    {
+        using var document = JsonDocument.Parse(configurationJson);
+        return document.RootElement.GetProperty(ManagedSeedVersionPropertyName).GetString()
+            ?? throw new InvalidOperationException("Managed seed version is required for agent template refresh tests.");
     }
 
     [Fact]

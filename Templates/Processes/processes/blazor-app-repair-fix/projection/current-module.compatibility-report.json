@@ -1,7 +1,0 @@
-{
-    "processKey":  "blazor-app-repair-fix",
-    "compatible":  true,
-    "notes":  [
-                  "Template-only process definition."
-              ]
-}

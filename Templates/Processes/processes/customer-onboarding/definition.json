@@ -345,15 +345,8 @@
       "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ],
-  "DocPath": "processes/customer-onboarding/definition.md",
   "RelativePath": "processes/customer-onboarding",
   "DefinitionJsonPath": "processes/customer-onboarding/definition.json",
-  "DefinitionMarkdownPath": "processes/customer-onboarding/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/customer-onboarding/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/customer-onboarding/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/customer-onboarding/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/customer-onboarding/mermaid/flowchart.mmd",
-  "SequencePath": "processes/customer-onboarding/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

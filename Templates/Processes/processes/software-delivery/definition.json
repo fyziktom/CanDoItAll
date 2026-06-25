@@ -2171,15 +2171,8 @@
       "OperationTargetScope": "ExternalActionControlled"
     }
   ],
-  "DocPath": "processes/software-delivery/definition.md",
   "RelativePath": "processes/software-delivery",
   "DefinitionJsonPath": "processes/software-delivery/definition.json",
-  "DefinitionMarkdownPath": "processes/software-delivery/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/software-delivery/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/software-delivery/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/software-delivery/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/software-delivery/mermaid/flowchart.mmd",
-  "SequencePath": "processes/software-delivery/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

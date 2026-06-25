@@ -309,6 +309,5 @@
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
-  ],
-  "DocPath": "processes/dotnet-runtime-command-writeback/definition.md"
+  ]
 }

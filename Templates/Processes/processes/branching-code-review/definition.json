@@ -1257,15 +1257,8 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
-  "DocPath": "processes/branching-code-review/definition.md",
   "RelativePath": "processes/branching-code-review",
   "DefinitionJsonPath": "processes/branching-code-review/definition.json",
-  "DefinitionMarkdownPath": "processes/branching-code-review/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/branching-code-review/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/branching-code-review/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/branching-code-review/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/branching-code-review/mermaid/flowchart.mmd",
-  "SequencePath": "processes/branching-code-review/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

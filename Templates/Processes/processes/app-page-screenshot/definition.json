@@ -401,6 +401,5 @@
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
-  ],
-  "DocPath": "processes/app-page-screenshot/definition.md"
+  ]
 }

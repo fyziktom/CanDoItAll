@@ -650,15 +650,8 @@
       "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ],
-  "DocPath": "processes/oss-intake-supply-chain-governance/definition.md",
   "RelativePath": "processes/oss-intake-supply-chain-governance",
   "DefinitionJsonPath": "processes/oss-intake-supply-chain-governance/definition.json",
-  "DefinitionMarkdownPath": "processes/oss-intake-supply-chain-governance/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/oss-intake-supply-chain-governance/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/oss-intake-supply-chain-governance/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/oss-intake-supply-chain-governance/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/oss-intake-supply-chain-governance/mermaid/flowchart.mmd",
-  "SequencePath": "processes/oss-intake-supply-chain-governance/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

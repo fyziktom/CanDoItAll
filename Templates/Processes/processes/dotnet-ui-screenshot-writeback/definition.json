@@ -426,6 +426,5 @@
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
-  ],
-  "DocPath": "processes/dotnet-ui-screenshot-writeback/definition.md"
+  ]
 }

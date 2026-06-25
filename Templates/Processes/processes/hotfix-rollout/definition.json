@@ -742,15 +742,8 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
-  "DocPath": "processes/hotfix-rollout/definition.md",
   "RelativePath": "processes/hotfix-rollout",
   "DefinitionJsonPath": "processes/hotfix-rollout/definition.json",
-  "DefinitionMarkdownPath": "processes/hotfix-rollout/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/hotfix-rollout/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/hotfix-rollout/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/hotfix-rollout/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/hotfix-rollout/mermaid/flowchart.mmd",
-  "SequencePath": "processes/hotfix-rollout/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

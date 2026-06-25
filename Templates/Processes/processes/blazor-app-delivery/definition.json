@@ -869,6 +869,5 @@
       ],
       "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
-  ],
-  "DocPath": "processes/blazor-app-delivery/definition.md"
+  ]
 }

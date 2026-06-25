@@ -469,6 +469,5 @@
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
-  ],
-  "DocPath": "processes/dotnet-architecture-design-review/definition.md"
+  ]
 }
