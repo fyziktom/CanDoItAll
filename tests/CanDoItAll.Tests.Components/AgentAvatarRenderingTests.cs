@@ -46,6 +46,39 @@ public sealed class AgentAvatarRenderingTests
     }
 
     [Fact]
+    public void Overview_usage_list_renders_execution_count_as_success_even_with_failures()
+    {
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+
+        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+            .Add(component => component.IsLoaded, true)
+            .Add(component => component.Rows, [
+                CreateRow("Delivery Manager", null)
+            ]));
+
+        Assert.Contains(cut.FindAll(".cda-status-badge--tone-success"), badge => badge.TextContent.Contains("12 runs", StringComparison.Ordinal));
+        Assert.Contains(cut.FindAll(".cda-status-badge--tone-danger"), badge => badge.TextContent.Contains("1 failed", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Overview_usage_list_renders_total_runs_in_failure_rank()
+    {
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+
+        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+            .Add(component => component.IsLoaded, true)
+            .Add(component => component.ShowFailureRank, true)
+            .Add(component => component.Rows, [
+                CreateRow("Delivery Manager", null)
+            ]));
+
+        Assert.Contains(cut.FindAll(".cda-status-badge--tone-danger"), badge => badge.TextContent.Contains("1 failed", StringComparison.Ordinal));
+        Assert.Contains(cut.FindAll(".cda-status-badge--tone-success"), badge => badge.TextContent.Contains("12 runs", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Avatar_upload_formatter_accepts_supported_image()
     {
         var dataUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(

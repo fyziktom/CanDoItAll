@@ -36,14 +36,20 @@
                     <div class="truncate text-xs text-slate-500">@ResolveSubtitle(agent)</div>
                 </div>
 
-                <div class="flex max-w-[5rem] shrink-0 flex-col items-end gap-0.5">
+                <div class="flex max-w-[6rem] shrink-0 flex-col items-end gap-0.5">
                     <StatusBadge Tone="@ResolvePrimaryTone(agent)"
                                  Text="@ResolvePrimaryText(agent)"
                                  NoWrap="true" />
-                    @if (!ShowFailureRank && agent.FailedRunCount > 0)
+                    @if (ShowFailureRank)
+                    {
+                        <StatusBadge Tone="success"
+                                     Text="@ResolveRunText(agent)"
+                                     NoWrap="true" />
+                    }
+                    else if (agent.FailedRunCount > 0)
                     {
                         <StatusBadge Tone="danger"
-                                     Text="@($"{agent.FailedRunCount} failed")"
+                                     Text="@ResolveFailedText(agent)"
                                      NoWrap="true" />
                     }
                 </div>
@@ -97,7 +103,7 @@
     {
         if (ShowFailureRank)
         {
-            return $"{AgentUsageDisplay.FormatCount(agent.RunCount)} run(s) total";
+            return AgentUsageDisplay.FormatLastUsed(agent.LastUsedAtUtc);
         }
 
         return AgentUsageDisplay.FormatLastUsed(agent.LastUsedAtUtc);
@@ -106,12 +112,18 @@
     private string ResolvePrimaryText(AgentOverviewUsageRow agent)
     {
         return ShowFailureRank
-            ? $"{AgentUsageDisplay.FormatCount(agent.FailedRunCount)} failed"
-            : $"{AgentUsageDisplay.FormatCount(agent.RunCount)} runs";
+            ? ResolveFailedText(agent)
+            : ResolveRunText(agent);
     }
 
     private string ResolvePrimaryTone(AgentOverviewUsageRow agent)
     {
-        return ShowFailureRank || agent.FailedRunCount > 0 ? "danger" : "success";
+        return ShowFailureRank ? "danger" : "success";
     }
+
+    private static string ResolveRunText(AgentOverviewUsageRow agent)
+        => $"{AgentUsageDisplay.FormatCount(agent.RunCount)} runs";
+
+    private static string ResolveFailedText(AgentOverviewUsageRow agent)
+        => $"{AgentUsageDisplay.FormatCount(agent.FailedRunCount)} failed";
 }

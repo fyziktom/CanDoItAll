@@ -177,14 +177,14 @@ public partial class WorkflowCanvasEditor
         new()
         {
             Label = "Components",
-            Value = componentOptions.Count.ToString(),
-            Tone = "success"
+            Value = CountUsedComponents().ToString(),
+            Tone = "accent"
         },
         new()
         {
             Label = "Executors",
-            Value = executorDescriptors.Count(executor => executor.CanExecute).ToString(),
-            Tone = "info"
+            Value = CountUsedExecutors().ToString(),
+            Tone = "warning"
         },
         new()
         {
@@ -193,6 +193,12 @@ public partial class WorkflowCanvasEditor
             Tone = validationIssues.Count == 0 ? "success" : "warning"
         }
     ];
+
+    private int CountUsedComponents()
+        => document.Nodes.Count(node => node.ComponentId.HasValue);
+
+    private int CountUsedExecutors()
+        => document.Nodes.Count(node => node.ExecutorId.HasValue);
 
     protected override void OnParametersSet()
     {
