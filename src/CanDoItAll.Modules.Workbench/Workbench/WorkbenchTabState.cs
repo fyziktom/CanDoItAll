@@ -72,6 +72,7 @@ public sealed class WorkbenchStateService(
 
         if (snapshot?.Tabs.Count > 0)
         {
+            var restoredTabIdentities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var tab in snapshot.Tabs.OrderBy(tab => tab.Order))
             {
                 if (!TryNormalizeRestoredTab(tab, out var normalized, out var failure))
@@ -80,9 +81,11 @@ public sealed class WorkbenchStateService(
                     continue;
                 }
 
-                if (_tabs.Any(existing => string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal)))
+                var identity = ResolveTabIdentity(normalized);
+                if (_tabs.Any(existing => string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal)) ||
+                    !restoredTabIdentities.Add(identity))
                 {
-                    failures.Add(new WorkbenchRestoreFailure(normalized.TabId, normalized.Title, "Duplicate tab id found in restore snapshot."));
+                    failures.Add(new WorkbenchRestoreFailure(normalized.TabId, normalized.Title, "Duplicate tab found in restore snapshot."));
                     continue;
                 }
 
@@ -99,8 +102,13 @@ public sealed class WorkbenchStateService(
                     continue;
                 }
 
-                if (_recentTabs.Any(existing => string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal)) ||
-                    _tabs.Any(existing => string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal)))
+                var identity = ResolveTabIdentity(normalized);
+                if (_recentTabs.Any(existing =>
+                        string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal) ||
+                        string.Equals(ResolveTabIdentity(existing), identity, StringComparison.OrdinalIgnoreCase)) ||
+                    _tabs.Any(existing =>
+                        string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal) ||
+                        string.Equals(ResolveTabIdentity(existing), identity, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
@@ -199,10 +207,14 @@ public sealed class WorkbenchStateService(
         var normalizedArtifactKey = string.IsNullOrWhiteSpace(descriptor.ArtifactKey)
             ? $"{descriptor.TabKind}:{normalizedRoute}"
             : descriptor.ArtifactKey;
+        var normalizedRestoreKey = descriptor.RestoreKey ?? normalizedArtifactKey;
+        var descriptorIdentity = ResolveTabIdentity(descriptor, normalizedRoute, normalizedArtifactKey, normalizedRestoreKey);
 
         var existing = _tabs.FirstOrDefault(tab =>
             string.Equals(tab.ArtifactKey, normalizedArtifactKey, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(tab.TabId, descriptor.TabId, StringComparison.Ordinal));
+            string.Equals(tab.RestoreKey, normalizedRestoreKey, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(tab.TabId, descriptor.TabId, StringComparison.Ordinal) ||
+            string.Equals(ResolveTabIdentity(tab), descriptorIdentity, StringComparison.OrdinalIgnoreCase));
 
         if (existing is null)
         {
@@ -215,7 +227,7 @@ public sealed class WorkbenchStateService(
                 ProjectScope: descriptor.ProjectScope ?? descriptor.ProjectId?.ToString(),
                 TabKind: descriptor.TabKind,
                 ProjectId: descriptor.ProjectId,
-                RestoreKey: descriptor.RestoreKey ?? normalizedArtifactKey,
+                RestoreKey: normalizedRestoreKey,
                 CanSleep: descriptor.CanSleep,
                 CapsuleKey: descriptor.CapsuleKey,
                 Description: descriptor.Description,
@@ -246,7 +258,7 @@ public sealed class WorkbenchStateService(
                 ProjectScope = descriptor.ProjectScope ?? existing.ProjectScope ?? descriptor.ProjectId?.ToString(),
                 TabKind = descriptor.TabKind,
                 ProjectId = descriptor.ProjectId ?? existing.ProjectId,
-                RestoreKey = descriptor.RestoreKey ?? existing.RestoreKey ?? normalizedArtifactKey,
+                RestoreKey = normalizedRestoreKey,
                 CanSleep = descriptor.CanSleep,
                 CapsuleKey = descriptor.CapsuleKey ?? existing.CapsuleKey,
                 Description = descriptor.Description ?? existing.Description,
@@ -265,6 +277,61 @@ public sealed class WorkbenchStateService(
 
         EnsureActiveTabIsAwake();
         AutoSleepBackgroundTabs();
+        await PersistAsync(cancellationToken);
+        NotifyStateChanged();
+    }
+
+    public async Task CloseTabsAsync(
+        IEnumerable<string> tabIds,
+        bool rememberRecent = false,
+        CancellationToken cancellationToken = default)
+    {
+        var requestedTabIds = tabIds
+            .Where(tabId => !string.IsNullOrWhiteSpace(tabId))
+            .ToHashSet(StringComparer.Ordinal);
+        if (requestedTabIds.Count == 0)
+        {
+            return;
+        }
+
+        var removedAny = false;
+        foreach (var tab in _tabs.ToList())
+        {
+            if (!requestedTabIds.Contains(tab.TabId))
+            {
+                continue;
+            }
+
+            _tabs.Remove(tab);
+            if (rememberRecent)
+            {
+                RememberRecentTab(tab);
+            }
+
+            removedAny = true;
+        }
+
+        foreach (var recentTab in _recentTabs.ToList())
+        {
+            if (!rememberRecent && requestedTabIds.Contains(recentTab.TabId))
+            {
+                _recentTabs.Remove(recentTab);
+            }
+        }
+
+        if (!removedAny)
+        {
+            return;
+        }
+
+        Reindex();
+        if (string.IsNullOrWhiteSpace(ActiveTabId) ||
+            _tabs.All(tab => !string.Equals(tab.TabId, ActiveTabId, StringComparison.Ordinal)))
+        {
+            ActiveTabId = _tabs.FirstOrDefault()?.TabId;
+        }
+
+        EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
         NotifyStateChanged();
     }
@@ -641,6 +708,67 @@ public sealed class WorkbenchStateService(
         }
 
         return route.StartsWith('/') ? route : $"/{route}";
+    }
+
+    private static string ResolveTabIdentity(WorkbenchTabState tab)
+    {
+        var normalizedRoute = NormalizeRoute(tab.Route);
+        var generatedArtifactKey = BuildGeneratedArtifactKey(tab.TabKind, normalizedRoute);
+        if (!string.IsNullOrWhiteSpace(tab.ArtifactKey) &&
+            !string.Equals(tab.ArtifactKey, generatedArtifactKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"artifact:{tab.ArtifactKey}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(tab.RestoreKey) &&
+            !string.Equals(tab.RestoreKey, generatedArtifactKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"restore:{tab.RestoreKey}";
+        }
+
+        if (tab.ProjectId.HasValue && !string.IsNullOrWhiteSpace(tab.TabKind))
+        {
+            return $"project:{tab.TabKind}:{tab.ProjectId.Value:N}";
+        }
+
+        return $"route:{NormalizeRoutePath(normalizedRoute)}";
+    }
+
+    private static string ResolveTabIdentity(
+        WorkbenchTabDescriptor descriptor,
+        string normalizedRoute,
+        string normalizedArtifactKey,
+        string normalizedRestoreKey)
+    {
+        var generatedArtifactKey = BuildGeneratedArtifactKey(descriptor.TabKind, normalizedRoute);
+        if (!string.IsNullOrWhiteSpace(descriptor.ArtifactKey) &&
+            !string.Equals(normalizedArtifactKey, generatedArtifactKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"artifact:{normalizedArtifactKey}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(descriptor.RestoreKey) &&
+            !string.Equals(normalizedRestoreKey, generatedArtifactKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"restore:{normalizedRestoreKey}";
+        }
+
+        if (descriptor.ProjectId.HasValue && !string.IsNullOrWhiteSpace(descriptor.TabKind))
+        {
+            return $"project:{descriptor.TabKind}:{descriptor.ProjectId.Value:N}";
+        }
+
+        return $"route:{NormalizeRoutePath(normalizedRoute)}";
+    }
+
+    private static string BuildGeneratedArtifactKey(string tabKind, string normalizedRoute)
+        => $"{tabKind}:{normalizedRoute}";
+
+    private static string NormalizeRoutePath(string route)
+    {
+        var normalized = NormalizeRoute(route);
+        var queryIndex = normalized.IndexOf('?');
+        return queryIndex >= 0 ? normalized[..queryIndex] : normalized;
     }
 
     private static bool IsRetiredModuleRoute(string route)

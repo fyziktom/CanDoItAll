@@ -33,6 +33,7 @@ public sealed class ProjectsPageTests
         var cut = harness.Context.RenderComponent<ProjectsPage>();
 
         cut.Find("[data-testid='projects-new-button']").Click();
+        cut.WaitForElement("[data-testid='project-name-input']");
         cut.Find("[data-testid='project-name-input']").Change("Card Modal Project");
         cut.Find("[data-testid='project-save-button']").Click();
 
@@ -93,6 +94,66 @@ public sealed class ProjectsPageTests
 
             Assert.Single(cards);
             Assert.Contains("Beta child", cards[0].TextContent);
+        });
+    }
+
+    [Fact]
+    public async Task Shows_only_main_projects_until_a_project_is_selected()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parentProjectId = await CreateProjectAsync(projectsService, "Main Alpha");
+        var childProjectId = await CreateProjectAsync(projectsService, "Nested Beta");
+        var unrelatedProjectId = await CreateProjectAsync(projectsService, "Main Gamma");
+
+        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+        Assert.NotEqual(Guid.Empty, unrelatedProjectId);
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var cards = cut.FindAll("[data-testid='project-card']");
+            Assert.Equal(2, cards.Count);
+            Assert.Contains(cards, card => card.TextContent.Contains("Main Alpha", StringComparison.Ordinal));
+            Assert.Contains(cards, card => card.TextContent.Contains("Main Gamma", StringComparison.Ordinal));
+            Assert.DoesNotContain(cards, card => card.TextContent.Contains("Nested Beta", StringComparison.Ordinal));
+
+            var projectSelector = cut.Find("[data-testid='hierarchy-filter-project']");
+            Assert.Contains("Main Alpha", projectSelector.InnerHtml);
+            Assert.DoesNotContain("Nested Beta", projectSelector.InnerHtml);
+        });
+    }
+
+    [Fact]
+    public async Task Project_tree_selection_filters_selected_project_and_subprojects()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parentProjectId = await CreateProjectAsync(projectsService, "Scope Alpha");
+        var childProjectId = await CreateProjectAsync(projectsService, "Scope Beta");
+        var grandchildProjectId = await CreateProjectAsync(projectsService, "Scope Gamma");
+        var unrelatedProjectId = await CreateProjectAsync(projectsService, "Scope Delta");
+
+        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+        Assert.True((await projectsService.AddSubprojectAsync(childProjectId, grandchildProjectId)).IsSuccess);
+        Assert.NotEqual(Guid.Empty, unrelatedProjectId);
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Scope Alpha", cut.Markup));
+        cut.Find($"[data-testid='projects-tree-node-{parentProjectId:N}']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var cards = cut.FindAll("[data-testid='project-card']");
+
+            Assert.Equal(3, cards.Count);
+            Assert.Contains(cards, card => card.TextContent.Contains("Scope Alpha", StringComparison.Ordinal));
+            Assert.Contains(cards, card => card.TextContent.Contains("Scope Beta", StringComparison.Ordinal));
+            Assert.Contains(cards, card => card.TextContent.Contains("Scope Gamma", StringComparison.Ordinal));
+            Assert.DoesNotContain(cards, card => card.TextContent.Contains("Scope Delta", StringComparison.Ordinal));
+            Assert.Empty(cut.FindAll("[data-testid='projects-detail-modal']"));
         });
     }
 
@@ -194,6 +255,9 @@ public sealed class ProjectsPageTests
         await using var harness = await ComponentTestHarness.CreateAsync();
         var cut = harness.Context.RenderComponent<ProjectsPage>();
 
+        Assert.Empty(cut.FindAll("[data-testid='projects-package-path-input']"));
+        cut.Find("[data-testid='projects-package-dialog-button']").Click();
+        cut.WaitForElement("[data-testid='projects-import-package-button']");
         cut.Find("[data-testid='projects-import-package-button']").Click();
 
         cut.WaitForAssertion(() =>

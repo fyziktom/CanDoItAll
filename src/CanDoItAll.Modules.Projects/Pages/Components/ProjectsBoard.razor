@@ -5,67 +5,70 @@
 
 <section class="projects-board flex min-h-[26rem] w-full flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
          data-testid="projects-board">
-    <Stack GapScale="LayoutGap.Medium"
+    <Stack GapScale="LayoutGap.Small"
            Class="border-b border-slate-200 px-4 py-4 sm:px-5"
            data-testid="projects-command-bar">
         <Split Breakpoint="LayoutBreakpoint.Xl"
-               Gap="LayoutGap.Large"
-               AlignItems="AlignItems.Start"
-               JustifyContent="JustifyContent.SpaceBetween">
-            <Stack GapScale="LayoutGap.Small" Orientation="Orientation.Horizontal"
-                   Class="min-w-0 flex-1 w-full">
-                <Cluster Class="min-w-0">
-                    <h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
-                    <Pill Tone="PillTone.Info"
-                          Text="@($"{FilteredProjectSummaries.Count} visible")" />
-                    <HelpPopover RootClass="pf-help-popover pf-help-popover--header"
-                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                                 AriaLabel="Show portfolio board help"
-                                 Title="Show portfolio board help"
-                                 Heading="Portfolio board"
-                                 Body="Search, inspect, edit, and jump into dashboard, structure, or calendar from one compact board without losing the project list."
-                                 Tip="Keep deeper work in focused tabs and use the board for fast scanning." />
-                </Cluster>
-                <Cluster Gap="LayoutGap.Small"
-                         Class="min-w-0">
-                    <Pill Tone="PillTone.Info"
-                          Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Active)} active")" />
-                    <Pill Tone="PillTone.Neutral"
-                          Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft)} draft")" />
-                    <Pill Tone="PillTone.Warn"
-                          Token="UPD"
-                          Text="@LatestUpdatedProjectLabel" />
-                    <HelpPopover RootClass="pf-help-popover flex items-center"
-                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                                 AriaLabel="Show latest updated project details"
-                                 Title="Show latest updated project details"
-                                 Heading="Latest updated project"
-                                 Body="@LatestUpdatedProjectHelper" />
-                </Cluster>
-           
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.NoWrap"
+               Class="projects-board__summary-row">
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.NoWrap"
+                     Class="projects-board__summary-main min-w-0">
+                <h2 class="truncate text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
+                <Pill Tone="PillTone.Info"
+                      Text="@($"{FilteredProjectSummaries.Count} visible")" />
+                <Pill Tone="PillTone.Info"
+                      Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Active)} active")" />
+                <Pill Tone="PillTone.Neutral"
+                      Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft)} draft")" />
+                <Pill Tone="PillTone.Warn"
+                      Token="UPD"
+                      Text="@LatestUpdatedProjectLabel" />
+                <HelpPopover RootClass="pf-help-popover flex items-center"
+                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                             AriaLabel="Show portfolio board help"
+                             Title="Show portfolio board help"
+                             Heading="Portfolio board"
+                             Body="@HierarchyFilterHelper"
+                             Tip="@LatestUpdatedProjectHelper" />
+            </Cluster>
 
-                <Cluster JustifyContent="JustifyContent.End">
+            <Cluster Gap="LayoutGap.XSmall"
+                     Wrap="FlexWrap.NoWrap"
+                     JustifyContent="JustifyContent.End"
+                     Class="projects-board__summary-actions">
+                <TooltipTarget Text="Create project"
+                               Position="TooltipPosition.Bottom"
+                               TestId="projects-new-tooltip">
                     <Button Class="cda-button--quick"
                             Icon="add"
-                            title="Create project"
                             aria-label="Create project"
                             data-testid="projects-new-button"
                             Click="OpenNewProject" />
+                </TooltipTarget>
+                <TooltipTarget Text="Open dashboard"
+                               Position="TooltipPosition.Bottom"
+                               TestId="projects-dashboard-tooltip">
                     <Button ButtonStyle="ButtonStyle.Light"
                             Class="cda-button--quick"
                             Icon="dashboard"
-                            title="Open dashboard"
                             aria-label="Open dashboard"
                             Click="NavigateHome" />
-                    <HelpPopover RootClass="pf-help-popover flex items-center"
-                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                                 AriaLabel="Show project relationship filter help"
-                                 Title="Show project relationship filter help"
-                                 Heading="Project relationship filter"
-                                 Body="@HierarchyFilterHelper"
-                                 Tip="Pick a project first, then narrow to parents, subprojects, or related items." />
-                </Cluster>
-            </Stack>
+                </TooltipTarget>
+                <TooltipTarget Text="Import or export projects package"
+                               Position="TooltipPosition.Bottom"
+                               TestId="projects-package-dialog-tooltip">
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Class="cda-button--quick"
+                            Icon="inventory_2"
+                            aria-label="Import or export projects package"
+                            data-testid="projects-package-dialog-button"
+                            Click="OpenProjectPackageDialog" />
+                </TooltipTarget>
+            </Cluster>
         </Split>
 
         <Toolbar Class="rounded-[1.35rem] border border-slate-200/90 bg-slate-50/85 p-3 shadow-none">
@@ -135,7 +138,7 @@
                                  class="cda-input cda-input--toolbar h-10 appearance-none"
                                  data-testid="hierarchy-filter-project">
                         <option value="">Any project</option>
-                        @foreach (var project in ProjectSummaries.OrderBy(project => project.Name))
+                        @foreach (var project in MainProjectOptions)
                         {
                             <option value="@project.Id">@project.Name</option>
                         }
@@ -156,66 +159,88 @@
                         <option value="related">Related</option>
                     </InputSelect>
                 </PrefixedField>
+                <TooltipTarget Text="Reset filters"
+                               Position="TooltipPosition.Bottom"
+                               TestId="projects-reset-filters-tooltip">
                 <Button ButtonStyle="ButtonStyle.Light"
                         Class="cda-button--quick"
                         Icon="restart_alt"
-                        title="Reset filters"
                         aria-label="Reset filters"
                         Click="ResetFilters" />
-            </div>
-        </Toolbar>
-
-        <Toolbar Class="rounded-[1.35rem] border border-slate-200/90 bg-white/90 p-3 shadow-none"
-                 data-testid="projects-package-toolbar">
-            <div class="projects-board__package">
-                <Cluster Gap="LayoutGap.Small"
-                         Class="min-w-0">
-                    <Pill Tone="PillTone.Info"
-                          Text="Projects zip" />
-                    @if (IsProjectPackageBusy)
-                    {
-                        <StatusBadge Tone="info" Text="Working" />
-                    }
-                </Cluster>
-                <PrefixedField Prefix="ZIP"
-                               PrefixPaddingRem="3.2"
-                               Class="min-w-0">
-                    <input value="@ProjectPackagePath"
-                           @oninput="HandleProjectPackagePathInput"
-                           class="cda-input cda-input--toolbar h-10"
-                           placeholder="Package path"
-                           data-testid="projects-package-path-input" />
-                </PrefixedField>
-                <Cluster Gap="LayoutGap.Small"
-                         JustifyContent="JustifyContent.End"
-                         Class="min-w-0">
-                    <Button Class="cda-button--quick"
-                            Icon="file_download"
-                            title="Export projects package"
-                            aria-label="Export projects package"
-                            Disabled="@IsProjectPackageBusy"
-                            IsBusy="@IsProjectPackageBusy"
-                            data-testid="projects-export-package-button"
-                            Click="ExportProjectsPackage" />
-                    <Button ButtonStyle="ButtonStyle.Light"
-                            Class="cda-button--quick"
-                            Icon="file_upload"
-                            title="Import projects package"
-                            aria-label="Import projects package"
-                            Disabled="@IsProjectPackageBusy"
-                            data-testid="projects-import-package-button"
-                            Click="ImportProjectsPackage" />
-                </Cluster>
-                @if (!string.IsNullOrWhiteSpace(ProjectPackageMessage))
-                {
-                    <p class="projects-board__package-message @(IsProjectPackageMessageError ? "projects-board__package-message--error" : "projects-board__package-message--success")"
-                       data-testid="projects-package-message">
-                        @ProjectPackageMessage
-                    </p>
-                }
+                </TooltipTarget>
             </div>
         </Toolbar>
     </Stack>
+
+    @if (isProjectPackageDialogOpen)
+    {
+        <Dialog IsOpen="true"
+                Eyebrow="Project package"
+                Title="Import / export"
+                Subtitle="Move the project portfolio as a zip package."
+                Size="ModalSize.Compact"
+                ShowCloseButton="false"
+                TestId="projects-package-dialog"
+                OnClose="CloseProjectPackageDialogAsync">
+            <HeaderActions>
+                @if (IsProjectPackageBusy)
+                {
+                    <StatusBadge Tone="info" Text="Working" />
+                }
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Icon="close"
+                        aria-label="Close project package dialog"
+                        Click="CloseProjectPackageDialogAsync" />
+            </HeaderActions>
+            <ChildContent>
+                <Stack GapScale="LayoutGap.Medium"
+                       Class="projects-board__package-dialog">
+                    <PrefixedField Prefix="ZIP"
+                                   PrefixPaddingRem="3.2"
+                                   Class="min-w-0">
+                        <input value="@ProjectPackagePath"
+                               @oninput="HandleProjectPackagePathInput"
+                               class="cda-input cda-input--toolbar h-10"
+                               placeholder="Package path"
+                               data-testid="projects-package-path-input" />
+                    </PrefixedField>
+                    <Cluster Gap="LayoutGap.Small"
+                             JustifyContent="JustifyContent.End"
+                             Class="min-w-0">
+                        <TooltipTarget Text="Export projects package"
+                                       Position="TooltipPosition.Bottom"
+                                       TestId="projects-export-package-tooltip">
+                            <Button Class="cda-button--quick"
+                                    Icon="file_download"
+                                    aria-label="Export projects package"
+                                    Disabled="@IsProjectPackageBusy"
+                                    IsBusy="@IsProjectPackageBusy"
+                                    data-testid="projects-export-package-button"
+                                    Click="ExportProjectsPackage" />
+                        </TooltipTarget>
+                        <TooltipTarget Text="Import projects package"
+                                       Position="TooltipPosition.Bottom"
+                                       TestId="projects-import-package-tooltip">
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Class="cda-button--quick"
+                                    Icon="file_upload"
+                                    aria-label="Import projects package"
+                                    Disabled="@IsProjectPackageBusy"
+                                    data-testid="projects-import-package-button"
+                                    Click="ImportProjectsPackage" />
+                        </TooltipTarget>
+                    </Cluster>
+                    @if (!string.IsNullOrWhiteSpace(ProjectPackageMessage))
+                    {
+                        <p class="projects-board__package-message @(IsProjectPackageMessageError ? "projects-board__package-message--error" : "projects-board__package-message--success")"
+                           data-testid="projects-package-message">
+                            @ProjectPackageMessage
+                        </p>
+                    }
+                </Stack>
+            </ChildContent>
+        </Dialog>
+    }
 
     <ListDetailShell ListPaneWidth="22rem"
                      Dense="true"
@@ -510,18 +535,38 @@
 
     private readonly HashSet<string> expandedProjectTreeNodeIds = [];
     private Guid? selectedTreeProjectId;
+    private bool isProjectPackageDialogOpen;
+
+    private IReadOnlyList<ProjectSummary> MainProjectOptions
+    {
+        get
+        {
+            var mainProjects = ProjectSummaries
+                .Where(IsMainProject)
+                .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            return mainProjects.Count > 0
+                ? mainProjects
+                : ProjectSummaries.OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+    }
 
     private IReadOnlyList<TreeViewNode> ProjectTreeNodes
         => ProjectPortfolioTreeNodeBuilder.Build(
-            FilteredProjectSummaries,
+            ProjectSummaries,
             HierarchyLinks,
             selectedTreeProjectId,
             expandedProjectTreeNodeIds);
 
     private string SelectedTreeProjectName
         => selectedTreeProjectId.HasValue
-            ? FilteredProjectSummaries.FirstOrDefault(project => project.Id == selectedTreeProjectId.Value)?.Name ?? "Selected project"
+            ? ProjectSummaries.FirstOrDefault(project => project.Id == selectedTreeProjectId.Value)?.Name ?? "Selected project"
             : "All filtered projects";
+
+    protected override void OnParametersSet()
+    {
+        selectedTreeProjectId = Guid.TryParse(HierarchyFilterProjectId, out var projectId) ? projectId : null;
+    }
 
     private async Task HandleProjectTreeSelectAsync(string nodeId)
     {
@@ -531,7 +576,11 @@
         }
 
         selectedTreeProjectId = projectId;
-        await OpenProjectPreview.InvokeAsync(projectId);
+        await HierarchyFilterProjectIdChanged.InvokeAsync(projectId.ToString("D"));
+        if (!string.IsNullOrWhiteSpace(HierarchyFilterMode))
+        {
+            await HierarchyFilterModeChanged.InvokeAsync(string.Empty);
+        }
     }
 
     private Task HandleProjectTreeToggleAsync(string nodeId)
@@ -558,6 +607,17 @@
     private Task HandleProjectPackagePathInput(ChangeEventArgs args)
     {
         return ProjectPackagePathChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OpenProjectPackageDialog()
+    {
+        isProjectPackageDialogOpen = true;
+    }
+
+    private Task CloseProjectPackageDialogAsync()
+    {
+        isProjectPackageDialogOpen = false;
+        return Task.CompletedTask;
     }
 
     private string StatusFilterProxy
@@ -589,6 +649,10 @@
         get => HierarchyFilterMode;
         set => _ = HierarchyFilterModeChanged.InvokeAsync(value);
     }
+
+    private bool IsMainProject(ProjectSummary project)
+        => project.ParentCount == 0 &&
+           HierarchyLinks.All(link => link.ChildProjectId != project.Id);
 
     private static string ResolveCategoryLabel(ProjectPartyPortfolioCategory category)
     {

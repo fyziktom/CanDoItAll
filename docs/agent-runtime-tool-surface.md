@@ -10,33 +10,21 @@ Source:
 
 - `src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`
 - `src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
-- `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
 - `src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
 - `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
 - `src/CanDoItAll.Web/Api/ProcessesApi.cs`
 
-Current direct runtime tools: 23.
+Current direct process runtime tools: 0.
 
-Process tools are owned by `CanDoItAll.Modules.Processes` and exposed through `ProcessAgentRuntimeToolProvider`, which is registered as an `IAgentRuntimeToolProvider` by the Processes module. `CanDoItAll.AgentFramework.Maf` composes registered providers and applies the same approval wrapping rules it applies to its built-in tools. If the Processes module is not registered, MAF starts without process tools instead of carrying a compile-time dependency on `CanDoItAll.Modules.Processes`.
+The current source tree does not contain `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`, and `AddProcessesModule` does not register an `IAgentRuntimeToolProvider` for direct `processes_*` tools. Policy constants and some tests still mention legacy or planned `processes_*` names; treat that as a hardening gap, not as proof that those tools are currently available.
 
-| Capability | Direct tools |
-| --- | --- |
-| Definition authoring | `processes_definitions_list`, `processes_definition_editor_get`, `processes_definition_save`, `processes_definition_role_add`, `processes_definition_publish`, `processes_definition_delete`, `processes_definition_export`, `processes_definition_import` |
-| Run operations | `processes_runs_list`, `processes_run_detail_get`, `processes_analytics_get`, `processes_run_start`, `processes_step_transition`, `processes_assignment_resolve`, `processes_artifact_record` |
-| Option catalogs | `processes_party_options_list`, `processes_executor_options_list` |
-| Template pack | `processes_templates_list`, `processes_template_get`, `processes_template_mermaid_get`, `processes_template_import`, `processes_template_baseline_scenarios_list`, `processes_template_live_run_profiles_list` |
+Current process control paths are:
 
-The following process HTTP operations are HTTP-only until typed runtime tools are deliberately added with policy and approval coverage:
+- HTTP routes in `src/CanDoItAll.Web/Api/ProcessesApi.cs`: launch, dispatch, cancel, step rework, live, detail, and history.
+- Project-structure runtime tools in Workbench that can link or start process definitions from project nodes.
+- Blazor process workspace UI backed by process projection services.
 
-- Launch plans and candidate-selection endpoints.
-- Manager directives.
-- Direct messages.
-- Escalation assign, resolve, reopen, and rework operations.
-- Operator approval operations.
-- Step-scoped artifact and assignment list/detail endpoints.
-- Artifact detail endpoints.
-- Template detail, envelope, baseline-scenario, and live-profile HTTP routes beyond the direct template tools listed above.
-- Stop/rerun/recovery-style run operations that are exposed only through HTTP.
+If direct process tools are reintroduced, they must be implemented as a concrete `IAgentRuntimeToolProvider` owned by `CanDoItAll.Modules.Processes`, with typed models, explicit process access metadata, `AgentToolInvocationPolicy` classification, approval behavior, and tests. Until then, document process operations as HTTP API or project-structure bridge operations only.
 
 ## Project Structure Tools
 

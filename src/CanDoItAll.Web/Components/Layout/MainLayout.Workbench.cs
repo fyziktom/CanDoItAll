@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.WebUtilities;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;
 
@@ -105,6 +106,31 @@ public partial class MainLayout
         await Workbench.TrackTabAsync(descriptor);
     }
 
+    private async Task CloseDeletedProjectTabsAsync()
+    {
+        var projectIds = (await ProjectsService.ListAsync())
+            .Select(project => project.Id)
+            .ToHashSet();
+        var staleProjectTabIds = Workbench.Tabs
+            .Where(tab => IsProjectScopedWorkbenchTab(tab) && !projectIds.Contains(tab.ProjectId!.Value))
+            .Select(tab => tab.TabId)
+            .ToArray();
+
+        if (staleProjectTabIds.Length == 0)
+        {
+            return;
+        }
+
+        var staleActiveTab = Workbench.ActiveTabId is not null &&
+            staleProjectTabIds.Contains(Workbench.ActiveTabId, StringComparer.Ordinal);
+        await Workbench.CloseTabsAsync(staleProjectTabIds, rememberRecent: false);
+
+        if (staleActiveTab)
+        {
+            Navigation.NavigateTo(Workbench.GetActiveTab()?.Route ?? "/projects", replace: true);
+        }
+    }
+
     private async Task<WorkbenchTabDescriptor> ResolveCurrentTabDescriptorAsync(Uri uri)
     {
         var path = uri.AbsolutePath;
@@ -114,7 +140,13 @@ public partial class MainLayout
         if (string.Equals(path, "/projects", StringComparison.OrdinalIgnoreCase) &&
             TryReadGuid(query, "projectId", out var projectId))
         {
-            var project = await ProjectsService.GetAsync(projectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(projectId);
+            if (project is null)
+            {
+                Navigation.NavigateTo("/projects", replace: true);
+                return BuildPageDescriptor("/projects", "/projects");
+            }
+
             return new WorkbenchTabDescriptor(
                 $"project:{projectId:N}",
                 string.IsNullOrWhiteSpace(project.Name) ? "Project Overview" : project.Name,
@@ -134,7 +166,13 @@ public partial class MainLayout
 
         if (TryReadProjectSurface(path, "structure", out var structureProjectId))
         {
-            var project = await ProjectsService.GetAsync(structureProjectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(structureProjectId);
+            if (project is null)
+            {
+                Navigation.NavigateTo("/projects", replace: true);
+                return BuildPageDescriptor("/projects", "/projects");
+            }
+
             return new WorkbenchTabDescriptor(
                 $"project-structure:{structureProjectId:N}",
                 $"{project.Name} · Structure",
@@ -154,7 +192,13 @@ public partial class MainLayout
 
         if (TryReadProjectSurface(path, "calendar", out var calendarProjectId))
         {
-            var project = await ProjectsService.GetAsync(calendarProjectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(calendarProjectId);
+            if (project is null)
+            {
+                Navigation.NavigateTo("/projects", replace: true);
+                return BuildPageDescriptor("/projects", "/projects");
+            }
+
             return new WorkbenchTabDescriptor(
                 $"project-calendar:{calendarProjectId:N}",
                 $"{project.Name} · Calendar",
@@ -174,7 +218,13 @@ public partial class MainLayout
 
         if (TryReadProjectProcessesSurface(path, out var processProjectId, out var isProjectLiveProcesses))
         {
-            var project = await ProjectsService.GetAsync(processProjectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(processProjectId);
+            if (project is null)
+            {
+                Navigation.NavigateTo("/projects", replace: true);
+                return BuildPageDescriptor("/projects", "/projects");
+            }
+
             var title = isProjectLiveProcesses
                 ? $"{project.Name} · Live Processes"
                 : $"{project.Name} · Processes";
@@ -283,19 +333,7 @@ public partial class MainLayout
                 TabGroup: "Prompt Sessions");
         }
 
-        var navigation = ShellNavigation.MatchRoute(path.TrimStart('/'), ShellNavigationContributors);
-        return new WorkbenchTabDescriptor(
-            string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? "route:settings" : BuildPageTabId(path),
-            navigation.Title,
-            route,
-            string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? WorkbenchTabKinds.Settings : WorkbenchTabKinds.Page,
-            ArtifactKind: navigation.Title,
-            ArtifactKey: NormalizeArtifactKey(path),
-            RestoreKey: NormalizeArtifactKey(path),
-            Description: navigation.Description,
-            TabGroup: ResolvePageGroup(path),
-            IsPinned: navigation.PinnedByDefault,
-            CanClose: !navigation.PinnedByDefault);
+        return BuildPageDescriptor(path, route);
     }
 
     private static bool TryReadGuid(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key, out Guid value)
@@ -332,6 +370,33 @@ public partial class MainLayout
         isLive = string.Equals(segments[3], "live", StringComparison.OrdinalIgnoreCase);
         return isLive;
     }
+
+    private async Task<ProjectEditorModel?> LoadExistingProjectForWorkbenchAsync(Guid projectId)
+    {
+        var project = await ProjectsService.GetAsync(projectId);
+        return project.Id.HasValue ? project : null;
+    }
+
+    private WorkbenchTabDescriptor BuildPageDescriptor(string path, string route)
+    {
+        var navigation = ShellNavigation.MatchRoute(path.TrimStart('/'), ShellNavigationContributors);
+        return new WorkbenchTabDescriptor(
+            string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? "route:settings" : BuildPageTabId(path),
+            navigation.Title,
+            route,
+            string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? WorkbenchTabKinds.Settings : WorkbenchTabKinds.Page,
+            ArtifactKind: navigation.Title,
+            ArtifactKey: NormalizeArtifactKey(path),
+            RestoreKey: NormalizeArtifactKey(path),
+            Description: navigation.Description,
+            TabGroup: ResolvePageGroup(path),
+            IsPinned: navigation.PinnedByDefault,
+            CanClose: !navigation.PinnedByDefault);
+    }
+
+    private static bool IsProjectScopedWorkbenchTab(WorkbenchTabState tab)
+        => tab.ProjectId.HasValue &&
+           tab.TabKind is WorkbenchTabKinds.ProjectOverview or WorkbenchTabKinds.ProjectStructure or WorkbenchTabKinds.ProjectCalendar or WorkbenchTabKinds.Processes;
 
     private static string ResolveWorkspaceId(string path)
         => path.Trim().ToLowerInvariant() switch

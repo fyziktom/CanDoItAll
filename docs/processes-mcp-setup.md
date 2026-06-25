@@ -13,15 +13,20 @@ Use the web API and the repo-managed process API skill:
 - API overview: [API control plane](api-control-plane.md)
 - Skill guidance: [codex/skills/candoitall-api-processes/SKILL.md](../codex/skills/candoitall-api-processes/SKILL.md)
 - Source routes: [ProcessesApi.cs](../src/CanDoItAll.Web/Api/ProcessesApi.cs)
+- Current implementation map: [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md)
 
-Key route families:
+Current source-grounded routes:
 
-- definitions: `/api/processes/definitions`
-- templates: `/api/processes/templates`
-- runs: `/api/processes/runs`
-- run steps, artifacts, assignments, escalations, approvals, rework, and direct messages: `/api/processes/runs/{runId}/...`
-- launch planning and HR matching: `/api/processes/launch-plans`
-- analytics and option lookups: `/api/processes/analytics`, `/api/processes/executor-options`, `/api/processes/manager-agent-options`, `/api/processes/party-options/{projectId}`
+- `GET /api/processes/contract`
+- `POST /api/processes/launch`
+- `POST /api/processes/runs/{runId}/dispatch`
+- `POST /api/processes/runs/{runId}/cancel`
+- `POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework`
+- `GET /api/processes/live`
+- `GET /api/processes/runs/{runId}`
+- `GET /api/processes/runs/{runId}/history`
+
+The broader definition/template/artifact/assignment/escalation/approval/analytics route families described by older docs are not active in `ProcessesApi.cs`. Treat them as roadmap candidates, not current API.
 
 ## Migration Guidance
 
@@ -29,7 +34,7 @@ Key route families:
 2. Check API status with `GET /api/access/status`.
 3. If API authorization is enabled, use a Settings-generated bearer token or an already-authorized token.
 4. Use the focused route for the smallest operation instead of fetching full process run detail by default.
-5. Read back the run, step, artifact, assignment, or escalation you changed.
+5. Read back the run through `GET /api/processes/runs/{runId}`, `GET /api/processes/runs/{runId}/history`, or `GET /api/processes/live`.
 
 ## Removed Setup Commands
 

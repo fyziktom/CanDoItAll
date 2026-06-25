@@ -20,11 +20,10 @@ Project references:
 
 - `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
 - `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
+- `../CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj`
 - `../CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj`
 - `../CanDoItAll.Tools.Documents/CanDoItAll.Tools.Documents.csproj`
-- `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
-- `../CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
 - `../CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
 
 Framework references:
@@ -63,14 +62,14 @@ MAF runtime regression proof is tracked by named slices so process automation an
 
 ## Architecture Notes
 
-Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly. MAF currently allows direct references to `CanDoItAll.Modules.Security` and `CanDoItAll.Modules.Workspace`; first-party product tool ownership for Processes, Workbench project-structure, and image generation belongs in registered `IAgentRuntimeToolProvider` implementations.
+Keep AgentFramework model contracts, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly. MAF currently allows direct references to `CanDoItAll.Modules.Security` and `CanDoItAll.Modules.Workspace`; first-party product tool ownership belongs in registered `IAgentRuntimeToolProvider` implementations.
 
 ## Process Automation Notes
 
-- Process tools are composed through registered `IAgentRuntimeToolProvider` implementations. Read tools such as `processes_run_detail_get`, `processes_template_baseline_scenarios_list`, and `processes_template_live_run_profiles_list` must remain approval-free; mutation tools such as transitions, assignment resolution, artifact recording, definition saves, and template imports require approval wrappers unless governed automation explicitly suppresses approvals.
-- The concrete process provider lives in the Processes module as `ProcessAgentRuntimeToolProvider`. MAF must not reference that product module directly; it should only resolve registered provider instances from DI.
+- Process execution currently reaches MAF through the Processes module adapter layer, especially `AgentFrameworkProcessExecutionAdapter` and related launch/assignment services in `CanDoItAll.Modules.Processes`.
+- A concrete direct `ProcessAgentRuntimeToolProvider` is not present in the current source tree. Direct `processes_*` tools should not be documented as available until that provider is reintroduced with typed models, policy classifications, approval behavior, and tests.
 - Project-structure tools live in Workbench as `ProjectStructureAgentRuntimeToolProvider`; image-generation tools live in the AgentFramework module as `ImageGenerationAgentRuntimeToolProvider`. Do not reintroduce hard-coded first-party product tool attachment methods into MAF.
-- MAF process agents should use the process API/tool surface for run state, artifacts, assignments, manager directives, and live-run profiles. They should not infer process state from prompt text, template files, or database rows.
+- MAF process agents should use explicit process context, structured output/finalizer contracts, and approved project-structure/process API paths for run state. They should not infer process state from prompt text, template files, or database rows.
 - Adopted MAF 1.8 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
 - Deferred or guarded surfaces must fail predictably. A2A endpoints require valid configuration and bearer secrets, browser MCP payloads are bounded, incompatible approval continuations are rejected, and workflow handoff depth is guarded.
 - Process automation that records final delivery must produce current-run evidence and let Processes validate the artifact and transition. MAF finalizers should not mark process steps complete by prose-only conclusion text.
@@ -83,17 +82,17 @@ Workspace receipts written inside a provider-owned tool invocation inherit the s
 
 ## Runtime Tool Provider Troubleshooting
 
-When process tools are missing from a MAF run:
+When a run appears to need direct process tools:
 
-1. Confirm the host registered the Processes module through `AddCanDoItAllRuntimeModules`.
-2. Confirm `IEnumerable<IAgentRuntimeToolProvider>` contains `ProcessAgentRuntimeToolProvider` in the run scope.
-3. Check MAF progress output for the registered-provider attachment message, provider key/display name, and the expected 23 process tools.
-4. Check `AgentProcessAccessMetadata` on the agent before treating absent or denied process behavior as a runtime bug.
-5. Check `AgentToolInvocationPolicy` classification before changing approval behavior.
+1. Confirm whether the operation can use `/api/processes` or project-structure bridge tools instead.
+2. Confirm the current `IEnumerable<IAgentRuntimeToolProvider>` contains only the expected registered providers for that scope.
+3. Treat missing direct `processes_*` tools as a product gap, not a MAF attachment failure, unless a concrete process runtime tool provider has been reintroduced.
+4. Check `AgentToolInvocationPolicy` classification before changing approval behavior.
 
-Do not repair missing process tools by reintroducing a MAF project reference to the Processes module; fix provider registration, provider construction, or policy coverage at the owning boundary.
+Do not repair missing process operations by adding a MAF project reference to the Processes module. Implement or remove the direct process tool provider at the owning boundary.
 
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture-beta.md`
+- Process/MAF/provider implementation map: `docs/processes-maf-providers-implementation-map.md`

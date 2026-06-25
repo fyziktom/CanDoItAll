@@ -28,6 +28,7 @@ public sealed class AppTabStripTests : TestContext
         Assert.Contains("push_pin", cut.Markup);
         Assert.Contains("bedtime", cut.Markup);
         Assert.Contains("cda-inline-tab__actions", cut.Markup);
+        Assert.DoesNotContain("cda-inline-tab__actions--active", cut.Markup);
         Assert.Contains("app-tab-strip-main-row", cut.Markup);
         Assert.Contains("cda-tab-strip__controls", cut.Markup);
 
@@ -38,6 +39,25 @@ public sealed class AppTabStripTests : TestContext
         Assert.Equal("projects", movedRight);
         Assert.Equal("projects", toggledSleep);
         Assert.Equal("projects", activated);
+    }
+
+    [Fact]
+    public void Renders_all_tabs_inline_without_overflow_counter()
+    {
+        var tabs = Enumerable.Range(1, 8)
+            .Select(index => new WorkbenchTabState($"tab-{index}", $"Tab {index}", $"/tab-{index}"))
+            .ToArray();
+
+        var cut = RenderComponent<AppTabStrip>(parameters => parameters
+            .Add(component => component.Items, tabs)
+            .Add(component => component.ActiveTabId, "tab-1"));
+
+        foreach (var tab in tabs)
+        {
+            Assert.Contains(tab.Title, cut.Markup);
+        }
+
+        Assert.DoesNotContain("+2", cut.Markup);
     }
 }
 

@@ -125,6 +125,7 @@ public partial class MainLayout
                     TabGroup: "Workspace")
             ]);
 
+        await CloseDeletedProjectTabsAsync();
         await ResolveAndTrackCurrentTabAsync();
         databaseSwitchListenerReference = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("CanDoItAll.browserState.registerDatabaseSwitchListener", databaseSwitchListenerReference);

@@ -265,13 +265,14 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private string HierarchyFilterHelper
         => !SelectedHierarchyFilterProjectId.HasValue
-            ? "Choose a project to filter direct subprojects, direct parents, or the immediate relationship neighborhood."
+            ? "Showing main projects. Choose a project to show it with its subprojects or narrow by direct links."
             : hierarchyFilterMode switch
             {
+                "" => $"Showing {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} and its subprojects.",
                 "children" => $"Showing direct subprojects of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
                 "parents" => $"Showing direct parents of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
                 "related" => $"Showing the direct relationship neighborhood around {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-                _ => $"Project {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} is selected. Pick Subprojects, Parents, or Related to narrow the board."
+                _ => $"Showing {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} and its subprojects."
             };
 
     private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
@@ -576,6 +577,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     {
         projectSearch = string.Empty;
         statusFilter = string.Empty;
+        relatedPartyCategoryFilter = string.Empty;
+        relatedPartyValueFilter = string.Empty;
         hierarchyFilterMode = string.Empty;
         hierarchyFilterProjectId = string.Empty;
     }
@@ -642,9 +645,14 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private bool MatchesHierarchyFilter(ProjectSummary project)
     {
-        if (!SelectedHierarchyFilterProjectId.HasValue || string.IsNullOrWhiteSpace(hierarchyFilterMode))
+        if (!SelectedHierarchyFilterProjectId.HasValue)
         {
-            return true;
+            return IsMainProject(project);
+        }
+
+        if (string.IsNullOrWhiteSpace(hierarchyFilterMode))
+        {
+            return BuildSelectedProjectScopeIds(SelectedHierarchyFilterProjectId.Value).Contains(project.Id);
         }
 
         return hierarchyFilterMode switch
@@ -656,6 +664,33 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                 (link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id)),
             _ => true
         };
+    }
+
+    private bool IsMainProject(ProjectSummary project)
+        => project.ParentCount == 0 &&
+           hierarchyLinks.All(link => link.ChildProjectId != project.Id);
+
+    private HashSet<Guid> BuildSelectedProjectScopeIds(Guid projectId)
+    {
+        var projectIds = new HashSet<Guid> { projectId };
+        AddSubprojectScopeIds(projectId, projectIds);
+        return projectIds;
+    }
+
+    private void AddSubprojectScopeIds(Guid parentProjectId, HashSet<Guid> projectIds)
+    {
+        var childProjectIds = hierarchyLinks
+            .Where(link => link.ParentProjectId == parentProjectId)
+            .Select(link => link.ChildProjectId)
+            .ToArray();
+
+        foreach (var childProjectId in childProjectIds)
+        {
+            if (projectIds.Add(childProjectId))
+            {
+                AddSubprojectScopeIds(childProjectId, projectIds);
+            }
+        }
     }
 
     private string ResolveProjectName(Guid projectId)

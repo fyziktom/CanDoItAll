@@ -17,6 +17,7 @@ These docs are for readers who need to understand what CanDoItAll does before th
 
 - [Root quick start](../README.md#quick-start-with-postgresql-and-qdrant): public entry point for PostgreSQL, Qdrant, build, test, and setup script commands.
 - [API control plane](api-control-plane.md): current HTTP API surface for projects, project structure, processes, agents, and API access.
+- [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md): source-grounded map of the current process runtime, MAF adapter, provider runtime, API/tool boundaries, known gaps, and hardening-refactor roadmap.
 - [Development runtime](development-runtime.md): default PostgreSQL/Qdrant setup for Visual Studio and local Development runs.
 - [PostgreSQL runtime canonicality](postgresql-runtime-canonicality.md): source-of-truth, lease finalization, and bounded parallelism rules.
 - [Cognitive Memory](cognitive-memory/README.md): current implementation stage, architecture, API, validation, and roadmap for the Cognitive Memory module.
