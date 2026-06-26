@@ -1,7 +1,0 @@
-warning: in the working copy of 'codex/bundles/process-module-architecture-v3/README.md', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'codex/bundles/process-module-architecture-v3/reviews/01-execution-report.md', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Processes.cs', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'src/CanDoItAll.Modules.Workbench/Pages/ProjectStructureProcessStartEstimateCalculator.cs', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'src/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProjectStructureProcessStartEstimateCalculatorTests.cs', LF will be replaced by CRLF the next time Git touches it

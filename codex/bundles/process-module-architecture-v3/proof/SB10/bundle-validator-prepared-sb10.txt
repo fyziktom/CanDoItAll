@@ -1,2 +1,0 @@
-python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py --stage prepared codex\bundles\process-module-architecture-v3
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3

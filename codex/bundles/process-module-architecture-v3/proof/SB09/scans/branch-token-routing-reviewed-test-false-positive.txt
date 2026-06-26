@@ -1,6 +1,0 @@
-Command:
-rg -n "Contains\(" tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs
-
-ExitCode: 0
-Result:
-442:            if (consumedKeys.Contains(consumption.IdempotencyKey))

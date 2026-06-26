@@ -1,6 +1,0 @@
-Command:
-rg -n "ProcessRuntimeStateSnapshot|ProcessRuntimeStepState|IProcessRuntimeUnitOfWork|IProcessRuntimeStateStore|DbContext|SaveChanges|RuntimeStates|RuntimeEvents" src/CanDoItAll.Processes.Projections src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs -g"*.cs"
-
-ExitCode: 1
-Result:
-No matches.

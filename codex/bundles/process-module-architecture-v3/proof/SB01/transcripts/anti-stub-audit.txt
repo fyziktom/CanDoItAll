@@ -1,3 +1,0 @@
-SB01 anti-stub audit scope: generated proof scripts, transcripts, manifest summaries, and inventories. Legacy archive source is reference evidence only and intentionally may preserve old implementation text.
-Active product diff is recorded separately in active-product-diff.txt.
-Match count: 0

@@ -1,9 +1,0 @@
-@page "/processes/live"
-@page "/projects/{ProjectId:guid}/processes/live"
-
-<LiveProcessesDashboard ProjectId="@ProjectId" />
-
-@code {
-    [Parameter]
-    public Guid? ProjectId { get; set; }
-}

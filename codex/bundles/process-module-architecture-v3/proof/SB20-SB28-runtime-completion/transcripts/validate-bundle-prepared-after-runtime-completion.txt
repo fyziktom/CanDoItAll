@@ -1,1 +1,0 @@
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-module-architecture-v3

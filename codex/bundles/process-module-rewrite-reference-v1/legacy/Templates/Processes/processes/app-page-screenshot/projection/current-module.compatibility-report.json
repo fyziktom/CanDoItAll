@@ -1,8 +1,0 @@
-{
-  "processKey": "app-page-screenshot",
-  "compatible": true,
-  "notes": [
-    "Uses current module process definition projection.",
-    "Screenshot-specific behavior is template data, not process runtime logic."
-  ]
-}

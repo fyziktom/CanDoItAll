@@ -1,6 +1,0 @@
-Command:
-rg -n "TODO|NotImplemented|throw new NotImplementedException|placeholder|stub" src/CanDoItAll.Processes.Projections src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs src/CanDoItAll.Processes.Persistence tests/CanDoItAll.Tests.Unit/ProcessProjectionPipelineTests.cs -g"*.cs"
-
-ExitCode: 1
-Result:
-No matches.

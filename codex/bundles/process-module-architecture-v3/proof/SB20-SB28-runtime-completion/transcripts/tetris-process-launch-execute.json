@@ -1,1 +1,0 @@
-{"errors":[{"code":"process.launch_failed","message":"The collection type 'System.Collections.Generic.IReadOnlySet`1[CanDoItAll.Processes.Abstractions.CapabilityTag]' is abstract, an interface, or is read only, and could not be instantiated and populated. Path: $.driverStack.drivers[0].capabilityTags | LineNumber: 0 | BytePositionInLine: 1106.","severity":1}]}

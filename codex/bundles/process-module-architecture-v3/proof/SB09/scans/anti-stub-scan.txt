@@ -1,6 +1,0 @@
-Command:
-rg -n "TODO|NotImplemented|throw new NotImplementedException|placeholder|stub" src/CanDoItAll.Processes.Application src/CanDoItAll.Processes.Runtime tests/CanDoItAll.Tests.Unit/ProcessManagerControlLoopTests.cs -g"ProcessManager*.cs"
-
-ExitCode: 1
-Result:
-No matches.

@@ -1,8 +1,0 @@
-Pattern: DbContext|EntityFramework|IProcessPersistence|ProcessRuntime|ProcessManagerControlLoop|ProcessProjectionWorker|ExecutionRun|document\.querySelector|ProcessObservation|Dispatcher
-Files:
-- src\CanDoItAll.Modules.Processes\Components\ProcessDefinitionStepEditorPanel.razor
-- src\CanDoItAll.Processes.Application\ProcessDefinitionStepEditorProjectionService.cs
-- src\CanDoItAll.Processes.Projections\ProcessDefinitionStepEditorProjectionContracts.cs
-- src\CanDoItAll.Processes.Templates\ProcessTemplateStepSummaries.cs
-
-No matches.

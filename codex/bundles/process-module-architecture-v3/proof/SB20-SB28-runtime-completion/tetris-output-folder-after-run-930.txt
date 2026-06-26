@@ -1,7 +1,0 @@
-
-Name            Mode  Length LastWriteTime
-----            ----  ------ -------------
-src             d----        16.06.2026 23:10:02
-tests           d----        16.06.2026 23:11:24
-TetrisGame.slnx -a--- 231    16.06.2026 23:11:35
-

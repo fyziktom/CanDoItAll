@@ -1,2 +1,0 @@
-Command: rg -n 'DbContext|Microsoft\.EntityFrameworkCore|Npgsql|CanDoItAll\.Processes\.Persistence|ProcessPersistenceDbContext|ProcessRuntimeStateEntity|ProcessOutboxMessageEntity' src\CanDoItAll.Processes.Runtime
-Result: no matches

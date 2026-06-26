@@ -1,6 +1,0 @@
-Command:
-rg -n "\bRawDiagnostic\b|DiagnosticText|RestrictedDiagnosticEvidence\.Detail|restricted-secret" src/CanDoItAll.Processes.Projections src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs -g"*.cs"
-
-ExitCode: 1
-Result:
-No matches.
