@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj" />

@@ -1029,3 +1029,23 @@ Entry gate: Pass. SB30-SB33 proof existed, prepared-stage validation was repaire
 Closure gate: Pass. Acceptance checklist complete, proof manifest and semantic invariants recorded, changed-file hashes recorded, focused tests/build/static scans passed, and fresh TetrisGame e2e plus generated build/test/cleanup proof is recorded.
 Progression: Keep ProcessRuntimeIntegrationServices split-up as a follow-up architecture task; SB34 records its size and LINQ/list/dictionary pressure but intentionally limits code changes to the concrete stuck-run/backpressure/regex risks proven in this pass.
 ```
+
+## Post-SB34 Process Estimate Historical Cost Repair
+
+Proof artifacts:
+
+```text
+bundle://proof/post-sb34-process-estimate-historical-cost-repair/manifest.md
+bundle://proof/post-sb34-process-estimate-historical-cost-repair/semantic-invariants.md
+bundle://proof/post-sb34-process-estimate-historical-cost-repair/changed-file-hashes.txt
+bundle://proof/post-sb34-process-estimate-historical-cost-repair/transcripts/focused-unit-tests.txt
+bundle://proof/post-sb34-process-estimate-historical-cost-repair/transcripts/component-page-render-smoke.txt
+bundle://proof/post-sb34-process-estimate-historical-cost-repair/transcripts/git-diff-check.txt
+bundle://proof/post-sb34-process-estimate-historical-cost-repair/transcripts/validate-bundle-prepared.txt
+```
+
+Result:
+
+```text
+Project-structure process-start estimation now prefers actual historical cost from completed runs of the same ProcessDefinitionId before using fixed provider-price token estimates. The historical reader aggregates cost per completed process run and includes descendant run IDs for root-run samples, so subprocess cost contributes to top-level process estimates. If historical completed runs exist but none has resolvable actual usage cost, the UI keeps the provider price-list fallback and states that the historical runs lacked resolvable actual cost. Focused unit validation passed 6/6, full project-structure page render smoke validation passed 1/1, git diff check passed, and prepared-stage bundle validation passed.
+```

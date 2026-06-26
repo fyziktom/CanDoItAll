@@ -36,6 +36,9 @@ public partial class ProjectStructurePage
     [Inject]
     private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
 
+    [Inject]
+    private IProcessHistoricalRunCostReader ProcessHistoricalRunCostReader { get; set; } = default!;
+
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
     private IReadOnlyDictionary<Guid, ProjectStructureProcessStartAgentMetadata> processStartAgentMetadataById =
@@ -353,11 +356,12 @@ public partial class ProjectStructurePage
             var previewStatusMessage = preview.Stage == ProcessLaunchStage.Blocked && preview.Warnings.Count > 0
                 ? string.Join(" ", preview.Warnings)
                 : statusMessage;
-            processStartDialog = MapProcessStartDialogState(
+            processStartDialog = await MapProcessStartDialogStateAsync(
                 dialog,
                 preview.LaunchPlan,
                 previewStatusMessage,
-                string.Empty);
+                string.Empty,
+                previewTimeout.Token);
             await InvokeAsync(StateHasChanged);
         }
         catch (OperationCanceledException exception) when (previewTimeout.IsCancellationRequested)
@@ -739,11 +743,12 @@ public partial class ProjectStructurePage
             .ToList();
     }
 
-    private ProjectStructureProcessStartDialogState MapProcessStartDialogState(
+    private async Task<ProjectStructureProcessStartDialogState> MapProcessStartDialogStateAsync(
         ProjectStructureProcessStartDialogState dialog,
         ProcessLaunchPlanView launchPlan,
         string statusMessage,
-        string error)
+        string error,
+        CancellationToken cancellationToken)
     {
         var steps = launchPlan.Steps
             .Where(step =>
@@ -757,6 +762,7 @@ public partial class ProjectStructurePage
         }
 
         var roles = steps.Select(MapProcessStartRoleState).ToList();
+        var estimate = await BuildProcessStartEstimateAsync(launchPlan, steps, roles, cancellationToken);
         return dialog with
         {
             LaunchPlanId = launchPlan.PlanId.Value,
@@ -769,7 +775,7 @@ public partial class ProjectStructurePage
             StageActivatedAtUtc = DateTimeOffset.UtcNow,
             AssignmentsReviewed = false,
             Roles = roles,
-            Estimate = BuildProcessStartEstimate(launchPlan, steps, roles),
+            Estimate = estimate,
             Error = error
         };
     }
@@ -990,10 +996,11 @@ public partial class ProjectStructurePage
         return [selectedCandidate, .. candidates];
     }
 
-    private ProjectStructureProcessEstimateSummary BuildProcessStartEstimate(
+    private async Task<ProjectStructureProcessEstimateSummary> BuildProcessStartEstimateAsync(
         ProcessLaunchPlanView launchPlan,
         IReadOnlyList<ProcessLaunchStepView> steps,
-        IReadOnlyList<ProjectStructureProcessStartRoleState> roles)
+        IReadOnlyList<ProjectStructureProcessStartRoleState> roles,
+        CancellationToken cancellationToken)
     {
         var assignments = roles
             .Select(role =>
@@ -1011,11 +1018,19 @@ public partial class ProjectStructurePage
                     metadata.ProviderProfile);
             })
             .ToList();
+        var historicalCostEstimate = await ProcessHistoricalRunCostReader
+            .ReadAsync(
+                new ProcessHistoricalRunCostQuery(
+                    launchPlan.DefinitionId,
+                    launchPlan.DefinitionKey,
+                    DateTimeOffset.UtcNow),
+                cancellationToken);
 
         return ProjectStructureProcessStartEstimateCalculator.Calculate(
             launchPlan.DefinitionKey,
             steps.Count,
-            assignments);
+            assignments,
+            historicalCostEstimate);
     }
 
     private static decimal ResolveCandidateScore(ProjectStructureProcessStartCandidateState candidate)
