@@ -136,6 +136,40 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Organization_workspace_seeds_local_comfyui_flux_image_generation_provider()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var providers = await workspaceService.ListProvidersAsync();
+        var imageProvider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.ComfyUi &&
+                    item.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                    string.Equals(item.Name, ComfyUiFluxProviderDefaults.ProviderName, StringComparison.Ordinal));
+        var service = new ProviderProfileService();
+        var matrix = service.ResolveFeatureMatrix(imageProvider);
+        using var configuration = JsonDocument.Parse(imageProvider.ConfigurationJson);
+        var root = configuration.RootElement;
+
+        Assert.Equal(ComfyUiFluxProviderDefaults.DefaultBaseUrl, imageProvider.BaseUrl);
+        Assert.Equal(ComfyUiFluxProviderDefaults.DefaultModel, imageProvider.DefaultModel);
+        Assert.True(imageProvider.IsEnabled);
+        Assert.True(imageProvider.IsPrivateProvider);
+        Assert.False(imageProvider.SupportsTools);
+        Assert.Contains(ComfyUiFluxProviderDefaults.DefaultModel, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(ComfyUiFluxProviderDefaults.PositivePromptNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.PositivePromptNodeId).GetString());
+        Assert.Equal(ComfyUiFluxProviderDefaults.SamplerNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.SamplerNodeId).GetString());
+        Assert.Equal(ComfyUiFluxProviderDefaults.LatentSizeNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.WidthNodeId).GetString());
+        Assert.Equal(ComfyUiFluxProviderDefaults.OutputNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.OutputNodeId).GetString());
+        Assert.Contains("flux1-dev.safetensors", root.GetProperty(ComfyUiProviderConfigurationKeys.WorkflowTemplateJson).GetString(), StringComparison.Ordinal);
+        Assert.True(matrix.SupportsImageGeneration);
+        Assert.False(matrix.SupportsFunctionTools);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog()
     {
         await using var application = await TestApplication.CreateAsync();

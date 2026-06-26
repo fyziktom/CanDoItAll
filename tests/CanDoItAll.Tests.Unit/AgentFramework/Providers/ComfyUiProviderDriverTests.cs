@@ -98,6 +98,65 @@ public sealed class ComfyUiProviderDriverTests
     }
 
     [Fact]
+    public async Task ComfyUiProviderDriver_UsesFluxDefaultsWithoutNegativePromptTextNode()
+    {
+        var imageBytes = new byte[] { 1, 2, 3, 4 };
+        var handler = new ComfyUiHandler(request =>
+        {
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/prompt" => JsonResponse("""{"prompt_id":"flux-prompt"}"""),
+                "/history/flux-prompt" => JsonResponse("""
+                    {
+                      "flux-prompt": {
+                        "outputs": {
+                          "9": {
+                            "images": [
+                              {
+                                "filename": "Flux.1_Dev_00001_.png",
+                                "subfolder": "",
+                                "type": "output"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                    """),
+                "/view" => BinaryResponse(imageBytes, "image/png"),
+                _ => JsonResponse("""{"error":"unexpected endpoint"}""", HttpStatusCode.NotFound)
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        var driver = new ComfyUiProviderDriver(httpClient);
+        var provider = CreateProvider(ComfyUiFluxProviderDefaults.CreateConfigurationJson()) with
+        {
+            DefaultModel = ComfyUiFluxProviderDefaults.DefaultModel,
+            SuggestedModels = ComfyUiFluxProviderDefaults.SuggestedModels
+        };
+
+        var result = await driver.GenerateImageAsync(new ProviderImageGenerationRequest(
+            provider,
+            ComfyUiFluxProviderDefaults.DefaultModel,
+            "paint a Flux validation scene",
+            "1536x1024",
+            "low",
+            ProviderGeneratedImageFormat.Png,
+            []));
+
+        Assert.Equal(ComfyUiFluxProviderDefaults.DefaultModel, result.Model);
+        Assert.Equal(imageBytes, Assert.Single(result.Images).Bytes);
+        var promptRequest = Assert.Single(handler.Requests, request => request.PathAndQuery == "/prompt");
+        using var promptDocument = JsonDocument.Parse(promptRequest.Body);
+        var prompt = promptDocument.RootElement.GetProperty("prompt");
+        Assert.Equal("paint a Flux validation scene", prompt.GetProperty("56:51").GetProperty("inputs").GetProperty("text").GetString());
+        Assert.True(prompt.GetProperty("56:52").GetProperty("inputs").GetProperty("seed").GetInt64() > 0);
+        Assert.Equal(1536, prompt.GetProperty("56:50").GetProperty("inputs").GetProperty("width").GetInt32());
+        Assert.Equal(1024, prompt.GetProperty("56:50").GetProperty("inputs").GetProperty("height").GetInt32());
+        Assert.False(prompt.GetProperty("56:54").GetProperty("inputs").TryGetProperty("text", out _));
+    }
+
+    [Fact]
     public async Task ComfyUiProviderDriver_RejectsMissingWorkflowTemplate()
     {
         using var httpClient = new HttpClient(new ComfyUiHandler(_ => JsonResponse("{}")));
@@ -124,6 +183,22 @@ public sealed class ComfyUiProviderDriverTests
 
         Assert.Contains("ComfyUI prompt enqueue failed with HTTP 400", exception.Message, StringComparison.Ordinal);
         Assert.Contains("bad workflow", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ComfyUiProviderDriver_RejectsMissingConfiguredOutputNodeBeforeEnqueue()
+    {
+        var handler = new ComfyUiHandler(_ => JsonResponse("{}"));
+        using var httpClient = new HttpClient(handler);
+        var driver = new ComfyUiProviderDriver(httpClient);
+        var provider = CreateProvider(CreateConfigurationJson(
+            positivePromptNodeId: "6",
+            outputNodeId: "missing-output"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => driver.GenerateImageAsync(CreateRequest(provider)));
+
+        Assert.Contains("missing-output", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(handler.Requests, request => request.PathAndQuery == "/prompt");
     }
 
     [Fact]

@@ -1,0 +1,9 @@
+Invariant: SB02-ANTI-STUB
+Command: rg -n "TODO|NotImplementedException|fixture-specific|stub" <SB02 changed files>
+WorkingDirectory: C:\repositories\CanDoItAll
+TimestampUtc: 2026-06-26T17:17:52.7962306Z
+RgExitCode: 1
+Passed: no stub/TODO/NotImplemented/fixture-specific markers in SB02 changed source and focused tests.
+Matches:
+
+ExitCode: 0

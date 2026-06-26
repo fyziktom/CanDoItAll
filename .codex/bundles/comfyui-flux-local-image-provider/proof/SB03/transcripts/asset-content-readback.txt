@@ -1,0 +1,18 @@
+Invariant: SB03-PROJECT-STRUCTURE-ASSET-READBACK
+Command: read project-structure live proof summary, inspect copied PNG length, recompute SHA256
+WorkingDirectory: C:\repositories\CanDoItAll
+TimestampUtc: 2026-06-26T17:17:52.8865951Z
+ProviderName: Local ComfyUI Flux
+Model: flux1-dev.safetensors
+ProjectId: 266c627b-3eb2-4ad4-8eb9-8e7b6e4eb3ba
+NodeId: custom:7299cf6d60224dcf83b1fdc40a1b7972
+MediaRelativePath: managed-files/project-media/images/266c627b3eb24ad48eb98e7b6e4eb3ba/live-comfyui-flux-proof-b2d16a4bb38f417eadc3d0feaeee4ebc.png
+MediaContentType: image/png
+MediaOriginalFileName: live-comfyui-flux-proof.png
+ContentLength: 665005
+ImageFileLength: 665005
+SummarySha256: 30AA6AF773ABF9E83054001FD0FADB9AC7CB60DFE6098FBF893C5CA26123D553
+ImageSha256: 30AA6AF773ABF9E83054001FD0FADB9AC7CB60DFE6098FBF893C5CA26123D553
+LengthMatches: True
+HashMatches: True
+ExitCode: 0

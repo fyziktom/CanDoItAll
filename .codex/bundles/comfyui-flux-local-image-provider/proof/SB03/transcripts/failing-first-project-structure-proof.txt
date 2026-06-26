@@ -1,0 +1,7 @@
+Invariant: SB03-PROJECT-STRUCTURE-ASSET
+Command: git show HEAD:tests/CanDoItAll.Tests.Integration/ProjectStructureAgentIntegrationTests.cs and check for live ComfyUI Flux project-structure asset proof
+WorkingDirectory: C:\repositories\CanDoItAll
+TimestampUtc: 2026-06-26T17:17:52.7068693Z
+PreChangeHasLiveProjectStructureComfyUiProof: 
+Result: pre-change tests do not prove project-structure storage with live ComfyUI Flux bytes through IAgentImageGenerationService.
+ExitCode: 1

@@ -36,6 +36,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var openAiProviderId = CreateStableGuid("providers/openai-default");
         var openAiChatProviderId = CreateStableGuid("providers/openai-chat-completions");
         var openAiImageProviderId = CreateStableGuid("providers/openai-image-generation");
+        var localComfyUiFluxProviderId = CreateStableGuid("providers/comfyui-flux-local");
         var ollamaProviderId = CreateStableGuid("providers/ollama-local");
         var localOllamaProviderId = CreateStableGuid("providers/ollama-local-default");
 
@@ -486,6 +487,29 @@ internal static class SandboxWorkspaceSeedBuilder
                 ProviderProfilePurpose.ImageGeneration)
             {
                 Tags = ["openai", "cloud", "image-generation", "image"]
+            },
+            new(
+                localComfyUiFluxProviderId,
+                ComfyUiFluxProviderDefaults.ProviderName,
+                ProviderKind.ComfyUi,
+                ComfyUiFluxProviderDefaults.DefaultBaseUrl,
+                string.Empty,
+                ComfyUiFluxProviderDefaults.DefaultModel,
+                ProviderTransportKind.ChatCompletions,
+                true,
+                false,
+                false,
+                false,
+                false,
+                ComfyUiFluxProviderDefaults.CreateConfigurationJson(),
+                "Local ComfyUI Flux image-generation provider for developer workstations exposing the ComfyUI HTTP API.",
+                "Not checked",
+                null,
+                ComfyUiFluxProviderDefaults.SuggestedModels,
+                ProviderProfilePurpose.ImageGeneration)
+            {
+                IsPrivateProvider = true,
+                Tags = ["comfyui", "flux", "image", "image-generation", "local"]
             },
             new(
                 localOllamaProviderId,

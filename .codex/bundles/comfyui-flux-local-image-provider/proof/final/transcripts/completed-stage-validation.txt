@@ -1,0 +1,10 @@
+Invariant: FINAL-BUNDLE-COMPLETED-VALIDATION
+Command: python <bundle-validator> .codex\bundles\comfyui-flux-local-image-provider --profile initiative --stage completed --repo-root <repo-root>
+WorkingDirectory: <repo-root>
+TimestampUtc: 2026-06-26T17:23:41.0340315Z
+
+Bundle is valid for stage 'completed': bundle root
+
+ExitCode: 0
+
+

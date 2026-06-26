@@ -1,0 +1,107 @@
+# ComfyUI Flux Connectivity Gate
+
+## Status
+
+- `Completed`
+
+## Objective
+
+- Prove that the local or LAN ComfyUI HTTP API can execute the provided Flux workflow and return a downloadable non-empty image before any CanDoItAll production driver/provider changes begin.
+
+## Covered Inputs
+
+- `N002`: better application tested with better ComfyUI over local network.
+- `N003`: updated ComfyUI should run on the same port or be restarted/reconfigured to expose the API.
+- `N004`: test that local image generation is possible.
+- `N005`: use `ImageGenerationFlux.json` and Flux, not SD3.5.
+- `N010`: stop if ComfyUI connection cannot be solved.
+
+## Prerequisites
+
+- `bundle://inputs/sample/ImageGenerationFlux.json` exists.
+- `C:\programovani\csharp\zyphonote_marketing_prompts\ImageGenerationFlux.json` exists.
+- The user permits the ZyphoNote sample project to be used as a disposable testbed.
+- No production CanDoItAll code changes have started for this bundle.
+
+## Exact Source References
+
+- `bundle://inputs/sample/ImageGenerationFlux.json`
+- `bundle://inputs/sample/ComfyUiService.cs`
+- `bundle://inputs/sample/ComfyUiOptions.cs`
+- `C:\programovani\csharp\zyphonote_marketing_prompts\ImageGenerationFlux.json`
+- `C:\programovani\csharp\zyphonote_marketing_prompts\app\ZyphoNote.MarketingPrompts\Services\ComfyUiService.cs`
+- `C:\programovani\csharp\zyphonote_marketing_prompts\app\ZyphoNote.MarketingPrompts\Options\ComfyUiOptions.cs`
+
+## Deliverables
+
+- Completed: `bundle://proof/SB01/transcripts/comfyui-flux-live-generation.txt` shows ComfyUI health/API reachability.
+- Completed: `bundle://proof/SB01/transcripts/comfyui-flux-live-generation.txt` shows Flux workflow prompt enqueue, history polling, and image download.
+- Completed: generated image artifact `bundle://proof/SB01/generated/flux-live-image.png`.
+- Completed: semantic invariant contract and proof manifest under `bundle://proof/SB01/`.
+- Completed: progression decision is continue to SB02.
+
+## Dependency Impact
+
+- SB02 depends on this proof because provider/driver changes are wasteful and misleading if the local Flux workflow cannot run.
+- SB03 depends on this proof because project-structure validation must use a real generated image, not stale or fixture bytes.
+
+## Validation Depth
+
+- Critical foundation with host/API proof, semantic positive proof, adversarial negative proof, anti-stub audit, source assertions, and raw-note literal closure.
+
+## Implementation Steps
+
+1. Inspect or run the ZyphoNote sample/testbed to identify the active ComfyUI base URL.
+2. Check `http://127.0.0.1:8188/system_stats`; if unavailable, check the LAN URL implied by the sample logs/options.
+3. If ComfyUI is not reachable, try only non-destructive restart or setting checks that expose the API on the expected port.
+4. Enqueue `ImageGenerationFlux.json` with a short deterministic prompt through `/prompt`.
+5. Poll `/history/{promptId}` until completion or timeout.
+6. Download the first image through `/view` and store it under `proof/SB01/`.
+7. Record transcripts, source assertions, and the closure decision.
+
+## Scope Exceptions
+
+- No CanDoItAll production code changes belong in SB01.
+- If ComfyUI cannot be reached or Flux generation fails because of server/model configuration, mark this subbundle `Blocked` and stop.
+
+## Do Not Do
+
+- Do not use OpenAI image generation, Ollama, SD3.5, or a different ComfyUI workflow as a substitute.
+- Do not treat existing generated images in the sample as proof.
+- Do not hide ComfyUI errors behind retries that erase the original failure.
+
+## Acceptance Checklist
+
+- Completed: ComfyUI API endpoint responded on `http://127.0.0.1:8188`.
+- Completed: Flux workflow node ids are asserted from `ImageGenerationFlux.json`.
+- Completed: `/prompt` returned prompt id `e39b85c8-abb7-4a66-9859-b45ff4b5cc47`.
+- Completed: `/history/{promptId}` contained output image `Flux.1_Dev_00081_.png` for node `9`.
+- Completed: `/view` returned `1,051,911` bytes saved to bundle proof.
+- Completed: `reviews/01-execution-report.md` has an SB01 gate row and raw-note closure update.
+
+## Proof Required
+
+- Completed: `bundle://proof/SB01/transcripts/comfyui-flux-live-generation.txt` with command line, working directory, exit code, endpoint responses, and invariant id `SB01-FLUX-LIVE`.
+- Completed: `bundle://proof/SB01/generated/flux-live-image.png` cited by the manifest.
+- Completed: `bundle://proof/SB01/source-assertions.md` showing Flux node ids and workflow path.
+- Completed: `bundle://proof/SB01/semantic-invariants.md`.
+- Completed: `bundle://proof/SB01/manifest.md`.
+- Completed: `bundle://proof/SB01/transcripts/anti-stub-audit.txt` proving the live proof did not use stale sample generated files.
+
+## Browser Validation Logging
+
+- Route/window: ComfyUI HTTP API and ZyphoNote sample/testbed.
+- Viewport: `N/A`; this is host/API proof unless the sample UI is used for diagnosis.
+- Actions/assertions: health request, prompt enqueue, history poll, image download, generated byte length assertion.
+- Screenshots/artifacts: generated image artifact under `proof/SB01/`.
+- Review questions: Does the artifact come from the current run, use Flux nodes, and contain non-empty image bytes?
+
+## Progression Gate
+
+- SB02 may start because SB01 is `Completed` with live Flux generation proof.
+
+## Suggested Agent Prompt
+
+```text
+Implement SB01 only. Prove live ComfyUI Flux generation with the sample workflow before touching CanDoItAll production code. If the server cannot be reached or the Flux workflow cannot generate and download a current image, mark SB01 blocked and stop.
+```

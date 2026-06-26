@@ -159,6 +159,11 @@ public sealed class ComfyUiProviderDriver(HttpClient httpClient) :
                 SetRequiredInput(workflow, options.HeightNodeId, options.HeightInputName, height);
             }
         }
+
+        if (!string.IsNullOrWhiteSpace(options.OutputNodeId))
+        {
+            EnsureWorkflowNodeExists(workflow, options.OutputNodeId);
+        }
     }
 
     private async Task<string> EnqueuePromptAsync(
@@ -306,6 +311,21 @@ public sealed class ComfyUiProviderDriver(HttpClient httpClient) :
         inputs[inputName] = value;
     }
 
+    private static void EnsureWorkflowNodeExists(
+        JsonObject workflow,
+        string nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            throw new InvalidOperationException("ComfyUI workflow node id is required.");
+        }
+
+        if (workflow[nodeId] is null)
+        {
+            throw new InvalidOperationException($"ComfyUI workflow node '{nodeId}' was not found.");
+        }
+    }
+
     private static bool TryParseImageSize(
         string size,
         out int width,
@@ -363,25 +383,25 @@ public sealed class ComfyUiProviderDriver(HttpClient httpClient) :
 
 public sealed record ComfyUiProviderOptions
 {
-    public const string WorkflowTemplateJsonKey = "workflowTemplateJson";
-    public const string WorkflowTemplatePathKey = "workflowTemplatePath";
-    public const string PositivePromptNodeIdKey = "positivePromptNodeId";
-    public const string PositivePromptInputNameKey = "positivePromptInputName";
-    public const string NegativePromptNodeIdKey = "negativePromptNodeId";
-    public const string NegativePromptInputNameKey = "negativePromptInputName";
-    public const string NegativePromptKey = "negativePrompt";
-    public const string SamplerNodeIdKey = "samplerNodeId";
-    public const string SeedInputNameKey = "seedInputName";
-    public const string SeedKey = "seed";
-    public const string RandomizeSeedKey = "randomizeSeed";
-    public const string WidthNodeIdKey = "widthNodeId";
-    public const string WidthInputNameKey = "widthInputName";
-    public const string HeightNodeIdKey = "heightNodeId";
-    public const string HeightInputNameKey = "heightInputName";
-    public const string OutputNodeIdKey = "outputNodeId";
-    public const string PollIntervalMillisecondsKey = "pollIntervalMilliseconds";
-    public const string TimeoutSecondsKey = "timeoutSeconds";
-    public const string MaxImagesKey = "maxImages";
+    public const string WorkflowTemplateJsonKey = ComfyUiProviderConfigurationKeys.WorkflowTemplateJson;
+    public const string WorkflowTemplatePathKey = ComfyUiProviderConfigurationKeys.WorkflowTemplatePath;
+    public const string PositivePromptNodeIdKey = ComfyUiProviderConfigurationKeys.PositivePromptNodeId;
+    public const string PositivePromptInputNameKey = ComfyUiProviderConfigurationKeys.PositivePromptInputName;
+    public const string NegativePromptNodeIdKey = ComfyUiProviderConfigurationKeys.NegativePromptNodeId;
+    public const string NegativePromptInputNameKey = ComfyUiProviderConfigurationKeys.NegativePromptInputName;
+    public const string NegativePromptKey = ComfyUiProviderConfigurationKeys.NegativePrompt;
+    public const string SamplerNodeIdKey = ComfyUiProviderConfigurationKeys.SamplerNodeId;
+    public const string SeedInputNameKey = ComfyUiProviderConfigurationKeys.SeedInputName;
+    public const string SeedKey = ComfyUiProviderConfigurationKeys.Seed;
+    public const string RandomizeSeedKey = ComfyUiProviderConfigurationKeys.RandomizeSeed;
+    public const string WidthNodeIdKey = ComfyUiProviderConfigurationKeys.WidthNodeId;
+    public const string WidthInputNameKey = ComfyUiProviderConfigurationKeys.WidthInputName;
+    public const string HeightNodeIdKey = ComfyUiProviderConfigurationKeys.HeightNodeId;
+    public const string HeightInputNameKey = ComfyUiProviderConfigurationKeys.HeightInputName;
+    public const string OutputNodeIdKey = ComfyUiProviderConfigurationKeys.OutputNodeId;
+    public const string PollIntervalMillisecondsKey = ComfyUiProviderConfigurationKeys.PollIntervalMilliseconds;
+    public const string TimeoutSecondsKey = ComfyUiProviderConfigurationKeys.TimeoutSeconds;
+    public const string MaxImagesKey = ComfyUiProviderConfigurationKeys.MaxImages;
 
     public string WorkflowTemplateJson { get; init; } = string.Empty;
 
