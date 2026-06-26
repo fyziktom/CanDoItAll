@@ -902,8 +902,8 @@ else
         pendingWorkbenchSelectionId = null;
         var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
         var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
-        var loadImageGenerationProvidersTask = LoadImageGenerationProvidersAsync();
-        await Task.WhenAll(loadStructureTask, loadStorageCatalogTask, loadImageGenerationProvidersTask);
+        await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
+        await LoadImageGenerationProvidersAsync();
         storageCatalog = await loadStorageCatalogTask;
         var loadResult = await loadStructureTask;
         if (!loadResult.IsSuccess || loadResult.Surface is null)
@@ -1156,8 +1156,19 @@ else
             CanLaunchRuntimeFromCanvas,
             CanShowLocalOpen,
             CanOpenIpfsNodeInNewTab);
+        HydrateCanvasNodeContextActions(canvasSurface);
         canvasSurface.Mode = canvasToolMode;
         canvasSurface.DependencySourceId = linkModeSourceId ?? string.Empty;
+    }
+
+    private void HydrateCanvasNodeContextActions(CanvasWorkbenchSurface projectedSurface)
+    {
+        foreach (var node in projectedSurface.Nodes)
+        {
+            node.ContextActions = node.ContextActions
+                .Select(HydrateCreateAction)
+                .ToList();
+        }
     }
 
     private bool CanLaunchRuntimeFromCanvas(ProjectStructureNode node)
@@ -1681,6 +1692,11 @@ else
 
     private async Task OpenCreateDialogAsync(CanvasWorkbenchAction action)
     {
+        if (IsGeneratedImageAssetCreateAction(action.ActionId))
+        {
+            action = await RefreshGeneratedImageCreateActionAsync(action);
+        }
+
         var sourceNode = selectedNode;
         var request = new CanvasWorkbenchCreateActionRequest(
             action.ActionId,

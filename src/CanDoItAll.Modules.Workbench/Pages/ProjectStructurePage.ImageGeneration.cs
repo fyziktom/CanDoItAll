@@ -35,10 +35,13 @@ public partial class ProjectStructurePage
     private IAgentImageGenerationService ImageGenerationService { get; set; } = default!;
 
     private IReadOnlyList<ProviderProfile> imageGenerationProviders = [];
+    private bool areImageGenerationProvidersLoaded;
     private string imageGenerationProvidersErrorMessage = string.Empty;
 
     private async Task LoadImageGenerationProvidersAsync()
     {
+        areImageGenerationProvidersLoaded = false;
+
         try
         {
             imageGenerationProviders = (await AgentWorkspaceService.ListProvidersAsync())
@@ -53,6 +56,33 @@ public partial class ProjectStructurePage
             imageGenerationProvidersErrorMessage = $"Image-generation providers could not be loaded. {exception.Message}";
             Logger.LogWarning(exception, "Image-generation provider catalog load failed. ProjectId={ProjectId}", ProjectId);
         }
+        finally
+        {
+            areImageGenerationProvidersLoaded = true;
+        }
+    }
+
+    private async Task EnsureImageGenerationProvidersLoadedAsync(bool refreshIfEmpty = false)
+    {
+        if (areImageGenerationProvidersLoaded &&
+            (!refreshIfEmpty || imageGenerationProviders.Count > 0 || !string.IsNullOrWhiteSpace(imageGenerationProvidersErrorMessage)))
+        {
+            return;
+        }
+
+        await LoadImageGenerationProvidersAsync();
+        if (surface is not null)
+        {
+            RefreshCanvasSurface();
+        }
+    }
+
+    private async Task<CanvasWorkbenchAction> RefreshGeneratedImageCreateActionAsync(CanvasWorkbenchAction action)
+    {
+        await EnsureImageGenerationProvidersLoadedAsync(refreshIfEmpty: true);
+        return ProjectStructureCanvasCatalog.TryResolveCreateDefinition(action.ActionId, out var definition)
+            ? HydrateCreateAction(ProjectStructureCanvasCatalog.BuildComposerAction(definition))
+            : HydrateCreateAction(action);
     }
 
     private IReadOnlyList<CanvasWorkbenchInputOption> BuildImageGenerationProviderOptions()
@@ -77,6 +107,7 @@ public partial class ProjectStructurePage
 
         try
         {
+            await EnsureImageGenerationProvidersLoadedAsync(refreshIfEmpty: true);
             var settings = ResolveGeneratedImageCreateSettings(request);
             var generated = await ImageGenerationService.GenerateAsync(
                 new AgentImageGenerationRequest(

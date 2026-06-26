@@ -171,6 +171,17 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
                 action => action.ActionId == "group-assets" &&
                           action.Children.Any(child => child.ActionId == "generate-image-asset"));
+
+            var rootNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
+            var contextGenerateAction = FindCreateAction(rootNode.ContextActions, "generate-image-asset");
+            var contextProviderField = Assert.Single(
+                contextGenerateAction.InputFields,
+                field => field.Key == "imageProviderProfileId");
+            Assert.Contains(
+                contextProviderField.Options,
+                option => option.Value == providerId.ToString("D"));
         });
 
         const string prompt = "Create a crisp dashboard thumbnail with teal, white, and charcoal UI panels.";
