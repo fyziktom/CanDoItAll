@@ -189,40 +189,6 @@
 
 .project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] {
     gap: 0.72rem;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98));
-    border-color: rgba(148, 163, 184, 0.22);
-    box-shadow: 0 28px 54px rgba(15, 23, 42, 0.32);
-}
-
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"]::after {
-    background:
-        linear-gradient(135deg, transparent 0 48%, rgba(148, 163, 184, 0.26) 48% 54%, transparent 54% 100%),
-        linear-gradient(135deg, transparent 0 66%, rgba(148, 163, 184, 0.44) 66% 72%, transparent 72% 100%);
-}
-
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-panel-kicker,
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__title {
-    color: #f8fafc;
-}
-
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__summary {
-    color: rgba(226, 232, 240, 0.82);
-}
-
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__action {
-    border-color: rgba(148, 163, 184, 0.24);
-    background: rgba(15, 23, 42, 0.42);
-    color: #f8fafc;
-}
-
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__action .rz-icon,
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__action .rz-icon-fallback {
-    color: #f8fafc;
-}
-
-.project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__action:hover:not(:disabled) {
-    border-color: rgba(125, 211, 252, 0.3);
-    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.26);
 }
 
 .project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__body {

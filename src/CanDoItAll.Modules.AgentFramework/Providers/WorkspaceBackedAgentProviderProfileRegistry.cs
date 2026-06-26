@@ -293,9 +293,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedKind = ResolveMappedProviderKind(provider.ConnectorPluginKey);
         var legacyMappedTransport = ResolveLegacyMappedTransport(provider);
         var mappedTransport = AgentFrameworkProviderMetadata.ResolveTransport(provider, legacyMappedTransport);
-        var legacyMappedPurpose = provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey
-            ? ProviderProfilePurpose.ImageGeneration
-            : ProviderProfilePurpose.Chat;
+        var legacyMappedPurpose = ResolveLegacyMappedPurpose(provider);
         var mappedPurpose = AgentFrameworkProviderMetadata.ResolvePurpose(provider, legacyMappedPurpose);
         var preferFrameworkManagedChatHistory = mappedKind is AgentFrameworkProviderKind.Ollama or AgentFrameworkProviderKind.ComfyUi ||
                                                 mappedTransport == ProviderTransportKind.ChatCompletions;
@@ -382,6 +380,51 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => ProviderTransportKind.ChatCompletions,
             _ => throw new InvalidOperationException($"No AgentFramework provider transport mapping exists for connector plugin '{provider.ConnectorPluginKey}'.")
         };
+    }
+
+    private static ProviderProfilePurpose ResolveLegacyMappedPurpose(
+        WorkspaceProviderProfile provider)
+    {
+        if (provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey)
+        {
+            return ProviderProfilePurpose.ImageGeneration;
+        }
+
+        return provider.ConnectorPluginKey == OpenAiProviderAdapter.PluginKey &&
+               LooksLikeLegacyOpenAiImageGenerationProvider(provider)
+            ? ProviderProfilePurpose.ImageGeneration
+            : ProviderProfilePurpose.Chat;
+    }
+
+    private static bool LooksLikeLegacyOpenAiImageGenerationProvider(
+        WorkspaceProviderProfile provider)
+    {
+        if (provider.Name.Contains("image", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (LooksLikeOpenAiImageGenerationModel(provider.DefaultModel))
+        {
+            return true;
+        }
+
+        return AgentFrameworkProviderMetadata.ReadTags(provider)
+            .Any(tag => string.Equals(tag, "image", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(tag, "image-generation", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool LooksLikeOpenAiImageGenerationModel(
+        string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return false;
+        }
+
+        var normalizedModel = model.Trim();
+        return normalizedModel.StartsWith("gpt-image", StringComparison.OrdinalIgnoreCase) ||
+               normalizedModel.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveApiKeyEnvironmentVariable(

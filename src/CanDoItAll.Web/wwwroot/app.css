@@ -144,11 +144,17 @@ a {
     }
 
     .cda-shell-workbar .cda-inline-tab {
+        --cda-inline-tab-action-space: 9.75rem;
+        --cda-inline-tab-hover-width: 17rem;
         position: relative;
         flex: 1 1 9rem;
         min-width: 5.75rem;
         max-width: none;
         overflow: hidden;
+        transition:
+            flex-basis 140ms ease,
+            min-width 140ms ease,
+            padding-right 140ms ease;
     }
 
     .cda-shell-workbar .cda-inline-tab > button:first-child {
@@ -161,9 +167,12 @@ a {
     }
 
     .cda-shell-workbar .cda-inline-tab__actions {
+        display: none;
         position: absolute;
         top: 50%;
         right: 0.35rem;
+        width: var(--cda-inline-tab-action-space);
+        justify-content: flex-end;
         transform: translateY(-50%);
         border: 1px solid rgba(148, 163, 184, 0.28);
         border-radius: 0.45rem;
@@ -173,7 +182,10 @@ a {
 
     .cda-shell-workbar .cda-inline-tab:hover,
     .cda-shell-workbar .cda-inline-tab:focus-within {
-        padding-right: 7.1rem;
+        flex: 2 0 var(--cda-inline-tab-hover-width);
+        min-width: var(--cda-inline-tab-hover-width);
+        padding-right: calc(var(--cda-inline-tab-action-space) + 0.35rem);
+        z-index: 2;
     }
 
     .cda-shell-workbar .cda-inline-tab:hover .cda-inline-tab__actions,

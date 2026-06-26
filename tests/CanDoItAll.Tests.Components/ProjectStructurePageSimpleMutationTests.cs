@@ -209,6 +209,95 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Generated_image_asset_create_lists_legacy_openai_image_provider_without_purpose_metadata()
+    {
+        var imageService = new RecordingAgentImageGenerationService();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IAgentImageGenerationService>();
+            services.AddSingleton<IAgentImageGenerationService>(imageService);
+        });
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var providerId = Guid.NewGuid();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(new CanDoItAll.Modules.Workspace.ProviderProfile
+            {
+                Id = providerId,
+                Name = "OpenAI image generation",
+                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
+                ConnectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                ConfigSchemaVersion = "1.0",
+                BaseUrl = "https://api.openai.com/v1",
+                DefaultModel = "gpt-image-1-mini",
+                TimeoutSeconds = 45,
+                IsEnabled = true,
+                SupportsStreaming = false,
+                SupportsToolCalling = false,
+                SupportsStructuredOutput = false,
+                SupportsVision = false,
+                ExtraSettingsJson = JsonSerializer.Serialize(new
+                {
+                    connectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                    configSchemaVersion = "1.0",
+                    timeoutSeconds = 45,
+                    providerTransport = ProviderTransportKind.Responses.ToString(),
+                    tags = new[] { "openai", "image-generation" }
+                })
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var projectId = await CreateProjectAsync(projectsService, "Legacy generated image provider");
+        var parentNodeId = $"project:{projectId}";
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            var generateAction = FindCreateAction(
+                canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
+                "generate-image-asset");
+            var providerField = Assert.Single(
+                generateAction.InputFields,
+                field => field.Key == "imageProviderProfileId");
+            var providerOption = Assert.Single(
+                providerField.Options,
+                option => option.Value == providerId.ToString("D"));
+
+            Assert.Equal("OpenAI image generation (gpt-image-1-mini)", providerOption.Label);
+        });
+
+        const string prompt = "Create a crisp settings panel thumbnail with teal controls.";
+        await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "generate-image-asset",
+            parentNodeId,
+            parentNodeId,
+            "Legacy provider generated dashboard",
+            "Dashboard hero",
+            prompt,
+            [
+                new CanvasWorkbenchInputValue { Key = "imageProviderProfileId", Value = providerId.ToString("D") },
+                new CanvasWorkbenchInputValue { Key = "imageSize", Value = "1024x1024" },
+                new CanvasWorkbenchInputValue { Key = "imageQuality", Value = "low" },
+                new CanvasWorkbenchInputValue { Key = "imageOutputFormat", Value = "png" }
+            ]);
+
+        var request = Assert.Single(imageService.Requests);
+        Assert.Equal(providerId, request.Provider.Id);
+        Assert.Equal(ProviderProfilePurpose.ImageGeneration, request.Provider.Purpose);
+        Assert.Equal("gpt-image-1-mini", request.Model);
+    }
+
+    [Fact]
     public async Task Quick_sibling_note_insertion_persists_downward_stack_shift()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);
@@ -1404,6 +1493,38 @@ public sealed class ProjectStructurePageSimpleMutationTests
         string selector = "button")
         => cut.FindAll(selector)
             .First(button => button.TextContent.Contains(label, StringComparison.Ordinal));
+
+    private static CanvasWorkbenchAction FindCreateAction(
+        IReadOnlyList<CanvasWorkbenchAction> actions,
+        string actionId)
+        => TryFindCreateAction(actions, actionId)
+           ?? throw new InvalidOperationException($"Create action '{actionId}' was not found.");
+
+    private static CanvasWorkbenchAction? TryFindCreateAction(
+        IReadOnlyList<CanvasWorkbenchAction> actions,
+        string actionId)
+    {
+        foreach (var action in actions)
+        {
+            if (string.Equals(action.ActionId, actionId, StringComparison.Ordinal))
+            {
+                return action;
+            }
+
+            if (action.Children.Count == 0)
+            {
+                continue;
+            }
+
+            var childAction = TryFindCreateAction(action.Children, actionId);
+            if (childAction is not null)
+            {
+                return childAction;
+            }
+        }
+
+        return null;
+    }
 
     private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedFragment cut)
     {
