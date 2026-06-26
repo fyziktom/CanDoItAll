@@ -35,9 +35,9 @@
 
 .scheduler-target-picker__filters {
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1fr);
-    gap: 0.85rem;
-    align-items: start;
+    grid-template-columns: minmax(22rem, 1.2fr) minmax(20rem, 1fr) auto auto;
+    gap: 0.75rem;
+    align-items: center;
 }
 
 .scheduler-target-picker ::deep .scheduler-target-picker__search {
@@ -56,6 +56,13 @@
     color: #334155;
     font-size: 0.82rem;
     font-weight: 700;
+    white-space: nowrap;
+}
+
+.scheduler-target-picker__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .scheduler-workflow-input {
@@ -108,29 +115,55 @@
 
 .scheduler-plan-card-grid {
     align-items: stretch;
+    justify-content: start;
 }
 
-.scheduler-plan-list__header {
+.scheduler-list-toolbar {
+    display: grid;
+    grid-template-columns: minmax(14rem, auto) minmax(22rem, 1fr) minmax(10rem, 12rem) minmax(9rem, 11rem) auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 0.5rem;
+    background: rgba(248, 250, 252, 0.82);
+}
+
+.scheduler-list-toolbar h2 {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.scheduler-list-toolbar__search,
+.scheduler-list-toolbar__select {
+    min-height: 2.35rem;
+}
+
+.scheduler-list-toolbar__result {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.scheduler-list-toolbar__actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.scheduler-plan-list__actions {
-    display: flex;
-    flex: 0 0 auto;
     justify-content: flex-end;
+    gap: 0.5rem;
+    white-space: nowrap;
 }
 
-.scheduler-plan-list__actions ::deep .cda-button {
+.scheduler-list-toolbar ::deep .scheduler-list-toolbar__button {
     width: auto;
-    min-width: 7rem;
+    min-width: 5.75rem;
 }
 
 .scheduler-plan-card {
+    width: 100%;
+    max-width: 21.5rem;
     min-height: 100%;
-    padding: 1rem;
+    padding: 0.85rem;
     border: 1px solid rgba(226, 232, 240, 0.95);
     border-radius: 0.5rem;
     background: #fff;
@@ -147,7 +180,7 @@
 }
 
 .scheduler-plan-card__title {
-    margin: 0.65rem 0 0;
+    margin: 0.55rem 0 0;
     color: #0f172a;
     font-size: 1rem;
     font-weight: 800;
@@ -168,6 +201,11 @@
     font-size: 0.88rem;
     font-weight: 600;
     line-height: 1.55;
+}
+
+.scheduler-plan-card ::deep .scheduler-plan-card__edit {
+    width: auto;
+    min-width: 5rem;
 }
 
 .scheduler-plan-card__meta,
@@ -250,6 +288,18 @@
 .scheduler-edit-context__stats {
     padding-top: 0.75rem;
     border-top: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.scheduler-edit-context__target {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.scheduler-edit-context ::deep .scheduler-edit-context__target-action {
+    width: auto;
+    flex: 0 0 auto;
 }
 
 .scheduler-dialog-footer {
@@ -361,41 +411,4 @@
     line-height: 1.5;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-}
-
-@media (max-width: 820px) {
-    .scheduler-target-summary {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .scheduler-target-picker__filters {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .scheduler-plan-card__meta {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .scheduler-plan-list__header {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .scheduler-plan-list__actions,
-    .scheduler-plan-list__actions ::deep .cda-button {
-        width: 100%;
-    }
-
-    .scheduler-dialog-footer,
-    .scheduler-dialog-footer__actions,
-    .scheduler-dialog-footer__start {
-        align-items: stretch;
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .scheduler-dialog-footer ::deep .cda-button {
-        width: 100%;
-    }
 }

@@ -402,7 +402,8 @@ public sealed class SchedulerPlannerPageTests
     private static SchedulerPlannerWorkspace CreateScheduledPlanWorkspace(
         Guid planId,
         Guid workflowId,
-        Guid workflowVersionId)
+        Guid workflowVersionId,
+        IReadOnlyList<SchedulerTargetOption>? additionalTargets = null)
     {
         var updatedAtUtc = new DateTimeOffset(2026, 5, 12, 8, 0, 0, TimeSpan.Zero);
         var nextFireAtUtc = new DateTimeOffset(2026, 5, 13, 9, 0, 0, TimeSpan.Zero);
@@ -423,6 +424,21 @@ public sealed class SchedulerPlannerPageTests
             ReadOnly = false,
             RepositoryId = planId.ToString("D")
         };
+        var targetOptions = new List<SchedulerTargetOption>
+        {
+            new(
+                SchedulerPlanTargetKind.Workflow,
+                workflowId,
+                workflowVersionId,
+                "Office365 email watch summary",
+                "Polls Office365 mail by sender and writes summaries into project structure.",
+                "Active / Local")
+        };
+
+        if (additionalTargets is not null)
+        {
+            targetOptions.AddRange(additionalTargets);
+        }
 
         return new SchedulerPlannerWorkspace(
             [
@@ -447,15 +463,7 @@ public sealed class SchedulerPlannerPageTests
                     updatedAtUtc)
             ],
             [],
-            [
-                new SchedulerTargetOption(
-                    SchedulerPlanTargetKind.Workflow,
-                    workflowId,
-                    workflowVersionId,
-                    "Office365 email watch summary",
-                    "Polls Office365 mail by sender and writes summaries into project structure.",
-                    "Active / Local")
-            ],
+            targetOptions,
             new CanvasCalendarSurface
             {
                 SurfaceId = "scheduler-planner-calendar",
@@ -836,6 +844,89 @@ public sealed class SchedulerPlannerPageTests
         {
             Assert.Equal(1, schedulerService.DeleteCount);
             Assert.Equal(planId, schedulerService.DeletedPlanId);
+        });
+    }
+
+    [Fact]
+    public async Task Scheduler_edit_dialog_can_change_selected_workflow()
+    {
+        var workflowId = Guid.NewGuid();
+        var workflowVersionId = Guid.NewGuid();
+        var replacementWorkflowId = Guid.NewGuid();
+        var replacementWorkflowVersionId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var workspace = CreateScheduledPlanWorkspace(
+            planId,
+            workflowId,
+            workflowVersionId,
+            [
+                new SchedulerTargetOption(
+                    SchedulerPlanTargetKind.Workflow,
+                    replacementWorkflowId,
+                    replacementWorkflowVersionId,
+                    "Replacement workflow",
+                    "Runs the replacement workflow for scheduler edits.",
+                    "Active / Local")
+            ]);
+        var schedulerService = new StubSchedulerPlannerService(
+            workspace,
+            new SchedulerPlanEditorModel
+            {
+                Name = "Office365 email watch",
+                TargetKind = SchedulerPlanTargetKind.Workflow,
+                TargetId = workflowId,
+                TargetVersionId = workflowVersionId,
+                CronExpression = "0 0 9 ? * MON-FRI",
+                TimeZoneId = "UTC",
+                InputJson = "{}",
+                IsEnabled = true
+            });
+
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ISchedulerPlannerService>();
+            services.AddSingleton<ISchedulerPlannerService>(schedulerService);
+        });
+
+        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+
+        cut.WaitForElement("[data-testid='scheduler-tabs']");
+        await cut.InvokeAsync(() =>
+        {
+            cut.FindAll("button[role='tab']")
+                .Single(element => element.TextContent.Contains("Schedules", StringComparison.Ordinal))
+                .Click();
+        });
+        await cut.InvokeAsync(() => cut.WaitForElement("[data-testid='scheduler-plan-edit']").Click());
+        cut.WaitForElement("[data-testid='scheduler-edit-dialog']");
+
+        Assert.Contains("Office365 email watch summary", cut.Markup);
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='scheduler-edit-target-open']").Click());
+        cut.WaitForElement("[data-testid='scheduler-target-dialog']");
+        Assert.Contains("Change schedule target", cut.Markup);
+
+        await cut.InvokeAsync(() =>
+        {
+            cut.FindAll("[data-testid='scheduler-target-card']")
+                .Single(element => element.TextContent.Contains("Replacement workflow", StringComparison.Ordinal))
+                .Click();
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Replacement workflow", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid='scheduler-target-dialog']"));
+        });
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='scheduler-edit-save']").Click());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, schedulerService.SaveCount);
+            Assert.Equal(planId, schedulerService.LastSavedEditor?.Id);
+            Assert.Equal(replacementWorkflowId, schedulerService.LastSavedEditor?.TargetId);
+            Assert.Equal(replacementWorkflowVersionId, schedulerService.LastSavedEditor?.TargetVersionId);
         });
     }
 

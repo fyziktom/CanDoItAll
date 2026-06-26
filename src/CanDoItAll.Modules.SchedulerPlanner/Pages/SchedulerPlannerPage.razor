@@ -92,51 +92,49 @@
 
                 <TabsItem Text="Schedules" Icon="event_note" BadgeText="@Plans.Count.ToString()" data-testid="scheduler-tab-schedules">
                     <SurfaceCard data-testid="scheduler-plan-list">
-                        <div class="scheduler-plan-list__header">
+                        <div class="scheduler-list-toolbar" data-testid="scheduler-schedules-toolbar">
                             <div>
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Schedules" />
                                 <h2 class="text-base font-semibold text-slate-900">Saved scheduled runs</h2>
                             </div>
-                            <div class="scheduler-plan-list__actions">
-                                <Button Text="New"
-                                        Icon="add"
-                                        Size="ButtonSize.Small"
-                                        Click="OpenNewScheduleTab"
-                                        data-testid="scheduler-plan-new" />
-                            </div>
-                        </div>
-
-                        <div class="mt-4">
-                            <FilterBar ResultText="@ScheduleFilterResultText">
-                                <InputText @bind-Value="scheduleSearchText"
-                                           class="cda-input"
-                                           placeholder="Search schedules"
-                                           data-testid="scheduler-schedules-search" />
-                                <select value="@FormatScheduleTargetKindFilter()"
-                                        class="cda-input"
-                                        @onchange="HandleScheduleTargetKindFilterChanged"
-                                        data-testid="scheduler-schedules-target-kind">
-                                    <option value="">All targets</option>
-                                    @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
-                                    {
-                                        <option value="@kind">@kind</option>
-                                    }
-                                </select>
-                                <InputSelect @bind-Value="scheduleStateFilter"
-                                             class="cda-input"
-                                             data-testid="scheduler-schedules-state">
-                                    @foreach (var state in Enum.GetValues<ScheduleStateFilter>())
-                                    {
-                                        <option value="@state">@FormatScheduleStateFilter(state)</option>
-                                    }
-                                </InputSelect>
+                            <InputText @bind-Value="scheduleSearchText"
+                                       class="cda-input scheduler-list-toolbar__search"
+                                       placeholder="Search schedules"
+                                       data-testid="scheduler-schedules-search" />
+                            <select value="@FormatScheduleTargetKindFilter()"
+                                    class="cda-input scheduler-list-toolbar__select"
+                                    @onchange="HandleScheduleTargetKindFilterChanged"
+                                    data-testid="scheduler-schedules-target-kind">
+                                <option value="">All targets</option>
+                                @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </select>
+                            <InputSelect @bind-Value="scheduleStateFilter"
+                                         class="cda-input scheduler-list-toolbar__select"
+                                         data-testid="scheduler-schedules-state">
+                                @foreach (var state in Enum.GetValues<ScheduleStateFilter>())
+                                {
+                                    <option value="@state">@FormatScheduleStateFilter(state)</option>
+                                }
+                            </InputSelect>
+                            <span class="scheduler-list-toolbar__result">@ScheduleFilterResultText</span>
+                            <div class="scheduler-list-toolbar__actions">
                                 <Button Text="Clear"
                                         Icon="restart_alt"
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Disabled="@(!HasScheduleFilters)"
-                                        Click="ClearScheduleFilters" />
-                            </FilterBar>
+                                        Click="ClearScheduleFilters"
+                                        class="scheduler-list-toolbar__button" />
+                                <Button Text="New"
+                                        Icon="add"
+                                        Size="ButtonSize.Small"
+                                        Click="OpenNewScheduleTab"
+                                        class="scheduler-list-toolbar__button"
+                                        data-testid="scheduler-plan-new" />
+                            </div>
                         </div>
 
                         @if (Plans.Count == 0)
@@ -158,7 +156,7 @@
                         else
                         {
                             <Grid Gap="LayoutGap.Medium"
-                                  ColumnTemplate="repeat(auto-fit,minmax(19rem,1fr))"
+                                  ColumnTemplate="repeat(auto-fill,minmax(17.5rem,21.5rem))"
                                   Class="scheduler-plan-card-grid mt-4">
                                 @foreach (var plan in FilteredPlans)
                                 {
@@ -181,6 +179,7 @@
                                                         Size="ButtonSize.Small"
                                                         Disabled="@isBusy"
                                                         Click="@(() => OpenEditScheduleDialogAsync(plan))"
+                                                        class="scheduler-plan-card__edit"
                                                         data-testid="scheduler-plan-edit" />
                                             </Split>
 
@@ -447,13 +446,17 @@
 
                 <TabsItem Text="History" Icon="history" BadgeText="@History.Count.ToString()" data-testid="scheduler-tab-history">
                     <SurfaceCard data-testid="scheduler-history">
-                        <FilterBar ResultText="@($"{History.Count} run(s)")">
+                        <div class="scheduler-list-toolbar" data-testid="scheduler-history-toolbar">
+                            <div>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="History" />
+                                <h2 class="text-base font-semibold text-slate-900">Dispatched scheduled runs</h2>
+                            </div>
                             <InputText @bind-Value="historyQuery.Search"
-                                       class="cda-input"
+                                       class="cda-input scheduler-list-toolbar__search"
                                        placeholder="Search history"
                                        data-testid="scheduler-history-search" />
                             <InputSelect @bind-Value="historyQuery.Status"
-                                         class="cda-input"
+                                         class="cda-input scheduler-list-toolbar__select"
                                          data-testid="scheduler-history-status">
                                 <option value="">All statuses</option>
                                 @foreach (var status in Enum.GetValues<SchedulerPlanRunDispatchStatus>())
@@ -462,7 +465,7 @@
                                 }
                             </InputSelect>
                             <InputSelect @bind-Value="historyQuery.TargetKind"
-                                         class="cda-input"
+                                         class="cda-input scheduler-list-toolbar__select"
                                          data-testid="scheduler-history-kind">
                                 <option value="">All targets</option>
                                 @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
@@ -470,13 +473,17 @@
                                     <option value="@kind">@kind</option>
                                 }
                             </InputSelect>
-                            <Button Text="Search"
-                                    Icon="search"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Size="ButtonSize.Small"
-                                    Disabled="@isBusy"
-                                    Click="RefreshAsync" />
-                        </FilterBar>
+                            <span class="scheduler-list-toolbar__result">@($"{History.Count} run(s)")</span>
+                            <div class="scheduler-list-toolbar__actions">
+                                <Button Text="Search"
+                                        Icon="search"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@isBusy"
+                                        Click="RefreshAsync"
+                                        class="scheduler-list-toolbar__button" />
+                            </div>
+                        </div>
 
                         @if (History.Count == 0)
                         {
@@ -536,8 +543,8 @@
 
             <Dialog IsOpen="@isTargetPickerOpen"
                     Eyebrow="Target"
-                    Title="Choose workflow or process"
-                    Subtitle="Select the run target for this scheduler CRON schedule."
+                    Title="@TargetPickerDialogTitle"
+                    Subtitle="@TargetPickerDialogSubtitle"
                     Size="ModalSize.Wide"
                     DenseChrome="true"
                     TestId="scheduler-target-dialog"
@@ -561,12 +568,24 @@
                                    MaxTags="6"
                                    TestId="scheduler-target-tag-filter"
                                    InputTestId="scheduler-target-tag-filter-input" />
+
+                        <label class="scheduler-target-picker__check">
+                            <CheckBox TValue="bool"
+                                      @bind-Value="showProcessTargets"
+                                      aria-label="Show process targets"
+                                      data-testid="scheduler-target-filter-processes" />
+                            <span>Processes</span>
+                        </label>
+                        <label class="scheduler-target-picker__check">
+                            <CheckBox TValue="bool"
+                                      @bind-Value="showWorkflowTargets"
+                                      aria-label="Show workflow targets"
+                                      data-testid="scheduler-target-filter-workflows" />
+                            <span>Workflows</span>
+                        </label>
                     </div>
 
-                    <Split Gap="LayoutGap.Small"
-                           AlignItems="AlignItems.Start"
-                           JustifyContent="JustifyContent.SpaceBetween"
-                           Wrap="FlexWrap.Wrap">
+                    <div class="scheduler-target-picker__summary">
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                             <StatusBadge Tone="info" Text="@($"{FilteredTargetOptions.Count} of {TargetOptions.Count} targets")" />
                             @if (targetTagFilters.Count > 0)
@@ -574,24 +593,7 @@
                                 <StatusBadge Tone="neutral" Text="@($"{targetTagFilters.Count} tag filter(s)")" />
                             }
                         </Cluster>
-
-                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                            <label class="scheduler-target-picker__check">
-                                <CheckBox TValue="bool"
-                                          @bind-Value="showProcessTargets"
-                                          aria-label="Show process targets"
-                                          data-testid="scheduler-target-filter-processes" />
-                                <span>Processes</span>
-                            </label>
-                            <label class="scheduler-target-picker__check">
-                                <CheckBox TValue="bool"
-                                          @bind-Value="showWorkflowTargets"
-                                          aria-label="Show workflow targets"
-                                          data-testid="scheduler-target-filter-workflows" />
-                                <span>Workflows</span>
-                            </label>
-                        </Cluster>
-                    </Split>
+                    </div>
 
                     @if (FilteredTargetOptions.Count == 0)
                     {
@@ -745,10 +747,20 @@
 
                             <aside class="scheduler-edit-context" data-testid="scheduler-edit-context">
                                 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
-                                    <div>
-                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Target" />
-                                        <h3>@EditScheduleTargetName</h3>
-                                        <p>@EditScheduleTargetDescription</p>
+                                    <div class="scheduler-edit-context__target">
+                                        <div class="min-w-0">
+                                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Target" />
+                                            <h3>@EditScheduleTargetName</h3>
+                                            <p>@EditScheduleTargetDescription</p>
+                                        </div>
+                                        <Button Text="Change"
+                                                Icon="switch_account"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isBusy"
+                                                Click="OpenEditTargetPicker"
+                                                class="scheduler-edit-context__target-action"
+                                                data-testid="scheduler-edit-target-open" />
                                     </div>
 
                                     <div class="scheduler-edit-context__stats">
@@ -884,6 +896,7 @@
     private IReadOnlyList<string> targetTagFilters = [];
     private bool showProcessTargets = true;
     private bool showWorkflowTargets = true;
+    private TargetPickerMode targetPickerMode = TargetPickerMode.NewSchedule;
     private SchedulerPlanTargetKind? scheduleTargetKindFilter;
     private ScheduleStateFilter scheduleStateFilter = ScheduleStateFilter.All;
     private SchedulerWorkflowInputSchema? workflowInputSchema;
@@ -910,6 +923,12 @@
         Paused
     }
 
+    private enum TargetPickerMode
+    {
+        NewSchedule,
+        EditSchedule
+    }
+
     private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
 
     private IReadOnlyList<SchedulerPlanRunSummary> History => workspace?.History ?? [];
@@ -918,10 +937,7 @@
 
     private int CalendarEventCount => workspace?.CalendarSurface.Events.Count ?? 0;
 
-    private SchedulerTargetOption? SelectedTarget => TargetOptions.FirstOrDefault(item =>
-        item.Kind == editor.TargetKind &&
-        item.Id == editor.TargetId &&
-        (item.Kind != SchedulerPlanTargetKind.Workflow || item.VersionId == editor.TargetVersionId));
+    private SchedulerTargetOption? SelectedTarget => ResolveSelectedTarget(editor);
 
     private string SelectedTargetName => SelectedTarget?.Name ?? "No target selected";
 
@@ -944,20 +960,26 @@
 
     private string ScheduleFilterResultText => $"{FilteredPlans.Count} of {Plans.Count} schedule(s)";
 
-    private SchedulerTargetOption? EditScheduleTarget => editScheduleEditor is null
-        ? null
-        : TargetOptions.FirstOrDefault(item =>
-            item.Kind == editScheduleEditor.TargetKind &&
-            item.Id == editScheduleEditor.TargetId &&
-            (item.Kind != SchedulerPlanTargetKind.Workflow || item.VersionId == editScheduleEditor.TargetVersionId));
+    private SchedulerPlanEditorModel? TargetPickerEditor
+        => targetPickerMode == TargetPickerMode.EditSchedule ? editScheduleEditor : editor;
 
-    private string EditScheduleSubtitle => selectedPlanForEdit is null
+    private SchedulerTargetOption? EditScheduleTarget => editScheduleEditor is null ? null : ResolveSelectedTarget(editScheduleEditor);
+
+    private string EditScheduleSubtitle => editScheduleEditor is null
         ? "Update scheduler details and future triggers."
-        : $"{selectedPlanForEdit.TargetKind} / {selectedPlanForEdit.TargetName}";
+        : $"{editScheduleEditor.TargetKind} / {EditScheduleTargetName}";
 
     private string EditScheduleTargetName => EditScheduleTarget?.Name ?? selectedPlanForEdit?.TargetName ?? "Saved target";
 
     private string EditScheduleTargetDescription => EditScheduleTarget?.Description ?? "This schedule keeps the target saved with the plan.";
+
+    private string TargetPickerDialogTitle => targetPickerMode == TargetPickerMode.EditSchedule
+        ? "Change schedule target"
+        : "Choose workflow or process";
+
+    private string TargetPickerDialogSubtitle => targetPickerMode == TargetPickerMode.EditSchedule
+        ? "Pick the workflow or process this saved schedule should run next."
+        : "Select the run target for this scheduler CRON schedule.";
 
     private string CronPreviewTitle
     {
@@ -1288,6 +1310,18 @@
 
     private void OpenTargetPicker()
     {
+        targetPickerMode = TargetPickerMode.NewSchedule;
+        isTargetPickerOpen = true;
+    }
+
+    private void OpenEditTargetPicker()
+    {
+        if (editScheduleEditor is null)
+        {
+            return;
+        }
+
+        targetPickerMode = TargetPickerMode.EditSchedule;
         isTargetPickerOpen = true;
     }
 
@@ -1318,17 +1352,39 @@
     {
         await RunUiOperationAsync(async () =>
         {
-            editor.TargetKind = target.Kind;
-            editor.TargetId = target.Id;
-            editor.TargetVersionId = target.VersionId;
-
-            if (string.IsNullOrWhiteSpace(editor.Name))
+            var targetEditor = TargetPickerEditor;
+            if (targetEditor is null)
             {
-                editor.Name = $"{target.Name} schedule";
+                isTargetPickerOpen = false;
+                return;
+            }
+
+            var targetChanged = targetEditor.TargetKind != target.Kind ||
+                                targetEditor.TargetId != target.Id ||
+                                targetEditor.TargetVersionId != target.VersionId;
+
+            targetEditor.TargetKind = target.Kind;
+            targetEditor.TargetId = target.Id;
+            targetEditor.TargetVersionId = target.VersionId;
+
+            if (targetPickerMode == TargetPickerMode.NewSchedule)
+            {
+                if (string.IsNullOrWhiteSpace(editor.Name))
+                {
+                    editor.Name = $"{target.Name} schedule";
+                }
+
+                isTargetPickerOpen = false;
+                await LoadWorkflowInputEditorAsync();
+                return;
+            }
+
+            if (targetChanged)
+            {
+                targetEditor.InputJson = "{}";
             }
 
             isTargetPickerOpen = false;
-            await LoadWorkflowInputEditorAsync();
         });
     }
 
@@ -1822,9 +1878,22 @@
 
     private bool IsTargetSelected(SchedulerTargetOption target)
     {
-        return target.Kind == editor.TargetKind &&
-               target.Id == editor.TargetId &&
-               (target.Kind != SchedulerPlanTargetKind.Workflow || target.VersionId == editor.TargetVersionId);
+        return TargetPickerEditor is SchedulerPlanEditorModel targetEditor &&
+               IsTargetSelected(targetEditor, target);
+    }
+
+    private SchedulerTargetOption? ResolveSelectedTarget(SchedulerPlanEditorModel targetEditor)
+    {
+        return TargetOptions.FirstOrDefault(target => IsTargetSelected(targetEditor, target));
+    }
+
+    private static bool IsTargetSelected(
+        SchedulerPlanEditorModel targetEditor,
+        SchedulerTargetOption target)
+    {
+        return target.Kind == targetEditor.TargetKind &&
+               target.Id == targetEditor.TargetId &&
+               (target.Kind != SchedulerPlanTargetKind.Workflow || target.VersionId == targetEditor.TargetVersionId);
     }
 
     private bool MatchesTargetTypeFilter(SchedulerTargetOption target)
