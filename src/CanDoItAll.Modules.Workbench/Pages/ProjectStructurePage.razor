@@ -752,6 +752,7 @@ else
     private string? pendingWorkbenchSelectionId;
     private ProjectWorkbenchUnavailableState? unavailableState;
     private readonly SemaphoreSlim nodeMoveCommitGate = new(1, 1);
+    private readonly CancellationTokenSource deferredCompletionCts = new();
     private bool isSecretReferenceDialogOpen;
     private bool isSecretReferenceDialogBusy;
     private bool isSecretReferenceEditMode;
@@ -1659,7 +1660,10 @@ else
         }
     }
 
-    private async Task CreateObjectAsync(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchCreateActionRequest request)
+    private async Task<ProjectStructureNode?> CreateObjectAsync(
+        ProjectStructureCreateLeafDefinition definition,
+        CanvasWorkbenchCreateActionRequest request,
+        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest>? configureRequest = null)
     {
         var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
         var parentNodeId = ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, request);
@@ -1675,7 +1679,8 @@ else
             },
             parentNodeId ?? $"project:{ProjectId}",
             placementPlan.Placement);
-        var created = await ProjectWorkbenchService.CreateObjectAsync(ProjectId, prepared.Request);
+        var createRequest = configureRequest?.Invoke(prepared.Request) ?? prepared.Request;
+        var created = await ProjectWorkbenchService.CreateObjectAsync(ProjectId, createRequest);
 
         foreach (var pendingLink in prepared.PendingLinks)
         {
@@ -1688,6 +1693,7 @@ else
         }
 
         await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
+        return created;
     }
 
     private async Task OpenCreateDialogAsync(CanvasWorkbenchAction action)
@@ -2567,6 +2573,8 @@ else
     public void Dispose()
     {
         CancelPendingCanvasViewStatePersistence();
+        deferredCompletionCts.Cancel();
+        deferredCompletionCts.Dispose();
         nodeMoveCommitGate.Dispose();
     }
 

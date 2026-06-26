@@ -1,3 +1,4 @@
+using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
@@ -32,7 +33,7 @@ public partial class ProjectStructurePage
     };
 
     [Inject]
-    private IAgentImageGenerationService ImageGenerationService { get; set; } = default!;
+    private IProjectStructureDeferredNodeCompletionQueue DeferredNodeCompletionQueue { get; set; } = default!;
 
     private IReadOnlyList<ProviderProfile> imageGenerationProviders = [];
     private bool areImageGenerationProvidersLoaded;
@@ -109,42 +110,46 @@ public partial class ProjectStructurePage
         {
             await EnsureImageGenerationProvidersLoadedAsync(refreshIfEmpty: true);
             var settings = ResolveGeneratedImageCreateSettings(request);
-            var generated = await ImageGenerationService.GenerateAsync(
-                new AgentImageGenerationRequest(
-                    settings.Provider,
-                    settings.Model,
-                    settings.Prompt,
-                    settings.Size,
-                    settings.Quality,
-                    settings.Format,
-                    []));
-            var image = generated.Images.FirstOrDefault()
-                ?? throw new InvalidOperationException("Image generation completed without image data.");
-            if (image.Bytes.Length == 0)
-            {
-                throw new InvalidOperationException("Image generation completed with empty image data.");
-            }
-
-            var contentType = string.IsNullOrWhiteSpace(image.ContentType)
-                ? ResolveGeneratedImageContentType(settings.Format)
-                : image.ContentType.Trim();
             var fileName = BuildGeneratedImageFileName(request.Title, settings.Format);
-            var upload = new CanvasWorkbenchUploadedFile
+            var completionRequest = new ProjectStructureGeneratedImageCompletionRequest(
+                settings.Provider.Id,
+                settings.Model,
+                settings.Prompt,
+                settings.Size,
+                settings.Quality,
+                settings.Format,
+                fileName);
+            var operationId = Guid.NewGuid();
+            var created = await CreateObjectAsync(definition, request with
             {
-                FileName = fileName,
-                ContentType = contentType,
-                Base64Data = Convert.ToBase64String(image.Bytes)
-            };
-
-            await CreateObjectAsync(definition, request with
-            {
-                UploadedFile = upload,
+                UploadedFile = BuildGeneratedImageWaitingPlaceholderUpload(),
                 ObjectSubtype = definition.ObjectSubtype,
                 Title = string.IsNullOrWhiteSpace(request.Title) ? definition.DefaultTitle : request.Title,
                 Notes = settings.Prompt
+            }, createRequest => createRequest with
+            {
+                MetadataJson = ProjectStructureDeferredCompletionMetadataFactory.BuildGeneratedImageMetadataJson(
+                    operationId,
+                    ProjectStructureDeferredNodeCompletionState.Queued,
+                    completionRequest,
+                    settings.Provider),
+                Status = "Image generation queued"
             });
+            if (created is null)
+            {
+                throw new InvalidOperationException("Generated image placeholder node could not be created.");
+            }
 
-            workflowFeedback = $"{fileName} was generated through {settings.Provider.Name}.";
+            var handle = await DeferredNodeCompletionQueue.EnqueueAsync(
+                new ProjectStructureDeferredNodeCompletionRequest(
+                    operationId,
+                    ProjectId,
+                    created.Id,
+                    ProjectStructureDeferredNodeCompletionKind.GeneratedImageAsset,
+                    completionRequest));
+            _ = ObserveDeferredNodeCompletionAsync(handle.Completion, created.Id, deferredCompletionCts.Token);
+
+            workflowFeedback = $"{created.Title} was added. Image generation is running through {settings.Provider.Name}.";
             workflowFeedbackTone = "mint";
         }
         catch (Exception exception)
@@ -161,6 +166,46 @@ public partial class ProjectStructurePage
         }
 
         return true;
+    }
+
+    private async Task ObserveDeferredNodeCompletionAsync(
+        Task<ProjectStructureDeferredNodeCompletionResult> completionTask,
+        string nodeId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await completionTask.WaitAsync(cancellationToken);
+            if (!string.Equals(result.NodeId, nodeId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            await InvokeAsync(async () =>
+            {
+                if (surface is not null &&
+                    result.UpdatedNode is not null &&
+                    surface.Nodes.Any(node => string.Equals(node.Id, result.UpdatedNode.Id, StringComparison.Ordinal)))
+                {
+                    await ApplySurfaceNodeUpdatesAsync([result.UpdatedNode]);
+                }
+
+                workflowFeedback = result.Message;
+                workflowFeedbackTone = result.IsSuccess ? "mint" : "warn";
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                exception,
+                "Project structure deferred completion observation failed. ProjectId={ProjectId} NodeId={NodeId}",
+                ProjectId,
+                nodeId);
+        }
     }
 
     private GeneratedImageCreateSettings ResolveGeneratedImageCreateSettings(CanvasWorkbenchCreateActionRequest request)
@@ -284,6 +329,27 @@ public partial class ProjectStructurePage
             AgentGeneratedImageFormat.Jpeg => "image/jpeg",
             AgentGeneratedImageFormat.Webp => "image/webp",
             _ => "image/png"
+        };
+    }
+
+    private static CanvasWorkbenchUploadedFile BuildGeneratedImageWaitingPlaceholderUpload()
+    {
+        const string svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+              <rect width="1024" height="1024" rx="64" fill="#f8fafc"/>
+              <rect x="96" y="96" width="832" height="832" rx="48" fill="#e0f2fe" stroke="#0f766e" stroke-width="8"/>
+              <circle cx="512" cy="390" r="92" fill="#ffffff" opacity="0.92"/>
+              <path d="M512 314v76l52 30" fill="none" stroke="#0f172a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="512" y="560" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#0f172a">Waiting for Image creation by AI...</text>
+              <text x="512" y="622" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#475569">The generated image will replace this placeholder.</text>
+            </svg>
+            """;
+
+        return new CanvasWorkbenchUploadedFile
+        {
+            FileName = "waiting-for-image-creation-by-ai.svg",
+            ContentType = "image/svg+xml",
+            Base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(svg))
         };
     }
 

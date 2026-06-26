@@ -229,7 +229,8 @@ public sealed record ProjectObjectCreateRequest(
     string? MetadataJson = null,
     int? DurationSeconds = null,
     ProjectNodeReferenceCollection? NodeReferences = null,
-    ProjectObjectExternalBindingRequest? ExternalBinding = null);
+    ProjectObjectExternalBindingRequest? ExternalBinding = null,
+    string? Status = null);
 
 public sealed record ProjectObjectExternalBindingRequest(
     string Route,
@@ -425,6 +426,8 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, request.ObjectSubtype, request.MetadataJson, null, request.Notes, media);
         var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, request.StartUtc, resolvedEndUtc);
+        var normalizedStatus = string.IsNullOrWhiteSpace(request.Status) ? "Draft" : request.Status.Trim();
+        var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(normalizedStatus);
 
         var record = new ProjectObjectRecord
         {
@@ -433,11 +436,11 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             ObjectType = request.ObjectType,
             Title = string.IsNullOrWhiteSpace(request.Title) ? request.ObjectType.ToString() : request.Title.Trim(),
             Subtitle = request.Subtitle?.Trim() ?? string.Empty,
-            Status = "Draft",
+            Status = normalizedStatus,
             Notes = request.Notes?.Trim() ?? string.Empty,
             ObjectSubtype = request.ObjectSubtype?.Trim() ?? string.Empty,
-            ProgressMode = "progress",
-            ProgressPercent = 0,
+            ProgressMode = progress.Mode,
+            ProgressPercent = progress.Percent,
             MetadataJson = metadataJson,
             ParentNodeKey = normalizedParentNodeKey,
             PositionX = position.Item1,
@@ -708,6 +711,64 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
 
         node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, metadataJson, node.MetadataJson, node.Notes, null);
         node.NodeReferences = nodeReferences ?? node.NodeReferences;
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            node.Status = status.Trim();
+            var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
+            node.ProgressMode = progress.Mode;
+            node.ProgressPercent = progress.Percent;
+        }
+
+        node.UpdatedAtUtc = clock.GetUtcNow();
+        var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        ProjectNodeBindingStorage.Apply(node, bindingPlan);
+        return ProjectWorkbenchNodeMapper.MapStructureNode(node);
+    }
+
+    public async Task<ProjectStructureNode?> ReplaceObjectMediaAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectObjectMediaPayload media,
+        string? metadataJson = null,
+        string? notes = null,
+        string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(media);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var node = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
+        if (node is null)
+        {
+            return null;
+        }
+
+        if (node.ObjectType is not (ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset))
+        {
+            throw new InvalidOperationException($"Project object '{nodeKey}' does not support media replacement.");
+        }
+
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        var savedMedia = await SaveMediaAsync(projectId, node.ObjectType, media, cancellationToken)
+            ?? throw new InvalidOperationException($"Replacement media for project object '{nodeKey}' could not be saved.");
+        node.Binding = ResolveCreateBinding(projectId, node.ObjectType, savedMedia, null);
+
+        if (notes is not null)
+        {
+            node.Notes = notes.Trim();
+        }
+
+        node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
+            node.ObjectType,
+            node.ObjectSubtype,
+            metadataJson,
+            node.MetadataJson,
+            node.Notes,
+            savedMedia);
 
         if (!string.IsNullOrWhiteSpace(status))
         {
