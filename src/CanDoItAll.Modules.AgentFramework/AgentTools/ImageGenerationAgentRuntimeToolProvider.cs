@@ -60,7 +60,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        return ValueTask.FromResult(toolBuilder.CreateTools(context.Agent));
+        return ValueTask.FromResult(toolBuilder.CreateTools(context.Agent, context.Provider));
     }
 
     private sealed class ImageGenerationToolBuilder(
@@ -72,7 +72,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         private readonly IProviderProfileRegistry providerRegistry = providerRegistry;
         private readonly ProjectStructureAgentService? projectStructureAgentService = projectStructureAgentService;
 
-        public IReadOnlyList<AITool> CreateTools(AgentDefinition agent)
+        public IReadOnlyList<AITool> CreateTools(AgentDefinition agent, ProviderProfile runtimeProvider)
         {
             var access = AgentImageGenerationAccessMetadata.Read(agent.ConfigurationJson);
             if (!access.CanGenerateImages)
@@ -93,14 +93,15 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             return
             [
                 AIFunctionFactory.Create(
-                    (ImageGenerationCreateInput request, CancellationToken cancellationToken = default) => ImageGenerationCreateAsync(agent, access, request, cancellationToken),
+                    (ImageGenerationCreateInput request, CancellationToken cancellationToken = default) => ImageGenerationCreateAsync(agent, runtimeProvider, access, request, cancellationToken),
                     AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
-                    "Generates one image through the agent's allowed image-generation provider and writes the generated binary to a managed workspace path. Use project_structure_asset_create afterwards when the image must become a project asset.")
+                    "Generates one image through the agent's allowed image-generation provider and writes the generated binary to a managed workspace path. When project asset storage is enabled, use project_structure_asset_create afterwards to store the image as a project asset.")
             ];
         }
 
         private async Task<ImageGenerationCreateResult> ImageGenerationCreateAsync(
             AgentDefinition agent,
+            ProviderProfile runtimeProvider,
             AgentImageGenerationAccessSettings access,
             ImageGenerationCreateInput request,
             CancellationToken cancellationToken)
@@ -112,7 +113,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             }
 
             ValidateRequest(request);
-            var provider = await ResolveImageProviderAsync(normalizedAccess, request.ProviderProfileId, cancellationToken);
+            var provider = await ResolveImageProviderAsync(normalizedAccess, request.ProviderProfileId, runtimeProvider, cancellationToken);
             var model = ResolveImageModel(provider, normalizedAccess, request.Model);
             var providerConfiguration = ReadProviderConfiguration(provider);
             var size = NormalizeOption(request.Size, providerConfiguration.DefaultSize, "1024x1024", ValidImageSizes, "image size");
@@ -154,19 +155,22 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 OutputFormat: outputFormat,
                 SourceCount: sourceImages.Count,
                 SourceSummaries: sourceImages.Select(item => item.Summary).ToList(),
-                ProjectAssetStorageInstruction: $"Call project_structure_asset_create with sourceWorkspacePath '{outputPath.RelativePath}', sourceContentType '{ResolveOutputContentType(outputFormat)}', and sourceFileName '{Path.GetFileName(outputPath.FullPath)}'.");
+                ProjectAssetStorageInstruction: ResolveProjectAssetStorageInstruction(normalizedAccess, outputPath, outputFormat));
         }
 
         private async Task<ProviderProfile> ResolveImageProviderAsync(
             AgentImageGenerationAccessSettings access,
             Guid? requestedProviderId,
+            ProviderProfile runtimeProvider,
             CancellationToken cancellationToken)
         {
-            var providers = await providerRegistry!.ListProvidersAsync(cancellationToken);
+            var providers = (await providerRegistry!.ListProvidersAsync(cancellationToken))
+                .Select(ProviderFeatureService.NormalizeImportedProfile)
+                .ToList();
             var providerId = requestedProviderId ?? access.PreferredProviderProfileId;
             var provider = providerId.HasValue
                 ? providers.FirstOrDefault(item => item.Id == providerId.Value)
-                : providers.FirstOrDefault(item => item.IsEnabled && item.Purpose == ProviderProfilePurpose.ImageGeneration);
+                : ResolveDefaultImageProvider(providers, runtimeProvider);
 
             if (provider is null)
             {
@@ -176,7 +180,6 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 throw new InvalidOperationException(reason);
             }
 
-            provider = ProviderFeatureService.NormalizeImportedProfile(provider);
             if (!provider.IsEnabled)
             {
                 throw new InvalidOperationException($"Image-generation provider '{provider.Name}' is disabled.");
@@ -189,6 +192,28 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
             return provider;
         }
+
+        private static ProviderProfile? ResolveDefaultImageProvider(
+            IReadOnlyList<ProviderProfile> providers,
+            ProviderProfile runtimeProvider)
+        {
+            var registryRuntimeProvider = providers.FirstOrDefault(item => item.Id == runtimeProvider.Id);
+            if (IsEnabledImageProvider(registryRuntimeProvider))
+            {
+                return registryRuntimeProvider;
+            }
+
+            var normalizedRuntimeProvider = ProviderFeatureService.NormalizeImportedProfile(runtimeProvider);
+            if (IsEnabledImageProvider(normalizedRuntimeProvider))
+            {
+                return normalizedRuntimeProvider;
+            }
+
+            return providers.FirstOrDefault(IsEnabledImageProvider);
+        }
+
+        private static bool IsEnabledImageProvider(ProviderProfile? provider)
+            => provider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration };
 
         private async Task<IReadOnlyList<AgentImageGenerationSource>> ResolveSourceImagesAsync(
             AgentDefinition agent,
@@ -333,6 +358,19 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             {
                 throw new InvalidOperationException("Image generation requires an output workspace path.");
             }
+        }
+
+        private static string ResolveProjectAssetStorageInstruction(
+            AgentImageGenerationAccessSettings access,
+            ImageGenerationOutputPath outputPath,
+            string outputFormat)
+        {
+            if (!access.CanStoreImagesAsProjectAssets)
+            {
+                return "Project asset storage is not enabled for this agent. Keep this generated image in the managed workspace until image project-asset storage is enabled.";
+            }
+
+            return $"Call project_structure_asset_create with sourceWorkspacePath '{outputPath.RelativePath}', sourceContentType '{ResolveOutputContentType(outputFormat)}', and sourceFileName '{Path.GetFileName(outputPath.FullPath)}'.";
         }
 
         private static string ResolveInputContentType(string fileName)

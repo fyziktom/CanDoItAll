@@ -99,6 +99,29 @@ internal static partial class ProjectStructureCanvasCatalog
         Option(nameof(StorageUsagePurpose.DeploymentMirror), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.DeploymentMirror))
     ];
 
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> ImageSizeOptions =
+    [
+        Option("auto", "Auto"),
+        Option("1024x1024", "Square 1024"),
+        Option("1024x1536", "Portrait 1024 x 1536"),
+        Option("1536x1024", "Landscape 1536 x 1024")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> ImageQualityOptions =
+    [
+        Option("auto", "Auto"),
+        Option("low", "Low"),
+        Option("medium", "Medium"),
+        Option("high", "High")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> ImageOutputFormatOptions =
+    [
+        Option("png", "PNG"),
+        Option("jpeg", "JPEG"),
+        Option("webp", "WebP")
+    ];
+
     private static readonly ProjectStructureCreateLeafDefinition[] RichCreateLeafDefinitions =
     [
         new("add-block-deployment", ProjectObjectType.ProjectBlock, "deployment", "blocks", "Deployment block", "Map rollout work, release gates, and deployment readiness.", "ship", "warn", "Deployment block", "Block name", "Deployment lane", "Release", "Target release or environment", "Description", "What this deployment block covers", false, string.Empty, "Drop a file here or choose one.", true, "Create", DeliveryTargetRootFields),
@@ -344,6 +367,16 @@ internal static partial class ProjectStructureCanvasCatalog
             Field("deliveryChannel", "Channel", "select", "Choose channel", false, DeliveryChannelOptions),
             Field("assigneeRef", "Recipient", "select", "Optional participant"),
             Field("dueUtc", "Due", "datetime-local", "Choose due date")
+        ];
+
+    private static IReadOnlyList<CanvasWorkbenchInputField> GeneratedImageFields()
+        =>
+        [
+            Field(ImageProviderProfileFieldKey, "Provider", "select", "Choose image provider", true),
+            Field(ImageModelFieldKey, "Model override", "text", "Use provider default"),
+            Field(ImageSizeFieldKey, "Size", "select", "Choose size", true, ImageSizeOptions),
+            Field(ImageQualityFieldKey, "Quality", "select", "Choose quality", true, ImageQualityOptions),
+            Field(ImageOutputFormatFieldKey, "Format", "select", "Choose format", true, ImageOutputFormatOptions)
         ];
 
     private static IReadOnlyList<CanvasWorkbenchInputField> ScriptFields(ProjectScriptKind kind, string? defaultCommand = null)

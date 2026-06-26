@@ -93,6 +93,7 @@ public partial class ProjectStructurePage
             "recordingRef" => BuildNodeOptions(ProjectObjectType.Recording),
             "secretRef" => BuildNodeOptions(ProjectObjectType.SecretReference),
             "storageCatalogId" => BuildStorageCatalogOptions(),
+            ProjectStructureCanvasCatalog.ImageProviderProfileFieldKey => BuildImageGenerationProviderOptions(),
             _ => null
         };
 

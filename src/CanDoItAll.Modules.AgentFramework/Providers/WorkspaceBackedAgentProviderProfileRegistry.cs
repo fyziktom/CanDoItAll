@@ -169,6 +169,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 secretRecordId,
                 timeoutSeconds,
                 selectedTransport,
+                model.Purpose,
                 model.Tags),
             ProviderPricingDefaults.ResolveIsPrivateProvider(capabilityProfile.Kind, model.IsPrivateProvider),
             modelPrices);
@@ -292,9 +293,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedKind = ResolveMappedProviderKind(provider.ConnectorPluginKey);
         var legacyMappedTransport = ResolveLegacyMappedTransport(provider);
         var mappedTransport = AgentFrameworkProviderMetadata.ResolveTransport(provider, legacyMappedTransport);
-        var mappedPurpose = provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey
+        var legacyMappedPurpose = provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey
             ? ProviderProfilePurpose.ImageGeneration
             : ProviderProfilePurpose.Chat;
+        var mappedPurpose = AgentFrameworkProviderMetadata.ResolvePurpose(provider, legacyMappedPurpose);
         var preferFrameworkManagedChatHistory = mappedKind is AgentFrameworkProviderKind.Ollama or AgentFrameworkProviderKind.ComfyUi ||
                                                 mappedTransport == ProviderTransportKind.ChatCompletions;
         var supportsBackgroundResponses = mappedKind == AgentFrameworkProviderKind.OpenAi &&

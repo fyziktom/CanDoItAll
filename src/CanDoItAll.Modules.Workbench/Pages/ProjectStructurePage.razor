@@ -902,7 +902,8 @@ else
         pendingWorkbenchSelectionId = null;
         var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
         var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
-        await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
+        var loadImageGenerationProvidersTask = LoadImageGenerationProvidersAsync();
+        await Task.WhenAll(loadStructureTask, loadStorageCatalogTask, loadImageGenerationProvidersTask);
         storageCatalog = await loadStorageCatalogTask;
         var loadResult = await loadStructureTask;
         if (!loadResult.IsSuccess || loadResult.Surface is null)
@@ -1363,6 +1364,11 @@ else
                 return;
             }
 
+            if (await TryCreateGeneratedImageAssetAsync(definition, request))
+            {
+                return;
+            }
+
             await CreateObjectAsync(definition, request);
         }
     }
@@ -1423,6 +1429,13 @@ else
                 {
                     CreateMode = action.CreateMode
                 });
+                return;
+            }
+
+            if (IsGeneratedImageAssetCreateAction(actionId))
+            {
+                var action = HydrateCreateAction(ProjectStructureCanvasCatalog.BuildComposerAction(definition));
+                await OpenCreateDialogAsync(action);
                 return;
             }
 
