@@ -2610,6 +2610,7 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
     private const int ContextEstimatedInputTokenWarningThreshold = 128_000;
     private const int ContextToolSchemaTokenWarningThreshold = 32_000;
     private const int ContextToolCountWarningThreshold = 64;
+    private const int UsageExecutionRunBatchTake = 5_000;
 
     public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
         ProcessRuntimeUsageTelemetryQuery query,
@@ -2673,22 +2674,28 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
         ProcessRuntimeUsageTelemetryQuery query,
         CancellationToken cancellationToken)
     {
-        var executionRuns = new List<ExecutionRunRecord>();
-        foreach (var runId in query.RunIds.Distinct())
+        var runIds = query.RunIds
+            .Select(runId => runId.ToString())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (runIds.Count == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var runRecords = await workspaceService.ListExecutionRunsAsync(
-                new ExecutionRunQuery(
-                    Take: Math.Max(1, query.TakePerRun),
-                    ProcessRunId: runId.ToString(),
-                    UpdatedFromUtc: query.FromUtc,
-                    UpdatedToUtc: query.ToUtc),
-                cancellationToken).ConfigureAwait(false);
-            executionRuns.AddRange(runRecords);
+            return [];
         }
 
-        return executionRuns;
+        var requestedTake = Math.Max(query.TakePerRun * runIds.Count, runIds.Count);
+        var take = Math.Clamp(
+            requestedTake,
+            runIds.Count,
+            Math.Max(runIds.Count, UsageExecutionRunBatchTake));
+        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+            new ExecutionRunQuery(
+                Take: take,
+                UpdatedFromUtc: query.FromUtc,
+                UpdatedToUtc: query.ToUtc),
+            cancellationToken).ConfigureAwait(false);
+        return executionRuns
+            .Where(run => runIds.Contains(run.ProcessRunId))
+            .ToArray();
     }
 
     private static ProcessRuntimeUsageObservation MapUsageObservation(

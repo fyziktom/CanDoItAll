@@ -386,10 +386,12 @@
 
 .project-structure-assignment-card-grid {
     align-content: start;
+    align-items: start;
     box-sizing: border-box;
     display: grid;
     flex: 1 1 auto;
     gap: 1rem;
+    grid-auto-rows: minmax(26rem, max-content);
     grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
     max-width: 100%;
     min-height: 0;
@@ -401,18 +403,24 @@
 }
 
 .project-structure-assignment-card {
+    align-content: start;
     background: #ffffff;
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 0.82rem;
     display: grid;
     gap: 0.8rem;
-    min-height: 17.8rem;
+    grid-template-rows: auto auto minmax(8.7rem, auto) auto;
+    min-height: 26rem;
+    min-width: 0;
+    overflow: visible;
     padding: 0.85rem;
+    position: relative;
 }
 
 .project-structure-assignment-card.is-active {
     border-color: rgba(37, 99, 235, 0.6);
     box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.2);
+    z-index: 1;
 }
 
 .project-structure-assignment-card.is-resolved {
@@ -497,6 +505,7 @@
 
 .project-structure-assignment-candidate {
     align-items: center;
+    align-self: stretch;
     background: #f8fcff;
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 0 0 0.65rem 0.65rem;
@@ -586,7 +595,7 @@
 }
 
 .project-structure-assignment-card__change {
-    align-self: start;
+    align-self: end;
     border-radius: 0 0 0.65rem 0.65rem;
     min-height: 2.6rem;
     width: 100%;

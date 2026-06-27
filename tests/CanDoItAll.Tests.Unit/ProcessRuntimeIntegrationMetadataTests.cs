@@ -295,6 +295,64 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
+    public async Task Runtime_usage_reader_batches_execution_run_lookup_for_multiple_process_runs()
+    {
+        var now = new DateTimeOffset(2026, 6, 26, 12, 0, 0, TimeSpan.Zero);
+        var firstProcessRunId = ProcessRunId.New();
+        var secondProcessRunId = ProcessRunId.New();
+        var unrelatedProcessRunId = ProcessRunId.New();
+        var firstRun = CreateUsageExecutionRun(firstProcessRunId, now.AddMinutes(-3));
+        var secondRun = CreateUsageExecutionRun(secondProcessRunId, now.AddMinutes(-2));
+        var unrelatedRun = CreateUsageExecutionRun(unrelatedProcessRunId, now.AddMinutes(-1));
+        var usageObservation = new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: now.AddMinutes(-2),
+            ProviderName: "OpenAI default",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "gpt-test",
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: ProviderUsageObservationStatus.Observed,
+            InputTokens: 100,
+            CachedInputTokens: 10,
+            OutputTokens: 50,
+            ReasoningTokens: 0,
+            TotalTokens: 150,
+            ToolCallCount: 1)
+        {
+            ExecutionRunId = firstRun.Id,
+            ProcessRunId = firstProcessRunId.ToString(),
+            CalculatedCostUsd = 0.42m
+        };
+        var workspace = new UsageTelemetryWorkspaceService(
+            [firstRun, secondRun, unrelatedRun],
+            new Dictionary<Guid, ExecutionRunDetail>
+            {
+                [firstRun.Id] = CreateExecutionRunDetail(firstRun, [usageObservation]),
+                [secondRun.Id] = CreateExecutionRunDetail(secondRun, []),
+                [unrelatedRun.Id] = CreateExecutionRunDetail(unrelatedRun, [])
+            });
+        var reader = new AgentFrameworkProcessRuntimeUsageTelemetryReader(
+            new WorkspaceBackedAgentReferenceDataProvider(workspace, new AgentReferenceDataCache()),
+            workspace);
+
+        var observations = await reader.ListAsync(
+            new ProcessRuntimeUsageTelemetryQuery(
+                [firstProcessRunId, secondProcessRunId],
+                now.AddHours(-1),
+                now.AddHours(1),
+                TakePerRun: 25));
+
+        var query = Assert.Single(workspace.ExecutionRunQueries);
+        Assert.Null(query.ProcessRunId);
+        Assert.Equal(50, query.Take);
+        Assert.Equal(2, workspace.ExecutionRunDetailRequestCount);
+        var observation = Assert.Single(observations);
+        Assert.Equal(firstProcessRunId, observation.RunId);
+        Assert.Equal(0.42m, observation.ActualCostUsd);
+    }
+
+    [Fact]
     public void Process_execution_metadata_does_not_trust_repository_root_as_product_target_alias()
     {
         var assignment = CreateAssignment(
@@ -348,6 +406,49 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
 
         Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+    }
+
+    private static ExecutionRunRecord CreateUsageExecutionRun(
+        ProcessRunId processRunId,
+        DateTimeOffset updatedAtUtc)
+    {
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "Process step",
+            SourceKind: "process-step",
+            SourceId: "usage-test",
+            CorrelationId: processRunId.ToString(),
+            CausationId: "step-001",
+            RequestedBy: "process-runtime",
+            RequestedByKind: "system",
+            MetadataJson: "{}",
+            InputSummary: "Input",
+            ResultSummary: "Result",
+            ProviderName: "OpenAI default",
+            Model: "gpt-test",
+            State: ExecutionState.Completed,
+            Outcome: RunOutcome.Succeeded,
+            CreatedAtUtc: updatedAtUtc.AddMinutes(-1),
+            UpdatedAtUtc: updatedAtUtc,
+            StartedAtUtc: updatedAtUtc.AddMinutes(-1),
+            CompletedAtUtc: updatedAtUtc,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: [],
+            ProcessRunId: processRunId.ToString(),
+            ProcessStepId: ProcessStepInstanceId.New().ToString());
+    }
+
+    private static ExecutionRunDetail CreateExecutionRunDetail(
+        ExecutionRunRecord run,
+        IReadOnlyList<ProviderUsageObservation> usageObservations)
+    {
+        return new ExecutionRunDetail(run, null, [], [])
+        {
+            UsageObservations = usageObservations
+        };
     }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(
@@ -439,5 +540,157 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             PendingApprovals: [],
             ProcessRunId: "run-001",
             ProcessStepId: "step-001");
+    }
+
+    private sealed class UsageTelemetryWorkspaceService(
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        IReadOnlyDictionary<Guid, ExecutionRunDetail> executionRunDetails) : IAgentFrameworkWorkspaceService
+    {
+        public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
+        {
+            add { }
+            remove { }
+        }
+
+        public List<ExecutionRunQuery> ExecutionRunQueries { get; } = [];
+
+        public int ExecutionRunDetailRequestCount { get; private set; }
+
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProviderProfile>>([]);
+
+        public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+            ExecutionRunQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            ExecutionRunQueries.Add(query);
+            var result = executionRuns
+                .Where(run => query.ProcessRunId is null ||
+                              string.Equals(run.ProcessRunId, query.ProcessRunId, StringComparison.OrdinalIgnoreCase))
+                .Where(run => query.UpdatedFromUtc is null || run.UpdatedAtUtc >= query.UpdatedFromUtc)
+                .Where(run => query.UpdatedToUtc is null || run.UpdatedAtUtc <= query.UpdatedToUtc)
+                .OrderByDescending(run => run.UpdatedAtUtc)
+                .Take(query.Take)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<ExecutionRunRecord>>(result);
+        }
+
+        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(
+            Guid executionRunId,
+            CancellationToken cancellationToken = default)
+        {
+            ExecutionRunDetailRequestCount++;
+            return executionRunDetails.TryGetValue(executionRunId, out var detail)
+                ? Task.FromResult(detail)
+                : throw new InvalidOperationException("Execution run detail was not found.");
+        }
+
+        public Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentOverviewSnapshot> GetAgentOverviewAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentUsageDetailSnapshot> GetAgentUsageDetailsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderUsageDetailSnapshot> GetProviderUsageDetailsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderTestChatResult> RunProviderTestChatAsync(Guid providerId, ProviderTestChatRequest request, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentChatRunResult> SendMessageAsync(
+            Guid agentId,
+            Guid? chatSessionId,
+            string prompt,
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<string>? attachmentPaths = null,
+            AgentChatRunOptions? options = null) => throw Unused();
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatRuntimeSnapshot> GetChatRuntimeSnapshotAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentRunMetric>> ListMetricsAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveMemoryAsync(MemoryEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        private static InvalidOperationException Unused()
+            => new("This fake workspace method is not used by the usage telemetry reader test.");
     }
 }

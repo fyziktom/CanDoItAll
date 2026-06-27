@@ -275,14 +275,25 @@
 
     private static decimal ResolveScore(ProjectStructureProcessStartCandidateState candidate)
     {
+        if (candidate.MatchScore != 0)
+        {
+            return candidate.MatchScore;
+        }
+
         var token = candidate.ScoreLabel.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         return decimal.TryParse(
             token,
             System.Globalization.NumberStyles.Number,
-            System.Globalization.CultureInfo.InvariantCulture,
-            out var score)
-            ? score
-            : 0m;
+            System.Globalization.CultureInfo.CurrentCulture,
+            out var localizedScore)
+            ? localizedScore * 10m
+            : decimal.TryParse(
+                token,
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var invariantScore)
+                ? invariantScore * 10m
+                : 0m;
     }
 
     private static string BuildInitials(string value)

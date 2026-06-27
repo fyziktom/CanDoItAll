@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
@@ -860,7 +861,8 @@ public partial class ProjectStructurePage
                 IsResolvable: false,
                 step.BlockedReason ?? "No active agent with an enabled provider was found for this role.",
                 "Provision or enable an agent before launch.",
-                "process-launch/gap"));
+                "process-launch/gap",
+                MatchScore: 0));
         }
 
         return candidates;
@@ -923,14 +925,12 @@ public partial class ProjectStructurePage
             displayName,
             "Agent",
             string.IsNullOrWhiteSpace(step.ExecutorKind) ? ProcessLaunchExecutorKinds.Agent : step.ExecutorKind,
-            $"{Math.Max(0, roleScore) / 10.0:0.0} score",
+            FormatProcessStartCandidateScore(roleScore),
             isSelected,
             isReadyRecommendation,
             RequiresProvisioning: !isResolvable,
             IsResolvable: isResolvable,
-            isReadyRecommendation
-                ? $"Recommended for role '{step.RoleKey}' on step '{step.StepKey}'."
-                : summary,
+            summary,
             metadata?.StatusLabel ?? "Active",
             metadata?.ProviderName ?? "agent-directory",
             metadata?.ProviderName ?? string.Empty,
@@ -941,7 +941,8 @@ public partial class ProjectStructurePage
             metadata?.WorkloadLabel ?? string.Empty,
             metadata?.AvatarImageUrl ?? string.Empty,
             metadata?.ToolNames,
-            metadata?.SkillNames);
+            metadata?.SkillNames,
+            roleScore);
     }
 
     private async Task RefreshProcessStartAgentMetadataAsync(CancellationToken cancellationToken)
@@ -1255,14 +1256,29 @@ public partial class ProjectStructurePage
 
     private static decimal ResolveCandidateScore(ProjectStructureProcessStartCandidateState candidate)
     {
+        if (candidate.MatchScore != 0)
+        {
+            return candidate.MatchScore;
+        }
+
         var token = candidate.ScoreLabel.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        return decimal.TryParse(
-            token,
-            System.Globalization.NumberStyles.Number,
-            System.Globalization.CultureInfo.InvariantCulture,
-            out var score)
-            ? score
-            : 0m;
+        if (decimal.TryParse(token, NumberStyles.Number, CultureInfo.CurrentCulture, out var localizedScore))
+        {
+            return localizedScore * 10m;
+        }
+
+        if (decimal.TryParse(token, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariantScore))
+        {
+            return invariantScore * 10m;
+        }
+
+        return 0m;
+    }
+
+    private static string FormatProcessStartCandidateScore(int matchScore)
+    {
+        var displayScore = Math.Clamp(Math.Max(0, matchScore) / 10m, 0m, 10m);
+        return $"{displayScore:0.0} score";
     }
 
     private async Task TryLinkStartedProcessRunAsync(string sourceNodeId, ProcessRunId runId)
