@@ -503,8 +503,6 @@
             var definitionLoadOptions = CreateDefinitionLoadOptions(detailTabKey);
             var runtimeLoadOptions = CreateRuntimeLoadOptions(detailTabKey);
             var runtimeQueryHistoryWindow = ResolveRuntimeHistoryWindow(detailTabKey);
-            var shouldAutoSelectRuntimeRun = detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat ||
-                (selectedRuntimeRunId ?? RunIdQuery).HasValue;
             var request = new ProcessWorkspaceShellRequest(
                 ResolveScope(),
                 new ProcessWorkspaceSelectionProjection(ProcessIdQuery, selectedRuntimeRunId ?? RunIdQuery, LaunchPlanIdQuery),
@@ -527,7 +525,7 @@
                     runtimeEventPage,
                     RuntimeEventPageSize,
                     selectedRuntimeRunId ?? RunIdQuery,
-                    AutoSelectRun: shouldAutoSelectRuntimeRun,
+                    AutoSelectRun: (selectedRuntimeRunId ?? RunIdQuery).HasValue,
                     TakeRuns: 50,
                     runtimeLoadOptions),
                 definitionLoadOptions);
@@ -620,7 +618,7 @@
                 IncludeHistory = false,
                 IncludeMetricHistory = false,
                 IncludeActiveAgents = false,
-                IncludeUsageTelemetry = true
+                IncludeUsageTelemetry = false
             },
             _ when hasExplicitRuntimeSelection => new ProcessRuntimeWorkspaceLoadOptions
             {
@@ -2293,10 +2291,6 @@
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
             ResolveManagerChatRunState();
             managerChatErrorMessage = null;
-            if (managerChatVoiceModeEnabled && !string.IsNullOrWhiteSpace(result.AssistantMessage.Content))
-            {
-                await SpeakManagerChatTextAsync(result.AssistantMessage.Content);
-            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -2746,14 +2740,13 @@
     private string BuildManagerChatPrompt()
     {
         var selectedRun = CurrentShell.Runtime.SelectedRun;
-        var runId = ResolveSelectedManagerChatRunId();
+        var runId = selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId;
         var loadedRuns = CurrentShell.Runtime.Runs.Take(10)
             .Select(run => $"- {run.RunId.Value:D} / {run.Status} / latest {run.LastEventAtUtc:u}")
             .ToArray();
         var runText = loadedRuns.Length == 0
             ? "- No runtime runs were found in the selected history window."
             : string.Join(Environment.NewLine, loadedRuns);
-        var selectedRunUsageText = BuildManagerChatSelectedRunUsageText(runId);
 
         return $"""
             Process manager context
@@ -2766,36 +2759,8 @@
             Loaded runs:
             {runText}
 
-            Selected run usage telemetry:
-            {selectedRunUsageText}
-
             Manager response rule:
-            Answer run-selection, status, cost, and token questions from the selected-run context above when it contains the requested data. For runtime events, artifacts, or operator-action details that are not shown here, use the appropriate runtime or artifact tools instead of guessing.
-            """;
-    }
-
-    private string BuildManagerChatSelectedRunUsageText(Guid? runId)
-    {
-        if (!runId.HasValue)
-        {
-            return "- No run is selected, so selected-run usage telemetry is not available.";
-        }
-
-        var stats = CurrentShell.Runtime.Stats;
-        if (!HasRuntimeUsageTelemetry(stats))
-        {
-            return "- No provider usage telemetry is loaded for the selected run in this history window.";
-        }
-
-        var cost = ResolveRuntimeUsageCost(stats);
-        var costLabel = stats.ActualCost > 0m ? "Actual cost" : "Estimated cost";
-        return $"""
-            - Scope: selected run and related root or child run observations in {FormatHistoryWindow(CurrentShell.Runtime.HistoryWindow)}.
-            - {costLabel}: {FormatCurrency(cost)}
-            - Input tokens: {FormatManagerChatTokenCount(stats.InputTokens)}
-            - Cached input tokens: {FormatManagerChatTokenCount(stats.CachedInputTokens)}
-            - Output tokens: {FormatManagerChatTokenCount(stats.OutputTokens)}
-            - Total tokens: {FormatManagerChatTokenCount(ResolveRuntimeTotalTokens(stats))}
+            The manager chat tab preloads only basic run context. Answer run-selection and status questions from this context. For runtime events, token usage, cost, artifacts, or operator-action details that are not shown here, use the appropriate runtime or artifact tools instead of guessing.
             """;
     }
 
@@ -2911,17 +2876,6 @@
             ? stats.TotalTokens
             : Math.Max(0, stats.InputTokens) + Math.Max(0, stats.OutputTokens);
 
-    private static bool HasRuntimeUsageTelemetry(ProcessRuntimeStatsProjection stats)
-        => stats.InputTokens > 0 ||
-           stats.CachedInputTokens > 0 ||
-           stats.OutputTokens > 0 ||
-           stats.TotalTokens > 0 ||
-           stats.EstimatedCost > 0m ||
-           stats.ActualCost > 0m;
-
-    private static decimal ResolveRuntimeUsageCost(ProcessRuntimeStatsProjection stats)
-        => Math.Max(0m, stats.ActualCost > 0m ? stats.ActualCost : stats.EstimatedCost);
-
     private static int ResolveRuntimeTotalTokens(ProcessRuntimeMetricPointProjection point)
         => point.TotalTokens > 0
             ? point.TotalTokens
@@ -2944,9 +2898,6 @@
 
     private static string FormatTokenCount(int value)
         => value.ToString("N0", CultureInfo.CurrentCulture);
-
-    private static string FormatManagerChatTokenCount(int value)
-        => value.ToString("N0", CultureInfo.InvariantCulture);
 
     private static string FormatDuration(long durationMs)
     {

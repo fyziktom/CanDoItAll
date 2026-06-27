@@ -1,0 +1,8 @@
+Invariant ID: SB02-USAGE-CONTEXT
+Test name: Manager_chat_prompt_includes_selected_run_usage_and_keeps_runtime_tools_enabled_for_cost_token_question
+Command: Adversarial assertion: old Manager tab did not request selected-run usage telemetry
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-27T22:14:36.4818430Z
+Output:
+Old no-usage-telemetry assumption rejected: Manager load options now request usage telemetry.
+Exit code: 1

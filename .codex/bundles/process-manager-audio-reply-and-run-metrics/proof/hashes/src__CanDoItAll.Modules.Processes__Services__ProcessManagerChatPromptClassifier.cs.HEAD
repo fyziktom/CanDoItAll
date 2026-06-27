@@ -38,21 +38,6 @@ internal static class ProcessManagerChatPromptClassifier
         "show"
     ];
 
-    private static readonly string[] PreloadedContextOnlyPromptTokens =
-    [
-        "use only",
-        "only use",
-        "already in this manager chat context",
-        "already in this context",
-        "preloaded context",
-        "pre loaded context",
-        "loaded context",
-        "do not use tools",
-        "dont use tools",
-        "without tools",
-        "no tools"
-    ];
-
     public static bool ShouldDisableRuntimeTools(string prompt)
     {
         if (string.IsNullOrWhiteSpace(prompt))
@@ -67,12 +52,7 @@ internal static class ProcessManagerChatPromptClassifier
             return false;
         }
 
-        if (ArtifactPromptTokens.Any(token => ContainsPromptToken(normalized, token)))
-        {
-            return false;
-        }
-
-        return PreloadedContextOnlyPromptTokens.Any(token => ContainsPromptToken(normalized, token));
+        return !ArtifactPromptTokens.Any(token => ContainsPromptToken(normalized, token));
     }
 
     private static bool ContainsPromptToken(string normalizedPrompt, string token)

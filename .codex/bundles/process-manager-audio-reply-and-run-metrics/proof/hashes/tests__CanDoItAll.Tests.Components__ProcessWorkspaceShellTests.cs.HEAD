@@ -146,12 +146,11 @@ public sealed class ProcessWorkspaceShellTests
         var managerRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
         Assert.NotNull(managerRuntimeOptions);
         Assert.Equal(ProcessRuntimeHistoryWindow.OneDay, client.LastRequest?.RuntimeQuery?.HistoryWindow);
-        Assert.True(client.LastRequest?.RuntimeQuery?.AutoSelectRun);
         Assert.True(managerRuntimeOptions.IncludeSelectedRun);
         Assert.False(managerRuntimeOptions.IncludeHistory);
         Assert.False(managerRuntimeOptions.IncludeMetricHistory);
         Assert.False(managerRuntimeOptions.IncludeActiveAgents);
-        Assert.True(managerRuntimeOptions.IncludeUsageTelemetry);
+        Assert.False(managerRuntimeOptions.IncludeUsageTelemetry);
         Assert.False(managerRuntimeOptions.LiveProcesses.IncludeAttentionReconciliation);
         Assert.False(managerRuntimeOptions.LiveProcesses.IncludeOperatorActions);
         Assert.False(managerRuntimeOptions.LiveProcesses.IncludeCurrentSteps);
@@ -713,75 +712,6 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
-    public void Manager_chat_auto_speaks_assistant_response_when_voice_mode_is_enabled()
-    {
-        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true)
-        {
-            AssistantResponseText = "The selected run cost USD 0.12 and used 1,666 tokens."
-        };
-        var voiceService = new RecordingAgentVoiceService();
-        using var context = CreateContext(out _, workspaceService, voiceService);
-
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
-
-        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
-        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='chat-voice-mode-button']").HasAttribute("disabled")));
-        cut.Find("[data-testid='chat-voice-mode-button']").Click();
-        cut.WaitForAssertion(() => Assert.Contains("Audio on", cut.Markup, StringComparison.Ordinal));
-
-        cut.Find("[data-testid='chat-prompt-input']").Input("Tell me about the selected run cost and tokens.");
-        cut.Find("[data-testid='chat-send-button']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            var request = Assert.Single(voiceService.SynthesisRequests);
-            Assert.Equal(workspaceService.AssistantResponseText, request.Text);
-        });
-        Assert.Contains(
-            context.JSInterop.Invocations,
-            invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.clearAudioQueue");
-        Assert.Contains(
-            context.JSInterop.Invocations,
-            invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.enqueueAudio");
-    }
-
-    [Fact]
-    public void Manager_chat_prompt_includes_selected_run_usage_and_keeps_runtime_tools_enabled_for_cost_token_question()
-    {
-        var workspaceService = new RecordingManagerChatWorkspaceService();
-        using var context = CreateContext(out var client, workspaceService);
-        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
-
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, runId));
-
-        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
-        cut.WaitForAssertion(() =>
-        {
-            var runtimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
-            Assert.NotNull(runtimeOptions);
-            Assert.True(runtimeOptions.IncludeSelectedRun);
-            Assert.False(runtimeOptions.IncludeHistory);
-            Assert.False(runtimeOptions.IncludeMetricHistory);
-            Assert.False(runtimeOptions.IncludeActiveAgents);
-            Assert.True(runtimeOptions.IncludeUsageTelemetry);
-        });
-
-        cut.Find("[data-testid='chat-prompt-input']").Input("Tell me please about this last run, how much did it cost and how much tokens did it use?");
-        cut.Find("[data-testid='chat-send-button']").Click();
-
-        cut.WaitForAssertion(() => Assert.NotNull(workspaceService.LastOptions));
-        Assert.Contains("Selected run usage telemetry:", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Actual cost: USD 0.12", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Input tokens: 1,234", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Cached input tokens: 234", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Output tokens: 432", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Total tokens: 1,666", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.True(workspaceService.LastOptions!.RuntimeToolProvidersEnabled);
-        Assert.True(workspaceService.LastOptions.WorkspaceToolsEnabled);
-    }
-
-    [Fact]
     public void Manager_chat_keeps_voice_controls_disabled_for_voice_denied_manager_agent()
     {
         var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: false);
@@ -948,8 +878,7 @@ public sealed class ProcessWorkspaceShellTests
 
     private static TestContext CreateContext(
         out RecordingProcessWorkspaceProjectionClient client,
-        IAgentFrameworkWorkspaceService? agentWorkspaceService = null,
-        IAgentVoiceService? voiceService = null)
+        IAgentFrameworkWorkspaceService? agentWorkspaceService = null)
     {
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -967,10 +896,6 @@ public sealed class ProcessWorkspaceShellTests
                 new WorkspaceBackedAgentReferenceDataProvider(
                     agentWorkspaceService,
                     serviceProvider.GetRequiredService<AgentReferenceDataCache>()));
-        }
-        if (voiceService is not null)
-        {
-            context.Services.AddSingleton(voiceService);
         }
 
         client = new RecordingProcessWorkspaceProjectionClient();
@@ -1002,12 +927,6 @@ public sealed class ProcessWorkspaceShellTests
         {
             agent = CreateAgent(canUseVoiceMode);
         }
-
-        public string AssistantResponseText { get; init; } = "Manager response from the fake runtime.";
-
-        public string LastPrompt { get; private set; } = string.Empty;
-
-        public AgentChatRunOptions? LastOptions { get; private set; }
 
         public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
         {
@@ -1193,46 +1112,7 @@ public sealed class ProcessWorkspaceShellTests
             string prompt,
             CancellationToken cancellationToken = default,
             IReadOnlyList<string>? attachmentPaths = null,
-            AgentChatRunOptions? options = null)
-        {
-            LastPrompt = prompt;
-            LastOptions = options;
-            var session = chatSessionId is { } sessionId
-                ? sessions.Single(item => item.AgentId == agentId && item.Id == sessionId)
-                : CreateSession(agentId);
-            var userMessage = new ChatMessageRecord(
-                Guid.NewGuid(),
-                ChatMessageRole.User,
-                prompt,
-                Now,
-                TokenEstimate: 0);
-            var assistantMessage = new ChatMessageRecord(
-                Guid.NewGuid(),
-                ChatMessageRole.Assistant,
-                AssistantResponseText,
-                Now.AddSeconds(1),
-                TokenEstimate: 0);
-            var updatedSession = session with
-            {
-                Messages = session.Messages.Concat([userMessage, assistantMessage]).ToArray(),
-                UpdatedAtUtc = Now.AddSeconds(1)
-            };
-            var sessionIndex = sessions.FindIndex(item => item.AgentId == agentId && item.Id == session.Id);
-            sessions[sessionIndex] = updatedSession;
-            var metric = new AgentRunMetric(
-                Guid.NewGuid(),
-                agentId,
-                updatedSession.Id,
-                Now.AddSeconds(1),
-                RunOutcome.Succeeded,
-                ProviderName: "TestProvider",
-                Model: "test-model",
-                DurationMs: 100,
-                InputTokens: 12,
-                OutputTokens: 34,
-                ToolCalls: 0);
-            return Task.FromResult(new AgentChatRunResult(updatedSession.Id, assistantMessage, metric));
-        }
+            AgentChatRunOptions? options = null) => throw Unused();
 
         public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
             Guid agentId,
@@ -1296,19 +1176,6 @@ public sealed class ProcessWorkspaceShellTests
                 Now,
                 Now);
 
-        private ChatSessionRecord CreateSession(Guid agentId)
-        {
-            var session = new ChatSessionRecord(
-                Guid.NewGuid(),
-                agentId,
-                "New exploration thread",
-                Now,
-                Now,
-                Messages: []);
-            sessions.Add(session);
-            return session;
-        }
-
         private static ChatSessionSummaryRecord ToSummary(ChatSessionRecord session)
             => new(
                 session.Id,
@@ -1323,64 +1190,6 @@ public sealed class ProcessWorkspaceShellTests
 
         private static NotSupportedException Unused()
             => new("This fake member is not used by the manager chat component test.");
-    }
-
-    private sealed class RecordingAgentVoiceService : IAgentVoiceService
-    {
-        public List<AgentVoiceSynthesisRequest> SynthesisRequests { get; } = [];
-
-        public Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default) => throw Unused();
-
-        public Task<AgentVoiceSettings> SaveSettingsAsync(
-            AgentVoiceSettings settings,
-            CancellationToken cancellationToken = default) => throw Unused();
-
-        public Task<AgentVoiceTranscriptionResult> TranscribeAsync(
-            AgentVoiceTranscriptionRequest request,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(new AgentVoiceTranscriptionResult("Tell me about the selected run cost and tokens.", "test-stt"));
-
-        public Task<AgentVoiceSynthesisResult> SynthesizeAsync(
-            AgentVoiceSynthesisRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            SynthesisRequests.Add(request);
-            return Task.FromResult(CreateSynthesisResult(request));
-        }
-
-        public IAsyncEnumerable<AgentVoiceSynthesisResult> SynthesizeChunksAsync(
-            AgentVoiceSynthesisRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            SynthesisRequests.Add(request);
-            return EnumerateSynthesisResult(CreateSynthesisResult(request));
-        }
-
-        public Task<AgentVoiceSynthesisResult> SynthesizeSampleAsync(
-            string? sampleText = null,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(CreateSynthesisResult(new AgentVoiceSynthesisRequest(sampleText ?? "sample")));
-
-        private static async IAsyncEnumerable<AgentVoiceSynthesisResult> EnumerateSynthesisResult(
-            AgentVoiceSynthesisResult result)
-        {
-            await Task.Yield();
-            yield return result;
-        }
-
-        private static AgentVoiceSynthesisResult CreateSynthesisResult(AgentVoiceSynthesisRequest request)
-            => new(
-                [1, 2, 3],
-                ContentType: "audio/mpeg",
-                Model: "test-tts",
-                VoiceId: request.AgentVoiceAccess?.PreferredVoiceId ?? "cedar",
-                ResponseFormat: "mp3")
-            {
-                SpokenText = request.Text
-            };
-
-        private static NotSupportedException Unused()
-            => new("This fake member is not used by the manager chat voice component test.");
     }
 
     private static void ActivateProcessDetailTab(
@@ -1679,9 +1488,6 @@ public sealed class ProcessWorkspaceShellTests
             var historyWindow = request.RuntimeQuery?.HistoryWindow ?? ProcessRuntimeHistoryWindow.OneDay;
             var page = request.RuntimeQuery?.EventPage ?? 0;
             var pageSize = request.RuntimeQuery?.EventPageSize ?? 25;
-            var useManagerChatUsageTelemetry = loadOptions.IncludeUsageTelemetry &&
-                loadOptions.IncludeSelectedRun &&
-                !loadOptions.IncludeMetricHistory;
 
             return new ProcessRuntimeWorkspaceProjection(
                 historyWindow,
@@ -1737,12 +1543,12 @@ public sealed class ProcessWorkspaceShellTests
                     ManagerEventCount: loadOptions.IncludeMetricHistory ? 1 : 0,
                     ToolCallCount: loadOptions.IncludeMetricHistory ? metricEvents.Count : events.Count,
                     DurationMs: 33 * 60 * 1000,
-                    InputTokens: useManagerChatUsageTelemetry ? 1_234 : 0,
-                    CachedInputTokens: useManagerChatUsageTelemetry ? 234 : 0,
-                    OutputTokens: useManagerChatUsageTelemetry ? 432 : 0,
-                    TotalTokens: useManagerChatUsageTelemetry ? 1_666 : 0,
-                    EstimatedCost: useManagerChatUsageTelemetry ? 0.130000m : 0m,
-                    ActualCost: useManagerChatUsageTelemetry ? 0.123456m : 0m),
+                    InputTokens: 0,
+                    CachedInputTokens: 0,
+                    OutputTokens: 0,
+                    TotalTokens: 0,
+                    EstimatedCost: 0m,
+                    ActualCost: 0m),
                 metricEvents.Select(runtimeEvent => new ProcessRuntimeMetricPointProjection(
                     runtimeEvent.OccurredAtUtc,
                     EventCount: 1,

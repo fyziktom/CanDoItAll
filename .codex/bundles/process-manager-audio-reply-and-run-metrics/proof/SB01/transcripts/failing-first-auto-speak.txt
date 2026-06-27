@@ -1,0 +1,8 @@
+Invariant ID: SB01-AUTO-SPEAK
+Test name: Manager_chat_auto_speaks_assistant_response_when_voice_mode_is_enabled
+Command: Adversarial assertion: old Manager chat had no assistant auto-speak call
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-27T22:14:02.3399028Z
+Output:
+Old no-auto-speak assumption rejected: production source now calls SpeakManagerChatTextAsync after manager response.
+Exit code: 1

@@ -23,15 +23,6 @@ public sealed class ProcessManagerChatPromptClassifierTests
     }
 
     [Fact]
-    public void ShouldDisableRuntimeTools_returns_false_for_natural_cost_token_question()
-    {
-        var result = ProcessManagerChatPromptClassifier.ShouldDisableRuntimeTools(
-            "Tell me please about this last run, how much did it cost and how much tokens did it use?");
-
-        Assert.False(result);
-    }
-
-    [Fact]
     public void ShouldDisableRuntimeTools_returns_false_for_non_telemetry_prompt()
     {
         var result = ProcessManagerChatPromptClassifier.ShouldDisableRuntimeTools(
