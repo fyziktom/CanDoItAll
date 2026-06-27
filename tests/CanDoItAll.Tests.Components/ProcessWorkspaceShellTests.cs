@@ -814,6 +814,13 @@ public sealed class ProcessWorkspaceShellTests
         if (agentWorkspaceService is not null)
         {
             context.Services.AddSingleton(agentWorkspaceService);
+            context.Services.AddSingleton<AgentReferenceDataCache>();
+            context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
+                serviceProvider.GetRequiredService<AgentReferenceDataCache>());
+            context.Services.AddSingleton<IAgentReferenceDataProvider>(serviceProvider =>
+                new WorkspaceBackedAgentReferenceDataProvider(
+                    agentWorkspaceService,
+                    serviceProvider.GetRequiredService<AgentReferenceDataCache>()));
         }
 
         client = new RecordingProcessWorkspaceProjectionClient();

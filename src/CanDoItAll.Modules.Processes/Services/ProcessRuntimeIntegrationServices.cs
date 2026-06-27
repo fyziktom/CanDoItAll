@@ -70,7 +70,7 @@ internal static class ProcessProviderReadinessRules
 }
 
 internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
-    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IAgentReferenceDataProvider agentReferenceDataProvider,
     ProcessMockAgentCatalogService processMockAgentCatalogService,
     IProviderProfileService providerProfileService) : IProcessLaunchExecutorResolver
 {
@@ -82,10 +82,11 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
         await processMockAgentCatalogService.EnsureCatalogAsync(cancellationToken).ConfigureAwait(false);
 
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
-        var providerById = providers.ToDictionary(provider => provider.Id);
+        var referenceData = await agentReferenceDataProvider
+            .GetAsync(AgentReferenceDataRequest.AgentsAndProviders(), cancellationToken)
+            .ConfigureAwait(false);
+        var agents = referenceData.Agents;
+        var providerById = referenceData.ProviderById;
         var templateStepByKey = request.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
         var roleByKey = request.Definition.RoleUsages.ToDictionary(role => role.Key, StringComparer.OrdinalIgnoreCase);
         var profileAssignmentByStep = request.LiveRunProfile?.Assignments
@@ -445,7 +446,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 }
 
 internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
-    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IAgentReferenceDataProvider agentReferenceDataProvider,
     IProviderProfileService providerProfileService) : IProcessRuntimeStepAssignmentRepairService
 {
     public async ValueTask<ProcessRuntimeStepAssignmentRepairResult> RepairAsync(
@@ -456,10 +457,11 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
         ArgumentNullException.ThrowIfNull(assignment);
 
         var readinessRequest = CreateReadinessRequest(assignment);
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
-        var providerById = providers.ToDictionary(provider => provider.Id);
+        var referenceData = await agentReferenceDataProvider
+            .GetAsync(AgentReferenceDataRequest.AgentsAndProviders(), cancellationToken)
+            .ConfigureAwait(false);
+        var agents = referenceData.Agents;
+        var providerById = referenceData.ProviderById;
         var currentAgent = ResolveCurrentAgent(assignment, agents);
         if (currentAgent is not null)
         {
@@ -868,6 +870,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
 
 internal sealed partial class AgentFrameworkProcessExecutionAdapter(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IAgentReferenceDataProvider agentReferenceDataProvider,
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeStateStore stateStore,
     IWorkspaceFileService workspaceFiles) : IProcessExecutionAdapter
@@ -911,9 +914,10 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 assignment.ExecutorId);
         }
 
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
-        var agent = agents.FirstOrDefault(candidate => candidate.Id == agentId);
+        var referenceData = await agentReferenceDataProvider
+            .GetAsync(new AgentReferenceDataRequest(AgentReferenceDataSections.Agents), cancellationToken)
+            .ConfigureAwait(false);
+        var agent = referenceData.Agents.FirstOrDefault(candidate => candidate.Id == agentId);
         if (agent is null)
         {
             return NeedsManager(
@@ -933,6 +937,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
         try
         {
+            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
             var metadataJson = BuildProcessExecutionMetadata(assignment);
             var result = await workspaceService
                 .ExecuteRunAsync(
@@ -2394,6 +2399,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 }
 
 internal sealed class AgentFrameworkProcessExecutionObservationReader(
+    IAgentReferenceDataProvider agentReferenceDataProvider,
     IAgentFrameworkWorkspaceService workspaceService) : IProcessExecutionObservationReader
 {
     public async ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
@@ -2407,9 +2413,11 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
             return [];
         }
 
-        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken).ConfigureAwait(false);
-        var agentNameById = agents.ToDictionary(agent => agent.Id, agent => agent.Name);
-        var agentAvatarById = agents.ToDictionary(agent => agent.Id, agent => agent.AvatarImageUrl ?? string.Empty);
+        var referenceData = await agentReferenceDataProvider
+            .GetAsync(new AgentReferenceDataRequest(AgentReferenceDataSections.Agents), cancellationToken)
+            .ConfigureAwait(false);
+        var agentNameById = referenceData.Agents.ToDictionary(agent => agent.Id, agent => agent.Name);
+        var agentAvatarById = referenceData.Agents.ToDictionary(agent => agent.Id, agent => agent.AvatarImageUrl ?? string.Empty);
         var requestedRunIds = query.RunIds.ToHashSet();
         var executionRuns = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
         var observations = new List<ProcessExecutionObservation>();
@@ -2596,6 +2604,7 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
 }
 
 internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
+    IAgentReferenceDataProvider agentReferenceDataProvider,
     IAgentFrameworkWorkspaceService workspaceService) : IProcessRuntimeUsageTelemetryReader
 {
     private const int ContextEstimatedInputTokenWarningThreshold = 128_000;
@@ -2614,7 +2623,10 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
         }
 
         var runIdSet = query.RunIds.ToHashSet();
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        var referenceData = await agentReferenceDataProvider
+            .GetAsync(new AgentReferenceDataRequest(AgentReferenceDataSections.Providers), cancellationToken)
+            .ConfigureAwait(false);
+        var providers = referenceData.Providers;
         var executionRuns = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
         var observations = new List<ProcessRuntimeUsageObservation>();
 

@@ -45,10 +45,12 @@ public partial class ProjectStructurePage
 
         try
         {
-            imageGenerationProviders = (await AgentWorkspaceService.ListProvidersAsync())
-                .Where(provider => provider.IsEnabled && provider.Purpose == ProviderProfilePurpose.ImageGeneration)
-                .OrderBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var referenceData = await AgentReferenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(
+                    AgentReferenceDataSections.Providers,
+                    EnabledProvidersOnly: true,
+                    ProviderPurpose: ProviderProfilePurpose.ImageGeneration));
+            imageGenerationProviders = referenceData.Providers;
             imageGenerationProvidersErrorMessage = string.Empty;
         }
         catch (Exception exception)

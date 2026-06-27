@@ -39,7 +39,7 @@ public sealed class ProcessLaunchExecutorResolverTests
         var workspace = new ResolverWorkspaceService([agent], [CreateProvider(providerId)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = new AgentFrameworkProcessLaunchExecutorResolver(
-            workspaceFactory,
+            CreateReferenceDataProvider(workspace),
             new ProcessMockAgentCatalogService(
                 workspaceFactory,
                 new NoOpAiTechnicalAgentBridge(),
@@ -462,7 +462,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             ["dotnet", "architecture", "blazor"]);
         var workspace = new ResolverWorkspaceService([qaReviewLead, architectAgent], [CreateProvider(providerId)]);
         var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
-            new ResolverWorkspaceFactory(workspace),
+            CreateReferenceDataProvider(workspace),
             new ProviderProfileService());
         var assignment = CreateArchitectureReviewAssignment(qaReviewLead);
 
@@ -526,12 +526,17 @@ public sealed class ProcessLaunchExecutorResolverTests
     private static AgentFrameworkProcessLaunchExecutorResolver CreateResolver(ResolverWorkspaceFactory workspaceFactory)
     {
         return new AgentFrameworkProcessLaunchExecutorResolver(
-            workspaceFactory,
+            CreateReferenceDataProvider(workspaceFactory.WorkspaceService),
             new ProcessMockAgentCatalogService(
                 workspaceFactory,
                 new NoOpAiTechnicalAgentBridge(),
                 Options.Create(new ProcessMockAgentOptions { Enabled = false })),
             new ProviderProfileService());
+    }
+
+    private static IAgentReferenceDataProvider CreateReferenceDataProvider(IAgentFrameworkWorkspaceService workspaceService)
+    {
+        return new WorkspaceBackedAgentReferenceDataProvider(workspaceService, new AgentReferenceDataCache());
     }
 
     private static void AssertResponsibleRole(
@@ -1025,11 +1030,18 @@ public sealed class ProcessLaunchExecutorResolverTests
         return templateLoader.LoadDefinition(definitionKey);
     }
 
-    private sealed class ResolverWorkspaceFactory(IAgentFrameworkWorkspaceService workspaceService) : ICanDoItAllAgentWorkspaceFactory
+    private sealed class ResolverWorkspaceFactory : ICanDoItAllAgentWorkspaceFactory
     {
-        public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService() => workspaceService;
+        public ResolverWorkspaceFactory(IAgentFrameworkWorkspaceService workspaceService)
+        {
+            WorkspaceService = workspaceService;
+        }
 
-        public IAgentFrameworkWorkspaceService GetWorkspaceService(WorkspaceScopeDescriptor scope) => workspaceService;
+        public IAgentFrameworkWorkspaceService WorkspaceService { get; }
+
+        public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService() => WorkspaceService;
+
+        public IAgentFrameworkWorkspaceService GetWorkspaceService(WorkspaceScopeDescriptor scope) => WorkspaceService;
 
         public WorkspaceScopeDescriptor GetOrganizationScope() => WorkspaceScopeDescriptor.Organization("unit-test");
 

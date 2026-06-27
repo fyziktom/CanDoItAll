@@ -37,7 +37,7 @@ public partial class CognitiveMemoryPage
     public ICognitiveMemoryExternalSourceIngestionService ExternalSourceIngestionService { get; set; } = default!;
 
     [Inject]
-    public IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+    public IAgentReferenceDataProvider AgentReferenceDataProvider { get; set; } = default!;
 
     [Inject]
     public IAgentVoiceService VoiceService { get; set; } = default!;

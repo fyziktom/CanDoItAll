@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService WorkspaceService
+@inject IAgentReferenceDataProvider AgentReferenceDataProvider
 @inject IAgentChatAttachmentStagingService AttachmentStagingService
 @inject IAgentVoiceService VoiceService
 @inject DialogService DialogService
@@ -413,7 +414,9 @@
 
         try
         {
-            agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+            var referenceData = await AgentReferenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(AgentReferenceDataSections.Agents));
+            agents = referenceData.Agents;
             ResolveAccessibleAgents();
         }
         catch (Exception exception)

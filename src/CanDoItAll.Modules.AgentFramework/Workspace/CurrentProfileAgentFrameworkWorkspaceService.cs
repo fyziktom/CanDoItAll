@@ -6,7 +6,8 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    IAiTechnicalAgentBridge technicalAgentBridge) : IAgentFrameworkWorkspaceService
+    IAiTechnicalAgentBridge technicalAgentBridge,
+    IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator) : IAgentFrameworkWorkspaceService
 {
     private readonly HashSet<IAgentFrameworkWorkspaceService> subscribedServices = new();
     private EventHandler<ExecutionLogEntry>? executionUpdated;
@@ -62,6 +63,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
     {
         var agentId = await ResolveService().SaveAgentAsync(model, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
         return agentId;
     }
@@ -69,6 +71,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteAgentAsync(agentId, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
     }
 
@@ -100,13 +103,16 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
     {
         var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
         return cloneId;
     }
 
-    public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
+    public async Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
     {
-        return ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
+        var templateId = await ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
+        return templateId;
     }
 
     public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
@@ -117,6 +123,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
     public async Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
     {
         var agentId = await ResolveService().ImportAgentAsync(packagePath, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
         return agentId;
     }
@@ -131,19 +138,24 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return ResolveService().GetProviderEditorAsync(providerId, cancellationToken);
     }
 
-    public Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+    public async Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
     {
-        return ResolveService().SaveProviderAsync(model, cancellationToken);
+        var providerId = await ResolveService().SaveProviderAsync(model, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
+        return providerId;
     }
 
-    public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+    public async Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
-        return ResolveService().DeleteProviderAsync(providerId, cancellationToken);
+        await ResolveService().DeleteProviderAsync(providerId, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
     }
 
-    public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+    public async Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
-        return ResolveService().TestProviderAsync(providerId, cancellationToken);
+        var result = await ResolveService().TestProviderAsync(providerId, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
+        return result;
     }
 
     public Task<ProviderTestChatResult> RunProviderTestChatAsync(Guid providerId, ProviderTestChatRequest request, CancellationToken cancellationToken = default)
@@ -151,9 +163,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return ResolveService().RunProviderTestChatAsync(providerId, request, cancellationToken);
     }
 
-    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default)
+    public async Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default)
     {
-        return ResolveService().CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken);
+        var result = await ResolveService().CreateOrUpdateProviderModelAsync(providerId, request, cancellationToken);
+        referenceDataCacheInvalidator.Invalidate();
+        return result;
     }
 
     public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)

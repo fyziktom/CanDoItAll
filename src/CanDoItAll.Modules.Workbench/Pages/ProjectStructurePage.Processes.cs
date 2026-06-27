@@ -16,6 +16,7 @@ public partial class ProjectStructurePage
 {
     private const string ProjectStructureHrManagerName = "HR Staffing Manager";
     private static readonly TimeSpan ProcessStartPreviewTimeout = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan ProcessStartHistoricalEstimateTimeout = TimeSpan.FromSeconds(15);
     private const int ProcessStartInlineCandidateLimit = 8;
     private static readonly string[] OutputRootMetadataKeys =
     [
@@ -34,13 +35,16 @@ public partial class ProjectStructurePage
     private ProcessLaunchApplicationService ProcessLaunchService { get; set; } = default!;
 
     [Inject]
-    private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+    private IAgentReferenceDataProvider AgentReferenceDataProvider { get; set; } = default!;
 
     [Inject]
     private IProcessHistoricalRunCostReader ProcessHistoricalRunCostReader { get; set; } = default!;
 
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
+    private CancellationTokenSource? processStartHistoricalEstimateRefreshCts;
+    private string processStartEstimateDefinitionKey = string.Empty;
+    private int processStartEstimateAssignmentCount;
     private IReadOnlyDictionary<Guid, ProjectStructureProcessStartAgentMetadata> processStartAgentMetadataById =
         new Dictionary<Guid, ProjectStructureProcessStartAgentMetadata>();
 
@@ -198,6 +202,7 @@ public partial class ProjectStructurePage
         bool estimateOnly)
     {
         CloseQuickActionDialog();
+        ResetProcessStartEstimateState();
         processStartDialog = new ProjectStructureProcessStartDialogState(
             ProjectId,
             processDefinitionId,
@@ -228,6 +233,7 @@ public partial class ProjectStructurePage
 
     private void CloseProcessStartDialog()
     {
+        ResetProcessStartEstimateState();
         processStartDialog = null;
     }
 
@@ -344,6 +350,7 @@ public partial class ProjectStructurePage
             ConfirmHrManagerMatch = false,
             StatusMessage = statusMessage
         };
+        CancelProcessStartHistoricalEstimateRefresh();
         await InvokeAsync(StateHasChanged);
 
         using var previewTimeout = new CancellationTokenSource(ProcessStartPreviewTimeout);
@@ -356,12 +363,12 @@ public partial class ProjectStructurePage
             var previewStatusMessage = preview.Stage == ProcessLaunchStage.Blocked && preview.Warnings.Count > 0
                 ? string.Join(" ", preview.Warnings)
                 : statusMessage;
-            processStartDialog = await MapProcessStartDialogStateAsync(
+            processStartDialog = MapProcessStartDialogState(
                 dialog,
                 preview.LaunchPlan,
                 previewStatusMessage,
-                string.Empty,
-                previewTimeout.Token);
+                string.Empty);
+            QueueProcessStartHistoricalEstimateRefresh(preview.LaunchPlan, processStartEstimateAssignmentCount);
             await InvokeAsync(StateHasChanged);
         }
         catch (OperationCanceledException exception) when (previewTimeout.IsCancellationRequested)
@@ -413,6 +420,7 @@ public partial class ProjectStructurePage
         processStartDialog = processStartDialog with
         {
             Roles = roles,
+            Estimate = BuildCurrentProcessStartEstimate(roles),
             AssignmentsReviewed = false,
             Error = string.Empty,
             StatusMessage = "Role selection updated. Review the assignments before starting."
@@ -743,12 +751,11 @@ public partial class ProjectStructurePage
             .ToList();
     }
 
-    private async Task<ProjectStructureProcessStartDialogState> MapProcessStartDialogStateAsync(
+    private ProjectStructureProcessStartDialogState MapProcessStartDialogState(
         ProjectStructureProcessStartDialogState dialog,
         ProcessLaunchPlanView launchPlan,
         string statusMessage,
-        string error,
-        CancellationToken cancellationToken)
+        string error)
     {
         var steps = launchPlan.Steps
             .Where(step =>
@@ -762,16 +769,27 @@ public partial class ProjectStructurePage
         }
 
         var roles = steps.Select(MapProcessStartRoleState).ToList();
-        var estimate = await BuildProcessStartEstimateAsync(launchPlan, steps, roles, cancellationToken);
+        processStartEstimateDefinitionKey = launchPlan.DefinitionKey;
+        processStartEstimateAssignmentCount = steps.Count;
+        var estimate = BuildProcessStartEstimate(
+            launchPlan.DefinitionKey,
+            steps.Count,
+            roles,
+            historicalCostEstimate: null);
+        var resolvedAssignmentMessage =
+            $"Resolved {steps.Count(step => !step.IsBlocked && !string.IsNullOrWhiteSpace(step.ExecutorId))} of {steps.Count} assignments.";
+        var baseStatusMessage = string.IsNullOrWhiteSpace(statusMessage)
+            ? resolvedAssignmentMessage
+            : statusMessage;
         return dialog with
         {
             LaunchPlanId = launchPlan.PlanId.Value,
             Stage = ProjectStructureProcessStartStage.Staffing,
             IsBusy = false,
             ConfirmHrManagerMatch = false,
-            StatusMessage = string.IsNullOrWhiteSpace(statusMessage)
-                ? $"Resolved {steps.Count(step => !step.IsBlocked && !string.IsNullOrWhiteSpace(step.ExecutorId))} of {steps.Count} assignments."
-                : statusMessage,
+            StatusMessage = AppendProcessStartEstimateStatusMessage(
+                baseStatusMessage,
+                "Provider price estimate is visible while historical run costs load."),
             StageActivatedAtUtc = DateTimeOffset.UtcNow,
             AssignmentsReviewed = false,
             Roles = roles,
@@ -928,32 +946,38 @@ public partial class ProjectStructurePage
 
     private async Task RefreshProcessStartAgentMetadataAsync(CancellationToken cancellationToken)
     {
-        var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
-        IReadOnlyList<ProviderProfile> providers = [];
         try
         {
-            providers = await AgentWorkspaceService.ListProvidersAsync(cancellationToken);
+            var referenceData = await AgentReferenceDataProvider.GetAsync(
+                AgentReferenceDataRequest.AgentsAndProviders(activeAgentsOnly: true),
+                cancellationToken);
+            var providerById = referenceData.ProviderById;
+            processStartAgentMetadataById = referenceData.Agents
+                .ToDictionary(
+                    agent => agent.Id,
+                    agent =>
+                    {
+                        ProviderProfile? provider = null;
+                        if (agent.ProviderProfileId.HasValue)
+                        {
+                            providerById.TryGetValue(agent.ProviderProfileId.Value, out provider);
+                        }
+
+                        return ProjectStructureProcessStartAgentMetadata.FromAgent(agent, provider);
+                    });
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             Logger.LogDebug(exception, "Agent provider metadata could not be loaded for process assignment badges.");
-        }
-
-        var providerById = providers.ToDictionary(item => item.Id);
-        processStartAgentMetadataById = agents
-            .Where(agent => !agent.IsTemplate && agent.Status == AgentLifecycleStatus.Active)
-            .ToDictionary(
+            var referenceData = await AgentReferenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(
+                    AgentReferenceDataSections.Agents,
+                    ActiveAgentsOnly: true),
+                cancellationToken);
+            processStartAgentMetadataById = referenceData.Agents.ToDictionary(
                 agent => agent.Id,
-                agent =>
-                {
-                    ProviderProfile? provider = null;
-                    if (agent.ProviderProfileId.HasValue)
-                    {
-                        providerById.TryGetValue(agent.ProviderProfileId.Value, out provider);
-                    }
-
-                    return ProjectStructureProcessStartAgentMetadata.FromAgent(agent, provider);
-                });
+                agent => ProjectStructureProcessStartAgentMetadata.FromAgent(agent, provider: null));
+        }
     }
 
     private ProjectStructureProcessStartRoleState SelectCandidate(
@@ -996,13 +1020,40 @@ public partial class ProjectStructurePage
         return [selectedCandidate, .. candidates];
     }
 
-    private async Task<ProjectStructureProcessEstimateSummary> BuildProcessStartEstimateAsync(
-        ProcessLaunchPlanView launchPlan,
-        IReadOnlyList<ProcessLaunchStepView> steps,
+    private ProjectStructureProcessEstimateSummary? BuildCurrentProcessStartEstimate(
         IReadOnlyList<ProjectStructureProcessStartRoleState> roles,
-        CancellationToken cancellationToken)
+        ProcessHistoricalRunCostEstimate? historicalCostEstimate = null)
     {
-        var assignments = roles
+        var definitionKey = FirstNonEmpty(processStartEstimateDefinitionKey, processStartDialog?.NodeTitle);
+        if (string.IsNullOrWhiteSpace(definitionKey))
+        {
+            return null;
+        }
+
+        var assignmentCount = processStartEstimateAssignmentCount > 0
+            ? processStartEstimateAssignmentCount
+            : roles.Count;
+        return BuildProcessStartEstimate(definitionKey, assignmentCount, roles, historicalCostEstimate);
+    }
+
+    private ProjectStructureProcessEstimateSummary BuildProcessStartEstimate(
+        string definitionKey,
+        int assignmentCount,
+        IReadOnlyList<ProjectStructureProcessStartRoleState> roles,
+        ProcessHistoricalRunCostEstimate? historicalCostEstimate)
+    {
+        var assignments = BuildProcessStartEstimateAssignments(roles);
+        return ProjectStructureProcessStartEstimateCalculator.Calculate(
+            definitionKey,
+            assignmentCount,
+            assignments,
+            historicalCostEstimate);
+    }
+
+    private IReadOnlyList<ProjectStructureProcessStartEstimateAssignment> BuildProcessStartEstimateAssignments(
+        IReadOnlyList<ProjectStructureProcessStartRoleState> roles)
+    {
+        return roles
             .Select(role =>
             {
                 var selectedCandidate = role.Candidates.FirstOrDefault(candidate => candidate.IsSelected);
@@ -1018,19 +1069,188 @@ public partial class ProjectStructurePage
                     metadata.ProviderProfile);
             })
             .ToList();
-        var historicalCostEstimate = await ProcessHistoricalRunCostReader
-            .ReadAsync(
-                new ProcessHistoricalRunCostQuery(
-                    launchPlan.DefinitionId,
-                    launchPlan.DefinitionKey,
-                    DateTimeOffset.UtcNow),
-                cancellationToken);
+    }
 
-        return ProjectStructureProcessStartEstimateCalculator.Calculate(
+    private void QueueProcessStartHistoricalEstimateRefresh(ProcessLaunchPlanView launchPlan, int assignmentCount)
+    {
+        CancelProcessStartHistoricalEstimateRefresh();
+        var refreshCts = new CancellationTokenSource(ProcessStartHistoricalEstimateTimeout);
+        processStartHistoricalEstimateRefreshCts = refreshCts;
+        _ = RefreshProcessStartHistoricalEstimateAsync(
+            launchPlan.DefinitionId,
             launchPlan.DefinitionKey,
-            steps.Count,
-            assignments,
-            historicalCostEstimate);
+            launchPlan.PlanId,
+            assignmentCount,
+            refreshCts);
+    }
+
+    private async Task RefreshProcessStartHistoricalEstimateAsync(
+        ProcessDefinitionId definitionId,
+        string definitionKey,
+        ProcessInstancePlanId launchPlanId,
+        int assignmentCount,
+        CancellationTokenSource refreshCts)
+    {
+        try
+        {
+            var historicalCostEstimate = await ProcessHistoricalRunCostReader.ReadAsync(
+                new ProcessHistoricalRunCostQuery(
+                    definitionId,
+                    definitionKey,
+                    DateTimeOffset.UtcNow),
+                refreshCts.Token);
+            if (!ReferenceEquals(processStartHistoricalEstimateRefreshCts, refreshCts))
+            {
+                return;
+            }
+
+            await InvokeAsync(() =>
+            {
+                if (!CanApplyProcessStartHistoricalEstimate(definitionId, launchPlanId, refreshCts) ||
+                    processStartDialog is null)
+                {
+                    return;
+                }
+
+                var estimate = BuildProcessStartEstimate(
+                    definitionKey,
+                    assignmentCount,
+                    processStartDialog.Roles,
+                    historicalCostEstimate);
+                processStartDialog = processStartDialog with
+                {
+                    Estimate = estimate,
+                    StatusMessage = AppendProcessStartEstimateStatusMessage(
+                        processStartDialog.StatusMessage,
+                        ResolveProcessStartHistoricalEstimateStatus(historicalCostEstimate))
+                };
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException exception) when (refreshCts.IsCancellationRequested)
+        {
+            Logger.LogDebug(
+                exception,
+                "Project structure historical process estimate was cancelled or timed out. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId} TimeoutSeconds={TimeoutSeconds}",
+                ProjectId,
+                definitionId.Value,
+                launchPlanId.Value,
+                ProcessStartHistoricalEstimateTimeout.TotalSeconds);
+            if (!ReferenceEquals(processStartHistoricalEstimateRefreshCts, refreshCts))
+            {
+                return;
+            }
+
+            await InvokeAsync(() =>
+            {
+                if (!CanApplyProcessStartHistoricalEstimate(definitionId, launchPlanId, refreshCts) ||
+                    processStartDialog is null)
+                {
+                    return;
+                }
+
+                processStartDialog = processStartDialog with
+                {
+                    StatusMessage = AppendProcessStartEstimateStatusMessage(
+                        processStartDialog.StatusMessage,
+                        $"Historical cost lookup did not finish within {ProcessStartHistoricalEstimateTimeout.TotalSeconds:N0} seconds; provider price estimate remains visible.")
+                };
+                StateHasChanged();
+            });
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(
+                exception,
+                "Project structure historical process estimate failed. ProjectId={ProjectId} ProcessDefinitionId={ProcessDefinitionId} LaunchPlanId={LaunchPlanId}",
+                ProjectId,
+                definitionId.Value,
+                launchPlanId.Value);
+            if (!ReferenceEquals(processStartHistoricalEstimateRefreshCts, refreshCts))
+            {
+                return;
+            }
+
+            await InvokeAsync(() =>
+            {
+                if (!CanApplyProcessStartHistoricalEstimate(definitionId, launchPlanId, refreshCts) ||
+                    processStartDialog is null)
+                {
+                    return;
+                }
+
+                processStartDialog = processStartDialog with
+                {
+                    StatusMessage = AppendProcessStartEstimateStatusMessage(
+                        processStartDialog.StatusMessage,
+                        "Historical cost lookup failed; provider price estimate remains visible.")
+                };
+                StateHasChanged();
+            });
+        }
+        finally
+        {
+            if (ReferenceEquals(processStartHistoricalEstimateRefreshCts, refreshCts))
+            {
+                processStartHistoricalEstimateRefreshCts = null;
+            }
+
+            refreshCts.Dispose();
+        }
+    }
+
+    private bool CanApplyProcessStartHistoricalEstimate(
+        ProcessDefinitionId definitionId,
+        ProcessInstancePlanId launchPlanId,
+        CancellationTokenSource refreshCts)
+    {
+        return ReferenceEquals(processStartHistoricalEstimateRefreshCts, refreshCts) &&
+               processStartDialog is { } dialog &&
+               dialog.ProcessDefinitionId == definitionId.Value &&
+               dialog.LaunchPlanId == launchPlanId.Value;
+    }
+
+    private void CancelProcessStartHistoricalEstimateRefresh()
+    {
+        var refreshCts = processStartHistoricalEstimateRefreshCts;
+        processStartHistoricalEstimateRefreshCts = null;
+        refreshCts?.Cancel();
+    }
+
+    private void ResetProcessStartEstimateState()
+    {
+        CancelProcessStartHistoricalEstimateRefresh();
+        processStartEstimateDefinitionKey = string.Empty;
+        processStartEstimateAssignmentCount = 0;
+    }
+
+    private static string ResolveProcessStartHistoricalEstimateStatus(ProcessHistoricalRunCostEstimate historicalCostEstimate)
+    {
+        if (historicalCostEstimate.HasActualCost)
+        {
+            return "Historical run costs are now included in the estimate.";
+        }
+
+        return historicalCostEstimate.CompletedRunCount > 0
+            ? "Provider price estimate is ready; historical runs had no resolved usage cost."
+            : "Provider price estimate is ready; no historical completed runs were found.";
+    }
+
+    private static string AppendProcessStartEstimateStatusMessage(string currentMessage, string addition)
+    {
+        if (string.IsNullOrWhiteSpace(addition))
+        {
+            return currentMessage;
+        }
+
+        if (string.IsNullOrWhiteSpace(currentMessage))
+        {
+            return addition;
+        }
+
+        return currentMessage.Contains(addition, StringComparison.Ordinal)
+            ? currentMessage
+            : $"{currentMessage} {addition}";
     }
 
     private static decimal ResolveCandidateScore(ProjectStructureProcessStartCandidateState candidate)

@@ -2154,12 +2154,21 @@
             return;
         }
 
+        var referenceDataProvider = Services.GetService<IAgentReferenceDataProvider>();
+        if (referenceDataProvider is null)
+        {
+            managerChatErrorMessage = "Agent reference data provider is not registered for this module instance.";
+            return;
+        }
+
         managerChatIsLoading = true;
         managerChatErrorMessage = null;
 
         try
         {
-            managerChatAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+            var referenceData = await referenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(AgentReferenceDataSections.Agents));
+            managerChatAgents = referenceData.Agents;
             managerChatAgentId = ResolveManagerAgentId(managerChatAgents, managerChatAgentId);
             if (managerChatAgentId is null)
             {

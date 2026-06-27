@@ -518,6 +518,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             () => assignmentStore.Add(childAssignment));
         var adapter = new AgentFrameworkProcessExecutionAdapter(
             new FakeWorkspaceFactory(workspace),
+            CreateReferenceDataProvider(workspace),
             assignmentStore,
             new InMemoryRuntimeStateStore(
                 NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
@@ -558,6 +559,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             new InvalidOperationException("Finalizer tool 'submit_process_step_outcome' in Required mode failed validation. Errors: agent.finalizer.missing."));
         var adapter = new AgentFrameworkProcessExecutionAdapter(
             new FakeWorkspaceFactory(workspace),
+            CreateReferenceDataProvider(workspace),
             new InMemoryAssignmentStore(assignment),
             new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
             CreateWorkspaceFileService(out _));
@@ -620,6 +622,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             var adapter = new AgentFrameworkProcessExecutionAdapter(
                 new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
                 new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
                 workspaceFiles);
@@ -695,6 +698,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             var adapter = new AgentFrameworkProcessExecutionAdapter(
                 new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
                 new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
                 workspaceFiles);
@@ -769,6 +773,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             var adapter = new AgentFrameworkProcessExecutionAdapter(
                 new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
                 new InMemoryAssignmentStore(assignment),
                 new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
                 workspaceFiles);
@@ -1117,6 +1122,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             tags,
             now,
             now);
+    }
+
+    private static IAgentReferenceDataProvider CreateReferenceDataProvider(IAgentFrameworkWorkspaceService workspaceService)
+    {
+        return new WorkspaceBackedAgentReferenceDataProvider(workspaceService, new AgentReferenceDataCache());
     }
 
     private sealed class FakeWorkspaceFactory(IAgentFrameworkWorkspaceService workspaceService) : ICanDoItAllAgentWorkspaceFactory

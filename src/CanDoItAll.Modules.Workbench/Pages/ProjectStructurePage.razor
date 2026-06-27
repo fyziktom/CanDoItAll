@@ -2573,6 +2573,7 @@ else
     public void Dispose()
     {
         CancelPendingCanvasViewStatePersistence();
+        ResetProcessStartEstimateState();
         deferredCompletionCts.Cancel();
         deferredCompletionCts.Dispose();
         nodeMoveCommitGate.Dispose();
