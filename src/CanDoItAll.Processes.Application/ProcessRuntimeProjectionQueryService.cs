@@ -70,7 +70,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         if (enrichmentCache.CanLoadAssignments &&
             (loadOptions.IncludeCurrentSteps || loadOptions.IncludeOperatorActions || loadOptions.IncludeChildRunWaits))
         {
-            runs = (await EnrichProcessNamesAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+            runs = (await EnrichRunMetadataAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
         }
 
         runs.Sort(static (left, right) =>
@@ -490,7 +490,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
             .ToArray();
     }
 
-    private static async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichProcessNamesAsync(
+    private static async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichRunMetadataAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
         RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
@@ -503,17 +503,24 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
         foreach (var run in runs)
         {
-            if (!string.IsNullOrWhiteSpace(run.ProcessName))
-            {
-                enriched.Add(run);
-                continue;
-            }
-
             var assignmentsByStep = await enrichmentCache.LoadAssignmentsByStepAsync(run.RunId, cancellationToken).ConfigureAwait(false);
-            var processName = ResolveProcessName(assignmentsByStep.Values);
-            enriched.Add(string.IsNullOrWhiteSpace(processName)
-                ? run
-                : run with { ProcessName = processName });
+            var assignments = assignmentsByStep.Values
+                .OrderBy(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var processName = string.IsNullOrWhiteSpace(run.ProcessName)
+                ? ResolveProcessName(assignments)
+                : run.ProcessName;
+            var projectId = run.ProjectId ?? ResolveProjectId(assignments);
+            var projectName = FirstNonEmpty(run.ProjectName, ResolveProjectName(assignments));
+            var isSubprocess = run.IsSubprocess || IsSubprocess(assignments);
+
+            enriched.Add(run with
+            {
+                ProcessName = processName,
+                ProjectId = projectId,
+                ProjectName = projectName,
+                IsSubprocess = isSubprocess
+            });
         }
 
         return enriched;
@@ -1065,7 +1072,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
     private static string ResolveProcessName(IEnumerable<ProcessRuntimeStepAssignment> assignments)
     {
-        foreach (var assignment in assignments.OrderBy(item => item.StepKey, StringComparer.OrdinalIgnoreCase))
+        foreach (var assignment in assignments)
         {
             if (ProcessRuntimeLaunchVariables.TryReadProcessDefinitionName(assignment.LaunchVariables, out var definitionName))
             {
@@ -1074,6 +1081,45 @@ public sealed class ProcessRuntimeProjectionQueryService(
         }
 
         return string.Empty;
+    }
+
+    private static Guid? ResolveProjectId(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadProjectId(assignment.LaunchVariables, out var projectId))
+            {
+                return projectId;
+            }
+        }
+
+        return null;
+    }
+
+    private static string ResolveProjectName(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadProjectName(assignment.LaunchVariables, out var projectName))
+            {
+                return projectName;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool IsSubprocess(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadParentRunId(assignment.LaunchVariables, out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string BuildRunLabel(ProcessLiveProcessSnapshot run)

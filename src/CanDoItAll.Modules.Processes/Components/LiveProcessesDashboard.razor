@@ -269,6 +269,8 @@
     }
 
     private const int ProcessNameDisplayLength = 34;
+    private const string ProcessManagerDisplayName = "Process manager";
+    private const string UnassignedAgentDisplayName = "Unassigned";
 
     private sealed record RunDisplayModel(
         string ProcessName,
@@ -964,12 +966,20 @@
             var progress = BuildRunProgress(run);
             var activeAgents = ResolveActiveAgents(run.RunId.Value);
             var primaryAgent = ResolvePrimaryAgent(activeAgents);
+            var assignedAgentName = ResolveActivityAssignedAgentName(run, primaryAgent);
+            var projectDisplayText = ResolveProjectDisplayText(run);
             var action = ResolvePrimaryOperatorAction(run);
         }
         <div class="live-processes-activity-card__body">
             <Split Gap="LayoutGap.Small">
                 <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                     <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                    @if (run.IsSubprocess)
+                    {
+                        <StatusBadge Tone="accent"
+                                     Text="Subprocess"
+                                     data-testid="live-processes-run-subprocess-badge" />
+                    }
                     @if (run.Incidents.Count > 0)
                     {
                         <StatusBadge Tone="warning" Text="@FormatCount(run.Incidents.Count, "incident", "incidents")" />
@@ -998,11 +1008,22 @@
                         <span>@ResolveCurrentStepText(run)</span>
                     </span>
                 </span>
+                @if (!string.IsNullOrWhiteSpace(projectDisplayText))
+                {
+                    <span>
+                        <Icon Name="account_tree" />
+                        <span class="live-processes-activity-card__field-body">
+                            <strong>Project</strong>
+                            <span title="@projectDisplayText"
+                                  data-testid="live-processes-run-project-name">@projectDisplayText</span>
+                        </span>
+                    </span>
+                }
                 <span>
                     <Icon Name="person" />
                     <span class="live-processes-activity-card__field-body">
                         <strong>Assigned agent</strong>
-                        <span>@(primaryAgent is null ? "Unassigned" : ResolveAgentDisplayName(primaryAgent))</span>
+                        <span data-testid="live-processes-run-agent-name">@assignedAgentName</span>
                     </span>
                 </span>
             </div>
@@ -1997,6 +2018,53 @@
         }
 
         return "No current step";
+    }
+
+    private static string ResolveActivityAssignedAgentName(
+        ProcessLiveProcessSnapshot run,
+        ProcessRuntimeActiveAgentProjection? primaryAgent)
+    {
+        if (primaryAgent is not null)
+        {
+            return ResolveAgentDisplayName(primaryAgent);
+        }
+
+        if (run.CurrentStep is not null)
+        {
+            var executorName = FirstNonEmpty(run.CurrentStep.ExecutorDisplayName);
+            if (!IsUnassignedAgentName(executorName))
+            {
+                return executorName;
+            }
+
+            var roleName = FirstNonEmpty(run.CurrentStep.RoleDisplayName, run.CurrentStep.RoleKey);
+            if (!IsUnassignedAgentName(roleName))
+            {
+                return roleName;
+            }
+        }
+
+        return run.WaitingOnChildRuns.Count > 0
+            ? ProcessManagerDisplayName
+            : UnassignedAgentDisplayName;
+    }
+
+    private static bool IsUnassignedAgentName(string value)
+        => string.IsNullOrWhiteSpace(value) ||
+           string.Equals(value, UnassignedAgentDisplayName, StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(value, "Unassigned executor", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(value, "unassigned", StringComparison.OrdinalIgnoreCase);
+
+    private static string ResolveProjectDisplayText(ProcessLiveProcessSnapshot run)
+    {
+        if (!string.IsNullOrWhiteSpace(run.ProjectName))
+        {
+            return run.ProjectName.Trim();
+        }
+
+        return run.ProjectId.HasValue
+            ? $"Project {run.ProjectId.Value.ToString("N")[..8]}"
+            : string.Empty;
     }
 
     private bool IsOperatorActionBusy(ProcessRuntimeOperatorActionProjection action)

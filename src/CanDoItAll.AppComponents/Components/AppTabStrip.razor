@@ -10,7 +10,9 @@
            Class="cda-tab-strip__main-row"
            data-testid="app-tab-strip-main-row">
         <Cluster Gap="LayoutGap.XSmall"
-                 Class="cda-tab-strip__tabs min-w-0">
+                 Class="cda-tab-strip__tabs min-w-0"
+                 role="tablist"
+                 aria-label="Open workspace tabs">
             @foreach (var tab in InlineTabs)
             {
                 @RenderTab(tab)
@@ -190,7 +192,13 @@
                 .ToList();
 
     private RenderFragment RenderTab(WorkbenchTabState tab) => @<div class="group/tab cda-inline-tab @(IsActive(tab) ? "cda-inline-tab--active" : "cda-inline-tab--inactive")">
-        <button type="button" class="inline-flex min-w-0 items-center gap-1.5 text-left" title="@tab.Title" @onclick="() => Activate.InvokeAsync(tab.TabId)">
+        <button type="button"
+                role="tab"
+                aria-selected="@(IsActive(tab) ? "true" : "false")"
+                aria-current="@(IsActive(tab) ? "page" : null)"
+                class="inline-flex min-w-0 items-center gap-1.5 text-left"
+                title="@tab.Title"
+                @onclick="() => Activate.InvokeAsync(tab.TabId)">
             <span class="max-w-[9rem] truncate font-medium">@tab.Title</span>
             @if (tab.IsDirty)
             {

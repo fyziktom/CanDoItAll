@@ -278,6 +278,47 @@ public sealed class AgentVoiceTests
     }
 
     [Fact]
+    public async Task AgentVoiceService_Transcribe_UsesProviderRuntimeSpeechDriver()
+    {
+        var provider = CreateProvider();
+        var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"text":"runtime transcript"}""")
+        });
+        await using var harness = CreateRuntimeVoiceDriverFactory(new OpenAiProviderDriver(
+            new HttpClient(handler),
+            new FixedProviderDriverCredentialResolver("test-key")));
+        var service = new AgentVoiceService(
+            new InMemoryWorkflowSettingsService(new AgentVoiceSettings
+            {
+                SpeechToText = new AgentSpeechToTextSettings
+                {
+                    IsEnabled = true,
+                    ProviderProfileId = provider.Id,
+                    Model = "gpt-4o-mini-transcribe",
+                    Language = "en",
+                    Prompt = "Expect process manager wording."
+                }
+            }),
+            new InMemoryProviderRegistry([provider]),
+            harness,
+            new AgentVoiceSpeechTextPreprocessor());
+
+        var result = await service.TranscribeAsync(new AgentVoiceTranscriptionRequest(
+            [1, 2, 3],
+            "voice.webm",
+            "audio/webm"));
+
+        Assert.Equal("runtime transcript", result.Text);
+        Assert.Equal("gpt-4o-mini-transcribe", result.Model);
+        Assert.Equal(HttpMethod.Post, handler.Request!.Method);
+        Assert.Equal("https://api.openai.com/v1/audio/transcriptions", handler.Request.RequestUri!.AbsoluteUri);
+        Assert.Contains("gpt-4o-mini-transcribe", handler.RequestBody, StringComparison.Ordinal);
+        Assert.Contains("en", handler.RequestBody, StringComparison.Ordinal);
+        Assert.Contains("Expect process manager wording.", handler.RequestBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AgentVoiceService_Synthesize_RejectsImageGenerationProvider()
     {
         var provider = CreateProvider(ProviderProfilePurpose.ImageGeneration);

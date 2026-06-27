@@ -3,14 +3,17 @@
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.Voice
 @using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Modules.AgentFramework
 @using CanDoItAll.Processes.Application
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.JSInterop
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject IServiceProvider Services
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
 
 <PageScaffold FillHeight="true"
               MaxWidthClass="max-w-full"
@@ -250,6 +253,8 @@
     private const string ScopeTreeNodePrefix = "processes:scope:";
     private const string DefinitionTreeNodePrefix = "processes:definition:";
     private const int SelectedRunGraphsViewIndex = 4;
+    private const decimal RuntimeUsageTokenThousandsDivisor = 1_000m;
+    private const decimal RuntimeUsageCostUsdMultiplier = 1_000m;
 
     private ProcessWorkspaceShellProjection? shell;
     private int activeDetailTabIndex;
@@ -279,9 +284,17 @@
     private int managerChatComposerKey;
     private bool managerChatIsLoading;
     private bool managerChatIsBusy;
+    private bool managerChatVoiceModeEnabled;
+    private bool managerChatVoiceRecording;
+    private bool managerChatVoiceTranscribing;
+    private bool managerChatVoiceSpeaking;
     private string? managerChatErrorMessage;
     private string managerChatRunStateText = string.Empty;
     private string managerChatRunStateTone = "neutral";
+    private string managerChatVoiceStatusText = string.Empty;
+    private string managerChatVoiceStatusTone = "neutral";
+    private readonly HashSet<Guid> managerChatSessionsWithVoiceIdentifierOmissionNotice = [];
+    private bool managerChatHasVoiceIdentifierOmissionNoticeWithoutSession;
     private bool activeDetailTabInitialized;
     private bool isBusy;
     private string? errorMessage;
@@ -1290,11 +1303,21 @@
                                     RunStateTone="@managerChatRunStateTone"
                                     PendingUserPrompt="@managerChatPendingPrompt"
                                     DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
+                                    CanUseVoiceMode="@CanUseManagerChatVoiceMode"
+                                    IsVoiceModeEnabled="@managerChatVoiceModeEnabled"
+                                    IsVoiceRecording="@managerChatVoiceRecording"
+                                    IsVoiceTranscribing="@managerChatVoiceTranscribing"
+                                    IsVoiceSpeaking="@managerChatVoiceSpeaking"
+                                    VoiceStatusText="@managerChatVoiceStatusText"
+                                    VoiceStatusTone="@managerChatVoiceStatusTone"
                                     SendRequested="SendManagerChatMessageAsync"
                                     ApprovalDecisionRequested="HandleManagerChatApprovalDecisionAsync"
                                     ApprovalDecisionForConversationRequested="ApproveManagerChatConversationAsync"
                                     AttachmentRequested="StageManagerChatRunArtifactsAsync"
-                                    SessionTitleChanged="RenameManagerChatSessionAsync" />
+                                    SessionTitleChanged="RenameManagerChatSessionAsync"
+                                    VoiceModeChanged="HandleManagerChatVoiceModeChangedAsync"
+                                    VoiceRecordingToggled="ToggleManagerChatVoiceRecordingAsync"
+                                    SpeakLatestAssistantMessageRequested="SpeakLatestManagerChatAssistantMessageAsync" />
             }
         </div>
     </Grid>;
@@ -1348,7 +1371,7 @@
     {
         Type = CdaChartType.Bar,
         XAxisType = CdaChartAxisType.DateTime,
-        YAxisTitle = "Usage",
+        YAxisTitle = "k tokens / min / USD x1k",
         TooltipPrecision = 2,
         ValuePrecision = 2,
         ShowToolbar = false,
@@ -1422,24 +1445,24 @@
             [
                 new CdaChartSeries
                 {
-                    Name = "Tokens",
+                    Name = "Tokens (k)",
                     Type = CdaChartType.Bar,
                     Color = "#16a34a",
-                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ResolveRuntimeTotalTokens(item))).ToArray()
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeTokensToThousands(item))).ToArray()
                 },
                 new CdaChartSeries
                 {
                     Name = "Minutes",
                     Type = CdaChartType.Line,
                     Color = "#d97706",
-                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, Math.Round(item.DurationMs / 60000m, 2))).ToArray()
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeDurationToMinutes(item))).ToArray()
                 },
                 new CdaChartSeries
                 {
-                    Name = "Cost",
+                    Name = "Cost (USD x1k)",
                     Type = CdaChartType.Line,
                     Color = "#dc2626",
-                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ActualCost > 0 ? item.ActualCost : item.EstimatedCost)).ToArray()
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeCostByUsdMultiplier(item))).ToArray()
                 }
             ];
         }
@@ -2180,6 +2203,7 @@
             }
 
             managerChatAgent = managerChatAgents.First(agent => agent.Id == managerChatAgentId.Value);
+            ResetManagerChatVoiceIfUnavailable();
             managerChatSessionId = await ResolveManagerChatSessionIdAsync(workspaceService, managerChatAgentId.Value, selectedRunId);
             managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
             managerChatSessionId = managerChatWorkspace.SelectedSessionId;
@@ -2215,6 +2239,7 @@
         managerChatWorkspace = null;
         managerChatLoadedRunId = null;
         managerChatLoadedAgentId = null;
+        ResetManagerChatVoiceState(clearStatus: true);
         await EnsureManagerChatLoadedAsync(forceReload: true);
     }
 
@@ -2447,6 +2472,220 @@
         managerChatLoadedAgentId = null;
         managerChatRunStateText = string.Empty;
         managerChatRunStateTone = "neutral";
+        ResetManagerChatVoiceState(clearStatus: false);
+    }
+
+    private AgentVoiceAccessSettings ManagerChatVoiceAccess
+        => managerChatAgent is null
+            ? new AgentVoiceAccessSettings()
+            : AgentVoiceAccessMetadata.Read(managerChatAgent.ConfigurationJson);
+
+    private bool CanUseManagerChatVoiceMode
+        => ManagerChatVoiceAccess.CanUseVoiceMode;
+
+    private Task HandleManagerChatVoiceModeChangedAsync(bool enabled)
+    {
+        if (enabled && !CanUseManagerChatVoiceMode)
+        {
+            SetManagerChatVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return Task.CompletedTask;
+        }
+
+        managerChatVoiceModeEnabled = enabled;
+        SetManagerChatVoiceStatus(enabled ? "Audio on" : "Audio off", enabled ? "primary" : "neutral");
+        return Task.CompletedTask;
+    }
+
+    private async Task ToggleManagerChatVoiceRecordingAsync()
+    {
+        if (!CanUseManagerChatVoiceMode)
+        {
+            SetManagerChatVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return;
+        }
+
+        if (!managerChatVoiceRecording)
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+                managerChatVoiceModeEnabled = true;
+                managerChatVoiceRecording = true;
+                SetManagerChatVoiceStatus("Recording", "danger");
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                SetManagerChatVoiceStatus("Record failed", "danger", exception.Message);
+            }
+
+            return;
+        }
+
+        await StopManagerChatRecordingAndSendAsync();
+    }
+
+    private async Task StopManagerChatRecordingAndSendAsync()
+    {
+        managerChatVoiceRecording = false;
+        managerChatVoiceTranscribing = true;
+        SetManagerChatVoiceStatus("Transcribing", "info");
+        try
+        {
+            var voiceService = ResolveManagerChatVoiceService();
+            if (voiceService is null)
+            {
+                return;
+            }
+
+            var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
+                "CanDoItAll.agentFramework.voice.stopRecording");
+            var transcription = await voiceService.TranscribeAsync(recording.ToTranscriptionRequest());
+
+            managerChatDraftPrompt = transcription.Text;
+            managerChatComposerKey++;
+            SetManagerChatVoiceStatus("Sending", "info");
+            await SendManagerChatMessageAsync();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            SetManagerChatVoiceStatus("Voice failed", "danger", exception.Message);
+        }
+        finally
+        {
+            managerChatVoiceTranscribing = false;
+        }
+    }
+
+    private Task SpeakLatestManagerChatAssistantMessageAsync()
+    {
+        var latestAssistantMessage = managerChatWorkspace?.SelectedSession?.Messages
+            .Where(message => message.Role == ChatMessageRole.Assistant)
+            .OrderByDescending(message => message.CreatedAtUtc)
+            .FirstOrDefault();
+        if (latestAssistantMessage is null || string.IsNullOrWhiteSpace(latestAssistantMessage.Content))
+        {
+            SetManagerChatVoiceStatus("Nothing to speak", "warning", "No assistant message is available.");
+            return Task.CompletedTask;
+        }
+
+        return SpeakManagerChatTextAsync(latestAssistantMessage.Content);
+    }
+
+    private async Task SpeakManagerChatTextAsync(string text)
+    {
+        if (managerChatAgent is null)
+        {
+            SetManagerChatVoiceStatus("No agent", "warning", "Select a manager agent before using text-to-speech.");
+            return;
+        }
+
+        var voiceService = ResolveManagerChatVoiceService();
+        if (voiceService is null)
+        {
+            return;
+        }
+
+        managerChatVoiceSpeaking = true;
+        SetManagerChatVoiceStatus("Speaking", "primary");
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+            var queuedChunks = 0;
+            await foreach (var synthesis in voiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
+                               text,
+                               ManagerChatVoiceAccess,
+                               SuppressIdentifierOmissionNotice: ShouldSuppressManagerChatIdentifierOmissionNotice())))
+            {
+                TrackManagerChatIdentifierOmissionNotice(synthesis);
+                queuedChunks++;
+                await JsRuntime.InvokeVoidAsync(
+                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+                    Convert.ToBase64String(synthesis.AudioBytes),
+                    synthesis.ContentType);
+                if (queuedChunks == 1)
+                {
+                    SetManagerChatVoiceStatus("Playing", "primary");
+                }
+            }
+
+            SetManagerChatVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            SetManagerChatVoiceStatus("Speak failed", "danger", exception.Message);
+        }
+        finally
+        {
+            managerChatVoiceSpeaking = false;
+        }
+    }
+
+    private IAgentVoiceService? ResolveManagerChatVoiceService()
+    {
+        var voiceService = Services.GetService<IAgentVoiceService>();
+        if (voiceService is not null)
+        {
+            return voiceService;
+        }
+
+        SetManagerChatVoiceStatus("Voice unavailable", "warning", "Voice services are not registered.");
+        return null;
+    }
+
+    private bool ShouldSuppressManagerChatIdentifierOmissionNotice()
+    {
+        return managerChatSessionId is { } sessionId
+            ? managerChatSessionsWithVoiceIdentifierOmissionNotice.Contains(sessionId)
+            : managerChatHasVoiceIdentifierOmissionNoticeWithoutSession;
+    }
+
+    private void TrackManagerChatIdentifierOmissionNotice(AgentVoiceSynthesisResult synthesis)
+    {
+        if (!synthesis.IdentifierOmissionNoticeIncluded)
+        {
+            return;
+        }
+
+        if (managerChatSessionId is { } sessionId)
+        {
+            managerChatSessionsWithVoiceIdentifierOmissionNotice.Add(sessionId);
+            return;
+        }
+
+        managerChatHasVoiceIdentifierOmissionNoticeWithoutSession = true;
+    }
+
+    private void ResetManagerChatVoiceIfUnavailable()
+    {
+        if (CanUseManagerChatVoiceMode)
+        {
+            return;
+        }
+
+        ResetManagerChatVoiceState(clearStatus: false);
+    }
+
+    private void ResetManagerChatVoiceState(bool clearStatus)
+    {
+        managerChatVoiceModeEnabled = false;
+        managerChatVoiceRecording = false;
+        managerChatVoiceTranscribing = false;
+        managerChatVoiceSpeaking = false;
+        if (!clearStatus)
+        {
+            return;
+        }
+
+        managerChatVoiceStatusText = string.Empty;
+        managerChatVoiceStatusTone = "neutral";
+    }
+
+    private void SetManagerChatVoiceStatus(string text, string tone, string? detail = null)
+    {
+        managerChatVoiceStatusText = string.IsNullOrWhiteSpace(detail)
+            ? text
+            : $"{text}: {detail}";
+        managerChatVoiceStatusTone = tone;
     }
 
     private static string BuildManagerChatSessionMapKey(Guid agentId, Guid runId)
@@ -2641,6 +2880,18 @@
         => point.TotalTokens > 0
             ? point.TotalTokens
             : Math.Max(0, point.InputTokens) + Math.Max(0, point.OutputTokens);
+
+    private static decimal ScaleRuntimeTokensToThousands(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(ResolveRuntimeTotalTokens(point) / RuntimeUsageTokenThousandsDivisor, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ScaleRuntimeDurationToMinutes(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(Math.Max(0, point.DurationMs) / 60000m, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ScaleRuntimeCostByUsdMultiplier(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(ResolveRuntimeUsageCost(point) * RuntimeUsageCostUsdMultiplier, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ResolveRuntimeUsageCost(ProcessRuntimeMetricPointProjection point)
+        => Math.Max(0m, point.ActualCost > 0 ? point.ActualCost : point.EstimatedCost);
 
     private string FormatCurrency(decimal value)
         => CurrencyFormatter.Format(value);

@@ -220,6 +220,69 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Live_process_query_enriches_run_metadata_from_launch_variables()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var parentRunId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
+        var projectId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                CreateStepState(stepId, claimToken)
+            ],
+            [
+                CreateClaim(stepId, claimToken, Now.AddMinutes(-1), Now.AddMinutes(29))
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var assignment = CreateAssignment(
+            runId,
+            planId,
+            stepId,
+            "implementation",
+            ".NET Developer") with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProjectId] = projectId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ProjectName] = "Apollo Delivery",
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.Value.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.Value.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ProcessDefinitionName] = "Project-scoped implementation subprocess"
+            }
+        };
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore([assignment]));
+
+        var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
+
+        var run = Assert.Single(live.Runs);
+        Assert.Equal(projectId, run.ProjectId);
+        Assert.Equal("Apollo Delivery", run.ProjectName);
+        Assert.True(run.IsSubprocess);
+        Assert.Equal("Project-scoped implementation subprocess", run.ProcessName);
+    }
+
+    [Fact]
     public async Task Runtime_workspace_list_only_skips_detail_history_metrics_and_runtime_enrichment()
     {
         await using var dbContext = CreateDbContext();

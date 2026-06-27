@@ -1,0 +1,5 @@
+Command: python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py .codex\bundles\process-manager-voice-mode-wiring --profile initiative --stage completed --repo-root .
+StartUtc: 2026-06-27 21:03:34Z
+Invariant: SB04-FINAL-BUNDLE-CLOSURE
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\.codex\bundles\process-manager-voice-mode-wiring
+ExitCode: 0

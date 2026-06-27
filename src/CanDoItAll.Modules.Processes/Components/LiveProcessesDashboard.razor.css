@@ -249,6 +249,13 @@
     min-width: 0;
 }
 
+.live-processes-activity-card__field-body > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .live-processes-activity-card__fields strong {
     color: #64748b;
     display: block;

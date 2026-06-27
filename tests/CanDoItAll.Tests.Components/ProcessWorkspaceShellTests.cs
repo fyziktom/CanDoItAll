@@ -1,9 +1,12 @@
 using Bunit;
 using System.Globalization;
+using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.Charts;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
@@ -20,6 +23,8 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProcessWorkspaceShellTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 30, 0, TimeSpan.Zero);
+    private static readonly Guid ProjectSubprocessRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+    private static readonly Guid ProjectSubprocessProjectId = Guid.Parse("12121212-3434-5656-7878-909090909090");
 
     [Fact]
     public void Global_shell_renders_projection_tabs_and_command_strip()
@@ -632,6 +637,14 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Tokens", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Time", cut.Markup, StringComparison.Ordinal);
+        var usageOptions = (CdaChartOptions)typeof(ProcessWorkspaceShell)
+            .GetField("RuntimeUsageChartOptions", BindingFlags.NonPublic | BindingFlags.Static)!
+            .GetValue(null)!;
+        var usageSeries = (IReadOnlyList<CdaChartSeries>)typeof(ProcessWorkspaceShell)
+            .GetProperty("RuntimeUsageSeries", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(cut.Instance)!;
+        Assert.Equal("k tokens / min / USD x1k", usageOptions.YAxisTitle);
+        Assert.Equal(["Tokens (k)", "Minutes", "Cost (USD x1k)"], usageSeries.Select(series => series.Name));
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-analytics", "processes-detail-panel-analytics");
         Assert.NotNull(cut.Find("[data-testid='processes-analytics-tab']"));
@@ -674,6 +687,46 @@ public sealed class ProcessWorkspaceShellTests
         cut.Find("[data-testid='processes-manager-chat-run-select']").Change(firstRunId.ToString("D"));
         cut.WaitForAssertion(() => Assert.Equal(firstSessionId, workspaceService.LastWorkspaceSessionId));
         Assert.Equal(2, workspaceService.SessionCount);
+    }
+
+    [Fact]
+    public void Manager_chat_enables_voice_controls_for_voice_allowed_manager_agent()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true);
+        using var context = CreateContext(out _, workspaceService);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='chat-voice-mode-button']").HasAttribute("disabled"));
+            Assert.False(cut.Find("[data-testid='chat-voice-record-button']").HasAttribute("disabled"));
+            Assert.False(cut.Find("[data-testid='chat-voice-speak-button']").HasAttribute("disabled"));
+        });
+
+        cut.Find("[data-testid='chat-voice-mode-button']").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Audio on", cut.Markup, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Manager_chat_keeps_voice_controls_disabled_for_voice_denied_manager_agent()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: false);
+        using var context = CreateContext(out _, workspaceService);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(cut.Find("[data-testid='chat-voice-mode-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='chat-voice-record-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='chat-voice-speak-button']").HasAttribute("disabled"));
+        });
     }
 
     [Fact]
@@ -801,6 +854,28 @@ public sealed class ProcessWorkspaceShellTests
         });
     }
 
+    [Fact]
+    public void Live_processes_activity_card_shows_project_subprocess_and_manager_context()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
+        var subprocessCard = cut
+            .FindAll("[data-testid='live-processes-activity-card']")
+            .Single(card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+
+        Assert.Equal(
+            "Apollo Delivery",
+            subprocessCard.QuerySelector("[data-testid='live-processes-run-project-name']")?.TextContent);
+        Assert.NotNull(subprocessCard.QuerySelector("[data-testid='live-processes-run-subprocess-badge']"));
+        Assert.Equal(
+            "Process manager",
+            subprocessCard.QuerySelector("[data-testid='live-processes-run-agent-name']")?.TextContent);
+        Assert.DoesNotContain("Unassigned", subprocessCard.TextContent, StringComparison.Ordinal);
+    }
+
     private static TestContext CreateContext(
         out RecordingProcessWorkspaceProjectionClient client,
         IAgentFrameworkWorkspaceService? agentWorkspaceService = null)
@@ -829,7 +904,7 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     private static string ResolveProcessName(Guid runId)
-        => runId == Guid.Parse("88888888-8888-8888-8888-888888888888")
+        => runId == ProjectSubprocessRunId
             ? "Long-running customer onboarding process with multiple external approvals"
             : "Blazor app delivery";
 
@@ -845,8 +920,13 @@ public sealed class ProcessWorkspaceShellTests
 
     private sealed class RecordingManagerChatWorkspaceService : IAgentFrameworkWorkspaceService
     {
-        private readonly AgentDefinition agent = CreateAgent();
+        private readonly AgentDefinition agent;
         private readonly List<ChatSessionRecord> sessions = [];
+
+        public RecordingManagerChatWorkspaceService(bool canUseVoiceMode = false)
+        {
+            agent = CreateAgent(canUseVoiceMode);
+        }
 
         public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
         {
@@ -1066,7 +1146,7 @@ public sealed class ProcessWorkspaceShellTests
 
         public Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
 
-        private static AgentDefinition CreateAgent()
+        private static AgentDefinition CreateAgent(bool canUseVoiceMode)
             => new(
                 Guid.Parse("99999999-9999-9999-9999-999999999999"),
                 "Process Manager",
@@ -1081,7 +1161,13 @@ public sealed class ProcessWorkspaceShellTests
                 0,
                 false,
                 false,
-                "{}",
+                AgentVoiceAccessMetadata.Write(
+                    "{}",
+                    new AgentVoiceAccessSettings
+                    {
+                        CanUseVoiceMode = canUseVoiceMode,
+                        PreferredVoiceId = canUseVoiceMode ? "cedar" : string.Empty
+                    }),
                 false,
                 string.Empty,
                 AgentPermissionsPolicy.Default,
@@ -1520,6 +1606,10 @@ public sealed class ProcessWorkspaceShellTests
                 events.Select(ToLiveRunEvent).ToArray(),
                 incidents);
             snapshot = snapshot with { ProcessName = ResolveProcessName(runId.Value) };
+            if (runId.Value == ProjectSubprocessRunId)
+            {
+                snapshot = CreateProjectSubprocessLiveRun(snapshot);
+            }
 
             return status == ProcessProjectedRunStatus.NeedsAttention
                 ? snapshot with
@@ -1548,6 +1638,47 @@ public sealed class ProcessWorkspaceShellTests
                     ]
                 }
                 : snapshot;
+        }
+
+        private static ProcessLiveProcessSnapshot CreateProjectSubprocessLiveRun(ProcessLiveProcessSnapshot snapshot)
+        {
+            var currentStepId = Guid.Parse("88888888-8888-8888-8888-aaaaaaaaaaaa");
+            var childRunId = Guid.Parse("88888888-8888-8888-8888-bbbbbbbbbbbb");
+
+            return snapshot with
+            {
+                ProjectId = ProjectSubprocessProjectId,
+                ProjectName = "Apollo Delivery",
+                IsSubprocess = true,
+                CurrentStep = new ProcessRuntimeCurrentStepProjection(
+                    snapshot.RunId.Value,
+                    currentStepId,
+                    "await-child-artifacts",
+                    ProcessRuntimeStepStatus.Waiting.ToString(),
+                    "process-manager",
+                    "Process manager",
+                    "Process manager",
+                    AttemptNumber: 1,
+                    IsWorking: false,
+                    IsLeaseExpired: false,
+                    Now.AddMinutes(-1),
+                    ClaimedAtUtc: null,
+                    LeaseExpiresAtUtc: null,
+                    "Process manager is waiting for child process evidence."),
+                WaitingOnChildRuns =
+                [
+                    new ProcessRuntimeChildRunWaitProjection(
+                        snapshot.RunId.Value,
+                        currentStepId,
+                        "await-child-artifacts",
+                        ProcessRuntimeStepStatus.Waiting.ToString(),
+                        childRunId,
+                        ProcessRuntimeStatus.Active.ToString(),
+                        "collect-child-evidence",
+                        ProcessRuntimeStepStatus.Running.ToString(),
+                        "Process manager is waiting for child process evidence.")
+                ]
+            };
         }
 
         private static IReadOnlyList<ProcessTimelineEventProjection> CreateRuntimeEvents(ProcessRunId runId, int startSequence = 10)

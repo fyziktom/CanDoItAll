@@ -1,0 +1,86 @@
+Command: rg -n "ProviderRuntimeVoiceDriver|CreateSpeechToTextDriver|CreateTextToSpeechDriver|AgentVoiceService_Transcribe_UsesProviderRuntimeSpeechDriver|OpenAiProviderDriver_Transcription_BuildsExpectedRequest|AgentVoiceService_Synthesize_UsesPreparedSpeechText|SupportsSpeech|SpeechToText|TextToSpeech" src/CanDoItAll.AgentFramework.Voice tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs tests/CanDoItAll.Tests.Unit/AgentFramework/Providers/ConcreteProviderDriverTests.cs
+StartUtc: 2026-06-27 20:54:26Z
+Invariant: SB03-PROVIDER-RUNTIME-STT-TTS
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:44:        var settings = new AgentTextToSpeechSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:146:    public async Task OpenAiProviderDriver_Transcription_BuildsExpectedRequest()
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:154:        var result = await driver.TranscribeSpeechAsync(new ProviderSpeechToTextRequest(
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:157:            [new ProviderSpeechToTextAudio("voice.webm", "audio/webm", [1, 2, 3])],
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:181:        var result = await driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:215:        var result = await driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:240:        var result = await driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:264:                SpeechToText = new AgentSpeechToTextSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:281:    public async Task AgentVoiceService_Transcribe_UsesProviderRuntimeSpeechDriver()
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:294:                SpeechToText = new AgentSpeechToTextSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:331:                TextToSpeech = new AgentTextToSpeechSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:348:    public async Task AgentVoiceService_Synthesize_UsesPreparedSpeechText()
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:361:                TextToSpeech = new AgentTextToSpeechSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:398:                TextToSpeech = new AgentTextToSpeechSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:415:        Assert.Equal(AgentProviderCapabilityKind.TextToSpeech, exception.Capability);
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:422:        var driver = new ConcurrentTextToSpeechProviderDriver(expectedConcurrentRequests: 8);
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:427:                TextToSpeech = new AgentTextToSpeechSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:458:                TextToSpeech = new AgentTextToSpeechSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:506:                SpeechToText = new AgentSpeechToTextSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:543:                SpeechToText = new AgentSpeechToTextSettings
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:623:            new AgentVoiceDriverFactory(new ProviderRuntimeVoiceDriver(descriptorStore, runtimePool)));
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:638:        public ISpeechToTextVoiceDriver CreateSpeechToTextDriver(AgentVoiceDriverKind driverKind)
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:640:            return innerFactory.CreateSpeechToTextDriver(driverKind);
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:643:        public ITextToSpeechVoiceDriver CreateTextToSpeechDriver(AgentVoiceDriverKind driverKind)
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:645:            return innerFactory.CreateTextToSpeechDriver(driverKind);
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:655:        ISpeechToTextVoiceDriver speechToTextDriver,
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:656:        ITextToSpeechVoiceDriver textToSpeechDriver) : IAgentVoiceDriverFactory
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:658:        public ISpeechToTextVoiceDriver CreateSpeechToTextDriver(AgentVoiceDriverKind driverKind)
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:663:        public ITextToSpeechVoiceDriver CreateTextToSpeechDriver(AgentVoiceDriverKind driverKind)
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:669:    private sealed class CapturingVoiceDriver(IEnumerable<string> transcriptResults) : ISpeechToTextVoiceDriver, ITextToSpeechVoiceDriver
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:675:        public List<SpeechToTextDriverRequest> TranscriptionRequests { get; } = [];
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:677:        public List<TextToSpeechDriverRequest> SynthesisRequests { get; } = [];
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:680:            SpeechToTextDriverRequest request,
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:692:            TextToSpeechDriverRequest request,
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:705:    private sealed class ConcurrentTextToSpeechProviderDriver(int expectedConcurrentRequests) : IProviderTextToSpeechDriver
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:709:            AgentProviderCapabilityKind.TextToSpeech
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:728:        public async Task<ProviderTextToSpeechResult> SynthesizeSpeechAsync(
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:729:            ProviderTextToSpeechRequest request,
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:742:                return new ProviderTextToSpeechResult(
+tests/CanDoItAll.Tests.Unit/AgentFramework/Providers/ConcreteProviderDriverTests.cs:25:        Assert.True(factory.Supports(ProviderKind.OpenAi, AgentProviderCapabilityKind.SpeechToText));
+tests/CanDoItAll.Tests.Unit/AgentFramework/Providers/ConcreteProviderDriverTests.cs:72:        var speech = await driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
+tests/CanDoItAll.Tests.Unit/AgentFramework/Providers/ConcreteProviderDriverTests.cs:408:            "ProviderRuntimeVoiceDriver",
+src/CanDoItAll.AgentFramework.Voice\AgentFrameworkVoiceServiceCollectionExtensions.cs:10:        services.TryAddScoped<ProviderRuntimeVoiceDriver>();
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceDriverFactory.cs:5:public sealed class AgentVoiceDriverFactory(ProviderRuntimeVoiceDriver providerRuntimeVoiceDriver) : IAgentVoiceDriverFactory
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceDriverFactory.cs:7:    public ISpeechToTextVoiceDriver CreateSpeechToTextDriver(AgentVoiceDriverKind driverKind)
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceDriverFactory.cs:13:    public ITextToSpeechVoiceDriver CreateTextToSpeechDriver(AgentVoiceDriverKind driverKind)
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:54:        var settings = (await GetSettingsAsync(cancellationToken)).SpeechToText;
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:64:        var driver = driverFactory.CreateSpeechToTextDriver(settings.DriverKind);
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:69:                new SpeechToTextDriverRequest(
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:84:                new SpeechToTextDriverRequest(
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:115:            new TextToSpeechDriverRequest(
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:148:                new TextToSpeechDriverRequest(
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:209:        var settings = (await GetSettingsAsync(cancellationToken)).TextToSpeech;
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:225:        var driver = driverFactory.CreateTextToSpeechDriver(settings.DriverKind);
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:299:        AgentTextToSpeechSettings Settings,
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceService.cs:300:        ITextToSpeechVoiceDriver Driver,
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:6:public sealed class ProviderRuntimeVoiceDriver(
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:8:    IProviderRuntimePool runtimePool) : ISpeechToTextVoiceDriver, ITextToSpeechVoiceDriver
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:13:        SpeechToTextDriverRequest request,
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:18:        var settings = AgentVoiceSettingsNormalizer.NormalizeSpeechToText(request.Settings);
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:23:            AgentProviderCapabilityKind.SpeechToText,
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:26:        var payload = new ProviderSpeechToTextRequest(
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:29:            [new ProviderSpeechToTextAudio(request.FileName, request.ContentType, request.AudioBytes)],
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:33:            new ProviderRuntimeDispatchRequest<ProviderSpeechToTextRequest>(query, payload),
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:37:                var driver = handle.ProviderFactory.Resolve<IProviderSpeechToTextDriver>(context.Query.Provider.Kind);
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:46:        TextToSpeechDriverRequest request,
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:51:        var settings = AgentVoiceSettingsNormalizer.NormalizeTextToSpeech(request.Settings);
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:56:            AgentProviderCapabilityKind.TextToSpeech,
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:59:        var payload = new ProviderTextToSpeechRequest(
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:67:            new ProviderRuntimeDispatchRequest<ProviderTextToSpeechRequest>(query, payload),
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:71:                var driver = handle.ProviderFactory.Resolve<IProviderTextToSpeechDriver>(context.Query.Provider.Kind);
+src/CanDoItAll.AgentFramework.Voice\README.md:34:Keep provider-specific speech implementations behind `IAgentVoiceService`, `IAgentVoiceDriverFactory`, `ISpeechToTextVoiceDriver`, and `ITextToSpeechVoiceDriver`. UI modules should pass typed `AgentVoiceTranscriptionRequest` and `AgentVoiceSynthesisRequest` objects instead of calling OpenAI voice endpoints directly.
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:96:public sealed record SpeechToTextDriverRequest(
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:98:    AgentSpeechToTextSettings Settings,
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:103:public sealed record TextToSpeechDriverRequest(
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:105:    AgentTextToSpeechSettings Settings,
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:109:public interface ISpeechToTextVoiceDriver
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:114:        SpeechToTextDriverRequest request,
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:118:public interface ITextToSpeechVoiceDriver
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:123:        TextToSpeechDriverRequest request,
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:129:    ISpeechToTextVoiceDriver CreateSpeechToTextDriver(AgentVoiceDriverKind driverKind);
+src/CanDoItAll.AgentFramework.Voice\VoiceContracts.cs:131:    ITextToSpeechVoiceDriver CreateTextToSpeechDriver(AgentVoiceDriverKind driverKind);
+ExitCode: 0

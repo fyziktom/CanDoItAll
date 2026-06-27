@@ -32,7 +32,7 @@ public sealed class ProcessLaunchApplicationService(
     private const string CurrentProcessRunNodeIdVariableName = "CurrentProcessRunNodeId";
     private const string CurrentManagedArtifactRootVariableName = "CurrentManagedArtifactRoot";
     private const string ManagedArtifactRootVariableName = "ManagedArtifactRoot";
-    private const string ProjectIdVariableName = "ProjectId";
+    private const string ProjectIdVariableName = ProcessRuntimeLaunchVariables.ProjectId;
     private const string ProjectNodeIdVariableName = "ProjectNodeId";
     private const string OutputFolderVariableName = "OutputFolder";
     private const string OutputRootVariableName = "OutputRoot";

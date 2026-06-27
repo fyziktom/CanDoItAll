@@ -1,0 +1,20 @@
+Command: rg -n "TODO|NotImplemented|throw new NotSupportedException|return Task.CompletedTask|fake|stub|placeholder" src/CanDoItAll.AgentFramework.Voice src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs tests/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs
+StartUtc: 2026-06-27 20:54:39Z
+Invariant: SB03-PROVIDER-RUNTIME-STT-TTS
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:816:            throw new NotSupportedException();
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:821:            throw new NotSupportedException();
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:826:            throw new NotSupportedException();
+tests/CanDoItAll.Tests.Unit/AgentVoiceTests.cs:834:            throw new NotSupportedException();
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:119:                                           placeholder="Search definitions"
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:1020:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2109:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2123:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2130:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2137:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2144:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2249:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2491:            return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2496:        return Task.CompletedTask;
+src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor:2568:            return Task.CompletedTask;
+tests/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs:1192:            => new("This fake member is not used by the manager chat component test.");
+ExitCode: 0

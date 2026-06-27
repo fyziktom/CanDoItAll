@@ -1,0 +1,74 @@
+Command: Source assertions for SB01 voice eligibility inventory
+StartUtc: 2026-06-27 20:30:38Z
+Invariant: SB01-VOICE-ELIGIBILITY-INVENTORY
+
+Command: rg -n 'CanUseVoiceMode|VoiceModeChanged|VoiceRecordingToggled|SpeakLatestAssistantMessageRequested' src/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor
+ExitCode: 0
+325:                            Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceTranscribing || HasPendingApprovals)"
+335:                            Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceSpeaking)"
+338:                            Click="@(async () => await SpeakLatestAssistantMessageRequested.InvokeAsync())"
+345:                            Disabled="@(!CanUseVoiceMode || IsBusy)"
+461:    public bool CanUseVoiceMode { get; set; }
+503:    public EventCallback<bool> VoiceModeChanged { get; set; }
+506:    public EventCallback VoiceRecordingToggled { get; set; }
+509:    public EventCallback SpeakLatestAssistantMessageRequested { get; set; }
+556:        => VoiceModeChanged.InvokeAsync(!IsVoiceModeEnabled);
+559:        => VoiceRecordingToggled.InvokeAsync();
+
+Command: rg -n 'AgentVoiceAccessMetadata|CanUseSelectedAgentVoiceMode|SynthesizeChunksAsync|TranscribeAsync|agentFramework.voice' src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs
+ExitCode: 0
+77:            : AgentVoiceAccessMetadata.Read(selectedAgent.ConfigurationJson);
+79:    private bool CanUseSelectedAgentVoiceMode
+365:        if (!CanUseSelectedAgentVoiceMode)
+578:        if (enabled && !CanUseSelectedAgentVoiceMode)
+591:        if (!CanUseSelectedAgentVoiceMode)
+601:                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+625:                "CanDoItAll.agentFramework.voice.stopRecording");
+626:            var result = await VoiceService.TranscribeAsync(recording.ToTranscriptionRequest());
+670:            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+672:            await foreach (var synthesis in VoiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
+680:                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+
+Command: rg -n 'AgentVoiceAccessMetadata|CanUseSelectedAgentVoiceMode|SynthesizeChunksAsync|TranscribeAsync|agentFramework.voice' src/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor
+ExitCode: 0
+201:                                CanUseVoiceMode="@CanUseSelectedAgentVoiceMode"
+386:            : AgentVoiceAccessMetadata.Read(selectedAgent.ConfigurationJson);
+388:    private bool CanUseSelectedAgentVoiceMode
+797:        if (!CanUseSelectedAgentVoiceMode)
+1067:        if (enabled && !CanUseSelectedAgentVoiceMode)
+1080:        if (!CanUseSelectedAgentVoiceMode)
+1090:                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+1114:                "CanDoItAll.agentFramework.voice.stopRecording");
+1115:            var transcription = await VoiceService.TranscribeAsync(recording.ToTranscriptionRequest());
+1159:            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+1161:            await foreach (var synthesis in VoiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
+1169:                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+
+Command: rg -n 'ChatWorkspacePanel|CanUseVoiceMode|VoiceModeChanged|VoiceRecordingToggled|SpeakLatestAssistantMessageRequested|IAgentVoiceService|agentFramework.voice' src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor
+ExitCode: 0
+1283:                <ChatWorkspacePanel Agent="@managerChatAgent"
+
+Command: rg -n 'ProviderRuntimeVoiceDriver|IProviderSpeechToTextDriver|IProviderTextToSpeechDriver|AgentProviderCapabilityKind.SpeechToText|AgentProviderCapabilityKind.TextToSpeech' src/CanDoItAll.AgentFramework.Voice src/CanDoItAll.AgentFramework.Providers
+ExitCode: 0
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:6:public sealed class ProviderRuntimeVoiceDriver(
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:23:            AgentProviderCapabilityKind.SpeechToText,
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:37:                var driver = handle.ProviderFactory.Resolve<IProviderSpeechToTextDriver>(context.Query.Provider.Kind);
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:56:            AgentProviderCapabilityKind.TextToSpeech,
+src/CanDoItAll.AgentFramework.Voice\ProviderRuntimeVoiceDriver.cs:71:                var driver = handle.ProviderFactory.Resolve<IProviderTextToSpeechDriver>(context.Query.Provider.Kind);
+src/CanDoItAll.AgentFramework.Voice\AgentVoiceDriverFactory.cs:5:public sealed class AgentVoiceDriverFactory(ProviderRuntimeVoiceDriver providerRuntimeVoiceDriver) : IAgentVoiceDriverFactory
+src/CanDoItAll.AgentFramework.Voice\AgentFrameworkVoiceServiceCollectionExtensions.cs:10:        services.TryAddScoped<ProviderRuntimeVoiceDriver>();
+src/CanDoItAll.AgentFramework.Providers\Contracts\ProviderCapabilityContracts.cs:53:public interface IProviderSpeechToTextDriver : IAgentProviderDriver
+src/CanDoItAll.AgentFramework.Providers\Contracts\ProviderCapabilityContracts.cs:60:public interface IProviderTextToSpeechDriver : IAgentProviderDriver
+src/CanDoItAll.AgentFramework.Providers\Drivers\OpenAiProviderDriver.cs:15:    IProviderSpeechToTextDriver,
+src/CanDoItAll.AgentFramework.Providers\Drivers\OpenAiProviderDriver.cs:16:    IProviderTextToSpeechDriver
+src/CanDoItAll.AgentFramework.Providers\Drivers\OpenAiProviderDriver.cs:25:        AgentProviderCapabilityKind.SpeechToText,
+src/CanDoItAll.AgentFramework.Providers\Drivers\OpenAiProviderDriver.cs:26:        AgentProviderCapabilityKind.TextToSpeech
+src/CanDoItAll.AgentFramework.Providers\Registration\AgentProviderDriverRegistry.cs:162:            AgentProviderCapabilityKind.SpeechToText => new HashSet<AgentProviderOperationKind> { AgentProviderOperationKind.TranscribeSpeech },
+src/CanDoItAll.AgentFramework.Providers\Registration\AgentProviderDriverRegistry.cs:163:            AgentProviderCapabilityKind.TextToSpeech => new HashSet<AgentProviderOperationKind> { AgentProviderOperationKind.SynthesizeSpeech },
+src/CanDoItAll.AgentFramework.Providers\Registration\AgentProviderDriverRegistry.cs:194:        if (driverType == typeof(IProviderSpeechToTextDriver))
+src/CanDoItAll.AgentFramework.Providers\Registration\AgentProviderDriverRegistry.cs:196:            return AgentProviderCapabilityKind.SpeechToText;
+src/CanDoItAll.AgentFramework.Providers\Registration\AgentProviderDriverRegistry.cs:199:        if (driverType == typeof(IProviderTextToSpeechDriver))
+src/CanDoItAll.AgentFramework.Providers\Registration\AgentProviderDriverRegistry.cs:201:            return AgentProviderCapabilityKind.TextToSpeech;
+
+Conclusion: Manager chat renders ChatWorkspacePanel but lacks voice parameter/callback wiring while normal and contextual chat surfaces provide it; provider runtime voice contracts are typed.
+ExitCode: 0

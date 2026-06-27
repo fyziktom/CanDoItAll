@@ -9,6 +9,8 @@ public static class ProcessRuntimeLaunchVariables
     public const string ParentProcessStepId = "ParentProcessStepId";
     public const string ProcessDefinitionKey = "ProcessDefinitionKey";
     public const string ProcessDefinitionName = "ProcessDefinitionName";
+    public const string ProjectId = "ProjectId";
+    public const string ProjectName = "ProjectName";
 
     public static IReadOnlyDictionary<string, string> CreateParentRunLookup(ProcessRunId parentRunId)
     {
@@ -83,6 +85,28 @@ public static class ProcessRuntimeLaunchVariables
         }
 
         definitionName = value;
+        return true;
+    }
+
+    public static bool TryReadProjectId(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out Guid projectId)
+    {
+        projectId = Guid.Empty;
+        return TryReadGuid(launchVariables, ProjectId, out projectId);
+    }
+
+    public static bool TryReadProjectName(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out string projectName)
+    {
+        projectName = string.Empty;
+        if (!TryReadNonEmptyString(launchVariables, ProjectName, out var value))
+        {
+            return false;
+        }
+
+        projectName = value;
         return true;
     }
 

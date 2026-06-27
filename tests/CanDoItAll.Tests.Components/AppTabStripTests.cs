@@ -27,10 +27,15 @@ public sealed class AppTabStripTests : TestContext
 
         Assert.Contains("push_pin", cut.Markup);
         Assert.Contains("bedtime", cut.Markup);
+        Assert.Contains("cda-inline-tab--active", cut.Markup);
+        Assert.Contains("cda-inline-tab--inactive", cut.Markup);
         Assert.Contains("cda-inline-tab__actions", cut.Markup);
         Assert.DoesNotContain("cda-inline-tab__actions--active", cut.Markup);
         Assert.Contains("app-tab-strip-main-row", cut.Markup);
         Assert.Contains("cda-tab-strip__controls", cut.Markup);
+        var activeTabButton = cut.Find("button[role='tab'][aria-selected='true']");
+        Assert.Equal("page", activeTabButton.GetAttribute("aria-current"));
+        Assert.Contains("Projects", activeTabButton.TextContent, StringComparison.Ordinal);
 
         cut.Find("button[title='Move right']").Click();
         cut.Find("button[title='Sleep/wake']").Click();
