@@ -1,7 +1,0 @@
-﻿Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|ProviderModelSelector_treats" touched production files
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTime: 2026-05-20T17:11:48.4650675-04:00
-ExitCode: 0
-Output:
-No production TODO, NotImplemented, fixture-specific branching, or test-name branching markers found in touched production files.
-

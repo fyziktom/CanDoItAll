@@ -1,8 +1,0 @@
-Invariant: SB02-FLUX-PROVIDER
-Command: git show HEAD:<seed,driver> and check for Flux seed/defaults plus configured output-node validation
-WorkingDirectory: C:\repositories\CanDoItAll
-TimestampUtc: 2026-06-26T17:17:52.6130439Z
-PreChangeHasFluxSeed: 
-PreChangeHasOutputNodeGuard: 
-Result: pre-change source fails the invariant because it has no Local ComfyUI Flux provider seed/defaults and no configured output-node existence guard before enqueue.
-ExitCode: 1

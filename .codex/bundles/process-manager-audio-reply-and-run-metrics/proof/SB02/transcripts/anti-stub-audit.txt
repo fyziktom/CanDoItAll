@@ -1,7 +1,0 @@
-Invariant ID: SB02-USAGE-CONTEXT
-Command: rg production changed files for TODO/NotImplemented/failing-first markers
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-27T22:15:39.4573592Z
-Output:
-No production stubs found in changed production files.
-Exit code: 0

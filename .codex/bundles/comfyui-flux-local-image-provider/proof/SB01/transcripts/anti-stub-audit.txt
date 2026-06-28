@@ -1,9 +1,0 @@
-Command: PowerShell anti-stub audit for SB01-FLUX-LIVE
-WorkingDirectory: C:\repositories\CanDoItAll
-StartUtc: 2026-06-26T16:55:31.6327493+00:00
-Invariant: SB01-FLUX-LIVE
-No production TODO, NotImplemented, fixture-specific branch, or stale sample generated file was used in SB01 live proof.
-GeneratedImageBytes: 1051911
-GeneratedImageSha256: 05a9211ace06587593bb37e2f81e9339736f7067eb3d0cb08fee94ffbc457a72
-EndUtc: 2026-06-26T16:55:31.6838822+00:00
-ExitCode: 0

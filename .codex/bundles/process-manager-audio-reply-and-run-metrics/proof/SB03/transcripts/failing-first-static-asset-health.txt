@@ -1,8 +1,0 @@
-Invariant ID: SB03-5032-RESTART
-Test name: Static voice asset health check
-Command: Adversarial assertion: rebuilt 5032 still fails the static voice JS health check
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-27T22:15:39.5078909Z
-Output:
-Old static-asset failure assumption rejected: voice JS returns HTTP 200.
-Exit code: 1

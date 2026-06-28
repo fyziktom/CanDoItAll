@@ -1,4 +1,0 @@
-﻿Command: rg -n "portfolio-architect\.instructions|app-screenshot-capture-template|ManagedSeriousDeliveryTemplateKeys|CreateWorkloadAgent|SeedAssets/instructions/agents|instructions/agents" src tests Templates\Agents
-No obsolete hardcoded default-agent seed assets or managed template lists found.
-RawRgExitCode: 1
-ExitCode: 0

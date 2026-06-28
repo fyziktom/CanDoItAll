@@ -1,1 +1,0 @@
-ACME score 91 enterprise with security review. Globex score 74 mid-market with pricing concern. Initech score 32 no active budget.

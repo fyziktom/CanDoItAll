@@ -1,6 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|template-only" SB02 production and tests
-StartUtc: 2026-06-27 20:37:29Z
-Invariant: SB02-MANAGER-CHAT-VOICE-ENABLED
-RawRgExitCode: 1
-No anti-stub markers found in SB02 scoped production/test files.
-ExitCode: 0

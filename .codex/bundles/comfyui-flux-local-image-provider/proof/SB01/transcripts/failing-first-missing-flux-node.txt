@@ -1,7 +1,0 @@
-Command: PowerShell adversarial negative proof for SB01-FLUX-LIVE missing positive Flux node
-WorkingDirectory: C:\repositories\CanDoItAll
-StartUtc: 2026-06-26T16:55:13.9103910+00:00
-Invariant: SB01-FLUX-LIVE
-ExpectedFailure: Rejected workflow before enqueue because required Flux positive prompt node 56:51 is missing.
-EndUtc: 2026-06-26T16:55:13.9320207+00:00
-ExitCode: 1

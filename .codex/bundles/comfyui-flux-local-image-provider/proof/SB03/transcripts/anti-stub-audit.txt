@@ -1,9 +1,0 @@
-Invariant: SB03-ANTI-STUB
-Command: rg -n "TODO|NotImplementedException|fixture-specific|stub" <SB03 service/proof files>
-WorkingDirectory: C:\repositories\CanDoItAll
-TimestampUtc: 2026-06-26T17:17:52.8323609Z
-RgExitCode: 1
-Passed: no stub/TODO/NotImplemented/fixture-specific markers in SB03 service path and live proof test.
-Matches:
-
-ExitCode: 0
