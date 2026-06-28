@@ -1,9 +1,0 @@
-  Zjišťují se projekty, které se mají obnovit...
-  Všechny projekty jsou v aktuálním stavu pro obnovení.
-  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\bin\Release\net10.0\CanDoItAll.Mcp.Core.dll
-  CanDoItAll.Mcp.Components -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Components\bin\Release\net10.0\CanDoItAll.Mcp.Components.dll
-  CanDoItAll.Mcp.Components.Tests -> C:\repositories\CanDoItAll\tests\CanDoItAll.Mcp.Components.Tests\bin\Release\net10.0\CanDoItAll.Mcp.Components.Tests.dll
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Mcp.Components.Tests\bin\Release\net10.0\CanDoItAll.Mcp.Components.Tests.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:    22, Přeskočeno:     0, Celkem:    22, Doba trvání: 2 m 16 s - CanDoItAll.Mcp.Components.Tests.dll (net10.0)

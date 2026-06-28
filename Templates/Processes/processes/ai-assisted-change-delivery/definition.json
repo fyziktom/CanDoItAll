@@ -973,15 +973,8 @@
       ]
     }
   ],
-  "DocPath": "processes/ai-assisted-change-delivery/definition.md",
   "RelativePath": "processes/ai-assisted-change-delivery",
   "DefinitionJsonPath": "processes/ai-assisted-change-delivery/definition.json",
-  "DefinitionMarkdownPath": "processes/ai-assisted-change-delivery/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/ai-assisted-change-delivery/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/ai-assisted-change-delivery/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/ai-assisted-change-delivery/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/ai-assisted-change-delivery/mermaid/flowchart.mmd",
-  "SequencePath": "processes/ai-assisted-change-delivery/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

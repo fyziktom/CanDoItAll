@@ -30,6 +30,25 @@ public sealed class MainLayoutDatabaseProfileTests
     }
 
     [Fact]
+    public async Task Main_layout_passes_active_workbench_tab_to_shell()
+    {
+        await using var harness = await CreateUnlockedHarnessAsync();
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
+            .SetResult(true);
+
+        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var activeTabButton = cut.Find("button[role='tab'][aria-selected='true']");
+            Assert.Contains("Dashboard", activeTabButton.TextContent, StringComparison.Ordinal);
+            Assert.Equal("page", activeTabButton.GetAttribute("aria-current"));
+            Assert.Contains("cda-inline-tab--active", activeTabButton.ParentElement?.ClassName ?? string.Empty, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public async Task Main_layout_renders_startup_modal_for_runtime_database_override()
     {
         await using var harness = await CreateRuntimeOverrideHarnessAsync();

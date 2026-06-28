@@ -1,1 +1,0 @@
-P1 support ticket. Billing outage affects three enterprise customers. First response SLA was missed by 42 minutes.

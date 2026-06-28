@@ -86,6 +86,22 @@ public partial class AgentDetailsDialog
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
 
+    private ProviderProfile? SelectedImageGenerationProvider
+        => editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue
+            ? providers.FirstOrDefault(item => item.Id == editorModel.ImageGenerationAccess.PreferredProviderProfileId.Value)
+            : ImageCapableRuntimeProvider;
+
+    private ProviderProfile? ImageCapableRuntimeProvider
+        => SelectedRuntimeProvider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration } provider
+            ? provider
+            : null;
+
+    private IReadOnlyList<ProviderProfile> ImageGenerationProviderOptions => providers
+        .Where(provider => provider.Purpose == ProviderProfilePurpose.ImageGeneration)
+        .OrderByDescending(provider => provider.IsEnabled)
+        .ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
     private IReadOnlyList<string> VisibleTagSuggestions => agents
         .SelectMany(agent => agent.Tags)
         .Where(tag => !AgentSpecialTags.IsFavorite(tag))
@@ -268,6 +284,7 @@ public partial class AgentDetailsDialog
     {
         SyncWorkspaceToolAccessFromEditorText();
         NormalizeRuntimeModelSelectionForSave();
+        NormalizeImageGenerationAccessForSave();
         editorModel.Tags = BuildAgentTagsForSave().ToList();
         return await WorkspaceService.SaveAgentAsync(editorModel);
     }
@@ -980,6 +997,38 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
+    private Task HandleImageGenerationProviderChangedAsync(Guid? providerId)
+    {
+        if (editorModel.ImageGenerationAccess.PreferredProviderProfileId != providerId)
+        {
+            editorModel.ImageGenerationAccess.PreferredProviderProfileId = providerId;
+            editorModel.ImageGenerationAccess.DefaultModel = string.Empty;
+        }
+
+        editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleImageGenerationModelChangedAsync(string? model)
+    {
+        editorModel.ImageGenerationAccess.DefaultModel = string.IsNullOrWhiteSpace(model)
+            ? string.Empty
+            : model.Trim();
+        return Task.CompletedTask;
+    }
+
+    private void ToggleImageGenerationAccess(object? rawValue)
+    {
+        editorModel.ImageGenerationAccess.CanGenerateImages = rawValue is bool value && value;
+        editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
+    }
+
+    private void ToggleImageProjectAssetStorage(object? rawValue)
+    {
+        editorModel.ImageGenerationAccess.CanStoreImagesAsProjectAssets = rawValue is bool value && value;
+        editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
+    }
+
     private void NormalizeRuntimeModelSelectionForSave()
     {
         editorModel.Model = SelectedRuntimeProvider is { } provider
@@ -987,6 +1036,64 @@ public partial class AgentDetailsDialog
             : string.IsNullOrWhiteSpace(editorModel.Model)
                 ? string.Empty
                 : editorModel.Model.Trim();
+    }
+
+    private void NormalizeImageGenerationAccessForSave()
+    {
+        var access = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
+        access.DefaultModel = SelectedImageGenerationProvider is { } provider
+            ? ProviderModelSelector.NormalizeProviderDefaultModel(access.DefaultModel, provider)
+            : string.IsNullOrWhiteSpace(access.DefaultModel)
+                ? string.Empty
+                : access.DefaultModel.Trim();
+        editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(access);
+    }
+
+    private string DescribeImageGenerationProviderChoice()
+    {
+        if (!editorModel.ImageGenerationAccess.CanGenerateImages)
+        {
+            return "Image-generation tools are disabled for this agent.";
+        }
+
+        if (editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue)
+        {
+            return SelectedImageGenerationProvider is { } provider
+                ? $"Image requests use '{provider.Name}'."
+                : "The selected image-generation provider is not available.";
+        }
+
+        return ImageCapableRuntimeProvider is { } runtimeProvider
+            ? $"Image requests use the runtime provider '{runtimeProvider.Name}'."
+            : "Image requests use the first enabled image-generation provider unless a provider is selected here.";
+    }
+
+    private string ResolveImageGenerationWarning()
+    {
+        if (!editorModel.ImageGenerationAccess.CanGenerateImages)
+        {
+            return string.Empty;
+        }
+
+        if (editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue &&
+            SelectedImageGenerationProvider is null)
+        {
+            return "The selected image-generation provider is missing. Select an enabled image-generation provider before relying on this agent for image delivery.";
+        }
+
+        if (SelectedImageGenerationProvider is { IsEnabled: false } disabledProvider)
+        {
+            return $"Image-generation provider '{disabledProvider.Name}' is disabled.";
+        }
+
+        if (ImageCapableRuntimeProvider is null &&
+            !editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue &&
+            !ImageGenerationProviderOptions.Any(provider => provider.IsEnabled))
+        {
+            return "No enabled image-generation provider is configured.";
+        }
+
+        return string.Empty;
     }
 
     private void SyncWorkspaceToolAccessFromEditorText()

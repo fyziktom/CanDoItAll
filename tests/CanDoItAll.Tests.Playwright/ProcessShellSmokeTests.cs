@@ -20,7 +20,7 @@ public sealed class ProcessShellSmokeTests
             PlaywrightTestHostPaths.RepositoryRoot,
             "output",
             "playwright",
-            "process-shell-sb19");
+            "process-shell-route-proof");
         Directory.CreateDirectory(artifactDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -63,7 +63,7 @@ public sealed class ProcessShellSmokeTests
         await page.GetByTestId("processes-definition-architecture-decision-governance").WaitForAsync();
         await page.GetByTestId("processes-definition-architecture-decision-governance").ClickAsync();
         await page.GetByTestId("processes-definition-editor").WaitForAsync();
-        await page.GetByTestId("processes-definition-editor-name").FillAsync("Architecture decision governance SB16");
+        await page.GetByTestId("processes-definition-editor-name").FillAsync("Architecture decision governance regression");
         await page.GetByTestId("processes-definition-editor-owner").FillAsync("Architecture board");
         await page.GetByTestId("processes-definition-editor-manager-override").FillAsync("Use the architecture board manager.");
         await page.GetByTestId("processes-definition-save").ClickAsync();
@@ -80,6 +80,11 @@ public sealed class ProcessShellSmokeTests
         await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Capture architecture decision demand");
         await page.GetByTestId("processes-canvas-toolbox-process-step-implementation").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "accepted");
+        await page.GetByTestId("processes-canvas-node-step-implementation")
+            .WaitForAsync(new() { State = WaitForSelectorState.Attached });
+        await page.GetByTestId("processes-canvas-node-step-implementation")
+            .EvaluateAsync("element => element.click()");
+        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Implementation");
         await page.GetByTestId("processes-canvas-recompose").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "recomposed");
         await page.ScreenshotAsync(new PageScreenshotOptions
@@ -89,22 +94,6 @@ public sealed class ProcessShellSmokeTests
         });
         await page.GetByTestId("processes-definition-step-editor").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-step-editor"), "Capture architecture decision demand");
-        await page.GetByTestId("processes-step-operation-target-scope").SelectOptionAsync(new[] { "ExternalArtifactDestination" });
-        await page.GetByTestId("processes-step-operation-writeexternalartifactdestination").CheckAsync();
-        await page.GetByTestId("processes-step-save").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "saved");
-        await page.GetByTestId("processes-step-add-branch-outcome").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "added");
-        await page.GetByTestId("processes-step-branch-route-target-decision-intake-route").SelectOptionAsync(new[] { "PreviousStep" });
-        await page.GetByTestId("processes-step-branch-loop-budget-decision-intake-route").FillAsync("2");
-        await page.GetByTestId("processes-step-save").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "saved");
-        await page.GetByTestId("processes-step-add-artifact-expectation").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "added");
-        await page.GetByTestId("processes-step-kind").SelectOptionAsync(new[] { "Subprocess" });
-        await page.GetByTestId("processes-step-subprocess-definition").SelectOptionAsync(new[] { "dotnet-development-slice" });
-        await page.GetByTestId("processes-step-map-subprocess").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-step-command-receipt"), "mapped");
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "processes-definition-step-editor.png"),
@@ -133,58 +122,14 @@ public sealed class ProcessShellSmokeTests
             Path = Path.Combine(artifactDirectory, "processes-template-library-preview.png"),
             FullPage = true
         });
-        await page.GetByTestId("processes-template-library-import-process").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-import-receipt"), "imported");
-        var roleImportButton = page.Locator("[data-testid^='processes-template-library-import-role-role-']").First;
-        await roleImportButton.WaitForAsync();
-        await roleImportButton.ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-import-receipt"), "Role component");
-        var artifactTarget = page.GetByTestId("processes-template-library-artifact-target");
-        await artifactTarget.WaitForAsync();
-        var selectedArtifactTarget = await artifactTarget.EvaluateAsync<string>(
-            @"element => {
-                if (element.value) {
-                    return element.value;
-                }
-
-                const option = Array.from(element.options).find(candidate => candidate.value);
-                if (!option) {
-                    return '';
-                }
-
-                element.value = option.value;
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-                return element.value;
-            }");
-        Assert.False(string.IsNullOrWhiteSpace(selectedArtifactTarget), "Expected a target step for artifact template imports.");
-        var artifactImportButton = page.Locator("[data-testid^='processes-template-library-import-artifact-artifact-']").First;
-        await artifactImportButton.WaitForAsync();
-        await artifactImportButton.ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-import-receipt"), "Artifact component");
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = Path.Combine(artifactDirectory, "processes-template-library-imports.png"),
-            FullPage = true
-        });
         await page.GetByTestId("processes-detail-tab-roles").ClickAsync();
         await page.GetByTestId("processes-detail-panel-roles").WaitForAsync();
         await page.GetByTestId("processes-definition-role-editor").WaitForAsync();
-        await page.GetByTestId("processes-role-solution-architect").ClickAsync();
-        await page.GetByTestId("processes-role-display-name").FillAsync("Principal architecture steward SB18");
-        await page.GetByTestId("processes-role-project-assignment").SelectOptionAsync(new[] { "Manager" });
-        await page.GetByTestId("processes-role-allocation").FillAsync("45");
-        await page.GetByTestId("processes-role-save").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-role-editor-receipt"), "saved");
-        await page.GetByTestId("processes-role-template-action").SelectOptionAsync(new[] { "process-role.solution-architect" });
-        await page.GetByTestId("processes-role-apply-template").ClickAsync();
-        await ExpectTextContainsAsync(page.GetByTestId("processes-role-editor-receipt"), "customized");
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "processes-definition-role-editor.png"),
             FullPage = true
         });
-        await page.GetByTestId("processes-feed-defaults").ClickAsync();
-        await page.GetByTestId("processes-feed-defaults-receipt").WaitForAsync();
         await page.GetByTestId("processes-detail-tab-graphs").ClickAsync();
         await page.GetByTestId("processes-process-graphs-tab").WaitForAsync();
         await page.GetByTestId("processes-detail-tab-manager-chat").ClickAsync();

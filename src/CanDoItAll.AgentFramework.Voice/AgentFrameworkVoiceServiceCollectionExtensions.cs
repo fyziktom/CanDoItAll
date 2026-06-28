@@ -7,10 +7,7 @@ public static class AgentFrameworkVoiceServiceCollectionExtensions
 {
     public static IServiceCollection AddAgentFrameworkVoice(this IServiceCollection services)
     {
-        services.TryAddScoped<OpenAiVoiceDriver>(serviceProvider =>
-            new OpenAiVoiceDriver(
-                new HttpClient(),
-                serviceProvider.GetRequiredService<CanDoItAll.AgentFramework.Core.IAgentProviderCredentialResolver>()));
+        services.TryAddScoped<ProviderRuntimeVoiceDriver>();
         services.TryAddScoped<IAgentVoiceSpeechTextPreprocessor, AgentVoiceSpeechTextPreprocessor>();
         services.TryAddScoped<IAgentVoiceDriverFactory, AgentVoiceDriverFactory>();
         services.TryAddScoped<IAgentVoiceService, AgentVoiceService>();

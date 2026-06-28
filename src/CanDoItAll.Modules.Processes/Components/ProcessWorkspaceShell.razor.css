@@ -103,6 +103,10 @@
     width: 100%;
 }
 
+.processes-graphs-load-gate {
+    width: 100%;
+}
+
 .processes-runtime-run-card {
     align-items: stretch;
     background: rgba(255, 255, 255, 0.92);

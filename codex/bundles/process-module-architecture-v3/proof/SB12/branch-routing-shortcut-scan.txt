@@ -1,1 +1,0 @@
-No free-text branch routing shortcut labels found in SB12 migration/compatibility code.

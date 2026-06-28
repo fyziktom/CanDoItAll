@@ -1,7 +1,12 @@
 using Bunit;
 using System.Globalization;
+using System.Reflection;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.Charts;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
@@ -10,6 +15,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -17,6 +23,8 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProcessWorkspaceShellTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 30, 0, TimeSpan.Zero);
+    private static readonly Guid ProjectSubprocessRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+    private static readonly Guid ProjectSubprocessProjectId = Guid.Parse("12121212-3434-5656-7878-909090909090");
 
     [Fact]
     public void Global_shell_renders_projection_tabs_and_command_strip()
@@ -115,11 +123,39 @@ public sealed class ProcessWorkspaceShellTests
         ActivateProcessDetailTab(cut, "processes-detail-tab-graphs", "processes-detail-panel-graphs");
         var graphRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
         Assert.NotNull(graphRuntimeOptions);
-        Assert.True(graphRuntimeOptions.IncludeSelectedRun);
-        Assert.True(graphRuntimeOptions.IncludeHistory);
-        Assert.True(graphRuntimeOptions.IncludeMetricHistory);
+        Assert.False(graphRuntimeOptions.IncludeSelectedRun);
+        Assert.False(graphRuntimeOptions.IncludeHistory);
+        Assert.False(graphRuntimeOptions.IncludeMetricHistory);
         Assert.False(graphRuntimeOptions.IncludeActiveAgents);
-        Assert.True(graphRuntimeOptions.IncludeUsageTelemetry);
+        Assert.False(graphRuntimeOptions.IncludeUsageTelemetry);
+        Assert.Equal(ProcessRuntimeHistoryWindow.LiveHour, client.LastRequest?.RuntimeQuery?.HistoryWindow);
+
+        cut.Find("[data-testid='processes-process-graphs-load-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            var loadedGraphRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+            Assert.NotNull(loadedGraphRuntimeOptions);
+            Assert.True(loadedGraphRuntimeOptions.IncludeSelectedRun);
+            Assert.True(loadedGraphRuntimeOptions.IncludeHistory);
+            Assert.True(loadedGraphRuntimeOptions.IncludeMetricHistory);
+            Assert.False(loadedGraphRuntimeOptions.IncludeActiveAgents);
+            Assert.True(loadedGraphRuntimeOptions.IncludeUsageTelemetry);
+        });
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        var managerRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+        Assert.NotNull(managerRuntimeOptions);
+        Assert.Equal(ProcessRuntimeHistoryWindow.OneDay, client.LastRequest?.RuntimeQuery?.HistoryWindow);
+        Assert.True(client.LastRequest?.RuntimeQuery?.AutoSelectRun);
+        Assert.True(managerRuntimeOptions.IncludeSelectedRun);
+        Assert.False(managerRuntimeOptions.IncludeHistory);
+        Assert.False(managerRuntimeOptions.IncludeMetricHistory);
+        Assert.False(managerRuntimeOptions.IncludeActiveAgents);
+        Assert.True(managerRuntimeOptions.IncludeUsageTelemetry);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeAttentionReconciliation);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeOperatorActions);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeCurrentSteps);
+        Assert.False(managerRuntimeOptions.LiveProcesses.IncludeChildRunWaits);
     }
 
     [Fact]
@@ -302,6 +338,12 @@ public sealed class ProcessWorkspaceShellTests
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']")));
+        Assert.NotNull(cut.Find("[data-testid='processes-role-card-grid']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='processes-role-card']"));
+        Assert.Empty(cut.FindAll("[data-testid='processes-role-display-name']"));
+
+        cut.Find("[data-testid='processes-role-solution-architect']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-details-dialog']")));
         Assert.Equal("Solution architect", cut.Find("[data-testid='processes-role-display-name']").GetAttribute("value"));
         Assert.Equal("process-role-template/solution-architect", cut.Find("[data-testid='processes-role-template-source']").GetAttribute("value"));
         Assert.Contains("Solution architect template", cut.Markup, StringComparison.Ordinal);
@@ -316,6 +358,8 @@ public sealed class ProcessWorkspaceShellTests
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-solution-architect']")));
+        cut.Find("[data-testid='processes-role-solution-architect']").Click();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-save']")));
         cut.Find("[data-testid='processes-role-display-name']").Input("Principal architecture steward");
         cut.Find("[data-testid='processes-role-executor-kind']").Change(ProcessDefinitionRoleExecutorKind.PersonOrAgent.ToString());
@@ -338,6 +382,8 @@ public sealed class ProcessWorkspaceShellTests
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-solution-architect']")));
+        cut.Find("[data-testid='processes-role-solution-architect']").Click();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-apply-template']")));
         cut.Find("[data-testid='processes-role-template-action']").Change("role-template.solution-architect");
         cut.Find("[data-testid='processes-role-apply-template']").Click();
@@ -567,7 +613,7 @@ public sealed class ProcessWorkspaceShellTests
     [Fact]
     public void Original_process_workspace_tabs_render_runs_graphs_analytics_and_manager_chat()
     {
-        using var context = CreateContext(out _);
+        using var context = CreateContext(out var client);
         var cut = context.RenderComponent<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-runs", "processes-detail-panel-runs");
@@ -582,17 +628,178 @@ public sealed class ProcessWorkspaceShellTests
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-graphs", "processes-detail-panel-graphs");
         Assert.NotNull(cut.Find("[data-testid='processes-process-graphs-tab']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-process-graphs-load-gate']"));
+        Assert.Contains("Load data history", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("[data-testid='processes-graph-metric-grid']"));
+
+        cut.Find("[data-testid='processes-process-graphs-load-button']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-graph-metric-grid']")));
         Assert.Contains("Cost", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Tokens", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Time", cut.Markup, StringComparison.Ordinal);
+        var usageOptions = (CdaChartOptions)typeof(ProcessWorkspaceShell)
+            .GetField("RuntimeUsageChartOptions", BindingFlags.NonPublic | BindingFlags.Static)!
+            .GetValue(null)!;
+        var usageSeries = (IReadOnlyList<CdaChartSeries>)typeof(ProcessWorkspaceShell)
+            .GetProperty("RuntimeUsageSeries", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(cut.Instance)!;
+        Assert.Equal("k tokens / min / USD x1k", usageOptions.YAxisTitle);
+        Assert.Equal(["Tokens (k)", "Minutes", "Cost (USD x1k)"], usageSeries.Select(series => series.Name));
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-analytics", "processes-detail-panel-analytics");
         Assert.NotNull(cut.Find("[data-testid='processes-analytics-tab']"));
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         Assert.NotNull(cut.Find("[data-testid='processes-manager-chat-tab']"));
+        Assert.NotNull(cut.Find("[data-testid='processes-manager-chat-history-window']"));
+        Assert.Contains("Run 77777777", cut.Find("[data-testid='processes-manager-chat-run-select']").TextContent, StringComparison.Ordinal);
+        Assert.Contains("Run 88888888", cut.Find("[data-testid='processes-manager-chat-run-select']").TextContent, StringComparison.Ordinal);
+        Assert.Equal(ProcessRuntimeHistoryWindow.OneDay, client.LastRequest?.RuntimeQuery?.HistoryWindow);
         Assert.Contains("processes:workspace", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Manager_chat_uses_distinct_thread_per_selected_process_run()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService();
+        using var context = CreateContext(out var client, workspaceService);
+        var firstRunId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.RunIdQuery, firstRunId));
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+
+        cut.WaitForAssertion(() => Assert.Contains(firstRunId.ToString("D"), workspaceService.LastWorkspaceSessionTitle, StringComparison.Ordinal));
+        Assert.Equal(ProcessRuntimeHistoryWindow.OneDay, client.LastRequest?.RuntimeQuery?.HistoryWindow);
+        var firstSessionId = workspaceService.LastWorkspaceSessionId;
+
+        cut.Find("[data-testid='processes-manager-chat-history-window']").Change(ProcessRuntimeHistoryWindow.SevenDays.ToString());
+        cut.WaitForAssertion(() => Assert.Equal(ProcessRuntimeHistoryWindow.SevenDays, client.LastRequest?.RuntimeQuery?.HistoryWindow));
+        cut.WaitForAssertion(() => Assert.Contains(firstRunId.ToString("D"), workspaceService.LastWorkspaceSessionTitle, StringComparison.Ordinal));
+
+        cut.Find("[data-testid='processes-manager-chat-run-select']").Change(secondRunId.ToString("D"));
+        cut.WaitForAssertion(() => Assert.Contains(secondRunId.ToString("D"), workspaceService.LastWorkspaceSessionTitle, StringComparison.Ordinal));
+        var secondSessionId = workspaceService.LastWorkspaceSessionId;
+
+        Assert.NotEqual(firstSessionId, secondSessionId);
+
+        cut.Find("[data-testid='processes-manager-chat-run-select']").Change(firstRunId.ToString("D"));
+        cut.WaitForAssertion(() => Assert.Equal(firstSessionId, workspaceService.LastWorkspaceSessionId));
+        Assert.Equal(2, workspaceService.SessionCount);
+    }
+
+    [Fact]
+    public void Manager_chat_enables_voice_controls_for_voice_allowed_manager_agent()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true);
+        using var context = CreateContext(out _, workspaceService);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='chat-voice-mode-button']").HasAttribute("disabled"));
+            Assert.False(cut.Find("[data-testid='chat-voice-record-button']").HasAttribute("disabled"));
+            Assert.False(cut.Find("[data-testid='chat-voice-speak-button']").HasAttribute("disabled"));
+        });
+
+        cut.Find("[data-testid='chat-voice-mode-button']").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Audio on", cut.Markup, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Manager_chat_auto_speaks_assistant_response_when_voice_mode_is_enabled()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true)
+        {
+            AssistantResponseText = "The selected run cost USD 0.12 and used 1,666 tokens."
+        };
+        var voiceService = new RecordingAgentVoiceService();
+        using var context = CreateContext(out _, workspaceService, voiceService);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='chat-voice-mode-button']").HasAttribute("disabled")));
+        cut.Find("[data-testid='chat-voice-mode-button']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Audio on", cut.Markup, StringComparison.Ordinal));
+
+        cut.Find("[data-testid='chat-prompt-input']").Input("Tell me about the selected run cost and tokens.");
+        cut.Find("[data-testid='chat-send-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var request = Assert.Single(voiceService.SynthesisRequests);
+            Assert.Equal(workspaceService.AssistantResponseText, request.Text);
+        });
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                context.JSInterop.Invocations,
+                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.clearAudioQueue");
+            Assert.Contains(
+                context.JSInterop.Invocations,
+                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.enqueueAudio");
+        });
+    }
+
+    [Fact]
+    public void Manager_chat_prompt_includes_selected_run_usage_and_keeps_runtime_tools_enabled_for_cost_token_question()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService();
+        using var context = CreateContext(out var client, workspaceService);
+        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.RunIdQuery, runId));
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForAssertion(() =>
+        {
+            var runtimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+            Assert.NotNull(runtimeOptions);
+            Assert.True(runtimeOptions.IncludeSelectedRun);
+            Assert.False(runtimeOptions.IncludeHistory);
+            Assert.False(runtimeOptions.IncludeMetricHistory);
+            Assert.False(runtimeOptions.IncludeActiveAgents);
+            Assert.True(runtimeOptions.IncludeUsageTelemetry);
+        });
+
+        cut.Find("[data-testid='chat-prompt-input']").Input("Tell me please about this last run, how much did it cost and how much tokens did it use?");
+        cut.Find("[data-testid='chat-send-button']").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(workspaceService.LastOptions));
+        Assert.Contains("Selected run usage telemetry:", workspaceService.LastPrompt, StringComparison.Ordinal);
+        Assert.Contains("Actual cost: USD 0.12", workspaceService.LastPrompt, StringComparison.Ordinal);
+        Assert.Contains("Input tokens: 1,234", workspaceService.LastPrompt, StringComparison.Ordinal);
+        Assert.Contains("Cached input tokens: 234", workspaceService.LastPrompt, StringComparison.Ordinal);
+        Assert.Contains("Output tokens: 432", workspaceService.LastPrompt, StringComparison.Ordinal);
+        Assert.Contains("Total tokens: 1,666", workspaceService.LastPrompt, StringComparison.Ordinal);
+        Assert.True(workspaceService.LastOptions!.RuntimeToolProvidersEnabled);
+        Assert.True(workspaceService.LastOptions.WorkspaceToolsEnabled);
+    }
+
+    [Fact]
+    public void Manager_chat_keeps_voice_controls_disabled_for_voice_denied_manager_agent()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: false);
+        using var context = CreateContext(out _, workspaceService);
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(cut.Find("[data-testid='chat-voice-mode-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='chat-voice-record-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='chat-voice-speak-button']").HasAttribute("disabled"));
+        });
     }
 
     [Fact]
@@ -624,6 +831,18 @@ public sealed class ProcessWorkspaceShellTests
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
         Assert.False(client.LastRequest?.RuntimeQuery?.AutoSelectRun);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeSelectedEditor);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeRoleEditor);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeStepEditor);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeCanvas);
+        Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeTemplateCatalog);
+        var runtimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+        Assert.NotNull(runtimeOptions);
+        Assert.False(runtimeOptions.IncludeSelectedRun);
+        Assert.True(runtimeOptions.IncludeHistory);
+        Assert.False(runtimeOptions.IncludeMetricHistory);
+        Assert.True(runtimeOptions.IncludeActiveAgents);
+        Assert.False(runtimeOptions.IncludeUsageTelemetry);
         Assert.NotNull(cut.Find("[data-testid='live-processes-page']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-command-strip']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']"));
@@ -631,10 +850,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']"));
         Assert.NotEmpty(cut.FindAll("[data-testid='live-processes-run-progress']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-tool-history-chart']"));
-        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-family-card']"));
-        Assert.NotNull(cut.Find("[data-testid='live-processes-tool-card']"));
         Assert.Contains("Tool history", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Process cost over time", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.NotNull(cut.Find("[data-testid='live-processes-request-rework']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-attention-decision']"));
@@ -686,6 +902,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Live_processes_active_card_prefers_working_agent_summary_over_stale_attention_event()
     {
         using var context = CreateContext(out _);
+        var tooltipHost = context.RenderComponent<Tooltip>();
         var activeRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
 
         var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
@@ -695,12 +912,47 @@ public sealed class ProcessWorkspaceShellTests
         var activeCard = cut
             .FindAll("[data-testid='live-processes-activity-card']")
             .Single(card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+        var processName = activeCard.QuerySelector("[data-testid='live-processes-run-process-name']");
 
+        Assert.NotNull(processName);
+        Assert.Contains("Long-running customer onboardin...", processName!.TextContent, StringComparison.Ordinal);
+        Assert.Equal(ResolveProcessName(activeRunId), processName.GetAttribute("title"));
         Assert.Contains("Active: .NET Developer is Running on implementation as lead-engineer.", activeCard.TextContent, StringComparison.Ordinal);
         Assert.DoesNotContain("ManagerIncidentRaised: ManagerIncidentRaised", activeCard.TextContent, StringComparison.Ordinal);
+
+        processName.TriggerEvent("onmouseenter", new MouseEventArgs { ClientX = 120, ClientY = 80 });
+        tooltipHost.WaitForAssertion(() =>
+        {
+            Assert.Contains(ResolveProcessName(activeRunId), tooltipHost.Markup, StringComparison.Ordinal);
+        });
     }
 
-    private static TestContext CreateContext(out RecordingProcessWorkspaceProjectionClient client)
+    [Fact]
+    public void Live_processes_activity_card_shows_project_subprocess_and_manager_context()
+    {
+        using var context = CreateContext(out _);
+
+        var cut = context.RenderComponent<LiveProcessesDashboard>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
+        var subprocessCard = cut
+            .FindAll("[data-testid='live-processes-activity-card']")
+            .Single(card => card.TextContent.Contains("Run 88888888", StringComparison.Ordinal));
+
+        Assert.Equal(
+            "Apollo Delivery",
+            subprocessCard.QuerySelector("[data-testid='live-processes-run-project-name']")?.TextContent);
+        Assert.NotNull(subprocessCard.QuerySelector("[data-testid='live-processes-run-subprocess-badge']"));
+        Assert.Equal(
+            "Process manager",
+            subprocessCard.QuerySelector("[data-testid='live-processes-run-agent-name']")?.TextContent);
+        Assert.DoesNotContain("Unassigned", subprocessCard.TextContent, StringComparison.Ordinal);
+    }
+
+    private static TestContext CreateContext(
+        out RecordingProcessWorkspaceProjectionClient client,
+        IAgentFrameworkWorkspaceService? agentWorkspaceService = null,
+        IAgentVoiceService? voiceService = null)
     {
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -708,10 +960,31 @@ public sealed class ProcessWorkspaceShellTests
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
+        if (agentWorkspaceService is not null)
+        {
+            context.Services.AddSingleton(agentWorkspaceService);
+            context.Services.AddSingleton<AgentReferenceDataCache>();
+            context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
+                serviceProvider.GetRequiredService<AgentReferenceDataCache>());
+            context.Services.AddSingleton<IAgentReferenceDataProvider>(serviceProvider =>
+                new WorkspaceBackedAgentReferenceDataProvider(
+                    agentWorkspaceService,
+                    serviceProvider.GetRequiredService<AgentReferenceDataCache>()));
+        }
+        if (voiceService is not null)
+        {
+            context.Services.AddSingleton(voiceService);
+        }
+
         client = new RecordingProcessWorkspaceProjectionClient();
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);
         return context;
     }
+
+    private static string ResolveProcessName(Guid runId)
+        => runId == ProjectSubprocessRunId
+            ? "Long-running customer onboarding process with multiple external approvals"
+            : "Blazor app delivery";
 
     private sealed class StaticCurrencyFormatter(string currencyCode) : ICurrencyFormatter
     {
@@ -721,6 +994,396 @@ public sealed class ProcessWorkspaceShellTests
         {
             return $"{CurrencyCode} {value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
         }
+    }
+
+    private sealed class RecordingManagerChatWorkspaceService : IAgentFrameworkWorkspaceService
+    {
+        private readonly AgentDefinition agent;
+        private readonly List<ChatSessionRecord> sessions = [];
+
+        public RecordingManagerChatWorkspaceService(bool canUseVoiceMode = false)
+        {
+            agent = CreateAgent(canUseVoiceMode);
+        }
+
+        public string AssistantResponseText { get; init; } = "Manager response from the fake runtime.";
+
+        public string LastPrompt { get; private set; } = string.Empty;
+
+        public AgentChatRunOptions? LastOptions { get; private set; }
+
+        public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
+        {
+            add { }
+            remove { }
+        }
+
+        public Guid? LastWorkspaceSessionId { get; private set; }
+
+        public string LastWorkspaceSessionTitle { get; private set; } = string.Empty;
+
+        public int SessionCount => sessions.Count;
+
+        public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(
+            bool includeTemplates = true,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<AgentDefinition>>([agent]);
+
+        public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ChatSessionRecord>>(
+                sessions
+                    .Where(session => session.AgentId == agentId)
+                    .OrderByDescending(session => session.UpdatedAtUtc)
+                    .ToArray());
+
+        public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
+            Guid agentId,
+            Guid? chatSessionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (chatSessionId is { } sessionId)
+            {
+                return Task.FromResult(sessions.Single(session => session.Id == sessionId));
+            }
+
+            var session = new ChatSessionRecord(
+                Guid.NewGuid(),
+                agentId,
+                "New exploration thread",
+                Now,
+                Now,
+                Messages: []);
+            sessions.Add(session);
+            return Task.FromResult(session);
+        }
+
+        public Task<ChatSessionRecord> RenameChatSessionAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            string title,
+            CancellationToken cancellationToken = default)
+        {
+            var sessionIndex = sessions.FindIndex(session => session.AgentId == agentId && session.Id == chatSessionId);
+            if (sessionIndex < 0)
+            {
+                throw new InvalidOperationException($"Chat session '{chatSessionId:D}' was not created.");
+            }
+
+            sessions[sessionIndex] = sessions[sessionIndex] with
+            {
+                Title = title,
+                UpdatedAtUtc = Now.AddSeconds(sessions.Count)
+            };
+            return Task.FromResult(sessions[sessionIndex]);
+        }
+
+        public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(
+            Guid agentId,
+            Guid? preferredSessionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var selectedSession = preferredSessionId is { } sessionId
+                ? sessions.FirstOrDefault(session => session.AgentId == agentId && session.Id == sessionId)
+                : sessions
+                    .Where(session => session.AgentId == agentId)
+                    .OrderByDescending(session => session.UpdatedAtUtc)
+                    .FirstOrDefault();
+            LastWorkspaceSessionId = selectedSession?.Id;
+            LastWorkspaceSessionTitle = selectedSession?.Title ?? string.Empty;
+            return Task.FromResult(new ChatAgentWorkspaceSnapshot(
+                agentId,
+                sessions
+                    .Where(session => session.AgentId == agentId)
+                    .Select(ToSummary)
+                    .ToArray(),
+                selectedSession,
+                selectedSession?.Id,
+                LatestRun: null));
+        }
+
+        public Task<ChatRuntimeSnapshot> GetChatRuntimeSnapshotAsync(
+            Guid agentId,
+            Guid? chatSessionId = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ChatRuntimeSnapshot([], []));
+
+        public Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentOverviewSnapshot> GetAgentOverviewAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentUsageDetailSnapshot> GetAgentUsageDetailsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderUsageDetailSnapshot> GetProviderUsageDetailsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(
+            Guid teamId,
+            IReadOnlyList<Guid> agentIds,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+            Guid providerId,
+            ProviderTestChatRequest request,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
+            Guid providerId,
+            ProviderModelMaintenanceEditorRequest request,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(
+            bool includeTemplates = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ExecutionRunResult> ExecuteRunAsync(
+            ExecutionRunRequest request,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(
+            Guid executionRunId,
+            bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentChatRunResult> SendMessageAsync(
+            Guid agentId,
+            Guid? chatSessionId,
+            string prompt,
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<string>? attachmentPaths = null,
+            AgentChatRunOptions? options = null)
+        {
+            LastPrompt = prompt;
+            LastOptions = options;
+            var session = chatSessionId is { } sessionId
+                ? sessions.Single(item => item.AgentId == agentId && item.Id == sessionId)
+                : CreateSession(agentId);
+            var userMessage = new ChatMessageRecord(
+                Guid.NewGuid(),
+                ChatMessageRole.User,
+                prompt,
+                Now,
+                TokenEstimate: 0);
+            var assistantMessage = new ChatMessageRecord(
+                Guid.NewGuid(),
+                ChatMessageRole.Assistant,
+                AssistantResponseText,
+                Now.AddSeconds(1),
+                TokenEstimate: 0);
+            var updatedSession = session with
+            {
+                Messages = session.Messages.Concat([userMessage, assistantMessage]).ToArray(),
+                UpdatedAtUtc = Now.AddSeconds(1)
+            };
+            var sessionIndex = sessions.FindIndex(item => item.AgentId == agentId && item.Id == session.Id);
+            sessions[sessionIndex] = updatedSession;
+            var metric = new AgentRunMetric(
+                Guid.NewGuid(),
+                agentId,
+                updatedSession.Id,
+                Now.AddSeconds(1),
+                RunOutcome.Succeeded,
+                ProviderName: "TestProvider",
+                Model: "test-model",
+                DurationMs: 100,
+                InputTokens: 12,
+                OutputTokens: 34,
+                ToolCalls: 0);
+            return Task.FromResult(new AgentChatRunResult(updatedSession.Id, assistantMessage, metric));
+        }
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(
+            Guid agentId,
+            Guid? chatSessionId = null,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentRunMetric>> ListMetricsAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<Guid> SaveMemoryAsync(MemoryEditorModel model, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task DeleteMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+            ExecutionRunQuery query,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+
+        private static AgentDefinition CreateAgent(bool canUseVoiceMode)
+            => new(
+                Guid.Parse("99999999-9999-9999-9999-999999999999"),
+                "Process Manager",
+                "Process manager",
+                "Answers process manager questions.",
+                "Use the supplied process context.",
+                AgentLifecycleStatus.Active,
+                null,
+                "test-model",
+                AgentWorkloadKind.Management,
+                AgentChatHistoryMode.FrameworkManaged,
+                0,
+                false,
+                false,
+                AgentVoiceAccessMetadata.Write(
+                    "{}",
+                    new AgentVoiceAccessSettings
+                    {
+                        CanUseVoiceMode = canUseVoiceMode,
+                        PreferredVoiceId = canUseVoiceMode ? "cedar" : string.Empty
+                    }),
+                false,
+                string.Empty,
+                AgentPermissionsPolicy.Default,
+                [],
+                [],
+                Now,
+                Now);
+
+        private ChatSessionRecord CreateSession(Guid agentId)
+        {
+            var session = new ChatSessionRecord(
+                Guid.NewGuid(),
+                agentId,
+                "New exploration thread",
+                Now,
+                Now,
+                Messages: []);
+            sessions.Add(session);
+            return session;
+        }
+
+        private static ChatSessionSummaryRecord ToSummary(ChatSessionRecord session)
+            => new(
+                session.Id,
+                session.AgentId,
+                session.Title,
+                session.CreatedAtUtc,
+                session.UpdatedAtUtc,
+                session.Messages.Count,
+                LastMessagePreview: string.Empty,
+                PendingApprovalCount: 0,
+                AutoApprovePendingToolCalls: false);
+
+        private static NotSupportedException Unused()
+            => new("This fake member is not used by the manager chat component test.");
+    }
+
+    private sealed class RecordingAgentVoiceService : IAgentVoiceService
+    {
+        public List<AgentVoiceSynthesisRequest> SynthesisRequests { get; } = [];
+
+        public Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentVoiceSettings> SaveSettingsAsync(
+            AgentVoiceSettings settings,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentVoiceTranscriptionResult> TranscribeAsync(
+            AgentVoiceTranscriptionRequest request,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new AgentVoiceTranscriptionResult("Tell me about the selected run cost and tokens.", "test-stt"));
+
+        public Task<AgentVoiceSynthesisResult> SynthesizeAsync(
+            AgentVoiceSynthesisRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            SynthesisRequests.Add(request);
+            return Task.FromResult(CreateSynthesisResult(request));
+        }
+
+        public IAsyncEnumerable<AgentVoiceSynthesisResult> SynthesizeChunksAsync(
+            AgentVoiceSynthesisRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            SynthesisRequests.Add(request);
+            return EnumerateSynthesisResult(CreateSynthesisResult(request));
+        }
+
+        public Task<AgentVoiceSynthesisResult> SynthesizeSampleAsync(
+            string? sampleText = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateSynthesisResult(new AgentVoiceSynthesisRequest(sampleText ?? "sample")));
+
+        private static async IAsyncEnumerable<AgentVoiceSynthesisResult> EnumerateSynthesisResult(
+            AgentVoiceSynthesisResult result)
+        {
+            await Task.Yield();
+            yield return result;
+        }
+
+        private static AgentVoiceSynthesisResult CreateSynthesisResult(AgentVoiceSynthesisRequest request)
+            => new(
+                [1, 2, 3],
+                ContentType: "audio/mpeg",
+                Model: "test-tts",
+                VoiceId: request.AgentVoiceAccess?.PreferredVoiceId ?? "cedar",
+                ResponseFormat: "mp3")
+            {
+                SpokenText = request.Text
+            };
+
+        private static NotSupportedException Unused()
+            => new("This fake member is not used by the manager chat voice component test.");
     }
 
     private static void ActivateProcessDetailTab(
@@ -1019,6 +1682,9 @@ public sealed class ProcessWorkspaceShellTests
             var historyWindow = request.RuntimeQuery?.HistoryWindow ?? ProcessRuntimeHistoryWindow.OneDay;
             var page = request.RuntimeQuery?.EventPage ?? 0;
             var pageSize = request.RuntimeQuery?.EventPageSize ?? 25;
+            var useManagerChatUsageTelemetry = loadOptions.IncludeUsageTelemetry &&
+                loadOptions.IncludeSelectedRun &&
+                !loadOptions.IncludeMetricHistory;
 
             return new ProcessRuntimeWorkspaceProjection(
                 historyWindow,
@@ -1074,12 +1740,12 @@ public sealed class ProcessWorkspaceShellTests
                     ManagerEventCount: loadOptions.IncludeMetricHistory ? 1 : 0,
                     ToolCallCount: loadOptions.IncludeMetricHistory ? metricEvents.Count : events.Count,
                     DurationMs: 33 * 60 * 1000,
-                    InputTokens: 0,
-                    CachedInputTokens: 0,
-                    OutputTokens: 0,
-                    TotalTokens: 0,
-                    EstimatedCost: 0m,
-                    ActualCost: 0m),
+                    InputTokens: useManagerChatUsageTelemetry ? 1_234 : 0,
+                    CachedInputTokens: useManagerChatUsageTelemetry ? 234 : 0,
+                    OutputTokens: useManagerChatUsageTelemetry ? 432 : 0,
+                    TotalTokens: useManagerChatUsageTelemetry ? 1_666 : 0,
+                    EstimatedCost: useManagerChatUsageTelemetry ? 0.130000m : 0m,
+                    ActualCost: useManagerChatUsageTelemetry ? 0.123456m : 0m),
                 metricEvents.Select(runtimeEvent => new ProcessRuntimeMetricPointProjection(
                     runtimeEvent.OccurredAtUtc,
                     EventCount: 1,
@@ -1136,6 +1802,11 @@ public sealed class ProcessWorkspaceShellTests
                 freshness,
                 events.Select(ToLiveRunEvent).ToArray(),
                 incidents);
+            snapshot = snapshot with { ProcessName = ResolveProcessName(runId.Value) };
+            if (runId.Value == ProjectSubprocessRunId)
+            {
+                snapshot = CreateProjectSubprocessLiveRun(snapshot);
+            }
 
             return status == ProcessProjectedRunStatus.NeedsAttention
                 ? snapshot with
@@ -1164,6 +1835,47 @@ public sealed class ProcessWorkspaceShellTests
                     ]
                 }
                 : snapshot;
+        }
+
+        private static ProcessLiveProcessSnapshot CreateProjectSubprocessLiveRun(ProcessLiveProcessSnapshot snapshot)
+        {
+            var currentStepId = Guid.Parse("88888888-8888-8888-8888-aaaaaaaaaaaa");
+            var childRunId = Guid.Parse("88888888-8888-8888-8888-bbbbbbbbbbbb");
+
+            return snapshot with
+            {
+                ProjectId = ProjectSubprocessProjectId,
+                ProjectName = "Apollo Delivery",
+                IsSubprocess = true,
+                CurrentStep = new ProcessRuntimeCurrentStepProjection(
+                    snapshot.RunId.Value,
+                    currentStepId,
+                    "await-child-artifacts",
+                    ProcessRuntimeStepStatus.Waiting.ToString(),
+                    "process-manager",
+                    "Process manager",
+                    "Process manager",
+                    AttemptNumber: 1,
+                    IsWorking: false,
+                    IsLeaseExpired: false,
+                    Now.AddMinutes(-1),
+                    ClaimedAtUtc: null,
+                    LeaseExpiresAtUtc: null,
+                    "Process manager is waiting for child process evidence."),
+                WaitingOnChildRuns =
+                [
+                    new ProcessRuntimeChildRunWaitProjection(
+                        snapshot.RunId.Value,
+                        currentStepId,
+                        "await-child-artifacts",
+                        ProcessRuntimeStepStatus.Waiting.ToString(),
+                        childRunId,
+                        ProcessRuntimeStatus.Active.ToString(),
+                        "collect-child-evidence",
+                        ProcessRuntimeStepStatus.Running.ToString(),
+                        "Process manager is waiting for child process evidence.")
+                ]
+            };
         }
 
         private static IReadOnlyList<ProcessTimelineEventProjection> CreateRuntimeEvents(ProcessRunId runId, int startSequence = 10)

@@ -220,6 +220,69 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Live_process_query_enriches_run_metadata_from_launch_variables()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var parentRunId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
+        var projectId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                CreateStepState(stepId, claimToken)
+            ],
+            [
+                CreateClaim(stepId, claimToken, Now.AddMinutes(-1), Now.AddMinutes(29))
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var assignment = CreateAssignment(
+            runId,
+            planId,
+            stepId,
+            "implementation",
+            ".NET Developer") with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProjectId] = projectId.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ProjectName] = "Apollo Delivery",
+                [ProcessRuntimeLaunchVariables.ParentProcessRunId] = parentRunId.Value.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ParentProcessStepId] = parentStepId.Value.ToString("D"),
+                [ProcessRuntimeLaunchVariables.ProcessDefinitionName] = "Project-scoped implementation subprocess"
+            }
+        };
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore([assignment]));
+
+        var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
+
+        var run = Assert.Single(live.Runs);
+        Assert.Equal(projectId, run.ProjectId);
+        Assert.Equal("Apollo Delivery", run.ProjectName);
+        Assert.True(run.IsSubprocess);
+        Assert.Equal("Project-scoped implementation subprocess", run.ProcessName);
+    }
+
+    [Fact]
     public async Task Runtime_workspace_list_only_skips_detail_history_metrics_and_runtime_enrichment()
     {
         await using var dbContext = CreateDbContext();
@@ -1262,6 +1325,89 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Shell_projection_scopes_usage_telemetry_to_selected_run()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var selectedRunId = ProcessRunId.New();
+        var unrelatedRunId = ProcessRunId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, unrelatedRunId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-6)),
+            latestKnownGlobalSequence: 2);
+        await ProjectAsync(
+            store,
+            StoredEvent(2, selectedRunId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 2);
+        var usageReader = new InMemoryUsageTelemetryReader(
+            new ProcessRuntimeUsageObservation(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                selectedRunId,
+                StepInstanceId: null,
+                Now.AddMinutes(-5),
+                "OpenAI default",
+                "gpt-test",
+                "agent-runtime",
+                "Observed",
+                IsKnownUsage: true,
+                InputTokens: 100,
+                CachedInputTokens: 10,
+                OutputTokens: 20,
+                ReasoningTokens: 0,
+                TotalTokens: 120,
+                EstimatedCostUsd: 0m,
+                ActualCostUsd: 0.123456m),
+            new ProcessRuntimeUsageObservation(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                unrelatedRunId,
+                StepInstanceId: null,
+                Now.AddMinutes(-6),
+                "OpenAI default",
+                "gpt-test",
+                "agent-runtime",
+                "Observed",
+                IsKnownUsage: true,
+                InputTokens: 900,
+                CachedInputTokens: 0,
+                OutputTokens: 90,
+                ReasoningTokens: 0,
+                TotalTokens: 990,
+                EstimatedCostUsd: 0m,
+                ActualCostUsd: 9.9m));
+        var clock = new FixedProcessProjectionClock(Now);
+        var templateLoader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(templateLoader, clock),
+            new ProcessDefinitionEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionStepEditorProjectionService(templateLoader, clock),
+            new ProcessTemplateCatalogProjectionService(templateLoader, clock),
+            new ProcessRuntimeProjectionQueryService(store, ProcessProjectionJsonCodec.Default, clock),
+            runtimeUsageTelemetryReader: usageReader);
+
+        var shell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(ProcessId: null, RunId: selectedRunId.Value, LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(ProcessRuntimeHistoryWindow.OneDay, EventPage: 0, EventPageSize: 25, selectedRunId.Value)));
+
+        Assert.Equal(100, shell.Runtime.Stats.InputTokens);
+        Assert.Equal(10, shell.Runtime.Stats.CachedInputTokens);
+        Assert.Equal(20, shell.Runtime.Stats.OutputTokens);
+        Assert.Equal(120, shell.Runtime.Stats.TotalTokens);
+        Assert.Equal(0.123456m, shell.Runtime.Stats.ActualCost);
+        Assert.NotNull(usageReader.LastQuery);
+        Assert.Contains(selectedRunId, usageReader.LastQuery!.RunIds);
+        Assert.DoesNotContain(unrelatedRunId, usageReader.LastQuery.RunIds);
+    }
+
+    [Fact]
     public async Task Shell_projection_selected_active_run_attention_summary_does_not_borrow_unselected_blocker()
     {
         await using var dbContext = CreateDbContext();
@@ -1767,11 +1913,14 @@ public sealed class ProcessProjectionPipelineTests
     {
         public int CallCount { get; private set; }
 
+        public ProcessRuntimeUsageTelemetryQuery? LastQuery { get; private set; }
+
         public ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
             ProcessRuntimeUsageTelemetryQuery query,
             CancellationToken cancellationToken = default)
         {
             CallCount++;
+            LastQuery = query;
             var runIds = query.RunIds.ToHashSet();
             IReadOnlyList<ProcessRuntimeUsageObservation> result = observations
                 .Where(observation =>

@@ -128,9 +128,9 @@ else
                             <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
                                                            TestId="project-structure-toolbox-window"
                                                            AriaLabel="Project structure standard blocks toolbox"
-                                                           Kicker="Standard blocks Toolbox"
-                                                           Title="Project structure toolbox"
-                                                           Summary="Search the shared block catalog, drag the window where you need it, and keep typed creation close to the canvas."
+                                                           Kicker="Standard Blocks Toolbox"
+                                                           Title=""
+                                                           Summary=""
                                                            State="@ToolboxWindowState"
                                                            StateChanged="HandleToolboxWindowStateChangedAsync"
                                                            Groups="@ToolboxCreateGroups"
@@ -752,6 +752,7 @@ else
     private string? pendingWorkbenchSelectionId;
     private ProjectWorkbenchUnavailableState? unavailableState;
     private readonly SemaphoreSlim nodeMoveCommitGate = new(1, 1);
+    private readonly CancellationTokenSource deferredCompletionCts = new();
     private bool isSecretReferenceDialogOpen;
     private bool isSecretReferenceDialogBusy;
     private bool isSecretReferenceEditMode;
@@ -903,6 +904,7 @@ else
         var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
         var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
         await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
+        await LoadImageGenerationProvidersAsync();
         storageCatalog = await loadStorageCatalogTask;
         var loadResult = await loadStructureTask;
         if (!loadResult.IsSuccess || loadResult.Surface is null)
@@ -1155,8 +1157,19 @@ else
             CanLaunchRuntimeFromCanvas,
             CanShowLocalOpen,
             CanOpenIpfsNodeInNewTab);
+        HydrateCanvasNodeContextActions(canvasSurface);
         canvasSurface.Mode = canvasToolMode;
         canvasSurface.DependencySourceId = linkModeSourceId ?? string.Empty;
+    }
+
+    private void HydrateCanvasNodeContextActions(CanvasWorkbenchSurface projectedSurface)
+    {
+        foreach (var node in projectedSurface.Nodes)
+        {
+            node.ContextActions = node.ContextActions
+                .Select(HydrateCreateAction)
+                .ToList();
+        }
     }
 
     private bool CanLaunchRuntimeFromCanvas(ProjectStructureNode node)
@@ -1363,6 +1376,11 @@ else
                 return;
             }
 
+            if (await TryCreateGeneratedImageAssetAsync(definition, request))
+            {
+                return;
+            }
+
             await CreateObjectAsync(definition, request);
         }
     }
@@ -1423,6 +1441,13 @@ else
                 {
                     CreateMode = action.CreateMode
                 });
+                return;
+            }
+
+            if (IsGeneratedImageAssetCreateAction(actionId))
+            {
+                var action = HydrateCreateAction(ProjectStructureCanvasCatalog.BuildComposerAction(definition));
+                await OpenCreateDialogAsync(action);
                 return;
             }
 
@@ -1635,7 +1660,10 @@ else
         }
     }
 
-    private async Task CreateObjectAsync(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchCreateActionRequest request)
+    private async Task<ProjectStructureNode?> CreateObjectAsync(
+        ProjectStructureCreateLeafDefinition definition,
+        CanvasWorkbenchCreateActionRequest request,
+        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest>? configureRequest = null)
     {
         var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
         var parentNodeId = ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, request);
@@ -1651,7 +1679,8 @@ else
             },
             parentNodeId ?? $"project:{ProjectId}",
             placementPlan.Placement);
-        var created = await ProjectWorkbenchService.CreateObjectAsync(ProjectId, prepared.Request);
+        var createRequest = configureRequest?.Invoke(prepared.Request) ?? prepared.Request;
+        var created = await ProjectWorkbenchService.CreateObjectAsync(ProjectId, createRequest);
 
         foreach (var pendingLink in prepared.PendingLinks)
         {
@@ -1664,10 +1693,16 @@ else
         }
 
         await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
+        return created;
     }
 
     private async Task OpenCreateDialogAsync(CanvasWorkbenchAction action)
     {
+        if (IsGeneratedImageAssetCreateAction(action.ActionId))
+        {
+            action = await RefreshGeneratedImageCreateActionAsync(action);
+        }
+
         var sourceNode = selectedNode;
         var request = new CanvasWorkbenchCreateActionRequest(
             action.ActionId,
@@ -2538,6 +2573,9 @@ else
     public void Dispose()
     {
         CancelPendingCanvasViewStatePersistence();
+        ResetProcessStartEstimateState();
+        deferredCompletionCts.Cancel();
+        deferredCompletionCts.Dispose();
         nodeMoveCommitGate.Dispose();
     }
 

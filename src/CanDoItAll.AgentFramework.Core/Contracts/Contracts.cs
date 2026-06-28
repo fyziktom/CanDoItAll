@@ -167,9 +167,9 @@ public interface IAgentRuntime
         ProviderTestChatRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+    Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         ProviderProfile provider,
-        OllamaModelfileRequest request,
+        ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default);
 
     Task<AgentRuntimeResponse> RunAsync(
@@ -232,8 +232,9 @@ public interface IProviderProfileService
     ProviderProfile NormalizeImportedProfile(ProviderProfile provider);
     string GetIdentityKey(ProviderProfile provider);
     ProviderProfile ApplyHealthResult(ProviderProfile provider, ProviderHealthResult result, DateTimeOffset checkedAtUtc);
-    ProviderProfile ApplyOllamaModelResult(ProviderProfile provider, OllamaModelfileResult result, DateTimeOffset checkedAtUtc);
+    ProviderProfile ApplyProviderModelMaintenanceResult(ProviderProfile provider, ProviderModelMaintenanceEditorResult result, DateTimeOffset checkedAtUtc);
     ProviderFeatureMatrix ResolveFeatureMatrix(ProviderProfile provider);
+    ProviderFeatureMatrix ResolveFeatureMatrixForModel(ProviderProfile provider, string? model);
 }
 
 public interface IProviderProfileRegistry
@@ -273,9 +274,9 @@ public interface IProviderDiagnosticsService
         ProviderTestChatRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+    Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         ProviderProfile provider,
-        OllamaModelfileRequest request,
+        ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default);
 }
 
@@ -350,7 +351,7 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
     Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
     Task<ProviderTestChatResult> RunProviderTestChatAsync(Guid providerId, ProviderTestChatRequest request, CancellationToken cancellationToken = default);
-    Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(Guid providerId, OllamaModelfileRequest request, CancellationToken cancellationToken = default);
+    Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default);
     Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default);
@@ -363,7 +364,13 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default);
-    Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default);
+    Task<AgentChatRunResult> SendMessageAsync(
+        Guid agentId,
+        Guid? chatSessionId,
+        string prompt,
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? attachmentPaths = null,
+        AgentChatRunOptions? options = null);
     Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,
         Guid chatSessionId,

@@ -17,13 +17,13 @@ public sealed record ProviderTestChatResult(
     int InputTokens,
     int OutputTokens);
 
-public sealed record OllamaModelfileRequest(
+public sealed record ProviderModelMaintenanceEditorRequest(
     string BaseModel,
     string TargetModel,
     string SystemPrompt,
     int ContextLength);
 
-public sealed record OllamaModelfileResult(
+public sealed record ProviderModelMaintenanceEditorResult(
     string ModelName,
     string BaseModel,
     string SystemPrompt,

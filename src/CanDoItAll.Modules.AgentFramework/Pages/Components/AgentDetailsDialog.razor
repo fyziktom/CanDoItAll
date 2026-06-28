@@ -177,6 +177,90 @@ else
                         </FormSection>
                     </TabsItem>
 
+                    <TabsItem Text="Images">
+                        <FormSection Title="Image Generation" Description="Control whether this agent may generate image deliverables and which image provider it should use.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-image-generation-access">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Access</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ImageGenerationAccess.CanGenerateImages"
+                                                   @onchange="args => ToggleImageGenerationAccess(args.Value)"
+                                                   data-testid="agents-catalog-image-generation-enabled" />
+                                            Can generate images
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ImageGenerationAccess.CanStoreImagesAsProjectAssets"
+                                                   @onchange="args => ToggleImageProjectAssetStorage(args.Value)"
+                                                   data-testid="agents-catalog-image-generation-project-assets" />
+                                            Can store generated images as project assets
+                                        </label>
+                                    </Stack>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                        <div>
+                                            <label class="cda-field-label">Image provider</label>
+                                            <InputSelect TValue="Guid?"
+                                                         Value="@editorModel.ImageGenerationAccess.PreferredProviderProfileId"
+                                                         ValueChanged="HandleImageGenerationProviderChangedAsync"
+                                                         ValueExpression="@(() => editorModel.ImageGenerationAccess.PreferredProviderProfileId)"
+                                                         class="cda-input"
+                                                         disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || !areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                         data-testid="agents-catalog-image-generation-provider">
+                                                <option value="">Use runtime/default image provider</option>
+                                                @foreach (var provider in ImageGenerationProviderOptions)
+                                                {
+                                                    <option value="@provider.Id">@($"{provider.Name}{(provider.IsEnabled ? string.Empty : " (disabled)")}")</option>
+                                                }
+                                            </InputSelect>
+                                            @if (!areProvidersLoaded &&
+                                                 string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                                            {
+                                                <p class="mt-2 text-sm leading-6 text-slate-500">Loading image-generation providers...</p>
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                                            {
+                                                <p class="mt-2 text-sm leading-6 text-rose-700">@providerLoadErrorMessage</p>
+                                            }
+                                            else if (ImageGenerationProviderOptions.Count == 0)
+                                            {
+                                                <p class="mt-2 text-sm leading-6 text-slate-600">No image-generation provider profiles are configured.</p>
+                                            }
+                                        </div>
+                                        <ProviderModelSelector Provider="@SelectedImageGenerationProvider"
+                                                               Value="@editorModel.ImageGenerationAccess.DefaultModel"
+                                                               ValueChanged="HandleImageGenerationModelChangedAsync"
+                                                               Disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || SelectedImageGenerationProvider is null)"
+                                                               Label="Image model"
+                                                               TestId="agents-catalog-image-model-selector"
+                                                               ChoiceTestId="agents-catalog-image-model-choice"
+                                                               OverrideTestId="agents-catalog-image-model-override"
+                                                               CustomModelTestId="agents-catalog-image-model" />
+                                    </Grid>
+
+                                    <Alert AlertStyle="AlertStyle.Info" Class="mt-4">
+                                        <p class="font-semibold">Image provider policy</p>
+                                        <p class="mt-1">@DescribeImageGenerationProviderChoice()</p>
+                                    </Alert>
+
+                                    @{
+                                        var imageGenerationWarning = ResolveImageGenerationWarning();
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(imageGenerationWarning))
+                                    {
+                                        <Alert AlertStyle="AlertStyle.Warning" Class="mt-3">
+                                            <p class="font-semibold">Image generation configuration needs attention</p>
+                                            <p class="mt-1">@imageGenerationWarning</p>
+                                        </Alert>
+                                    }
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
                     <TabsItem Text="Project Structure Access">
                         <FormSection Title="Project Structure Access" Description="Internal agents always carry the project-structure tool family. These settings decide whether the current agent can read or mutate project data and which projects it may touch.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-project-structure-access">

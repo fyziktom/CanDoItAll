@@ -22,6 +22,8 @@ public static class ToolContractCatalog
     public const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";
     public const string WorkspacePythonRunFile = "workspace_python_run_file";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
+    public const string WorkspaceAnalyzeImage = "workspace_analyze_image";
+    public const string WorkspaceAnalyzeImages = "workspace_analyze_images";
     public const string WorkspaceInspectSpreadsheet = "workspace_inspect_spreadsheet";
     public const string WorkspaceConvertDocument = "workspace_convert_document";
     public const string WorkspaceCommandRun = "workspace_command_run";
@@ -67,6 +69,8 @@ public static class ToolContractCatalog
         WorkspacePowerShellRunScript,
         WorkspacePythonRunFile,
         WorkspaceInspectImage,
+        WorkspaceAnalyzeImage,
+        WorkspaceAnalyzeImages,
         WorkspaceInspectSpreadsheet,
         WorkspaceConvertDocument,
         WorkspaceCommandRun,

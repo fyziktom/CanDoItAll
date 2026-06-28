@@ -1,4 +1,0 @@
-warning: unused variable: `verification_context`
-test transcript_verifier_rejects_missing_manifest ... FAILED
-missing artifact: proof/SB021/manifest.md
-runtime proof gap: no cargo test transcript hash was supplied.

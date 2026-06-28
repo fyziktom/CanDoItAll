@@ -1040,12 +1040,22 @@ internal static class RuntimePluginAssemblyRegistrar
             .Select(type => type.AsType())
             .Where(typeof(IWorkflowExecutor).IsAssignableFrom))
         {
+            var runtimeExecutorType = implementationType;
             services.AddScoped(typeof(IWorkflowExecutor), serviceProvider =>
-            {
-                var executor = (IWorkflowExecutor)ActivatorUtilities.CreateInstance(serviceProvider, implementationType);
-                return new RuntimePackageWorkflowExecutor(executor, manifest.Plugin);
-            });
+                CreateRuntimePackageWorkflowExecutor(serviceProvider, runtimeExecutorType, manifest.Plugin));
+            services.AddScoped<IWorkflowExecutorDescriptorSource>(serviceProvider =>
+                new RuntimePackageWorkflowExecutorDescriptorSource(
+                    CreateRuntimePackageWorkflowExecutor(serviceProvider, runtimeExecutorType, manifest.Plugin)));
         }
+    }
+
+    private static RuntimePackageWorkflowExecutor CreateRuntimePackageWorkflowExecutor(
+        IServiceProvider serviceProvider,
+        Type implementationType,
+        PluginDescriptor pluginDescriptor)
+    {
+        var executor = (IWorkflowExecutor)ActivatorUtilities.CreateInstance(serviceProvider, implementationType);
+        return new RuntimePackageWorkflowExecutor(executor, pluginDescriptor);
     }
 
     private sealed class RuntimePackageWorkflowExecutor(
@@ -1097,6 +1107,14 @@ internal static class RuntimePluginAssemblyRegistrar
                 PluginTrustLevel.RemotePackage => WorkflowExecutorTrustLevel.RemotePackage,
                 _ => WorkflowExecutorTrustLevel.Untrusted
             };
+    }
+
+    private sealed class RuntimePackageWorkflowExecutorDescriptorSource(IWorkflowExecutor executor) : IWorkflowExecutorDescriptorSource
+    {
+        public IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors()
+        {
+            yield return executor.Descriptor;
+        }
     }
 
 #pragma warning disable CA1416

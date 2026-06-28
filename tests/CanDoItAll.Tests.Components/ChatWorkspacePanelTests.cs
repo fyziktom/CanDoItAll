@@ -2,6 +2,8 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -128,6 +130,47 @@ public sealed class ChatWorkspacePanelTests
         Assert.NotEmpty(cut.FindAll("[data-testid='chat-voice-speak-button']"));
         Assert.Contains("Audio mode", cut.Markup);
         Assert.Contains("Audio on", cut.Markup);
+    }
+
+    [Fact]
+    public void Image_attachment_upload_control_renders_only_when_upload_handler_is_bound()
+    {
+        using var context = CreateContext();
+        var withoutUpload = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+            .Add(item => item.DraftPrompt, string.Empty));
+
+        Assert.Empty(withoutUpload.FindAll("[data-testid='chat-image-attachment-button']"));
+
+        var withUpload = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+            .Add(item => item.DraftPrompt, string.Empty)
+            .Add(
+                item => item.AttachmentFilesSelected,
+                EventCallback.Factory.Create<InputFileChangeEventArgs>(
+                    this,
+                    _ => Task.CompletedTask)));
+
+        Assert.NotEmpty(withUpload.FindAll("[data-testid='chat-image-attachment-button']"));
+        Assert.NotEmpty(withUpload.FindAll("[data-testid='chat-image-attachment-input']"));
+    }
+
+    [Fact]
+    public void Prompt_composer_raises_draft_prompt_changed_on_input()
+    {
+        using var context = CreateContext();
+        var agentId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        var createdAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
+        var changedPrompt = string.Empty;
+
+        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+            .Add(item => item.Session, CreateSession(agentId, sessionId, runId, createdAtUtc))
+            .Add(item => item.DraftPrompt, string.Empty)
+            .Add(item => item.DraftPromptChanged, value => changedPrompt = value));
+
+        cut.Find("[data-testid='chat-prompt-input']").Input("Analyze this screenshot.");
+
+        Assert.Equal("Analyze this screenshot.", changedPrompt);
     }
 
     private static TestContext CreateContext()

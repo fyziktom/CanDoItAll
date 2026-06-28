@@ -1,6 +1,0 @@
-Invoke-RestMethod: 
-Line |
-   2 |  … $response = Invoke-RestMethod -Method Post -Uri 'http://localhost:503 …
-     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     | The request was canceled due to the configured HttpClient.Timeout of 900 seconds elapsing.
-

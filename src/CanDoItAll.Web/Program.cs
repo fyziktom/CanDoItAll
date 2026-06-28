@@ -29,12 +29,14 @@ using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Web;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
+using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseStaticWebAssets();
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
 var promptAttachmentMessageLimitBytes = 8 * 1024 * 1024;
 var databaseOptions = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();

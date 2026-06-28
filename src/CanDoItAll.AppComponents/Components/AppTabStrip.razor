@@ -10,7 +10,9 @@
            Class="cda-tab-strip__main-row"
            data-testid="app-tab-strip-main-row">
         <Cluster Gap="LayoutGap.XSmall"
-                 Class="cda-tab-strip__tabs min-w-0">
+                 Class="cda-tab-strip__tabs min-w-0"
+                 role="tablist"
+                 aria-label="Open workspace tabs">
             @foreach (var tab in InlineTabs)
             {
                 @RenderTab(tab)
@@ -21,7 +23,7 @@
                  Wrap="FlexWrap.NoWrap"
                  Class="cda-tab-strip__controls flex-shrink-0"
                  data-testid="app-tab-strip-controls">
-            @if (Items.Count > InlineTabLimit || RecentTabs.Count > 0)
+            @if (Items.Count > 1 || RecentTabs.Count > 0)
             {
                 <input @bind="searchText"
                        @bind:event="oninput"
@@ -119,7 +121,6 @@
 </div>
 
 @code {
-    private const int InlineTabLimit = 6;
     private string searchText = string.Empty;
 
     [Parameter]
@@ -178,9 +179,9 @@
                     string.Equals(tab.ProjectName, searchText, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-    private IReadOnlyList<WorkbenchTabState> InlineTabs => FilteredTabs.Take(InlineTabLimit).ToList();
+    private IReadOnlyList<WorkbenchTabState> InlineTabs => FilteredTabs;
 
-    private IReadOnlyList<WorkbenchTabState> OverflowTabs => FilteredTabs.Skip(InlineTabLimit).ToList();
+    private IReadOnlyList<WorkbenchTabState> OverflowTabs => [];
 
     private IReadOnlyList<WorkbenchTabState> FilteredRecentTabs
         => string.IsNullOrWhiteSpace(searchText)
@@ -191,7 +192,13 @@
                 .ToList();
 
     private RenderFragment RenderTab(WorkbenchTabState tab) => @<div class="group/tab cda-inline-tab @(IsActive(tab) ? "cda-inline-tab--active" : "cda-inline-tab--inactive")">
-        <button type="button" class="inline-flex min-w-0 items-center gap-1.5 text-left" @onclick="() => Activate.InvokeAsync(tab.TabId)">
+        <button type="button"
+                role="tab"
+                aria-selected="@(IsActive(tab) ? "true" : "false")"
+                aria-current="@(IsActive(tab) ? "page" : null)"
+                class="inline-flex min-w-0 items-center gap-1.5 text-left"
+                title="@tab.Title"
+                @onclick="() => Activate.InvokeAsync(tab.TabId)">
             <span class="max-w-[9rem] truncate font-medium">@tab.Title</span>
             @if (tab.IsDirty)
             {
@@ -203,7 +210,7 @@
             }
         </button>
 
-        <div class="cda-inline-tab__actions group-hover/tab:inline-flex @(IsActive(tab) ? "cda-inline-tab__actions--active" : string.Empty)">
+        <div class="cda-inline-tab__actions group-hover/tab:inline-flex">
             <button type="button" class="cda-inline-tab__action" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)"><Icon Name="chevron_left" /><span class="sr-only">Move left</span></button>
             <button type="button" class="cda-inline-tab__action" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)"><Icon Name="chevron_right" /><span class="sr-only">Move right</span></button>
             <button type="button" class="cda-inline-tab__action" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)"><Icon Name="push_pin" /><span class="sr-only">Pin tab</span></button>

@@ -192,7 +192,8 @@ public sealed record ProjectStructureProcessStartCandidateState(
     string AgentWorkloadLabel = "",
     string AgentAvatarImageUrl = "",
     IReadOnlyList<string>? ToolNames = null,
-    IReadOnlyList<string>? SkillNames = null);
+    IReadOnlyList<string>? SkillNames = null,
+    int MatchScore = 0);
 
 public sealed record ProjectStructureProcessStartRoleState(
     Guid LaunchPlanRoleId,

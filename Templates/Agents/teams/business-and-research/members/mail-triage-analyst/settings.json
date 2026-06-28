@@ -5,7 +5,7 @@
   "summary": "Uses inline skill instructions, AI context, and workspace document tools to summarize mail-like artifacts and extract participant-owned tasks.",
   "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-03.jpg",
   "status": "Active",
-  "providerProfileKey": "openai-chat-completions",
+  "providerProfileKey": "managed-seed-openai-default",
   "model": "gpt-5.4-mini",
   "workload": "Mail",
   "chatHistoryMode": "FrameworkManaged",

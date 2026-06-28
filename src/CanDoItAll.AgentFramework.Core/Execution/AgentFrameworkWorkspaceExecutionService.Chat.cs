@@ -158,22 +158,72 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid agentId,
         Guid? chatSessionId,
         string prompt,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? attachmentPaths = null,
+        AgentChatRunOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(prompt))
         {
             throw new InvalidOperationException("Prompt is required.");
         }
 
+        if (store is ISandboxWorkspaceExecutionRunStore &&
+            store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+        {
+            var splitCatalog = await store.LoadCatalogAsync(cancellationToken);
+            var splitAgent = EnsureAgentExists(splitCatalog, agentId);
+            var splitProvider = await ResolveProviderForAgentAsync(splitAgent, splitCatalog, cancellationToken);
+            var splitSession = chatSessionId.HasValue
+                ? EnsureAgentOwnsSession(
+                    await chatQueryStore.GetChatSessionAsync(chatSessionId.Value, cancellationToken),
+                    agentId,
+                    chatSessionId.Value)
+                : null;
+
+            return await SendMessageCoreAsync(
+                splitAgent,
+                splitProvider,
+                splitCatalog,
+                SandboxWorkspaceExecutionState.Empty,
+                splitSession,
+                prompt,
+                attachmentPaths,
+                options,
+                cancellationToken);
+        }
+
         var document = await store.LoadAsync(cancellationToken);
-        var catalog = document.ToCatalog();
-        var executionState = document.ToExecutionState();
-        var agent = EnsureAgentExists(catalog, agentId);
-        var provider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
-        var session = chatSessionId.HasValue
-            ? EnsureAgentOwnsSession(executionState, agentId, chatSessionId.Value)
+        var fallbackCatalog = document.ToCatalog();
+        var fallbackExecutionState = document.ToExecutionState();
+        var fallbackAgent = EnsureAgentExists(fallbackCatalog, agentId);
+        var fallbackProvider = await ResolveProviderForAgentAsync(fallbackAgent, fallbackCatalog, cancellationToken);
+        var fallbackSession = chatSessionId.HasValue
+            ? EnsureAgentOwnsSession(fallbackExecutionState, agentId, chatSessionId.Value)
             : null;
 
+        return await SendMessageCoreAsync(
+            fallbackAgent,
+            fallbackProvider,
+            fallbackCatalog,
+            fallbackExecutionState,
+            fallbackSession,
+            prompt,
+            attachmentPaths,
+            options,
+            cancellationToken);
+    }
+
+    private async Task<AgentChatRunResult> SendMessageCoreAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        SandboxWorkspaceCatalog catalog,
+        SandboxWorkspaceExecutionState executionState,
+        ChatSessionRecord? session,
+        string prompt,
+        IReadOnlyList<string>? attachmentPaths,
+        AgentChatRunOptions? options,
+        CancellationToken cancellationToken)
+    {
         var result = await ExecuteRunCoreAsync(
             agent,
             provider,
@@ -181,7 +231,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             executionState,
             session,
             new ExecutionRunRequest(
-                AgentId: agentId,
+                AgentId: agent.Id,
                 Prompt: prompt.Trim(),
                 ChatSessionId: session?.Id,
                 Context: new ExecutionInvocationContext(
@@ -191,8 +241,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     CausationId: string.Empty,
                     RequestedBy: "sandbox-chat",
                     RequestedByKind: "interactive",
-                    MetadataJson: "{}"),
-                AutoApprovePendingToolCalls: false),
+                    MetadataJson: BuildChatMetadataJson(options)),
+                AutoApprovePendingToolCalls: false,
+                InputAttachmentPaths: attachmentPaths),
             persistTranscript: true,
             cancellationToken);
 
@@ -203,6 +254,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             ExecutionRunId = result.ExecutionRunId
         };
+    }
+
+    private static string BuildChatMetadataJson(AgentChatRunOptions? options)
+    {
+        var metadataJson = "{}";
+        if (options?.RuntimeToolProvidersEnabled == false)
+        {
+            metadataJson = ExecutionInvocationMetadata.ApplyRuntimeToolProvidersEnabled(metadataJson, enabled: false);
+        }
+
+        if (options?.WorkspaceToolsEnabled == false)
+        {
+            metadataJson = ExecutionInvocationMetadata.ApplyWorkspaceToolsEnabled(metadataJson, enabled: false);
+        }
+
+        return metadataJson;
     }
 
     public async Task<AgentChatRunResult> RespondToPendingApprovalsAsync(

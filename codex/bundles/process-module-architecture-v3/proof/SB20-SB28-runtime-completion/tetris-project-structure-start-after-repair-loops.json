@@ -1,4 +1,0 @@
-{
-  "error": "The request was canceled due to the configured HttpClient.Timeout of 180 seconds elapsing.",
-  "response": null
-}

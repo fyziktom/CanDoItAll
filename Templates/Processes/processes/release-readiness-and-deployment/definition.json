@@ -771,15 +771,8 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
-  "DocPath": "processes/release-readiness-and-deployment/definition.md",
   "RelativePath": "processes/release-readiness-and-deployment",
   "DefinitionJsonPath": "processes/release-readiness-and-deployment/definition.json",
-  "DefinitionMarkdownPath": "processes/release-readiness-and-deployment/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/release-readiness-and-deployment/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/release-readiness-and-deployment/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/release-readiness-and-deployment/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/release-readiness-and-deployment/mermaid/flowchart.mmd",
-  "SequencePath": "processes/release-readiness-and-deployment/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

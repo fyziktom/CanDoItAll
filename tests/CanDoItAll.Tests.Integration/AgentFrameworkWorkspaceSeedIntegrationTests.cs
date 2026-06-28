@@ -136,6 +136,40 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Organization_workspace_seeds_local_comfyui_flux_image_generation_provider()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var providers = await workspaceService.ListProvidersAsync();
+        var imageProvider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.ComfyUi &&
+                    item.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                    string.Equals(item.Name, ComfyUiFluxProviderDefaults.ProviderName, StringComparison.Ordinal));
+        var service = new ProviderProfileService();
+        var matrix = service.ResolveFeatureMatrix(imageProvider);
+        using var configuration = JsonDocument.Parse(imageProvider.ConfigurationJson);
+        var root = configuration.RootElement;
+
+        Assert.Equal(ComfyUiFluxProviderDefaults.DefaultBaseUrl, imageProvider.BaseUrl);
+        Assert.Equal(ComfyUiFluxProviderDefaults.DefaultModel, imageProvider.DefaultModel);
+        Assert.True(imageProvider.IsEnabled);
+        Assert.True(imageProvider.IsPrivateProvider);
+        Assert.False(imageProvider.SupportsTools);
+        Assert.Contains(ComfyUiFluxProviderDefaults.DefaultModel, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(ComfyUiFluxProviderDefaults.PositivePromptNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.PositivePromptNodeId).GetString());
+        Assert.Equal(ComfyUiFluxProviderDefaults.SamplerNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.SamplerNodeId).GetString());
+        Assert.Equal(ComfyUiFluxProviderDefaults.LatentSizeNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.WidthNodeId).GetString());
+        Assert.Equal(ComfyUiFluxProviderDefaults.OutputNodeId, root.GetProperty(ComfyUiProviderConfigurationKeys.OutputNodeId).GetString());
+        Assert.Contains("flux1-dev.safetensors", root.GetProperty(ComfyUiProviderConfigurationKeys.WorkflowTemplateJson).GetString(), StringComparison.Ordinal);
+        Assert.True(matrix.SupportsImageGeneration);
+        Assert.False(matrix.SupportsFunctionTools);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -543,6 +577,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Before any scaffold call", instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", instructions, StringComparison.Ordinal);
         Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as current-run evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("When writing xUnit tests, include a visible `using Xunit;`", instructions, StringComparison.Ordinal);
+        Assert.Contains("custom route backed only by scaffold-default `app.css` and layout CSS", instructions, StringComparison.Ordinal);
+        Assert.Contains("custom class names without matching loaded styles", instructions, StringComparison.Ordinal);
         Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
         Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
     }
@@ -570,6 +607,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Final delivery order is strict", instructions, StringComparison.Ordinal);
         Assert.Contains("Do not claim completion with chat-only evidence", instructions, StringComparison.Ordinal);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("computed styles apply to the primary surface", instructions, StringComparison.Ordinal);
+        Assert.Contains("product-specific class names but the accepted screenshot or state output shows only unstyled DOM", instructions, StringComparison.Ordinal);
         Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
         Assert.Contains("store accepted screenshots as ImageAsset nodes or record the exact project-structure asset handoff", instructions, StringComparison.Ordinal);
         Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
@@ -591,6 +630,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", instructions, StringComparison.Ordinal);
         Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", instructions, StringComparison.Ordinal);
+        Assert.Contains("When writing xUnit tests, include a visible `using Xunit;`", instructions, StringComparison.Ordinal);
+        Assert.Contains("domain-specific classes but only stock template CSS", instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", instructions, StringComparison.Ordinal);
         Assert.Contains("cleanup.json", instructions, StringComparison.Ordinal);
         Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
@@ -633,9 +674,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var appendFileCapabilityId = capabilityIdsByKey["workspace-append-file"];
         var workspaceDotnetRunCapabilityId = capabilityIdsByKey["workspace-dotnet-run"];
         var workspaceDotnetStopCapabilityId = capabilityIdsByKey["workspace-dotnet-stop"];
+        var workspaceDotnetNewCapabilityId = capabilityIdsByKey["workspace-dotnet-new"];
         var pwshRunScriptCapabilityId = capabilityIdsByKey["workspace-pwsh-run-script"];
         var convertDocumentCapabilityId = capabilityIdsByKey["workspace-convert-document"];
         var inspectSpreadsheetCapabilityId = capabilityIdsByKey["workspace-inspect-spreadsheet"];
+        var inspectImageCapabilityId = capabilityIdsByKey["workspace-inspect-image"];
+        var analyzeImageCapabilityId = capabilityIdsByKey["workspace-analyze-image"];
+        var analyzeImagesCapabilityId = capabilityIdsByKey["workspace-analyze-images"];
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         var architectAgent = Assert.Single(agents, item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
         var programmingAgent = Assert.Single(agents, item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
@@ -674,19 +719,19 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(marketingSpecialistAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
 
         AssertHasCapabilities(architectAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(qaAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(qaAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(codeReviewAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(uiReviewAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(uiReviewAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(securityReviewerAgent, codeanalyticsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(releaseManagerAgent, playwrightCapabilityId, playwrightWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(dotnetArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(dotnetDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(blazorDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(dotnetQaAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(dotnetDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(blazorDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(dotnetQaAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(javascriptArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(javascriptDeveloperAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
+        AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(businessStrategistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(marketingSpecialistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
@@ -866,10 +911,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("stale evidence", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Treat untouched scaffold styling, flat stacked forms, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("loaded CSS or scoped CSS applies to the primary route classes with computed styles", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("rendered as unstyled DOM is a QA failure", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("meaningful filled, selected, or changed state", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a .NET app is not already running", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("provider/model is not vision-capable", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("A single static screenshot is insufficient", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a non-.NET app is not already running and only PowerShell execution is available", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not call `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for non-.NET deliverables", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", qaEditor.Instructions, StringComparison.Ordinal);
@@ -880,8 +931,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Back every claim with visible proof", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("provider/model is not vision-capable", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("mark conflicting prior screenshots or notes as stale evidence", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Call out flat Bootstrap-default composition, bare stacked form sections, or template navigation chrome", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("backed by loaded CSS or scoped CSS", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("rendered by stock scaffold CSS only", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("stock scaffold", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-theme", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-skill", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -892,7 +948,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("filesystem assumptions", securityEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Keep the decision explicit: ready, blocked, or ready-with-residual-risk", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not accept stale prior-run artifacts as proof for the current release", releaseEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Treat obviously template-looking UI, unresolved screenshot quality concerns, or ambiguous artifact handoff as release blockers", releaseEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("missing active styles for custom visual surfaces", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("For visible browser workflows, release readiness requires process-visible current-run browser artifacts", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("missing, empty, detached, stale, or chat-only browser proof", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("build-system fragility", releaseEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -925,6 +981,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Assert.Single(agents, item => string.Equals(item.Name, "JavaScript Application Developer", StringComparison.Ordinal)).Id);
         var javascriptQa = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "JavaScript QA Review Lead", StringComparison.Ordinal)).Id);
+        var dotnetQa = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, ".NET QA Review Lead", StringComparison.Ordinal)).Id);
         var businessStrategist = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "Business Strategist", StringComparison.Ordinal)).Id);
         var financialStrategist = await workspaceService.GetAgentEditorAsync(
@@ -950,6 +1008,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not satisfy a behavior defect by adding manifests", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", dotnetQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", dotnetQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("A single static screenshot is insufficient", dotnetQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not submit Completed or Blocked for missing browser receipts from file inspection alone", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", javascriptQa.Instructions, StringComparison.Ordinal);
@@ -1191,6 +1254,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("scaffold directly into it instead of adding an extra nested", refreshedInstructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Before any scaffold call", refreshedInstructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("When writing xUnit tests, include a visible `using Xunit;`", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("custom route backed only by scaffold-default `app.css` and layout CSS", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("custom class names without matching loaded styles", refreshedInstructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1232,7 +1298,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase));
 
         Assert.Equal(seededSnapshot.Description, refreshedSnapshot.Description);
-        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
+        Assert.Contains(GetExpectedSeriousDeliveryManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1272,11 +1338,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var refreshedStopSnapshot = ReadCapabilitySnapshotFromCatalog(catalogPath, "workspace-dotnet-stop");
 
         Assert.Contains("stdout/stderr diagnostics", refreshedSnapshot.Description, StringComparison.Ordinal);
-        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
+        Assert.Contains(GetExpectedSeriousDeliveryManagedSeedVersion(), refreshedSnapshot.ConfigurationJson, StringComparison.Ordinal);
         Assert.Contains("startup.json receipt", refreshedStopSnapshot.Description, StringComparison.Ordinal);
         Assert.Contains("cleanup.json proof", refreshedStopSnapshot.Description, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", refreshedStopSnapshot.ConfigurationJson, StringComparison.Ordinal);
-        Assert.Contains(GetExpectedManagedSeedVersion(), refreshedStopSnapshot.ConfigurationJson, StringComparison.Ordinal);
+        Assert.Contains(GetExpectedSeriousDeliveryManagedSeedVersion(), refreshedStopSnapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
     private static void AssertOpenAiBacked(AgentDefinition agent, Guid providerId, string expectedModel)
@@ -1300,6 +1366,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         using var configuration = JsonDocument.Parse(seededAgent.ConfigurationJson);
         return configuration.RootElement.GetProperty("managedSeedVersion").GetString()
                ?? throw new InvalidOperationException("Managed seed version is missing from the default software delivery agent configuration.");
+    }
+
+    private static string GetExpectedSeriousDeliveryManagedSeedVersion()
+    {
+        var seededCapability = Assert.Single(
+            SandboxWorkspaceSeedFactory.Create().Capabilities,
+            item => string.Equals(item.Key, "dotnet-app-delivery-inline-skill", StringComparison.Ordinal));
+        using var configuration = JsonDocument.Parse(seededCapability.ConfigurationJson);
+        return configuration.RootElement.GetProperty("managedSeedVersion").GetString()
+               ?? throw new InvalidOperationException("Managed seed version is missing from the serious delivery capability configuration.");
     }
 
     private static void AssertHasCapabilities(AgentDefinition agent, params Guid[] capabilityIds)

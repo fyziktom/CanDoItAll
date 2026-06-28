@@ -374,6 +374,52 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
     }
 
+    [Theory]
+    [InlineData("artifacts/process-runs/dotnet-run/20260624-193219617/startup.json")]
+    [InlineData("artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/dotnet-run/20260624-193219617/startup.json")]
+    public async Task DotnetStop_in_organization_scope_accepts_scoped_and_unscoped_startup_receipts(string startupReceiptPath)
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceScope = WorkspaceScopeDescriptor.Organization("e5df9ad633dbc6974a0678a74976013c");
+        var receiptRelativeDirectory = workspaceScope.CombineArtifactPath("process-runs", "dotnet-run", "20260624-193219617");
+        var receiptDirectory = Path.Combine(workspaceRoot, receiptRelativeDirectory.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(receiptDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(receiptDirectory, "startup.json"),
+            """
+            {
+              "succeeded": true,
+              "appProcessId": 12345,
+              "appProcessTreeIds": [12346, 12345]
+            }
+            """);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost, workspaceScope);
+
+        try
+        {
+            var result = await service.DotnetStop(startupReceiptPath, timeoutSeconds: 10);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_stop", processHost.LastRequest!.ToolName);
+            Assert.Equal(receiptDirectory, processHost.LastRequest.WorkingDirectory);
+            Assert.Contains(
+                result.Receipt.TargetPaths,
+                item => string.Equals(item, $"{receiptRelativeDirectory}/startup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(
+                result.Receipt.TargetPaths,
+                item => string.Equals(item, $"{receiptRelativeDirectory}/cleanup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(
+                result.Receipt.TargetPaths,
+                item => string.Equals(item, $"{receiptRelativeDirectory}/stop.ps1", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
     [Fact]
     public async Task DotnetRun_http_smoke_can_mark_process_run_lifetime_for_downstream_capture()
     {

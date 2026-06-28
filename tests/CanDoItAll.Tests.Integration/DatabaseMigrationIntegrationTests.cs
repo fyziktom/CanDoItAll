@@ -13,13 +13,31 @@ public sealed class MigrationBootstrapIntegrationTests
     private const string SchedulerRunObservabilityMigrationId = "20260529220032_AddSchedulerRunObservability";
     private const string DisableCognitiveMemoryByDefaultMigrationId = "20260603113251_DisableCognitiveMemoryByDefault";
     private const string ProcessVerificationAuditRecordsMigrationId = "20260610113813_AddProcessVerificationAuditRecords";
+    private const string SubprocessChildArtifactMappingMigrationId = "20260612173521_PersistSubprocessChildArtifactMapping";
+    private const string WorkspaceCurrencySettingsMigrationId = "20260612222259_AddWorkspaceCurrencySettings";
+    private const string ProcessModuleArchitectureV3RuntimePersistenceMigrationId = "20260615235147_ProcessModuleArchitectureV3RuntimePersistence";
+    private const string ProcessV3RuntimeTablesMigrationId = "20260616144322_ProcessV3RuntimeTables";
+    private const string ProcessRuntimeAssignmentOperationContractsMigrationId = "20260616155920_ProcessRuntimeAssignmentOperationContracts";
+    private const string ProcessRuntimeAssignmentLaunchVariablesMigrationId = "20260616162335_ProcessRuntimeAssignmentLaunchVariables";
+    private const string ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId = "20260617131500_ProcessRuntimeEventGlobalSequenceIdentityRepair";
+    private const string ProcessRuntimeAssignmentRoleIdentityMigrationId = "20260618103000_ProcessRuntimeAssignmentRoleIdentity";
+    private const string RemoveUnusedValidationActivityAutomationModulesMigrationId = "20260621212712_RemoveUnusedValidationActivityAutomationModules";
     private static readonly string[] ExpectedPostgreSqlMigrations =
     [
         InitialPostgreSqlBaselineMigrationId,
         WorkflowCheckpointsMigrationId,
         SchedulerRunObservabilityMigrationId,
         DisableCognitiveMemoryByDefaultMigrationId,
-        ProcessVerificationAuditRecordsMigrationId
+        ProcessVerificationAuditRecordsMigrationId,
+        SubprocessChildArtifactMappingMigrationId,
+        WorkspaceCurrencySettingsMigrationId,
+        ProcessModuleArchitectureV3RuntimePersistenceMigrationId,
+        ProcessV3RuntimeTablesMigrationId,
+        ProcessRuntimeAssignmentOperationContractsMigrationId,
+        ProcessRuntimeAssignmentLaunchVariablesMigrationId,
+        ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId,
+        ProcessRuntimeAssignmentRoleIdentityMigrationId,
+        RemoveUnusedValidationActivityAutomationModulesMigrationId
     ];
 
     [Fact]

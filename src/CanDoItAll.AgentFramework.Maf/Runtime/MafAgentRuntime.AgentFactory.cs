@@ -77,10 +77,19 @@ public sealed partial class MafAgentRuntime
         var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiCredentialOverride);
         PromoteResolvedProviderCredentialEnvironment(effectiveProvider);
-        var model = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
+        var requestedModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
+        var model = ResolveRuntimeModelForInputAttachments(effectiveProvider, requestedModel, runtimeOptions);
         if (string.IsNullOrWhiteSpace(model))
         {
             throw new InvalidOperationException($"Provider '{effectiveProvider.Name}' does not have a default model and the agent '{agent.Name}' does not override one.");
+        }
+
+        if (!string.Equals(requestedModel, model, StringComparison.OrdinalIgnoreCase))
+        {
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Input attachments",
+                $"Using provider image-analysis model '{model}' for request-scoped image attachment(s) because runtime model '{requestedModel}' is not vision-capable.");
         }
 
         if (IsReasoningEffortConfiguredButTransportUnsupported(effectiveProvider, model, agent.ConfigurationJson))
@@ -93,6 +102,7 @@ public sealed partial class MafAgentRuntime
         var capabilityState = await CreateCapabilityStateCoreAsync(
             agent,
             effectiveProvider,
+            model,
             capabilities,
             memory,
             progressCallback,
@@ -114,7 +124,7 @@ public sealed partial class MafAgentRuntime
                 $"Attached {runtimeOptions.FinalizerMode} finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
         }
 
-        var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider);
+        var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider, runtimeOptions);
         var chatOptions = CreateModelCompatibleChatOptions(
             effectiveProvider,
             model,
@@ -506,7 +516,10 @@ public sealed partial class MafAgentRuntime
                 ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
                 InspectedScriptContent: scriptInspection.Content,
                 ScriptInspectionFailure: scriptInspection.FailureMessage,
-                ScriptSideEffectManifestJson: scriptSideEffectManifestJson);
+                ScriptSideEffectManifestJson: scriptSideEffectManifestJson)
+            {
+                SourceId = auditScope?.SourceId ?? string.Empty
+            };
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
@@ -1132,7 +1145,9 @@ public sealed partial class MafAgentRuntime
         }
 
         return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
-               "- The `result` object must have this JSON shape: `{ \"status\": \"Completed|Blocked|Failed|WaitingApproval|Refused\", \"reason\": \"...\", \"branchOutcomeKey\": \"\", \"branchOutcomeTitle\": \"\", \"evidenceRefs\": [\"artifacts/process-runs/...\"], \"nextActions\": [], \"humanReadableSummaryMarkdown\": \"...\" }`." + Environment.NewLine;
+               "- The `result` object must include `status`, `reason`, `branchOutcomeKey`, `branchOutcomeTitle`, `evidenceRefs`, `nextActions`, and `humanReadableSummaryMarkdown`. Use `Completed`, `Blocked`, `Failed`, `WaitingApproval`, or `Refused` for `status`." + Environment.NewLine +
+               "- Do not copy placeholder evidence values. Evidence refs must be exact current-run refs already created or observed during this turn." + Environment.NewLine +
+               "- If `status` is `Completed`, `evidenceRefs` must contain at least one concrete current-run evidence reference. If no such evidence exists, return `Blocked` or `Failed` with a concrete `nextActions` entry instead of claiming completion." + Environment.NewLine;
     }
 
     private ScriptContentInspection ResolveScriptContentInspectionForPolicy(
@@ -1663,11 +1678,15 @@ public sealed partial class MafAgentRuntime
 
         public RuntimeCapabilityState? CapabilityState { get; } = runtimeCapabilityState;
 
+        public IReadOnlyList<AITool> FinalizerTools { get; } = finalizerCapture?.Tools ?? [];
+
+        public ToolInvocationTraceRecorder? ToolInvocationTraceRecorder { get; } = toolInvocationTraceRecorder;
+
         public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
             => snapshotFinalizerInvocations?.Invoke() ?? finalizerCapture?.Snapshot() ?? [];
 
         public IReadOnlyList<AgentToolInvocationTrace> SnapshotToolInvocationTraces()
-            => snapshotToolInvocationTraces?.Invoke() ?? toolInvocationTraceRecorder?.Snapshot() ?? [];
+            => snapshotToolInvocationTraces?.Invoke() ?? ToolInvocationTraceRecorder?.Snapshot() ?? [];
 
         public IReadOnlyList<AgentContextContributionTrace> SnapshotContextContributionTraces()
             => snapshotContextContributionTraces?.Invoke() ?? contextContributionTraceCollector?.Snapshot() ?? [];
@@ -1807,8 +1826,8 @@ public sealed partial class MafAgentRuntime
 
         public List<AITool> Tools { get; } = [];
 
-        public string SubmitProcessStepOutcome(ProcessStepOutcomeResult result)
-            => Capture(result, "Process step outcome finalizer captured.");
+        public string SubmitProcessStepOutcome(JsonElement result)
+            => CaptureJsonElement<ProcessStepOutcomeResult>(result, "Process step outcome finalizer captured.");
 
         public string SubmitCodeReviewResult(CodeReviewResult result)
             => Capture(result, "Code review result finalizer captured.");
@@ -1844,6 +1863,26 @@ public sealed partial class MafAgentRuntime
             ArgumentNullException.ThrowIfNull(result);
 
             var argumentsJson = JsonSerializer.Serialize(result, AgentOutputJson.SerializerOptions);
+            return CaptureArgumentsJson(argumentsJson, message);
+        }
+
+        private string CaptureJsonElement<TOutput>(JsonElement result, string message)
+        {
+            var rawJson = result.ValueKind == JsonValueKind.String &&
+                          TryUseRawJsonObjectOrArray(result.GetString(), out var parsedRawJson)
+                ? parsedRawJson
+                : result.GetRawText();
+            if (!TryNormalizeKnownFinalizerOutput(Policy, rawJson, out var argumentsJson, out var failureMessage) &&
+                !TryDeserializeFinalizerOutput(Policy, rawJson, out argumentsJson, out failureMessage))
+            {
+                throw new InvalidOperationException($"Finalizer payload for '{Policy.ToolName}' is invalid: {failureMessage}");
+            }
+
+            return CaptureArgumentsJson(argumentsJson, message);
+        }
+
+        private string CaptureArgumentsJson(string argumentsJson, string message)
+        {
             lock (gate)
             {
                 nextSequence++;

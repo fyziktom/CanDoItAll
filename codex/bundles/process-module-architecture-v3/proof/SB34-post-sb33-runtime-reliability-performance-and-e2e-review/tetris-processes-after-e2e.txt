@@ -1,1 +1,0 @@
-No TetrisGame process remains after completed e2e run.

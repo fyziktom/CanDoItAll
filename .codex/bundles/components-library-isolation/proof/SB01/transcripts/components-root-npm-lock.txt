@@ -1,4 +1,0 @@
-
-up to date, audited 2 packages in 2s
-
-found 0 vulnerabilities

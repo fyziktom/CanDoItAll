@@ -370,12 +370,14 @@ public sealed class WorkflowsPageTests
         });
 
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("LLM call", cut.Markup);
             Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-edge-row']"));
         });
 
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-node");
         cut.Find("[data-testid='workflow-canvas-node-instructions']").Change("Return a concise workflow canvas test summary.");
         cut.Find("[data-testid='workflow-canvas-validate']").Click();
         cut.WaitForAssertion(() =>
@@ -385,6 +387,7 @@ public sealed class WorkflowsPageTests
         });
 
         cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow preview completed");
@@ -449,6 +452,7 @@ public sealed class WorkflowsPageTests
         cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
         cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
         cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
         {
@@ -493,6 +497,39 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_stats_count_workflow_node_usages_not_available_inventory()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var usedComponent = CreateWorkflowComponent("Used summary call");
+        var definition = CreateWorkflowUsageStatsDefinition(usedComponent.Id);
+
+        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, definition)
+            .Add(component => component.Components,
+            [
+                usedComponent,
+                CreateWorkflowComponent("Unused research call"),
+                CreateWorkflowComponent("Unused validation call")
+            ])
+            .Add(component => component.ProviderOptions, []));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Workflow usage stats target", cut.Markup, StringComparison.Ordinal);
+            var stats = cut.FindAll(".cw-stage-stats .cw-stat-chip")
+                .ToDictionary(
+                    chip => chip.QuerySelector("span")!.TextContent.Trim(),
+                    chip => chip.QuerySelector("strong")!.TextContent.Trim());
+
+            Assert.Equal("6", stats["Nodes"]);
+            Assert.Equal("5", stats["Edges"]);
+            Assert.Equal("2", stats["Components"]);
+            Assert.Equal("2", stats["Executors"]);
+            Assert.Equal("Valid", stats["Validation"]);
+        });
+    }
+
+    [Fact]
     public async Task Workflow_canvas_preview_selects_running_node_from_progress()
     {
         var runner = new NodeProgressWorkflowTestRunner(new WorkflowNodeId("work"));
@@ -510,6 +547,7 @@ public sealed class WorkflowsPageTests
 
         cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
         cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
         {
@@ -633,6 +671,7 @@ public sealed class WorkflowsPageTests
         });
         cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
         cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
 
         cut.Find("[data-testid='workflow-canvas-edit-edge']").Click();
@@ -1008,7 +1047,12 @@ public sealed class WorkflowsPageTests
         {
             Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
         });
-        cut.Find("[data-testid='agents-shell-open-workflows']").Click();
+        Assert.Contains("Open workflows", cut.Markup, StringComparison.Ordinal);
+        var openWorkflows = typeof(AgentsHomePage).GetMethod(
+            "OpenWorkflows",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(openWorkflows);
+        await cut.InvokeAsync(() => openWorkflows.Invoke(cut.Instance, null));
 
         Assert.EndsWith("/agents/workflows", navigation.Uri, StringComparison.Ordinal);
     }
@@ -1056,6 +1100,21 @@ public sealed class WorkflowsPageTests
     private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
+
+    private static void ClickWorkflowCanvasTab(IRenderedFragment cut, string testId)
+    {
+        var tab = cut.Find($"[data-testid='{testId}']");
+        if (string.Equals(tab.TagName, "button", StringComparison.OrdinalIgnoreCase))
+        {
+            tab.Click();
+            return;
+        }
+
+        var button = tab.QuerySelector("button") ??
+                     tab.QuerySelector("[role='tab']") ??
+                     throw new InvalidOperationException($"Workflow canvas tab '{testId}' did not render a clickable tab element.");
+        button.Click();
+    }
 
     private static void ClickTabButton(IRenderedFragment cut, string text)
     {
@@ -1337,6 +1396,119 @@ public sealed class WorkflowsPageTests
                 RequireDurableProductionRuns: false,
                 ExposeAzureFunctionsStatusEndpoint: false,
                 ExposeAzureFunctionsMcpTool: false),
+            now,
+            now);
+    }
+
+    private static WorkflowDefinition CreateWorkflowUsageStatsDefinition(WorkflowComponentId componentId)
+    {
+        var start = new WorkflowNodeId("start");
+        var firstLlm = new WorkflowNodeId("llm-a");
+        var firstExecutor = new WorkflowNodeId("executor-a");
+        var secondLlm = new WorkflowNodeId("llm-b");
+        var secondExecutor = new WorkflowNodeId("executor-b");
+        var end = new WorkflowNodeId("end");
+        var now = DateTimeOffset.UtcNow;
+
+        return new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "Workflow usage stats target",
+            "Workflow used to verify canvas stat counts.",
+            WorkflowLifecycleStatus.Draft,
+            new WorkflowGraph(
+                start,
+                [
+                    CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateLlmUsageNode(firstLlm, componentId),
+                    CreateExecutorUsageNode(firstExecutor),
+                    CreateLlmUsageNode(secondLlm, componentId),
+                    CreateExecutorUsageNode(secondExecutor),
+                    CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    CreateWorkflowEdge("start-to-llm-a", start, firstLlm),
+                    CreateWorkflowEdge("llm-a-to-executor-a", firstLlm, firstExecutor),
+                    CreateWorkflowEdge("executor-a-to-llm-b", firstExecutor, secondLlm),
+                    CreateWorkflowEdge("llm-b-to-executor-b", secondLlm, secondExecutor),
+                    CreateWorkflowEdge("executor-b-to-end", secondExecutor, end)
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            now,
+            now);
+    }
+
+    private static WorkflowNode CreateLlmUsageNode(WorkflowNodeId id, WorkflowComponentId componentId)
+        => new(
+            id,
+            WorkflowNodeKind.LlmCall,
+            id.Value,
+            [],
+            new WorkflowNodeSettings(
+                componentId,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: "Summarize the current payload.",
+                InputShape: WorkflowValueShape.Text,
+                ResultShape: WorkflowValueShape.Text));
+
+    private static WorkflowNode CreateExecutorUsageNode(WorkflowNodeId id)
+        => new(
+            id,
+            WorkflowNodeKind.Executor,
+            id.Value,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: "Store the current payload.",
+                InputShape: WorkflowValueShape.Text,
+                ResultShape: WorkflowValueShape.Text)
+            {
+                ExecutorId = WorkflowExecutorIds.ProjectStructure,
+                ExecutorSettingsJson = "{}"
+            });
+
+    private static WorkflowEdge CreateWorkflowEdge(
+        string id,
+        WorkflowNodeId sourceNodeId,
+        WorkflowNodeId targetNodeId)
+        => new(
+            new WorkflowEdgeId(id),
+            sourceNodeId,
+            SourcePortId: null,
+            targetNodeId,
+            TargetPortId: null,
+            WorkflowEdgeKind.Direct,
+            ConditionExpression: string.Empty);
+
+    private static LlmCallComponent CreateWorkflowComponent(string name)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        return new LlmCallComponent(
+            WorkflowComponentId.New(),
+            name,
+            ProviderProfileId: null,
+            "gpt-5.4",
+            WorkflowModality.Text,
+            new WorkflowModelSettings(
+                Temperature: 0.2,
+                MaxOutputTokens: 800,
+                RequireJsonOutput: false,
+                ResponseFormatJsonSchema: string.Empty),
+            "Summarize the input.",
+            WorkflowValueShape.Text,
+            WorkflowValueShape.Text,
+            AgentPermissionsPolicy.Default,
             now,
             now);
     }

@@ -30,9 +30,11 @@ public partial class CognitiveMemoryPage
             defaultProviderProfileIdText = settings.DefaultProviderProfileId?.ToString("D") ?? string.Empty;
             defaultAgentIdText = settings.DefaultAgentId?.ToString("D") ?? string.Empty;
 
-            var providers = await AgentWorkspaceService.ListProvidersAsync(CancellationToken.None);
+            var referenceData = await AgentReferenceDataProvider.GetAsync(
+                AgentReferenceDataRequest.AgentsAndProviders(),
+                CancellationToken.None);
             var allowedProviderIds = settings.AllowedProviderProfileIds.ToHashSet();
-            modelProviderOptions = providers
+            modelProviderOptions = referenceData.Providers
                 .Where(provider => provider.Purpose == ProviderProfilePurpose.Chat)
                 .OrderByDescending(provider => provider.IsEnabled)
                 .ThenBy(provider => provider.Kind)
@@ -47,7 +49,7 @@ public partial class CognitiveMemoryPage
                     CognitiveMemoryModelAccessPolicy.IsLocalProvider(provider),
                     allowedProviderIds.Contains(provider.Id)))
                 .ToList();
-            modelAgentOptions = (await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, CancellationToken.None))
+            modelAgentOptions = referenceData.Agents
                 .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
             modelAccessStatus = BuildModelAccessStatus(settings);

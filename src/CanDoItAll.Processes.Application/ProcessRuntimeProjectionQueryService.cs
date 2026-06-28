@@ -67,6 +67,12 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs = (await EnrichChildRunWaitsAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
         }
 
+        if (enrichmentCache.CanLoadAssignments &&
+            (loadOptions.IncludeCurrentSteps || loadOptions.IncludeOperatorActions || loadOptions.IncludeChildRunWaits))
+        {
+            runs = (await EnrichRunMetadataAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
+        }
+
         runs.Sort(static (left, right) =>
         {
             var lastEventComparison = right.LastEventAtUtc.CompareTo(left.LastEventAtUtc);
@@ -482,6 +488,42 @@ public sealed class ProcessRuntimeProjectionQueryService(
             .ThenByDescending(agent => agent.UpdatedAtUtc)
             .ThenBy(agent => agent.ExecutorDisplayName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> EnrichRunMetadataAsync(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        RuntimeRunEnrichmentCache enrichmentCache,
+        CancellationToken cancellationToken)
+    {
+        if (runs.Count == 0)
+        {
+            return runs;
+        }
+
+        var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            var assignmentsByStep = await enrichmentCache.LoadAssignmentsByStepAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var assignments = assignmentsByStep.Values
+                .OrderBy(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var processName = string.IsNullOrWhiteSpace(run.ProcessName)
+                ? ResolveProcessName(assignments)
+                : run.ProcessName;
+            var projectId = run.ProjectId ?? ResolveProjectId(assignments);
+            var projectName = FirstNonEmpty(run.ProjectName, ResolveProjectName(assignments));
+            var isSubprocess = run.IsSubprocess || IsSubprocess(assignments);
+
+            enriched.Add(run with
+            {
+                ProcessName = processName,
+                ProjectId = projectId,
+                ProjectName = projectName,
+                IsSubprocess = isSubprocess
+            });
+        }
+
+        return enriched;
     }
 
     private async Task<IReadOnlyList<ProcessLiveProcessSnapshot>> ReconcileLiveActivityAsync(
@@ -1027,6 +1069,58 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
     private static bool IsAgentActiveStep(ProcessRuntimeStepState step)
         => step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running;
+
+    private static string ResolveProcessName(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadProcessDefinitionName(assignment.LaunchVariables, out var definitionName))
+            {
+                return definitionName;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static Guid? ResolveProjectId(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadProjectId(assignment.LaunchVariables, out var projectId))
+            {
+                return projectId;
+            }
+        }
+
+        return null;
+    }
+
+    private static string ResolveProjectName(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadProjectName(assignment.LaunchVariables, out var projectName))
+            {
+                return projectName;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool IsSubprocess(IEnumerable<ProcessRuntimeStepAssignment> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            if (ProcessRuntimeLaunchVariables.TryReadParentRunId(assignment.LaunchVariables, out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static string BuildRunLabel(ProcessLiveProcessSnapshot run)
         => $"Run {run.RunId.Value.ToString("N")[..8]}";

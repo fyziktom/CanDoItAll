@@ -133,6 +133,254 @@ public sealed class WorkbenchStateServiceTests
         Assert.Contains("incompatible session format", service.LastRestoreReport.Failures[0].Summary, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task InitializeAsync_deduplicates_restored_tabs_by_artifact_identity()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore
+        {
+            Snapshot = new WorkbenchSessionSnapshot(
+                4,
+                "route:processes",
+                [
+                    new WorkbenchTabState(
+                        "route:processes",
+                        "Processes",
+                        "/processes",
+                        TabKind: WorkbenchTabKinds.Processes,
+                        ArtifactKey: "process-workspace",
+                        RestoreKey: "process-workspace",
+                        Order: 0),
+                    new WorkbenchTabState(
+                        "route:processes-copy",
+                        "Processes copy",
+                        "/processes?unused=true",
+                        TabKind: WorkbenchTabKinds.Processes,
+                        ArtifactKey: "process-workspace",
+                        RestoreKey: "process-workspace",
+                        Order: 1)
+                ],
+                CompatibilityMarker: "candoitall.workbench.v4")
+        };
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/")]);
+
+        Assert.Single(service.Tabs);
+        Assert.Equal("route:processes", service.ActiveTabId);
+        Assert.NotNull(service.LastRestoreReport);
+        Assert.Single(service.LastRestoreReport!.Failures);
+        Assert.Contains("Duplicate tab", service.LastRestoreReport.Failures[0].Summary);
+        Assert.Single(store.SavedSnapshot!.Tabs);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_deduplicates_restored_project_structure_tabs_by_route_identity()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var projectId = Guid.NewGuid();
+        var route = $"/projects/{projectId:D}/structure";
+        var canonicalArtifactKey = $"project-structure:{projectId:N}";
+        var store = new TestWorkbenchStateStore
+        {
+            Snapshot = new WorkbenchSessionSnapshot(
+                4,
+                $"project-structure:{projectId:N}",
+                [
+                    new WorkbenchTabState(
+                        "legacy-project-structure",
+                        "Legacy Structure",
+                        route,
+                        TabKind: WorkbenchTabKinds.ProjectStructure,
+                        ProjectId: projectId,
+                        ArtifactKey: "project-child:legacy-node",
+                        RestoreKey: "project-child:legacy-node",
+                        Order: 0),
+                    new WorkbenchTabState(
+                        $"project-structure:{projectId:N}",
+                        "Canonical Structure",
+                        route,
+                        TabKind: WorkbenchTabKinds.ProjectStructure,
+                        ProjectId: projectId,
+                        ArtifactKey: canonicalArtifactKey,
+                        RestoreKey: canonicalArtifactKey,
+                        Order: 1)
+                ],
+                CompatibilityMarker: "candoitall.workbench.v4")
+        };
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/")]);
+
+        Assert.Single(service.Tabs, tab => string.Equals(tab.Route, route, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("legacy-project-structure", service.ActiveTabId);
+        Assert.NotNull(service.LastRestoreReport);
+        Assert.Single(service.LastRestoreReport!.Failures);
+        Assert.Contains("Duplicate tab", service.LastRestoreReport.Failures[0].Summary);
+        Assert.Single(store.SavedSnapshot!.Tabs);
+    }
+
+    [Fact]
+    public async Task TrackTabAsync_reuses_same_page_tab_by_restore_identity()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore();
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/")]);
+        await service.TrackTabAsync(new WorkbenchTabDescriptor(
+            "route:processes",
+            "Processes",
+            "/processes",
+            WorkbenchTabKinds.Processes,
+            ArtifactKind: "process-workspace",
+            ArtifactKey: "process-workspace",
+            RestoreKey: "process-workspace"));
+        await service.TrackTabAsync(new WorkbenchTabDescriptor(
+            "route:processes-duplicate",
+            "Processes",
+            "/processes?ignored=true",
+            WorkbenchTabKinds.Processes,
+            ArtifactKind: "process-workspace",
+            ArtifactKey: "process-workspace",
+            RestoreKey: "process-workspace"));
+
+        var processTabs = service.Tabs.Where(tab => string.Equals(tab.RestoreKey, "process-workspace", StringComparison.Ordinal)).ToList();
+        Assert.Single(processTabs);
+        Assert.Equal("route:processes", processTabs[0].TabId);
+        Assert.Equal("/processes?ignored=true", processTabs[0].Route);
+    }
+
+    [Fact]
+    public async Task TrackTabAsync_reuses_project_structure_tab_by_route_when_artifact_keys_differ()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore();
+        var projectId = Guid.NewGuid();
+        var route = $"/projects/{projectId:D}/structure";
+        var canonicalArtifactKey = $"project-structure:{projectId:N}";
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/")]);
+        await service.TrackTabAsync(new WorkbenchTabDescriptor(
+            "legacy-project-structure",
+            "Legacy Structure",
+            route,
+            WorkbenchTabKinds.ProjectStructure,
+            ProjectId: projectId,
+            ArtifactKind: "project-child",
+            ArtifactKey: "project-child:legacy-node",
+            RestoreKey: "project-child:legacy-node"));
+        await service.TrackTabAsync(new WorkbenchTabDescriptor(
+            $"project-structure:{projectId:N}",
+            "Canonical Structure",
+            route,
+            WorkbenchTabKinds.ProjectStructure,
+            ProjectId: projectId,
+            ArtifactId: projectId,
+            ArtifactKind: "project-structure",
+            ArtifactKey: canonicalArtifactKey,
+            RestoreKey: canonicalArtifactKey));
+
+        var structureTabs = service.Tabs
+            .Where(tab => string.Equals(tab.Route, route, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        Assert.Single(structureTabs);
+        Assert.Equal("legacy-project-structure", structureTabs[0].TabId);
+        Assert.Equal("Canonical Structure", structureTabs[0].Title);
+        Assert.Equal(canonicalArtifactKey, structureTabs[0].ArtifactKey);
+        Assert.Equal("legacy-project-structure", service.ActiveTabId);
+    }
+
+    [Fact]
+    public async Task TrackTabAsync_removes_recent_project_structure_duplicate_by_route_identity()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore();
+        var projectId = Guid.NewGuid();
+        var route = $"/projects/{projectId:D}/structure";
+        var canonicalArtifactKey = $"project-structure:{projectId:N}";
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/")]);
+        await service.TrackTabAsync(new WorkbenchTabDescriptor(
+            "legacy-project-structure",
+            "Legacy Structure",
+            route,
+            WorkbenchTabKinds.ProjectStructure,
+            ProjectId: projectId,
+            ArtifactKind: "project-child",
+            ArtifactKey: "project-child:legacy-node",
+            RestoreKey: "project-child:legacy-node"));
+        await service.CloseAsync("legacy-project-structure");
+        await service.TrackTabAsync(new WorkbenchTabDescriptor(
+            $"project-structure:{projectId:N}",
+            "Canonical Structure",
+            route,
+            WorkbenchTabKinds.ProjectStructure,
+            ProjectId: projectId,
+            ArtifactId: projectId,
+            ArtifactKind: "project-structure",
+            ArtifactKey: canonicalArtifactKey,
+            RestoreKey: canonicalArtifactKey));
+
+        Assert.Empty(service.RecentTabs);
+        Assert.Single(service.Tabs, tab => string.Equals(tab.Route, route, StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(store.SavedSnapshot);
+        Assert.Empty(store.SavedSnapshot!.RecentTabs ?? []);
+    }
+
+    [Fact]
+    public async Task CloseTabsAsync_removes_requested_tabs_and_repairs_active_tab()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore();
+        var projectId = Guid.NewGuid();
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync(
+            [
+                new WorkbenchTabState("dashboard", "Dashboard", "/"),
+                new WorkbenchTabState(
+                    "project-structure",
+                    "Deleted Project · Structure",
+                    $"/projects/{projectId:D}/structure",
+                    IsPinned: true,
+                    ProjectId: projectId,
+                    TabKind: WorkbenchTabKinds.ProjectStructure,
+                    ArtifactKey: $"project-structure:{projectId:N}",
+                    RestoreKey: $"project-structure:{projectId:N}",
+                    Order: 1)
+            ]);
+        await service.ActivateAsync("project-structure");
+
+        await service.CloseTabsAsync(["project-structure"]);
+
+        Assert.Equal("dashboard", service.ActiveTabId);
+        Assert.DoesNotContain(service.Tabs, tab => tab.TabId == "project-structure");
+        Assert.Empty(service.RecentTabs);
+        Assert.NotNull(store.SavedSnapshot);
+        Assert.DoesNotContain(store.SavedSnapshot!.Tabs, tab => tab.TabId == "project-structure");
+    }
+
     private sealed class TestWorkbenchStateStore : IWorkbenchStateStore
     {
         public WorkbenchSessionSnapshot? Snapshot { get; init; }

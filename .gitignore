@@ -25,6 +25,8 @@ codex/**/*.zip
 .codex/live-targets/**
 .codex/live-runner/**
 .codex/runlogs/**
+.codex/long-runs/**
+.codex/run-logs/**
 .codex/tmp/**
 .codex/temp/**
 **/.codex-artifacts/**

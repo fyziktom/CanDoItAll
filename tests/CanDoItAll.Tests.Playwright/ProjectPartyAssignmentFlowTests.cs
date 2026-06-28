@@ -9,6 +9,7 @@ using Microsoft.Playwright;
 namespace CanDoItAll.Tests.Playwright;
 
 [Collection(PlaywrightCollection.Name)]
+[Trait("Category", "Quarantined")]
 public sealed class ProjectPartyAssignmentFlowTests
 {
     private readonly PlaywrightAppFixture fixture;

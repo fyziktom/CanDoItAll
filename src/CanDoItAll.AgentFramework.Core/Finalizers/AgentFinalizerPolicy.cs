@@ -332,6 +332,47 @@ public static class AgentFinalizerSequenceValidator
     }
 }
 
+public static class AgentFinalizerInvocationNormalizer
+{
+    public static IReadOnlyList<AgentFinalizerInvocation> NormalizeRequired(
+        AgentFinalizerPolicy policy,
+        IReadOnlyList<AgentFinalizerInvocation> invocations,
+        IAgentOutputValidatorRegistry? outputValidatorRegistry = null)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(invocations);
+
+        if (!policy.IsRequired || invocations.Count <= 1)
+        {
+            return invocations;
+        }
+
+        var validator = new DefaultAgentFinalizerValidator(outputValidatorRegistry);
+        var validation = validator.Validate(policy, invocations);
+        if (validation.Succeeded)
+        {
+            return invocations;
+        }
+
+        for (var index = invocations.Count - 1; index >= 0; index--)
+        {
+            var candidate = invocations[index];
+            if (!string.Equals(candidate.ToolName, policy.ToolName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var candidateValidation = validator.Validate(policy, [candidate]);
+            if (candidateValidation.Succeeded && candidateValidation.Output is not null)
+            {
+                return [candidate];
+            }
+        }
+
+        return invocations;
+    }
+}
+
 public interface IAgentFinalizerValidator
 {
     AgentFinalizerValidationResult Validate(

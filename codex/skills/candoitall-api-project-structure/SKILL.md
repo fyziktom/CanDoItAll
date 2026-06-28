@@ -16,9 +16,9 @@ Use this skill when a task needs project, hierarchy, project-structure, dependen
 
 ## Primary Routes
 
-- Project records: `/api/projects`.
+- Project records: `GET /api/projects`, `POST /api/projects`, `GET /api/projects/access-list`, `GET /api/projects/hierarchy-links`, `GET /api/projects/{projectId}`, `DELETE /api/projects/{projectId}`, `GET /api/projects/{projectId}/hierarchy`, `POST /api/projects/{parentProjectId}/subprojects/{childProjectId}`, `DELETE /api/projects/{parentProjectId}/subprojects/{childProjectId}`, and `POST /api/projects/{childProjectId}/reconnect-subproject`.
 - Project hierarchy: `/api/projects/{projectId}/hierarchy`.
-- Project structure read and focused mutations: `/api/project-structure/projects/{projectId}/structure/read`, `/nodes`, `/nodes/{nodeId}`, `/nodes/{nodeId}/type`, `/nodes/{nodeId}/metadata`, `/nodes/statuses`, `/nodes/{nodeId}/status`, `/nodes/progress`, `/nodes/{nodeId}/progress`, `/nodes/markers`, `/nodes/{nodeId}/markers`, `/nodes/priorities`, `/nodes/{nodeId}/priority`, `/nodes/move`, `/nodes/recompose`, `/nodes/{nodeId}/reparent`, `/nodes/reparent`, `/nodes/move-to-new-subproject`, `/nodes/{nodeId}/move-descendants-to-project`, `/nodes/{nodeId}/command`, `/nodes/{nodeId}/delete`.
+- Project structure read and focused mutations: `/api/project-structure/projects/{projectId}/structure/read`, `/nodes`, `/nodes/{nodeId}`, `/nodes/{nodeId}/type`, `/nodes/{nodeId}/metadata`, `/nodes/statuses`, `/nodes/{nodeId}/status`, `/nodes/progress`, `/nodes/{nodeId}/progress`, `/nodes/markers`, `/nodes/{nodeId}/markers`, `/nodes/priorities`, `/nodes/{nodeId}/priority`, `/nodes/move`, `/nodes/recompose`, `/nodes/{nodeId}/reparent`, `/nodes/reparent`, `/nodes/move-to-new-subproject`, `/nodes/{nodeId}/move-descendants-to-project`, `/nodes/{nodeId}/command`, `/nodes/{nodeId}/delete`, and `/nodes/delete`.
 - Dependency and link control: `/links`, `/links/unlink`, `/dependencies/link`, `/dependencies/unlink`, `/dependencies/query`.
 - Assets: `/assets`, `/assets/{nodeId}`, `/assets/{nodeId}/content`, `/assets/{nodeId}/revisions`.
 - Process nodes: `/nodes/{nodeId}/process-definition` and `/nodes/{nodeId}/process/start`.
@@ -27,7 +27,7 @@ Use this skill when a task needs project, hierarchy, project-structure, dependen
 
 ## Direct Tool Boundary
 
-The internal project-structure runtime tool surface currently exposes 51 direct tools and covers the current 51-route HTTP project-structure API set. Direct runtime tools include node create (`project_structure_node_create`), node delete (`project_structure_node_delete`), focused node updates, generic links, asset create/content (`project_structure_asset_create`, `project_structure_asset_content_get`), lease renew, process/workflow node operations, and the existing read/write/import/lease tools. These tools are composed through `ProjectStructureAgentRuntimeToolProvider` and classified by `AgentToolInvocationPolicy`; destructive and mutating tools still require project-structure write access and the normal approval path.
+The internal project-structure runtime tool surface currently exposes 53 direct functions through `ProjectStructureAgentRuntimeToolProvider`. It broadly mirrors the 52-route `/api/project-structure` HTTP surface and adds the repo-branch lease helper `project_structure_repo_branch_lease_acquire`, which is a runtime tool and not an HTTP route. Direct runtime tools include node create (`project_structure_node_create`), single and batch node delete (`project_structure_node_delete`, `project_structure_nodes_delete`), focused node updates, generic links, asset create/content (`project_structure_asset_create`, `project_structure_asset_content_get`), lease renew, process/workflow node operations, and read/write/import/lease tools. These tools are classified by `AgentToolInvocationPolicy`; destructive and mutating tools still require project-structure write access and the normal approval path.
 
 When a process or agent asks for a direct project-structure tool and that tool is unavailable in the running host, use the HTTP API skill for the equivalent governed action and record the missing tool name as an environment/runtime issue. Do not reinstall or infer a removed ProjectStructure MCP server.
 
@@ -101,6 +101,7 @@ Project Structure API route appendix. Generated from Minimal API registrations; 
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/{nodeId}/workflow-definition` |
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/{nodeId}/workflow/start` |
 | `GET` | `/api/project-structure/projects/{projectId:guid}/nodes/{nodeId}/workflow/status` |
+| `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/delete` |
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/markers` |
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/move` |
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/move-to-new-subproject` |

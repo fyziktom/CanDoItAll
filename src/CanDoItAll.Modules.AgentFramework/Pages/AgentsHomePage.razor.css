@@ -166,11 +166,11 @@
 .agents-overview-team-shortcut {
     display: flex;
     min-width: 0;
-    height: 4.15rem;
+    height: 4.7rem;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.2rem;
+    gap: 0.18rem;
     overflow: hidden;
     border: 1px solid rgb(226 232 240);
     border-radius: 0.65rem;
@@ -192,6 +192,28 @@
     flex: 0 0 auto;
     font-size: 1.25rem;
     line-height: 1;
+}
+
+.agents-overview-team-shortcut__name,
+.agents-overview-team-shortcut__count {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agents-overview-team-shortcut__name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.agents-overview-team-shortcut__count {
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: rgb(100 116 139);
 }
 
 @media (max-width: 1279px) {

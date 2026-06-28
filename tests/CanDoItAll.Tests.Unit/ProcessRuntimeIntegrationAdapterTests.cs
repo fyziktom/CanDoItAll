@@ -165,6 +165,49 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Managed_artifact_completion_requires_write_receipt_when_receipts_are_available()
+    {
+        var assignment = CreateManagedArtifactAssignment("feature-intake");
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Wrote the scope packet.",
+                EvidenceRefs = [BuildStepArtifactRef(assignment)],
+                NextActions = []
+            },
+            [CreateToolReceipt("workspace_read_file", BuildStepArtifactRef(assignment), "Succeeded: Read file.")]);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.produced_artifact_write_receipt_missing");
+        Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.produced_artifact_write_receipt_missing");
+        Assert.Empty(result.ProducedArtifacts);
+    }
+
+    [Fact]
+    public void Managed_artifact_completion_accepts_scoped_workspace_write_receipt()
+    {
+        var assignment = CreateManagedArtifactAssignment("feature-intake");
+        var scopedPath = $"artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{assignment.RunId.Value:D}/steps/{assignment.StepKey}.md";
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Wrote the scope packet.",
+                EvidenceRefs = [BuildStepArtifactRef(assignment)],
+                NextActions = []
+            },
+            [CreateToolReceipt("workspace_write_file", scopedPath, "Succeeded: Wrote file.")]);
+
+        Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+        Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+        Assert.Empty(result.Diagnostics);
+    }
+
+
+    [Fact]
     public void Runtime_readiness_rejects_delivery_manager_for_implementation_step()
     {
         var deliveryManager = NewAgent(
@@ -475,10 +518,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             () => assignmentStore.Add(childAssignment));
         var adapter = new AgentFrameworkProcessExecutionAdapter(
             new FakeWorkspaceFactory(workspace),
+            CreateReferenceDataProvider(workspace),
             assignmentStore,
             new InMemoryRuntimeStateStore(
                 NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
-                NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Active)));
+                NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Active)),
+            CreateWorkspaceFileService(out _));
 
         var exception = await Assert.ThrowsAsync<ProcessRuntimeDispatchDeferredException>(() =>
             adapter.ExecuteAsync(
@@ -495,9 +540,280 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.True(workspace.ExecuteRunCalled);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_retries_when_agent_misses_required_process_finalizer()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("feature-intake", agent.Id);
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("Finalizer tool 'submit_process_step_outcome' in Required mode failed validation. Errors: agent.finalizer.missing."));
+        var adapter = new AgentFrameworkProcessExecutionAdapter(
+            new FakeWorkspaceFactory(workspace),
+            CreateReferenceDataProvider(workspace),
+            new InMemoryAssignmentStore(assignment),
+            new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+            CreateWorkspaceFileService(out _));
+
+        var result = await adapter.ExecuteAsync(
+            new ProcessExecutionAdapterRequest(
+                assignment.RunId,
+                assignment.StepInstanceId,
+                ProcessExecutionAdapterKind.Workflow,
+                new ProcessExecutionAdapterOperationKey("execute"),
+                Binding,
+                [],
+                []));
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("process.adapter.agent_output_contract_retryable", diagnostic.Code.Value);
+        Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.Contains(BuildStepArtifactRef(assignment), result.UserSafeSummary, StringComparison.Ordinal);
+        Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+        Assert.True(workspace.ExecuteRunCalled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_materializes_managed_artifact_from_valid_structured_outcome()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("feature-intake", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var responseText = """
+            {
+              "status": "Completed",
+              "reason": "Clarified the requested software scope.",
+              "branchOutcomeKey": "scope-clarified",
+              "branchOutcomeTitle": "Scope clarified",
+              "evidenceRefs": [
+                "https://example.invalid/external-evidence.md"
+              ],
+              "nextActions": [],
+              "humanReadableSummaryMarkdown": "The software scope is clarified and ready for architecture."
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(agent.Id, executionRunId, responseText, []));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.True(
+                result.Outcome == StrategyOutcome.Succeeded,
+                result.UserSafeSummary);
+            Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            Assert.Empty(result.Diagnostics);
+            var artifactPath = Path.Combine(
+                workspaceRoot,
+                "artifacts",
+                "process-runs",
+                assignment.RunId.Value.ToString("D"),
+                "steps",
+                "feature-intake.md");
+            Assert.True(File.Exists(artifactPath));
+            var content = await File.ReadAllTextAsync(artifactPath);
+            Assert.Contains("Runtime persisted this managed artifact", content, StringComparison.Ordinal);
+            Assert.Contains("Clarified the requested software scope.", content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_materializes_pure_producer_self_evidence_blocker()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("feature-intake", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var responseText = """
+            {
+              "status": "Blocked",
+              "reason": "Insufficient concrete current-run evidence references found.",
+              "branchOutcomeKey": "",
+              "branchOutcomeTitle": "",
+              "evidenceRefs": [],
+              "nextActions": [
+                "actionType: CreateConcreteCurrentRunEvidenceReference"
+              ],
+              "humanReadableSummaryMarkdown": ""
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(agent.Id, executionRunId, responseText, []));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.True(
+                result.Outcome == StrategyOutcome.Succeeded,
+                result.UserSafeSummary);
+            Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            var artifactPath = Path.Combine(
+                workspaceRoot,
+                "artifacts",
+                "process-runs",
+                assignment.RunId.Value.ToString("D"),
+                "steps",
+                "feature-intake.md");
+            Assert.True(File.Exists(artifactPath));
+            var content = await File.ReadAllTextAsync(artifactPath);
+            Assert.Contains("Insufficient concrete current-run evidence references found.", content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_materializes_pure_producer_missing_own_primary_artifact_blocker()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("feature-intake", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var responseText = $$"""
+            {
+              "status": "Blocked",
+              "reason": "File '{{primaryRef}}' does not exist in the workspace.",
+              "branchOutcomeKey": "",
+              "branchOutcomeTitle": "",
+              "evidenceRefs": [],
+              "nextActions": [
+                "actionType: SearchForFile; description: Search for file '{{primaryRef}}' in the workspace."
+              ],
+              "humanReadableSummaryMarkdown": "Workspace tool failed to find requested file '{{primaryRef}}'."
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(agent.Id, executionRunId, responseText, []));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.True(
+                result.Outcome == StrategyOutcome.Succeeded,
+                result.UserSafeSummary);
+            Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            var artifactPath = Path.Combine(
+                workspaceRoot,
+                "artifacts",
+                "process-runs",
+                assignment.RunId.Value.ToString("D"),
+                "steps",
+                "feature-intake.md");
+            Assert.True(File.Exists(artifactPath));
+            var content = await File.ReadAllTextAsync(artifactPath);
+            Assert.Contains(primaryRef, content, StringComparison.Ordinal);
+            Assert.Contains("Workspace tool failed to find requested file", content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
     private static ProcessExecutionAdapterResult ToAdapterResult(
         ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null)
     {
         var adapterType = typeof(ProcessesModuleServiceCollectionExtensions)
             .Assembly
@@ -508,7 +824,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Process execution result mapper was not found.");
 
-        return Assert.IsType<ProcessExecutionAdapterResult>(method.Invoke(null, [assignment, output, "sha256:raw"]));
+        return Assert.IsType<ProcessExecutionAdapterResult>(method.Invoke(null, [assignment, output, "sha256:raw", toolReceipts]));
     }
 
     private static AgentProcessRoleReadinessRequest CreateRuntimeReadinessRequest(ProcessRuntimeStepAssignment assignment)
@@ -555,7 +871,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             DateTimeOffset.UtcNow);
     }
 
-    private static ProcessRuntimeStepAssignment CreateManagedArtifactAssignment(string stepKey)
+    private static ProcessRuntimeStepAssignment CreateManagedArtifactAssignment(
+        string stepKey,
+        Guid? agentId = null)
     {
         return new ProcessRuntimeStepAssignment(
             ProcessRunId.New(),
@@ -566,7 +884,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             "solution-architect",
             "Solution architect",
             ProcessLaunchExecutorKinds.Agent,
-            Guid.NewGuid().ToString("D"),
+            (agentId ?? Guid.NewGuid()).ToString("D"),
             ".NET Solution Architect",
             "Produce managed process evidence.",
             "sha256:readiness",
@@ -587,6 +905,92 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         ProcessRuntimeStepAssignment assignment,
         string fileName)
         => $"artifacts/process-runs/{assignment.RunId.Value:D}/{assignment.StepKey}/{fileName}";
+
+    private static ToolExecutionReceiptRecord CreateToolReceipt(
+        string toolName,
+        string requestSummary,
+        string exitSummary)
+        => new(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "workspace-file",
+            toolName,
+            "ReadOnlyWorkspace",
+            "NotRequired",
+            "Workspace file service.",
+            requestSummary,
+            ".",
+            exitSummary,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
+    private static IWorkspaceFileService CreateWorkspaceFileService(out string workspaceRoot)
+    {
+        workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProcessAdapter.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        return new WorkspaceFileService(workspaceRoot);
+    }
+
+    private static ExecutionRunResult CreateExecutionRunResult(
+        Guid agentId,
+        Guid executionRunId,
+        string responseText)
+        => new(
+            executionRunId,
+            null,
+            responseText,
+            null,
+            new AgentRunMetric(
+                Guid.NewGuid(),
+                agentId,
+                null,
+                DateTimeOffset.UtcNow,
+                RunOutcome.Succeeded,
+                "test-provider",
+                "test-model",
+                1,
+                10,
+                2,
+                0));
+
+    private static ExecutionRunDetail CreateExecutionRunDetail(
+        Guid agentId,
+        Guid executionRunId,
+        string responseText,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+        => new(
+            new ExecutionRunRecord(
+                executionRunId,
+                agentId,
+                ChatSessionId: null,
+                "Test execution",
+                "process-step",
+                "feature-intake",
+                "correlation",
+                "causation",
+                "process-runtime",
+                "system",
+                "{}",
+                "Input",
+                responseText,
+                "test-provider",
+                "test-model",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow,
+                string.Empty,
+                null,
+                [],
+                true),
+            null,
+            [],
+            [])
+        {
+            ToolReceipts = toolReceipts
+        };
 
     private static ProcessRuntimeStepAssignment CreateControlledExternalActionAssignment(
         ProcessRunId runId,
@@ -720,6 +1124,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             now);
     }
 
+    private static IAgentReferenceDataProvider CreateReferenceDataProvider(IAgentFrameworkWorkspaceService workspaceService)
+    {
+        return new WorkspaceBackedAgentReferenceDataProvider(workspaceService, new AgentReferenceDataCache());
+    }
+
     private sealed class FakeWorkspaceFactory(IAgentFrameworkWorkspaceService workspaceService) : ICanDoItAllAgentWorkspaceFactory
     {
         public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService()
@@ -737,8 +1146,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
     private sealed class ThrowingWorkspaceService(
         AgentDefinition agent,
-        Exception executeException,
-        Action? beforeThrow = null) : IAgentFrameworkWorkspaceService
+        Exception? executeException,
+        Action? beforeThrow = null,
+        ExecutionRunResult? executeResult = null,
+        ExecutionRunDetail? executionDetail = null) : IAgentFrameworkWorkspaceService
     {
         public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
         {
@@ -759,7 +1170,14 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             ExecuteRunCalled = true;
             beforeThrow?.Invoke();
-            throw executeException;
+            if (executeException is not null)
+            {
+                throw executeException;
+            }
+
+            return executeResult is not null
+                ? Task.FromResult(executeResult)
+                : throw Unused();
         }
 
         public Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default) => throw Unused();
@@ -814,9 +1232,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ProviderTestChatRequest request,
             CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             Guid providerId,
-            OllamaModelfileRequest request,
+            ProviderModelMaintenanceEditorRequest request,
             CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default) => throw Unused();
@@ -855,7 +1273,14 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<AgentChatRunResult> SendMessageAsync(
+            Guid agentId,
+            Guid? chatSessionId,
+            string prompt,
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<string>? attachmentPaths = null,
+            AgentChatRunOptions? options = null)
+            => throw Unused();
 
         public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
             Guid agentId,
@@ -878,7 +1303,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(ExecutionRunQuery query, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+            => executionDetail is not null
+                ? Task.FromResult(executionDetail)
+                : throw Unused();
 
         public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
 

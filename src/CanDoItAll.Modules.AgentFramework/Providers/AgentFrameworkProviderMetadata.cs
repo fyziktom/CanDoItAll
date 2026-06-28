@@ -17,7 +17,9 @@ internal static class AgentFrameworkProviderMetadata
     private const string SecretRecordIdPropertyName = "secretRecordId";
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
     private const string TransportPropertyName = "providerTransport";
+    private const string PurposePropertyName = "providerPurpose";
     private const string TagsPropertyName = "tags";
+    private const string SupportsVisionPropertyName = "supportsVision";
 
     public static string BuildConfigurationJson(
         WorkspaceProviderProfile provider)
@@ -32,6 +34,10 @@ internal static class AgentFrameworkProviderMetadata
         {
             configuration[TransportPropertyName] = transport.ToString();
         }
+        if (TryResolvePurpose(provider.ExtraSettingsJson, out var purpose))
+        {
+            configuration[PurposePropertyName] = purpose.ToString();
+        }
         if (provider.ApiKeySecretId.HasValue)
         {
             configuration[SecretRecordIdPropertyName] = provider.ApiKeySecretId.Value.ToString("D");
@@ -39,6 +45,15 @@ internal static class AgentFrameworkProviderMetadata
         else
         {
             configuration.Remove(SecretRecordIdPropertyName);
+        }
+
+        if (provider.SupportsVision)
+        {
+            configuration[SupportsVisionPropertyName] = true;
+        }
+        else
+        {
+            configuration.Remove(SupportsVisionPropertyName);
         }
 
         return configuration.ToJsonString();
@@ -51,6 +66,7 @@ internal static class AgentFrameworkProviderMetadata
         Guid? secretRecordId,
         int timeoutSeconds,
         ProviderTransportKind transport,
+        ProviderProfilePurpose purpose,
         IEnumerable<string>? tags = null)
     {
         var configuration = ParseObject(configurationJson);
@@ -58,6 +74,7 @@ internal static class AgentFrameworkProviderMetadata
         configuration[ConfigSchemaVersionPropertyName] = configSchemaVersion;
         configuration[TimeoutSecondsPropertyName] = timeoutSeconds;
         configuration[TransportPropertyName] = transport.ToString();
+        configuration[PurposePropertyName] = purpose.ToString();
         WriteTags(configuration, tags);
         if (secretRecordId.HasValue)
         {
@@ -105,6 +122,17 @@ internal static class AgentFrameworkProviderMetadata
 
         return TryResolveTransport(provider.ExtraSettingsJson, out var configuredTransport)
             ? configuredTransport
+            : fallback;
+    }
+
+    public static ProviderProfilePurpose ResolvePurpose(
+        WorkspaceProviderProfile provider,
+        ProviderProfilePurpose fallback)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        return TryResolvePurpose(provider.ExtraSettingsJson, out var configuredPurpose)
+            ? configuredPurpose
             : fallback;
     }
 
@@ -188,9 +216,11 @@ internal static class AgentFrameworkProviderMetadata
 
         return model.Kind switch
         {
+            AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdapter.PluginKey,
             AgentFrameworkProviderKind.Ollama when LooksLikeLocalOllama(model.BaseUrl) => OllamaProviderAdapter.PluginKey,
             AgentFrameworkProviderKind.Ollama => OllamaRemoteProviderAdapter.PluginKey,
-            _ => OpenAiProviderAdapter.PluginKey
+            AgentFrameworkProviderKind.OpenAi or AgentFrameworkProviderKind.AzureOpenAi => OpenAiProviderAdapter.PluginKey,
+            _ => throw new InvalidOperationException($"No workspace connector plugin mapping exists for provider kind '{model.Kind}'.")
         };
     }
 
@@ -292,6 +322,22 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         return Enum.TryParse(configuredTransport.Trim(), ignoreCase: true, out transport);
+    }
+
+    private static bool TryResolvePurpose(
+        string? json,
+        out ProviderProfilePurpose purpose)
+    {
+        purpose = default;
+        var configuration = ParseObject(json);
+        if (configuration[PurposePropertyName] is not JsonValue value ||
+            !value.TryGetValue<string>(out var configuredPurpose) ||
+            string.IsNullOrWhiteSpace(configuredPurpose))
+        {
+            return false;
+        }
+
+        return Enum.TryParse(configuredPurpose.Trim(), ignoreCase: true, out purpose);
     }
 
     private static bool LooksLikeLocalOllama(

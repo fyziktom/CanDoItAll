@@ -9,7 +9,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class AgentFrameworkHostingServiceCollectionTests
 {
     [Fact]
-    public void AddAgentFrameworkCore_builds_with_scope_validation()
+    public async Task AddAgentFrameworkCore_builds_with_scope_validation()
     {
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
@@ -21,12 +21,12 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             var services = new ServiceCollection();
             services.AddAgentFrameworkCore(workspaceRoot);
 
-            using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+            await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
             {
                 ValidateOnBuild = true,
                 ValidateScopes = true
             });
-            using var scope = provider.CreateScope();
+            await using var scope = provider.CreateAsyncScope();
 
             Assert.IsType<MafWorkflowCompiler>(scope.ServiceProvider.GetRequiredService<IWorkflowMafCompiler>());
             Assert.IsType<CompositeWorkflowExecutorExecutionObserver>(

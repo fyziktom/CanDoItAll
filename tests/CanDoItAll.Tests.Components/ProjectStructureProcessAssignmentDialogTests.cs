@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Workbench.Pages;
@@ -17,7 +18,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             "Release Readiness Manager",
             isSelected: true,
             isRecommended: true,
-            score: "469.0 score");
+            score: "4.7 score");
         var assignedRole = CreateRole("Feature implementation manager", isResolved: true, assignedCandidate);
         var unassignedRole = CreateRole("Blazor application developer", isResolved: false);
         var state = CreateDialogState(
@@ -39,6 +40,8 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
                 .Children[0]
                 .GetAttribute("data-testid"));
         Assert.Contains("Release Readiness Manager", cut.Markup);
+        Assert.Contains("4.7 score", cut.Markup);
+        Assert.DoesNotContain("469.0 score", cut.Markup);
         Assert.Contains("No agent assigned", cut.Markup);
         Assert.Contains("Summary review", cut.Markup);
         Assert.Empty(cut.FindAll("[data-testid='project-structure-process-assignment-feedback']"));
@@ -60,7 +63,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             "Blazor Agent",
             isSelected: false,
             isRecommended: true,
-            score: "388.0 score");
+            score: "3.9 score");
         var unresolvedRole = CreateRole("Blazor application developer", isResolved: false) with
         {
             DirectoryCandidates = [alternateCandidate]
@@ -96,17 +99,17 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             "Selected Release Manager",
             isSelected: true,
             isRecommended: true,
-            score: "410.0 score");
+            score: "4.1 score");
         var higherScoreCandidate = CreateCandidate(
             ".NET Solution Architect",
             isSelected: false,
             isRecommended: true,
-            score: "502.0 score");
+            score: "5.0 score");
         var lowerScoreCandidate = CreateCandidate(
             "Deployment Assistant",
             isSelected: false,
             isRecommended: true,
-            score: "265.0 score");
+            score: "2.7 score");
         var role = CreateRole(
             "Feature implementation manager",
             isResolved: true,
@@ -147,12 +150,13 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             "Selected Release Manager",
             isSelected: true,
             isRecommended: true,
-            score: "410.0 score");
+            score: "4.1 score");
         var directoryOnlyCandidate = CreateCandidate(
             "Architecture Agent",
             isSelected: false,
             isRecommended: true,
-            score: "503.0 score");
+            score: "5.0 score",
+            matchScore: 503);
         var role = CreateRole(
             "Feature implementation manager",
             isResolved: true,
@@ -201,12 +205,12 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             "Selected Release Manager",
             isSelected: true,
             isRecommended: true,
-            score: "410.0 score");
+            score: "4.1 score");
         var alternativeCandidate = CreateCandidate(
             ".NET Solution Architect",
             isSelected: false,
             isRecommended: true,
-            score: "502.0 score");
+            score: "5.0 score");
         var role = CreateRole(
             "Feature implementation manager",
             isResolved: true,
@@ -248,7 +252,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             "Release Readiness Manager",
             isSelected: true,
             isRecommended: true,
-            score: "469.0 score");
+            score: "4.7 score");
         var role = CreateRole("Feature implementation manager", isResolved: true, candidate);
         var state = CreateDialogState([role]);
 
@@ -261,6 +265,48 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         Assert.Equal("project-structure-process-assignment-agent-details-dialog", dialog.Options.TestId);
         Assert.Equal(typeof(ProjectStructureProcessAgentDetailsDialog), dialog.ComponentType);
         dialogService.CloseAll();
+    }
+
+    [Fact]
+    public void Assignment_dialog_orders_candidates_by_typed_match_score_before_localized_score_label()
+    {
+        using var context = CreateContext();
+        var selectedCandidate = CreateCandidate(
+            "Selected Release Manager",
+            isSelected: true,
+            isRecommended: true,
+            score: "4.1 score",
+            matchScore: 410);
+        var localizedLowLabelCandidate = CreateCandidate(
+            ".NET Solution Architect",
+            isSelected: false,
+            isRecommended: true,
+            score: "1,0 score",
+            matchScore: 900);
+        var localizedHighLabelCandidate = CreateCandidate(
+            "Deployment Assistant",
+            isSelected: false,
+            isRecommended: true,
+            score: "9,9 score",
+            matchScore: 100);
+        var role = CreateRole(
+            "Feature implementation manager",
+            isResolved: true,
+            localizedHighLabelCandidate,
+            selectedCandidate,
+            localizedLowLabelCandidate);
+        var state = CreateDialogState([role]);
+
+        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+            .Add(component => component.Dialog, state));
+
+        cut.Find($"[data-testid='project-structure-process-assignment-role-row-{role.LaunchPlanRoleId:D}']").Click();
+
+        var cards = cut.FindAll(".project-structure-assignment-candidate-option");
+        Assert.Equal(3, cards.Count);
+        Assert.Contains("Selected Release Manager", cards[0].TextContent);
+        Assert.Contains(".NET Solution Architect", cards[1].TextContent);
+        Assert.Contains("Deployment Assistant", cards[2].TextContent);
     }
 
     private static TestContext CreateContext()
@@ -317,7 +363,8 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         string displayName,
         bool isSelected,
         bool isRecommended,
-        string score)
+        string score,
+        int? matchScore = null)
     {
         return new ProjectStructureProcessStartCandidateState(
             Guid.NewGuid(),
@@ -340,6 +387,15 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             AgentStatusLabel: "Active",
             AgentWorkloadLabel: "Programming",
             ToolNames: ["playwright-local-mcp", "workspace-files"],
-            SkillNames: ["candoitall-bundle-workflow", "aspnet-core-skill"]);
+            SkillNames: ["candoitall-bundle-workflow", "aspnet-core-skill"],
+            MatchScore: matchScore ?? ResolveMatchScore(score));
+    }
+
+    private static int ResolveMatchScore(string score)
+    {
+        var token = score.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return decimal.TryParse(token, NumberStyles.Number, CultureInfo.InvariantCulture, out var value)
+            ? (int)decimal.Round(value * 10m, MidpointRounding.AwayFromZero)
+            : 0;
     }
 }

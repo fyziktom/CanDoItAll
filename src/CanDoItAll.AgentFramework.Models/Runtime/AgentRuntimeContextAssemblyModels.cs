@@ -33,7 +33,9 @@ public sealed record AgentRuntimeContextIntent(
     bool AllowsProductMutation,
     AgentWorkspaceToolProfileKind? WorkspaceToolProfile,
     WorkspaceScopeDescriptor? WorkspaceScope,
-    IReadOnlyList<string> AllowedOperations)
+    IReadOnlyList<string> AllowedOperations,
+    bool RuntimeToolProvidersEnabled = true,
+    bool WorkspaceToolsEnabled = true)
 {
     public static AgentRuntimeContextIntent Empty { get; } = new(
         SourceKind: string.Empty,
@@ -47,7 +49,9 @@ public sealed record AgentRuntimeContextIntent(
         AllowsProductMutation: true,
         WorkspaceToolProfile: null,
         WorkspaceScope: null,
-        AllowedOperations: []);
+        AllowedOperations: [],
+        RuntimeToolProvidersEnabled: true,
+        WorkspaceToolsEnabled: true);
 }
 
 public sealed record AgentRuntimeContextManifestTotals(

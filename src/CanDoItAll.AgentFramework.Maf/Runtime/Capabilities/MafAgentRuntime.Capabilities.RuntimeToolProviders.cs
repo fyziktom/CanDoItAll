@@ -20,6 +20,15 @@ public sealed partial class MafAgentRuntime
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent)
     {
+        if (!contextIntent.RuntimeToolProvidersEnabled)
+        {
+            composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
+                AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                "registered-runtime-tool-providers",
+                "registered runtime tool providers disabled by execution context"));
+            return;
+        }
+
         if (!agent.Permissions.CanUseTools ||
             composition.RuntimeToolProviders.Count == 0)
         {

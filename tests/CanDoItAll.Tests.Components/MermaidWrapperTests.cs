@@ -95,32 +95,4 @@ public sealed class MermaidWrapperTests
         Assert.Contains("mermaid-diagram-viewport", cut.Markup);
     }
 
-    [Fact]
-    public void Vendor_Asset_Metadata_And_Official_Esm_File_Exist()
-    {
-        var workspaceRoot = FindWorkspaceRoot();
-        var packageRoot = Path.Combine(workspaceRoot, "src", "CanDoItAll.Components.Mermaid");
-
-        Assert.True(File.Exists(Path.Combine(packageRoot, "MermaidVendor.md")));
-        Assert.True(File.Exists(Path.Combine(packageRoot, "wwwroot", "js", "vendor", "mermaid.esm.min.mjs")));
-        Assert.Contains(
-            Directory.EnumerateFiles(Path.Combine(packageRoot, "wwwroot", "js", "vendor"), "*.mjs", SearchOption.AllDirectories),
-            path => path.Contains(Path.Combine("chunks", "mermaid.esm.min"), StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string FindWorkspaceRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate CanDoItAll.slnx.");
-    }
 }

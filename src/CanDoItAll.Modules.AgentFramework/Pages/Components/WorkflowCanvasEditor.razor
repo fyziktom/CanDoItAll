@@ -5,11 +5,12 @@
 @using CanDoItAll.Modules.AgentFramework.Pages
 @using CanDoItAll.Modules.Workspace.Pages.Components
 
-<SurfaceCard Class="workflow-canvas-editor"
-             data-testid="workflow-canvas-editor">
-    <CanvasWorkbenchStage Eyebrow="Workflow canvas"
+<div class="workflow-canvas-editor-shell">
+    <SurfaceCard Class="workflow-canvas-editor"
+                 data-testid="workflow-canvas-editor">
+    <CanvasWorkbenchStage Eyebrow=""
                           Title="@document.Name"
-                          Description="@document.Description"
+                          Description=""
                           Stats="CanvasStats">
         <HeaderActions>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -253,8 +254,7 @@
                 <TabsItem Text="Definition"
                           Icon="settings"
                           data-testid="workflow-canvas-tab-definition">
-                <div class="workflow-canvas-panel">
-                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition" />
+                <div class="workflow-canvas-panel workflow-canvas-definition-panel">
                     <label class="workflow-canvas-field">
                         <span>Name</span>
                         <input class="cda-input"
@@ -262,7 +262,7 @@
                                @onchange="HandleNameChanged"
                                data-testid="workflow-canvas-name" />
                     </label>
-                    <label class="workflow-canvas-field">
+                    <label class="workflow-canvas-field workflow-canvas-field--description">
                         <span>Description</span>
                         <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
                                   value="@document.Description"
@@ -489,7 +489,8 @@
                                 <span>Capture output as workflow artifact</span>
                             </label>
 
-                            @if (descriptor?.ConfigurationSchema.Fields.Count > 0)
+                            @if (descriptor?.ConfigurationSchema.Fields.Count > 0 &&
+                                 selected.ExecutorId != WorkflowExecutorIds.ImageGeneration)
                             {
                                 <SettingsRendererHost RendererKey="@descriptor.SetupRendererKey"
                                                       Schema="@descriptor.ConfigurationSchema"
@@ -866,10 +867,25 @@
                                         </select>
                                     </label>
                                     <label class="workflow-canvas-field">
-                                        <span>Provider profile id</span>
-                                        <input class="cda-input"
-                                               value="@settings.ProviderProfileId?.ToString("D")"
-                                               @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { ProviderProfileId = Guid.TryParse(ReadString(args), out var providerId) ? providerId : null })" />
+                                        <span>Image provider</span>
+                                        <select class="cda-input"
+                                                value="@settings.ProviderProfileId?.ToString("D")"
+                                                @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { ProviderProfileId = Guid.TryParse(ReadString(args), out var providerId) ? providerId : null })"
+                                                data-testid="workflow-image-provider-select">
+                                            <option value="">Default image provider</option>
+                                            @foreach (var providerOption in ImageProviderOptions)
+                                            {
+                                                <option value="@providerOption.ProviderProfileId.ToString("D")">@BuildProviderOptionLabel(providerOption)</option>
+                                            }
+                                        </select>
+                                        @if (settings.ProviderProfileId.HasValue && ResolveImageProviderOption(settings.ProviderProfileId) is null)
+                                        {
+                                            <small class="text-rose-700">Selected provider is not an image-generation provider.</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-slate-500">@BuildImageProviderOptionsSummary()</small>
+                                        }
                                     </label>
                                     <label class="workflow-canvas-field">
                                         <span>Model</span>
@@ -1194,7 +1210,8 @@
             </Tabs>
         </Inspector>
     </CanvasWorkbenchStage>
-</SurfaceCard>
+    </SurfaceCard>
+</div>
 
 @if (isPreviewInputDialogOpen)
 {

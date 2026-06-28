@@ -19,6 +19,10 @@ public interface ISchedulerPlannerService
 
     Task<SchedulerPlanEditorModel> CreateDefaultEditorAsync(CancellationToken cancellationToken = default);
 
+    Task<SchedulerPlanEditorModel> GetPlanEditorAsync(
+        Guid planId,
+        CancellationToken cancellationToken = default);
+
     Task<SchedulerPlanSummary> SavePlanAsync(
         SchedulerPlanEditorModel editor,
         CancellationToken cancellationToken = default);
@@ -26,6 +30,10 @@ public interface ISchedulerPlannerService
     Task SetPlanEnabledAsync(
         Guid planId,
         bool isEnabled,
+        CancellationToken cancellationToken = default);
+
+    Task DeletePlanAsync(
+        Guid planId,
         CancellationToken cancellationToken = default);
 }
 
@@ -173,6 +181,21 @@ public sealed class SchedulerPlannerService(
         };
     }
 
+    public async Task<SchedulerPlanEditorModel> GetPlanEditorAsync(
+        Guid planId,
+        CancellationToken cancellationToken = default)
+    {
+        EnsurePlanId(planId);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var plan = await dbContext.Set<SchedulerPlan>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+
+        return MapEditor(plan);
+    }
+
     public async Task<SchedulerPlanSummary> SavePlanAsync(
         SchedulerPlanEditorModel editor,
         CancellationToken cancellationToken = default)
@@ -247,10 +270,7 @@ public sealed class SchedulerPlannerService(
         bool isEnabled,
         CancellationToken cancellationToken = default)
     {
-        if (planId == Guid.Empty)
-        {
-            throw new ArgumentException("Scheduler plan id is required.", nameof(planId));
-        }
+        EnsurePlanId(planId);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
@@ -265,6 +285,27 @@ public sealed class SchedulerPlannerService(
         plan.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
         await triggerScheduler.SynchronizePlanAsync(plan.Id, cancellationToken);
+    }
+
+    public async Task DeletePlanAsync(
+        Guid planId,
+        CancellationToken cancellationToken = default)
+    {
+        EnsurePlanId(planId);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var plan = await dbContext.Set<SchedulerPlan>().SingleOrDefaultAsync(item => item.Id == planId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Scheduler plan '{planId:D}' was not found.");
+
+        dbContext.Set<SchedulerPlan>().Remove(plan);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await triggerScheduler.SynchronizePlanAsync(planId, cancellationToken);
+
+        logger.LogInformation(
+            "Deleted scheduler plan {PlanId} for {TargetKind} target {TargetId}.",
+            plan.Id,
+            plan.TargetKind,
+            plan.TargetId);
     }
 
     private async Task<IReadOnlyList<SchedulerTargetOption>> ListTargetOptionsAsync(CancellationToken cancellationToken)
@@ -420,7 +461,9 @@ public sealed class SchedulerPlannerService(
                     occurrence,
                     "Scheduled",
                     plan.TargetKind,
-                    "#2563eb"));
+                    "#2563eb",
+                    plan.Id,
+                    readOnly: false));
             }
         }
 
@@ -440,7 +483,9 @@ public sealed class SchedulerPlannerService(
                 run.FiredAtUtc,
                 run.Status.ToString(),
                 run.TargetKind,
-                color));
+                color,
+                planId: null,
+                readOnly: true));
         }
 
         return new CanvasCalendarSurface
@@ -478,7 +523,9 @@ public sealed class SchedulerPlannerService(
         DateTimeOffset startUtc,
         string status,
         SchedulerPlanTargetKind targetKind,
-        string color)
+        string color,
+        Guid? planId,
+        bool readOnly)
     {
         return new CanvasCalendarEvent
         {
@@ -494,8 +541,9 @@ public sealed class SchedulerPlannerService(
             Status = status,
             Category = targetKind.ToString(),
             Color = color,
-            ReadOnly = true,
-            Notes = description
+            ReadOnly = readOnly,
+            Notes = description,
+            RepositoryId = planId?.ToString("D") ?? string.Empty
         };
     }
 
@@ -559,9 +607,37 @@ public sealed class SchedulerPlannerService(
             plan.UpdatedAtUtc);
     }
 
+    private static SchedulerPlanEditorModel MapEditor(SchedulerPlan plan)
+    {
+        return new SchedulerPlanEditorModel
+        {
+            Id = plan.Id,
+            Name = plan.Name,
+            Description = plan.Description,
+            TargetKind = plan.TargetKind,
+            TargetId = plan.TargetId,
+            TargetVersionId = plan.TargetVersionId,
+            CronExpression = plan.CronExpression,
+            TimeZoneId = plan.TimeZoneId,
+            MisfirePolicy = plan.MisfirePolicy,
+            IsEnabled = plan.IsEnabled,
+            StartAtUtc = plan.StartAtUtc,
+            EndAtUtc = plan.EndAtUtc,
+            InputJson = string.IsNullOrWhiteSpace(plan.InputJson) ? "{}" : plan.InputJson
+        };
+    }
+
     private static string BuildTriggerKey(Guid planId)
     {
         return $"scheduler-plan-{planId:N}";
+    }
+
+    private static void EnsurePlanId(Guid planId)
+    {
+        if (planId == Guid.Empty)
+        {
+            throw new ArgumentException("Scheduler plan id is required.", nameof(planId));
+        }
     }
 
     private static void ValidateEditor(SchedulerPlanEditorModel editor)

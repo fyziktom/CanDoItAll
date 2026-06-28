@@ -532,7 +532,7 @@
             Scope,
             StepEditor.DefinitionKey,
             commandKind,
-            StepEditor.VersionToken,
+            syncedVersionToken ?? StepEditor.VersionToken,
             CreateDraft());
         await ExecuteCommand.InvokeAsync(command);
     }

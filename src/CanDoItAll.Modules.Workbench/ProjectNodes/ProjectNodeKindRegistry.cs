@@ -272,6 +272,7 @@ internal static class ProjectNodeKindRegistry
         => new()
         {
             WorkflowProjectWrite = metadata.WorkflowProjectWrite,
+            DeferredCompletion = metadata.DeferredCompletion,
             ProjectBlock = family == ProjectNodeKindFamily.ProjectBlock ? metadata.ProjectBlock : null,
             Meeting = family == ProjectNodeKindFamily.Meeting ? metadata.Meeting : null,
             Recording = family == ProjectNodeKindFamily.Recording ? metadata.Recording : null,

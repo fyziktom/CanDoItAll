@@ -14,10 +14,13 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
         Assert.Contains("ProjectStructureRuntimeLauncher", resolve, StringComparison.Ordinal);
         Assert.Contains("launcher-compatible", write, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("return `Blocked` with the missing field", write, StringComparison.Ordinal);
+        Assert.Contains("steps/run-command-node-receipts.md", write, StringComparison.Ordinal);
+        Assert.Contains("do not use `runtime-command-handoff.md` for this step", write, StringComparison.Ordinal);
         Assert.Contains("launcher-compatibility receipts", handoff, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("metadata.environment.projectPath", definitionJson, StringComparison.Ordinal);
         Assert.Contains("metadata.environment.workingDirectory", definitionJson, StringComparison.Ordinal);
         Assert.Contains("ProjectStructureRuntimeLauncher.Resolve", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("steps/run-command-node-receipts.md", definitionJson, StringComparison.Ordinal);
     }
 
     [Fact]

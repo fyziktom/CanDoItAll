@@ -23,7 +23,8 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
         IAgentExecutionCheckpointBridge? executionCheckpointBridge = null,
         IWorkspaceProcessHost? workspaceProcessHost = null,
         IAgentExecutionCancellationRegistry? executionCancellationRegistry = null,
-        IAgentOutputRepairService? outputRepairService = null)
+        IAgentOutputRepairService? outputRepairService = null,
+        IWorkspacePathResolutionService? workspacePathResolutionService = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
@@ -58,7 +59,8 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
             resolvedProviderProfileRegistry,
             resolvedProviderCredentialResolver,
             executionCancellationRegistry,
-            outputRepairService);
+            outputRepairService,
+            workspacePathResolutionService);
 
         executionService.ExecutionUpdated += (_, entry) => ExecutionUpdated?.Invoke(this, entry);
     }

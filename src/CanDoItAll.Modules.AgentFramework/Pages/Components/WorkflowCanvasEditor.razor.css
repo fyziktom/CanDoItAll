@@ -1,4 +1,4 @@
-.workflow-canvas-editor {
+.workflow-canvas-editor-shell {
     --workflow-canvas-panel-border: rgba(71, 85, 105, 0.2);
 }
 
@@ -298,6 +298,140 @@
     margin: 0;
     color: var(--cda-color-text-muted, #64748b);
     font-size: 0.88rem;
+}
+
+@media (min-width: 1361px) {
+    .workflow-canvas-editor-shell ::deep .cw-main-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+        gap: 1rem;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stage-column {
+        padding: 1rem;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-inspector-shell {
+        min-height: 49rem;
+        padding: 0.75rem;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stage-header {
+        gap: 0.45rem;
+        margin-bottom: 0.65rem;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stage-header-row {
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stage-heading {
+        flex: 1 1 auto;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stage-title,
+    .workflow-canvas-editor-shell ::deep .cw-stage-description {
+        display: none;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stage-title-row {
+        gap: 0.45rem;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stage-stats {
+        gap: 0.4rem;
+        justify-content: flex-end;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip {
+        min-width: auto;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.34rem 0.58rem;
+        background: var(--workflow-canvas-stat-bg, #f8fafc);
+        border-color: var(--workflow-canvas-stat-border, #cbd5e1);
+        box-shadow: none;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip span {
+        color: var(--workflow-canvas-stat-label, #475569);
+        font-size: 0.62rem;
+        letter-spacing: 0.08em;
+        line-height: 1;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip strong {
+        color: var(--workflow-canvas-stat-value, #0f172a);
+        font-size: 0.82rem;
+        line-height: 1;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="info"] {
+        --workflow-canvas-stat-bg: #eef6ff;
+        --workflow-canvas-stat-border: #bae6fd;
+        --workflow-canvas-stat-label: #0369a1;
+        --workflow-canvas-stat-value: #075985;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="secondary"] {
+        --workflow-canvas-stat-bg: #f5f3ff;
+        --workflow-canvas-stat-border: #ddd6fe;
+        --workflow-canvas-stat-label: #6d28d9;
+        --workflow-canvas-stat-value: #5b21b6;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="accent"] {
+        --workflow-canvas-stat-bg: #fdf4ff;
+        --workflow-canvas-stat-border: #f5d0fe;
+        --workflow-canvas-stat-label: #a21caf;
+        --workflow-canvas-stat-value: #86198f;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="warning"] {
+        --workflow-canvas-stat-bg: #fffbeb;
+        --workflow-canvas-stat-border: #fde68a;
+        --workflow-canvas-stat-label: #b45309;
+        --workflow-canvas-stat-value: #92400e;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="success"] {
+        --workflow-canvas-stat-bg: #ecfdf5;
+        --workflow-canvas-stat-border: #bbf7d0;
+        --workflow-canvas-stat-label: #047857;
+        --workflow-canvas-stat-value: #065f46;
+    }
+
+    .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="danger"] {
+        --workflow-canvas-stat-bg: #fff1f2;
+        --workflow-canvas-stat-border: #fecdd3;
+        --workflow-canvas-stat-label: #be123c;
+        --workflow-canvas-stat-value: #9f1239;
+    }
+
+    .workflow-canvas-definition-panel {
+        min-height: 37.75rem;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        align-content: stretch;
+        padding: 0.8rem;
+    }
+
+    .workflow-canvas-definition-panel .workflow-canvas-field:first-child {
+        margin-top: 0;
+    }
+
+    .workflow-canvas-field--description {
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .workflow-canvas-field--description .workflow-canvas-textarea {
+        min-height: 21rem;
+        height: 100%;
+        resize: none;
+    }
 }
 
 @media (max-width: 760px) {

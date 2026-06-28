@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
@@ -92,6 +93,8 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         AddIfMissing(variables, "DotNetTestTemplate", DefaultTestTemplate);
         AddIfMissing(variables, "DotNetTestFrameworkPreference", DefaultTestFramework);
         AddIfMissing(variables, "DotNetTargetFramework", targetFramework);
+        var workspaceAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(productRoot) ?? string.Empty;
+        AddIfMissing(variables, "DotNetWorkspaceAlias", workspaceAlias);
         AddIfMissing(
             variables,
             "DotNetScaffoldContractSource",
@@ -108,15 +111,15 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
                 testProjectName,
                 testProjectDirectory,
                 targetFramework,
-                productRoot));
+                productRoot,
+                workspaceAlias));
     }
 
     private static bool TryResolveProductRoot(IDictionary<string, string> variables, out string productRoot)
     {
         productRoot = FirstNonEmpty(
             ResolveVariable(variables, "ProductRoot"),
-            ResolveVariable(variables, "OutputRoot"),
-            ResolveVariable(variables, "ExternalTargetRoot"));
+            ResolveVariable(variables, "OutputRoot"));
 
         return !string.IsNullOrWhiteSpace(productRoot);
     }
@@ -226,7 +229,8 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         string testProjectName,
         string testProjectDirectory,
         string targetFramework,
-        string productRoot)
+        string productRoot,
+        string workspaceAlias)
     {
         var builder = new StringBuilder();
         builder.AppendLine($"SolutionName: {solutionName}");
@@ -238,6 +242,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         builder.AppendLine($"AppTemplateOptions: {appArchetype.TemplateOptions}");
         builder.AppendLine($"AllowedTemplateSwitches: {appArchetype.AllowedTemplateSwitches}");
         builder.AppendLine($"ScaffoldToolContract: use workspace_dotnet_new with template '{BuildTemplateSpec(appArchetype)}' for the app project; do not hand-author SDK/package scaffolding unless repairing an existing project in place.");
+        builder.AppendLine("ExternalTargetScriptRule: external-target/... aliases are only for structured workspace tool path arguments. Do not put external-target aliases inside PowerShell, Python, or shell script content; scripts must use the native absolute ProductRoot or DotNet* launch variable paths.");
         builder.AppendLine("ExistingScaffoldRule: existing files are not enough; if the app project already exists, compare template-critical files to the current template baseline and repair stale or hand-authored scaffold drift before first build validation.");
         if (string.Equals(appArchetype.Template, "blazorwasm", StringComparison.OrdinalIgnoreCase) &&
             ContainsAny(appArchetype.AllowedTemplateSwitches, "--pwa"))
@@ -252,6 +257,12 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         builder.AppendLine($"TestFrameworkPreference: {DefaultTestFramework}");
         builder.AppendLine($"TargetFramework: {targetFramework}");
         builder.AppendLine($"ProductRoot: {productRoot}");
+        if (!string.IsNullOrWhiteSpace(workspaceAlias))
+        {
+            builder.AppendLine($"WorkspaceAlias: {workspaceAlias}");
+        }
+
+        builder.AppendLine("StructuredWorkspacePathRule: use WorkspaceAlias or external-target/... aliases in workspace_* tool path arguments; use ProductRoot only inside approved ProductMutation scripts and native dotnet commands.");
         builder.Append("Layout: solution file at ProductRoot, app under ProductRoot/src, tests under ProductRoot/tests.");
         return builder.ToString();
     }

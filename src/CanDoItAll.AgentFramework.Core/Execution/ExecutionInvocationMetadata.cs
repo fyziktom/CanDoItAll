@@ -22,6 +22,9 @@ public static class ExecutionInvocationMetadata
     public const string ProcessGroundedTargetAliasLedgerMetadataKey = "agentProcessGroundedTargetAliasLedger";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const string ProjectStructureLaunchAgentMetadataKey = "agentProjectStructureLaunchAgent";
+    public const string ProjectStructureProcessNodeContextMetadataKey = "agentProjectStructureProcessNodeContext";
+    public const string RuntimeToolProvidersEnabledMetadataKey = "agentRuntimeToolProvidersEnabled";
+    public const string WorkspaceToolsEnabledMetadataKey = "agentWorkspaceToolsEnabled";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
     private const string ContextWorkspaceScopeKindPropertyName = "kind";
@@ -32,6 +35,10 @@ public static class ExecutionInvocationMetadata
     private const string ProjectStructureLaunchAgentRepositoryRootPropertyName = "repositoryRoot";
     private const string ProjectStructureLaunchAgentBranchNamePropertyName = "branchName";
     private const string ProjectStructureLaunchAgentSessionIdPropertyName = "sessionId";
+    private const string CurrentProcessRunNodeIdPropertyName = "currentProcessRunNodeId";
+    private const string ProcessRunNodeIdPropertyName = "processRunNodeId";
+    private const string ParentProcessRunNodeIdPropertyName = "parentProcessRunNodeId";
+    private const string TargetProcessRunNodeIdPropertyName = "targetProcessRunNodeId";
 
     public static string Build(
         string? metadataJson,
@@ -88,6 +95,24 @@ public static class ExecutionInvocationMetadata
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
+    public static string ApplyRuntimeToolProvidersEnabled(
+        string? metadataJson,
+        bool enabled)
+    {
+        var metadata = ParseObject(metadataJson);
+        metadata[RuntimeToolProvidersEnabledMetadataKey] = enabled;
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyWorkspaceToolsEnabled(
+        string? metadataJson,
+        bool enabled)
+    {
+        var metadata = ParseObject(metadataJson);
+        metadata[WorkspaceToolsEnabledMetadataKey] = enabled;
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
     public static string ApplyProjectStructureLaunchAgent(
         string? metadataJson,
         ProjectStructureAgentIdentityDescriptor? launchAgent)
@@ -106,6 +131,26 @@ public static class ExecutionInvocationMetadata
             [ProjectStructureLaunchAgentRepositoryRootPropertyName] = launchAgent.RepositoryRoot.Trim(),
             [ProjectStructureLaunchAgentBranchNamePropertyName] = launchAgent.BranchName.Trim(),
             [ProjectStructureLaunchAgentSessionIdPropertyName] = launchAgent.SessionId.Trim()
+        };
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyProjectStructureProcessNodeContext(
+        string? metadataJson,
+        ProjectStructureProcessNodeContextDescriptor? context)
+    {
+        var metadata = ParseObject(metadataJson);
+        if (context?.HasAnyProcessRunNode != true)
+        {
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        metadata[ProjectStructureProcessNodeContextMetadataKey] = new JsonObject
+        {
+            [CurrentProcessRunNodeIdPropertyName] = context.CurrentProcessRunNodeId.Trim(),
+            [ProcessRunNodeIdPropertyName] = context.ProcessRunNodeId.Trim(),
+            [ParentProcessRunNodeIdPropertyName] = context.ParentProcessRunNodeId.Trim(),
+            [TargetProcessRunNodeIdPropertyName] = context.TargetProcessRunNodeId.Trim()
         };
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
@@ -268,6 +313,20 @@ public static class ExecutionInvocationMetadata
                TryReadBoolean(run.MetadataJson, ProcessScaffoldToolOnlyMetadataKey) == true;
     }
 
+    public static bool ResolveRuntimeToolProvidersEnabled(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return TryReadBoolean(run.MetadataJson, RuntimeToolProvidersEnabledMetadataKey) != false;
+    }
+
+    public static bool ResolveWorkspaceToolsEnabled(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return TryReadBoolean(run.MetadataJson, WorkspaceToolsEnabledMetadataKey) != false;
+    }
+
     public static bool ResolveProcessAllowsProductMutation(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -321,6 +380,15 @@ public static class ExecutionInvocationMetadata
 
         return IsTrustedGovernedProcessRun(run)
             ? ResolveProjectStructureLaunchAgent(run.MetadataJson)
+            : null;
+    }
+
+    public static ProjectStructureProcessNodeContextDescriptor? ResolveProjectStructureProcessNodeContext(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run)
+            ? ResolveProjectStructureProcessNodeContext(run.MetadataJson)
             : null;
     }
 
@@ -601,6 +669,36 @@ public static class ExecutionInvocationMetadata
                 ReadObjectString(agentElement, ProjectStructureLaunchAgentBranchNamePropertyName),
                 ReadObjectString(agentElement, ProjectStructureLaunchAgentSessionIdPropertyName));
             return descriptor.HasLeaseOwnerIdentity ? descriptor : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static ProjectStructureProcessNodeContextDescriptor? ResolveProjectStructureProcessNodeContext(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty(ProjectStructureProcessNodeContextMetadataKey, out var contextElement) ||
+                contextElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var descriptor = new ProjectStructureProcessNodeContextDescriptor(
+                ReadObjectString(contextElement, CurrentProcessRunNodeIdPropertyName),
+                ReadObjectString(contextElement, ProcessRunNodeIdPropertyName),
+                ReadObjectString(contextElement, ParentProcessRunNodeIdPropertyName),
+                ReadObjectString(contextElement, TargetProcessRunNodeIdPropertyName));
+            return descriptor.HasAnyProcessRunNode ? descriptor : null;
         }
         catch (JsonException)
         {

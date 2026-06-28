@@ -34,9 +34,11 @@ public partial class ProjectStructurePage
             Description = action.Description,
             Icon = action.Icon,
             MenuLabel = action.MenuLabel,
+            ShortcutKey = action.ShortcutKey,
             MenuSize = action.MenuSize,
             SubmenuLayout = action.SubmenuLayout,
             Tone = action.Tone,
+            SetupRendererKey = action.SetupRendererKey,
             RequiresInput = useSecretReferenceDialog ? false : action.RequiresInput,
             CreateMode = useSecretReferenceDialog ? "secret-reference-picker" : action.CreateMode,
             ObjectSubtype = action.ObjectSubtype,
@@ -93,6 +95,7 @@ public partial class ProjectStructurePage
             "recordingRef" => BuildNodeOptions(ProjectObjectType.Recording),
             "secretRef" => BuildNodeOptions(ProjectObjectType.SecretReference),
             "storageCatalogId" => BuildStorageCatalogOptions(),
+            ProjectStructureCanvasCatalog.ImageProviderProfileFieldKey => BuildImageGenerationProviderOptions(),
             _ => null
         };
 

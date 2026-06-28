@@ -1,16 +1,20 @@
 using System.Text.Json;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureProcessProjectionContributor(
     IDbContextFactory<ProcessPersistenceDbContext> processDbContextFactory,
-    ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService) : IProjectStructureProjectionContributor
+    ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService,
+    IWorkspacePathResolver workspacePathResolver,
+    ILogger<ProjectStructureProcessProjectionContributor> logger) : IProjectStructureProjectionContributor
 {
     private const string ProjectIdVariableName = "ProjectId";
     private const string ProjectNodeIdVariableName = "ProjectNodeId";
@@ -18,7 +22,34 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     private const string CurrentProcessRunIdVariableName = "CurrentProcessRunId";
     private const string ProcessRunNodeIdVariableName = "ProcessRunNodeId";
     private const string CurrentProcessRunNodeIdVariableName = "CurrentProcessRunNodeId";
+    private const string ProductRootVariableName = "ProductRoot";
+    private const string OutputRootVariableName = "OutputRoot";
+    private const string ExternalTargetRootVariableName = "ExternalTargetRoot";
     private const string ProcessRunOutputFolderArtifactKind = "process-run-output-folder";
+    private const string ProcessRunSummaryArtifactKind = "process-run-summary";
+    private const string ProcessRunScreenshotArtifactKind = "process-run-screenshot";
+    private const string ProcessRunRuntimeArtifactKind = "process-run-runtime";
+    private const int MaxProjectedScreenshotCount = 6;
+    private const int MaxProjectedRuntimeProjectCount = 3;
+    private const int MaxRuntimeProjectSearchDepth = 6;
+    private const int MaxRuntimeProjectSearchEntries = 2000;
+    private static readonly HashSet<string> ScreenshotExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp"
+    };
+
+    private static readonly HashSet<string> SkippedRuntimeProjectDirectories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".git",
+        ".vs",
+        "bin",
+        "node_modules",
+        "obj",
+        "TestResults"
+    };
 
     public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
     {
@@ -168,6 +199,9 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 projectedRunNodeKeyByLinkedRunNodeKey),
             projectScopedRunReferences);
         var outputFoldersByRunId = BuildOutputFolderMap(projectScopedRunReferences);
+        var projectScopedRunReferencesByRunId = projectScopedRunReferences
+            .GroupBy(reference => reference.RunId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<ProjectScopedProcessRunReference>)group.ToArray());
 
         foreach (var definition in linkedDefinitionIds
             .OrderBy(definitionId => ResolveDefinitionSortName(definitionId, catalogItemsByDefinitionId), StringComparer.OrdinalIgnoreCase)
@@ -200,6 +234,14 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 run.State,
                 run.Index,
                 outputFoldersByRunId.GetValueOrDefault(run.State.RunId, []));
+            AddRunEvidenceNodes(
+                context,
+                run.State,
+                plan,
+                definitionItem,
+                stepStatsByRunId.GetValueOrDefault(run.State.RunId, ProcessRunProjectionStats.Empty(run.State.RunId)),
+                run.Index,
+                projectScopedRunReferencesByRunId.GetValueOrDefault(run.State.RunId, []));
         }
     }
 
@@ -357,6 +399,160 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         }
     }
 
+    private void AddRunEvidenceNodes(
+        ProjectStructureProjectionContext context,
+        ProjectStructureProcessRuntimeState state,
+        ProjectStructureProcessPlan? plan,
+        ProcessDefinitionCatalogItemProjection? definition,
+        ProcessRunProjectionStats stats,
+        int runIndex,
+        IReadOnlyList<ProjectScopedProcessRunReference> runReferences)
+    {
+        var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
+        if (!context.ContainsNode(runNodeKey))
+        {
+            return;
+        }
+
+        AddRunSummaryNode(context, state, plan, definition, stats, runIndex);
+        AddRunScreenshotNodes(context, state, runIndex);
+        AddRunRuntimeNodes(context, state, runIndex, runReferences);
+    }
+
+    private static void AddRunSummaryNode(
+        ProjectStructureProjectionContext context,
+        ProjectStructureProcessRuntimeState state,
+        ProjectStructureProcessPlan? plan,
+        ProcessDefinitionCatalogItemProjection? definition,
+        ProcessRunProjectionStats stats,
+        int runIndex)
+    {
+        var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
+        var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(state.RunId);
+        var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.Note, (runIndex * 8) + 1);
+        context.AddNode(new ProjectObjectRecord
+        {
+            ProjectId = context.ProjectId,
+            NodeKey = nodeKey,
+            ObjectType = ProjectObjectType.Note,
+            ObjectSubtype = "process-summary",
+            Title = "Run summary",
+            Subtitle = BuildRunSubtitle(state, stats),
+            Status = state.Status.ToString(),
+            Notes = BuildRunSummaryNotes(context.ProjectId, state, plan, definition, stats),
+            MetadataJson = BuildRunSummaryMetadataJson(state, stats),
+            Binding = ProjectStructureProjectionBindingFactory.Create(
+                $"/projects/{context.ProjectId:D}/processes/live?runId={state.RunId:D}",
+                ProcessRunSummaryArtifactKind,
+                state.RunId),
+            ParentNodeKey = runNodeKey,
+            PositionX = position.X,
+            PositionY = position.Y,
+            CreatedAtUtc = plan?.CreatedAtUtc ?? state.UpdatedAtUtc,
+            UpdatedAtUtc = state.UpdatedAtUtc
+        });
+
+        if (context.ContainsNode(nodeKey))
+        {
+            context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
+        }
+    }
+
+    private void AddRunScreenshotNodes(
+        ProjectStructureProjectionContext context,
+        ProjectStructureProcessRuntimeState state,
+        int runIndex)
+    {
+        var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
+        var screenshots = EnumerateRunScreenshots(state.RunId);
+        for (var index = 0; index < screenshots.Count; index++)
+        {
+            var screenshot = screenshots[index];
+            var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(state.RunId, screenshot.RelativePath);
+            var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.ImageAsset, (runIndex * 8) + 2 + index);
+            var storageReference = StorageJson.CreateLegacyManagedFileReference(
+                screenshot.RelativePath,
+                screenshot.ContentType,
+                screenshot.FileName,
+                screenshot.Length);
+            context.AddNode(new ProjectObjectRecord
+            {
+                ProjectId = context.ProjectId,
+                NodeKey = nodeKey,
+                ObjectType = ProjectObjectType.ImageAsset,
+                ObjectSubtype = "screenshot",
+                Title = BuildScreenshotTitle(screenshot.FileName),
+                Subtitle = "Process UI evidence",
+                Status = state.Status.ToString(),
+                Notes = BuildScreenshotNotes(state.RunId, screenshot),
+                MetadataJson = BuildScreenshotMetadataJson(screenshot),
+                Binding = new ProjectNodeBindingState(
+                    StorageJson.BuildPreviewUrl(storageReference),
+                    ProcessRunScreenshotArtifactKind,
+                    state.RunId,
+                    screenshot.RelativePath,
+                    screenshot.ContentType,
+                    screenshot.FileName,
+                    StorageJson.SerializeReference(storageReference)),
+                ParentNodeKey = runNodeKey,
+                PositionX = position.X,
+                PositionY = position.Y,
+                CreatedAtUtc = screenshot.LastWriteTimeUtc,
+                UpdatedAtUtc = screenshot.LastWriteTimeUtc
+            });
+
+            if (context.ContainsNode(nodeKey))
+            {
+                context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
+            }
+        }
+    }
+
+    private void AddRunRuntimeNodes(
+        ProjectStructureProjectionContext context,
+        ProjectStructureProcessRuntimeState state,
+        int runIndex,
+        IReadOnlyList<ProjectScopedProcessRunReference> runReferences)
+    {
+        var runNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(state.RunId);
+        var runtimeProjects = EnumerateRuntimeProjects(runReferences);
+        for (var index = 0; index < runtimeProjects.Count; index++)
+        {
+            var runtimeProject = runtimeProjects[index];
+            var nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunRuntimeNodeKey(state.RunId, runtimeProject.ProjectPath);
+            var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.Environment, (runIndex * 8) + 8 + index);
+            var title = runtimeProjects.Count == 1
+                ? "Run final app"
+                : $"Run {runtimeProject.ProjectName}";
+            context.AddNode(new ProjectObjectRecord
+            {
+                ProjectId = context.ProjectId,
+                NodeKey = nodeKey,
+                ObjectType = ProjectObjectType.Environment,
+                ObjectSubtype = "dotnet-watch",
+                Title = title,
+                Subtitle = ".NET watch runtime",
+                Status = state.Status.ToString(),
+                Notes = BuildRuntimeNotes(state.RunId, runtimeProject),
+                MetadataJson = BuildRuntimeMetadataJson(runtimeProject),
+                Binding = ProjectStructureProjectionBindingFactory.Create(
+                    $"/projects/{context.ProjectId:D}/structure",
+                    ProcessRunRuntimeArtifactKind,
+                    state.RunId),
+                ParentNodeKey = runNodeKey,
+                PositionX = position.X,
+                PositionY = position.Y,
+                CreatedAtUtc = state.UpdatedAtUtc,
+                UpdatedAtUtc = state.UpdatedAtUtc
+            });
+
+            if (context.ContainsNode(nodeKey))
+            {
+                context.AddLink(runNodeKey, nodeKey, ProjectObjectLinkKind.Contains);
+            }
+        }
+    }
+
     private static IReadOnlyDictionary<string, string> BuildPreferredDefinitionParentMap(
         IReadOnlyList<ProjectStructureProcessLink> userAuthoredLinks)
     {
@@ -465,6 +661,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 row.RunId,
                 ResolveLaunchVariable(variables, ProjectNodeIdVariableName),
                 EnumerateProjectableOutputFolders(row.RunId, variables),
+                EnumerateProductRoots(variables),
                 row.CreatedAtUtc));
         }
 
@@ -525,6 +722,20 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             .GroupBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(folder => folder.DirectoryPath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> EnumerateProductRoots(IReadOnlyDictionary<string, string> variables)
+    {
+        return new[]
+            {
+                ResolveLaunchVariable(variables, ProductRootVariableName),
+                ResolveLaunchVariable(variables, OutputRootVariableName),
+                ResolveLaunchVariable(variables, ExternalTargetRootVariableName)
+            }
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
@@ -635,6 +846,106 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             });
     }
 
+    private static string BuildRunSummaryNotes(
+        Guid projectId,
+        ProjectStructureProcessRuntimeState state,
+        ProjectStructureProcessPlan? plan,
+        ProcessDefinitionCatalogItemProjection? definition,
+        ProcessRunProjectionStats stats)
+        => string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                "Projected process run summary.",
+                BuildRunNotes(projectId, state, plan, definition, stats)
+            });
+
+    private static string BuildRunSummaryMetadataJson(
+        ProjectStructureProcessRuntimeState state,
+        ProcessRunProjectionStats stats)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            processRunSummary = new
+            {
+                state.RunId,
+                state.RootRunId,
+                state.PlanId,
+                Status = state.Status.ToString(),
+                stats.TotalStepCount,
+                stats.CompletedStepCount,
+                stats.BlockedStepCount,
+                stats.WaitingApprovalStepCount,
+                stats.ActiveStepCount,
+                state.UpdatedAtUtc
+            }
+        });
+    }
+
+    private static string BuildScreenshotTitle(string fileName)
+    {
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        return string.IsNullOrWhiteSpace(name)
+            ? "Process screenshot"
+            : $"Screenshot - {name}";
+    }
+
+    private static string BuildScreenshotNotes(
+        Guid runId,
+        ProjectedProcessRunFile screenshot)
+        => string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                $"Process run screenshot for {runId:D}.",
+                $"Managed path: {screenshot.RelativePath}",
+                $"Content type: {screenshot.ContentType}",
+                $"Size: {screenshot.Length} bytes",
+                $"Captured: {screenshot.LastWriteTimeUtc:u}"
+            });
+
+    private static string BuildScreenshotMetadataJson(ProjectedProcessRunFile screenshot)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            processRunScreenshot = new
+            {
+                screenshot.RelativePath,
+                screenshot.ContentType,
+                screenshot.Length,
+                screenshot.LastWriteTimeUtc
+            }
+        });
+    }
+
+    private static string BuildRuntimeNotes(
+        Guid runId,
+        ProjectedRuntimeProject runtimeProject)
+        => string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                $"Process run runtime entry for {runId:D}.",
+                $"Project path: {runtimeProject.ProjectPath}",
+                $"Working directory: {runtimeProject.WorkingDirectory}",
+                $"Product root: {runtimeProject.ProductRoot}",
+                $"Command: dotnet watch --project \"{runtimeProject.ProjectPath}\" run"
+            });
+
+    private static string BuildRuntimeMetadataJson(ProjectedRuntimeProject runtimeProject)
+    {
+        return ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Environment = new ProjectEnvironmentMetadata
+            {
+                EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                ProjectPath = runtimeProject.ProjectPath,
+                WorkingDirectory = runtimeProject.WorkingDirectory,
+                RuntimeProtocol = ProjectRuntimeProtocol.Http
+            }
+        });
+    }
+
     private static string ResolveRunOutputTitle(ProjectStructureProcessRunFolderProjectionKind kind)
         => kind switch
         {
@@ -678,6 +989,257 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     private static string BuildManagedArtifactRoot(Guid runId)
         => $"artifacts/process-runs/{runId:D}";
 
+    private IReadOnlyList<ProjectedProcessRunFile> EnumerateRunScreenshots(Guid runId)
+    {
+        try
+        {
+            var workspaceRoot = workspacePathResolver.ResolveWorkspaceRoot();
+            var runRoot = Path.Combine(workspaceRoot, "artifacts", "process-runs", runId.ToString("D"));
+            if (!Directory.Exists(runRoot))
+            {
+                return [];
+            }
+
+            return Directory
+                .EnumerateFiles(
+                    runRoot,
+                    "*",
+                    new EnumerationOptions
+                    {
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = true,
+                        AttributesToSkip = 0
+                    })
+                .Where(path => ScreenshotExtensions.Contains(Path.GetExtension(path)))
+                .Select(path => CreateProjectedProcessRunFile(workspaceRoot, path))
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .ThenBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .Take(MaxProjectedScreenshotCount)
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
+            logger.LogWarning(ex, "Could not enumerate process run screenshots for run {RunId}.", runId);
+            return [];
+        }
+    }
+
+    private IReadOnlyList<ProjectedRuntimeProject> EnumerateRuntimeProjects(
+        IReadOnlyList<ProjectScopedProcessRunReference> runReferences)
+    {
+        if (runReferences.Count == 0)
+        {
+            return [];
+        }
+
+        var projects = new List<ProjectedRuntimeProject>();
+        var seenProjectPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var productRoot in runReferences
+            .SelectMany(reference => reference.ProductRoots)
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (projects.Count >= MaxProjectedRuntimeProjectCount)
+            {
+                break;
+            }
+
+            if (!TryResolveProductRootPath(productRoot, out var fullProductRoot))
+            {
+                continue;
+            }
+
+            foreach (var runtimeProject in FindRuntimeProjects(fullProductRoot))
+            {
+                if (!seenProjectPaths.Add(runtimeProject.ProjectPath))
+                {
+                    continue;
+                }
+
+                projects.Add(runtimeProject);
+                if (projects.Count >= MaxProjectedRuntimeProjectCount)
+                {
+                    break;
+                }
+            }
+        }
+
+        return projects;
+    }
+
+    private bool TryResolveProductRootPath(string productRoot, out string fullPath)
+    {
+        fullPath = string.Empty;
+        try
+        {
+            var trimmedRoot = productRoot.Trim();
+            var candidatePath = Path.IsPathRooted(trimmedRoot)
+                ? Path.GetFullPath(trimmedRoot)
+                : Path.GetFullPath(Path.Combine(workspacePathResolver.ResolveWorkspaceRoot(), trimmedRoot.Replace('/', Path.DirectorySeparatorChar)));
+            if (!Directory.Exists(candidatePath))
+            {
+                return false;
+            }
+
+            fullPath = candidatePath;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
+            logger.LogWarning(ex, "Could not resolve process run product root {ProductRoot}.", productRoot);
+            return false;
+        }
+    }
+
+    private IReadOnlyList<ProjectedRuntimeProject> FindRuntimeProjects(string productRoot)
+    {
+        var candidates = new List<string>();
+        var pending = new Stack<(string DirectoryPath, int Depth)>();
+        var visitedEntryCount = 0;
+        pending.Push((productRoot, 0));
+
+        while (pending.Count > 0 &&
+               visitedEntryCount < MaxRuntimeProjectSearchEntries &&
+               candidates.Count < MaxProjectedRuntimeProjectCount * 4)
+        {
+            var current = pending.Pop();
+            if (!TryEnumerateFileSystemEntries(current.DirectoryPath, "*.csproj", filesOnly: true, out var projectFiles))
+            {
+                continue;
+            }
+
+            foreach (var projectFile in projectFiles)
+            {
+                candidates.Add(projectFile);
+                visitedEntryCount++;
+                if (visitedEntryCount >= MaxRuntimeProjectSearchEntries)
+                {
+                    break;
+                }
+            }
+
+            if (current.Depth >= MaxRuntimeProjectSearchDepth ||
+                visitedEntryCount >= MaxRuntimeProjectSearchEntries)
+            {
+                continue;
+            }
+
+            if (!TryEnumerateFileSystemEntries(current.DirectoryPath, "*", filesOnly: false, out var childDirectories))
+            {
+                continue;
+            }
+
+            foreach (var childDirectory in childDirectories
+                .Where(directory => !ShouldSkipRuntimeProjectDirectory(directory))
+                .OrderByDescending(directory => directory, StringComparer.OrdinalIgnoreCase))
+            {
+                pending.Push((childDirectory, current.Depth + 1));
+                visitedEntryCount++;
+                if (visitedEntryCount >= MaxRuntimeProjectSearchEntries)
+                {
+                    break;
+                }
+            }
+        }
+
+        var orderedCandidates = candidates
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(IsLikelyTestProject)
+            .ThenBy(path => CountPathSegments(Path.GetRelativePath(productRoot, path)))
+            .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var appCandidates = orderedCandidates
+            .Where(path => !IsLikelyTestProject(path))
+            .ToArray();
+        var selectedCandidates = appCandidates.Length == 0
+            ? orderedCandidates
+            : appCandidates;
+
+        return selectedCandidates
+            .Take(MaxProjectedRuntimeProjectCount)
+            .Select(path => new ProjectedRuntimeProject(
+                productRoot,
+                path,
+                Path.GetDirectoryName(path) ?? productRoot,
+                Path.GetFileNameWithoutExtension(path)))
+            .ToArray();
+    }
+
+    private bool TryEnumerateFileSystemEntries(
+        string directoryPath,
+        string searchPattern,
+        bool filesOnly,
+        out IReadOnlyList<string> entries)
+    {
+        try
+        {
+            entries = filesOnly
+                ? Directory.EnumerateFiles(directoryPath, searchPattern, SearchOption.TopDirectoryOnly).ToArray()
+                : Directory.EnumerateDirectories(directoryPath, searchPattern, SearchOption.TopDirectoryOnly).ToArray();
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
+            logger.LogWarning(ex, "Could not enumerate process runtime project directory {DirectoryPath}.", directoryPath);
+            entries = [];
+            return false;
+        }
+    }
+
+    private static bool ShouldSkipRuntimeProjectDirectory(string directoryPath)
+    {
+        var name = Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return SkippedRuntimeProjectDirectories.Contains(name) ||
+               string.Equals(name, "tests", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLikelyTestProject(string projectPath)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(projectPath);
+        if (fileName.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase) ||
+            fileName.EndsWith("Tests", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return projectPath
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(segment =>
+                string.Equals(segment, "tests", StringComparison.OrdinalIgnoreCase) ||
+                segment.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static int CountPathSegments(string path)
+    {
+        return path.Split(
+                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Length;
+    }
+
+    private static ProjectedProcessRunFile CreateProjectedProcessRunFile(string workspaceRoot, string fullPath)
+    {
+        var info = new FileInfo(fullPath);
+        var relativePath = Path.GetRelativePath(workspaceRoot, fullPath)
+            .Replace('\\', '/')
+            .TrimStart('/');
+        return new ProjectedProcessRunFile(
+            relativePath,
+            Path.GetFileName(fullPath),
+            ResolveImageContentType(fullPath),
+            info.Length,
+            new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero));
+    }
+
+    private static string ResolveImageContentType(string path)
+        => Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".webp" => "image/webp",
+            _ => "image/png"
+        };
+
     private static string ShortId(Guid value)
         => value.ToString("N")[..8];
 
@@ -690,6 +1252,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         Guid RunId,
         string ProjectNodeKey,
         IReadOnlyList<ProjectStructureProcessRunFolderProjection> OutputFolders,
+        IReadOnlyList<string> ProductRoots,
         DateTimeOffset CreatedAtUtc);
 
     private sealed record ProjectStructureProcessLink(
@@ -723,4 +1286,17 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             return new ProcessRunProjectionStats(runId, 0, 0, 0, 0, 0);
         }
     }
+
+    private sealed record ProjectedProcessRunFile(
+        string RelativePath,
+        string FileName,
+        string ContentType,
+        long Length,
+        DateTimeOffset LastWriteTimeUtc);
+
+    private sealed record ProjectedRuntimeProject(
+        string ProductRoot,
+        string ProjectPath,
+        string WorkingDirectory,
+        string ProjectName);
 }

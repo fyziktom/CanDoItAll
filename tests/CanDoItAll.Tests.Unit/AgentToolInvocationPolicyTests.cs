@@ -268,6 +268,163 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_reading_current_step_primary_managed_artifact_before_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{currentRunId:D}/steps/feature-intake.md"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "WriteManagedProcessArtifacts"
+            ],
+            processRunId: currentRunId.ToString("D"),
+            sourceId: "feature-intake");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("cannot read", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workspace_write_file", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"artifacts/process-runs/{currentRunId:D}/steps/feature-intake.md", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_recoverable_ellipsized_current_process_run_artifact_ref_for_guid_governed_run()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/2a.../steps/classify-dotnet-application.md"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "WriteManagedProcessArtifacts"
+            ],
+            processRunId: currentRunId.ToString("D"));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_ellipsized_process_run_artifact_ref_for_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/2a.../steps/classify-dotnet-application.md",
+                ["content"] = "content"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "WriteManagedProcessArtifacts"
+            ],
+            processRunId: currentRunId.ToString("D"));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("malformed managed process-run artifact ref", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not abbreviate", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_wrong_process_run_artifact_ref_without_external_action()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var guessedRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b5c1e8d6f3");
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{guessedRunId:D}/steps/classify-dotnet-application.md"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "WriteManagedProcessArtifacts"
+            ],
+            processRunId: currentRunId.ToString("D"));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("cannot read managed artifacts for process run", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(currentRunId.ToString("D"), decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_child_process_run_artifact_ref_for_external_action_coordinator()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("886aba26-7806-4214-bbe5-15e4c9ff57d1");
+        var childRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"artifacts/process-runs/{childRunId:D}/steps/architecture-handoff.md"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "ExecuteExternalAction"
+            ],
+            processStepTargetScope: "ExternalActionControlled",
+            processRunId: currentRunId.ToString("D"));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_external_product_mutation_when_process_step_disallows_product_mutation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -361,7 +518,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("contains write operations against product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not use external-target aliases as literal OS paths", decision.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("external-target/C/programovani/todo-summary/product/src/Program.cs", decision.Reason, StringComparison.Ordinal);
     }
 
@@ -390,7 +547,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("contains write operations against product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not use external-target aliases as literal OS paths", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -411,9 +568,9 @@ public sealed class AgentToolInvocationPolicyTests
             processAllowsProductMutation: false,
             scriptSideEffectManifestJson: CreateSideEffectManifest(
                 GovernedScriptSideEffectMode.NoMutation,
-                declaredReadPaths: ["external-target/C/programovani/todo-summary/product/src/Program.cs"]),
+                declaredReadPaths: ["C:\\programovani\\todo-summary\\product\\src\\Program.cs"]),
             inspectedScriptContent:
-                "Get-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
+                "Get-Content -Path 'C:\\programovani\\todo-summary\\product\\src\\Program.cs'");
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -460,7 +617,7 @@ public sealed class AgentToolInvocationPolicyTests
             readOnlyExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
             processAllowsProductMutation: false,
             inspectedScriptContent:
-                "Get-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
+                "Get-Content -Path 'artifacts/process-runs/process-run-001/evidence/report.md'");
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -486,9 +643,9 @@ public sealed class AgentToolInvocationPolicyTests
             processAllowsProductMutation: false,
             scriptSideEffectManifestJson: CreateSideEffectManifest(
                 GovernedScriptSideEffectMode.NoMutation,
-                declaredReadPaths: ["external-target/C/programovani/todo-summary/product/src/Program.cs"]),
+                declaredReadPaths: ["C:\\programovani\\todo-summary\\product\\src\\Program.cs"]),
             inspectedScriptContent:
-                "Get-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
+                "Get-Content -Path 'C:\\programovani\\todo-summary\\product\\src\\Program.cs'");
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -545,7 +702,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not use external-target aliases as literal OS paths", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -625,7 +782,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must not use external-target aliases as literal OS paths", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -672,9 +829,9 @@ public sealed class AgentToolInvocationPolicyTests
             processAllowsProductMutation: false,
             scriptSideEffectManifestJson: CreateSideEffectManifest(
                 GovernedScriptSideEffectMode.ExternalArtifactDestination,
-                declaredWritePaths: ["external-target/C/programovani/process-run/evidence/report.md"]),
+                declaredWritePaths: ["artifacts/process-runs/process-run-001/evidence/report.md"]),
             inspectedScriptContent:
-                "[IO.File]::WriteAllText('external-target/C/programovani/process-run/evidence/report.md', 'ok')");
+                "[IO.File]::WriteAllText('artifacts/process-runs/process-run-001/evidence/report.md', 'ok')");
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -700,9 +857,9 @@ public sealed class AgentToolInvocationPolicyTests
             processStepAllowedOperations: ["MutateProductTarget"],
             scriptSideEffectManifestJson: CreateSideEffectManifest(
                 GovernedScriptSideEffectMode.ProductMutation,
-                declaredWritePaths: ["external-target/C/programovani/todo-summary/product/src/Program.cs"]),
+                declaredWritePaths: ["C:\\programovani\\todo-summary\\product\\src\\Program.cs"]),
             inspectedScriptContent:
-                "Set-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs' -Value 'changed'");
+                "Set-Content -Path 'C:\\programovani\\todo-summary\\product\\src\\Program.cs' -Value 'changed'");
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -752,6 +909,8 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("workspace_dotnet_stop", "LaunchRuntime")]
     [InlineData(ToolContractCatalog.BrowserClick, "CaptureRuntimeProof")]
     [InlineData(ToolContractCatalog.BrowserWaitFor, "CaptureRuntimeProof")]
+    [InlineData(ToolContractCatalog.WorkspaceAnalyzeImage, "CaptureRuntimeProof")]
+    [InlineData(ToolContractCatalog.WorkspaceAnalyzeImages, "CaptureRuntimeProof")]
     [InlineData("processes_step_transition", "ExecuteExternalAction")]
     public void ProcessToolOperationAuthorizer_denies_governed_step_with_missing_operation_contract(
         string toolName,
@@ -1334,6 +1493,7 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
         Assert.Contains("not native absolute paths", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Retry this structured workspace tool", decision.Reason, StringComparison.Ordinal);
         Assert.Contains("external-target/C/programovani/dotnet/output", decision.Reason, StringComparison.Ordinal);
     }
 
@@ -1480,6 +1640,8 @@ public sealed class AgentToolInvocationPolicyTests
     public async Task EvaluateAsync_allows_specific_child_process_run_artifact_search_for_external_target_process_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("886aba26-7806-4214-bbe5-15e4c9ff57d1");
+        var childRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
         var context = CreateContext(
             "workspace_search",
             ToolInvocationClassification.Read,
@@ -1489,11 +1651,18 @@ public sealed class AgentToolInvocationPolicyTests
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["query"] = "architecture-decision",
-                ["relativePath"] = "artifacts/scopes/organization/demo/process-runs/child-run-001"
+                ["relativePath"] = $"artifacts/scopes/organization/demo/process-runs/{childRunId:D}"
             },
             readOnlyExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
             processAllowsProductMutation: false,
-            processStepTargetScope: "ExternalProductTargetReadOnly");
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadUpstreamArtifacts",
+                "ExecuteExternalAction"
+            ],
+            processStepTargetScope: "ExternalActionControlled",
+            processRunId: currentRunId.ToString("D"));
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -1902,6 +2071,31 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_governed_script_with_external_target_alias_literal()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetMutable,
+            inspectedScriptContent: "dotnet new blazorwasm -o 'external-target/C/programovani/dotnet/output/src/TetrisGame'",
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ProductMutation,
+                declaredWritePaths: ["external-target/C/programovani/dotnet/output/src/TetrisGame"]));
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("must not use external-target aliases as literal OS paths", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_new", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("native absolute ProductRoot", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BlockGuard_does_not_reclassify_allowed_tool_exceptions()
     {
         var decision = ToolInvocationPolicyDecision.Allow("workspace_read_file|path=artifact.md");
@@ -1976,6 +2170,12 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserWaitFor));
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.BrowserWaitFor));
         Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserWaitFor));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImage));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceAnalyzeImage));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceAnalyzeImage));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceAnalyzeImages));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceAnalyzeImages));
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetStop));
         Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary));
     }
@@ -2064,6 +2264,16 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserWaitFor, out var browserWaitFor));
         Assert.Equal(ToolCapabilityOperationRequirementKind.Static, browserWaitFor.OperationRequirementKind);
         Assert.Contains(browserWaitFor.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceAnalyzeImage, out var analyzeImage));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, analyzeImage.OperationRequirementKind);
+        Assert.Contains(analyzeImage.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceAnalyzeImages, out var analyzeImages));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, analyzeImages.OperationRequirementKind);
+        Assert.Contains(analyzeImages.OperationRequirements, requirement =>
             requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
 
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceDotNetStop, out var dotnetStop));
@@ -2448,8 +2658,10 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Contains("LaunchRuntime", decision.Reason, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task EvaluateAsync_allows_dotnet_stop_with_runtime_proof_operation()
+    [Theory]
+    [InlineData("artifacts/process-runs/dotnet-run/20260616/startup.json")]
+    [InlineData("artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/dotnet-run/20260616/startup.json")]
+    public async Task EvaluateAsync_allows_dotnet_stop_with_runtime_proof_operation(string startupReceiptPath)
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -2461,7 +2673,7 @@ public sealed class AgentToolInvocationPolicyTests
             processAllowsProductMutation: false,
             arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["startupReceiptPath"] = "artifacts/process-runs/dotnet-run/20260616/startup.json"
+                ["startupReceiptPath"] = startupReceiptPath
             },
             processStepAllowedOperations:
             [
@@ -2939,7 +3151,9 @@ public sealed class AgentToolInvocationPolicyTests
         string processStepTargetScope = "",
         string inspectedScriptContent = "",
         string scriptInspectionFailure = "",
-        string scriptSideEffectManifestJson = "")
+        string scriptSideEffectManifestJson = "",
+        string processRunId = "process-run-001",
+        string sourceId = "feature-intake")
     {
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -2952,7 +3166,7 @@ public sealed class AgentToolInvocationPolicyTests
             ApprovalWrapperAvailable: approvalWrapperAvailable,
             ExecutionRunId: "run-001",
             SourceKind: "process-step",
-            ProcessRunId: "process-run-001",
+            ProcessRunId: processRunId,
             ProcessStepId: "step-001",
             AllowedExternalTargetAliases: allowedExternalTargetAliases,
             ReadOnlyExternalTargetAliases: readOnlyExternalTargetAliases,
@@ -2964,7 +3178,10 @@ public sealed class AgentToolInvocationPolicyTests
             ProcessStepTargetScope: processStepTargetScope,
             InspectedScriptContent: inspectedScriptContent,
             ScriptInspectionFailure: scriptInspectionFailure,
-            ScriptSideEffectManifestJson: scriptSideEffectManifestJson);
+            ScriptSideEffectManifestJson: scriptSideEffectManifestJson)
+        {
+            SourceId = sourceId
+        };
     }
 
     private static string CreateSideEffectManifest(

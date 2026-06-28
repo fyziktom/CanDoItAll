@@ -628,15 +628,8 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
-  "DocPath": "processes/architecture-decision-governance/definition.md",
   "RelativePath": "processes/architecture-decision-governance",
   "DefinitionJsonPath": "processes/architecture-decision-governance/definition.json",
-  "DefinitionMarkdownPath": "processes/architecture-decision-governance/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/architecture-decision-governance/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/architecture-decision-governance/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/architecture-decision-governance/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/architecture-decision-governance/mermaid/flowchart.mmd",
-  "SequencePath": "processes/architecture-decision-governance/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

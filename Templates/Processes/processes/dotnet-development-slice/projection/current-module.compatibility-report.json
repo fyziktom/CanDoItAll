@@ -1,8 +1,0 @@
-{
-  "ProcessKey": "dotnet-development-slice",
-  "Status": "Compatible",
-  "Notes": [
-    "Uses subprocess steps resolved by definition name during import.",
-    "Requires the generic .NET solution setup and .NET feature/function implementation subprocesses to exist before import or synchronization."
-  ]
-}

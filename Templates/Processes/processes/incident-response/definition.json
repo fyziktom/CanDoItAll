@@ -342,15 +342,8 @@
       "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ],
-  "DocPath": "processes/incident-response/definition.md",
   "RelativePath": "processes/incident-response",
   "DefinitionJsonPath": "processes/incident-response/definition.json",
-  "DefinitionMarkdownPath": "processes/incident-response/definition.md",
-  "CurrentModuleImportEnvelopePath": "processes/incident-response/projection/current-module.import-envelope.json",
-  "CurrentModuleCompatibilityReportPath": "processes/incident-response/projection/current-module.compatibility-report.json",
-  "CurrentModuleCompatibilityReportMarkdownPath": "processes/incident-response/projection/current-module.compatibility-report.md",
-  "FlowchartPath": "processes/incident-response/mermaid/flowchart.mmd",
-  "SequencePath": "processes/incident-response/mermaid/sequence.mmd",
   "LocalRoles": [
     {
       "Kind": "role-resource",

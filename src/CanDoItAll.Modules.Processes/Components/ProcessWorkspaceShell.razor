@@ -3,13 +3,17 @@
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.Voice
 @using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Modules.AgentFramework
 @using CanDoItAll.Processes.Application
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.JSInterop
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject IServiceProvider Services
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
 
 <PageScaffold FillHeight="true"
               MaxWidthClass="max-w-full"
@@ -249,14 +253,18 @@
     private const string ScopeTreeNodePrefix = "processes:scope:";
     private const string DefinitionTreeNodePrefix = "processes:definition:";
     private const int SelectedRunGraphsViewIndex = 4;
+    private const decimal RuntimeUsageTokenThousandsDivisor = 1_000m;
+    private const decimal RuntimeUsageCostUsdMultiplier = 1_000m;
 
     private ProcessWorkspaceShellProjection? shell;
     private int activeDetailTabIndex;
     private int selectedRunViewIndex = 1;
     private Guid? selectedRuntimeRunId;
-    private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.OneDay;
+    private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.LiveHour;
+    private ProcessRuntimeHistoryWindow managerChatHistoryWindow = ProcessRuntimeHistoryWindow.OneDay;
     private int runtimeEventPage;
     private const int RuntimeEventPageSize = 25;
+    private bool processGraphsHistoryLoaded;
     private bool runDetailDialogOpen;
     private ProcessLiveProcessSnapshot? runDetailSnapshot;
     private bool eventDetailDialogOpen;
@@ -266,6 +274,9 @@
     private Guid? managerChatAgentId;
     private Guid? managerChatSessionId;
     private ChatAgentWorkspaceSnapshot? managerChatWorkspace;
+    private Guid? managerChatLoadedRunId;
+    private Guid? managerChatLoadedAgentId;
+    private readonly Dictionary<string, Guid> managerChatSessionIdsByRun = new(StringComparer.Ordinal);
     private IReadOnlyList<ExecutionLogEntry> managerChatExecutionLog = [];
     private string managerChatDraftPrompt = string.Empty;
     private string managerChatPendingPrompt = string.Empty;
@@ -273,9 +284,17 @@
     private int managerChatComposerKey;
     private bool managerChatIsLoading;
     private bool managerChatIsBusy;
+    private bool managerChatVoiceModeEnabled;
+    private bool managerChatVoiceRecording;
+    private bool managerChatVoiceTranscribing;
+    private bool managerChatVoiceSpeaking;
     private string? managerChatErrorMessage;
     private string managerChatRunStateText = string.Empty;
     private string managerChatRunStateTone = "neutral";
+    private string managerChatVoiceStatusText = string.Empty;
+    private string managerChatVoiceStatusTone = "neutral";
+    private readonly HashSet<Guid> managerChatSessionsWithVoiceIdentifierOmissionNotice = [];
+    private bool managerChatHasVoiceIdentifierOmissionNoticeWithoutSession;
     private bool activeDetailTabInitialized;
     private bool isBusy;
     private string? errorMessage;
@@ -483,6 +502,9 @@
             var detailTabKey = ResolveRequestedDetailTabKey();
             var definitionLoadOptions = CreateDefinitionLoadOptions(detailTabKey);
             var runtimeLoadOptions = CreateRuntimeLoadOptions(detailTabKey);
+            var runtimeQueryHistoryWindow = ResolveRuntimeHistoryWindow(detailTabKey);
+            var shouldAutoSelectRuntimeRun = detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat ||
+                (selectedRuntimeRunId ?? RunIdQuery).HasValue;
             var request = new ProcessWorkspaceShellRequest(
                 ResolveScope(),
                 new ProcessWorkspaceSelectionProjection(ProcessIdQuery, selectedRuntimeRunId ?? RunIdQuery, LaunchPlanIdQuery),
@@ -501,11 +523,11 @@
                     Take: 50),
                 forceRefresh,
                 new ProcessRuntimeWorkspaceQueryProjection(
-                    runtimeHistoryWindow,
+                    runtimeQueryHistoryWindow,
                     runtimeEventPage,
                     RuntimeEventPageSize,
                     selectedRuntimeRunId ?? RunIdQuery,
-                    AutoSelectRun: (selectedRuntimeRunId ?? RunIdQuery).HasValue,
+                    AutoSelectRun: shouldAutoSelectRuntimeRun,
                     TakeRuns: 50,
                     runtimeLoadOptions),
                 definitionLoadOptions);
@@ -586,15 +608,19 @@
                 IncludeUsageTelemetry = SelectedRunViewNeedsMetrics,
                 IncludeActiveAgents = SelectedRunViewNeedsActiveAgents
             },
+            ProcessWorkspaceDetailTabKey.Graphs when !processGraphsHistoryLoaded => ProcessRuntimeWorkspaceLoadOptions.ListOnly,
             ProcessWorkspaceDetailTabKey.Graphs or ProcessWorkspaceDetailTabKey.Analytics => new ProcessRuntimeWorkspaceLoadOptions
             {
                 IncludeActiveAgents = false
             },
             ProcessWorkspaceDetailTabKey.ManagerChat => new ProcessRuntimeWorkspaceLoadOptions
             {
+                LiveProcesses = ProcessLiveProcessesLoadOptions.SnapshotOnly,
+                IncludeSelectedRun = true,
                 IncludeHistory = false,
                 IncludeMetricHistory = false,
-                IncludeUsageTelemetry = false
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = true
             },
             _ when hasExplicitRuntimeSelection => new ProcessRuntimeWorkspaceLoadOptions
             {
@@ -605,11 +631,19 @@
         };
     }
 
+    private ProcessRuntimeHistoryWindow ResolveRuntimeHistoryWindow(ProcessWorkspaceDetailTabKey detailTabKey)
+        => detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat
+            ? managerChatHistoryWindow
+            : runtimeHistoryWindow;
+
     private bool SelectedRunViewNeedsMetrics
         => selectedRunViewIndex == SelectedRunGraphsViewIndex;
 
     private bool SelectedRunViewNeedsActiveAgents
         => selectedRunViewIndex is 1 or 2 or 3 or 5 or 6;
+
+    private bool ShouldDeferProcessGraphsHistoryLoad
+        => ResolveRequestedDetailTabKey() == ProcessWorkspaceDetailTabKey.Graphs && !processGraphsHistoryLoaded;
 
     private int ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey key)
     {
@@ -1132,8 +1166,15 @@
 
     private RenderFragment RenderGraphsTab() => @<Stack GapScale="LayoutGap.Medium"
                                                         data-testid="processes-process-graphs-tab">
-        @RenderRuntimeToolbar("processes-process-graphs-toolbar")
-        @RenderGraphMetricGrid("Process run history graph projection")
+        @if (processGraphsHistoryLoaded)
+        {
+            @RenderRuntimeToolbar("processes-process-graphs-toolbar")
+            @RenderGraphMetricGrid("Process run history graph projection")
+        }
+        else
+        {
+            @RenderGraphHistoryLoadGate()
+        }
     </Stack>;
 
     private RenderFragment RenderAnalyticsTab() => @<Stack GapScale="LayoutGap.Medium"
@@ -1168,6 +1209,18 @@
                 </Stack>
 
                 <Stack GapScale="LayoutGap.Small">
+                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-history-window">History length</label>
+                    <select id="processes-manager-chat-history-window"
+                            class="cda-input"
+                            value="@managerChatHistoryWindow"
+                            @onchange="ChangeManagerChatHistoryWindowAsync"
+                            data-testid="processes-manager-chat-history-window">
+                        @foreach (var option in RuntimeHistoryWindowOptions)
+                        {
+                            <option value="@option">@FormatHistoryWindow(option)</option>
+                        }
+                    </select>
+
                     <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-run-select">Run</label>
                     <select id="processes-manager-chat-run-select"
                             class="cda-input"
@@ -1252,11 +1305,21 @@
                                     RunStateTone="@managerChatRunStateTone"
                                     PendingUserPrompt="@managerChatPendingPrompt"
                                     DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
+                                    CanUseVoiceMode="@CanUseManagerChatVoiceMode"
+                                    IsVoiceModeEnabled="@managerChatVoiceModeEnabled"
+                                    IsVoiceRecording="@managerChatVoiceRecording"
+                                    IsVoiceTranscribing="@managerChatVoiceTranscribing"
+                                    IsVoiceSpeaking="@managerChatVoiceSpeaking"
+                                    VoiceStatusText="@managerChatVoiceStatusText"
+                                    VoiceStatusTone="@managerChatVoiceStatusTone"
                                     SendRequested="SendManagerChatMessageAsync"
                                     ApprovalDecisionRequested="HandleManagerChatApprovalDecisionAsync"
                                     ApprovalDecisionForConversationRequested="ApproveManagerChatConversationAsync"
                                     AttachmentRequested="StageManagerChatRunArtifactsAsync"
-                                    SessionTitleChanged="RenameManagerChatSessionAsync" />
+                                    SessionTitleChanged="RenameManagerChatSessionAsync"
+                                    VoiceModeChanged="HandleManagerChatVoiceModeChangedAsync"
+                                    VoiceRecordingToggled="ToggleManagerChatVoiceRecordingAsync"
+                                    SpeakLatestAssistantMessageRequested="SpeakLatestManagerChatAssistantMessageAsync" />
             }
         </div>
     </Grid>;
@@ -1310,7 +1373,7 @@
     {
         Type = CdaChartType.Bar,
         XAxisType = CdaChartAxisType.DateTime,
-        YAxisTitle = "Usage",
+        YAxisTitle = "k tokens / min / USD x1k",
         TooltipPrecision = 2,
         ValuePrecision = 2,
         ShowToolbar = false,
@@ -1384,24 +1447,24 @@
             [
                 new CdaChartSeries
                 {
-                    Name = "Tokens",
+                    Name = "Tokens (k)",
                     Type = CdaChartType.Bar,
                     Color = "#16a34a",
-                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ResolveRuntimeTotalTokens(item))).ToArray()
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeTokensToThousands(item))).ToArray()
                 },
                 new CdaChartSeries
                 {
                     Name = "Minutes",
                     Type = CdaChartType.Line,
                     Color = "#d97706",
-                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, Math.Round(item.DurationMs / 60000m, 2))).ToArray()
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeDurationToMinutes(item))).ToArray()
                 },
                 new CdaChartSeries
                 {
-                    Name = "Cost",
+                    Name = "Cost (USD x1k)",
                     Type = CdaChartType.Line,
                     Color = "#dc2626",
-                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ActualCost > 0 ? item.ActualCost : item.EstimatedCost)).ToArray()
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeCostByUsdMultiplier(item))).ToArray()
                 }
             ];
         }
@@ -1442,6 +1505,47 @@
     private string ManagerChatAgentSelectValue => managerChatAgentId?.ToString("D") ?? string.Empty;
 
     private string ManagerChatManagerLabel => managerChatAgent?.Name ?? CurrentShell.AgentEntry.Label;
+
+    private RenderFragment RenderGraphHistoryLoadGate() => @<SurfaceCard Soft="true"
+                                                                         Class="processes-graphs-load-gate"
+                                                                         data-testid="processes-process-graphs-load-gate">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(14rem,0.6fr) minmax(16rem,1fr) auto"
+              AlignItems="AlignItems.End">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="History on demand" />
+                <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-window">History window</label>
+                <select id="processes-process-graphs-load-window"
+                        class="cda-input"
+                        value="@runtimeHistoryWindow"
+                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                        data-testid="processes-runtime-history-window">
+                    @foreach (var option in RuntimeHistoryWindowOptions)
+                    {
+                        <option value="@option">@FormatHistoryWindow(option)</option>
+                    }
+                </select>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-run">Run</label>
+                <select id="processes-process-graphs-load-run"
+                        class="cda-input"
+                        value="@RuntimeRunSelectValue"
+                        @onchange="SelectRuntimeRunAsync"
+                        data-testid="processes-runtime-run-select">
+                    @RenderRuntimeRunOptions()
+                </select>
+            </Stack>
+            <Button Text="Load data history"
+                    Icon="bar_chart"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Size="ButtonSize.Small"
+                    Disabled="@isBusy"
+                    IsBusy="@isBusy"
+                    Click="LoadProcessGraphsHistoryAsync"
+                    data-testid="processes-process-graphs-load-button" />
+        </Grid>
+    </SurfaceCard>;
 
     private RenderFragment RenderRuntimeToolbar(string testId) => @<SurfaceCard Soft="true"
                                                                                 Class="processes-runtime-toolbar"
@@ -1497,7 +1601,7 @@
                         Disabled="@isBusy"
                         IsBusy="@isBusy"
                         Click="RefreshAsync"
-                        data-testid="processes-process-graphs-load-button" />
+                        data-testid="processes-runtime-refresh-button" />
             </Cluster>
         </Grid>
     </SurfaceCard>;
@@ -1922,8 +2026,31 @@
         {
             runtimeHistoryWindow = parsed;
             runtimeEventPage = 0;
+            if (ShouldDeferProcessGraphsHistoryLoad)
+            {
+                return;
+            }
+
             await LoadAsync(forceRefresh: false);
         }
+    }
+
+    private async Task ChangeManagerChatHistoryWindowAsync(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed))
+        {
+            managerChatHistoryWindow = parsed;
+            runtimeEventPage = 0;
+            ResetManagerChatForSelectedRunChange();
+            await LoadAsync(forceRefresh: false);
+        }
+    }
+
+    private async Task LoadProcessGraphsHistoryAsync()
+    {
+        processGraphsHistoryLoaded = true;
+        runtimeEventPage = 0;
+        await LoadAsync(forceRefresh: false);
     }
 
     private async Task SelectRuntimeRunAsync(ChangeEventArgs args)
@@ -1933,7 +2060,12 @@
             ? parsed
             : null;
         runtimeEventPage = 0;
-        managerChatDraftPrompt = string.Empty;
+        ResetManagerChatForSelectedRunChange();
+        if (ShouldDeferProcessGraphsHistoryLoad)
+        {
+            return;
+        }
+
         await LoadAsync(forceRefresh: false);
     }
 
@@ -1941,7 +2073,12 @@
     {
         selectedRuntimeRunId = runId == Guid.Empty ? null : runId;
         runtimeEventPage = 0;
-        managerChatDraftPrompt = string.Empty;
+        ResetManagerChatForSelectedRunChange();
+        if (ShouldDeferProcessGraphsHistoryLoad)
+        {
+            return;
+        }
+
         await LoadAsync(forceRefresh: false);
     }
 
@@ -2012,26 +2149,40 @@
     private async Task OpenManagerChatTabAsync()
     {
         activeDetailTabIndex = ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat);
-        await EnsureManagerChatLoadedAsync();
+        await LoadAsync(forceRefresh: false);
     }
 
     private async Task ReloadManagerChatAsync()
     {
         managerChatWorkspace = null;
+        managerChatLoadedRunId = null;
+        managerChatLoadedAgentId = null;
         await EnsureManagerChatLoadedAsync(forceReload: true);
     }
 
     private async Task EnsureManagerChatLoadedAsync(bool forceReload = false)
     {
-        if (!forceReload && managerChatWorkspace is not null && managerChatAgent is not null)
+        var selectedRunId = ResolveSelectedManagerChatRunId();
+        if (!forceReload &&
+            managerChatWorkspace is not null &&
+            managerChatAgent is not null &&
+            managerChatLoadedRunId == selectedRunId &&
+            managerChatLoadedAgentId == managerChatAgentId)
         {
             return;
         }
 
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null)
         {
             managerChatErrorMessage = "Agent workspace service is not registered for this module instance.";
+            return;
+        }
+
+        var referenceDataProvider = Services.GetService<IAgentReferenceDataProvider>();
+        if (referenceDataProvider is null)
+        {
+            managerChatErrorMessage = "Agent reference data provider is not registered for this module instance.";
             return;
         }
 
@@ -2040,7 +2191,9 @@
 
         try
         {
-            managerChatAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+            var referenceData = await referenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(AgentReferenceDataSections.Agents));
+            managerChatAgents = referenceData.Agents;
             managerChatAgentId = ResolveManagerAgentId(managerChatAgents, managerChatAgentId);
             if (managerChatAgentId is null)
             {
@@ -2052,10 +2205,15 @@
             }
 
             managerChatAgent = managerChatAgents.First(agent => agent.Id == managerChatAgentId.Value);
+            ResetManagerChatVoiceIfUnavailable();
+            managerChatSessionId = await ResolveManagerChatSessionIdAsync(workspaceService, managerChatAgentId.Value, selectedRunId);
             managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
             managerChatSessionId = managerChatWorkspace.SelectedSessionId;
+            TrackManagerChatSessionForRun(managerChatAgentId.Value, selectedRunId, managerChatSessionId);
             var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
+            managerChatLoadedRunId = selectedRunId;
+            managerChatLoadedAgentId = managerChatAgentId;
             ResolveManagerChatRunState();
             if (string.IsNullOrWhiteSpace(managerChatDraftPrompt))
             {
@@ -2081,6 +2239,9 @@
             : null;
         managerChatSessionId = null;
         managerChatWorkspace = null;
+        managerChatLoadedRunId = null;
+        managerChatLoadedAgentId = null;
+        ResetManagerChatVoiceState(clearStatus: true);
         await EnsureManagerChatLoadedAsync(forceReload: true);
     }
 
@@ -2092,7 +2253,7 @@
 
     private async Task SendManagerChatMessageAsync()
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatAgentId is null)
         {
             managerChatErrorMessage = "Select a manager agent before sending a message.";
@@ -2114,14 +2275,28 @@
 
         try
         {
-            var result = await workspaceService.SendMessageAsync(managerChatAgentId.Value, managerChatSessionId, prompt);
+            var disableManagerTelemetryTools = ProcessManagerChatPromptClassifier.ShouldDisableRuntimeTools(previousDraft);
+            var options = new AgentChatRunOptions(
+                RuntimeToolProvidersEnabled: !disableManagerTelemetryTools,
+                WorkspaceToolsEnabled: !disableManagerTelemetryTools);
+            var result = await workspaceService.SendMessageAsync(
+                managerChatAgentId.Value,
+                managerChatSessionId,
+                prompt,
+                attachmentPaths: managerChatDraftAttachmentPaths,
+                options: options);
             managerChatSessionId = result.ChatSessionId;
+            TrackManagerChatSessionForRun(managerChatAgentId.Value, ResolveSelectedManagerChatRunId(), managerChatSessionId);
             managerChatDraftAttachmentPaths = [];
             managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
             var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
             ResolveManagerChatRunState();
             managerChatErrorMessage = null;
+            if (managerChatVoiceModeEnabled && !string.IsNullOrWhiteSpace(result.AssistantMessage.Content))
+            {
+                await SpeakManagerChatTextAsync(result.AssistantMessage.Content);
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -2148,7 +2323,7 @@
 
     private async Task ContinueManagerChatApprovalAsync(bool approved, bool autoApprovePendingToolCalls)
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
         {
             return;
@@ -2179,7 +2354,7 @@
 
     private async Task RenameManagerChatSessionAsync(string title)
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
         {
             return;
@@ -2190,6 +2365,7 @@
         {
             var session = await workspaceService.RenameChatSessionAsync(managerChatAgentId.Value, managerChatSessionId.Value, title);
             managerChatSessionId = session.Id;
+            TrackManagerChatSessionForRun(managerChatAgentId.Value, ResolveSelectedManagerChatRunId(), managerChatSessionId);
             managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -2204,7 +2380,7 @@
 
     private async Task StageManagerChatRunArtifactsAsync()
     {
-        var workspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatWorkspace?.SelectedRun is null)
         {
             managerChatDraftAttachmentPaths = [];
@@ -2217,6 +2393,18 @@
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private IAgentFrameworkWorkspaceService? ResolveManagerChatWorkspaceService()
+    {
+        var directWorkspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
+        if (directWorkspaceService is not null)
+        {
+            return directWorkspaceService;
+        }
+
+        var workspaceFactory = Services.GetService<ICanDoItAllAgentWorkspaceFactory>();
+        return workspaceFactory?.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
     }
 
     private Guid? ResolveManagerAgentId(IReadOnlyList<AgentDefinition> agents, Guid? currentAgentId)
@@ -2234,6 +2422,284 @@
             .FirstOrDefault();
     }
 
+    private Guid? ResolveSelectedManagerChatRunId()
+        => selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId ?? RunIdQuery;
+
+    private async Task<Guid?> ResolveManagerChatSessionIdAsync(
+        IAgentFrameworkWorkspaceService workspaceService,
+        Guid agentId,
+        Guid? selectedRunId)
+    {
+        if (selectedRunId is null)
+        {
+            return managerChatSessionId;
+        }
+
+        var mapKey = BuildManagerChatSessionMapKey(agentId, selectedRunId.Value);
+        if (managerChatSessionIdsByRun.TryGetValue(mapKey, out var cachedSessionId))
+        {
+            return cachedSessionId;
+        }
+
+        var title = BuildManagerChatRunThreadTitle(selectedRunId.Value);
+        var existingSession = (await workspaceService.ListChatSessionsAsync(agentId))
+            .FirstOrDefault(session => string.Equals(session.Title, title, StringComparison.OrdinalIgnoreCase));
+        if (existingSession is not null)
+        {
+            managerChatSessionIdsByRun[mapKey] = existingSession.Id;
+            return existingSession.Id;
+        }
+
+        var createdSession = await workspaceService.GetOrCreateChatSessionAsync(agentId);
+        var renamedSession = string.Equals(createdSession.Title, title, StringComparison.Ordinal)
+            ? createdSession
+            : await workspaceService.RenameChatSessionAsync(agentId, createdSession.Id, title);
+        managerChatSessionIdsByRun[mapKey] = renamedSession.Id;
+        return renamedSession.Id;
+    }
+
+    private void TrackManagerChatSessionForRun(Guid agentId, Guid? selectedRunId, Guid? chatSessionId)
+    {
+        if (selectedRunId is null || chatSessionId is null)
+        {
+            return;
+        }
+
+        managerChatSessionIdsByRun[BuildManagerChatSessionMapKey(agentId, selectedRunId.Value)] = chatSessionId.Value;
+    }
+
+    private void ResetManagerChatForSelectedRunChange()
+    {
+        managerChatDraftPrompt = string.Empty;
+        managerChatSessionId = null;
+        managerChatWorkspace = null;
+        managerChatExecutionLog = [];
+        managerChatLoadedRunId = null;
+        managerChatLoadedAgentId = null;
+        managerChatRunStateText = string.Empty;
+        managerChatRunStateTone = "neutral";
+        ResetManagerChatVoiceState(clearStatus: false);
+    }
+
+    private AgentVoiceAccessSettings ManagerChatVoiceAccess
+        => managerChatAgent is null
+            ? new AgentVoiceAccessSettings()
+            : AgentVoiceAccessMetadata.Read(managerChatAgent.ConfigurationJson);
+
+    private bool CanUseManagerChatVoiceMode
+        => ManagerChatVoiceAccess.CanUseVoiceMode;
+
+    private Task HandleManagerChatVoiceModeChangedAsync(bool enabled)
+    {
+        if (enabled && !CanUseManagerChatVoiceMode)
+        {
+            SetManagerChatVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return Task.CompletedTask;
+        }
+
+        managerChatVoiceModeEnabled = enabled;
+        SetManagerChatVoiceStatus(enabled ? "Audio on" : "Audio off", enabled ? "primary" : "neutral");
+        return Task.CompletedTask;
+    }
+
+    private async Task ToggleManagerChatVoiceRecordingAsync()
+    {
+        if (!CanUseManagerChatVoiceMode)
+        {
+            SetManagerChatVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return;
+        }
+
+        if (!managerChatVoiceRecording)
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+                managerChatVoiceModeEnabled = true;
+                managerChatVoiceRecording = true;
+                SetManagerChatVoiceStatus("Recording", "danger");
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                SetManagerChatVoiceStatus("Record failed", "danger", exception.Message);
+            }
+
+            return;
+        }
+
+        await StopManagerChatRecordingAndSendAsync();
+    }
+
+    private async Task StopManagerChatRecordingAndSendAsync()
+    {
+        managerChatVoiceRecording = false;
+        managerChatVoiceTranscribing = true;
+        SetManagerChatVoiceStatus("Transcribing", "info");
+        try
+        {
+            var voiceService = ResolveManagerChatVoiceService();
+            if (voiceService is null)
+            {
+                return;
+            }
+
+            var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
+                "CanDoItAll.agentFramework.voice.stopRecording");
+            var transcription = await voiceService.TranscribeAsync(recording.ToTranscriptionRequest());
+
+            managerChatDraftPrompt = transcription.Text;
+            managerChatComposerKey++;
+            SetManagerChatVoiceStatus("Sending", "info");
+            await SendManagerChatMessageAsync();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            SetManagerChatVoiceStatus("Voice failed", "danger", exception.Message);
+        }
+        finally
+        {
+            managerChatVoiceTranscribing = false;
+        }
+    }
+
+    private Task SpeakLatestManagerChatAssistantMessageAsync()
+    {
+        var latestAssistantMessage = managerChatWorkspace?.SelectedSession?.Messages
+            .Where(message => message.Role == ChatMessageRole.Assistant)
+            .OrderByDescending(message => message.CreatedAtUtc)
+            .FirstOrDefault();
+        if (latestAssistantMessage is null || string.IsNullOrWhiteSpace(latestAssistantMessage.Content))
+        {
+            SetManagerChatVoiceStatus("Nothing to speak", "warning", "No assistant message is available.");
+            return Task.CompletedTask;
+        }
+
+        return SpeakManagerChatTextAsync(latestAssistantMessage.Content);
+    }
+
+    private async Task SpeakManagerChatTextAsync(string text)
+    {
+        if (managerChatAgent is null)
+        {
+            SetManagerChatVoiceStatus("No agent", "warning", "Select a manager agent before using text-to-speech.");
+            return;
+        }
+
+        var voiceService = ResolveManagerChatVoiceService();
+        if (voiceService is null)
+        {
+            return;
+        }
+
+        managerChatVoiceSpeaking = true;
+        SetManagerChatVoiceStatus("Speaking", "primary");
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+            var queuedChunks = 0;
+            await foreach (var synthesis in voiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
+                               text,
+                               ManagerChatVoiceAccess,
+                               SuppressIdentifierOmissionNotice: ShouldSuppressManagerChatIdentifierOmissionNotice())))
+            {
+                TrackManagerChatIdentifierOmissionNotice(synthesis);
+                queuedChunks++;
+                await JsRuntime.InvokeVoidAsync(
+                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+                    Convert.ToBase64String(synthesis.AudioBytes),
+                    synthesis.ContentType);
+                if (queuedChunks == 1)
+                {
+                    SetManagerChatVoiceStatus("Playing", "primary");
+                }
+            }
+
+            SetManagerChatVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            SetManagerChatVoiceStatus("Speak failed", "danger", exception.Message);
+        }
+        finally
+        {
+            managerChatVoiceSpeaking = false;
+        }
+    }
+
+    private IAgentVoiceService? ResolveManagerChatVoiceService()
+    {
+        var voiceService = Services.GetService<IAgentVoiceService>();
+        if (voiceService is not null)
+        {
+            return voiceService;
+        }
+
+        SetManagerChatVoiceStatus("Voice unavailable", "warning", "Voice services are not registered.");
+        return null;
+    }
+
+    private bool ShouldSuppressManagerChatIdentifierOmissionNotice()
+    {
+        return managerChatSessionId is { } sessionId
+            ? managerChatSessionsWithVoiceIdentifierOmissionNotice.Contains(sessionId)
+            : managerChatHasVoiceIdentifierOmissionNoticeWithoutSession;
+    }
+
+    private void TrackManagerChatIdentifierOmissionNotice(AgentVoiceSynthesisResult synthesis)
+    {
+        if (!synthesis.IdentifierOmissionNoticeIncluded)
+        {
+            return;
+        }
+
+        if (managerChatSessionId is { } sessionId)
+        {
+            managerChatSessionsWithVoiceIdentifierOmissionNotice.Add(sessionId);
+            return;
+        }
+
+        managerChatHasVoiceIdentifierOmissionNoticeWithoutSession = true;
+    }
+
+    private void ResetManagerChatVoiceIfUnavailable()
+    {
+        if (CanUseManagerChatVoiceMode)
+        {
+            return;
+        }
+
+        ResetManagerChatVoiceState(clearStatus: false);
+    }
+
+    private void ResetManagerChatVoiceState(bool clearStatus)
+    {
+        managerChatVoiceModeEnabled = false;
+        managerChatVoiceRecording = false;
+        managerChatVoiceTranscribing = false;
+        managerChatVoiceSpeaking = false;
+        if (!clearStatus)
+        {
+            return;
+        }
+
+        managerChatVoiceStatusText = string.Empty;
+        managerChatVoiceStatusTone = "neutral";
+    }
+
+    private void SetManagerChatVoiceStatus(string text, string tone, string? detail = null)
+    {
+        managerChatVoiceStatusText = string.IsNullOrWhiteSpace(detail)
+            ? text
+            : $"{text}: {detail}";
+        managerChatVoiceStatusTone = tone;
+    }
+
+    private static string BuildManagerChatSessionMapKey(Guid agentId, Guid runId)
+        => $"{agentId:N}:{runId:N}";
+
+    private static string BuildManagerChatRunThreadTitle(Guid runId)
+        => $"Process manager / run {runId:D}";
+
     private void ResolveManagerChatRunState()
     {
         if (managerChatWorkspace?.SelectedRun is null)
@@ -2249,7 +2715,7 @@
 
     private string BuildManagerChatPromptWithContext()
     {
-        var prompt = managerChatDraftPrompt.Trim();
+        var prompt = BuildManagerChatPromptWithAttachments();
         if (string.IsNullOrWhiteSpace(prompt))
         {
             return string.Empty;
@@ -2258,16 +2724,36 @@
         return $"{BuildManagerChatPrompt()}{Environment.NewLine}{Environment.NewLine}User request:{Environment.NewLine}{prompt}";
     }
 
+    private string BuildManagerChatPromptWithAttachments()
+    {
+        if (managerChatDraftAttachmentPaths.Count == 0)
+        {
+            return managerChatDraftPrompt.Trim();
+        }
+
+        var attachmentText = string.Join(
+            Environment.NewLine,
+            managerChatDraftAttachmentPaths.Select(item => $"- {item}"));
+
+        return $"""
+            Use these workspace artifacts as input:
+            {attachmentText}
+
+            {managerChatDraftPrompt.Trim()}
+            """;
+    }
+
     private string BuildManagerChatPrompt()
     {
         var selectedRun = CurrentShell.Runtime.SelectedRun;
-        var runId = selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId;
-        var recentEvents = CurrentShell.Runtime.Events.Take(8)
-            .Select(runtimeEvent => $"- {runtimeEvent.OccurredAtUtc:u} {runtimeEvent.EventType}: {runtimeEvent.Summary}")
+        var runId = ResolveSelectedManagerChatRunId();
+        var loadedRuns = CurrentShell.Runtime.Runs.Take(10)
+            .Select(run => $"- {run.RunId.Value:D} / {run.Status} / latest {run.LastEventAtUtc:u}")
             .ToArray();
-        var eventText = recentEvents.Length == 0
-            ? "- No runtime events in the selected page."
-            : string.Join(Environment.NewLine, recentEvents);
+        var runText = loadedRuns.Length == 0
+            ? "- No runtime runs were found in the selected history window."
+            : string.Join(Environment.NewLine, loadedRuns);
+        var selectedRunUsageText = BuildManagerChatSelectedRunUsageText(runId);
 
         return $"""
             Process manager context
@@ -2277,8 +2763,39 @@
             Attention summary: {CurrentShell.Runtime.AttentionSummary}
             History window: {FormatHistoryWindow(CurrentShell.Runtime.HistoryWindow)}
 
-            Recent runtime events:
-            {eventText}
+            Loaded runs:
+            {runText}
+
+            Selected run usage telemetry:
+            {selectedRunUsageText}
+
+            Manager response rule:
+            Answer run-selection, status, cost, and token questions from the selected-run context above when it contains the requested data. For runtime events, artifacts, or operator-action details that are not shown here, use the appropriate runtime or artifact tools instead of guessing.
+            """;
+    }
+
+    private string BuildManagerChatSelectedRunUsageText(Guid? runId)
+    {
+        if (!runId.HasValue)
+        {
+            return "- No run is selected, so selected-run usage telemetry is not available.";
+        }
+
+        var stats = CurrentShell.Runtime.Stats;
+        if (!HasRuntimeUsageTelemetry(stats))
+        {
+            return "- No provider usage telemetry is loaded for the selected run in this history window.";
+        }
+
+        var cost = ResolveRuntimeUsageCost(stats);
+        var costLabel = stats.ActualCost > 0m ? "Actual cost" : "Estimated cost";
+        return $"""
+            - Scope: selected run and related root or child run observations in {FormatHistoryWindow(CurrentShell.Runtime.HistoryWindow)}.
+            - {costLabel}: {FormatCurrency(cost)}
+            - Input tokens: {FormatManagerChatTokenCount(stats.InputTokens)}
+            - Cached input tokens: {FormatManagerChatTokenCount(stats.CachedInputTokens)}
+            - Output tokens: {FormatManagerChatTokenCount(stats.OutputTokens)}
+            - Total tokens: {FormatManagerChatTokenCount(ResolveRuntimeTotalTokens(stats))}
             """;
     }
 
@@ -2394,16 +2911,42 @@
             ? stats.TotalTokens
             : Math.Max(0, stats.InputTokens) + Math.Max(0, stats.OutputTokens);
 
+    private static bool HasRuntimeUsageTelemetry(ProcessRuntimeStatsProjection stats)
+        => stats.InputTokens > 0 ||
+           stats.CachedInputTokens > 0 ||
+           stats.OutputTokens > 0 ||
+           stats.TotalTokens > 0 ||
+           stats.EstimatedCost > 0m ||
+           stats.ActualCost > 0m;
+
+    private static decimal ResolveRuntimeUsageCost(ProcessRuntimeStatsProjection stats)
+        => Math.Max(0m, stats.ActualCost > 0m ? stats.ActualCost : stats.EstimatedCost);
+
     private static int ResolveRuntimeTotalTokens(ProcessRuntimeMetricPointProjection point)
         => point.TotalTokens > 0
             ? point.TotalTokens
             : Math.Max(0, point.InputTokens) + Math.Max(0, point.OutputTokens);
+
+    private static decimal ScaleRuntimeTokensToThousands(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(ResolveRuntimeTotalTokens(point) / RuntimeUsageTokenThousandsDivisor, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ScaleRuntimeDurationToMinutes(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(Math.Max(0, point.DurationMs) / 60000m, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ScaleRuntimeCostByUsdMultiplier(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(ResolveRuntimeUsageCost(point) * RuntimeUsageCostUsdMultiplier, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ResolveRuntimeUsageCost(ProcessRuntimeMetricPointProjection point)
+        => Math.Max(0m, point.ActualCost > 0 ? point.ActualCost : point.EstimatedCost);
 
     private string FormatCurrency(decimal value)
         => CurrencyFormatter.Format(value);
 
     private static string FormatTokenCount(int value)
         => value.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string FormatManagerChatTokenCount(int value)
+        => value.ToString("N0", CultureInfo.InvariantCulture);
 
     private static string FormatDuration(long durationMs)
     {

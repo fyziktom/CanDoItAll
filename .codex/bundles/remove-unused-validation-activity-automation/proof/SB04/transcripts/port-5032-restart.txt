@@ -1,5 +1,0 @@
-Command: final restart CanDoItAll.Web on http://localhost:5032
-Invariant: RM-004 app runs on requested port after final build
-Started PID 14452
-Ready attempt 10 status 200
-ExitCode: 0

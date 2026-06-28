@@ -40,13 +40,13 @@ public sealed class AgentProviderFailureDisplayFormatterTests
     public void Format_redacts_provider_detail()
     {
         var provider = CreateProvider();
-        var exception = new InvalidOperationException("OpenAI failed with api_key=sk-test-secret-value-1234567890 and status code 402.");
+        var exception = new InvalidOperationException("OpenAI failed with api_key=unit-redaction-secret and status code 402.");
 
         var display = AgentProviderFailureDisplayFormatter.Format(provider, exception);
 
         Assert.Equal(AgentProviderFailureCategory.QuotaOrBilling, display.Category);
         Assert.Contains("[REDACTED]", display.ProviderDetail, StringComparison.Ordinal);
-        Assert.DoesNotContain("sk-test-secret", display.ProviderDetail, StringComparison.Ordinal);
+        Assert.DoesNotContain("unit-redaction-secret", display.ProviderDetail, StringComparison.Ordinal);
     }
 
     private static ProviderProfile CreateProvider()

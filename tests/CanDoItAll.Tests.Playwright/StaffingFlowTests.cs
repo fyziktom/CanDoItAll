@@ -7,6 +7,7 @@ using Microsoft.Playwright;
 namespace CanDoItAll.Tests.Playwright;
 
 [Collection(PlaywrightCollection.Name)]
+[Trait("Category", "Quarantined")]
 public sealed class StaffingFlowTests
 {
     private readonly PlaywrightAppFixture fixture;

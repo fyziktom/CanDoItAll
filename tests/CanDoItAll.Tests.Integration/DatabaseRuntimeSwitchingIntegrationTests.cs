@@ -194,6 +194,19 @@ public sealed class DatabaseTransferIntegrationTests
     public async Task Project_transfer_copies_all_project_and_workbench_records_between_profiles()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-project-transfer");
+        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-transfer-source");
+        Guid sourceProfileId;
+        await using (var setupProvider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment))
+        {
+            var setupProfileService = setupProvider.GetRequiredService<IDatabaseProfileService>();
+            var sourceSaveResult = await setupProfileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                sourceTestProfile,
+                "PostgreSQL project transfer source"));
+            Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
+            Assert.True((await setupProfileService.ActivateAsync(sourceSaveResult.Value)).IsSuccess);
+            sourceProfileId = sourceSaveResult.Value;
+        }
+
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
 
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
@@ -201,13 +214,8 @@ public sealed class DatabaseTransferIntegrationTests
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
         var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
 
-        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-transfer-source");
-        var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
-            sourceTestProfile,
-            "PostgreSQL project transfer source"));
-        Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
-
-        var sourceProfile = runtimeAccessor.ResolveProfile(sourceSaveResult.Value);
+        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
+        Assert.Equal(sourceProfileId, sourceProfile.Profile.Id);
         await bootstrapper.EnsureCurrentProfileReadyAsync();
 
         var sourceProjectName = $"Transferred Project {Guid.NewGuid():N}"[..32];
@@ -503,6 +511,19 @@ public sealed class DatabaseTransferIntegrationTests
     public async Task Project_package_export_import_round_trips_project_records_and_media()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-project-package");
+        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-package-source");
+        Guid sourceProfileId;
+        await using (var setupProvider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment))
+        {
+            var setupProfileService = setupProvider.GetRequiredService<IDatabaseProfileService>();
+            var sourceSaveResult = await setupProfileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                sourceTestProfile,
+                "PostgreSQL project package source"));
+            Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
+            Assert.True((await setupProfileService.ActivateAsync(sourceSaveResult.Value)).IsSuccess);
+            sourceProfileId = sourceSaveResult.Value;
+        }
+
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
 
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
@@ -510,13 +531,8 @@ public sealed class DatabaseTransferIntegrationTests
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
         var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
 
-        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-package-source");
-        var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
-            sourceTestProfile,
-            "PostgreSQL project package source"));
-        Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
-
-        var sourceProfile = runtimeAccessor.ResolveProfile(sourceSaveResult.Value);
+        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
+        Assert.Equal(sourceProfileId, sourceProfile.Profile.Id);
         await bootstrapper.EnsureCurrentProfileReadyAsync();
 
         var sourceProjectName = $"Packaged Project {Guid.NewGuid():N}"[..29];

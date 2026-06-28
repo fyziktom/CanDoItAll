@@ -1,7 +1,0 @@
-{
-    "processKey":  "blazor-backend-feature",
-    "compatible":  true,
-    "notes":  [
-                  "Template-only process definition."
-              ]
-}

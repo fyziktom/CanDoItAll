@@ -359,6 +359,7 @@ public sealed class ProcessWorkspaceMockProjectionFactory(IProcessProjectionCloc
             events,
             Incidents: [])
         {
+            ProcessName = stepTitle,
             CurrentStep = new ProcessRuntimeCurrentStepProjection(
                 runIdValue,
                 CreateStepInstanceId(runIdValue),

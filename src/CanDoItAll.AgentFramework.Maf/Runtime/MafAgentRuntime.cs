@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -17,6 +19,7 @@ public sealed partial class MafAgentRuntime(
 {
     private const string LocalHistoryConversationId = "_agent_local_chat_history";
     private const int MaxRepeatedToolInvocationCount = 3;
+    private const int MaxFinalizerRepairPreviousAssistantTextCharacters = 12_000;
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly TimeSpan FinalizerSessionSerializationTimeout = TimeSpan.FromSeconds(5);
@@ -29,7 +32,28 @@ public sealed partial class MafAgentRuntime(
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
     private readonly IServiceProvider services = services;
     private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
+    private readonly IMafProviderRuntimeGateway providerRuntimeGateway =
+        services.GetService(typeof(IMafProviderRuntimeGateway)) is IMafProviderRuntimeGateway gateway
+            ? gateway
+            : MafProviderRuntimeGateway.CreateFallback(services);
+    private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate =
+        services.GetService(typeof(IMafProviderStreamingDispatchGate)) is IMafProviderStreamingDispatchGate streamingDispatchGate
+            ? streamingDispatchGate
+            : CreateFallbackProviderStreamingDispatchGate(services);
     private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
+
+    private static IMafProviderStreamingDispatchGate CreateFallbackProviderStreamingDispatchGate(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var providerFactory = services.GetService(typeof(IAgentProviderFactory)) is IAgentProviderFactory resolvedFactory
+            ? resolvedFactory
+            : MafProviderRuntimeServiceCollectionExtensions.CreateDefaultProviderFactory(services);
+        var dispatchLaneGate = services.GetService(typeof(IProviderDispatchLaneGate)) is IProviderDispatchLaneGate resolvedGate
+            ? resolvedGate
+            : new ProviderDispatchLaneGate(providerFactory);
+        return new MafProviderStreamingDispatchGate(dispatchLaneGate);
+    }
 
     public async Task<AgentRuntimeResponse> RunAsync(
         AgentDefinition agent,
@@ -99,6 +123,15 @@ public sealed partial class MafAgentRuntime(
         bool forceOmitTemperature)
     {
         var runtimeOptions = NormalizeRuntimeExecutionOptions(structuredOutput, executionOptions);
+        var preparedInput = await PrepareInputAttachmentsAsync(
+            agent,
+            provider,
+            prompt,
+            runtimeOptions,
+            progressCallback,
+            cancellationToken);
+        prompt = preparedInput.Prompt;
+        runtimeOptions = preparedInput.RuntimeOptions;
         await progressCallback(ExecutionState.Preparing, "Framework", "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.");
         if (suppressApprovalRequirements)
         {
@@ -115,6 +148,7 @@ public sealed partial class MafAgentRuntime(
             suppressApprovalRequirements,
             forceOmitTemperature,
             runtimeOptions);
+        EnsureInputAttachmentsSupported(runtimeBuild.Provider, runtimeBuild.Model, runtimeOptions);
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
@@ -137,7 +171,7 @@ public sealed partial class MafAgentRuntime(
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
             runtimeOptions);
-        var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt).ToList();
+        var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt, runtimeOptions).ToList();
         var contextManifest = CreateContextAssemblyManifest(
             agent,
             runtimeBuild.Provider,
@@ -146,7 +180,7 @@ public sealed partial class MafAgentRuntime(
             runtimeBuild,
             inputMessages);
 
-        return await ExecuteRunAsync(
+        var response = await ExecuteRunAsync(
             agent,
             runtimeBuild.Provider,
             runtimeBuild.Model,
@@ -162,10 +196,14 @@ public sealed partial class MafAgentRuntime(
             runtimeOptions.FinalizerMode,
             runtimeOptions,
             forceOmitTemperature,
+            runtimeBuild.FinalizerTools,
+            runtimeBuild.ToolInvocationTraceRecorder,
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces,
             runtimeBuild.SnapshotContextContributionTraces,
             contextManifest);
+
+        return AttachPreparedInputUsageObservations(response, preparedInput.UsageObservations);
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -299,6 +337,8 @@ public sealed partial class MafAgentRuntime(
             runtimeOptions.FinalizerMode,
             runtimeOptions,
             forceOmitTemperature,
+            runtimeBuild.FinalizerTools,
+            runtimeBuild.ToolInvocationTraceRecorder,
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces,
             runtimeBuild.SnapshotContextContributionTraces,
@@ -321,6 +361,8 @@ public sealed partial class MafAgentRuntime(
         AgentFinalizerMode finalizerMode,
         AgentRuntimeExecutionOptions runtimeOptions,
         bool forceOmitTemperature,
+        IReadOnlyList<AITool> finalizerTools,
+        ToolInvocationTraceRecorder? toolInvocationTraceRecorder,
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces,
         Func<IReadOnlyList<AgentContextContributionTrace>> snapshotContextContributionTraces,
@@ -331,6 +373,7 @@ public sealed partial class MafAgentRuntime(
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var repeatedToolInvocationGuard = new RepeatedToolInvocationGuard();
+        var synthesizedFinalizerInvocations = new List<AgentFinalizerInvocation>();
         var streamedFinalizerRecorder = new StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotEffectiveToolInvocationTraces = () =>
             CreateEffectiveToolInvocationTraces(
@@ -342,7 +385,8 @@ public sealed partial class MafAgentRuntime(
                 finalizerMode,
                 snapshotFinalizerInvocations(),
                 snapshotToolInvocationTraces(),
-                streamedFinalizerRecorder.SnapshotFinalizerInvocations());
+                streamedFinalizerRecorder.SnapshotFinalizerInvocations(),
+                synthesizedFinalizerInvocations);
         var pollCount = 0;
         var resolvedModel = model;
 
@@ -374,12 +418,12 @@ public sealed partial class MafAgentRuntime(
                     repeatedToolInvocationGuard.Guard(toolCall);
                 }
 
+                streamedFinalizerRecorder.Record(toolCall);
                 if (!announcedToolCalls.Add(toolKey))
                 {
                     continue;
                 }
 
-                streamedFinalizerRecorder.Record(toolCall);
                 await progressCallback(ExecutionState.WaitingOnTool, "Tool", DescribeToolInvocation(toolCall));
             }
 
@@ -391,6 +435,7 @@ public sealed partial class MafAgentRuntime(
                 runtimeAgent,
                 runtimeSession,
                 runtimeSessionKey,
+                runtimeOptions,
                 updates,
                 usageSourcePhase,
                 progressCallback,
@@ -419,7 +464,14 @@ public sealed partial class MafAgentRuntime(
                 "Finalizer repair",
                 $"Required finalizer tool '{finalizerPolicy.ToolName}' was missing after the provider completed. Requesting one bounded repair turn.");
 
-            var repairRunOptions = CreateRequiredFinalizerRepairRunOptions(runOptions, finalizerPolicy);
+            var finalizerTool = ResolveRequiredFinalizerTool(finalizerPolicy, finalizerTools);
+            if (toolInvocationTraceRecorder is null)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot repair missing required finalizer '{finalizerPolicy.ToolName}' because tool invocation tracing is unavailable.");
+            }
+
+            var repairRunOptions = CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool);
             var repairMessages = new[]
             {
                 CreateRequiredFinalizerRepairMessage(finalizerPolicy, response)
@@ -427,7 +479,7 @@ public sealed partial class MafAgentRuntime(
 
             try
             {
-                await foreach (var repairUpdate in RunStreamingAsync(runtimeAgent, runtimeSession, repairMessages, repairRunOptions, cancellationToken))
+                await foreach (var repairUpdate in RunProviderStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, repairMessages, repairRunOptions, cancellationToken))
                 {
                     var finalizerResponse = await RecordStreamingUpdateAsync(
                         repairUpdate,
@@ -446,15 +498,25 @@ public sealed partial class MafAgentRuntime(
                     runtimeAgent,
                     runtimeSession,
                     runtimeSessionKey,
+                    runtimeOptions,
                     updates,
                     ProviderUsageSourcePhases.FinalizerRecovery,
                     progressCallback,
                     cancellationToken,
                     snapshotEffectiveFinalizerInvocations,
                     snapshotEffectiveToolInvocationTraces);
-                return requiredFinalizerResponse is null
+                if (requiredFinalizerResponse is not null)
+                {
+                    return AttachContextDiagnostics(requiredFinalizerResponse);
+                }
+
+                var jsonRepairResponse = await TryRunRequiredFinalizerJsonRepairAsync(
+                    finalizerPolicy,
+                    response,
+                    toolInvocationTraceRecorder);
+                return jsonRepairResponse is null
                     ? null
-                    : AttachContextDiagnostics(requiredFinalizerResponse);
+                    : AttachContextDiagnostics(jsonRepairResponse);
             }
             catch (RequiredFinalizerCapturedException exception)
             {
@@ -466,6 +528,7 @@ public sealed partial class MafAgentRuntime(
                     runtimeAgent,
                     runtimeSession,
                     runtimeSessionKey,
+                    runtimeOptions,
                     updates,
                     ProviderUsageSourcePhases.FinalizerRecovery,
                     progressCallback,
@@ -498,6 +561,7 @@ public sealed partial class MafAgentRuntime(
                     runtimeAgent,
                     runtimeSession,
                     runtimeSessionKey,
+                    runtimeOptions,
                     finalizerMode,
                     exception,
                     updates,
@@ -519,8 +583,91 @@ public sealed partial class MafAgentRuntime(
                         runtimeSession,
                         runtimeSessionKey,
                         updates,
-                        ProviderUsageSourcePhases.FinalizerRecovery,
-                        BuildProviderFailureDiagnostic(exception)));
+                    ProviderUsageSourcePhases.FinalizerRecovery,
+                    BuildProviderFailureDiagnostic(exception)));
+            }
+        }
+
+        async Task<AgentRuntimeResponse?> TryRunRequiredFinalizerJsonRepairAsync(
+            AgentFinalizerPolicy finalizerPolicy,
+            AgentResponse previousResponse,
+            ToolInvocationTraceRecorder toolInvocationTraceRecorder)
+        {
+            await progressCallback(
+                ExecutionState.Running,
+                "Finalizer repair",
+                $"Required finalizer tool '{finalizerPolicy.ToolName}' was still missing after the tool-only repair turn. Requesting a typed JSON fallback for the same governed contract.");
+
+            var jsonRepairAgent = CreateRequiredFinalizerJsonRepairAgent(
+                agent,
+                provider,
+                resolvedModel,
+                forceOmitTemperature,
+                finalizerPolicy);
+            var jsonRepairSession = await jsonRepairAgent.CreateSessionAsync(cancellationToken);
+            var jsonRepairRunOptions = CreateRequiredFinalizerJsonRepairRunOptions();
+            var jsonRepairMessages = new[]
+            {
+                CreateRequiredFinalizerJsonRepairMessage(finalizerPolicy, previousResponse)
+            };
+            var jsonRepairUpdates = new List<AgentResponseUpdate>();
+
+            try
+            {
+                await foreach (var jsonRepairUpdate in RunProviderStreamingAsync(provider, resolvedModel, jsonRepairAgent, jsonRepairSession, jsonRepairMessages, jsonRepairRunOptions, cancellationToken))
+                {
+                    jsonRepairUpdates.Add(SnapshotUpdate(jsonRepairUpdate));
+                    var streamedFinalizerResponse = await RecordStreamingUpdateAsync(
+                        jsonRepairUpdate,
+                        ProviderUsageSourcePhases.FinalizerRecovery);
+                    if (streamedFinalizerResponse is not null)
+                    {
+                        return AttachContextDiagnostics(streamedFinalizerResponse);
+                    }
+                }
+
+                var jsonRepairProviderResponse = jsonRepairUpdates.ToAgentResponse();
+                if (!TryCaptureSynthesizedFinalizerInvocation(
+                        finalizerPolicy,
+                        jsonRepairProviderResponse.Text,
+                        toolInvocationTraceRecorder,
+                        synthesizedFinalizerInvocations,
+                        out var captureFailure))
+                {
+                    await progressCallback(
+                        ExecutionState.Running,
+                        "Finalizer repair",
+                        $"Typed JSON fallback did not produce a valid '{finalizerPolicy.OutputContract.ContractKey}' payload: {captureFailure}");
+                    return null;
+                }
+
+                await progressCallback(
+                    ExecutionState.Running,
+                    "Finalizer repair",
+                    $"Typed JSON fallback produced a valid '{finalizerPolicy.OutputContract.ContractKey}' payload. Validating it through the same required-finalizer contract.");
+
+                var synthesizedFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                    provider,
+                    resolvedModel,
+                    structuredOutput,
+                    finalizerMode,
+                    runtimeAgent,
+                    runtimeSession,
+                    runtimeSessionKey,
+                    runtimeOptions,
+                    updates,
+                    ProviderUsageSourcePhases.FinalizerRecovery,
+                    progressCallback,
+                    cancellationToken,
+                    snapshotEffectiveFinalizerInvocations,
+                    snapshotEffectiveToolInvocationTraces);
+                return synthesizedFinalizerResponse is null
+                    ? null
+                    : AttachContextDiagnostics(synthesizedFinalizerResponse);
+            }
+            finally
+            {
+                await DisposeAgentAsync(jsonRepairAgent);
             }
         }
 
@@ -544,7 +691,7 @@ public sealed partial class MafAgentRuntime(
 
                 try
                 {
-                    await foreach (var update in RunStreamingAsync(runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
+                    await foreach (var update in RunProviderStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
                     {
                         var finalizerResponse = await RecordStreamingUpdateAsync(
                             update,
@@ -563,6 +710,7 @@ public sealed partial class MafAgentRuntime(
                         runtimeAgent,
                         runtimeSession,
                         runtimeSessionKey,
+                        runtimeOptions,
                         updates,
                         ProviderUsageSourcePhases.FinalizerShortCircuit,
                         progressCallback,
@@ -585,6 +733,7 @@ public sealed partial class MafAgentRuntime(
                         runtimeAgent,
                         runtimeSession,
                         runtimeSessionKey,
+                        runtimeOptions,
                         updates,
                         ProviderUsageSourcePhases.FinalizerShortCircuit,
                         progressCallback,
@@ -609,6 +758,7 @@ public sealed partial class MafAgentRuntime(
                         runtimeAgent,
                         runtimeSession,
                         runtimeSessionKey,
+                        runtimeOptions,
                         finalizerMode,
                         exception,
                         updates,
@@ -659,35 +809,20 @@ public sealed partial class MafAgentRuntime(
                 }
 
                 var pendingApprovals = approvalRequests.Select(MapPendingApproval).ToList();
-                string? serializedSessionJson = null;
-                if (ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
-                {
-                    await progressCallback(
-                        ExecutionState.Persisting,
-                        "Session",
-                        "Skipped Microsoft Agent Framework session serialization for a governed process step with no pending approvals. Process state is persisted through the typed outcome and artifacts.");
-                }
-                else
-                {
-                    await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
-                    serializedSessionJson = await TrySerializeRuntimeSessionAsync(
-                        runtimeAgent,
-                        runtimeSession,
-                        cancellationToken);
-                }
-
-                if (serializedSessionJson is null && !ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
-                {
-                    await progressCallback(
-                        ExecutionState.Persisting,
-                        "Session",
-                        "Microsoft Agent Framework session serialization did not complete within the bounded timeout. Continuing without serialized session state.");
-                }
+                var serializedSessionJson = await TrySerializePersistableRuntimeSessionAsync(
+                    runtimeAgent,
+                    runtimeSession,
+                    runtimeOptions,
+                    pendingApprovals,
+                    progressCallback,
+                    cancellationToken);
 
                 if (pendingApprovals.Count > 0)
                 {
                     await progressCallback(ExecutionState.WaitingOnTool, "Approval", "The run is waiting for a tool approval response before it can continue.");
                 }
+
+                ThrowIfEmptyProviderCompletion(provider, resolvedModel, response, pendingApprovals);
 
                 return AttachContextDiagnostics(new AgentRuntimeResponse(
                     ResponseText: ResolveResponseText(response, pendingApprovals),
@@ -752,23 +887,218 @@ public sealed partial class MafAgentRuntime(
             string.Equals(invocation.ToolName, toolName, StringComparison.OrdinalIgnoreCase));
     }
 
-    internal static ChatClientAgentRunOptions CreateRequiredFinalizerRepairRunOptions(
-        ChatClientAgentRunOptions source,
-        AgentFinalizerPolicy policy)
+    internal static AITool ResolveRequiredFinalizerTool(
+        AgentFinalizerPolicy policy,
+        IReadOnlyList<AITool> finalizerTools)
     {
-        ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(finalizerTools);
 
-        var chatOptions = source.ChatOptions?.Clone() ?? new ChatOptions();
+        var matchingFinalizerTools = finalizerTools
+            .Where(tool => string.Equals(tool.Name, policy.ToolName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (matchingFinalizerTools.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"Cannot repair missing required finalizer '{policy.ToolName}' because the runtime did not expose exactly one matching finalizer tool.");
+        }
+
+        return matchingFinalizerTools[0];
+    }
+
+    internal static void ConfigureRequiredFinalizerRepairChatOptions(
+        ChatOptions chatOptions,
+        AgentFinalizerPolicy policy,
+        AITool finalizerTool)
+    {
+        ArgumentNullException.ThrowIfNull(chatOptions);
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(finalizerTool);
+
         chatOptions.AllowMultipleToolCalls = false;
-        chatOptions.ToolMode = null;
+        chatOptions.Instructions = BuildRequiredFinalizerRepairInstructions(policy);
+        chatOptions.Tools = [finalizerTool];
+        chatOptions.ToolMode = ChatToolMode.RequireSpecific(policy.ToolName);
+    }
+
+    internal static ChatClientAgentRunOptions CreateRequiredFinalizerRepairRunOptions(
+        AgentFinalizerPolicy policy,
+        AITool finalizerTool)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(finalizerTool);
+
+        var chatOptions = new ChatOptions
+        {
+            AllowMultipleToolCalls = false,
+            Instructions = BuildRequiredFinalizerRepairInstructions(policy),
+            Tools = [finalizerTool],
+            ToolMode = ChatToolMode.RequireSpecific(policy.ToolName)
+        };
 
         return new ChatClientAgentRunOptions(chatOptions)
         {
             AllowBackgroundResponses = false,
-            ChatClientFactory = source.ChatClientFactory,
             ContinuationToken = null
         };
+    }
+
+    private AIAgent CreateRequiredFinalizerRepairAgent(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string model,
+        bool forceOmitTemperature,
+        AgentFinalizerPolicy policy,
+        AITool finalizerTool,
+        ToolInvocationTraceRecorder toolInvocationTraceRecorder)
+    {
+        var chatOptions = CreateModelCompatibleChatOptions(
+            provider,
+            model,
+            (float)agent.Temperature,
+            forceOmitTemperature,
+            agent.ConfigurationJson);
+        ConfigureRequiredFinalizerRepairChatOptions(chatOptions, policy, finalizerTool);
+
+        var repairOptions = new ChatClientAgentOptions
+        {
+            Id = agent.Id.ToString("D"),
+            Name = agent.Name,
+            Description = agent.Summary,
+            ChatOptions = chatOptions,
+            AIContextProviders = [],
+            ChatHistoryProvider = null,
+            RequirePerServiceCallChatHistoryPersistence = false
+        };
+        var repairCapabilityState = new RuntimeCapabilityState();
+        repairCapabilityState.Tools.Add(finalizerTool);
+        return CreateInstrumentedAgent(
+            CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false),
+            provider,
+            agent,
+            repairCapabilityState,
+            suppressApprovalRequirements: true,
+            toolInvocationTraceRecorder,
+            policy,
+            AgentFinalizerMode.Required);
+    }
+
+    private AIAgent CreateRequiredFinalizerJsonRepairAgent(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string model,
+        bool forceOmitTemperature,
+        AgentFinalizerPolicy policy)
+    {
+        var chatOptions = CreateModelCompatibleChatOptions(
+            provider,
+            model,
+            (float)agent.Temperature,
+            forceOmitTemperature,
+            agent.ConfigurationJson);
+        chatOptions.AllowMultipleToolCalls = false;
+        chatOptions.Instructions = BuildRequiredFinalizerJsonRepairInstructions(policy);
+        chatOptions.Tools = [];
+        chatOptions.ToolMode = null;
+
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
+        if (featureMatrix.SupportsResponseFormatJsonSchema)
+        {
+            chatOptions.ResponseFormat = ChatResponseFormat.ForJsonSchema(
+                policy.OutputType,
+                AgentOutputJson.SerializerOptions,
+                string.IsNullOrWhiteSpace(policy.OutputContract.SchemaName) ? null : policy.OutputContract.SchemaName,
+                string.IsNullOrWhiteSpace(policy.OutputContract.SchemaDescription) ? null : policy.OutputContract.SchemaDescription);
+        }
+
+        var repairOptions = new ChatClientAgentOptions
+        {
+            Id = agent.Id.ToString("D"),
+            Name = agent.Name,
+            Description = agent.Summary,
+            ChatOptions = chatOptions,
+            AIContextProviders = [],
+            ChatHistoryProvider = null,
+            RequirePerServiceCallChatHistoryPersistence = false
+        };
+        return CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false);
+    }
+
+    private static string BuildRequiredFinalizerRepairInstructions(
+        AgentFinalizerPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        return
+            $"You are completing a bounded finalizer repair turn for `{policy.OutputContract.ContractKey}`." + Environment.NewLine +
+            $"Call `{policy.ToolName}` exactly once." + Environment.NewLine +
+            "Do not call any other tool. Do not emit Markdown, prose, code fences, or machine JSON outside the finalizer tool call." + Environment.NewLine +
+            BuildRequiredFinalizerArgumentInstructions(policy);
+    }
+
+    private static string BuildRequiredFinalizerJsonRepairInstructions(
+        AgentFinalizerPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        return
+            $"You are completing a bounded typed-output repair turn for `{policy.OutputContract.ContractKey}`." + Environment.NewLine +
+            "Return exactly one JSON object matching the requested contract. Do not use Markdown, prose, code fences, or tool calls." + Environment.NewLine +
+            BuildRequiredFinalizerArgumentInstructions(policy);
+    }
+
+    internal static ChatClientAgentRunOptions CreateRequiredFinalizerJsonRepairRunOptions()
+    {
+        return new ChatClientAgentRunOptions(new ChatOptions
+        {
+            AllowMultipleToolCalls = false,
+            ToolMode = null,
+            Tools = []
+        })
+        {
+            AllowBackgroundResponses = false,
+            ContinuationToken = null
+        };
+    }
+
+    internal static ChatMessage CreateRequiredFinalizerJsonRepairMessage(
+        AgentFinalizerPolicy policy,
+        AgentResponse previousResponse)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(previousResponse);
+
+        return new ChatMessage(
+            ChatRole.User,
+            BuildRequiredFinalizerJsonRepairPrompt(policy, previousResponse.Text));
+    }
+
+    internal static string BuildRequiredFinalizerJsonRepairPrompt(
+        AgentFinalizerPolicy policy,
+        string? previousAssistantText)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        var previousTextSummary = BuildBoundedFinalizerRepairPreviousTextSummary(previousAssistantText);
+
+        return
+            $"The previous repair turn could not submit `{policy.ToolName}` through provider tool calling." + Environment.NewLine +
+            $"Return exactly one JSON object for `{policy.OutputContract.ContractKey}` now." + Environment.NewLine +
+            "Use only the prior response text, session context, tool results, and process artifacts already available in the conversation. If evidence is insufficient, return the contract's blocking or failure state with actionable next actions where the contract supports them." + Environment.NewLine +
+            previousTextSummary;
+    }
+
+    private static async ValueTask DisposeAgentAsync(AIAgent agent)
+    {
+        switch (agent)
+        {
+            case IAsyncDisposable asyncDisposable:
+                await asyncDisposable.DisposeAsync();
+                break;
+            case IDisposable disposable:
+                disposable.Dispose();
+                break;
+        }
     }
 
     internal static ChatMessage CreateRequiredFinalizerRepairMessage(
@@ -789,9 +1119,7 @@ public sealed partial class MafAgentRuntime(
     {
         ArgumentNullException.ThrowIfNull(policy);
 
-        var previousTextSummary = string.IsNullOrWhiteSpace(previousAssistantText)
-            ? "The previous turn returned no assistant text."
-            : $"Previous assistant text:{Environment.NewLine}{previousAssistantText.Trim()}";
+        var previousTextSummary = BuildBoundedFinalizerRepairPreviousTextSummary(previousAssistantText);
 
         return
             $"The previous turn ended without the required `{policy.ToolName}` finalizer tool call.{Environment.NewLine}" +
@@ -801,22 +1129,412 @@ public sealed partial class MafAgentRuntime(
             previousTextSummary;
     }
 
-    private static IReadOnlyList<AgentFinalizerInvocation> CreateEffectiveFinalizerInvocations(
+    internal static string BuildBoundedFinalizerRepairPreviousTextSummary(string? previousAssistantText)
+    {
+        if (string.IsNullOrWhiteSpace(previousAssistantText))
+        {
+            return "The previous turn returned no assistant text.";
+        }
+
+        var trimmed = previousAssistantText.Trim();
+        if (trimmed.Length <= MaxFinalizerRepairPreviousAssistantTextCharacters)
+        {
+            return $"Previous assistant text:{Environment.NewLine}{trimmed}";
+        }
+
+        var headLength = MaxFinalizerRepairPreviousAssistantTextCharacters / 2;
+        var tailLength = MaxFinalizerRepairPreviousAssistantTextCharacters - headLength;
+        var head = trimmed[..headLength];
+        var tail = trimmed[^tailLength..];
+        return
+            $"Previous assistant text (truncated from {trimmed.Length} to {MaxFinalizerRepairPreviousAssistantTextCharacters} characters for bounded finalizer repair):" + Environment.NewLine +
+            head + Environment.NewLine +
+            Environment.NewLine +
+            "[... middle of previous assistant text omitted for bounded finalizer repair ...]" + Environment.NewLine +
+            Environment.NewLine +
+            tail;
+    }
+
+    private static bool TryCaptureSynthesizedFinalizerInvocation(
+        AgentFinalizerPolicy policy,
+        string? repairText,
+        ToolInvocationTraceRecorder toolInvocationTraceRecorder,
+        List<AgentFinalizerInvocation> synthesizedInvocations,
+        out string failureMessage)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(toolInvocationTraceRecorder);
+        ArgumentNullException.ThrowIfNull(synthesizedInvocations);
+
+        failureMessage = string.Empty;
+        if (!TryNormalizeFinalizerJsonRepairText(policy, repairText, out var argumentsJson, out failureMessage))
+        {
+            return false;
+        }
+
+        var sequence = toolInvocationTraceRecorder.Start(
+            policy.ToolName,
+            ToolInvocationClassification.Read,
+            runtimeToolOwnership: null);
+        synthesizedInvocations.Add(new AgentFinalizerInvocation(
+            policy.ToolName,
+            argumentsJson,
+            sequence));
+        toolInvocationTraceRecorder.Complete(
+            sequence,
+            succeeded: true,
+            failureMessage: "Captured from a typed JSON required-finalizer repair response.");
+        return true;
+    }
+
+    internal static bool TryNormalizeFinalizerJsonRepairText(
+        AgentFinalizerPolicy policy,
+        string? repairText,
+        out string argumentsJson,
+        out string failureMessage)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        argumentsJson = string.Empty;
+        failureMessage = string.Empty;
+        if (!TryExtractJsonObject(repairText, out var rawJson))
+        {
+            failureMessage = "No JSON object was found in the repair response.";
+            return false;
+        }
+
+        if (TryNormalizeKnownFinalizerOutput(policy, rawJson, out argumentsJson, out failureMessage))
+        {
+            return true;
+        }
+
+        if (TryDeserializeFinalizerOutput(policy, rawJson, out argumentsJson, out failureMessage))
+        {
+            return true;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawJson);
+            if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("result", out var resultElement) &&
+                resultElement.ValueKind == JsonValueKind.Object)
+            {
+                var resultRawJson = resultElement.GetRawText();
+                if (TryNormalizeKnownFinalizerOutput(policy, resultRawJson, out argumentsJson, out failureMessage))
+                {
+                    return true;
+                }
+
+                if (TryDeserializeFinalizerOutput(policy, resultRawJson, out argumentsJson, out failureMessage))
+                {
+                    return true;
+                }
+            }
+        }
+        catch (JsonException exception)
+        {
+            failureMessage = exception.Message;
+        }
+
+        return false;
+    }
+
+    private static bool TryDeserializeFinalizerOutput(
+        AgentFinalizerPolicy policy,
+        string rawJson,
+        out string argumentsJson,
+        out string failureMessage)
+    {
+        argumentsJson = string.Empty;
+        failureMessage = string.Empty;
+
+        try
+        {
+            var output = JsonSerializer.Deserialize(rawJson, policy.OutputType, AgentOutputJson.SerializerOptions);
+            if (output is null)
+            {
+                failureMessage = "The JSON payload deserialized to null.";
+                return false;
+            }
+
+            argumentsJson = JsonSerializer.Serialize(output, policy.OutputType, AgentOutputJson.SerializerOptions);
+            return true;
+        }
+        catch (JsonException exception)
+        {
+            failureMessage = exception.Message;
+            return false;
+        }
+    }
+
+    private static bool TryNormalizeKnownFinalizerOutput(
+        AgentFinalizerPolicy policy,
+        string rawJson,
+        out string argumentsJson,
+        out string failureMessage)
+    {
+        argumentsJson = string.Empty;
+        failureMessage = string.Empty;
+
+        if (policy.OutputType == typeof(ProcessStepOutcomeResult))
+        {
+            return TryNormalizeProcessStepOutcomeResultJson(rawJson, out argumentsJson, out failureMessage);
+        }
+
+        return false;
+    }
+
+    private static bool TryNormalizeProcessStepOutcomeResultJson(
+        string rawJson,
+        out string argumentsJson,
+        out string failureMessage)
+    {
+        argumentsJson = string.Empty;
+        failureMessage = string.Empty;
+
+        try
+        {
+            if (JsonNode.Parse(rawJson) is not JsonObject jsonObject)
+            {
+                failureMessage = "The JSON payload was not an object.";
+                return false;
+            }
+
+            NormalizeStringArrayProperty(jsonObject, "evidenceRefs");
+            NormalizeStringArrayProperty(jsonObject, "nextActions");
+            NormalizeProcessStepOutcomeReason(jsonObject);
+
+            var output = jsonObject.Deserialize<ProcessStepOutcomeResult>(AgentOutputJson.SerializerOptions);
+            if (output is null)
+            {
+                failureMessage = "The normalized JSON payload deserialized to null.";
+                return false;
+            }
+
+            argumentsJson = JsonSerializer.Serialize(output, AgentOutputJson.SerializerOptions);
+            return true;
+        }
+        catch (JsonException exception)
+        {
+            failureMessage = exception.Message;
+            return false;
+        }
+    }
+
+    private static void NormalizeProcessStepOutcomeReason(JsonObject jsonObject)
+    {
+        if (TryReadNonEmptyStringProperty(jsonObject, "reason", out _))
+        {
+            return;
+        }
+
+        if (TryReadNonEmptyStringProperty(jsonObject, "humanReadableSummaryMarkdown", out var humanSummary) ||
+            TryReadNonEmptyStringProperty(jsonObject, "branchOutcomeTitle", out humanSummary))
+        {
+            jsonObject["reason"] = humanSummary;
+        }
+    }
+
+    private static bool TryReadNonEmptyStringProperty(
+        JsonObject jsonObject,
+        string propertyName,
+        out string value)
+    {
+        value = string.Empty;
+        if (!jsonObject.TryGetPropertyValue(propertyName, out var node))
+        {
+            return false;
+        }
+
+        value = ConvertJsonNodeToString(node).Trim();
+        return !string.IsNullOrWhiteSpace(value);
+    }
+
+    private static void NormalizeStringArrayProperty(JsonObject jsonObject, string propertyName)
+    {
+        if (!jsonObject.TryGetPropertyValue(propertyName, out var value) ||
+            value is not JsonArray values)
+        {
+            return;
+        }
+
+        var normalizedValues = new JsonArray();
+        foreach (var item in values)
+        {
+            var text = ConvertJsonNodeToString(item);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                normalizedValues.Add(text);
+            }
+        }
+
+        jsonObject[propertyName] = normalizedValues;
+    }
+
+    private static string ConvertJsonNodeToString(JsonNode? node)
+    {
+        if (node is null)
+        {
+            return string.Empty;
+        }
+
+        if (node is JsonValue value)
+        {
+            return value.TryGetValue<string>(out var text)
+                ? text
+                : value.ToJsonString();
+        }
+
+        if (node is JsonObject jsonObject)
+        {
+            return string.Join(
+                "; ",
+                jsonObject.Select(property => $"{property.Key}: {ConvertJsonNodeToString(property.Value)}"));
+        }
+
+        if (node is JsonArray jsonArray)
+        {
+            return string.Join(", ", jsonArray.Select(ConvertJsonNodeToString));
+        }
+
+        return node.ToJsonString();
+    }
+
+    private static bool TryExtractJsonObject(
+        string? text,
+        out string rawJson)
+    {
+        rawJson = string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var trimmed = text.Trim();
+        if (trimmed.StartsWith("```", StringComparison.Ordinal))
+        {
+            var firstLineEnd = trimmed.IndexOf('\n');
+            var fenceEnd = trimmed.LastIndexOf("```", StringComparison.Ordinal);
+            if (firstLineEnd >= 0 && fenceEnd > firstLineEnd)
+            {
+                trimmed = trimmed[(firstLineEnd + 1)..fenceEnd].Trim();
+            }
+        }
+
+        if (trimmed.StartsWith('{') && trimmed.EndsWith('}'))
+        {
+            rawJson = trimmed;
+            return true;
+        }
+
+        var start = trimmed.IndexOf('{');
+        var end = trimmed.LastIndexOf('}');
+        if (start < 0 || end <= start)
+        {
+            return false;
+        }
+
+        rawJson = trimmed[start..(end + 1)].Trim();
+        return true;
+    }
+
+    internal static IReadOnlyList<AgentFinalizerInvocation> CreateEffectiveFinalizerInvocations(
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode,
         IReadOnlyList<AgentFinalizerInvocation> capturedInvocations,
         IReadOnlyList<AgentToolInvocationTrace> capturedToolInvocationTraces,
-        IReadOnlyList<AgentFinalizerInvocation> streamedInvocations)
+        IReadOnlyList<AgentFinalizerInvocation> streamedInvocations,
+        IReadOnlyList<AgentFinalizerInvocation> synthesizedInvocations)
     {
-        if (capturedInvocations.Count > 0 ||
-            streamedInvocations.Count == 0 ||
-            finalizerMode != AgentFinalizerMode.Required ||
+        if (finalizerMode != AgentFinalizerMode.Required ||
             !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
+        {
+            return synthesizedInvocations.Count == 0
+                ? capturedInvocations
+                : capturedInvocations
+                    .Concat(synthesizedInvocations)
+                    .OrderBy(invocation => invocation.Sequence)
+                    .ToList();
+        }
+
+        var normalizedCapturedInvocations = AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, capturedInvocations);
+        if (IsValidFinalizerInvocationSet(policy, normalizedCapturedInvocations))
+        {
+            return normalizedCapturedInvocations;
+        }
+
+        if (TrySelectLastValidFinalizerInvocation(policy, capturedInvocations, out var capturedInvocation))
+        {
+            return [capturedInvocation];
+        }
+
+        var normalizedStreamedInvocations = AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, streamedInvocations);
+        if (IsValidFinalizerInvocationSet(policy, normalizedStreamedInvocations))
+        {
+            return normalizedStreamedInvocations;
+        }
+
+        if (TrySelectLastValidFinalizerInvocation(policy, streamedInvocations, out var streamedInvocation))
+        {
+            return [streamedInvocation];
+        }
+
+        var normalizedSynthesizedInvocations = AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, synthesizedInvocations);
+        if (IsValidFinalizerInvocationSet(policy, normalizedSynthesizedInvocations))
+        {
+            return normalizedSynthesizedInvocations;
+        }
+
+        if (TrySelectLastValidFinalizerInvocation(policy, synthesizedInvocations, out var synthesizedInvocation))
+        {
+            return [synthesizedInvocation];
+        }
+
+        if (synthesizedInvocations.Count > 0)
+        {
+            return synthesizedInvocations;
+        }
+
+        if (capturedInvocations.Count > 0)
         {
             return capturedInvocations;
         }
 
         return streamedInvocations;
+    }
+
+    private static bool IsValidFinalizerInvocationSet(
+        AgentFinalizerPolicy policy,
+        IReadOnlyList<AgentFinalizerInvocation> invocations)
+    {
+        if (invocations.Count == 0)
+        {
+            return false;
+        }
+
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
+        return validation.Succeeded && validation.Output is not null;
+    }
+
+    private static bool TrySelectLastValidFinalizerInvocation(
+        AgentFinalizerPolicy policy,
+        IReadOnlyList<AgentFinalizerInvocation> invocations,
+        out AgentFinalizerInvocation invocation)
+    {
+        invocation = default!;
+        for (var index = invocations.Count - 1; index >= 0; index--)
+        {
+            var candidate = invocations[index];
+            var validation = new DefaultAgentFinalizerValidator().Validate(policy, [candidate]);
+            if (validation.Succeeded && validation.Output is not null)
+            {
+                invocation = candidate;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static IReadOnlyList<AgentToolInvocationTrace> CreateEffectiveToolInvocationTraces(
@@ -920,7 +1638,7 @@ public sealed partial class MafAgentRuntime(
         return false;
     }
 
-    private sealed class StreamedFinalizerInvocationRecorder(
+    internal sealed class StreamedFinalizerInvocationRecorder(
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode)
     {
@@ -986,6 +1704,7 @@ public sealed partial class MafAgentRuntime(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         string? runtimeSessionKey,
+        AgentRuntimeExecutionOptions runtimeOptions,
         IReadOnlyList<AgentResponseUpdate> updates,
         string usageSourcePhase,
         Func<ExecutionState, string, string, Task> progressCallback,
@@ -1020,9 +1739,12 @@ public sealed partial class MafAgentRuntime(
             "Finalizer short-circuit",
             "Required finalizer tool produced a valid governed result. Persisting the typed result immediately without waiting for redundant post-finalizer assistant prose.");
 
-        var serializedSessionStateJson = await TrySerializeRuntimeSessionAsync(
+        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
+            runtimeOptions,
+            [],
+            progressCallback,
             cancellationToken);
         return serializedResponse with
         {
@@ -1037,6 +1759,7 @@ public sealed partial class MafAgentRuntime(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         string? runtimeSessionKey,
+        AgentRuntimeExecutionOptions runtimeOptions,
         AgentFinalizerMode finalizerMode,
         Exception exception,
         IReadOnlyList<AgentResponseUpdate> updates,
@@ -1070,9 +1793,12 @@ public sealed partial class MafAgentRuntime(
             "Finalizer recovery",
             $"Provider streaming failed after required finalizer '{policy.ToolName}' was captured. Persisting the governed finalizer outcome and preserving the provider error for diagnostics: {exception.Message}");
 
-        var serializedSessionStateJson = await TrySerializeRuntimeSessionAsync(
+        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
+            runtimeOptions,
+            [],
+            progressCallback,
             cancellationToken);
         return new AgentRuntimeResponse(
             JsonSerializer.Serialize(finalizerValidation.Output, policy.OutputType, AgentOutputJson.SerializerOptions),
@@ -1108,6 +1834,7 @@ public sealed partial class MafAgentRuntime(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         string? runtimeSessionKey,
+        AgentRuntimeExecutionOptions runtimeOptions,
         IReadOnlyList<AgentResponseUpdate> updates,
         string usageSourcePhase,
         Func<ExecutionState, string, string, Task> progressCallback,
@@ -1142,9 +1869,12 @@ public sealed partial class MafAgentRuntime(
             "Finalizer short-circuit",
             "Required finalizer tool produced a valid governed result. Persisting the typed result without waiting for redundant post-finalizer assistant prose.");
 
-        var serializedSessionStateJson = await TrySerializeRuntimeSessionAsync(
+        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
+            runtimeOptions,
+            [],
+            progressCallback,
             cancellationToken);
         return serializedResponse with
         {
@@ -1329,7 +2059,219 @@ public sealed partial class MafAgentRuntime(
         IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals)
     {
         return pendingApprovals.Count == 0 &&
-               runtimeOptions.ContextIntent?.IsGovernedProcessStep == true;
+               (runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
+                HasRequestScopedInputAttachments(runtimeOptions));
+    }
+
+    private static bool HasRequestScopedInputAttachments(AgentRuntimeExecutionOptions runtimeOptions)
+        => runtimeOptions.InputAttachments?.Count > 0;
+
+    internal static void EnsureInputAttachmentsSupported(
+        ProviderProfile provider,
+        string model,
+        AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+
+        var attachments = runtimeOptions.InputAttachments ?? [];
+        if (attachments.Count == 0)
+        {
+            return;
+        }
+
+        var selectedModel = string.IsNullOrWhiteSpace(model) ? provider.DefaultModel : model.Trim();
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel);
+        if (featureMatrix.SupportsVision)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Provider '{provider.Name}' model '{selectedModel}' does not support vision/image input, but the request includes {attachments.Count:N0} image attachment(s). Choose a vision-capable provider/model or remove the attachment(s).");
+    }
+
+    internal static string ResolveRuntimeModelForInputAttachments(
+        ProviderProfile provider,
+        string model,
+        AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+
+        var selectedModel = string.IsNullOrWhiteSpace(model) ? provider.DefaultModel : model.Trim();
+        var attachments = runtimeOptions.InputAttachments ?? [];
+        if (attachments.Count == 0)
+        {
+            return selectedModel;
+        }
+
+        if (ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel).SupportsVision)
+        {
+            return selectedModel;
+        }
+
+        var imageAnalysisModel = ResolveProviderImageAnalysisModel(provider, selectedModel);
+        return ProviderFeatureService.ResolveFeatureMatrixForModel(provider, imageAnalysisModel).SupportsVision
+            ? imageAnalysisModel
+            : selectedModel;
+    }
+
+    private static string ResolveRuntimeSessionSerializationSkipMessage(AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        return HasRequestScopedInputAttachments(runtimeOptions)
+            ? "Skipped Microsoft Agent Framework session serialization because request-scoped input attachments are not persisted into session state. The sandbox transcript keeps the text turn for future replay."
+            : "Skipped Microsoft Agent Framework session serialization for a governed process step with no pending approvals. Process state is persisted through the typed outcome and artifacts.";
+    }
+
+    private static async Task<string?> TrySerializePersistableRuntimeSessionAsync(
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        AgentRuntimeExecutionOptions runtimeOptions,
+        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken)
+    {
+        if (ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
+        {
+            await progressCallback(
+                ExecutionState.Persisting,
+                "Session",
+                ResolveRuntimeSessionSerializationSkipMessage(runtimeOptions));
+            return null;
+        }
+
+        await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
+        var serializedSessionJson = await TrySerializeRuntimeSessionAsync(
+            runtimeAgent,
+            runtimeSession,
+            cancellationToken);
+        if (serializedSessionJson is null)
+        {
+            await progressCallback(
+                ExecutionState.Persisting,
+                "Session",
+                "Microsoft Agent Framework session serialization did not complete within the bounded timeout. Continuing without serialized session state.");
+            return null;
+        }
+
+        if (!HasRequestScopedInputAttachments(runtimeOptions))
+        {
+            return serializedSessionJson;
+        }
+
+        var scrubbedSessionJson = RemoveRequestScopedDataContentFromSerializedSession(serializedSessionJson);
+        if (scrubbedSessionJson is null)
+        {
+            await progressCallback(
+                ExecutionState.Persisting,
+                "Session",
+                "Dropped serialized Microsoft Agent Framework session state because request-scoped attachment payload scrubbing failed.");
+            return null;
+        }
+
+        if (!string.Equals(serializedSessionJson, scrubbedSessionJson, StringComparison.Ordinal))
+        {
+            await progressCallback(
+                ExecutionState.Persisting,
+                "Session",
+                "Removed request-scoped attachment payloads from serialized Microsoft Agent Framework session state.");
+        }
+
+        return scrubbedSessionJson;
+    }
+
+    internal static string? RemoveRequestScopedDataContentFromSerializedSession(string? serializedSessionJson)
+    {
+        if (string.IsNullOrWhiteSpace(serializedSessionJson))
+        {
+            return serializedSessionJson;
+        }
+
+        try
+        {
+            var root = JsonNode.Parse(serializedSessionJson);
+            if (root is null)
+            {
+                return serializedSessionJson;
+            }
+
+            return RemoveRequestScopedDataContentNodes(root)
+                ? root.ToJsonString(SerializerOptions)
+                : serializedSessionJson;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool RemoveRequestScopedDataContentNodes(JsonNode node)
+    {
+        return node switch
+        {
+            JsonObject jsonObject => RemoveRequestScopedDataContentNodes(jsonObject),
+            JsonArray jsonArray => RemoveRequestScopedDataContentNodes(jsonArray),
+            _ => false
+        };
+    }
+
+    private static bool RemoveRequestScopedDataContentNodes(JsonObject jsonObject)
+    {
+        var removedAny = false;
+        foreach (var property in jsonObject.ToList())
+        {
+            if (property.Value is not null)
+            {
+                removedAny |= RemoveRequestScopedDataContentNodes(property.Value);
+            }
+        }
+
+        return removedAny;
+    }
+
+    private static bool RemoveRequestScopedDataContentNodes(JsonArray jsonArray)
+    {
+        var removedAny = false;
+        var dataContentIndexes = new List<int>();
+        for (var index = 0; index < jsonArray.Count; index++)
+        {
+            var item = jsonArray[index];
+            if (IsRequestScopedDataContentNode(item))
+            {
+                dataContentIndexes.Add(index);
+                continue;
+            }
+
+            if (item is not null)
+            {
+                removedAny |= RemoveRequestScopedDataContentNodes(item);
+            }
+        }
+
+        for (var index = dataContentIndexes.Count - 1; index >= 0; index--)
+        {
+            jsonArray.RemoveAt(dataContentIndexes[index]);
+            removedAny = true;
+        }
+
+        if (dataContentIndexes.Count > 0 && jsonArray.Count == 0)
+        {
+            jsonArray.Add(new JsonObject
+            {
+                ["$type"] = "text",
+                ["text"] = "[Request-scoped attachment omitted from persisted session state.]"
+            });
+        }
+
+        return removedAny;
+    }
+
+    private static bool IsRequestScopedDataContentNode(JsonNode? node)
+    {
+        return node is JsonObject jsonObject &&
+               jsonObject.TryGetPropertyValue("$type", out var typeNode) &&
+               string.Equals(typeNode?.GetValue<string>(), "data", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<string?> TrySerializeRuntimeSessionAsync(
@@ -1463,6 +2405,24 @@ public sealed partial class MafAgentRuntime(
             }));
 
         return $"Approval is required before the run can continue.{Environment.NewLine}{summary}";
+    }
+
+    private static void ThrowIfEmptyProviderCompletion(
+        ProviderProfile provider,
+        string model,
+        AgentResponse response,
+        IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
+    {
+        if (!string.IsNullOrWhiteSpace(response.Text) ||
+            pendingApprovals.Count > 0 ||
+            CountToolCalls(response) > 0 ||
+            ClampTokenCount(response.Usage?.OutputTokenCount) > 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Provider '{provider.Name}' model '{model}' completed without returning text, tool calls, approvals, or output tokens.");
     }
 
     private static bool ShouldContinueBackgroundRun(

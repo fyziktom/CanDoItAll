@@ -1,7 +1,10 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using AngleSharp.Dom;
 using Bunit;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -10,6 +13,8 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -124,6 +129,257 @@ public sealed class ProjectStructurePageSimpleMutationTests
             persistedSurface.Nodes,
             node => string.Equals(node.Title, expectedTitle, StringComparison.Ordinal));
         Assert.Equal(longNoteBody, persistedNode.Notes);
+    }
+
+    [Fact]
+    public async Task Generated_image_asset_create_uses_selected_provider_and_persists_image_asset()
+    {
+        var imageService = new RecordingAgentImageGenerationService(waitForRelease: true);
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IAgentImageGenerationService>();
+            services.AddSingleton<IAgentImageGenerationService>(imageService);
+        });
+        await using var deferredWorker = await StartedDeferredCompletionWorker.StartAsync(harness);
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var agentWorkspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+
+        var providerId = await SaveImageProviderAsync(agentWorkspaceService);
+
+        var projectId = await CreateProjectAsync(projectsService, "Generated image asset");
+        var parentNodeId = $"project:{projectId}";
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
+                action => action.ActionId == "group-assets" &&
+                          action.Children.Any(child => child.ActionId == "generate-image-asset"));
+
+            var rootNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
+            var contextGenerateAction = FindCreateAction(rootNode.ContextActions, "generate-image-asset");
+            var contextProviderField = Assert.Single(
+                contextGenerateAction.InputFields,
+                field => field.Key == "imageProviderProfileId");
+            Assert.Contains(
+                contextProviderField.Options,
+                option => option.Value == providerId.ToString("D"));
+        });
+
+        const string prompt = "Create a crisp dashboard thumbnail with teal, white, and charcoal UI panels.";
+        var createdNodeId = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "generate-image-asset",
+            parentNodeId,
+            parentNodeId,
+            "Generated dashboard concept",
+            "Dashboard hero",
+            prompt,
+            [
+                new CanvasWorkbenchInputValue { Key = "imageProviderProfileId", Value = providerId.ToString("D") },
+                new CanvasWorkbenchInputValue { Key = "imageModel", Value = "gpt-image-1-mini" },
+                new CanvasWorkbenchInputValue { Key = "imageSize", Value = "1536x1024" },
+                new CanvasWorkbenchInputValue { Key = "imageQuality", Value = "medium" },
+                new CanvasWorkbenchInputValue { Key = "imageOutputFormat", Value = "png" }
+            ]);
+
+        var waitingSurface = await workbenchService.GetStructureAsync(projectId);
+        var waitingNode = Assert.Single(waitingSurface.Nodes, node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ImageAsset, waitingNode.ObjectType);
+        Assert.Equal("generated", waitingNode.ObjectSubtype);
+        Assert.Equal("image/svg+xml", waitingNode.MediaContentType);
+        Assert.Equal("waiting-for-image-creation-by-ai.svg", waitingNode.MediaOriginalFileName);
+        Assert.Equal(prompt, waitingNode.Notes);
+
+        var request = await imageService.WaitForFirstRequestAsync();
+        Assert.Equal(providerId, request.Provider.Id);
+        Assert.Equal("gpt-image-1-mini", request.Model);
+        Assert.Equal(prompt, request.Prompt);
+        Assert.Equal("1536x1024", request.Size);
+        Assert.Equal("medium", request.Quality);
+        Assert.Equal(AgentGeneratedImageFormat.Png, request.Format);
+
+        imageService.CompleteGeneration();
+        cut.WaitForAssertion(() =>
+        {
+            var updatedNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
+            Assert.Equal("image/png", updatedNode.MediaContentType);
+            Assert.Equal("generated-dashboard-concept.png", updatedNode.MediaFileName);
+            Assert.Equal("Generated image ready", updatedNode.Status);
+        });
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ImageAsset, persistedNode.ObjectType);
+        Assert.Equal("generated", persistedNode.ObjectSubtype);
+        Assert.Equal("image/png", persistedNode.MediaContentType);
+        Assert.Equal("generated-dashboard-concept.png", persistedNode.MediaOriginalFileName);
+        Assert.Equal(prompt, persistedNode.Notes);
+        var metadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal(ProjectStructureDeferredNodeCompletionState.Completed, metadata.DeferredCompletion?.State);
+    }
+
+    [Fact]
+    public async Task Generated_image_asset_create_lists_legacy_openai_image_provider_without_purpose_metadata()
+    {
+        var imageService = new RecordingAgentImageGenerationService();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IAgentImageGenerationService>();
+            services.AddSingleton<IAgentImageGenerationService>(imageService);
+        });
+        await using var deferredWorker = await StartedDeferredCompletionWorker.StartAsync(harness);
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var providerId = Guid.NewGuid();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(new CanDoItAll.Modules.Workspace.ProviderProfile
+            {
+                Id = providerId,
+                Name = "OpenAI image generation",
+                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
+                ConnectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                ConfigSchemaVersion = "1.0",
+                BaseUrl = "https://api.openai.com/v1",
+                DefaultModel = "gpt-image-1-mini",
+                TimeoutSeconds = 45,
+                IsEnabled = true,
+                SupportsStreaming = false,
+                SupportsToolCalling = false,
+                SupportsStructuredOutput = false,
+                SupportsVision = false,
+                ExtraSettingsJson = JsonSerializer.Serialize(new
+                {
+                    connectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                    configSchemaVersion = "1.0",
+                    timeoutSeconds = 45,
+                    providerTransport = ProviderTransportKind.Responses.ToString(),
+                    tags = new[] { "openai", "image-generation" }
+                })
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var projectId = await CreateProjectAsync(projectsService, "Legacy generated image provider");
+        var parentNodeId = $"project:{projectId}";
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            var generateAction = FindCreateAction(
+                canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
+                "generate-image-asset");
+            var providerField = Assert.Single(
+                generateAction.InputFields,
+                field => field.Key == "imageProviderProfileId");
+            var providerOption = Assert.Single(
+                providerField.Options,
+                option => option.Value == providerId.ToString("D"));
+
+            Assert.Equal("OpenAI image generation (gpt-image-1-mini)", providerOption.Label);
+        });
+
+        const string prompt = "Create a crisp settings panel thumbnail with teal controls.";
+        await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "generate-image-asset",
+            parentNodeId,
+            parentNodeId,
+            "Legacy provider generated dashboard",
+            "Dashboard hero",
+            prompt,
+            [
+                new CanvasWorkbenchInputValue { Key = "imageProviderProfileId", Value = providerId.ToString("D") },
+                new CanvasWorkbenchInputValue { Key = "imageSize", Value = "1024x1024" },
+                new CanvasWorkbenchInputValue { Key = "imageQuality", Value = "low" },
+                new CanvasWorkbenchInputValue { Key = "imageOutputFormat", Value = "png" }
+            ]);
+
+        var request = await imageService.WaitForFirstRequestAsync();
+        Assert.Equal(providerId, request.Provider.Id);
+        Assert.Equal(ProviderProfilePurpose.ImageGeneration, request.Provider.Purpose);
+        Assert.Equal("gpt-image-1-mini", request.Model);
+    }
+
+    [Fact]
+    public async Task Generated_image_asset_failure_marks_existing_waiting_node_without_recreating_it()
+    {
+        var imageService = new RecordingAgentImageGenerationService(
+            failure: new InvalidOperationException("provider unavailable"));
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IAgentImageGenerationService>();
+            services.AddSingleton<IAgentImageGenerationService>(imageService);
+        });
+        await using var deferredWorker = await StartedDeferredCompletionWorker.StartAsync(harness);
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var agentWorkspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var providerId = await SaveImageProviderAsync(agentWorkspaceService, "Failing image provider");
+
+        var projectId = await CreateProjectAsync(projectsService, "Generated image failure");
+        var parentNodeId = $"project:{projectId}";
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        const string prompt = "Create a product calculator image with visible calculator controls.";
+        var createdNodeId = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "generate-image-asset",
+            parentNodeId,
+            parentNodeId,
+            "Failing generated image",
+            "Calculator",
+            prompt,
+            [
+                new CanvasWorkbenchInputValue { Key = "imageProviderProfileId", Value = providerId.ToString("D") },
+                new CanvasWorkbenchInputValue { Key = "imageSize", Value = "1024x1024" },
+                new CanvasWorkbenchInputValue { Key = "imageQuality", Value = "low" },
+                new CanvasWorkbenchInputValue { Key = "imageOutputFormat", Value = "png" }
+            ]);
+
+        var request = await imageService.WaitForFirstRequestAsync();
+        Assert.Equal(prompt, request.Prompt);
+
+        cut.WaitForAssertion(() =>
+        {
+            var updatedNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
+            Assert.Equal("Image generation failed", updatedNode.Status);
+            Assert.Equal("waiting-for-image-creation-by-ai.svg", updatedNode.MediaFileName);
+        });
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
+        Assert.Equal("Image generation failed", persistedNode.Status);
+        Assert.Equal("waiting-for-image-creation-by-ai.svg", persistedNode.MediaOriginalFileName);
+        var metadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal(ProjectStructureDeferredNodeCompletionState.Failed, metadata.DeferredCompletion?.State);
+        Assert.Contains("provider unavailable", metadata.DeferredCompletion?.ErrorMessage, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1267,6 +1523,24 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 }
             }.ToJson());
 
+    private static Task<Guid> SaveImageProviderAsync(
+        IAgentFrameworkWorkspaceService agentWorkspaceService,
+        string name = "Component image provider")
+        => agentWorkspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        {
+            Name = name,
+            Kind = ProviderKind.OpenAi,
+            BaseUrl = "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            DefaultModel = "gpt-image-1-mini",
+            Transport = ProviderTransportKind.Responses,
+            Purpose = ProviderProfilePurpose.ImageGeneration,
+            IsEnabled = true,
+            SupportsStreaming = false,
+            SupportsTools = false,
+            SuggestedModels = ["gpt-image-1-mini"]
+        });
+
     private static async Task<string> InvokeCreateActionAsync(
         IRenderedComponent<ProjectStructurePage> cut,
         IRenderedComponent<CanvasWorkbench> canvasWorkbench,
@@ -1302,6 +1576,12 @@ public sealed class ProjectStructurePageSimpleMutationTests
         string createdNodeId = string.Empty;
         cut.WaitForAssertion(() =>
         {
+            var matchingNodes = canvasWorkbench.Instance.Surface.Nodes
+                .Where(node => string.Equals(node.Title, title, StringComparison.Ordinal))
+                .ToList();
+            Assert.True(
+                matchingNodes.Count == 1,
+                $"Expected one node titled '{title}', found {matchingNodes.Count}. Markup: {cut.Markup}");
             createdNodeId = Assert.Single(
                 canvasWorkbench.Instance.Surface.Nodes,
                 node => string.Equals(node.Title, title, StringComparison.Ordinal)).Id;
@@ -1317,6 +1597,38 @@ public sealed class ProjectStructurePageSimpleMutationTests
         => cut.FindAll(selector)
             .First(button => button.TextContent.Contains(label, StringComparison.Ordinal));
 
+    private static CanvasWorkbenchAction FindCreateAction(
+        IReadOnlyList<CanvasWorkbenchAction> actions,
+        string actionId)
+        => TryFindCreateAction(actions, actionId)
+           ?? throw new InvalidOperationException($"Create action '{actionId}' was not found.");
+
+    private static CanvasWorkbenchAction? TryFindCreateAction(
+        IReadOnlyList<CanvasWorkbenchAction> actions,
+        string actionId)
+    {
+        foreach (var action in actions)
+        {
+            if (string.Equals(action.ActionId, actionId, StringComparison.Ordinal))
+            {
+                return action;
+            }
+
+            if (action.Children.Count == 0)
+            {
+                continue;
+            }
+
+            var childAction = TryFindCreateAction(action.Children, actionId);
+            if (childAction is not null)
+            {
+                return childAction;
+            }
+        }
+
+        return null;
+    }
+
     private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedFragment cut)
     {
         IRenderedComponent<CanvasWorkbench>? canvasWorkbench = null;
@@ -1331,6 +1643,69 @@ public sealed class ProjectStructurePageSimpleMutationTests
             ContentType = contentType,
             Base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(content))
         };
+
+    private sealed class RecordingAgentImageGenerationService : IAgentImageGenerationService
+    {
+        private static readonly byte[] PngBytes = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
+
+        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<AgentImageGenerationRequest> firstRequest = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly Exception? failure;
+
+        public RecordingAgentImageGenerationService(
+            bool waitForRelease = false,
+            Exception? failure = null)
+        {
+            this.failure = failure;
+            if (!waitForRelease)
+            {
+                release.TrySetResult();
+            }
+        }
+
+        public ConcurrentQueue<AgentImageGenerationRequest> Requests { get; } = new();
+
+        public async Task<AgentImageGenerationRequest> WaitForFirstRequestAsync()
+            => await firstRequest.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        public void CompleteGeneration()
+            => release.TrySetResult();
+
+        public async Task<AgentImageGenerationResult> GenerateAsync(
+            AgentImageGenerationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Requests.Enqueue(request);
+            firstRequest.TrySetResult(request);
+            await release.Task.WaitAsync(cancellationToken);
+            if (failure is not null)
+            {
+                throw failure;
+            }
+
+            return new AgentImageGenerationResult(
+                request.Model,
+                request.Format,
+                [new AgentGeneratedImage("image/png", PngBytes, request.Prompt)]);
+        }
+    }
+
+    private sealed class StartedDeferredCompletionWorker(ProjectStructureDeferredNodeCompletionWorker worker) : IAsyncDisposable
+    {
+        public static async Task<StartedDeferredCompletionWorker> StartAsync(ComponentTestHarness harness)
+        {
+            var worker = harness.Context.Services.GetRequiredService<ProjectStructureDeferredNodeCompletionWorker>();
+            await worker.StartAsync(CancellationToken.None);
+            return new StartedDeferredCompletionWorker(worker);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await worker.StopAsync(CancellationToken.None);
+        }
+    }
 
     private static void WrapDbContextFactoryWithCreateCounter(IServiceCollection services)
     {

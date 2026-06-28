@@ -282,6 +282,53 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Software_delivery_visual_quality_requires_provider_backed_image_analysis_without_domain_coupling()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var definition = loader.LoadDefinition("software-delivery");
+
+        var visualGateSteps = new[]
+        {
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "qa-validation", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "qa-recheck", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "capture-ui-screenshots", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "capture-ui-screenshots-after-repair", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "release-approval", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "release-approval-after-repair", StringComparison.Ordinal))
+        };
+
+        foreach (var step in visualGateSteps)
+        {
+            var stepContract = string.Join(
+                Environment.NewLine,
+                step.Notes,
+                step.InputContractSummary,
+                step.OutputContractSummary,
+                step.EvidenceContractSummary,
+                step.ArtifactExpectations.Select(expectation => expectation.ValidationRequirementSummary));
+
+            Assert.Contains("workspace_analyze_image", stepContract, StringComparison.Ordinal);
+            Assert.Contains("provider-backed image-analysis", stepContract, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("tetris", stepContract, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("tetromino", stepContract, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var stepDocs = string.Join(
+            Environment.NewLine,
+            File.ReadAllText(Path.Combine(repositoryRoot, "Templates", "Processes", "processes", "software-delivery", "steps", "qa-validation.md")),
+            File.ReadAllText(Path.Combine(repositoryRoot, "Templates", "Processes", "processes", "software-delivery", "steps", "qa-recheck.md")),
+            File.ReadAllText(Path.Combine(repositoryRoot, "Templates", "Processes", "processes", "software-delivery", "steps", "capture-ui-screenshots.md")),
+            File.ReadAllText(Path.Combine(repositoryRoot, "Templates", "Processes", "processes", "software-delivery", "steps", "capture-ui-screenshots-after-repair.md")),
+            File.ReadAllText(Path.Combine(repositoryRoot, "Templates", "Processes", "processes", "software-delivery", "steps", "release-approval.md")),
+            File.ReadAllText(Path.Combine(repositoryRoot, "Templates", "Processes", "processes", "software-delivery", "steps", "release-approval-after-repair.md")));
+
+        Assert.Contains("workspace_analyze_images", stepDocs, StringComparison.Ordinal);
+        Assert.DoesNotContain("tetris", stepDocs, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("tetromino", stepDocs, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Software_delivery_peer_review_can_run_read_only_validation()
     {
         var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
@@ -639,7 +686,38 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
-    public async Task Canvas_rejects_stale_version_tokens()
+    public async Task Canvas_rejects_stale_version_tokens_for_mutating_commands()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var added = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            canvas.Selection.NodeKey);
+
+        var stale = await service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+            ProcessWorkspaceShellScope.Global,
+            added.Projection.DefinitionKey,
+            ProcessDefinitionCanvasCommandKind.AddArtifactExpectation,
+            canvas.VersionToken,
+            new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-artifact-expectation"),
+            added.Projection.Selection.NodeKey,
+            SelectedEdgeKey: null,
+            ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, stale.Receipt.Status);
+        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Canvas_accepts_stale_recompose_against_current_projection()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();
         var service = new ProcessDefinitionCanvasEditorProjectionService(
@@ -665,8 +743,9 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             SelectedEdgeKey: null,
             ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
 
-        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, stale.Receipt.Status);
-        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, stale.Receipt.Status);
+        Assert.Contains(stale.Projection.Nodes, node => node.Title == "Implementation");
+        Assert.Contains("recomposed", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

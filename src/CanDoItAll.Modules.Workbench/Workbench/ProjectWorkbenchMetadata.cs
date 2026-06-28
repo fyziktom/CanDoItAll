@@ -168,6 +168,8 @@ public sealed class ProjectObjectMetadataEnvelope
 {
     public ProjectWorkflowProjectWriteMetadata? WorkflowProjectWrite { get; set; }
 
+    public ProjectStructureDeferredCompletionMetadata? DeferredCompletion { get; set; }
+
     public ProjectBlockMetadata? ProjectBlock { get; set; }
 
     public ProjectMeetingMetadata? Meeting { get; set; }

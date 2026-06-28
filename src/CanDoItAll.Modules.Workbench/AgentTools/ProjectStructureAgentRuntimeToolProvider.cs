@@ -103,6 +103,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             var accessState = new ProjectStructureAccessState(
                 accessSettings,
                 ResolveScopedProcessAccess(context));
+            if (!accessState.CanRead && !accessState.CanWrite)
+            {
+                return [];
+            }
 
             return
             [
@@ -688,7 +692,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.CreateNodeAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
+                    return await agentService.CreateNodeAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -1424,7 +1429,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    return await agentService.CreateAssetAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
+                    return await agentService.CreateAssetAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -2182,8 +2188,36 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     auditScope.ProcessStepId.Trim(),
                     canRead,
                     canWrite,
-                    MapScopedProcessAgentContext(auditScope.ProjectStructureLaunchAgent));
+                    MapScopedProcessAgentContext(auditScope.ProjectStructureLaunchAgent),
+                    auditScope.ProjectStructureProcessNodeContext);
         }
+
+        private static ProjectStructureNodeCreateInput NormalizeGovernedProcessCreateParent(
+            ProjectStructureAccessState accessState,
+            ProjectStructureNodeCreateInput request)
+        {
+            var parentNodeKey = NormalizeGovernedProcessCreateParent(accessState, request.ParentNodeKey);
+            return string.Equals(parentNodeKey, request.ParentNodeKey, StringComparison.Ordinal)
+                ? request
+                : request with { ParentNodeKey = parentNodeKey };
+        }
+
+        private static ProjectStructureAssetCreateInput NormalizeGovernedProcessCreateParent(
+            ProjectStructureAccessState accessState,
+            ProjectStructureAssetCreateInput request)
+        {
+            var parentNodeKey = NormalizeGovernedProcessCreateParent(accessState, request.ParentNodeKey);
+            return string.Equals(parentNodeKey, request.ParentNodeKey, StringComparison.Ordinal)
+                ? request
+                : request with { ParentNodeKey = parentNodeKey };
+        }
+
+        private static string? NormalizeGovernedProcessCreateParent(
+            ProjectStructureAccessState accessState,
+            string? requestedParentNodeKey)
+            => ProjectStructureProcessParentNodePolicy.NormalizeCreateParentNodeKey(
+                accessState.ScopedProcessAccess?.ProcessNodeContext,
+                requestedParentNodeKey);
 
         private static bool TryResolveScopedProcessProjectId(
             AgentRuntimeToolProviderContext context,
@@ -2327,7 +2361,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         string ProcessStepId,
         bool CanRead,
         bool CanWrite,
-        ProjectStructureAgentContext? AgentContext);
+        ProjectStructureAgentContext? AgentContext,
+        ProjectStructureProcessNodeContextDescriptor? ProcessNodeContext);
 
     private sealed record ProjectStructureResolvedScope(
         ProjectStructureLeaseScopeKind ScopeKind,

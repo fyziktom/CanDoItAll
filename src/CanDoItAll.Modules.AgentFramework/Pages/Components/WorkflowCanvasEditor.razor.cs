@@ -60,6 +60,12 @@ public partial class WorkflowCanvasEditor
     [Parameter]
     public IReadOnlyList<WorkflowProviderOption> ProviderOptions { get; set; } = [];
 
+    private IReadOnlyList<WorkflowProviderOption> ImageProviderOptions => ProviderOptions
+        .Where(option => option.Purpose == ProviderProfilePurpose.ImageGeneration)
+        .OrderByDescending(option => option.IsEnabled)
+        .ThenBy(option => option.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
     [Parameter]
     public EventCallback<WorkflowDefinition> DefinitionSaved { get; set; }
 
@@ -171,14 +177,14 @@ public partial class WorkflowCanvasEditor
         new()
         {
             Label = "Components",
-            Value = componentOptions.Count.ToString(),
-            Tone = "success"
+            Value = CountUsedComponents().ToString(),
+            Tone = "accent"
         },
         new()
         {
             Label = "Executors",
-            Value = executorDescriptors.Count(executor => executor.CanExecute).ToString(),
-            Tone = "info"
+            Value = CountUsedExecutors().ToString(),
+            Tone = "warning"
         },
         new()
         {
@@ -187,6 +193,12 @@ public partial class WorkflowCanvasEditor
             Tone = validationIssues.Count == 0 ? "success" : "warning"
         }
     ];
+
+    private int CountUsedComponents()
+        => document.Nodes.Count(node => node.ComponentId.HasValue);
+
+    private int CountUsedExecutors()
+        => document.Nodes.Count(node => node.ExecutorId.HasValue);
 
     protected override void OnParametersSet()
     {
@@ -2858,6 +2870,24 @@ public partial class WorkflowCanvasEditor
     {
         var label = $"{option.Name} - {option.Kind} - {option.Transport}";
         return option.IsEnabled ? label : $"{label} (disabled)";
+    }
+
+    private WorkflowProviderOption? ResolveImageProviderOption(Guid? providerProfileId)
+    {
+        return providerProfileId.HasValue
+            ? ImageProviderOptions.FirstOrDefault(option => option.ProviderProfileId == providerProfileId.Value)
+            : null;
+    }
+
+    private string BuildImageProviderOptionsSummary()
+    {
+        if (ImageProviderOptions.Count == 0)
+        {
+            return "No image-generation providers are available.";
+        }
+
+        var enabledCount = ImageProviderOptions.Count(option => option.IsEnabled);
+        return $"{enabledCount} enabled image provider(s) available.";
     }
 
     private void SyncNewComponentDefaults()

@@ -36,7 +36,8 @@ public static class WorkspaceExecutionAuditContext
             ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run),
             ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
             ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
-            ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run));
+            ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run),
+            ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run));
         return new Scope(previous);
     }
 
@@ -63,7 +64,8 @@ public static class WorkspaceExecutionAuditContext
         IReadOnlyList<string> ProcessStepAllowedOperations,
         string ProcessStepTargetScope,
         WorkspaceScopeDescriptor? ContextWorkspaceScope,
-        ProjectStructureAgentIdentityDescriptor? ProjectStructureLaunchAgent);
+        ProjectStructureAgentIdentityDescriptor? ProjectStructureLaunchAgent,
+        ProjectStructureProcessNodeContextDescriptor? ProjectStructureProcessNodeContext);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

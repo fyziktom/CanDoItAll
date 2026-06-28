@@ -153,6 +153,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ChatSessionRecord session,
         CancellationToken cancellationToken)
     {
+        if (store is ISandboxWorkspaceChatSessionStore chatSessionStore)
+        {
+            await chatSessionStore.UpdateChatSessionAsync(session, cancellationToken);
+            return;
+        }
+
         await PersistExecutionMutationAsync(new ExecutionStateMutation(Session: session), cancellationToken);
     }
 
@@ -220,6 +226,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentStructuredOutputContract? structuredOutput,
         CancellationToken cancellationToken)
     {
+        if (store is ISandboxWorkspaceExecutionRunStore executionRunStore &&
+            store is ISandboxWorkspaceChatQueryStore chatQueryStore)
+        {
+            return await BeginChatBackedRunWithSplitStoreAsync(
+                executionRunStore,
+                chatQueryStore,
+                agentId,
+                provider,
+                chatSessionId,
+                prompt,
+                context,
+                autoApprovePendingToolCalls,
+                structuredOutput,
+                cancellationToken);
+        }
+
         PreparedExecutionRunStart? prepared = null;
 
         await store.UpdateWorkspaceAsync(document =>
@@ -287,6 +309,93 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }, cancellationToken);
 
         return prepared ?? throw new InvalidOperationException("Chat-backed execution run start could not be prepared.");
+    }
+
+    private async Task<PreparedExecutionRunStart> BeginChatBackedRunWithSplitStoreAsync(
+        ISandboxWorkspaceExecutionRunStore executionRunStore,
+        ISandboxWorkspaceChatQueryStore chatQueryStore,
+        Guid agentId,
+        ProviderProfile provider,
+        Guid? chatSessionId,
+        string prompt,
+        ExecutionInvocationContext context,
+        bool autoApprovePendingToolCalls,
+        AgentStructuredOutputContract? structuredOutput,
+        CancellationToken cancellationToken)
+    {
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        var agent = EnsureAgentExists(catalog, agentId);
+        if (agent.ProviderProfileId != provider.Id)
+        {
+            throw new InvalidOperationException("The selected agent does not have a provider profile.");
+        }
+
+        var existingSession = chatSessionId.HasValue
+            ? EnsureAgentOwnsSession(
+                await chatQueryStore.GetChatSessionAsync(chatSessionId.Value, cancellationToken),
+                agentId,
+                chatSessionId.Value)
+            : null;
+
+        if (existingSession is not null &&
+            await TryGetBlockingSessionRunAsync(
+                executionRunStore,
+                chatQueryStore,
+                agentId,
+                existingSession,
+                cancellationToken) is { } blockingRun)
+        {
+            throw new InvalidOperationException(DescribeSessionBusyMessage(blockingRun));
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var userMessage = new ChatMessageRecord(
+            Id: Guid.NewGuid(),
+            Role: ChatMessageRole.User,
+            Content: prompt,
+            CreatedAtUtc: now,
+            TokenEstimate: EstimateTokens(prompt));
+        var session = existingSession ?? new ChatSessionRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agentId,
+            Title: CreateSessionTitle(prompt),
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            Messages: [],
+            PendingApprovals: []);
+        var run = CreatePreparingRun(agent, provider, session.Id, session.Title, context, prompt, now, autoApprovePendingToolCalls, structuredOutput);
+        var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+            session with
+            {
+                Title = string.IsNullOrWhiteSpace(session.Title) ? CreateSessionTitle(prompt) : session.Title,
+                UpdatedAtUtc = now,
+                Messages = session.Messages.Append(userMessage).ToList()
+            },
+            now,
+            run.Id);
+
+        var persistedDetail = await executionRunStore.SaveExecutionRunDetailAsync(
+            CreateExecutionRunDetail(
+                run,
+                updatedSession,
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []),
+            cancellationToken);
+
+        return new PreparedExecutionRunStart(
+            catalog,
+            agent,
+            provider,
+            persistedDetail.ChatSession ?? updatedSession,
+            persistedDetail.Run,
+            userMessage);
     }
 
     private static string CreateSessionTitle(string prompt)
@@ -430,6 +539,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentDefinition agent,
         ProviderProfile provider)
     {
+        if (agent.ProviderProfileId.HasValue &&
+            agent.ProviderProfileId.Value != provider.Id &&
+            !string.IsNullOrWhiteSpace(provider.DefaultModel))
+        {
+            return provider.DefaultModel;
+        }
+
         return ManagedSeedProviderFallbacks.ResolveModel(
             agent,
             provider,
@@ -728,6 +844,38 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return blockingRun is not null;
     }
 
+    private static async Task<ExecutionRunRecord?> TryGetBlockingSessionRunAsync(
+        ISandboxWorkspaceExecutionRunStore executionRunStore,
+        ISandboxWorkspaceChatQueryStore chatQueryStore,
+        Guid agentId,
+        ChatSessionRecord session,
+        CancellationToken cancellationToken)
+    {
+        if (session.LatestExecutionRunId.HasValue)
+        {
+            var latestRun = await executionRunStore.GetExecutionRunAsync(session.LatestExecutionRunId.Value, cancellationToken);
+            if (latestRun is not null && ExecutionRunBlocksSession(latestRun))
+            {
+                return latestRun;
+            }
+        }
+
+        var summaries = await chatQueryStore.ListChatRunSummariesAsync(agentId, session.Id, cancellationToken);
+        var blockingSummary = summaries
+            .Where(item => item.ChatSessionId == session.Id && ExecutionRunBlocksSession(item.State))
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .FirstOrDefault();
+        if (blockingSummary is null)
+        {
+            return null;
+        }
+
+        var blockingRun = await executionRunStore.GetExecutionRunAsync(blockingSummary.ExecutionRunId, cancellationToken);
+        return blockingRun is not null && ExecutionRunBlocksSession(blockingRun)
+            ? blockingRun
+            : null;
+    }
+
     private static string DescribeSessionBusyMessage(
         SandboxWorkspaceExecutionState executionState,
         ChatSessionRecord session)
@@ -742,7 +890,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             : "This session already has an active execution run. Wait for it to finish before sending a new prompt.";
     }
 
+    private static string DescribeSessionBusyMessage(ExecutionRunRecord blockingRun)
+    {
+        return blockingRun.PendingApprovals.Count > 0 || blockingRun.State == ExecutionState.WaitingOnTool
+            ? "This session has pending tool approvals. Approve or reject them before sending a new prompt."
+            : "This session already has an active execution run. Wait for it to finish before sending a new prompt.";
+    }
+
     private static bool ExecutionRunBlocksSession(ExecutionRunRecord run)
-        => run.PendingApprovals.Count > 0
-           || run.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting;
+        => run.PendingApprovals.Count > 0 || ExecutionRunBlocksSession(run.State);
+
+    private static bool ExecutionRunBlocksSession(ExecutionState state)
+        => state is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting;
 }

@@ -1,4 +1,0 @@
-Testovací běh pro C:\programovani\dotnet\output\tests\TetrisGame.Tests\bin\Debug\net10.0\TetrisGame.Tests.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     8, Přeskočeno:     0, Celkem:     8, Doba trvání: 29 ms - TetrisGame.Tests.dll (net10.0)

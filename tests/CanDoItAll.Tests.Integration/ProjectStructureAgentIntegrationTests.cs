@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
@@ -40,6 +41,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         DefaultAgent.RepositoryRoot,
         DefaultAgent.BranchName,
         DefaultAgent.SessionId);
+    private const string LiveComfyUiFluxProofVariable = "CANDOITALL_RUN_LIVE_COMFYUI_FLUX_PROOF";
+    private const string LiveComfyUiFluxProofDirectoryVariable = "CANDOITALL_LIVE_COMFYUI_FLUX_PROOF_DIR";
 
     [Fact]
     public async Task LeaseService_AcquireAsync_reports_conflict_details_for_other_agents()
@@ -363,11 +366,15 @@ public sealed class ProjectStructureAgentIntegrationTests
         var assignment = Assert.Single(assignments, item => item.StepKey == "feature-intake");
         var currentRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId.Value);
         var currentArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(result.RunId.Value));
+        var outputRootAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot);
         Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
         Assert.Equal(deliveryNode.Title, assignment.LaunchVariables["ProjectNodeTitle"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["ProductRoot"]);
-        Assert.Equal(outputRoot, assignment.LaunchVariables["ExternalTargetRoot"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["ExternalTargetRoot"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["OutputRootAlias"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["ProductRootAlias"]);
+        Assert.Equal(outputRootAlias, assignment.LaunchVariables["WorkspaceAlias"]);
         Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["CurrentProcessRunId"]);
         Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["ProcessRunId"]);
         Assert.Equal(result.RunId.Value.ToString("D"), assignment.LaunchVariables["processRunId"]);
@@ -431,7 +438,50 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
-    public async Task ProcessLaunchApplicationService_LaunchAsync_projects_run_and_managed_artifact_folder_without_seed_link()
+    public async Task ProcessLaunchApplicationService_LaunchAsync_normalizes_output_folder_to_product_root_variables()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
+        var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+
+        var projectId = await CreateProjectAsync(projects, "Direct output folder launch");
+        const string outputFolder = @"C:\temp\CanDoItAll\OutputFolderOnly";
+
+        var result = await launchService.LaunchAsync(
+            new ProcessLaunchRequest(
+                DefinitionKey: "software-delivery",
+                ProcessDefinitionId: null,
+                LiveRunProfileKey: null,
+                projectId,
+                ProjectNodeId: null,
+                RequestedBy: "integration-test",
+                Variables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["OutputFolder"] = outputFolder
+                },
+                RunReadiness: false,
+                Execute: false));
+
+        Assert.True(result.RunId.HasValue);
+        var assignments = await assignmentStore.LoadByRunAsync(result.RunId.Value);
+        Assert.NotEmpty(assignments);
+        var outputFolderAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputFolder);
+        Assert.All(assignments, assignment =>
+        {
+            Assert.Equal(outputFolder, assignment.LaunchVariables["OutputFolder"]);
+            Assert.Equal(outputFolder, assignment.LaunchVariables["OutputRoot"]);
+            Assert.Equal(outputFolder, assignment.LaunchVariables["ProductRoot"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["ExternalTargetRoot"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["OutputRootAlias"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["ProductRootAlias"]);
+            Assert.Equal(outputFolderAlias, assignment.LaunchVariables["WorkspaceAlias"]);
+        });
+    }
+
+    [Fact]
+    public async Task ProcessLaunchApplicationService_LaunchAsync_projects_run_evidence_and_runtime_nodes_without_seed_link()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -440,6 +490,29 @@ public sealed class ProjectStructureAgentIntegrationTests
         var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
 
         var projectId = await CreateProjectAsync(projects, "Direct project scoped process projection");
+        var productRoot = Path.Combine(application.ActiveProfile.WorkspaceRootPath, "external-output", Guid.NewGuid().ToString("N"));
+        var appProjectPath = Path.Combine(productRoot, "src", "TetrisGame", "TetrisGame.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(appProjectPath)!);
+        await File.WriteAllTextAsync(
+            appProjectPath,
+            """
+            <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
+        var testProjectPath = Path.Combine(productRoot, "tests", "TetrisGame.Tests", "TetrisGame.Tests.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(testProjectPath)!);
+        await File.WriteAllTextAsync(
+            testProjectPath,
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
         var deliveryNode = await workbench.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -462,7 +535,11 @@ public sealed class ProjectStructureAgentIntegrationTests
                 projectId,
                 deliveryNode.Id,
                 RequestedBy: "integration-test",
-                Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+                Variables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["ProductRoot"] = productRoot,
+                    ["OutputRoot"] = productRoot
+                },
                 RunReadiness: false,
                 Execute: false));
 
@@ -471,6 +548,12 @@ public sealed class ProjectStructureAgentIntegrationTests
         var runNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId.Value);
         var managedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(runId);
         var outputNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId.Value, managedArtifactRoot);
+        var screenshotRelativePath = $"{managedArtifactRoot}/browser/desktop.png";
+        var screenshotFullPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, screenshotRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(screenshotFullPath)!);
+        await File.WriteAllBytesAsync(
+            screenshotFullPath,
+            Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="));
 
         var surface = await workbench.GetStructureAsync(projectId);
         var runNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
@@ -483,10 +566,39 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("process-run-output-folder", outputNode.ArtifactKind);
         Assert.Equal(runId.Value, outputNode.ArtifactId);
         Assert.Contains(managedArtifactRoot, outputNode.Notes, StringComparison.Ordinal);
+        var summaryNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(runId.Value), StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.Note, summaryNode.ObjectType);
+        Assert.Equal("process-summary", summaryNode.ObjectSubtype);
+        Assert.Equal(runNodeId, summaryNode.ParentId);
+        Assert.Equal("process-run-summary", summaryNode.ArtifactKind);
+        Assert.Contains("Projected process run summary.", summaryNode.Notes, StringComparison.Ordinal);
+        var screenshotNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(runId.Value, screenshotRelativePath);
+        var screenshotNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, screenshotNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ImageAsset, screenshotNode.ObjectType);
+        Assert.Equal("screenshot", screenshotNode.ObjectSubtype);
+        Assert.Equal(runNodeId, screenshotNode.ParentId);
+        Assert.Equal("process-run-screenshot", screenshotNode.ArtifactKind);
+        Assert.Equal(screenshotRelativePath, screenshotNode.MediaRelativePath);
+        Assert.Equal("image/png", screenshotNode.MediaContentType);
+        Assert.False(string.IsNullOrWhiteSpace(screenshotNode.StorageObjectReferenceJson));
+        var runtimeNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunRuntimeNodeKey(runId.Value, appProjectPath);
+        var runtimeNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, runtimeNodeId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.Environment, runtimeNode.ObjectType);
+        Assert.Equal("dotnet-watch", runtimeNode.ObjectSubtype);
+        Assert.Equal(runNodeId, runtimeNode.ParentId);
+        Assert.Equal("process-run-runtime", runtimeNode.ArtifactKind);
+        Assert.Contains(appProjectPath, runtimeNode.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain(testProjectPath, runtimeNode.Notes, StringComparison.Ordinal);
+        var runtimeMetadata = ProjectObjectMetadataSerializer.Parse(runtimeNode.MetadataJson);
+        Assert.Equal(ProjectEnvironmentKind.DotNetWatch, runtimeMetadata.Environment?.EnvironmentKind);
+        Assert.Equal(appProjectPath, runtimeMetadata.Environment?.ProjectPath);
 
         var refreshedSurface = await workbench.GetStructureAsync(projectId);
         Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
         Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, outputNodeId, StringComparison.Ordinal));
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, summaryNode.Id, StringComparison.Ordinal));
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, screenshotNodeId, StringComparison.Ordinal));
+        Assert.Single(refreshedSurface.Nodes, node => string.Equals(node.Id, runtimeNodeId, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -801,6 +913,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("AppTemplate: blazorwasm", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("AllowedTemplateSwitches: --pwa", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("WorkspaceAlias: external-target/C/temp/CanDoItAll/TetrisGame", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("StructuredWorkspacePathRule: use WorkspaceAlias or external-target/... aliases in workspace_* tool path arguments", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("ExistingScaffoldRule: existing files are not enough", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("PackageRule: do not add PackageReference Include=\"Microsoft.AspNetCore.Components.WebAssembly.PWA\"", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("BlazorWasmTemplateIntegrityRule: Program.cs, App.razor, and _Imports.razor", classifyAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
@@ -1208,7 +1322,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("xunit", scaffoldAssignment.LaunchVariables["DotNetTestTemplate"]);
         Assert.Equal("xUnit", scaffoldAssignment.LaunchVariables["DotNetTestFrameworkPreference"]);
         Assert.Equal("net10.0", scaffoldAssignment.LaunchVariables["DotNetTargetFramework"]);
+        Assert.Equal("external-target/C/temp/CanDoItAll/TetrisGame", scaffoldAssignment.LaunchVariables["DotNetWorkspaceAlias"]);
         Assert.Contains("SolutionName: TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("WorkspaceAlias: external-target/C/temp/CanDoItAll/TetrisGame", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
+        Assert.Contains("StructuredWorkspacePathRule: use WorkspaceAlias or external-target/... aliases in workspace_* tool path arguments", scaffoldAssignment.LaunchVariables["DotNetScaffoldContract"], StringComparison.Ordinal);
         Assert.Contains("AppTemplate: blazorwasm", scaffoldAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("AllowedTemplateSwitches: --pwa", scaffoldAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ScaffoldToolContract: use workspace_dotnet_new with template 'blazorwasm --pwa'", scaffoldAssignment.Prompt, StringComparison.Ordinal);
@@ -2070,6 +2187,94 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "LiveComfyUi")]
+    public async Task AgentService_CreateAssetAsync_stores_live_comfyui_flux_generated_image()
+    {
+        if (!IsLiveComfyUiFluxProofEnabled())
+        {
+            return;
+        }
+
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var imageGenerationService = scope.ServiceProvider.GetRequiredService<IAgentImageGenerationService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var providers = await workspaceService.ListProvidersAsync();
+        var provider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.ComfyUi &&
+                    item.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                    string.Equals(item.Name, ComfyUiFluxProviderDefaults.ProviderName, StringComparison.Ordinal));
+        var projectId = await CreateProjectAsync(projects, "Live ComfyUI Flux project asset proof");
+        var prompt = "A compact CanDoItAll project board with a generated image asset card, crisp product illustration, no text.";
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+        var generated = await imageGenerationService.GenerateAsync(
+            new AgentImageGenerationRequest(
+                provider,
+                provider.DefaultModel,
+                prompt,
+                "1024x1024",
+                "low",
+                AgentGeneratedImageFormat.Png,
+                []),
+            timeout.Token);
+        var image = Assert.Single(generated.Images);
+
+        Assert.NotEmpty(image.Bytes);
+        Assert.Equal(ComfyUiFluxProviderDefaults.DefaultModel, generated.Model);
+
+        var created = await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.ImageAsset,
+                "Live ComfyUI Flux proof",
+                "Generated by the local ComfyUI Flux provider",
+                prompt,
+                new ProjectObjectMediaPayload(
+                    "live-comfyui-flux-proof.png",
+                    "image/png",
+                    Convert.ToBase64String(image.Bytes)),
+                $"project:{projectId:D}",
+                "generated",
+                JsonSerializer.Serialize(new
+                {
+                    providerId = provider.Id,
+                    providerName = provider.Name,
+                    model = generated.Model,
+                    source = "IAgentImageGenerationService"
+                })),
+            DefaultAgent,
+            timeout.Token);
+        var asset = await agentService.GetAssetAsync(projectId, created.Id, timeout.Token);
+        var content = await agentService.GetAssetContentAsync(projectId, created.Id, timeout.Token);
+        var storedBytes = Convert.FromBase64String(content.Base64Data);
+        var generatedHash = Convert.ToHexString(SHA256.HashData(image.Bytes));
+        var storedHash = Convert.ToHexString(SHA256.HashData(storedBytes));
+
+        Assert.Equal(ProjectObjectType.ImageAsset, asset.ObjectType);
+        Assert.Equal("generated", asset.ObjectSubtype);
+        Assert.Equal("image/png", asset.MediaContentType);
+        Assert.Equal("live-comfyui-flux-proof.png", asset.MediaOriginalFileName);
+        Assert.Equal(image.Bytes.Length, content.ContentLength);
+        Assert.Equal(generatedHash, storedHash);
+        Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }, storedBytes.Take(8).ToArray());
+
+        await WriteLiveComfyUiFluxProofAsync(
+            provider,
+            projectId,
+            asset,
+            prompt,
+            generated.Model,
+            storedHash,
+            storedBytes,
+            timeout.Token);
+    }
+
+    [Fact]
     public async Task AgentService_CreateAssetAsync_accepts_external_source_url()
     {
         var pdfBytes = Encoding.UTF8.GetBytes("%PDF-1.7 external brochure");
@@ -2526,6 +2731,60 @@ public sealed class ProjectStructureAgentIntegrationTests
         }
 
         return stream.ToArray();
+    }
+
+    private static bool IsLiveComfyUiFluxProofEnabled()
+    {
+        return string.Equals(
+            Environment.GetEnvironmentVariable(LiveComfyUiFluxProofVariable),
+            "1",
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task WriteLiveComfyUiFluxProofAsync(
+        ProviderProfile provider,
+        Guid projectId,
+        ProjectStructureAssetDescriptor asset,
+        string prompt,
+        string model,
+        string storedHash,
+        byte[] storedBytes,
+        CancellationToken cancellationToken)
+    {
+        var configuredProofDirectory = Environment.GetEnvironmentVariable(LiveComfyUiFluxProofDirectoryVariable);
+        if (string.IsNullOrWhiteSpace(configuredProofDirectory))
+        {
+            return;
+        }
+
+        var proofDirectory = Path.GetFullPath(configuredProofDirectory);
+        Directory.CreateDirectory(proofDirectory);
+        var imagePath = Path.Combine(proofDirectory, "project-structure-live-comfyui-flux.png");
+        var summaryPath = Path.Combine(proofDirectory, "project-structure-live-comfyui-flux-summary.json");
+        await File.WriteAllBytesAsync(imagePath, storedBytes, cancellationToken);
+        await File.WriteAllTextAsync(
+            summaryPath,
+            JsonSerializer.Serialize(
+                new
+                {
+                    provider.Id,
+                    ProviderName = provider.Name,
+                    ProjectId = projectId,
+                    asset.NodeId,
+                    asset.Title,
+                    asset.ObjectType,
+                    asset.ObjectSubtype,
+                    asset.MediaContentType,
+                    asset.MediaOriginalFileName,
+                    asset.MediaRelativePath,
+                    Model = model,
+                    Prompt = prompt,
+                    ContentLength = storedBytes.LongLength,
+                    Sha256 = storedHash,
+                    ImagePath = imagePath
+                },
+                new JsonSerializerOptions { WriteIndented = true }),
+            cancellationToken);
     }
 
     private static void WriteParagraph(StreamWriter writer, string style, string text)

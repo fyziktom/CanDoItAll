@@ -1,9 +1,0 @@
-Command:
-rg -n "ProcessStartInfo|FileName\s*=\s*\"git\"|DefaultGitCommandExecutor|IGitCommandExecutor|new GitCommandSpec" src/CanDoItAll.Processes.Drivers.Standard src/CanDoItAll.Processes.Drivers.Abstractions src/CanDoItAll.Processes.Application/ProcessAdapterMutationAudit.cs -g"*.cs" -g"*.csproj"
-
-ExitCode: 2
-Result:
-rg: regex parse error:
-    (?:ProcessStartInfo|FileName\s*=\s*\)
-    ^
-error: unclosed group

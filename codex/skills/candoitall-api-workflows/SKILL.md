@@ -30,7 +30,7 @@ Use this skill when a task needs workflow authoring, lifecycle control, runtime 
 - Start runs: `POST /api/workflows/runs/start` or `POST /api/workflows/definitions/{workflowId}/runs/start`.
 - Observe runs: `GET /api/workflows/runs`, `GET /api/workflows/runs/page`, `GET /api/workflows/runs/{runId}`, `GET /api/workflows/runs/{runId}/detail`.
 - Cancel runs: `POST /api/workflows/runs/{runId}/cancel`.
-- Events and artifacts: `GET /api/workflows/runs/{runId}/events`, `GET /api/workflows/runs/{runId}/events/page`, `GET /api/workflows/runs/{runId}/artifacts`.
+- Events, checkpoints, and artifacts: `GET /api/workflows/runs/{runId}/events`, `GET /api/workflows/runs/{runId}/events/page`, `GET /api/workflows/runs/{runId}/checkpoints`, and `GET /api/workflows/runs/{runId}/artifacts`.
 - Artifact content: `GET /api/workflows/runs/{runId}/artifacts/{artifactId}/content`.
 - Human or external input: `GET /api/workflows/runs/{runId}/pending-requests`, `POST /api/workflows/external-requests/{requestId}/response`.
 - Analytics: `GET /api/workflows/analytics`.

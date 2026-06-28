@@ -17,7 +17,25 @@ public interface IWorkspaceArtifactToolService
         int previewCharacters = 4000);
 
     Task<WorkspaceImageInspectionResult> InspectImageFile(string path);
+
+    Task<WorkspaceImageContentResult> ReadImageFile(
+        string path,
+        long maxBytes = 10 * 1024 * 1024,
+        string operationName = "workspace_analyze_image");
 }
+
+public sealed record WorkspaceImageContentResult(
+    bool Succeeded,
+    string Message,
+    WorkspaceToolReceipt Receipt,
+    string Path,
+    string Format,
+    string ContentType,
+    long SizeBytes,
+    int? Width,
+    int? Height,
+    byte[] Bytes,
+    string Diagnostics);
 
 public sealed class WorkspaceArtifactToolService(
     string workspaceRoot,
@@ -166,6 +184,136 @@ public sealed class WorkspaceArtifactToolService(
             targetPaths: [resolution.RelativePath]));
     }
 
+    public Task<WorkspaceImageContentResult> ReadImageFile(
+        string path,
+        long maxBytes = 10 * 1024 * 1024,
+        string operationName = "workspace_analyze_image")
+    {
+        var startedAtUtc = DateTimeOffset.UtcNow;
+        var normalizedOperationName = string.IsNullOrWhiteSpace(operationName)
+            ? "workspace_analyze_image"
+            : operationName.Trim();
+        if (!pathPolicy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out var resolution, out var validationMessage))
+        {
+            return Task.FromResult(CreateImageContentResult(
+                normalizedOperationName,
+                succeeded: false,
+                outcome: "Denied",
+                message: validationMessage,
+                path,
+                format: string.Empty,
+                contentType: string.Empty,
+                sizeBytes: 0,
+                width: null,
+                height: null,
+                bytes: [],
+                diagnostics: validationMessage,
+                startedAtUtc,
+                targetPaths: [path]));
+        }
+
+        if (!File.Exists(resolution.FullPath))
+        {
+            var missingMessage = $"Image file '{resolution.DisplayPath}' was not found.";
+            return Task.FromResult(CreateImageContentResult(
+                normalizedOperationName,
+                succeeded: false,
+                outcome: "Failed",
+                missingMessage,
+                resolution.RelativePath,
+                format: string.Empty,
+                contentType: string.Empty,
+                sizeBytes: 0,
+                width: null,
+                height: null,
+                bytes: [],
+                diagnostics: missingMessage,
+                startedAtUtc,
+                targetPaths: [resolution.RelativePath]));
+        }
+
+        var info = new FileInfo(resolution.FullPath);
+        if (info.Length > maxBytes)
+        {
+            var sizeMessage = $"Image file '{resolution.RelativePath}' is {info.Length:N0} bytes, which exceeds the {maxBytes:N0}-byte analysis limit.";
+            return Task.FromResult(CreateImageContentResult(
+                normalizedOperationName,
+                succeeded: false,
+                outcome: "Failed",
+                sizeMessage,
+                resolution.RelativePath,
+                format: string.Empty,
+                contentType: string.Empty,
+                sizeBytes: info.Length,
+                width: null,
+                height: null,
+                bytes: [],
+                diagnostics: sizeMessage,
+                startedAtUtc,
+                targetPaths: [resolution.RelativePath]));
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = File.ReadAllBytes(resolution.FullPath);
+        }
+        catch (IOException exception)
+        {
+            return Task.FromResult(CreateImageContentResult(
+                normalizedOperationName,
+                succeeded: false,
+                outcome: "Failed",
+                message: exception.Message,
+                resolution.RelativePath,
+                format: string.Empty,
+                contentType: string.Empty,
+                sizeBytes: 0,
+                width: null,
+                height: null,
+                bytes: [],
+                diagnostics: exception.Message,
+                startedAtUtc,
+                targetPaths: [resolution.RelativePath]));
+        }
+
+        if (!TryReadImageMetadata(bytes, out var metadata, out var diagnostics))
+        {
+            return Task.FromResult(CreateImageContentResult(
+                normalizedOperationName,
+                succeeded: false,
+                outcome: "Failed",
+                message: diagnostics,
+                resolution.RelativePath,
+                metadata.Format,
+                metadata.ContentType,
+                bytes.LongLength,
+                metadata.Width,
+                metadata.Height,
+                bytes: [],
+                diagnostics,
+                startedAtUtc,
+                targetPaths: [resolution.RelativePath]));
+        }
+
+        var successMessage = $"{metadata.Format} image {metadata.Width}x{metadata.Height}, {bytes.LongLength} bytes loaded for analysis.";
+        return Task.FromResult(CreateImageContentResult(
+            normalizedOperationName,
+            succeeded: true,
+            outcome: "Succeeded",
+            successMessage,
+            resolution.RelativePath,
+            metadata.Format,
+            metadata.ContentType,
+            bytes.LongLength,
+            metadata.Width,
+            metadata.Height,
+            bytes,
+            diagnostics: string.Empty,
+            startedAtUtc,
+            targetPaths: [resolution.RelativePath]));
+    }
+
     private (string Content, bool Truncated) ReadPreview(string relativePath, int maxCharacters)
     {
         if (!pathPolicy.TryResolveWorkspacePath(relativePath, allowWorkspaceRoot: false, out var resolution, out _)
@@ -247,6 +395,46 @@ public sealed class WorkspaceArtifactToolService(
             SizeBytes: sizeBytes,
             Width: width,
             Height: height,
+            Diagnostics: diagnostics);
+    }
+
+    private WorkspaceImageContentResult CreateImageContentResult(
+        string operationName,
+        bool succeeded,
+        string outcome,
+        string message,
+        string path,
+        string format,
+        string contentType,
+        long sizeBytes,
+        int? width,
+        int? height,
+        byte[] bytes,
+        string diagnostics,
+        DateTimeOffset startedAtUtc,
+        IReadOnlyList<string> targetPaths)
+    {
+        var receipt = receiptWriter.CreateReceipt(
+            operationName,
+            mutatesWorkspace: false,
+            outcome,
+            message,
+            receiptRelativePath: string.Empty,
+            targetPaths,
+            artifactReferences: [],
+            startedAtUtc);
+
+        return new WorkspaceImageContentResult(
+            Succeeded: succeeded,
+            Message: message,
+            Receipt: receipt,
+            Path: path,
+            Format: format,
+            ContentType: contentType,
+            SizeBytes: sizeBytes,
+            Width: width,
+            Height: height,
+            Bytes: bytes,
             Diagnostics: diagnostics);
     }
 

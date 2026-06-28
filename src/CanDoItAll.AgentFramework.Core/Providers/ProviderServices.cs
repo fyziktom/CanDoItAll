@@ -10,6 +10,22 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed class ProviderProfileService : IProviderProfileService
 {
     private const string GitHubCopilotRecommendation = "Deferred in remediation-bundle-v3. Keep GitHub Copilot as a future provider extension seam until package/runtime/credential proof exists inside this repository.";
+    private const string SupportsVisionConfigurationKey = "supportsVision";
+    private const string VisionTag = "vision";
+    private const string MultimodalTag = "multimodal";
+
+    private static readonly IReadOnlySet<string> OllamaVisionModelPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "bakllava",
+        "gemma3",
+        "gemma4",
+        "llama3.2-vision",
+        "llava",
+        "minicpm",
+        "minicpm-v",
+        "moondream",
+        "qwen3.5"
+    };
 
     public ProviderProfileEditorModel CreateEditor(ProviderProfile? provider = null)
     {
@@ -138,7 +154,7 @@ public sealed class ProviderProfileService : IProviderProfileService
         });
     }
 
-    public ProviderProfile ApplyOllamaModelResult(ProviderProfile provider, OllamaModelfileResult result, DateTimeOffset checkedAtUtc)
+    public ProviderProfile ApplyProviderModelMaintenanceResult(ProviderProfile provider, ProviderModelMaintenanceEditorResult result, DateTimeOffset checkedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(result);
@@ -170,6 +186,31 @@ public sealed class ProviderProfileService : IProviderProfileService
     {
         ArgumentNullException.ThrowIfNull(provider);
 
+        return ResolveFeatureMatrixCore(provider, requireSelectedModelMatch: false);
+    }
+
+    public ProviderFeatureMatrix ResolveFeatureMatrixForModel(ProviderProfile provider, string? model)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        var normalizedProvider = NormalizeImportedProfile(provider);
+        var normalizedModel = NormalizeText(model);
+        if (string.IsNullOrWhiteSpace(normalizedModel))
+        {
+            return ResolveFeatureMatrix(normalizedProvider);
+        }
+
+        return ResolveFeatureMatrixCore(normalizedProvider with
+        {
+            DefaultModel = normalizedModel,
+            SuggestedModels = [normalizedModel]
+        }, requireSelectedModelMatch: true);
+    }
+
+    private ProviderFeatureMatrix ResolveFeatureMatrixCore(
+        ProviderProfile provider,
+        bool requireSelectedModelMatch)
+    {
         var normalizedProvider = NormalizeImportedProfile(provider);
         var supportsOpenAiFamily = normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
         var supportsResponsesNativeTools = normalizedProvider.SupportsTools
@@ -185,6 +226,7 @@ public sealed class ProviderProfileService : IProviderProfileService
         var supportsToolApprovalRequests = supportsOpenAiFamily &&
                                            normalizedProvider.SupportsTools &&
                                            normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
+        var supportsVision = supportsOpenAiFamily || SupportsConfiguredVision(normalizedProvider, requireSelectedModelMatch);
 
         return new ProviderFeatureMatrix(
             Kind: normalizedProvider.Kind,
@@ -202,7 +244,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsHostedMcpServer: supportsResponsesNativeTools,
             SupportsLocalMcpBridge: normalizedProvider.SupportsTools,
             SupportsServiceManagedHistory: supportsServiceManagedHistory,
-            SupportsVision: supportsOpenAiFamily,
+            SupportsVision: supportsVision,
             SupportsCompaction: supportsOpenAiFamily,
             GitHubCopilotRecommendation: GitHubCopilotRecommendation,
             SupportsFunctionTools: supportsFunctionTools,
@@ -214,6 +256,94 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsHostedMcp: supportsResponsesNativeTools,
             SupportsLocalMcp: normalizedProvider.SupportsTools,
             SupportsImageGeneration: normalizedProvider.Purpose == ProviderProfilePurpose.ImageGeneration);
+    }
+
+    private static bool SupportsConfiguredVision(
+        ProviderProfile provider,
+        bool requireSelectedModelMatch)
+    {
+        if (provider.Kind == ProviderKind.Ollama)
+        {
+            var hasVisionModel = IsOllamaVisionModel(provider.DefaultModel) ||
+                                 provider.SuggestedModels.Any(IsOllamaVisionModel);
+            if (requireSelectedModelMatch)
+            {
+                return hasVisionModel;
+            }
+
+            if (hasVisionModel)
+            {
+                return true;
+            }
+        }
+
+        if (provider.Tags.Any(tag =>
+                string.Equals(tag, VisionTag, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(tag, MultimodalTag, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (TryReadConfigurationBoolean(provider.ConfigurationJson, SupportsVisionConfigurationKey, out var configuredSupportsVision) &&
+            configuredSupportsVision)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsOllamaVisionModel(string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return false;
+        }
+
+        var normalized = model.Trim();
+        return OllamaVisionModelPrefixes.Any(prefix =>
+            normalized.Equals(prefix, StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith(prefix + ":", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool TryReadConfigurationBoolean(
+        string? configurationJson,
+        string propertyName,
+        out bool value)
+    {
+        value = false;
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            if (!document.RootElement.TryGetProperty(propertyName, out var property))
+            {
+                return false;
+            }
+
+            switch (property.ValueKind)
+            {
+                case JsonValueKind.True:
+                    value = true;
+                    return true;
+                case JsonValueKind.False:
+                    value = false;
+                    return true;
+                case JsonValueKind.String:
+                    return bool.TryParse(property.GetString(), out value);
+                default:
+                    return false;
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     public ProviderFeatureSupportResult GetNativeToolSupport(ProviderProfile provider, ProviderNativeToolFamily family)
@@ -406,12 +536,12 @@ public sealed class ProviderDiagnosticsService(IAgentRuntime runtime) : IProvide
         return runtime.RunProviderTestChatAsync(provider, request, cancellationToken);
     }
 
-    public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
         ProviderProfile provider,
-        OllamaModelfileRequest request,
+        ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
-        return runtime.CreateOrUpdateOllamaModelAsync(provider, request, cancellationToken);
+        return runtime.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
     }
 }
 

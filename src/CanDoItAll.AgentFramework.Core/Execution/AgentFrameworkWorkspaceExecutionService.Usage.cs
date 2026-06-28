@@ -122,7 +122,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private static bool HasRuntimeUsageObservation(IReadOnlyList<ProviderUsageObservation> observations)
     {
         return observations.Any(observation =>
-            !string.Equals(observation.SourcePhase, ProviderUsageSourcePhases.StructuredOutputRepair, StringComparison.OrdinalIgnoreCase));
+            !string.Equals(observation.SourcePhase, ProviderUsageSourcePhases.StructuredOutputRepair, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(observation.SourcePhase, ProviderUsageSourcePhases.InputAttachmentAnalysis, StringComparison.OrdinalIgnoreCase));
     }
 
     private static ProviderUsageObservation CreateObservationFromMetric(

@@ -346,6 +346,23 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         Assert.Contains(actions, action => action.ActionId == "add-workflow");
     }
 
+    [Fact]
+    public void Image_asset_context_actions_expose_generated_image_create_action()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("image-asset", ProjectObjectType.ImageAsset, "Image asset", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node);
+        var assetsGroup = FindAction(actions, "group-assets");
+
+        var generateAction = Assert.Single(
+            assetsGroup.Children,
+            action => action.ActionId == "generate-image-asset");
+        Assert.Equal("Generate image", generateAction.Label);
+        Assert.Equal("Generate", generateAction.MenuLabel);
+        Assert.Equal("auto_awesome", generateAction.Icon);
+    }
+
     private static ProjectStructureNode CreateNode(
         string id,
         ProjectObjectType objectType,

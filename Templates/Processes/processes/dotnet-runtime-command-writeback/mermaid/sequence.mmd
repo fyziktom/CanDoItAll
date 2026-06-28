@@ -1,8 +1,0 @@
-sequenceDiagram
-    participant Parent
-    participant Recorder
-    participant ProjectStructure
-    Parent->>Recorder: Accepted QA and architecture evidence
-    Recorder->>ProjectStructure: Create Run command, Run app, Run tests
-    ProjectStructure-->>Recorder: Node receipts
-    Recorder-->>Parent: Runtime command handoff

@@ -1,6 +1,0 @@
-Command:
-rg -n "ProcessRuntimeStateSnapshot|ProcessRuntimeStepState|IProcessRuntimeUnitOfWork|IProcessRuntimeStateStore|DbContext|SaveChanges|Status\s*=" src/CanDoItAll.Processes.Application -g"ProcessManager*.cs"
-
-ExitCode: 1
-Result:
-No matches.

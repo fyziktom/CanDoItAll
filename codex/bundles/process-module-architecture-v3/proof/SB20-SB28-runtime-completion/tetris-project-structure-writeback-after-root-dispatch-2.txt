@@ -1,4 +1,0 @@
- NodeKey | Title | ObjectType | ObjectSubtype | Status | ParentNodeKey | notes | metadata 
----------+-------+------------+---------------+--------+---------------+-------+----------
-(0 ��dek)
-

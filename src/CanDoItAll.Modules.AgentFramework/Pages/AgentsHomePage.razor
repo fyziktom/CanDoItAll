@@ -232,7 +232,6 @@
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.35rem">
                                 <p class="cda-eyebrow">Teams</p>
-                                <h2 class="text-base font-semibold text-slate-950">Open a team-filtered agent view</h2>
                             </Stack>
                             <StatusBadge Tone="info"
                                          Text="@(isLoaded ? $"{overview.TeamShortcuts.Count} team(s)" : "Loading")" />
@@ -256,7 +255,7 @@
                                   ColumnsSm="2"
                                   ColumnsLg="3"
                                   ColumnsXl="6"
-                                  Class="mt-3"
+                                  Class="mt-2"
                                   data-testid="agents-overview-team-shortcuts-grid">
                                 @foreach (var team in overview.TeamShortcuts.Take(6))
                                 {
@@ -266,8 +265,8 @@
                                             @onclick="@(() => OpenAgentsForTeamAsync(team.TeamId))"
                                             data-testid="agents-overview-team-shortcut">
                                         <span class="material-icons text-2xl" aria-hidden="true">@team.Icon</span>
-                                        <span class="max-w-full truncate text-xs font-bold">@team.Name</span>
-                                        <span class="text-[0.68rem] font-semibold text-slate-500">@($"{team.AgentCount} agent(s)")</span>
+                                        <span class="agents-overview-team-shortcut__name">@team.Name</span>
+                                        <span class="agents-overview-team-shortcut__count">@($"{team.AgentCount} agent(s)")</span>
                                     </button>
                                 }
                             </Grid>

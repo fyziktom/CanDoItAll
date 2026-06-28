@@ -13,6 +13,7 @@ public static class ProviderUsageSourcePhases
 {
     public const string AgentRuntime = "agent-runtime";
     public const string AgentRuntimeContinuation = "agent-runtime-continuation";
+    public const string InputAttachmentAnalysis = "input-attachment-analysis";
     public const string FinalizerShortCircuit = "finalizer-short-circuit";
     public const string FinalizerRecovery = "finalizer-recovery";
     public const string StructuredOutputRepair = "structured-output-repair";

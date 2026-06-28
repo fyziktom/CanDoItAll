@@ -79,6 +79,184 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteRunAsync_finalizes_run_when_caller_cancels_after_runtime_started()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-run-caller-cancel");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton<FakeProgressAgentRuntime>();
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<FakeProgressAgentRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+        using var callerCancellation = new CancellationTokenSource();
+
+        var executionTask = workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Run a slow provider-backed validation.",
+                session.Id,
+                new ExecutionInvocationContext(
+                    SourceKind: "chat-session",
+                    SourceId: session.Id.ToString("N"),
+                    CorrelationId: "corr-caller-cancel",
+                    CausationId: "cause-caller-cancel",
+                    RequestedBy: "integration-test",
+                    RequestedByKind: "test",
+                    MetadataJson: "{}"),
+                AutoApprovePendingToolCalls: true),
+            callerCancellation.Token);
+
+        var executionRunId = await WaitForExecutionRunIdAsync(runtime, executionTask);
+        await runtime.ProgressPersisted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        callerCancellation.Cancel();
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() => executionTask);
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRunId);
+
+        Assert.Contains("caller request was cancelled", exception.Message, StringComparison.Ordinal);
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Failed, detail.Run.State);
+        Assert.Equal(RunOutcome.Cancelled, detail.Run.Outcome);
+        Assert.Contains("caller request was cancelled", detail.Run.ResultSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            detail.ExecutionLog,
+            entry => entry.ExecutionRunId == executionRunId &&
+                     entry.State == ExecutionState.Failed &&
+                     entry.Phase == "Cancelled" &&
+                     entry.Message.Contains("caller request was cancelled", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_starts_chat_backed_run_without_loading_unrelated_run_slices()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-chat-split-store");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton<FakeProgressAgentRuntime>();
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<FakeProgressAgentRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var workspaceScope = ResolveWorkspaceScope(scope.ServiceProvider);
+        var layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        var unrelatedRunId = Guid.NewGuid();
+        await executionRunStore.SaveExecutionRunDetailAsync(CreateCompletedRunDetail(unrelatedRunId, agent.Id, "Unrelated corrupt receipt run"));
+        var unrelatedReceiptsRoot = layout.RunReceiptsRoot(unrelatedRunId);
+        Directory.CreateDirectory(unrelatedReceiptsRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(unrelatedReceiptsRoot, "corrupt-receipt.json"),
+            "{ this is not valid json",
+            CancellationToken.None);
+
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+        runtime.AllowCompletion.TrySetResult(true);
+
+        var result = await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Confirm that chat start avoids unrelated run slices.",
+                session.Id,
+                new ExecutionInvocationContext(
+                    SourceKind: "chat-session",
+                    SourceId: session.Id.ToString("N"),
+                    CorrelationId: Guid.NewGuid().ToString("N"),
+                    CausationId: session.Id.ToString("N"),
+                    RequestedBy: "integration-test",
+                    RequestedByKind: "test",
+                    MetadataJson: "{}")));
+
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Completed, detail!.Run.State);
+        Assert.NotNull(detail.ChatSession);
+        Assert.Equal(result.ExecutionRunId, detail.ChatSession!.LatestExecutionRunId);
+        Assert.Contains(detail.ChatSession.Messages, message => message.Role == ChatMessageRole.Assistant);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_starts_chat_run_without_loading_unrelated_run_slices()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-send-message-split-store");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton<FakeProgressAgentRuntime>();
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<FakeProgressAgentRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var workspaceScope = ResolveWorkspaceScope(scope.ServiceProvider);
+        var layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        var unrelatedRunId = Guid.NewGuid();
+        await executionRunStore.SaveExecutionRunDetailAsync(CreateCompletedRunDetail(unrelatedRunId, agent.Id, "Unrelated corrupt send receipt run"));
+        var unrelatedReceiptsRoot = layout.RunReceiptsRoot(unrelatedRunId);
+        Directory.CreateDirectory(unrelatedReceiptsRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(unrelatedReceiptsRoot, "corrupt-receipt.json"),
+            "{ this is not valid json",
+            CancellationToken.None);
+
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+        runtime.AllowCompletion.TrySetResult(true);
+
+        var result = await workspaceService.SendMessageAsync(
+            agent.Id,
+            session.Id,
+            "Confirm that SendMessageAsync avoids unrelated run slices.");
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Completed, detail!.Run.State);
+        Assert.Equal(session.Id, result.ChatSessionId);
+        Assert.Equal(result.ExecutionRunId, detail.ChatSession!.LatestExecutionRunId);
+        Assert.Equal(ChatMessageRole.Assistant, result.AssistantMessage.Role);
+        Assert.Contains(detail.ChatSession.Messages, message => message.Role == ChatMessageRole.Assistant);
+    }
+
+    [Fact]
     public async Task ContinueExecutionRunAsync_preserves_structured_output_contract_after_pending_approval()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-structured-output-continuation");
@@ -1042,6 +1220,52 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         return await runtime.ExecutionRunIdObserved.Task;
     }
 
+    private static ExecutionRunDetail CreateCompletedRunDetail(Guid executionRunId, Guid agentId, string title)
+    {
+        var createdAtUtc = DateTimeOffset.UtcNow;
+        return new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                executionRunId,
+                agentId,
+                null,
+                title,
+                "manual",
+                "split-store-regression",
+                Guid.NewGuid().ToString("N"),
+                string.Empty,
+                "integration-test",
+                "integration-test",
+                "{}",
+                "Verify chat-backed run creation does not load unrelated run slices.",
+                "Completed",
+                "OpenAI default",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                createdAtUtc,
+                createdAtUtc,
+                createdAtUtc,
+                createdAtUtc,
+                string.Empty,
+                null,
+                []),
+            null,
+            [
+                new ExecutionLogEntry(
+                    Guid.NewGuid(),
+                    agentId,
+                    null,
+                    createdAtUtc,
+                    ExecutionState.Completed,
+                    "validation",
+                    "Unrelated run slice should not be loaded.")
+                {
+                    ExecutionRunId = executionRunId
+                }
+            ],
+            []);
+    }
+
     private sealed class FakeProgressAgentRuntime : IAgentRuntime
     {
         public TaskCompletionSource<Guid> ExecutionRunIdObserved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1065,12 +1289,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             return Task.FromResult(new ProviderTestChatResult(provider.DefaultModel, "ok", 1, 1));
         }
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             ProviderProfile provider,
-            OllamaModelfileRequest request,
+            ProviderModelMaintenanceEditorRequest request,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new OllamaModelfileResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
+            return Task.FromResult(new ProviderModelMaintenanceEditorResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
         }
 
         public async Task<AgentRuntimeResponse> RunAsync(
@@ -1196,12 +1420,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             return Task.FromResult(new ProviderTestChatResult(provider.DefaultModel, "ok", 1, 1));
         }
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             ProviderProfile provider,
-            OllamaModelfileRequest request,
+            ProviderModelMaintenanceEditorRequest request,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new OllamaModelfileResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
+            return Task.FromResult(new ProviderModelMaintenanceEditorResult(request.TargetModel, request.BaseModel, request.SystemPrompt, request.ContextLength, string.Empty, "ok"));
         }
 
         public Task<AgentRuntimeResponse> RunAsync(

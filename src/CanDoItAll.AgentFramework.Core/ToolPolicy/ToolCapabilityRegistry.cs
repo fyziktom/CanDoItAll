@@ -179,6 +179,14 @@ public static class ToolCapabilityRegistry
                 ToolContractCatalog.WorkspaceInspectImage,
                 ToolCapabilitySideEffectKind.RuntimeProofCapture,
                 StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+            Read(
+                ToolContractCatalog.WorkspaceAnalyzeImage,
+                ToolCapabilitySideEffectKind.RuntimeProofCapture,
+                StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+            Read(
+                ToolContractCatalog.WorkspaceAnalyzeImages,
+                ToolCapabilitySideEffectKind.RuntimeProofCapture,
+                StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
             Read(ToolContractCatalog.WorkspaceInspectSpreadsheet, ToolCapabilitySideEffectKind.WorkspaceRead),
             Mutation(
                 ToolContractCatalog.WorkspaceConvertDocument,

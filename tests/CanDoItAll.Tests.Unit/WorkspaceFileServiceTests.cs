@@ -7,6 +7,79 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkspaceFileServiceTests
 {
     [Fact]
+    public async Task AgentChatAttachmentStagingService_stage_image_writes_scoped_artifact_and_returns_logical_path()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ChatAttachmentTests.{Guid.NewGuid():N}");
+        var scope = WorkspaceScopeDescriptor.Organization("test-org");
+        Directory.CreateDirectory(workspaceRoot);
+
+        try
+        {
+            var pathResolution = new WorkspacePathResolutionService(workspaceRoot, scope);
+            var service = new AgentChatAttachmentStagingService(pathResolution);
+            var bytes = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
+
+            var result = await service.StageImageAsync(
+                "qa screenshot.PNG",
+                "image/png",
+                bytes.Length,
+                new MemoryStream(bytes));
+
+            Assert.StartsWith("artifacts/chat-attachments/", result.RelativePath, StringComparison.Ordinal);
+            Assert.EndsWith(".png", result.RelativePath, StringComparison.Ordinal);
+            Assert.Equal("image/png", result.ContentType);
+
+            var resolved = pathResolution.ResolveFilePath(result.RelativePath, allowMissing: false);
+            Assert.True(File.Exists(resolved.FullPath));
+            Assert.Contains(
+                Path.Combine("artifacts", "scopes", "organization", "test-org", "chat-attachments"),
+                resolved.FullPath,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(resolved.FullPath));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AgentChatAttachmentStagingService_stage_image_rejects_non_image_extension()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ChatAttachmentTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+
+        try
+        {
+            var service = new AgentChatAttachmentStagingService(new WorkspacePathResolutionService(workspaceRoot));
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.StageImageAsync(
+                "notes.txt",
+                "text/plain",
+                4,
+                new MemoryStream([1, 2, 3, 4])));
+
+            Assert.Contains("Only PNG, JPEG, GIF, and WebP", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
     public void WriteTextFile_registers_showcase_deliverable_as_execution_artifact()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");

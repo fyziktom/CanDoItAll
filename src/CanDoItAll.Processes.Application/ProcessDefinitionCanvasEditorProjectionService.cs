@@ -68,7 +68,9 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
             : CreateTemplateSnapshot(command.Scope, FindTemplateDefinition(command.DefinitionKey));
         var observedAtUtc = clock.GetUtcNow();
 
-        if (command.ExpectedVersionToken is { } expected && expected != baseline.VersionToken)
+        if (RequiresCurrentVersion(command.CommandKind) &&
+            command.ExpectedVersionToken is { } expected &&
+            expected != baseline.VersionToken)
         {
             return Task.FromResult(CreateRejectedResult(
                 baseline,
@@ -91,5 +93,8 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
         return Task.FromResult(result);
     }
+
+    private static bool RequiresCurrentVersion(ProcessDefinitionCanvasCommandKind commandKind)
+        => commandKind != ProcessDefinitionCanvasCommandKind.Recompose;
 
 }

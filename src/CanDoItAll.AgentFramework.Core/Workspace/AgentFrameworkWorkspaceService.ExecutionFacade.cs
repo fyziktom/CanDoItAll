@@ -77,8 +77,10 @@ public sealed partial class AgentFrameworkWorkspaceService
         Guid agentId,
         Guid? chatSessionId,
         string prompt,
-        CancellationToken cancellationToken = default)
-        => executionService.SendMessageAsync(agentId, chatSessionId, prompt, cancellationToken);
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? attachmentPaths = null,
+        AgentChatRunOptions? options = null)
+        => executionService.SendMessageAsync(agentId, chatSessionId, prompt, cancellationToken, attachmentPaths, options);
 
     public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,

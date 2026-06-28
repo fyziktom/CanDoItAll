@@ -44,6 +44,13 @@ public sealed record ProjectStructureInspectorCreateGroup(
 
 internal static partial class ProjectStructureCanvasCatalog
 {
+    internal const string GenerateImageAssetActionId = "generate-image-asset";
+    internal const string ImageProviderProfileFieldKey = "imageProviderProfileId";
+    internal const string ImageModelFieldKey = "imageModel";
+    internal const string ImageSizeFieldKey = "imageSize";
+    internal const string ImageQualityFieldKey = "imageQuality";
+    internal const string ImageOutputFormatFieldKey = "imageOutputFormat";
+
     private static readonly IReadOnlyList<CanvasWorkbenchInputField> DeliveryTargetRootFields =
     [
         Field("outputRoot", "Output root", "text", @"C:\repositories\CanDoItAll\output\App"),
@@ -102,6 +109,7 @@ internal static partial class ProjectStructureCanvasCatalog
             new("add-repository", ProjectObjectType.Repository, string.Empty, "assets", "Repo", "Add a repository or code artifact next to the current source.", "repo", "mint", "New repository", "Repo name", "frontend-app", "Owner / path", "team/repository", "Purpose", "What this repo is for"),
             new("add-file", ProjectObjectType.File, string.Empty, "assets", "File", "Upload or register a file node without leaving the canvas.", "file", "mint", "Uploaded file", "File title", "Architecture notes", "Folder / usage", "docs/architecture", "Purpose", "What lives in this file", true, "*/*", "Drop a file here or choose one."),
             new("add-image-asset", ProjectObjectType.ImageAsset, string.Empty, "assets", "Image", "Upload an image and keep it attached to the current part of the graph.", "image", "danger", "Uploaded image", "Image title", "Flow diagram", "Usage", "Where this image is used", "Description", "What this image explains", true, "image/*", "Drop an image here or choose one."),
+            new(GenerateImageAssetActionId, ProjectObjectType.ImageAsset, "generated", "assets", "Generate image", "Create an image asset from a prompt using a selected image-generation provider.", "auto_awesome", "accent", "Generated image", "Image title", "Hero concept", "Usage", "Where this generated image is used", "Prompt", "Describe the image to generate", false, string.Empty, "No upload needed. The selected provider generates the image.", true, "Generate image", GeneratedImageFields(), [DefaultValue(ImageSizeFieldKey, "1024x1024"), DefaultValue(ImageQualityFieldKey, "low"), DefaultValue(ImageOutputFormatFieldKey, "png")]),
             new("add-video-asset", ProjectObjectType.VideoAsset, string.Empty, "assets", "Video", "Upload a video and connect it to the selected node immediately.", "video", "accent", "Uploaded video", "Video title", "Demo recording", "Usage", "Where this video is used", "Description", "What this video demonstrates", true, "video/*", "Drop a video here or choose one."),
             new("add-link", ProjectObjectType.Link, string.Empty, "assets", "Link", "Create a link node and capture the address immediately.", "link", "sky", "New link", "Label", "API reference", "Address", "https://...", "Usage", "How this link is used"),
             new("add-connector", ProjectObjectType.Connector, string.Empty, "assets", "Connector", "Describe the integration or handoff point represented by this node.", "plug", "accent", "New connector", "Connector", "CI pipeline", "System", "Source or target system", "Handshake", "What the connector does"),
@@ -349,8 +357,8 @@ internal static partial class ProjectStructureCanvasCatalog
     {
         var assetLeaves = CreateLeafDefinitions.Where(item => item.GroupKey == "assets").ToDictionary(item => item.ActionId, StringComparer.OrdinalIgnoreCase);
         var actionIds = sourceType is ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference
-            ? new[] { "add-file", "add-file-pdf", "add-file-excel", "add-file-docx", "add-file-markdown", "add-file-mermaid", "add-file-screenshot", "add-file-log", "add-file-audio", "add-link", "add-image-asset", "add-video-asset", "add-connector", "add-secret-reference" }
-            : new[] { "add-file-pdf", "add-file-excel", "add-file-docx", "add-file-text", "add-file-json", "add-file-markdown", "add-file-mermaid", "add-file-screenshot", "add-file-log", "add-file-archive", "add-file-audio", "add-repository", "add-file", "add-image-asset", "add-video-asset", "add-link", "add-connector", "add-secret-reference" };
+            ? new[] { "add-file", "add-file-pdf", "add-file-excel", "add-file-docx", "add-file-markdown", "add-file-mermaid", "add-file-screenshot", "add-file-log", "add-file-audio", "add-link", "add-image-asset", GenerateImageAssetActionId, "add-video-asset", "add-connector", "add-secret-reference" }
+            : new[] { "add-file-pdf", "add-file-excel", "add-file-docx", "add-file-text", "add-file-json", "add-file-markdown", "add-file-mermaid", "add-file-screenshot", "add-file-log", "add-file-archive", "add-file-audio", "add-repository", "add-file", "add-image-asset", GenerateImageAssetActionId, "add-video-asset", "add-link", "add-connector", "add-secret-reference" };
 
         return actionIds.Select(actionId => assetLeaves[actionId]).ToList();
     }
@@ -492,6 +500,14 @@ internal static partial class ProjectStructureCanvasCatalog
             aliases.Add("mermaid diagram");
         }
 
+        if (definition.ObjectType == ProjectObjectType.ImageAsset && string.Equals(definition.ObjectSubtype, "generated", StringComparison.OrdinalIgnoreCase))
+        {
+            aliases.Add("generated image");
+            aliases.Add("image generation");
+            aliases.Add("create image");
+            aliases.Add("prompt image");
+        }
+
         AddCatalogAliases(definition, aliases);
 
         return aliases
@@ -613,6 +629,7 @@ internal static partial class ProjectStructureCanvasCatalog
             "add-prompt-flow" => "Flow",
             "add-prompt-step" => "Step",
             "add-image-asset" => "Image",
+            GenerateImageAssetActionId => "Generate",
             "add-video-asset" => "Video",
             "add-link" => "Link",
             "add-file" => "File",

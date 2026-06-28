@@ -257,7 +257,7 @@ public sealed partial class WorkspaceService(
                 var providerPlugin = providerRegistry.Resolve(profile);
                 var connectorPluginKey = providerPlugin?.Manifest.PluginKey ?? profile.ConnectorPluginKey;
                 var pricingMetadata = ProviderPricingMetadata.Read(profile.ExtraSettingsJson);
-                var pricingKind = ResolveAgentFrameworkProviderKind(connectorPluginKey);
+                var isKnownPricingKind = TryResolveAgentFrameworkProviderKind(connectorPluginKey, out var pricingKind);
                 return new ProviderProfileSummary(
                 profile.Id,
                 profile.Name,
@@ -267,7 +267,9 @@ public sealed partial class WorkspaceService(
                 profile.BaseUrl,
                 profile.DefaultModel,
                 profile.IsEnabled,
-                ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, pricingMetadata.IsPrivateProvider),
+                isKnownPricingKind
+                    ? ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, pricingMetadata.IsPrivateProvider)
+                    : pricingMetadata.IsPrivateProvider ?? false,
                 profile.LastHealthStatus,
                 profile.LastHealthCheckAtUtc);
             })
@@ -291,12 +293,14 @@ public sealed partial class WorkspaceService(
         }
 
         var connectorPluginKey = providerRegistry.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey;
-        var pricingKind = ResolveAgentFrameworkProviderKind(connectorPluginKey);
+        var isKnownPricingKind = TryResolveAgentFrameworkProviderKind(connectorPluginKey, out var pricingKind);
         var pricingMetadata = ProviderPricingMetadata.Read(provider.ExtraSettingsJson);
-        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
-            pricingKind,
-            provider.DefaultModel,
-            pricingMetadata.ModelPrices);
+        var modelPrices = isKnownPricingKind
+            ? ProviderPricingDefaults.NormalizeModelPrices(
+                pricingKind,
+                provider.DefaultModel,
+                pricingMetadata.ModelPrices)
+            : pricingMetadata.ModelPrices;
 
         return new ProviderProfileEditorModel
         {
@@ -311,9 +315,11 @@ public sealed partial class WorkspaceService(
             SupportsStructuredOutput = provider.SupportsStructuredOutput,
             SupportsVision = provider.SupportsVision,
             Configuration = BuildProviderConfiguration(provider),
-            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(
-                pricingKind,
-                pricingMetadata.IsPrivateProvider),
+            IsPrivateProvider = isKnownPricingKind
+                ? ProviderPricingDefaults.ResolveIsPrivateProvider(
+                    pricingKind,
+                    pricingMetadata.IsPrivateProvider)
+                : pricingMetadata.IsPrivateProvider ?? false,
             ModelPrices = ProviderPricingDefaults.ToEditorModels(modelPrices)
         };
     }
@@ -355,11 +361,14 @@ public sealed partial class WorkspaceService(
         }
 
         var defaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
-        var pricingKind = ResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey);
-        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
-            pricingKind,
-            defaultModel,
-            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
+        var hasPricingKind = TryResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey, out var pricingKind);
+        var editorModelPrices = ProviderPricingDefaults.FromEditorModels(model.ModelPrices);
+        var modelPrices = hasPricingKind
+            ? ProviderPricingDefaults.NormalizeModelPrices(
+                pricingKind,
+                defaultModel,
+                editorModelPrices)
+            : editorModelPrices;
         if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var pricingValidationMessage))
         {
             return Result<Guid>.Failure(Error.Validation(pricingValidationMessage));
@@ -393,7 +402,9 @@ public sealed partial class WorkspaceService(
                                 model.SupportsVision;
         entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
             model.Configuration.ToJson(),
-            ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, model.IsPrivateProvider),
+            hasPricingKind
+                ? ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, model.IsPrivateProvider)
+                : model.IsPrivateProvider,
             modelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -562,6 +573,7 @@ public sealed partial class WorkspaceService(
             ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
             ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
             OpenAiProviderAdapter.PluginKey => OpenAiProviderAdapter.DefaultModel,
+            ComfyUiProviderAdapter.PluginKey => ComfyUiProviderAdapter.DefaultModel,
             OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => "llama3.1",
             _ => "unknown"
         };
@@ -614,13 +626,31 @@ public sealed partial class WorkspaceService(
 
     private static AgentFrameworkProviderKind ResolveAgentFrameworkProviderKind(string? connectorPluginKey)
     {
-        return connectorPluginKey?.Trim() switch
+        return TryResolveAgentFrameworkProviderKind(connectorPluginKey, out var kind)
+            ? kind
+            : throw new InvalidOperationException($"No AgentFramework provider kind mapping exists for connector plugin '{connectorPluginKey}'.");
+    }
+
+    private static bool TryResolveAgentFrameworkProviderKind(string? connectorPluginKey, out AgentFrameworkProviderKind kind)
+    {
+        switch (connectorPluginKey?.Trim())
         {
-            ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            _ => AgentFrameworkProviderKind.Ollama
-        };
+            case ScenarioHarnessProviderAdapter.PluginKey:
+            case ProcessMockProviderAdapter.PluginKey:
+            case OpenAiProviderAdapter.PluginKey:
+                kind = AgentFrameworkProviderKind.OpenAi;
+                return true;
+            case ComfyUiProviderAdapter.PluginKey:
+                kind = AgentFrameworkProviderKind.ComfyUi;
+                return true;
+            case OllamaProviderAdapter.PluginKey:
+            case OllamaRemoteProviderAdapter.PluginKey:
+                kind = AgentFrameworkProviderKind.Ollama;
+                return true;
+            default:
+                kind = default;
+                return false;
+        }
     }
 
     private static string BuildProviderPricingRefreshMessage(

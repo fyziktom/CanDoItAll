@@ -58,17 +58,20 @@ Acquire a lease before mutating shared project structure. Prefer focused reads a
 
 ### Processes
 
-Use `/api/processes` for process definitions, templates, runtime control, and operator workflows:
+Use `/api/processes` for the current process runtime control plane. The source-grounded route set is intentionally smaller than older process-rewrite docs:
 
-- definitions: list, editor read, save, publish, delete, export, and import
-- templates: list, detail, envelope, Mermaid, baseline scenarios, live-run profiles, and import
-- runs: list, detail, start, stop, steps, artifacts, assignments, analytics
-- operator actions: transitions, rerun-agent, assignment resolution, escalations, approvals, rework, manager directives, and direct messages
-- launch planning: launch plans, HR matching, approval submission and decisions, provisioning, execution, and candidate selections
+- `GET /api/processes/contract`
+- `POST /api/processes/launch`
+- `POST /api/processes/runs/{runId}/dispatch`
+- `POST /api/processes/runs/{runId}/cancel`
+- `POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework`
+- `GET /api/processes/live`
+- `GET /api/processes/runs/{runId}`
+- `GET /api/processes/runs/{runId}/history`
 
-For governed agent-run processes, use PostgreSQL when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled.
+Definition authoring, template import/export, artifact/assignment detail, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `src/CanDoItAll.Web/Api/ProcessesApi.cs`. Do not document or call those as current HTTP routes until they are reintroduced with typed handlers and tests.
 
-Before starting live UI-driven runs, read `/api/processes/templates/live-run-profiles` and preserve the `freshRunPolicy` response fields. Baseline scenarios are fixture data; they are not current-run delivery evidence.
+For source-level details, use [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md).
 
 ### Agents
 
@@ -100,11 +103,11 @@ New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitiv
 
 ### Plugins And Projects
 
-`/api/projects` and `/api/plugins` are documented here as control-plane route families, but they do not currently have dedicated repo-managed API skills. Use OpenAPI plus the owning source files until a dedicated skill is justified.
+`/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
 
 ### Internal Agent Tools
 
-The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Direct process tools are registered by `ProcessAgentRuntimeToolProvider` in the Processes module and composed by MAF through `IAgentRuntimeToolProvider`; they are not a reason for MAF to reference the Processes module directly. Do not assume every HTTP route is callable as a direct tool. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for direct process/project-structure tools and HTTP-only operations.
+The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Current registered first-party runtime tool providers include project-structure tools from Workbench and image-generation tools from the AgentFramework module. A concrete direct process runtime tool provider is not present in the current source tree; process control currently goes through `/api/processes` and the project-structure bridge tools that can link and start processes. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for current direct tools and HTTP-only operations.
 
 ## Development Workflow
 

@@ -4,9 +4,9 @@ This pack is the current-architecture-aligned replacement for the original execu
 
 ## Goals
 - Keep process templates file-driven and outside compiled C# code.
-- Preserve shared and local resource sidecars for roles, artifacts, checklists, validations, prompts, and step documents.
+- Preserve shared and local authoring resources for roles, artifacts, checklists, validations, prompts, and step documents.
 - Project current-module import envelopes with first-class dependencies, artifact inputs, decision roles, and branch outcomes.
-- Provide Mermaid exports plus supporting markdown files for human inspection and downstream tooling.
+- Generate process catalog Markdown, Mermaid, canonical JSON, hashes, and structure from `definition.json` at runtime; checked-in generated preview sidecars are intentionally not part of the current pack.
 
 ## Current architecture adjustments
 - Added explicit process-level role usages.
@@ -54,7 +54,7 @@ This pack is the current-architecture-aligned replacement for the original execu
 
 ## Folder layout
 - `shared/` contains reusable roles, artifacts, checklists, validations, and prompts.
-- `processes/<key>/` contains the template definition, local resources, step docs, Mermaid exports, and projection sidecars.
+- `processes/<key>/` contains the canonical template definition, local authoring resources, and step docs.
 - `toolbox/` contains role/step seeds and the proposed chrome-action catalog.
 - `seed-catalog/` contains baseline seeded runtime scenarios and live-run profiles for fresh UI-driven runs.
 

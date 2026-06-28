@@ -2,23 +2,27 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Voice;
 
-public sealed class AgentVoiceDriverFactory(OpenAiVoiceDriver openAiVoiceDriver) : IAgentVoiceDriverFactory
+public sealed class AgentVoiceDriverFactory(ProviderRuntimeVoiceDriver providerRuntimeVoiceDriver) : IAgentVoiceDriverFactory
 {
     public ISpeechToTextVoiceDriver CreateSpeechToTextDriver(AgentVoiceDriverKind driverKind)
     {
-        return driverKind switch
-        {
-            AgentVoiceDriverKind.OpenAi => openAiVoiceDriver,
-            _ => throw new InvalidOperationException($"Speech-to-text driver '{driverKind}' is not registered.")
-        };
+        EnsureRegisteredDriver(driverKind, "speech-to-text");
+        return providerRuntimeVoiceDriver;
     }
 
     public ITextToSpeechVoiceDriver CreateTextToSpeechDriver(AgentVoiceDriverKind driverKind)
     {
-        return driverKind switch
+        EnsureRegisteredDriver(driverKind, "text-to-speech");
+        return providerRuntimeVoiceDriver;
+    }
+
+    private static void EnsureRegisteredDriver(
+        AgentVoiceDriverKind driverKind,
+        string capabilityName)
+    {
+        if (driverKind != AgentVoiceDriverKind.OpenAi)
         {
-            AgentVoiceDriverKind.OpenAi => openAiVoiceDriver,
-            _ => throw new InvalidOperationException($"Text-to-speech driver '{driverKind}' is not registered.")
-        };
+            throw new InvalidOperationException($"{capabilityName} driver '{driverKind}' is not registered.");
+        }
     }
 }

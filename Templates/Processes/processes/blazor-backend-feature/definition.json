@@ -868,6 +868,5 @@
       ],
       "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
-  ],
-  "DocPath": "processes/blazor-backend-feature/definition.md"
+  ]
 }

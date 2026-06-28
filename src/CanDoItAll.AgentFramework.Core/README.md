@@ -44,15 +44,18 @@ Process roles must be staffed with the tools and skills they are expected to use
 
 | Role | Required capabilities | Process access | Runtime rule |
 | --- | --- | --- | --- |
-| Process author | `candoitall-api-processes`; `processes_definition_editor_get`; `processes_definition_save`; `processes_definition_publish`; `processes_templates_list`; `processes_template_get`; `processes_template_import` when importing templates | Read/write for allowed definitions | Definition mutation must use process tools and approval policy, not direct database or file edits. |
-| Process manager | `candoitall-api-processes`; `processes_runs_list`; `processes_run_detail_get`; `processes_analytics_get`; `processes_step_transition`; `processes_assignment_resolve`; `processes_artifact_record` | Read/write for managed definitions | Managers inspect run detail before transitions and record assignment/artifact evidence through governed tools. |
-| Step executor | Workspace read/write tools required by the work brief; validation tools named by the step; `processes_artifact_record` only when the executor records its own process artifact | Usually read-only process access unless the step explicitly records artifacts | Executors do not invent process state transitions when the tool is unavailable. |
-| Reviewer or QA | Workspace read tools; validation/browser tools named by the step; `processes_run_detail_get`; `processes_artifact_record` when review evidence is required | Read access; write access only for review artifacts or transitions assigned to the role | Review decisions must cite current-run evidence and required receipts. |
-| Template curator | `processes_templates_list`; `processes_template_get`; `processes_template_mermaid_get`; `processes_template_baseline_scenarios_list`; `processes_template_live_run_profiles_list`; `processes_template_import` | Read/write only when importing or publishing templates | Template inspection is read-only unless import or publish is explicitly requested. |
+| Process author | `candoitall-api-processes`; project-structure process definition link/start tools when authoring through project structure | Read/write for allowed definitions only when a current API or UI path exists | Definition mutation must use a current process API/UI path, not direct database or file edits. Direct `processes_*` runtime tools are not current. |
+| Process manager | `candoitall-api-processes`; `/api/processes/live`; `/api/processes/runs/{runId}`; `/api/processes/runs/{runId}/history`; dispatch/cancel/rework routes when authorized | Read/write for managed runs through the API | Managers inspect run detail/history before dispatch, cancellation, or rework. |
+| Step executor | Workspace tools required by the work brief; validation tools named by the step; project-structure subprocess launch tool only when the process operation contract allows it | Usually read-only process access unless the step explicitly allows external action or subprocess launch | Executors do not invent process state transitions when the current API/tool path is unavailable. |
+| Reviewer or QA | Workspace read tools; validation/browser tools named by the step; current process readback routes | Read access unless an explicit current mutation route is authorized | Review decisions must cite current-run evidence and required receipts. |
+| Template curator | Process template authoring UI or future API/tool path when reintroduced | Read/write only when importing or publishing templates through a current surface | Template inspection is read-only unless import or publish is explicitly supported by current implementation. |
 
 Anti-improvisation is enforced in two layers. `DefaultAgentToolInvocationPolicy` denies tools that are not in the composed capability set and denies known tools with no registered classification. `AgentCapabilityRequirementEvaluator` catches missing, stale, or retired role capabilities before dispatch so callers can block or restaff explicitly.
+
+Current gap: policy constants and some tests still mention legacy or planned direct `processes_*` runtime tools. The current source tree does not contain a concrete process runtime tool provider. Reintroduce that provider deliberately or remove the stale capability names in a hardening pass.
 
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture-beta.md`
+- Process/MAF/provider implementation map: `docs/processes-maf-providers-implementation-map.md`

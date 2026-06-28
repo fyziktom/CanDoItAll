@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -35,13 +36,15 @@ public sealed partial class MafAgentRuntime
         AgentDefinition agent,
         ProviderProfile provider,
         ChatSessionRecord session,
-        string prompt)
+        string prompt,
+        AgentRuntimeExecutionOptions runtimeOptions)
     {
+        var inputAttachments = runtimeOptions.InputAttachments ?? [];
         if (ShouldRestoreSerializedSession(agent, provider, session))
         {
             return
             [
-                new ChatMessage(ChatRole.User, prompt.Trim())
+                CreateUserInputMessage(prompt, inputAttachments)
             ];
         }
 
@@ -53,14 +56,122 @@ public sealed partial class MafAgentRuntime
         {
             return
             [
-                new ChatMessage(ChatRole.User, prompt.Trim())
+                CreateUserInputMessage(prompt, inputAttachments)
             ];
+        }
+
+        var lastUserMessageIndex = transcriptMessages.FindLastIndex(message => message.Role == ChatRole.User);
+        if (lastUserMessageIndex >= 0)
+        {
+            transcriptMessages[lastUserMessageIndex] = CreateUserInputMessage(prompt, inputAttachments);
+        }
+        else
+        {
+            transcriptMessages.Add(CreateUserInputMessage(prompt, inputAttachments));
         }
 
         return transcriptMessages;
     }
 
-    private static IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(
+    internal static ChatMessage CreateUserInputMessage(
+        string prompt,
+        IReadOnlyList<AgentRuntimeInputAttachment> attachments)
+    {
+        var normalizedPrompt = prompt.Trim();
+        if (attachments.Count == 0)
+        {
+            return new ChatMessage(ChatRole.User, normalizedPrompt);
+        }
+
+        var contents = new List<AIContent>();
+        if (!string.IsNullOrWhiteSpace(normalizedPrompt))
+        {
+            contents.Add(new TextContent(normalizedPrompt));
+        }
+
+        contents.AddRange(attachments.Select(attachment => new DataContent(attachment.Bytes, attachment.ContentType)
+        {
+            Name = string.IsNullOrWhiteSpace(attachment.Name) ? Path.GetFileName(attachment.SourcePath) : attachment.Name
+        }));
+        return new ChatMessage(ChatRole.User, contents);
+    }
+
+    private static string ResolveText(ChatMessage message)
+        => string.Join(
+            Environment.NewLine,
+            message.Contents
+                .OfType<TextContent>()
+                .Select(content => content.Text)
+                .Where(text => !string.IsNullOrWhiteSpace(text)));
+
+    private async IAsyncEnumerable<AgentResponseUpdate> RunProviderStreamingAsync(
+        ProviderProfile provider,
+        string model,
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        IEnumerable<ChatMessage> inputMessages,
+        ChatClientAgentRunOptions runOptions,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        using var timeoutCancellation = new CancellationTokenSource(ResolveProviderNetworkTimeout(provider));
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            timeoutCancellation.Token);
+        var providerCancellationToken = linkedCancellation.Token;
+        await using var dispatchLease = await providerStreamingDispatchGate.EnterAsync(
+            provider,
+            model,
+            providerCancellationToken).ConfigureAwait(false);
+
+        var updates = RunStreamingCoreAsync(
+            runtimeAgent,
+            runtimeSession,
+            inputMessages,
+            runOptions,
+            providerCancellationToken);
+        await using var enumerator = updates.GetAsyncEnumerator(providerCancellationToken);
+        while (await MoveNextProviderStreamingUpdateAsync(
+                   enumerator,
+                   provider,
+                   model,
+                   timeoutCancellation,
+                   cancellationToken).ConfigureAwait(false))
+        {
+            yield return enumerator.Current;
+        }
+    }
+
+    private static async Task<bool> MoveNextProviderStreamingUpdateAsync(
+        IAsyncEnumerator<AgentResponseUpdate> enumerator,
+        ProviderProfile provider,
+        string model,
+        CancellationTokenSource timeoutCancellation,
+        CancellationToken callerCancellationToken)
+    {
+        try
+        {
+            return await enumerator.MoveNextAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException exception)
+            when (timeoutCancellation.IsCancellationRequested &&
+                  !callerCancellationToken.IsCancellationRequested)
+        {
+            throw CreateProviderStreamingTimeoutException(provider, model, exception);
+        }
+    }
+
+    private static TimeoutException CreateProviderStreamingTimeoutException(
+        ProviderProfile provider,
+        string model,
+        Exception innerException)
+    {
+        var timeoutSeconds = Math.Round(ResolveProviderNetworkTimeout(provider).TotalSeconds);
+        return new TimeoutException(
+            $"Provider '{provider.Name}' streaming chat for model '{model}' exceeded the configured timeout of {timeoutSeconds:N0} second(s).",
+            innerException);
+    }
+
+    private static IAsyncEnumerable<AgentResponseUpdate> RunStreamingCoreAsync(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         IEnumerable<ChatMessage> inputMessages,
@@ -112,6 +223,10 @@ public sealed partial class MafAgentRuntime
             },
             ToolCallContent toolCall => SnapshotToolCall(toolCall),
             TextContent textContent => new TextContent(textContent.Text),
+            DataContent dataContent => new DataContent(dataContent.Data, dataContent.MediaType)
+            {
+                Name = dataContent.Name
+            },
             _ => content
         };
     }
@@ -410,6 +525,17 @@ public sealed partial class MafAgentRuntime
             AgentChatHistoryMode.ProviderManaged => false,
             _ => provider.PreferFrameworkManagedChatHistory || !SupportsServiceManagedConversations(provider)
         };
+    }
+
+    internal static bool ShouldUseFrameworkManagedHistory(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+
+        return runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
+               ShouldUseFrameworkManagedHistory(agent, provider);
     }
 
     private static bool SupportsServiceManagedConversations(ProviderProfile provider)

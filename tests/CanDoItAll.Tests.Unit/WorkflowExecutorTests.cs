@@ -66,6 +66,69 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task ImageGenerationWorkflowExecutor_WritesProviderRuntimeOutput()
+    {
+        using var temp = new TempDirectory();
+        var provider = CreateProviderProfile("gpt-image-1-mini") with
+        {
+            Purpose = ProviderProfilePurpose.ImageGeneration,
+            DefaultModel = "gpt-image-1-mini"
+        };
+        var imageService = new RecordingImageGenerationService(
+            [4, 5, 6],
+            "workflow revised prompt");
+        var executor = new ImageGenerationWorkflowExecutor(
+            new TestProviderProfileRegistry([provider]),
+            imageService,
+            new WorkspacePathResolutionService(temp.Path));
+
+        var result = await ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
+        {
+            ProviderProfileId = provider.Id,
+            Prompt = "A clean workflow diagram",
+            Model = "gpt-image-1-mini",
+            Size = "1024x1024",
+            Quality = "low",
+            OutputFormat = "png",
+            OutputWorkspacePath = "output/workflow-image"
+        });
+
+        var outputPath = System.IO.Path.Combine(temp.Path, "output", "workflow-image.png");
+        Assert.True(File.Exists(outputPath));
+        Assert.Equal(new byte[] { 4, 5, 6 }, await File.ReadAllBytesAsync(outputPath));
+        Assert.Contains("workflow-image.png", result.PayloadJson, StringComparison.Ordinal);
+        Assert.Contains("workflow revised prompt", result.PayloadJson, StringComparison.Ordinal);
+        var request = Assert.Single(imageService.Requests);
+        Assert.Equal(provider.Id, request.Provider.Id);
+        Assert.Equal("gpt-image-1-mini", request.Model);
+        Assert.Equal("A clean workflow diagram", request.Prompt);
+        Assert.Empty(request.Sources);
+    }
+
+    [Fact]
+    public async Task ImageGenerationWorkflowExecutor_RejectsEditWithoutSourceContract()
+    {
+        using var temp = new TempDirectory();
+        var provider = CreateProviderProfile("gpt-image-1-mini") with
+        {
+            Purpose = ProviderProfilePurpose.ImageGeneration,
+            DefaultModel = "gpt-image-1-mini"
+        };
+        var executor = new ImageGenerationWorkflowExecutor(
+            new TestProviderProfileRegistry([provider]),
+            new RecordingImageGenerationService([1, 2, 3]),
+            new WorkspacePathResolutionService(temp.Path));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
+        {
+            Operation = WorkflowImageGenerationOperation.Edit,
+            Prompt = "Edit a clean workflow diagram",
+            OutputWorkspacePath = "output/workflow-image.png"
+        }));
+        Assert.Contains("source-image settings", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void BuiltInDescriptorsExposeSourceAvailabilityAndSchemaMetadata()
     {
         var descriptor = BuiltInWorkflowExecutorDescriptors.StorageFile;
@@ -1558,12 +1621,65 @@ public sealed class WorkflowExecutorTests
             }));
         });
 
-        await RecordAsync("image generation reports missing provider bridge", async () =>
+        await RecordAsync("image generation writes provider-runtime output", async () =>
         {
-            await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(new ImageGenerationWorkflowExecutor(), new WorkflowImageGenerationExecutorSettings
+            using var temp = new TempDirectory();
+            var provider = CreateProviderProfile("gpt-image-1-mini") with
             {
-                Prompt = "A clean workflow diagram"
+                Purpose = ProviderProfilePurpose.ImageGeneration,
+                DefaultModel = "gpt-image-1-mini"
+            };
+            var imageService = new RecordingImageGenerationService(
+                [4, 5, 6],
+                "workflow revised prompt");
+            var executor = new ImageGenerationWorkflowExecutor(
+                new TestProviderProfileRegistry([provider]),
+                imageService,
+                new WorkspacePathResolutionService(temp.Path));
+
+            var result = await ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
+            {
+                ProviderProfileId = provider.Id,
+                Prompt = "A clean workflow diagram",
+                Model = "gpt-image-1-mini",
+                Size = "1024x1024",
+                Quality = "low",
+                OutputFormat = "png",
+                OutputWorkspacePath = "output/workflow-image"
+            });
+
+            var outputPath = System.IO.Path.Combine(temp.Path, "output", "workflow-image.png");
+            Assert.True(File.Exists(outputPath));
+            Assert.Equal(new byte[] { 4, 5, 6 }, await File.ReadAllBytesAsync(outputPath));
+            Assert.Contains("workflow-image.png", result.PayloadJson, StringComparison.Ordinal);
+            Assert.Contains("workflow revised prompt", result.PayloadJson, StringComparison.Ordinal);
+            var request = Assert.Single(imageService.Requests);
+            Assert.Equal(provider.Id, request.Provider.Id);
+            Assert.Equal("gpt-image-1-mini", request.Model);
+            Assert.Equal("A clean workflow diagram", request.Prompt);
+            Assert.Empty(request.Sources);
+        });
+
+        await RecordAsync("image generation edit reports unsupported workflow source contract", async () =>
+        {
+            using var temp = new TempDirectory();
+            var provider = CreateProviderProfile("gpt-image-1-mini") with
+            {
+                Purpose = ProviderProfilePurpose.ImageGeneration,
+                DefaultModel = "gpt-image-1-mini"
+            };
+            var executor = new ImageGenerationWorkflowExecutor(
+                new TestProviderProfileRegistry([provider]),
+                new RecordingImageGenerationService([1, 2, 3]),
+                new WorkspacePathResolutionService(temp.Path));
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
+            {
+                Operation = WorkflowImageGenerationOperation.Edit,
+                Prompt = "Edit a clean workflow diagram",
+                OutputWorkspacePath = "output/workflow-image.png"
             }));
+            Assert.Contains("source-image settings", exception.Message, StringComparison.OrdinalIgnoreCase);
         });
 
         await RecordAsync("planned executor reports not implemented", async () =>
@@ -1964,9 +2080,9 @@ public sealed class WorkflowExecutorTests
             AgentRuntimeExecutionOptions? executionOptions = null)
             => throw new NotSupportedException();
 
-        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
             ProviderProfile provider,
-            OllamaModelfileRequest request,
+            ProviderModelMaintenanceEditorRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
@@ -2018,6 +2134,25 @@ public sealed class WorkflowExecutorTests
             Func<ProviderProfile, ProviderProfile> update,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingImageGenerationService(
+        byte[] imageBytes,
+        string revisedPrompt = "") : IAgentImageGenerationService
+    {
+        public List<AgentImageGenerationRequest> Requests { get; } = [];
+
+        public Task<AgentImageGenerationResult> GenerateAsync(
+            AgentImageGenerationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Requests.Add(request);
+            return Task.FromResult(new AgentImageGenerationResult(
+                request.Model,
+                request.Format,
+                [new AgentGeneratedImage("image/png", imageBytes, revisedPrompt)]));
+        }
     }
 
     private sealed class TempDirectory : IDisposable

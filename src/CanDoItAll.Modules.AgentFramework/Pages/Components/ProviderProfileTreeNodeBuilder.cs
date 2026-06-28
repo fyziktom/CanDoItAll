@@ -143,6 +143,7 @@ internal static class ProviderProfileTreeNodeBuilder
         => provider.Kind switch
         {
             ProviderKind.Ollama => "memory",
+            ProviderKind.ComfyUi => "image",
             ProviderKind.OpenAi or ProviderKind.AzureOpenAi => provider.Purpose == ProviderProfilePurpose.ImageGeneration
                 ? "image"
                 : "auto_awesome",

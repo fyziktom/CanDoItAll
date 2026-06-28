@@ -10,6 +10,7 @@
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 @inject NotificationService Notifications
+@inject TooltipService TooltipService
 
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -267,6 +268,17 @@
         Other
     }
 
+    private const int ProcessNameDisplayLength = 34;
+    private const string ProcessManagerDisplayName = "Process manager";
+    private const string UnassignedAgentDisplayName = "Unassigned";
+
+    private sealed record RunDisplayModel(
+        string ProcessName,
+        string ShortProcessName,
+        string RunLabel,
+        string Title,
+        bool IsProcessNameTruncated);
+
     private sealed record LiveRunProgressModel(
         int Percent,
         string Label,
@@ -447,6 +459,7 @@
 
     private async Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, Guid? runId)
     {
+        var runtimeLoadOptions = CreateRuntimeLoadOptions();
         var request = new ProcessWorkspaceShellRequest(
             ResolveScope(),
             new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
@@ -468,7 +481,9 @@
                 RuntimeEventPageSize,
                 runId,
                 AutoSelectRun: runId.HasValue,
-                TakeRuns: 40));
+                TakeRuns: 40,
+                runtimeLoadOptions),
+            ProcessDefinitionWorkspaceLoadOptions.CatalogOnly);
 
         var baseline = await ProjectionClient.GetShellAsync(request).ConfigureAwait(false);
         if (!MockProjectionFactory.TryParseScenario(MockScenarioQuery, out var scenario))
@@ -488,10 +503,53 @@
             ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
             : ProcessWorkspaceShellScope.Global;
 
-    private Task HandleTabChangedAsync(int index)
+    private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions()
+        => selectedTabIndex switch
+        {
+            1 => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = false,
+                IncludeMetricHistory = false,
+                IncludeActiveAgents = true,
+                IncludeUsageTelemetry = false
+            },
+            2 => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = true,
+                IncludeMetricHistory = true,
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = true
+            },
+            3 => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = true,
+                IncludeMetricHistory = true,
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = false
+            },
+            _ => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = true,
+                IncludeMetricHistory = false,
+                IncludeActiveAgents = true,
+                IncludeUsageTelemetry = false
+            }
+        };
+
+    private async Task HandleTabChangedAsync(int index)
     {
+        if (selectedTabIndex == index)
+        {
+            return;
+        }
+
         selectedTabIndex = index;
-        return Task.CompletedTask;
+        runtimeEventPage = 0;
+        await LoadAsync(forceRefresh: false);
     }
 
     private IReadOnlyList<ProcessLiveProcessSnapshot> SelectableRuns
@@ -817,7 +875,7 @@
                                     <StatusBadge Tone="info" Text="@FormatCount(ResolveManagerMessages(run.RunId).Count, "manager message", "manager messages")" />
                                 }
                             </Cluster>
-                            <h3 class="live-processes-attention-card__title">@BuildRunTitle(run)</h3>
+                            <h3 class="live-processes-attention-card__title">@RenderRunTitleContent(run)</h3>
                             <p class="live-processes-attention-card__summary">@BuildAttentionSummary(run)</p>
                             @if (action is not null)
                             {
@@ -908,12 +966,20 @@
             var progress = BuildRunProgress(run);
             var activeAgents = ResolveActiveAgents(run.RunId.Value);
             var primaryAgent = ResolvePrimaryAgent(activeAgents);
+            var assignedAgentName = ResolveActivityAssignedAgentName(run, primaryAgent);
+            var projectDisplayText = ResolveProjectDisplayText(run);
             var action = ResolvePrimaryOperatorAction(run);
         }
         <div class="live-processes-activity-card__body">
             <Split Gap="LayoutGap.Small">
                 <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                     <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                    @if (run.IsSubprocess)
+                    {
+                        <StatusBadge Tone="accent"
+                                     Text="Subprocess"
+                                     data-testid="live-processes-run-subprocess-badge" />
+                    }
                     @if (run.Incidents.Count > 0)
                     {
                         <StatusBadge Tone="warning" Text="@FormatCount(run.Incidents.Count, "incident", "incidents")" />
@@ -933,7 +999,7 @@
                 </Cluster>
                 <span class="live-processes-activity-card__percent">@($"{progress.Percent}%")</span>
             </Split>
-            <h3 class="live-processes-activity-card__title">@BuildRunTitle(run)</h3>
+            <h3 class="live-processes-activity-card__title">@RenderRunTitleContent(run)</h3>
             <div class="live-processes-activity-card__fields">
                 <span>
                     <Icon Name="route" />
@@ -942,11 +1008,22 @@
                         <span>@ResolveCurrentStepText(run)</span>
                     </span>
                 </span>
+                @if (!string.IsNullOrWhiteSpace(projectDisplayText))
+                {
+                    <span>
+                        <Icon Name="account_tree" />
+                        <span class="live-processes-activity-card__field-body">
+                            <strong>Project</strong>
+                            <span title="@projectDisplayText"
+                                  data-testid="live-processes-run-project-name">@projectDisplayText</span>
+                        </span>
+                    </span>
+                }
                 <span>
                     <Icon Name="person" />
                     <span class="live-processes-activity-card__field-body">
                         <strong>Assigned agent</strong>
-                        <span>@(primaryAgent is null ? "Unassigned" : ResolveAgentDisplayName(primaryAgent))</span>
+                        <span data-testid="live-processes-run-agent-name">@assignedAgentName</span>
                     </span>
                 </span>
             </div>
@@ -1015,7 +1092,7 @@
                             class="live-processes-run-card__body"
                             @onclick="@(() => SelectRuntimeRunAsync(run.RunId.Value))">
                         <span class="live-processes-run-card__header">
-                            <span class="live-processes-run-card__title">@BuildRunTitle(run)</span>
+                            <span class="live-processes-run-card__title">@RenderRunTitleContent(run)</span>
                             <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
                         </span>
                         <span class="live-processes-run-card__summary">@BuildRunCardSummary(run)</span>
@@ -1146,6 +1223,7 @@
                 {
                     <div class="live-processes-event-row" data-testid="live-processes-event-row">
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            @RenderEventRunTitleContent(runtimeEvent)
                             <StatusBadge Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.EventType" />
                             <StatusBadge Tone="neutral" Text="@runtimeEvent.Sensitivity.ToString()" />
                             <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
@@ -1272,7 +1350,7 @@
                             <StatusBadge Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" />
                         }
                     </Cluster>
-                    <h2>@BuildRunTitle(run)</h2>
+                    <h2>@RenderRunTitleContent(run)</h2>
                     <p>@BuildRunCardSummary(run)</p>
                     <div class="live-processes-run-progress live-processes-run-progress--detail"
                          title="@progress.Tooltip">
@@ -1361,6 +1439,7 @@
                 {
                     <div class="live-processes-event-row">
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            @RenderRunTitleContent(run)
                             <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@runtimeEvent.EventType" />
                             <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                         </Cluster>
@@ -1941,6 +2020,53 @@
         return "No current step";
     }
 
+    private static string ResolveActivityAssignedAgentName(
+        ProcessLiveProcessSnapshot run,
+        ProcessRuntimeActiveAgentProjection? primaryAgent)
+    {
+        if (primaryAgent is not null)
+        {
+            return ResolveAgentDisplayName(primaryAgent);
+        }
+
+        if (run.CurrentStep is not null)
+        {
+            var executorName = FirstNonEmpty(run.CurrentStep.ExecutorDisplayName);
+            if (!IsUnassignedAgentName(executorName))
+            {
+                return executorName;
+            }
+
+            var roleName = FirstNonEmpty(run.CurrentStep.RoleDisplayName, run.CurrentStep.RoleKey);
+            if (!IsUnassignedAgentName(roleName))
+            {
+                return roleName;
+            }
+        }
+
+        return run.WaitingOnChildRuns.Count > 0
+            ? ProcessManagerDisplayName
+            : UnassignedAgentDisplayName;
+    }
+
+    private static bool IsUnassignedAgentName(string value)
+        => string.IsNullOrWhiteSpace(value) ||
+           string.Equals(value, UnassignedAgentDisplayName, StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(value, "Unassigned executor", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(value, "unassigned", StringComparison.OrdinalIgnoreCase);
+
+    private static string ResolveProjectDisplayText(ProcessLiveProcessSnapshot run)
+    {
+        if (!string.IsNullOrWhiteSpace(run.ProjectName))
+        {
+            return run.ProjectName.Trim();
+        }
+
+        return run.ProjectId.HasValue
+            ? $"Project {run.ProjectId.Value.ToString("N")[..8]}"
+            : string.Empty;
+    }
+
     private bool IsOperatorActionBusy(ProcessRuntimeOperatorActionProjection action)
         => busyOperatorActionStepId == action.StepInstanceId;
 
@@ -1970,8 +2096,70 @@
             : $"{instruction}{Environment.NewLine}{Environment.NewLine}Operator note:{Environment.NewLine}{note}";
     }
 
+    private RenderFragment RenderRunTitleContent(ProcessLiveProcessSnapshot run)
+        => RenderRunTitleContent(BuildRunDisplay(run));
+
+    private RenderFragment RenderEventRunTitleContent(ProcessTimelineEventProjection runtimeEvent)
+        => RenderRunTitleContent(BuildRunDisplay(runtimeEvent));
+
+    private RenderFragment RenderRunTitleContent(RunDisplayModel display) => @<span class="live-processes-run-title">
+        <span class="live-processes-run-title__name"
+              title="@display.ProcessName"
+              @onmouseenter="@((MouseEventArgs args) => OpenProcessNameTooltip(args, display))"
+              @onmouseleave="CloseProcessNameTooltip"
+              data-testid="live-processes-run-process-name">@display.ShortProcessName</span>
+        <span class="live-processes-run-title__hash">@display.RunLabel</span>
+    </span>;
+
+    private void OpenProcessNameTooltip(MouseEventArgs args, RunDisplayModel display)
+    {
+        if (!display.IsProcessNameTruncated)
+        {
+            return;
+        }
+
+        TooltipService.Open(
+            args,
+            display.ProcessName,
+            new TooltipOptions
+            {
+                Position = TooltipPosition.Bottom,
+                Duration = null,
+                TestId = "live-processes-process-name-tooltip"
+            });
+    }
+
+    private void CloseProcessNameTooltip()
+    {
+        TooltipService.Close();
+    }
+
+    private RunDisplayModel BuildRunDisplay(ProcessTimelineEventProjection runtimeEvent)
+    {
+        var run = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId == runtimeEvent.RunId);
+        return run is null
+            ? BuildRunDisplay(runtimeEvent.RunId.Value, processName: null)
+            : BuildRunDisplay(run);
+    }
+
+    private static RunDisplayModel BuildRunDisplay(ProcessLiveProcessSnapshot run)
+        => BuildRunDisplay(run.RunId.Value, run.ProcessName);
+
+    private static RunDisplayModel BuildRunDisplay(Guid runId, string? processName)
+    {
+        var normalizedProcessName = FirstNonEmpty(processName, "Process run");
+        var shortProcessName = TrimLabel(normalizedProcessName, ProcessNameDisplayLength);
+        var runLabel = $"Run {runId.ToString("N")[..8]}";
+        return new RunDisplayModel(
+            normalizedProcessName,
+            shortProcessName,
+            runLabel,
+            $"{normalizedProcessName} / {runLabel}",
+            !string.Equals(normalizedProcessName, shortProcessName, StringComparison.Ordinal));
+    }
+
     private static string BuildRunTitle(ProcessLiveProcessSnapshot run)
-        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+        => BuildRunDisplay(run).Title;
 
     private static string BuildRunSubtitle(ProcessLiveProcessSnapshot run)
         => $"{run.Status} / {run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}";

@@ -1,6 +1,0 @@
-Command:
-rg -n "ProcessPersistenceDbContext|ProcessRuntimeEventEntity|ProcessRuntimeStateEntity|ProcessProjectionHistoryEntity|RuntimeStates|RuntimeEvents" src/CanDoItAll.Modules.Processes src/CanDoItAll.Web src/CanDoItAll.Processes.Application -g"*.cs" -g"*.razor"
-
-ExitCode: 1
-Result:
-No matches.

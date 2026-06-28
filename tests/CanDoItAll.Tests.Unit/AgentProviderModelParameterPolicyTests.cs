@@ -105,4 +105,48 @@ public sealed class AgentProviderModelParameterPolicyTests
 
         Assert.Null(effort);
     }
+
+    [Fact]
+    public void Max_output_tokens_prefers_agent_configuration_over_provider_configuration()
+    {
+        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+            ProviderKind.OpenAi,
+            "{\"modelParameters\":{\"maxOutputTokens\":300}}",
+            "{\"maxOutputTokens\":120}");
+
+        Assert.Equal(120, maxOutputTokens);
+    }
+
+    [Fact]
+    public void Ollama_num_predict_is_treated_as_max_output_tokens()
+    {
+        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+            ProviderKind.Ollama,
+            "{\"modelParameters\":{\"numPredict\":160}}",
+            string.Empty);
+
+        Assert.Equal(160, maxOutputTokens);
+    }
+
+    [Fact]
+    public void Ollama_think_can_be_disabled_from_model_parameters()
+    {
+        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(
+            "{\"modelParameters\":{\"think\":false}}",
+            string.Empty);
+
+        Assert.False(think);
+    }
+
+    [Fact]
+    public void Invalid_max_output_tokens_fails_explicitly()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
+                ProviderKind.Ollama,
+                "{\"modelParameters\":{\"num_predict\":0}}",
+                string.Empty));
+
+        Assert.Contains("must be between", exception.Message);
+    }
 }
