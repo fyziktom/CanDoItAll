@@ -72,12 +72,19 @@ public sealed record ProviderDispatchLimits(
     TimeSpan MaxQueueDelay,
     TimeSpan RequestTimeout)
 {
-    public static ProviderDispatchLimits Unbatched(TimeSpan? requestTimeout = null)
+    public static ProviderDispatchLimits Unbatched(
+        TimeSpan? requestTimeout = null,
+        int maxInFlightRequests = 1)
     {
+        if (maxInFlightRequests < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxInFlightRequests), "At least one in-flight request must be allowed.");
+        }
+
         return new ProviderDispatchLimits(
             SupportsBatching: false,
             MaxBatchSize: 1,
-            MaxInFlightBatches: 1,
+            MaxInFlightBatches: maxInFlightRequests,
             MaxQueueDepth: 0,
             MaxQueueDelay: TimeSpan.Zero,
             RequestTimeout: requestTimeout ?? TimeSpan.FromMinutes(2));

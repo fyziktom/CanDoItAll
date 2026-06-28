@@ -189,6 +189,18 @@ public sealed class ManagedSeedProviderFallbacksTests
     }
 
     [Fact]
+    public void Remote_ollama_provider_is_recognized_as_managed_seed_fallback_for_catalog_repair()
+    {
+        var provider = CreateFallbackProvider() with
+        {
+            ConfigurationJson = "{\"history\":\"framework-managed\"}",
+            Notes = "Targets the remote host validated during the latest Ollama repair and networking checks."
+        };
+
+        Assert.True(ManagedSeedProviderFallbacks.IsGeneratedManagedSeedFallbackProvider(provider));
+    }
+
+    [Fact]
     public void Fallback_runtime_configuration_sets_bounded_ollama_generation_parameters()
     {
         var configurationJson = ManagedSeedProviderFallbacks.CreateFallbackConfigurationJson("unit-test");

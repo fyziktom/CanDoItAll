@@ -1,6 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
-using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
+using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 

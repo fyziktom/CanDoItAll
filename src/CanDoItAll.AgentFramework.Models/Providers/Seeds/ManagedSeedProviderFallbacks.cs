@@ -241,7 +241,8 @@ public static class ManagedSeedProviderFallbacks
 
     public static bool IsGeneratedManagedSeedFallbackProvider(ProviderProfile provider)
     {
-        return provider.ConfigurationJson.Contains("\"fallback\"", StringComparison.OrdinalIgnoreCase) ||
+        return IsFallbackProvider(provider) ||
+               provider.ConfigurationJson.Contains("\"fallback\"", StringComparison.OrdinalIgnoreCase) ||
                provider.Notes.Contains("managed-seed fallback", StringComparison.OrdinalIgnoreCase);
     }
 

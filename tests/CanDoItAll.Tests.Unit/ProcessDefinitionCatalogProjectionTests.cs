@@ -686,7 +686,38 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
-    public async Task Canvas_rejects_stale_version_tokens()
+    public async Task Canvas_rejects_stale_version_tokens_for_mutating_commands()
+    {
+        using var pack = TemporaryProcessTemplatePack.CreateDefault();
+        var service = new ProcessDefinitionCanvasEditorProjectionService(
+            new ProcessTemplatePackLoader(pack.RootPath),
+            new FixedProcessProjectionClock(Now));
+        var canvas = await service.GetCanvasAsync(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessDefinitionCatalogItemKey("architecture-review"));
+        var added = await ExecuteCanvasCommandAsync(
+            service,
+            canvas,
+            ProcessDefinitionCanvasCommandKind.AddStep,
+            new ProcessDefinitionCanvasToolboxActionKey("process-step.implementation"),
+            canvas.Selection.NodeKey);
+
+        var stale = await service.ExecuteCommandAsync(new ProcessDefinitionCanvasCommand(
+            ProcessWorkspaceShellScope.Global,
+            added.Projection.DefinitionKey,
+            ProcessDefinitionCanvasCommandKind.AddArtifactExpectation,
+            canvas.VersionToken,
+            new ProcessDefinitionCanvasToolboxActionKey("process-canvas.add-artifact-expectation"),
+            added.Projection.Selection.NodeKey,
+            SelectedEdgeKey: null,
+            ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
+
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, stale.Receipt.Status);
+        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Canvas_accepts_stale_recompose_against_current_projection()
     {
         using var pack = TemporaryProcessTemplatePack.CreateDefault();
         var service = new ProcessDefinitionCanvasEditorProjectionService(
@@ -712,8 +743,9 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             SelectedEdgeKey: null,
             ProcessDefinitionCanvasRecompositionMode.BalancedFlow));
 
-        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Rejected, stale.Receipt.Status);
-        Assert.Contains("changed before submission", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ProcessDefinitionCanvasCommandStatus.Accepted, stale.Receipt.Status);
+        Assert.Contains(stale.Projection.Nodes, node => node.Title == "Implementation");
+        Assert.Contains("recomposed", stale.Receipt.Summary, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

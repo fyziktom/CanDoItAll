@@ -61,13 +61,25 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private bool IsDisabled => Disabled || IsBusy;
+    private bool isClickInFlight;
+
+    private bool IsDisabled => Disabled || IsBusy || isClickInFlight;
 
     private async Task OnClickAsync()
     {
-        if (!IsDisabled)
+        if (IsDisabled)
+        {
+            return;
+        }
+
+        isClickInFlight = true;
+        try
         {
             await Click.InvokeAsync();
+        }
+        finally
+        {
+            isClickInFlight = false;
         }
     }
 

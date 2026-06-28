@@ -90,7 +90,7 @@ public sealed class CanvasAdapterTests
 
         var note = Assert.Single(canvasSurface.Nodes, node => node.Id == "note-1");
         Assert.True(note.IsInlineTextNode);
-        Assert.Contains(note.Annotations, annotation => string.Equals(annotation.Kind, "validation", StringComparison.Ordinal) && string.Equals(annotation.ActionId, "validate", StringComparison.Ordinal));
+        Assert.Contains(note.Annotations, annotation => string.Equals(annotation.Kind, "health", StringComparison.Ordinal) && string.Equals(annotation.ActionId, "summary", StringComparison.Ordinal));
         Assert.Contains(note.ContextActions, action => string.Equals(action.ActionId, "open", StringComparison.Ordinal));
         Assert.True(canvasSurface.Chrome.Diagnostics.IsEnabled);
         Assert.True(canvasSurface.Chrome.Minimap.IsEnabled);

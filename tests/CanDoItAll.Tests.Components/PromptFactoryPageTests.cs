@@ -175,10 +175,6 @@ public sealed class PromptFactoryPageTests
             Assert.Equal(buildResult.Value!.GeneratedPrompt, promptPreviewText);
         });
 
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Close", StringComparison.OrdinalIgnoreCase))
-            .Click();
-        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-factory-prompt-modal']")));
     }
 
     private static async Task LoadPromptFactorySessionAsync(

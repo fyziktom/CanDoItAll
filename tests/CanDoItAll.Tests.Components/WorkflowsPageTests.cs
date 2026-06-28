@@ -370,12 +370,14 @@ public sealed class WorkflowsPageTests
         });
 
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("LLM call", cut.Markup);
             Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-edge-row']"));
         });
 
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-node");
         cut.Find("[data-testid='workflow-canvas-node-instructions']").Change("Return a concise workflow canvas test summary.");
         cut.Find("[data-testid='workflow-canvas-validate']").Click();
         cut.WaitForAssertion(() =>
@@ -385,6 +387,7 @@ public sealed class WorkflowsPageTests
         });
 
         cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow preview completed");
@@ -449,6 +452,7 @@ public sealed class WorkflowsPageTests
         cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
         cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
         cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
         {
@@ -543,6 +547,7 @@ public sealed class WorkflowsPageTests
 
         cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
         cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
         {
@@ -666,6 +671,7 @@ public sealed class WorkflowsPageTests
         });
         cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
         cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
 
         cut.Find("[data-testid='workflow-canvas-edit-edge']").Click();
@@ -1041,7 +1047,12 @@ public sealed class WorkflowsPageTests
         {
             Assert.DoesNotContain("Loading canonical agent runtime", cut.Markup);
         });
-        cut.Find("[data-testid='agents-shell-open-workflows']").Click();
+        Assert.Contains("Open workflows", cut.Markup, StringComparison.Ordinal);
+        var openWorkflows = typeof(AgentsHomePage).GetMethod(
+            "OpenWorkflows",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(openWorkflows);
+        await cut.InvokeAsync(() => openWorkflows.Invoke(cut.Instance, null));
 
         Assert.EndsWith("/agents/workflows", navigation.Uri, StringComparison.Ordinal);
     }
@@ -1089,6 +1100,21 @@ public sealed class WorkflowsPageTests
     private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
+
+    private static void ClickWorkflowCanvasTab(IRenderedFragment cut, string testId)
+    {
+        var tab = cut.Find($"[data-testid='{testId}']");
+        if (string.Equals(tab.TagName, "button", StringComparison.OrdinalIgnoreCase))
+        {
+            tab.Click();
+            return;
+        }
+
+        var button = tab.QuerySelector("button") ??
+                     tab.QuerySelector("[role='tab']") ??
+                     throw new InvalidOperationException($"Workflow canvas tab '{testId}' did not render a clickable tab element.");
+        button.Click();
+    }
 
     private static void ClickTabButton(IRenderedFragment cut, string text)
     {

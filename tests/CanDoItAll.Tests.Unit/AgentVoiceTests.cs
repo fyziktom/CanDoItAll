@@ -722,7 +722,9 @@ public sealed class AgentVoiceTests
 
         public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query)
         {
-            return ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(30));
+            return ProviderDispatchLimits.Unbatched(
+                TimeSpan.FromSeconds(30),
+                maxInFlightRequests: expectedConcurrentRequests);
         }
 
         public async Task<ProviderTextToSpeechResult> SynthesizeSpeechAsync(

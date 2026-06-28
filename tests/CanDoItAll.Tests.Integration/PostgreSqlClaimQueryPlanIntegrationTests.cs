@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
-    private const string ProcessOutboxClaimIndex = "IX_Processes_Outbox_PendingClaimOrder";
-    private const string ProcessStepDispatchHeaderIndex = "IX_Processes_StepRuns_ProcessRunId_Sequence";
+    private const string ProcessOutboxClaimIndex = "IX_process_outbox_messages_Status_AvailableAtUtc_LockedAtUtc";
+    private const string ProcessStepDispatchHeaderIndex = "IX_process_runtime_steps_RunId_Status";
     private const string ConnectorCommandClaimIndex = "IX_Workspace_ConnectorCommands_PendingClaimOrder";
 
     [Fact]
@@ -28,11 +28,11 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
 
         var processOutboxPlan = await ExplainAsync(dbContext, ProcessOutboxClaimSql);
         await WritePlanAsync("process-outbox-claim", processOutboxPlan);
-        AssertPlanUsesIndex(processOutboxPlan, ProcessOutboxClaimIndex, "Processes_Outbox");
+        AssertPlanUsesIndex(processOutboxPlan, ProcessOutboxClaimIndex, "process_outbox_messages");
 
         var processStepDispatchPlan = await ExplainAsync(dbContext, ProcessStepDispatchHeaderSql);
         await WritePlanAsync("process-step-dispatch-header", processStepDispatchPlan);
-        AssertPlanUsesIndex(processStepDispatchPlan, ProcessStepDispatchHeaderIndex, "Processes_StepRuns");
+        AssertPlanUsesIndex(processStepDispatchPlan, ProcessStepDispatchHeaderIndex, "process_runtime_steps");
 
         var connectorCommandPlan = await ExplainAsync(dbContext, ConnectorCommandClaimSql);
         await WritePlanAsync("connector-command-claim", connectorCommandPlan);
@@ -60,8 +60,8 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             FROM pg_indexes
             WHERE schemaname = 'public'
               AND indexname IN (
-                  'IX_Processes_Outbox_PendingClaimOrder',
-                'IX_Processes_StepRuns_ProcessRunId_Sequence',
+                  'IX_process_outbox_messages_Status_AvailableAtUtc_LockedAtUtc',
+                  'IX_process_runtime_steps_RunId_Status',
                   'IX_Workspace_ConnectorCommands_PendingClaimOrder'
               );
             """;
@@ -80,8 +80,8 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
         await dbContext.Database.ExecuteSqlRawAsync(SeedConnectorCommandsSql);
         await dbContext.Database.ExecuteSqlRawAsync(
             """
-            ANALYZE "Processes_Outbox";
-            ANALYZE "Processes_StepRuns";
+            ANALYZE "process_outbox_messages";
+            ANALYZE "process_runtime_steps";
             ANALYZE "Workspace_ConnectorCommands";
             """);
     }
@@ -116,295 +116,94 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
 
     private static void AssertPlanUsesIndex(string plan, string indexName, string tableName) {
         Assert.Contains(indexName, plan, StringComparison.Ordinal);
+        Assert.DoesNotContain($"Seq Scan on {tableName}", plan, StringComparison.Ordinal);
         Assert.DoesNotContain($"Seq Scan on \"{tableName}\"", plan, StringComparison.Ordinal);
     }
 
     private const string SeedProcessOutboxSql =
         """
-        INSERT INTO "Processes_Outbox" (
-            "Id",
-            "ProjectId",
-            "ProcessDefinitionId",
-            "ProcessRunId",
-            "CommandKey",
-            "PayloadJson",
+        INSERT INTO "process_outbox_messages" (
+            "MessageId",
+            "EventId",
+            "SubscriberKind",
+            "PayloadHash",
             "Status",
             "AttemptCount",
-            "LastError",
-            "LeaseToken",
             "CreatedAtUtc",
-            "UpdatedAtUtc",
-            "NextAttemptAtUtc",
-            "LeaseExpiresAtUtc")
+            "AvailableAtUtc",
+            "LockedAtUtc",
+            "LockId",
+            "DeliveredAtUtc",
+            "LastErrorClass")
         SELECT
             ('00000000-0000-0000-1000-' || lpad(series.value::text, 12, '0'))::uuid,
-            NULL,
-            NULL,
-            NULL,
-            CASE WHEN series.value % 5 = 0 THEN 'dispatch-run-automation' ELSE 'search-upsert' END,
-            '{{}}',
-            CASE WHEN series.value <= 16000 THEN 0 ELSE 1 END,
+            ('00000000-0000-0000-2000-' || lpad(series.value::text, 12, '0'))::uuid,
+            'RuntimeProjection',
+            'payload-' || series.value,
+            CASE WHEN series.value <= 200 THEN 'Pending' ELSE 'Delivered' END,
             0,
-            '',
-            '',
-            now() - make_interval(secs => series.value),
             now() - make_interval(secs => series.value),
             CASE
-                WHEN series.value % 11 = 0 THEN now() + interval '1 day'
-                WHEN series.value % 3 = 0 THEN now() - interval '5 minutes'
+                WHEN series.value <= 200 AND series.value % 11 = 0 THEN now() + interval '1 day'
+                WHEN series.value <= 200 THEN now() - interval '5 minutes'
                 ELSE NULL
             END,
-            CASE
-                WHEN series.value % 13 = 0 THEN now() + interval '1 day'
-                WHEN series.value % 7 = 0 THEN now() - interval '2 minutes'
-                ELSE NULL
-            END
+            NULL,
+            NULL,
+            CASE WHEN series.value <= 200 THEN NULL ELSE now() - interval '1 hour' END,
+            NULL
         FROM generate_series(1, 20000) AS series(value);
         """;
 
     private const string SeedProcessStepDispatchSql =
         """
-        INSERT INTO "Processes_Definitions" (
-            "Id",
-            "Name",
-            "Slug",
-            "Summary",
-            "ValueStatement",
-            "CustomerName",
-            "OwnerName",
-            "InterfaceContractSummary",
-            "GovernanceNotes",
-            "Criticality",
-            "AutonomyLevel",
+        INSERT INTO "process_runtime_states" (
+            "RunId",
+            "RootRunId",
+            "PlanId",
+            "PlanHash",
             "Status",
-            "NextVersionNumber",
-            "CreatedAtUtc",
             "UpdatedAtUtc",
             "ConcurrencyToken")
-        VALUES (
-            '10000000-0000-0000-0000-000000000001',
-            'Scenario05 claim plan',
-            'scenario05-claim-plan',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            'Standard',
-            'Assisted',
-            'Published',
-            2,
-            now(),
-            now(),
-            '10000000-0000-0000-0000-000000000003');
-
-        INSERT INTO "Processes_DefinitionVersions" (
-            "Id",
-            "ProcessDefinitionId",
-            "VersionNumber",
-            "Status",
-            "ChangeSummary",
-            "GovernancePolicySummary",
-            "ConstitutionRuleSummary",
-            "OperatingModeSummary",
-            "SimulationReadinessSummary",
-            "ManagerAgentOverrideName",
-            "ImportedFrom",
-            "ImportWarnings",
-            "ContractMode",
-            "CreatedAtUtc",
-            "UpdatedAtUtc",
-            "PublishedAtUtc",
-            "PublishedBy",
-            "ConcurrencyToken")
-        VALUES (
-            '10000000-0000-0000-0000-000000000002',
-            '10000000-0000-0000-0000-000000000001',
-            1,
-            'Published',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            'Compatibility',
-            now(),
-            now(),
-            now(),
-            'integration-tests',
-            '10000000-0000-0000-0000-000000000004');
-
-        INSERT INTO "Processes_StepDefinitions" (
-            "Id",
-            "ProcessDefinitionVersionId",
-            "Key",
-            "Title",
-            "Subtitle",
-            "Notes",
-            "StepKind",
-            "AllowedOperations",
-            "OperationTargetScope",
-            "SubprocessDefinitionSnapshotName",
-            "AllowsManualSkip",
-            "AllowsSafeRefusal",
-            "RequiresApproval",
-            "RequiresDecisionRecord",
-            "InputContractSummary",
-            "OutputContractSummary",
-            "EvidenceContractSummary",
-            "DecisionRightsSummary",
-            "ExceptionPolicySummary",
-            "TargetLeadHours",
-            "OrderIndex",
-            "CanvasX",
-            "CanvasY",
-            "BranchCanvasX",
-            "BranchCanvasY")
         SELECT
-            ('00000000-0000-0000-4000-' || lpad(series.value::text, 12, '0'))::uuid,
-            '10000000-0000-0000-0000-000000000002',
-            'step-' || series.value,
-            'Step ' || series.value,
-            '',
-            '',
-            'Work',
-            '[]',
-            NULL,
-            '',
-            false,
-            false,
-            false,
-            false,
-            '',
-            '',
-            '',
-            '',
-            '',
-            1,
-            series.value,
-            0,
-            0,
-            0,
-            0
-        FROM generate_series(1, 6000) AS series(value);
+            ('10000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid,
+            ('10000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid,
+            ('20000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid,
+            'plan-' || run.value,
+            CASE WHEN run.value = 5 THEN 'Active' ELSE 'Completed' END,
+            now() - make_interval(secs => run.value),
+            ('30000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid
+        FROM generate_series(1, 200) AS run(value);
 
-        INSERT INTO "Processes_Runs" (
-            "Id",
-            "ProcessDefinitionId",
-            "ProcessDefinitionVersionId",
-            "HierarchyDepth",
-            "Name",
-            "Status",
-            "OperatingMode",
-            "TriggerReason",
-            "GovernanceSnapshot",
-            "PolicySnapshot",
-            "ExecutorSnapshotSummary",
-            "ManagerAgentName",
-            "ReplayPackageKey",
-            "CreatedAtUtc",
-            "UpdatedAtUtc",
-            "StartedAtUtc",
-            "EstimatedCost",
-            "ActualCost",
-            "FirstTimeRightPercent",
-            "SlaAttainmentPercent",
-            "ConcurrencyToken")
-        VALUES (
-            '10000000-0000-0000-0000-000000000005',
-            '10000000-0000-0000-0000-000000000001',
-            '10000000-0000-0000-0000-000000000002',
-            0,
-            'Scenario05 claim plan run',
-            'Active',
-            'AssistedExecution',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            now(),
-            now(),
-            now(),
-            0,
-            0,
-            100,
-            100,
-            '10000000-0000-0000-0000-000000000006');
-
-        INSERT INTO "Processes_StepRuns" (
-            "Id",
-            "ProcessRunId",
+        INSERT INTO "process_runtime_steps" (
+            "RunId",
+            "StepInstanceId",
             "StepDefinitionId",
-            "Sequence",
-            "Title",
-            "StepKind",
             "Status",
-            "RoleSnapshotSummary",
-            "CurrentExecutorName",
-            "DecisionSummary",
-            "BlockedReason",
-            "BlockReasonCode",
-            "RecoveryOptionsJson",
-            "NextRecoveryAction",
-            "RefusalReason",
-            "ExceptionSummary",
-            "InputQualitySummary",
-            "SelectedBranchOutcomeTitle",
-            "WaitMinutes",
-            "TouchMinutes",
-            "BlockedMinutes",
-            "ReworkCount",
-            "CapabilityGapSeverity",
-            "AutomationDispatchClaimToken",
-            "AutomationDispatchClaimedBy",
-            "AutomationDispatchLeaseExpiresAtUtc",
-            "AutomationDispatchAttemptCount",
-            "ConcurrencyToken")
+            "IsExecutable",
+            "AttemptNumber",
+            "DependencyStepIds",
+            "RequiredArtifactSlotIds",
+            "ActiveClaimToken",
+            "CompletedResultKey")
         SELECT
-            ('00000000-0000-0000-5000-' || lpad(series.value::text, 12, '0'))::uuid,
-            '10000000-0000-0000-0000-000000000005',
-            ('00000000-0000-0000-4000-' || lpad(series.value::text, 12, '0'))::uuid,
-            series.value,
-            'Step ' || series.value,
-            'Work',
+            ('10000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid,
+            ('40000000-0000-0000-0000-' || lpad((run.value * 10000 + step.value)::text, 12, '0'))::uuid,
+            ('50000000-0000-0000-0000-' || lpad(step.value::text, 12, '0'))::uuid,
             CASE
-                WHEN series.value % 7 = 0 THEN 'Completed'
-                WHEN series.value % 5 = 0 THEN 'InProgress'
-                WHEN series.value % 3 = 0 THEN 'WaitingApproval'
+                WHEN step.value % 7 = 0 THEN 'Completed'
+                WHEN step.value % 5 = 0 THEN 'Running'
+                WHEN step.value % 3 = 0 THEN 'WaitingApproval'
                 ELSE 'Ready'
             END,
-            '',
-            '',
-            '',
-            'None',
+            true,
+            step.value,
             '[]',
-            'None',
-            '',
-            '',
-            '',
-            '',
-            '',
-            0,
-            0,
-            0,
-            0,
-            'None',
-            '',
-            '',
-            CASE
-                WHEN series.value % 13 = 0 THEN now() + interval '1 day'
-                WHEN series.value % 11 = 0 THEN now() - interval '2 minutes'
-                ELSE NULL
-            END,
-            0,
-            ('00000000-0000-0000-6000-' || lpad(series.value::text, 12, '0'))::uuid
-        FROM generate_series(1, 6000) AS series(value);
+            '[]',
+            NULL,
+            NULL
+        FROM generate_series(1, 200) AS run(value)
+        CROSS JOIN generate_series(1, 50) AS step(value);
         """;
 
     private const string SeedConnectorCommandsSql =
@@ -459,36 +258,36 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
     private const string ProcessOutboxClaimSql =
         """
         WITH due AS (
-            SELECT o."Id"
-            FROM "Processes_Outbox" AS o
-            WHERE o."Status" = 0
-              AND (o."NextAttemptAtUtc" IS NULL OR o."NextAttemptAtUtc" <= now())
-              AND (o."LeaseExpiresAtUtc" IS NULL OR o."LeaseExpiresAtUtc" <= now())
-            ORDER BY COALESCE(o."NextAttemptAtUtc", o."CreatedAtUtc"), o."CreatedAtUtc"
+            SELECT o."MessageId"
+            FROM "process_outbox_messages" AS o
+            WHERE o."Status" = 'Pending'
+              AND (o."AvailableAtUtc" IS NULL OR o."AvailableAtUtc" <= now())
+            ORDER BY o."CreatedAtUtc"
             FOR UPDATE SKIP LOCKED
             LIMIT 64
         )
-        UPDATE "Processes_Outbox" AS o
-        SET "LeaseToken" = 'scenario05',
-            "LeaseExpiresAtUtc" = now() + interval '2 minutes',
-            "UpdatedAtUtc" = now()
+        UPDATE "process_outbox_messages" AS o
+        SET "Status" = 'Locked',
+            "LockId" = 'scenario05',
+            "LockedAtUtc" = now(),
+            "AttemptCount" = o."AttemptCount" + 1
         FROM due
-        WHERE o."Id" = due."Id"
-        RETURNING o."Id", o."LeaseToken", o."ProcessRunId", o."CommandKey";
+        WHERE o."MessageId" = due."MessageId"
+        RETURNING o."MessageId", o."LockId", o."EventId", o."SubscriberKind";
         """;
 
     private const string ProcessStepDispatchHeaderSql =
         """
-        SELECT s."Id", s."Status"
-        FROM "Processes_StepRuns" AS s
-        WHERE s."ProcessRunId" = '10000000-0000-0000-0000-000000000005'
+        SELECT s."RunId", s."StepInstanceId", s."Status"
+        FROM "process_runtime_steps" AS s
+        WHERE s."RunId" = '10000000-0000-0000-0000-000000000005'
           AND (
               s."Status" = 'Ready'
               OR s."Status" = 'WaitingApproval'
-              OR s."Status" = 'InProgress'
+              OR s."Status" = 'Running'
           )
-          AND (s."AutomationDispatchLeaseExpiresAtUtc" IS NULL OR s."AutomationDispatchLeaseExpiresAtUtc" <= now())
-        ORDER BY s."Sequence"
+          AND s."ActiveClaimToken" IS NULL
+        ORDER BY s."AttemptNumber", s."StepInstanceId"
         LIMIT 64;
         """;
 

@@ -1,6 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
 
-namespace CanDoItAll.Processes.Application;
+namespace CanDoItAll.Processes.Projections;
 
 public interface IProcessExecutionObservationReader
 {

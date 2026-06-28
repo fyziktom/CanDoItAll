@@ -340,7 +340,13 @@ internal static class SandboxWorkspaceSeedNormalizer
             return false;
         }
 
-        return !IsManagedSeedOpenAiProvider(provider);
+        if (ManagedSeedProviderFallbacks.HasProviderRepairFallbackOverride(existingAgent))
+        {
+            return true;
+        }
+
+        return !IsManagedSeedOpenAiProvider(provider) &&
+               !ManagedSeedProviderFallbacks.IsGeneratedManagedSeedFallbackProvider(provider);
     }
 
     private static string CopyManagedSeedVersion(

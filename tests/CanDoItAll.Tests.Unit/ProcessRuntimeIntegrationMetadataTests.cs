@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit;

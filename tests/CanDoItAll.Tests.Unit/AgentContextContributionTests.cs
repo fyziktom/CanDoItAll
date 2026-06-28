@@ -579,6 +579,7 @@ public sealed class AgentContextContributionTests
             [
                 agent,
                 provider,
+                provider.DefaultModel,
                 Array.Empty<CapabilityCatalogItem>(),
                 Array.Empty<AgentMemoryRecord>(),
                 (Func<ExecutionState, string, string, Task>)((_, _, message) =>
@@ -588,7 +589,8 @@ public sealed class AgentContextContributionTests
                 }),
                 CancellationToken.None,
                 false,
-                contextWorkspaceScope
+                contextWorkspaceScope,
+                AgentRuntimeContextIntent.Empty
             ]);
         var task = Assert.IsAssignableFrom<Task>(invocation);
         await task;

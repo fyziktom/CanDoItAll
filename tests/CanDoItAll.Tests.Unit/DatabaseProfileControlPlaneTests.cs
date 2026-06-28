@@ -130,15 +130,18 @@ public sealed class DatabaseProfileOverrideTests
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-retired-provider-override-rejected");
 
         var overrideWorkspaceRoot = Path.Combine(testEnvironment.RootPath, "wrong-override-workspace");
-        var ex = Assert.Throws<InvalidOperationException>(() => DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
-                testEnvironment,
-                includeDatabaseOverride: true,
-                additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["Database:Provider"] = LegacyCatalogTestData.RetiredProviderName(),
-                    ["Database:ConnectionString"] = "Data Source=C:\\legacy\\candoitall.db",
-                    ["Storage:WorkspaceRoot"] = overrideWorkspaceRoot
-                }));
+        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: true,
+            additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Database:Provider"] = LegacyCatalogTestData.RetiredProviderName(),
+                ["Database:ConnectionString"] = "Data Source=C:\\legacy\\candoitall.db",
+                ["Storage:WorkspaceRoot"] = overrideWorkspaceRoot
+            });
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            provider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile());
 
         Assert.Contains("Unsupported database provider", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(LegacyCatalogTestData.RetiredProviderName(), ex.Message, StringComparison.OrdinalIgnoreCase);

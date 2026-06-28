@@ -140,7 +140,9 @@ public sealed class ProviderRuntimeImageGenerationServiceTests
 
         public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query)
         {
-            return ProviderDispatchLimits.Unbatched(TimeSpan.FromSeconds(30));
+            return ProviderDispatchLimits.Unbatched(
+                TimeSpan.FromSeconds(30),
+                maxInFlightRequests: 8);
         }
 
         public async Task<ProviderImageGenerationResult> GenerateImageAsync(

@@ -361,11 +361,14 @@ public sealed partial class WorkspaceService(
         }
 
         var defaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
-        var pricingKind = ResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey);
-        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
-            pricingKind,
-            defaultModel,
-            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
+        var hasPricingKind = TryResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey, out var pricingKind);
+        var editorModelPrices = ProviderPricingDefaults.FromEditorModels(model.ModelPrices);
+        var modelPrices = hasPricingKind
+            ? ProviderPricingDefaults.NormalizeModelPrices(
+                pricingKind,
+                defaultModel,
+                editorModelPrices)
+            : editorModelPrices;
         if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var pricingValidationMessage))
         {
             return Result<Guid>.Failure(Error.Validation(pricingValidationMessage));
@@ -399,7 +402,9 @@ public sealed partial class WorkspaceService(
                                 model.SupportsVision;
         entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
             model.Configuration.ToJson(),
-            ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, model.IsPrivateProvider),
+            hasPricingKind
+                ? ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, model.IsPrivateProvider)
+                : model.IsPrivateProvider,
             modelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);

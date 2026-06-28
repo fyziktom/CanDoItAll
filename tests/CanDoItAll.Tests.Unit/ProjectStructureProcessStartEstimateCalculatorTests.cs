@@ -1,7 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Processes.Abstractions;
-using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Projections;
 
 namespace CanDoItAll.Tests.Unit;
 

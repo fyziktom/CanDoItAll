@@ -737,12 +737,15 @@ public sealed class ProcessWorkspaceShellTests
             var request = Assert.Single(voiceService.SynthesisRequests);
             Assert.Equal(workspaceService.AssistantResponseText, request.Text);
         });
-        Assert.Contains(
-            context.JSInterop.Invocations,
-            invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.clearAudioQueue");
-        Assert.Contains(
-            context.JSInterop.Invocations,
-            invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.enqueueAudio");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                context.JSInterop.Invocations,
+                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.clearAudioQueue");
+            Assert.Contains(
+                context.JSInterop.Invocations,
+                invocation => invocation.Identifier == "CanDoItAll.agentFramework.voice.enqueueAudio");
+        });
     }
 
     [Fact]

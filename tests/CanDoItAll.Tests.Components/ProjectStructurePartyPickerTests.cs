@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -41,17 +42,14 @@ public sealed class ProjectStructurePartyPickerTests
                     }
                 })));
 
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, participantNode.Id);
+
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
-
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Freelancer Node", cut.Markup);
         });
-
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Freelancer Node", StringComparison.Ordinal))
-            .Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -59,6 +57,7 @@ public sealed class ProjectStructurePartyPickerTests
             Assert.Contains("Keep project-local only", cut.Markup);
         });
 
+        cut.WaitForElement("[data-testid='project-structure-participant-local-only']");
         cut.Find("[data-testid='project-structure-participant-local-only']").Change(false);
         cut.WaitForAssertion(() =>
         {
@@ -142,18 +141,16 @@ public sealed class ProjectStructurePartyPickerTests
                 260,
                 ObjectSubtype: "task"));
 
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, meetingNode.Id);
+
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
-
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Weekly Sync", cut.Markup);
             Assert.Contains("Prepare recap", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Weekly Sync", StringComparison.Ordinal))
-            .Click();
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("project-structure-party-editor", cut.Markup);
@@ -176,13 +173,15 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.Contains("Meeting Customer", meetingMetadata.RelatedPartySummary);
         Assert.Contains("Meeting Owner", meetingMetadata.RelatedPartySummary);
 
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Prepare recap", StringComparison.Ordinal))
-            .Click();
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, workItemNode.Id);
+        cut.Dispose();
+        cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Work-item party assignment", cut.Markup);
         });
+        cut.WaitForElement("[data-testid='project-structure-work-item-party']");
         cut.Find("[data-testid='project-structure-work-item-party']").Change(ownerId.ToString());
         cut.Find("[data-testid='project-structure-work-item-save']").Click();
 
@@ -301,9 +300,10 @@ public sealed class ProjectStructurePartyPickerTests
             Source = "component-tests"
         })).IsSuccess);
 
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, participantNode.Id);
+
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
-
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Stale participant node", cut.Markup);
@@ -311,13 +311,11 @@ public sealed class ProjectStructurePartyPickerTests
             Assert.Contains("Stale work item node", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Stale participant node", StringComparison.Ordinal))
-            .Click();
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("project-structure-party-editor", cut.Markup);
         });
+        cut.WaitForElement("[data-testid='project-structure-participant-save']");
         cut.Find("[data-testid='project-structure-participant-save']").Click();
         cut.WaitForAssertion(() =>
         {
@@ -327,13 +325,15 @@ public sealed class ProjectStructurePartyPickerTests
         var participantMetadata = await ReadParticipantMetadataAsync(workbenchService, projectId, participantNode.Id);
         Assert.Equal("Canonical Participant", participantMetadata.LinkedPartyDisplayName);
 
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Stale meeting node", StringComparison.Ordinal))
-            .Click();
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, meetingNode.Id);
+        cut.Dispose();
+        cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Meeting party assignments", cut.Markup);
         });
+        cut.WaitForElement("[data-testid='project-structure-meeting-save']");
         cut.Find("[data-testid='project-structure-meeting-save']").Click();
         cut.WaitForAssertion(() =>
         {
@@ -344,13 +344,15 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.Contains("Canonical Meeting Customer", meetingMetadata.RelatedPartySummary);
         Assert.Contains("Canonical Meeting Owner", meetingMetadata.RelatedPartySummary);
 
-        cut.FindAll("button")
-            .First(button => button.TextContent.Contains("Stale work item node", StringComparison.Ordinal))
-            .Click();
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, workItemNode.Id);
+        cut.Dispose();
+        cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Work-item party assignment", cut.Markup);
         });
+        cut.WaitForElement("[data-testid='project-structure-work-item-save']");
         cut.Find("[data-testid='project-structure-work-item-save']").Click();
         cut.WaitForAssertion(() =>
         {
@@ -374,6 +376,19 @@ public sealed class ProjectStructurePartyPickerTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    private static Task SaveSelectedNodeStateAsync(ProjectWorkbenchService workbenchService, Guid projectId, params string[] selectedNodeIds)
+        => workbenchService.SaveViewStateAsync(
+            projectId,
+            "structure",
+            new CanvasWorkbenchUiState
+            {
+                SelectedNodeIds = selectedNodeIds.ToList(),
+                WindowStates = new Dictionary<string, CanvasWorkbenchWindowState>(StringComparer.Ordinal)
+                {
+                    ["project-structure.selection"] = new CanvasWorkbenchWindowState { IsVisible = true }
+                }
+            }.ToJson());
 
     private static async Task<Guid> CreatePartyAsync(PartyDirectoryService partyDirectoryService, PartyType partyType, string displayName)
     {

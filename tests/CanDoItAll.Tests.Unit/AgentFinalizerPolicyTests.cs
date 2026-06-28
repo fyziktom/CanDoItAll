@@ -700,11 +700,11 @@ public sealed class AgentFinalizerPolicyTests
     public void ExecutionInvocationMetadata_resolves_project_structure_launch_agent_for_trusted_process_run()
     {
         var launchAgent = new ProjectStructureAgentIdentityDescriptor(
-            "codex-sb05-tetris-e2e",
-            "Codex SB05 Tetris E2E",
+            "codex-project-structure-e2e",
+            "Codex Project Structure E2E",
             "LUCYSPOWER",
             @"C:\repositories\CanDoItAll",
-            "maf-processes-refactor",
+            "project-structure-runtime-refactor",
             "session-001");
         var metadataJson = ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(null, launchAgent);
         var run = CreateRun(metadataJson);
@@ -726,11 +726,11 @@ public sealed class AgentFinalizerPolicyTests
         var metadataJson = ExecutionInvocationMetadata.ApplyProjectStructureLaunchAgent(
             null,
             new ProjectStructureAgentIdentityDescriptor(
-                "codex-sb05-tetris-e2e",
-                "Codex SB05 Tetris E2E",
+                "codex-project-structure-e2e",
+                "Codex Project Structure E2E",
                 "LUCYSPOWER",
                 @"C:\repositories\CanDoItAll",
-                "maf-processes-refactor",
+                "project-structure-runtime-refactor",
                 "session-001"));
         var run = CreateRun(metadataJson) with
         {
