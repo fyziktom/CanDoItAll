@@ -795,6 +795,12 @@ internal static class SandboxWorkspaceSeedNormalizer
             return true;
         }
 
+        if (string.Equals(capability.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(capability.Name, "Bundle Workflow Skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         if (!string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
             capability.EndpointOrPath.Contains(RetiredSandboxAssemblyName, StringComparison.OrdinalIgnoreCase))
         {

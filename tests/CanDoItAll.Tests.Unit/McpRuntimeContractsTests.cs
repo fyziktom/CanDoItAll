@@ -43,7 +43,7 @@ public sealed class McpRuntimeContractsTests
     {
         var descriptor = McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("playwright-local-mcp"),
-            McpServerKey.Create("playwright-local-mcp"),
+            McpServerKey.Create("playwright-local"),
             "Playwright Local MCP",
             "Local browser automation MCP.",
             command: "node",
@@ -78,7 +78,7 @@ public sealed class McpRuntimeContractsTests
     {
         var descriptor = McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("playwright-local-mcp"),
-            McpServerKey.Create("playwright-local-mcp"),
+            McpServerKey.Create("playwright-local"),
             "Playwright Local MCP",
             "Local browser automation MCP.",
             command: "node",
@@ -424,13 +424,13 @@ public sealed class McpRuntimeContractsTests
                 CapabilityRuleId.Create("deny-server"),
                 CapabilityAccessEffect.Deny,
                 CapabilityAccessScope.ProcessStep,
-                CapabilitySelector.ByMcpServerKey(McpServerKey.Create("playwright-local-mcp")),
+                CapabilitySelector.ByMcpServerKey(McpServerKey.Create("playwright-local")),
                 "No browser MCP server."),
             new CapabilityAccessRule(
                 CapabilityRuleId.Create("deny-tool"),
                 CapabilityAccessEffect.Deny,
                 CapabilityAccessScope.ProcessStep,
-                CapabilitySelector.ByMcpToolName(McpServerKey.Create("playwright-local-mcp"), McpToolName.Create("browser_snapshot")),
+                CapabilitySelector.ByMcpToolName(McpServerKey.Create("playwright-local"), McpToolName.Create("browser_snapshot")),
                 "No browser snapshot tool.")
         ]);
 
@@ -481,7 +481,7 @@ public sealed class McpRuntimeContractsTests
     {
         return McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("playwright-local-mcp"),
-            McpServerKey.Create("playwright-local-mcp"),
+            McpServerKey.Create("playwright-local"),
             "Playwright Local MCP",
             "Local browser automation MCP.",
             command: "node",

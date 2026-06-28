@@ -214,7 +214,7 @@ public sealed class CapabilityFoundationHardeningTests
             operationClassifications: [CapabilityOperationClassification.Read]));
         var mcpServerDescriptor = McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("playwright-local-mcp"),
-            McpServerKey.Create("playwright-local-mcp"),
+            McpServerKey.Create("playwright-local"),
             "Playwright Local MCP",
             "Local browser automation MCP.",
             command: "node",
@@ -242,7 +242,7 @@ public sealed class CapabilityFoundationHardeningTests
             Assert.NotNull(descriptor.SourcePath);
         }
 
-        Assert.Equal(McpServerKey.Create("playwright-local-mcp"), mcpTool.McpServerKey);
+        Assert.Equal(McpServerKey.Create("playwright-local"), mcpTool.McpServerKey);
         Assert.Equal(McpToolName.Create("browser_snapshot"), mcpTool.McpToolName);
     }
 

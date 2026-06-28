@@ -59,7 +59,7 @@ internal sealed class CapabilityTemplatePackLoader
                 capability.TemplatePath = RelativePath(root, path);
                 capability.ManifestIndex = index;
                 capabilities.Add(capability);
-                issues.AddRange(ValidateCapability(capability));
+                issues.AddRange(ValidateCapability(capability, root));
             }
         }
 
@@ -109,7 +109,9 @@ internal sealed class CapabilityTemplatePackLoader
                 .ToList());
     }
 
-    private static IReadOnlyList<CapabilityValidationIssue> ValidateCapability(CapabilitySeedTemplateDescriptor capability)
+    private static IReadOnlyList<CapabilityValidationIssue> ValidateCapability(
+        CapabilitySeedTemplateDescriptor capability,
+        string packRoot)
     {
         var templatePath = TemplatePath.Create(capability.TemplatePath);
         var descriptor = new CapabilityTemplateDescriptorDto
@@ -194,7 +196,101 @@ internal sealed class CapabilityTemplatePackLoader
                 [capability]));
         }
 
+        issues.AddRange(ValidateInlineSkillAssets(capability, packRoot, kind, key));
+
         return issues;
+    }
+
+    private static IEnumerable<CapabilityValidationIssue> ValidateInlineSkillAssets(
+        CapabilitySeedTemplateDescriptor capability,
+        string packRoot,
+        CapabilityKind? kind,
+        CapabilityKey? key)
+    {
+        if (!string.Equals(capability.Kind, "skill", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(capability.SkillSource, "inline", StringComparison.OrdinalIgnoreCase))
+        {
+            yield break;
+        }
+
+        if (capability.InlineSkill is null)
+        {
+            yield return Issue(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                kind,
+                key,
+                capability.TemplatePath,
+                "$.inlineSkill",
+                "Inline skill templates must define inlineSkill settings.",
+                "Add inlineSkill.name, inlineSkill.description, and inlineSkill.instructionsAssetKey.");
+            yield break;
+        }
+
+        foreach (var issue in ValidateTemplateAssetPath(
+                     capability,
+                     packRoot,
+                     capability.InlineSkill.InstructionsAssetKey,
+                     "$.inlineSkill.instructionsAssetKey",
+                     kind,
+                     key))
+        {
+            yield return issue;
+        }
+
+        for (var index = 0; index < capability.InlineSkill.Resources.Count; index++)
+        {
+            var resource = capability.InlineSkill.Resources[index];
+            if (string.IsNullOrWhiteSpace(resource.ContentAssetKey))
+            {
+                continue;
+            }
+
+            foreach (var issue in ValidateTemplateAssetPath(
+                         capability,
+                         packRoot,
+                         resource.ContentAssetKey,
+                         $"$.inlineSkill.resources[{index}].contentAssetKey",
+                         kind,
+                         key))
+            {
+                yield return issue;
+            }
+        }
+    }
+
+    private static IEnumerable<CapabilityValidationIssue> ValidateTemplateAssetPath(
+        CapabilitySeedTemplateDescriptor capability,
+        string packRoot,
+        string relativePath,
+        string fieldPath,
+        CapabilityKind? kind,
+        CapabilityKey? key)
+    {
+        CapabilityValidationIssue? validationIssue = null;
+        try
+        {
+            CapabilityTemplateSeedMaterializer.ResolveTemplateAssetPath(
+                packRoot,
+                relativePath,
+                capability.Key,
+                fieldPath);
+        }
+        catch (InvalidOperationException exception)
+        {
+            validationIssue = Issue(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                kind,
+                key,
+                capability.TemplatePath,
+                fieldPath,
+                exception.Message,
+                "Create the referenced file under Templates/Capabilities or correct the relative asset path.");
+        }
+
+        if (validationIssue is not null)
+        {
+            yield return validationIssue;
+        }
     }
 
     private static IEnumerable<CapabilityValidationIssue> ValidateDuplicateKeys(IReadOnlyList<CapabilitySeedTemplateDescriptor> capabilities)

@@ -8,7 +8,7 @@
       "stableId": "mcp:playwright-local-mcp:v1",
       "stableGuidKey": "capabilities/playwright-local-mcp",
       "endpointOrPath": "npx",
-      "mcpServerKey": "playwright-local-mcp",
+      "mcpServerKey": "playwright-local",
       "operationClassifications": [
         "browser-access",
         "mcp-tool",

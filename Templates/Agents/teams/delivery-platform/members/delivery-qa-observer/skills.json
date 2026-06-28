@@ -1,7 +1,6 @@
 {
   "capabilityKeys": [
     "playwright-local-mcp",
-    "candoitall-bundle-workflow",
     "concrete-deliverable-delivery-inline-skill",
     "candoitall-frontend-theme",
     "frontend-skill",

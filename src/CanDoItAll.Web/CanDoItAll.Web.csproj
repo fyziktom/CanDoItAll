@@ -38,8 +38,12 @@
 
   <ItemGroup>
     <Content Include="..\..\Templates\**\*"
+             Exclude="..\..\Templates\**\*.razor"
              Link="Templates\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\Templates\**\*.razor"
+          Link="Templates\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

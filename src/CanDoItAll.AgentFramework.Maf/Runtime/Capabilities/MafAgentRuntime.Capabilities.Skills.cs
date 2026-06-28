@@ -214,6 +214,12 @@ public sealed partial class MafAgentRuntime
             return true;
         }
 
+        if (string.Equals(capability.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(capability.Name, "Bundle Workflow Skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         if (!string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
             capability.EndpointOrPath.Contains("CanDoItAll.AgentFramework.Sandbox", StringComparison.OrdinalIgnoreCase))
         {

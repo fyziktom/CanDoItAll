@@ -187,7 +187,7 @@ public sealed class CapabilityContractsTests
             "Local browser automation MCP.",
             ImplementationKey.Create("mcp.playwright.local"),
             null,
-            McpServerKey.Create("playwright-local-mcp"),
+            McpServerKey.Create("playwright-local"),
             null,
             new HashSet<CapabilityTag> { CapabilityTag.Create("external") },
             new HashSet<CapabilityOperationClassification> { CapabilityOperationClassification.BrowserAccess },

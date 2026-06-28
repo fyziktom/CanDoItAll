@@ -11,13 +11,14 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 {
     [Fact]
-    public void Seed_catalog_loads_generic_reconciliation_skill_and_retires_stale_built_in_inline_skills()
+    public void Seed_catalog_loads_generic_reconciliation_skill_and_retires_stale_built_in_skills()
     {
         var seed = SandboxWorkspaceSeedFactory.Create();
         var reconciliationCapability = Assert.Single(
             seed.Capabilities,
             item => string.Equals(item.Key, "document-spreadsheet-reconciliation-inline-skill", StringComparison.OrdinalIgnoreCase));
         var retiredCapabilityId = Guid.NewGuid();
+        var retiredBundleWorkflowCapabilityId = Guid.NewGuid();
         var retiredCapability = new CapabilityCatalogItem(
             retiredCapabilityId,
             CapabilityKind.Skill,
@@ -30,6 +31,22 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             string.Empty,
             null,
             true);
+        var retiredBundleWorkflowCapability = new CapabilityCatalogItem(
+            retiredBundleWorkflowCapabilityId,
+            CapabilityKind.Skill,
+            "candoitall-bundle-workflow",
+            "Bundle Workflow Skill",
+            "Old Codex development workflow skill that must not be exposed to internal runtime agents.",
+            "~/.codex/skills/candoitall-bundle-workflow/SKILL.md",
+            JsonSerializer.Serialize(new
+            {
+                skillSource = "file",
+                skillRoot = "~/.codex/skills/candoitall-bundle-workflow"
+            }),
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
         var financialStrategist = Assert.Single(
             seed.Agents,
             item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
@@ -38,7 +55,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Name, "Spreadsheet Analyst", StringComparison.Ordinal));
         var catalog = seed.ToCatalog() with
         {
-            Capabilities = seed.Capabilities.Concat([retiredCapability]).ToList(),
+            Capabilities = seed.Capabilities.Concat([retiredCapability, retiredBundleWorkflowCapability]).ToList(),
             Agents = seed.Agents.Select(agent => agent.Id == financialStrategist.Id
                 ? agent with
                 {
@@ -47,6 +64,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                             retiredCapabilityId,
                             retiredCapability.Key,
                             retiredCapability.Kind,
+                            CapabilityProofStatus.NotRun,
+                            null,
+                            string.Empty),
+                        new AgentCapabilityAssignment(
+                            retiredBundleWorkflowCapabilityId,
+                            retiredBundleWorkflowCapability.Key,
+                            retiredBundleWorkflowCapability.Kind,
                             CapabilityProofStatus.NotRun,
                             null,
                             string.Empty)
@@ -61,7 +85,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
 
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredCapabilityId);
+        Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredBundleWorkflowCapabilityId);
+        Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredCapabilityId);
+        Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredBundleWorkflowCapabilityId);
         Assert.Contains(spreadsheetAnalyst.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
         Assert.Contains(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
     }
@@ -654,8 +681,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var capabilities = await workspaceService.ListCapabilitiesAsync();
         Assert.DoesNotContain(capabilities, item => string.Equals(item.Key, "workspace-delivery-skill", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(capabilities, item => string.Equals(item.Key, "workspace-inspector-plugin", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(capabilities, item => string.Equals(item.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
         var capabilityIdsByKey = capabilities.ToDictionary(item => item.Key, item => item.Id, StringComparer.OrdinalIgnoreCase);
-        var bundleWorkflowCapabilityId = capabilityIdsByKey["candoitall-bundle-workflow"];
         var playwrightCapabilityId = capabilityIdsByKey["playwright-local-mcp"];
         var codeanalyticsCapabilityId = capabilityIdsByKey["candoitall-codeanalytics-mcp"];
         var componentsCapabilityId = capabilityIdsByKey["candoitall-components-mcp"];
@@ -726,16 +753,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertHasCapabilities(uiReviewAgent, playwrightCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(securityReviewerAgent, codeanalyticsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(releaseManagerAgent, playwrightCapabilityId, playwrightWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(dotnetArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(dotnetArchitectAgent, concreteDeliverableDeliveryCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(dotnetDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(blazorDeveloperAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(dotnetQaAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(javascriptArchitectAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(javascriptArchitectAgent, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(javascriptDeveloperAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
-        AssertHasCapabilities(businessStrategistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(businessStrategistAgent, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(marketingSpecialistAgent, bundleWorkflowCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(marketingSpecialistAgent, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         Assert.DoesNotContain(architectAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(programmingAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
@@ -1064,6 +1091,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         await DowngradeAgentToLegacyUiReviewAsync(workspaceService, capabilityIdsByKey);
         await DowngradeAgentToLegacySecurityReviewAsync(workspaceService, capabilityIdsByKey);
         await DowngradeAgentToLegacyReleaseReadinessAsync(workspaceService, capabilityIdsByKey);
+        Assert.DoesNotContain(capabilityIdsByKey.Keys, key => string.Equals(key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         var architectAgent = Assert.Single(agents, item => string.Equals(item.Name, "Portfolio Architect", StringComparison.Ordinal));
@@ -1088,7 +1116,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertHasCapabilities(codeReviewAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
         AssertHasCapabilities(uiReviewAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
         AssertHasCapabilities(securityReviewAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
-        AssertHasCapabilities(releaseManagerAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["candoitall-bundle-workflow"], capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
+        AssertHasCapabilities(releaseManagerAgent, capabilityIdsByKey["playwright-local-mcp"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-pwsh-run-script"]);
         Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(codeReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(uiReviewAgent.Capabilities, item => string.Equals(item.CapabilityKey, "workspace-source-rag", StringComparison.OrdinalIgnoreCase));

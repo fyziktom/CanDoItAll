@@ -15,15 +15,18 @@ internal static class CapabilityTemplateSeedMaterializer
         ArgumentNullException.ThrowIfNull(pack);
 
         return pack.Capabilities
-            .Select(template => Materialize(template, pack.Manifest.SeedVersion))
+            .Select(template => Materialize(template, pack.Manifest.SeedVersion, pack.RootPath))
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    private static CapabilityCatalogItem Materialize(CapabilitySeedTemplateDescriptor template, string seedVersion)
+    private static CapabilityCatalogItem Materialize(
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        string packRoot)
     {
         var kind = ParseKind(template.Kind, template.Key);
-        var configurationJson = BuildConfigurationJson(template, seedVersion);
+        var configurationJson = BuildConfigurationJson(template, seedVersion, packRoot);
         return new CapabilityCatalogItem(
             CreateStableGuid(Require(template.StableGuidKey, template.Key, "stableGuidKey")),
             kind,
@@ -46,14 +49,17 @@ internal static class CapabilityTemplateSeedMaterializer
         };
     }
 
-    private static string BuildConfigurationJson(CapabilitySeedTemplateDescriptor template, string seedVersion)
+    private static string BuildConfigurationJson(
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        string packRoot)
     {
         return NormalizeKind(template.Kind) switch
         {
             "skill" when string.Equals(template.SkillSource, "file", StringComparison.OrdinalIgnoreCase) =>
                 BuildFileSkillConfiguration(template, seedVersion),
             "skill" when string.Equals(template.SkillSource, "inline", StringComparison.OrdinalIgnoreCase) =>
-                BuildInlineSkillConfiguration(template, seedVersion),
+                BuildInlineSkillConfiguration(template, seedVersion, packRoot),
             "tool" => BuildToolConfiguration(template, seedVersion),
             "aiContext" => SerializeConfiguration(new { message = Require(template.Message, template.Key, "message"), role = "system" }),
             _ => BuildRawConfiguration(template, seedVersion)
@@ -79,7 +85,10 @@ internal static class CapabilityTemplateSeedMaterializer
         });
     }
 
-    private static string BuildInlineSkillConfiguration(CapabilitySeedTemplateDescriptor template, string seedVersion)
+    private static string BuildInlineSkillConfiguration(
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        string packRoot)
     {
         var inlineSkill = template.InlineSkill
             ?? throw new InvalidOperationException($"Capability template '{template.Key}' is missing inlineSkill settings.");
@@ -89,15 +98,17 @@ internal static class CapabilityTemplateSeedMaterializer
             {
                 name = Require(inlineSkill.Name, template.Key, "inlineSkill.name"),
                 description = Require(inlineSkill.Description, template.Key, "inlineSkill.description"),
-                instructions = SandboxWorkspaceSeedAssets.Current.GetText(Require(
+                instructions = ReadTemplateAsset(packRoot, Require(
                     inlineSkill.InstructionsAssetKey,
                     template.Key,
-                    "inlineSkill.instructionsAssetKey")),
+                    "inlineSkill.instructionsAssetKey"),
+                    template.Key,
+                    "inlineSkill.instructionsAssetKey"),
                 resources = inlineSkill.Resources.Count > 0
                     ? inlineSkill.Resources.Select(resource => new
                     {
                         resource.Name,
-                        Content = ResolveResourceContent(resource),
+                        Content = ResolveResourceContent(resource, packRoot),
                         resource.Description
                     }).ToArray()
                     : null
@@ -179,14 +190,63 @@ internal static class CapabilityTemplateSeedMaterializer
         return Require(template.EndpointOrPath, template.Key, "endpointOrPath");
     }
 
-    private static string ResolveResourceContent(InlineSkillResourceTemplate resource)
+    private static string ResolveResourceContent(
+        InlineSkillResourceTemplate resource,
+        string packRoot)
     {
         if (!string.IsNullOrWhiteSpace(resource.ContentAssetKey))
         {
-            return SandboxWorkspaceSeedAssets.Current.GetText(resource.ContentAssetKey.Trim());
+            return ReadTemplateAsset(
+                packRoot,
+                resource.ContentAssetKey.Trim(),
+                resource.Name,
+                "inlineSkill.resources[].contentAssetKey");
         }
 
         return resource.Content ?? string.Empty;
+    }
+
+    private static string ReadTemplateAsset(
+        string packRoot,
+        string relativePath,
+        string templateKey,
+        string fieldPath)
+    {
+        var fullPath = ResolveTemplateAssetPath(packRoot, relativePath, templateKey, fieldPath);
+        return File.ReadAllText(fullPath, Encoding.UTF8);
+    }
+
+    internal static string ResolveTemplateAssetPath(
+        string packRoot,
+        string relativePath,
+        string templateKey,
+        string fieldPath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            throw new InvalidOperationException($"Capability template '{templateKey}' is missing required asset path '{fieldPath}'.");
+        }
+
+        var normalizedRelativePath = relativePath.Trim().Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(normalizedRelativePath))
+        {
+            throw new InvalidOperationException($"Capability template '{templateKey}' asset path '{fieldPath}' must be relative to the capability template pack root.");
+        }
+
+        var root = Path.GetFullPath(packRoot);
+        var fullPath = Path.GetFullPath(Path.Combine(root, normalizedRelativePath));
+        if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Capability template '{templateKey}' asset path '{fieldPath}' escapes the capability template pack root.");
+        }
+
+        if (!File.Exists(fullPath))
+        {
+            throw new InvalidOperationException($"Capability template '{templateKey}' asset path '{fieldPath}' was not found: {relativePath}");
+        }
+
+        return fullPath;
     }
 
     private static CapabilityKind ParseKind(string value, string key)

@@ -26,9 +26,11 @@ Every capability descriptor must have:
 
 ## Adding Skills
 
-For a file skill, add a `skill` descriptor to `skills.json` with `skillSource: "file"` and a `skillRootKey` that resolves through `SandboxWorkspaceSeedAssets`. The materializer writes `skillSource`, `skillRoot`, `allowedExternalRoots`, and script execution policy into the capability configuration. File skills become shared `SkillDescriptor` values through the MAF catalog adapter; do not add private MAF skill descriptor records.
+Internal-agent skills are app templates. Store their instructions under `Templates/Capabilities/skills/instructions/` and reusable resources under `Templates/Capabilities/skills/resources/`. Do not point managed app capabilities at `~/.codex/skills`; those are Codex development skills for building CanDoItAll, not runtime template inputs for internal agents.
 
-For an inline skill, use `skillSource: "inline"` and an `inlineSkill` block with `name`, `description`, `instructionsAssetKey`, and optional `resources`. Put reusable text under the seed assets read by `SandboxWorkspaceSeedAssets`; do not duplicate long instructions in C#.
+For an inline skill, use `skillSource: "inline"` and an `inlineSkill` block with `name`, `description`, `instructionsAssetKey`, and optional `resources`. `instructionsAssetKey` and resource `contentAssetKey` values are repository-relative paths under `Templates/Capabilities`, for example `skills/instructions/dotnet-app-delivery.md` or `skills/resources/dotnet-command-examples.md`. The capability template loader validates these files before seeding.
+
+File skills are reserved for explicitly user-provided workspace skills. Do not use file skills for the default app-owned capability pack unless the skill root also lives under the app template tree and the ownership boundary is reviewed.
 
 For a registered skill, bind through an implementation key and service registration in the skill implementation project. The catalog template owns the capability key and user-facing metadata; the implementation project owns execution.
 

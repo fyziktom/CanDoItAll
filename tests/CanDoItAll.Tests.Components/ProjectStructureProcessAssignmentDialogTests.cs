@@ -387,7 +387,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             AgentStatusLabel: "Active",
             AgentWorkloadLabel: "Programming",
             ToolNames: ["playwright-local-mcp", "workspace-files"],
-            SkillNames: ["candoitall-bundle-workflow", "aspnet-core-skill"],
+            SkillNames: ["concrete-deliverable-delivery-inline-skill", "aspnet-core-skill"],
             MatchScore: matchScore ?? ResolveMatchScore(score));
     }
 

@@ -120,7 +120,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
                           "stableId": "mcp:playwright-local-mcp:v1",
                           "stableGuidKey": "capabilities/playwright-local-mcp",
                           "endpointOrPath": "npx",
-                          "mcpServerKey": "playwright-local-mcp",
+                          "mcpServerKey": "playwright-local",
                           "mcpTransport": {
                             "transport": "local-stdio",
                             "command": "npx",
@@ -317,7 +317,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
         }
 
         Assert.Equal(
-            "2026-06-agent-template-teams-v25",
+            "2026-06-agent-template-teams-v26",
             ReadManagedSeedVersion(firstByKey["workspace-read-file"].ConfigurationJson));
         Assert.Null(ReadManagedSeedVersion(firstByKey["mail-triage-inline-skill"].ConfigurationJson));
     }
@@ -404,7 +404,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
             key,
             null,
             RuntimeToolName.TryCreate(runtimeToolName, out var runtimeName) ? runtimeName : null,
-            key.StartsWith("playwright", StringComparison.OrdinalIgnoreCase) ? McpServerKey.Create("playwright-local-mcp") : null,
+            key.StartsWith("playwright", StringComparison.OrdinalIgnoreCase) ? McpServerKey.Create("playwright-local") : null,
             key.StartsWith("playwright", StringComparison.OrdinalIgnoreCase) ? McpToolName.Create("browser_take_screenshot") : null,
             new HashSet<CapabilityTag>(),
             classifications,

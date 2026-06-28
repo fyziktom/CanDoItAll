@@ -1,9 +1,9 @@
 {
   "packKey": "candoitall-capability-template-pack",
   "name": "CanDoItAll default capability template pack",
-  "version": "2026-06-capability-template-pack-v2",
+  "version": "2026-06-capability-template-pack-v3",
   "seedMarker": "Managed capability template seed",
-  "seedVersion": "2026-06-agent-template-teams-v25",
+  "seedVersion": "2026-06-agent-template-teams-v26",
   "capabilityFiles": [
     {
       "relativePath": "skills.json"

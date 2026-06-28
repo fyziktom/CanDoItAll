@@ -32,6 +32,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.McpServer, byKey["playwright-local-mcp"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["aspnet-core-skill"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Rag, byKey["workspace-source-rag"].Kind);
+        Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -63,9 +64,39 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal("blazor-ssr-delivery", blazorSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
         Assert.Equal(3, blazorSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("resources").GetArrayLength());
 
+        using var aspNetSkillJson = JsonDocument.Parse(capabilities["aspnet-core-skill"].ConfigurationJson);
+        Assert.Equal(pack.Manifest.SeedVersion, aspNetSkillJson.RootElement.GetProperty("managedSeedVersion").GetString());
+        Assert.Equal("inline", aspNetSkillJson.RootElement.GetProperty("skillSource").GetString());
+        Assert.Equal("aspnet-core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
+        Assert.Contains("ASP.NET Core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(), StringComparison.Ordinal);
+
         using var ragJson = JsonDocument.Parse(capabilities["workspace-source-rag"].ConfigurationJson);
         Assert.Equal(".", ragJson.RootElement.GetProperty("ragRoot").GetString());
         Assert.Equal(5, ragJson.RootElement.GetProperty("maxResults").GetInt32());
+    }
+
+    [Fact]
+    public void Default_skill_templates_are_app_owned_inline_assets_under_capability_templates()
+    {
+        var pack = new CapabilityTemplatePackLoader().Load();
+        var skillTemplates = pack.Capabilities
+            .Where(template => string.Equals(template.Kind, "skill", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        Assert.NotEmpty(skillTemplates);
+        Assert.DoesNotContain(skillTemplates, template => string.Equals(template.SkillSource, "file", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(skillTemplates, template =>
+            string.Equals(template.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
+
+        foreach (var template in skillTemplates)
+        {
+            Assert.Equal("inline", template.SkillSource);
+            Assert.NotNull(template.InlineSkill);
+            Assert.StartsWith("skills/instructions/", template.InlineSkill!.InstructionsAssetKey, StringComparison.Ordinal);
+            Assert.True(File.Exists(Path.Combine(pack.RootPath, template.InlineSkill.InstructionsAssetKey)));
+            Assert.DoesNotContain("~/.codex", template.EndpointOrPath, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("~/.codex", template.InlineSkill.InstructionsAssetKey, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     [Fact]
@@ -231,7 +262,6 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "architecture-source-rag",
         "aspnet-core-skill",
         "blazor-ssr-delivery-inline-skill",
-        "candoitall-bundle-workflow",
         "candoitall-codeanalytics-mcp",
         "candoitall-components-mcp",
         "candoitall-frontend-theme",

@@ -282,11 +282,10 @@ public sealed class SkillLoaderContractsTests
     {
         var seedSkillsRoot = Path.GetFullPath(Path.Combine(
             FindRepoRoot(),
-            "src",
-            "CanDoItAll.AgentFramework.Persistence",
-            "SeedAssets",
-            "instructions",
-            "skills"));
+            "Templates",
+            "Capabilities",
+            "skills",
+            "instructions"));
         var seedFiles = Directory.GetFiles(seedSkillsRoot, "*.md");
         var loader = new InlineSkillLoader();
         var failures = new List<string>();

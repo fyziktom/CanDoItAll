@@ -1,9 +1,13 @@
 using System.Reflection;
+using CapabilityExposureDescriptor = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityExposureDescriptor;
 using AccessCapabilityDiagnosticCategory = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityDiagnosticCategory;
+using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
+using AccessCapabilityOperationClassification = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityOperationClassification;
 using EffectiveCapabilitySet = CanDoItAll.AgentFramework.Capabilities.Abstractions.EffectiveCapabilitySet;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -364,6 +368,111 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task Default_template_agent_runtime_composes_app_owned_skills_tools_process_workflow_and_mcp_descriptors()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.project-process-workflow-provider"),
+            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet,
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList,
+            AgentToolInvocationPolicyMetadata.ProcessesRunStart));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
+        var provider = CreateProviderProfile();
+        var capabilities = LoadDefaultTemplateCapabilities(
+            "aspnet-core-skill",
+            "run-tests",
+            "concrete-deliverable-delivery-inline-skill",
+            "playwright-local-mcp",
+            "workspace-read-file",
+            "workspace-dotnet-test",
+            "workspace-dotnet-run",
+            "workspace-dotnet-stop");
+        var processIntent = CreateProcessContextIntent(
+            ProcessOperationContractNames.ReadProjectStructure,
+            ProcessOperationContractNames.RunValidation,
+            ProcessOperationContractNames.LaunchRuntime,
+            ProcessOperationContractNames.CaptureRuntimeProof,
+            ProcessOperationContractNames.StartProjectNodeProcess,
+            ProcessOperationContractNames.ExecuteExternalAction);
+
+        var accessPlan = InvokeCreateRuntimeCapabilityAccessPlan(
+            runtime,
+            agent,
+            capabilities,
+            AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment),
+            processIntent);
+        var initialAllowed = ReadInitialAllowedCapabilities(accessPlan);
+
+        Assert.Contains(initialAllowed, capability =>
+            capability.Identity.Kind == AccessCapabilityKind.Skill &&
+            capability.Identity.Key.Value == "aspnet-core-skill" &&
+            capability.SourcePath?.Value == "Templates/Capabilities/skills/inline/aspnet-core-skill.json");
+        Assert.Contains(initialAllowed, capability =>
+            capability.Identity.Kind == AccessCapabilityKind.McpServer &&
+            capability.Identity.Key.Value == "playwright-local-mcp" &&
+            capability.McpServerKey?.Value == "playwright-local" &&
+            capability.OperationClassifications.Contains(AccessCapabilityOperationClassification.BrowserAccess));
+        Assert.Contains(initialAllowed, capability =>
+            capability.RuntimeToolName?.Value == "workspace_dotnet_run");
+        Assert.Contains(initialAllowed, capability =>
+            capability.RuntimeToolName?.Value == "workspace_dotnet_stop");
+
+        var progressMessages = new List<string>();
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            provider,
+            capabilities.Where(capability => capability.Kind != CapabilityKind.McpServer).ToList(),
+            processIntent,
+            progressMessages);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.Contains("workspace_dotnet_test", toolNames);
+        Assert.Contains("workspace_dotnet_run", toolNames);
+        Assert.Contains("workspace_dotnet_stop", toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureRead, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProcessesRunsList, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProcessesRunStart, toolNames);
+
+        Assert.Contains(ReadFrameworkToolNames(state), toolName =>
+            string.Equals(toolName, AgentToolInvocationPolicyMetadata.LoadSkill, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(ReadFrameworkToolNames(state), toolName =>
+            string.Equals(toolName, AgentToolInvocationPolicyMetadata.ReadSkillResource, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(ReadFrameworkToolNames(state), toolName =>
+            string.Equals(toolName, AgentToolInvocationPolicyMetadata.RunSkillScript, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.Skills &&
+            source.Decision == AgentRuntimeContextSourceDecision.Included &&
+            source.ItemCount == 3);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.WorkspaceTools &&
+            source.Decision == AgentRuntimeContextSourceDecision.Included);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.RuntimeToolProvider &&
+            source.Decision == AgentRuntimeContextSourceDecision.Included);
+        Assert.Contains(progressMessages, message =>
+            message.Contains("Loaded 0 file skill root(s), 3 inline skill(s), and 0 DI-provided skill(s)", StringComparison.Ordinal));
+
+        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+        Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+            capability.Identity.Kind == AccessCapabilityKind.Skill &&
+            capability.Identity.Key.Value == "concrete-deliverable-delivery-inline-skill");
+        Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+            capability.RuntimeToolName?.Value == AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart);
+        Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+            capability.RuntimeToolName?.Value == AgentToolInvocationPolicyMetadata.ProcessesRunStart);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeProcessContext_read_only_step_does_not_attach_broad_workspace_tools()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -684,7 +793,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         AgentDefinition agent,
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
-        AgentRuntimeContextIntent contextIntent)
+        AgentRuntimeContextIntent contextIntent,
+        List<string>? progressMessages = null)
     {
         var method = typeof(MafAgentRuntime).GetMethod(
                          "CreateCapabilityStateCoreAsync",
@@ -698,7 +808,11 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 string.IsNullOrWhiteSpace(agent.Model) ? provider.DefaultModel : agent.Model,
                 capabilities,
                 Array.Empty<AgentMemoryRecord>(),
-                (Func<ExecutionState, string, string, Task>)((_, _, _) => Task.CompletedTask),
+                (Func<ExecutionState, string, string, Task>)((_, _, message) =>
+                {
+                    progressMessages?.Add(message);
+                    return Task.CompletedTask;
+                }),
                 CancellationToken.None,
                 true,
                 WorkspaceScopeDescriptor.Sandbox,
@@ -709,6 +823,42 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
 
         return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
                ?? throw new InvalidOperationException("CreateCapabilityStateCoreAsync did not produce a result.");
+    }
+
+    private static object InvokeCreateRuntimeCapabilityAccessPlan(
+        MafAgentRuntime runtime,
+        AgentDefinition agent,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        AgentWorkspaceToolAccessSettings workspaceToolAccess,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        var method = typeof(MafAgentRuntime).GetMethod(
+                         "CreateRuntimeCapabilityAccessPlan",
+                         BindingFlags.NonPublic | BindingFlags.Instance)
+                     ?? throw new InvalidOperationException("CreateRuntimeCapabilityAccessPlan method was not found.");
+        return method.Invoke(
+                   runtime,
+                   [
+                       agent,
+                       capabilities,
+                       workspaceToolAccess,
+                       contextIntent,
+                       false
+                   ])
+               ?? throw new InvalidOperationException("CreateRuntimeCapabilityAccessPlan did not produce a result.");
+    }
+
+    private static IReadOnlyList<CapabilityExposureDescriptor> ReadInitialAllowedCapabilities(object accessPlan)
+        => Assert.IsAssignableFrom<IEnumerable<CapabilityExposureDescriptor>>(
+                accessPlan.GetType().GetProperty("InitialAllowedCapabilities", BindingFlags.Public | BindingFlags.Instance)?.GetValue(accessPlan))
+            .ToList();
+
+    private static IReadOnlyList<CapabilityCatalogItem> LoadDefaultTemplateCapabilities(params string[] keys)
+    {
+        var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(new CapabilityTemplatePackLoader().Load())
+            .ToDictionary(capability => capability.Key, StringComparer.OrdinalIgnoreCase);
+
+        return keys.Select(key => capabilities[key]).ToList();
     }
 
     private static AgentDefinition CreateToolEnabledAgent(string configurationJson = "{}")
