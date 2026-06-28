@@ -25,6 +25,7 @@
           "--ignore-https-errors",
           "--isolated"
         ],
+        "messageFraming": "newlineDelimitedJson",
         "allowedTools": [
           "browser_navigate",
           "browser_snapshot",
@@ -55,6 +56,7 @@
           "--isolated"
         ],
         "workingDirectory": ".",
+        "messageFraming": "newlineDelimitedJson",
         "allowedTools": [
           "browser_navigate",
           "browser_snapshot",

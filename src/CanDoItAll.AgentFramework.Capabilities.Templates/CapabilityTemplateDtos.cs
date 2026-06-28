@@ -93,6 +93,8 @@ public sealed record McpTransportTemplateDto
 
     public IReadOnlyList<SecretBindingTemplateDto> EnvironmentVariableBindings { get; init; } = [];
 
+    public string? MessageFraming { get; init; }
+
     public IReadOnlyList<string> AllowedTools { get; init; } = [];
 }
 

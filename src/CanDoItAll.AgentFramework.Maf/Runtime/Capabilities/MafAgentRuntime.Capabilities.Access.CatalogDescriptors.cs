@@ -156,7 +156,8 @@ public sealed partial class MafAgentRuntime
                 approvalMode,
                 timeout,
                 tags,
-                classifications);
+                classifications,
+                ResolveMcpMessageFraming(configuration.MessageFraming, capability));
         }
         else if (TryResolveMcpEndpoint(capability, configuration, out var endpoint))
         {
@@ -271,6 +272,30 @@ public sealed partial class MafAgentRuntime
         => string.Equals(configuration.ApprovalMode, "AlwaysRequire", StringComparison.OrdinalIgnoreCase)
             ? McpApprovalMode.AlwaysRequire
             : McpApprovalMode.NeverRequire;
+
+    private static McpStdioMessageFraming ResolveMcpMessageFraming(
+        string? value,
+        CapabilityCatalogItem capability)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return McpStdioMessageFraming.ContentLength;
+        }
+
+        var normalized = value
+            .Trim()
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Replace("_", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .ToLowerInvariant();
+        return normalized switch
+        {
+            "contentlength" => McpStdioMessageFraming.ContentLength,
+            "newlinedelimitedjson" or "newlinejson" or "newline" or "ndjson" => McpStdioMessageFraming.NewlineDelimitedJson,
+            _ => throw new InvalidOperationException(
+                $"MCP capability '{capability.Name}' has unsupported messageFraming '{value.Trim()}'. Use contentLength or newlineDelimitedJson.")
+        };
+    }
 
     private static bool TryResolveMcpEndpoint(
         CapabilityCatalogItem capability,

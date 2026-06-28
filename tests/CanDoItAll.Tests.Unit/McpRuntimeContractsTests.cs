@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
+using System.Text;
+using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -326,6 +328,86 @@ public sealed class McpRuntimeContractsTests
         Assert.Equal(1, factory.LastClient.ListToolsCount);
         Assert.Equal(1, factory.LastClient.CallCount);
         Assert.Equal(1, factory.LastClient.StopCount);
+    }
+
+    [Fact]
+    public async Task Local_stdio_factory_creates_local_clients_and_rejects_unsupported_transports()
+    {
+        var factory = new LocalStdioMcpClientFactory();
+        var local = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
+        var remote = McpDescriptorFactory.RemoteHttp(
+            CapabilityKey.Create("remote-browser-mcp"),
+            McpServerKey.Create("remote-browser-mcp"),
+            "Remote Browser MCP",
+            "Remote MCP.",
+            new Uri("https://example.test/mcp"),
+            allowedTools: [McpToolName.Create("browser_snapshot")],
+            headerBindings: new Dictionary<string, string>(),
+            rawHeaders: new Dictionary<string, string>(),
+            approvalMode: McpApprovalMode.NeverRequire,
+            timeout: TimeSpan.FromSeconds(3));
+
+        var client = await factory.CreateAsync(local, "LOCAL_STDIO_FACTORY_LOCAL", CancellationToken.None);
+        var exception = await Assert.ThrowsAsync<McpSetupException>(
+            () => factory.CreateAsync(remote, "LOCAL_STDIO_FACTORY_REMOTE", CancellationToken.None));
+
+        Assert.IsType<LocalStdioMcpRuntimeClient>(client);
+        Assert.Equal(CapabilityDiagnosticCategory.ImplementationMissing, exception.Category);
+        await client.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Local_stdio_json_rpc_framing_round_trips_content_length_messages()
+    {
+        var payload = new JsonObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = 42,
+            ["result"] = new JsonObject
+            {
+                ["ok"] = true
+            }
+        };
+        await using var stream = new MemoryStream();
+
+        await McpJsonRpcFraming.WriteMessageAsync(stream, payload, CancellationToken.None);
+        stream.Position = 0;
+        var message = await McpJsonRpcFraming.ReadMessageAsync(stream, CancellationToken.None);
+
+        Assert.Contains("\"id\":42", message, StringComparison.Ordinal);
+        Assert.Contains("\"ok\":true", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Local_stdio_json_rpc_framing_round_trips_newline_delimited_json_messages()
+    {
+        var payload = new JsonObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = 43,
+            ["result"] = new JsonObject
+            {
+                ["ok"] = true
+            }
+        };
+        await using var stream = new MemoryStream();
+
+        await McpJsonRpcFraming.WriteMessageAsync(
+            stream,
+            payload,
+            McpStdioMessageFraming.NewlineDelimitedJson,
+            CancellationToken.None);
+        stream.Position = 0;
+        var wireMessage = Encoding.UTF8.GetString(stream.ToArray());
+        var message = await McpJsonRpcFraming.ReadMessageAsync(
+            stream,
+            McpStdioMessageFraming.NewlineDelimitedJson,
+            CancellationToken.None);
+
+        Assert.DoesNotContain("Content-Length", wireMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("\n", wireMessage, StringComparison.Ordinal);
+        Assert.Contains("\"id\":43", message, StringComparison.Ordinal);
+        Assert.Contains("\"ok\":true", message, StringComparison.Ordinal);
     }
 
     [Fact]

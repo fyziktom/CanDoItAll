@@ -87,6 +87,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Equal("stdio", root.GetProperty("transport").GetString());
         Assert.Equal("npx", root.GetProperty("command").GetString());
         Assert.Equal(".", root.GetProperty("workingDirectory").GetString());
+        Assert.Equal("newlineDelimitedJson", root.GetProperty("messageFraming").GetString());
         Assert.Equal("NeverRequire", root.GetProperty("approvalMode").GetString());
         Assert.Contains(
             root.GetProperty("arguments").EnumerateArray().Select(item => item.GetString()),

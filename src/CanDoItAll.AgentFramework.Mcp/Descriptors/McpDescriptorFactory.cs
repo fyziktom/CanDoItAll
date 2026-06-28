@@ -47,7 +47,8 @@ public static class McpDescriptorFactory
         McpApprovalMode approvalMode,
         TimeSpan timeout,
         IEnumerable<CapabilityTag>? tags = null,
-        IEnumerable<CapabilityOperationClassification>? operationClassifications = null)
+        IEnumerable<CapabilityOperationClassification>? operationClassifications = null,
+        McpStdioMessageFraming messageFraming = McpStdioMessageFraming.ContentLength)
     {
         return new LocalStdioMcpServerDescriptor(
             Identity(key),
@@ -64,6 +65,7 @@ public static class McpDescriptorFactory
             RequireText(command, nameof(command)),
             NormalizeStrings(arguments),
             RequireText(workingDirectory, nameof(workingDirectory)),
+            messageFraming,
             NormalizeStringSet(allowedWorkingDirectories),
             NormalizeDictionary(environmentVariableBindings),
             NormalizeDictionary(rawEnvironmentVariables));

@@ -32,6 +32,7 @@ public sealed partial class AgentCapabilitySetupFlowService
             .Concat([CapabilityTag.Create("mcp")])
             .ToHashSet();
         var transport = NormalizeMcpTransport(configuration.Transport, configuration.Command, configuration.Endpoint);
+        var messageFraming = ReadMcpMessageFraming(configuration.MessageFraming, identity, serverKey, correlationId, errors);
 
         McpServerDescriptor descriptor;
         if (transport == "local-stdio")
@@ -64,6 +65,7 @@ public sealed partial class AgentCapabilitySetupFlowService
                 string.IsNullOrWhiteSpace(configuration.Command) ? "missing-command" : configuration.Command.Trim(),
                 configuration.Arguments ?? [],
                 string.IsNullOrWhiteSpace(configuration.WorkingDirectory) ? "." : configuration.WorkingDirectory.Trim(),
+                messageFraming,
                 NormalizeStringSet(configuration.AllowedWorkingDirectories),
                 configuration.EnvironmentVariableBindings ?? new Dictionary<string, string>(),
                 configuration.EnvironmentVariables ?? new Dictionary<string, string>());
@@ -191,6 +193,49 @@ public sealed partial class AgentCapabilitySetupFlowService
 
         return "internal-hosted";
     }
+
+    private static McpStdioMessageFraming ReadMcpMessageFraming(
+        string? value,
+        CapabilityIdentity identity,
+        McpServerKey serverKey,
+        string correlationId,
+        List<CapabilityDiagnostic> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return McpStdioMessageFraming.ContentLength;
+        }
+
+        var normalized = NormalizeMcpMessageFramingToken(value);
+        if (normalized == "contentlength")
+        {
+            return McpStdioMessageFraming.ContentLength;
+        }
+
+        if (normalized is "newlinedelimitedjson" or "newlinejson" or "newline" or "ndjson")
+        {
+            return McpStdioMessageFraming.NewlineDelimitedJson;
+        }
+
+        errors.Add(Diagnostic(
+            CapabilityDiagnosticCategory.TemplateValidation,
+            identity,
+            "$.messageFraming",
+            $"MCP stdio message framing '{value.Trim()}' is invalid.",
+            "Use contentLength or newlineDelimitedJson.",
+            correlationId,
+            mcpServerKey: serverKey,
+            transport: CapabilityTransportKind.LocalStdio));
+        return McpStdioMessageFraming.ContentLength;
+    }
+
+    private static string NormalizeMcpMessageFramingToken(string value)
+        => value
+            .Trim()
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Replace("_", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .ToLowerInvariant();
 
     private static CapabilityTransportKind ResolveMcpTransport(McpServerDescriptor descriptor)
     {

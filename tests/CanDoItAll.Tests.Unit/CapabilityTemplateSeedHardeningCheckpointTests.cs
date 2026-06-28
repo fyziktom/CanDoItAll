@@ -317,7 +317,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
         }
 
         Assert.Equal(
-            "2026-06-agent-template-teams-v24",
+            "2026-06-agent-template-teams-v25",
             ReadManagedSeedVersion(firstByKey["workspace-read-file"].ConfigurationJson));
         Assert.Null(ReadManagedSeedVersion(firstByKey["mail-triage-inline-skill"].ConfigurationJson));
     }

@@ -22,6 +22,12 @@ public enum McpLifecycleOwner
     RemoteService
 }
 
+public enum McpStdioMessageFraming
+{
+    ContentLength,
+    NewlineDelimitedJson
+}
+
 public abstract record McpServerDescriptor(
     McpServerDescriptorKind DescriptorKind,
     CapabilityIdentity Identity,
@@ -80,6 +86,7 @@ public sealed record LocalStdioMcpServerDescriptor(
     string Command,
     IReadOnlyList<string> Arguments,
     string WorkingDirectory,
+    McpStdioMessageFraming MessageFraming,
     IReadOnlySet<string> AllowedWorkingDirectories,
     IReadOnlyDictionary<string, string> EnvironmentVariableBindings,
     IReadOnlyDictionary<string, string> RawEnvironmentVariables)

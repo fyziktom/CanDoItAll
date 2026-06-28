@@ -1037,6 +1037,8 @@ public sealed partial class MafAgentRuntime
 
         public string? WorkingDirectory { get; set; }
 
+        public string? MessageFraming { get; set; }
+
         public List<string>? AllowedWorkingDirectories { get; set; }
 
         public Dictionary<string, string>? EnvironmentVariables { get; set; }

@@ -56,7 +56,7 @@ internal static class CapabilityTemplateSeedMaterializer
                 BuildInlineSkillConfiguration(template, seedVersion),
             "tool" => BuildToolConfiguration(template, seedVersion),
             "aiContext" => SerializeConfiguration(new { message = Require(template.Message, template.Key, "message"), role = "system" }),
-            _ => BuildRawConfiguration(template)
+            _ => BuildRawConfiguration(template, seedVersion)
         };
     }
 
@@ -138,7 +138,7 @@ internal static class CapabilityTemplateSeedMaterializer
         return SerializeConfiguration(configuration);
     }
 
-    private static string BuildRawConfiguration(CapabilitySeedTemplateDescriptor template)
+    private static string BuildRawConfiguration(CapabilitySeedTemplateDescriptor template, string seedVersion)
     {
         if (template.Configuration.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
         {
@@ -150,6 +150,13 @@ internal static class CapabilityTemplateSeedMaterializer
             string.Equals(template.ExcludePathsSource, "workspaceRagDefault", StringComparison.OrdinalIgnoreCase))
         {
             dictionary["excludePaths"] = WorkspaceRetrievalNoisePolicy.BuildSeedWorkspaceRagExcludedPaths();
+        }
+
+        if (template.IncludeManagedSeedVersion &&
+            configuration is Dictionary<string, object?> versionedDictionary &&
+            !versionedDictionary.ContainsKey("managedSeedVersion"))
+        {
+            versionedDictionary["managedSeedVersion"] = seedVersion;
         }
 
         return SerializeConfiguration(configuration);

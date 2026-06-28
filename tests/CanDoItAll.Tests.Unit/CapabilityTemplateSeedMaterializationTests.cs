@@ -37,12 +37,15 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     [Fact]
     public void SB06_INV_TEMPLATE_002_materialization_preserves_representative_configuration_json()
     {
-        var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(new CapabilityTemplatePackLoader().Load())
+        var pack = new CapabilityTemplatePackLoader().Load();
+        var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack)
             .ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
 
         using var playwrightJson = JsonDocument.Parse(capabilities["playwright-local-mcp"].ConfigurationJson);
+        Assert.Equal(pack.Manifest.SeedVersion, playwrightJson.RootElement.GetProperty("managedSeedVersion").GetString());
         Assert.Equal("stdio", playwrightJson.RootElement.GetProperty("transport").GetString());
         Assert.Equal("npx", playwrightJson.RootElement.GetProperty("command").GetString());
+        Assert.Equal("newlineDelimitedJson", playwrightJson.RootElement.GetProperty("messageFraming").GetString());
         Assert.Contains(
             playwrightJson.RootElement.GetProperty("allowedTools").EnumerateArray(),
             item => item.GetString() == "browser_take_screenshot");

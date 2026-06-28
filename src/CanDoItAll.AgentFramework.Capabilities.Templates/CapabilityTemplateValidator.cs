@@ -305,6 +305,19 @@ public sealed class CapabilityTemplateValidator
                 "Use an MCP environment variable secret binding instead."));
         }
 
+        if (!string.IsNullOrWhiteSpace(transport.MessageFraming) &&
+            !IsKnownMcpMessageFraming(transport.MessageFraming))
+        {
+            issues.Add(Issue(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                kind,
+                key,
+                templatePath,
+                "$.mcpTransport.messageFraming",
+                "MCP stdio message framing is invalid.",
+                "Use contentLength or newlineDelimitedJson."));
+        }
+
         for (var index = 0; index < transport.AllowedTools.Count; index++)
         {
             if (McpToolName.TryCreate(transport.AllowedTools[index], out _))
@@ -329,6 +342,17 @@ public sealed class CapabilityTemplateValidator
             key,
             templatePath,
             issues);
+    }
+
+    private static bool IsKnownMcpMessageFraming(string value)
+    {
+        var normalized = value
+            .Trim()
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Replace("_", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .ToLowerInvariant();
+        return normalized is "contentlength" or "newlinedelimitedjson" or "newlinejson" or "newline" or "ndjson";
     }
 
     private static void ValidateSecretBindings(

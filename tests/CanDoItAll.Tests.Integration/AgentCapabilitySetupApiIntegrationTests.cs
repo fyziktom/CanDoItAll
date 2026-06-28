@@ -16,6 +16,19 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentCapabilitySetupApiIntegrationTests
 {
     [Fact]
+    public async Task Capability_setup_api_host_registers_live_mcp_setup_runtime()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        await using var scope = host.App.Services.CreateAsyncScope();
+
+        var clientFactory = scope.ServiceProvider.GetRequiredService<IMcpClientFactory>();
+        var setupService = scope.ServiceProvider.GetRequiredService<IMcpSetupTestService>();
+
+        Assert.IsType<LocalStdioMcpClientFactory>(clientFactory);
+        Assert.IsType<McpSetupTestService>(setupService);
+    }
+
+    [Fact]
     public async Task Capability_setup_api_returns_typed_negative_setup_and_access_diagnostics()
     {
         await using var host = await ApiTestHost.CreateAsync(

@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Mcp;
+using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
@@ -42,6 +44,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IExternalProcessToolInvoker, ExternalProcessToolInvoker>();
         services.TryAddScoped<IExternalHttpToolInvoker, ExternalHttpToolInvoker>();
         services.TryAddScoped<IToolSetupTestService, ToolSetupTestService>();
+        services.TryAddScoped<IMcpClientFactory, LocalStdioMcpClientFactory>();
+        services.TryAddScoped<IMcpSetupTestService, McpSetupTestService>();
         services.TryAddScoped<ICapabilityAccessPolicyEvaluator, CapabilityAccessPolicyEvaluator>();
         services.TryAddScoped<IAgentCapabilitySetupFlowService, AgentCapabilitySetupFlowService>();
         services.AddScoped<ISandboxWorkspaceStore>(serviceProvider =>
