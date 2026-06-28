@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -71,7 +72,11 @@ public sealed partial class MafAgentRuntime
 
             EnsureRuntimeToolProviderNamesAreValid(toolProvider, providerTools);
             var allToolMetadata = ResolveRuntimeToolMetadata(registration, context, providerTools);
-            var filtered = FilterRuntimeProviderToolsForContextIntent(registration, contextIntent, providerTools, allToolMetadata);
+            var filtered = FilterRuntimeProviderToolsForCapabilityAccess(
+                registration,
+                composition,
+                providerTools,
+                allToolMetadata);
             var tools = filtered.Tools
                 .Select(tool => WrapRuntimeProviderToolForApproval(tool, suppressApprovalRequirements))
                 .ToList();
@@ -272,20 +277,40 @@ public sealed partial class MafAgentRuntime
             _ => AgentRuntimeToolOperationKind.Unknown
         };
 
-    private static FilteredRuntimeToolProviderTools FilterRuntimeProviderToolsForContextIntent(
+    private static FilteredRuntimeToolProviderTools FilterRuntimeProviderToolsForCapabilityAccess(
         RuntimeToolProviderRegistration registration,
-        AgentRuntimeContextIntent contextIntent,
+        RuntimeCapabilityComposition composition,
         IReadOnlyList<AITool> tools,
         IReadOnlyList<AgentRuntimeToolMetadata> metadata)
     {
-        if (!contextIntent.IsGovernedProcessStep)
-        {
-            return new FilteredRuntimeToolProviderTools(tools, metadata, ExcludedToolCount: 0);
-        }
-
         var metadataByToolName = metadata.ToDictionary(
             item => item.ToolName,
             StringComparer.OrdinalIgnoreCase);
+        var candidates = tools
+            .Select(tool =>
+            {
+                if (!metadataByToolName.TryGetValue(tool.Name, out var toolMetadata))
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime tool provider '{DescribeRuntimeToolProvider(registration.Provider)}' did not resolve metadata for tool '{tool.Name}'.");
+                }
+
+                return CreateRuntimeToolCapabilityDescriptor(
+                    tool.Name,
+                    $"Runtime provider tool {tool.Name}",
+                    $"Tool exposed by runtime provider '{registration.Descriptor.ProviderKey}'.",
+                    registration.Descriptor.DomainTags.Count == 0
+                        ? ["runtime-provider"]
+                        : registration.Descriptor.DomainTags.Prepend("runtime-provider").ToArray(),
+                    ResolveRuntimeToolOperationClassifications(toolMetadata));
+            })
+            .ToList();
+        var accessResult = EvaluateRuntimeToolAccess(composition.CapabilityAccessPlan, candidates);
+        AppendRuntimeToolAccessResult(composition.State, accessResult);
+        var allowedToolNames = accessResult.AllowedCapabilities
+            .Select(capability => capability.RuntimeToolName?.Value)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var includedTools = new List<AITool>(tools.Count);
         var includedMetadata = new List<AgentRuntimeToolMetadata>(metadata.Count);
         foreach (var tool in tools)
@@ -296,7 +321,7 @@ public sealed partial class MafAgentRuntime
                     $"Runtime tool provider '{DescribeRuntimeToolProvider(registration.Provider)}' did not resolve metadata for tool '{tool.Name}'.");
             }
 
-            if (!ShouldAttachRuntimeProviderToolForProcessIntent(tool.Name, toolMetadata, contextIntent))
+            if (!allowedToolNames.Contains(tool.Name))
             {
                 continue;
             }
@@ -311,25 +336,22 @@ public sealed partial class MafAgentRuntime
             tools.Count - includedTools.Count);
     }
 
-    private static bool ShouldAttachRuntimeProviderToolForProcessIntent(
-        string toolName,
-        AgentRuntimeToolMetadata metadata,
-        AgentRuntimeContextIntent contextIntent)
+    private static IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(
+        AgentRuntimeToolMetadata metadata)
     {
-        if (ToolCapabilityRegistry.TryResolve(toolName, out var capability))
+        if (ToolCapabilityRegistry.TryResolve(metadata.ToolName, out _))
         {
-            return IsToolCapabilityAllowedForProcessIntent(capability, contextIntent);
+            return ResolveRuntimeToolOperationClassifications(metadata.ToolName);
         }
 
         return metadata.OperationKind switch
         {
-            AgentRuntimeToolOperationKind.Read => true,
-            AgentRuntimeToolOperationKind.Validation => HasAnyOperation(
-                contextIntent,
-                ProcessOperationContractNames.RunValidation,
-                ProcessOperationContractNames.LaunchRuntime,
-                ProcessOperationContractNames.CaptureRuntimeProof),
-            _ => false
+            AgentRuntimeToolOperationKind.Read => ToClassificationSet(CapabilityOperationClassification.Read),
+            AgentRuntimeToolOperationKind.Validation => ToClassificationSet(CapabilityOperationClassification.Validation),
+            AgentRuntimeToolOperationKind.Mutation => ToClassificationSet(CapabilityOperationClassification.Mutation),
+            AgentRuntimeToolOperationKind.HostedProviderNative => ToClassificationSet(CapabilityOperationClassification.ProviderNative),
+            AgentRuntimeToolOperationKind.LocalMcp or AgentRuntimeToolOperationKind.HostedMcp => ToClassificationSet(CapabilityOperationClassification.McpTool),
+            _ => ToClassificationSet(CapabilityOperationClassification.Read)
         };
     }
 

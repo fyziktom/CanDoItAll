@@ -1,0 +1,395 @@
+{
+  "capabilities": [
+    {
+      "kind": "skill",
+      "key": "candoitall-bundle-workflow",
+      "displayName": "Bundle Workflow Skill",
+      "description": "Research and execution skill for complex delivery initiatives.",
+      "stableId": "skill:candoitall-bundle-workflow:v1",
+      "stableGuidKey": "capabilities/candoitall-bundle-workflow",
+      "endpointOrPath": "skill://candoitall-bundle-workflow",
+      "skillSource": "file",
+      "skillRootKey": "candoitall-bundle-workflow",
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Seeded from the active Codex skill registry. Local proof has not been run yet."
+    },
+    {
+      "kind": "skill",
+      "key": "aspnet-core-skill",
+      "displayName": "ASP.NET Core Skill",
+      "description": "Framework guidance for web, API, Blazor, hosting, and ASP.NET Core debugging tasks.",
+      "stableId": "skill:aspnet-core:v1",
+      "stableGuidKey": "capabilities/aspnet-core-skill",
+      "endpointOrPath": "skill://aspnet-core",
+      "skillSource": "file",
+      "skillRootKey": "aspnet-core",
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for programming-oriented workflows."
+    },
+    {
+      "kind": "skill",
+      "key": "candoitall-codeanalytics-mcp",
+      "displayName": "Codeanalytics MCP Skill",
+      "description": "Repository-guided C# architecture and symbol inspection through the CanDoItAll codeanalytics MCP.",
+      "stableId": "skill:candoitall-codeanalytics-mcp:v1",
+      "stableGuidKey": "capabilities/candoitall-codeanalytics-mcp",
+      "endpointOrPath": "skill://candoitall-codeanalytics-mcp",
+      "skillSource": "file",
+      "skillRootKey": "candoitall-codeanalytics-mcp",
+      "operationClassifications": [
+        "read",
+        "project-structure"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for architecture, review, and source-of-truth investigations."
+    },
+    {
+      "kind": "skill",
+      "key": "candoitall-components-mcp",
+      "displayName": "Components MCP Skill",
+      "description": "Guidance for using the shared CanDoItAll component library before falling back to raw Blazor markup.",
+      "stableId": "skill:candoitall-components-mcp:v1",
+      "stableGuidKey": "capabilities/candoitall-components-mcp",
+      "endpointOrPath": "skill://candoitall-components-mcp",
+      "skillSource": "file",
+      "skillRootKey": "candoitall-components-mcp",
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for Blazor UI work and review."
+    },
+    {
+      "kind": "skill",
+      "key": "candoitall-frontend-theme",
+      "displayName": "Frontend Theme Skill",
+      "description": "Guidance for intentional CanDoItAll frontend theming, composition, and semantic-token usage in Blazor delivery.",
+      "stableId": "skill:candoitall-frontend-theme:v1",
+      "stableGuidKey": "capabilities/candoitall-frontend-theme",
+      "endpointOrPath": "skill://candoitall-frontend-theme",
+      "skillSource": "file",
+      "skillRootKey": "candoitall-frontend-theme",
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for serious Blazor delivery and UI review."
+    },
+    {
+      "kind": "skill",
+      "key": "frontend-skill",
+      "displayName": "Frontend Delivery Skill",
+      "description": "Guidance for strong, intentional product surfaces that avoid generic scaffold output in UI delivery.",
+      "stableId": "skill:frontend-skill:v1",
+      "stableGuidKey": "capabilities/frontend-skill",
+      "endpointOrPath": "skill://frontend-skill",
+      "skillSource": "file",
+      "skillRootKey": "frontend-skill",
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for product-facing UI implementation, QA, and UI review."
+    },
+    {
+      "kind": "skill",
+      "key": "candoitall-watch-playwright-loop",
+      "displayName": "Watch And Playwright Loop Skill",
+      "description": "Guidance for fast, real-browser validation with Playwright and the shared CanDoItAll watch workflow.",
+      "stableId": "skill:candoitall-watch-playwright-loop:v1",
+      "stableGuidKey": "capabilities/candoitall-watch-playwright-loop",
+      "endpointOrPath": "skill://candoitall-watch-playwright-loop",
+      "skillSource": "file",
+      "skillRootKey": "candoitall-watch-playwright-loop",
+      "operationClassifications": [
+        "validation",
+        "browser-access"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for UI delivery, QA, and release smoke validation."
+    },
+    {
+      "kind": "skill",
+      "key": "spreadsheet-skill",
+      "displayName": "Spreadsheet Skill",
+      "description": "Guidance and assets for creating, reading, and analyzing spreadsheet content.",
+      "stableId": "skill:spreadsheet:v1",
+      "stableGuidKey": "capabilities/spreadsheet-skill",
+      "endpointOrPath": "skill://spreadsheet",
+      "skillSource": "file",
+      "skillRootKey": "spreadsheet",
+      "operationClassifications": [
+        "read",
+        "document-processing"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for spreadsheet-oriented workflows."
+    },
+    {
+      "kind": "skill",
+      "key": "run-tests",
+      "displayName": "Run Tests Skill",
+      "description": "Guidance for selecting and executing the right focused dotnet test command for the active .NET test framework and runner.",
+      "stableId": "skill:run-tests:v1",
+      "stableGuidKey": "capabilities/run-tests-skill",
+      "endpointOrPath": "skill://run-tests",
+      "skillSource": "file",
+      "skillRootKey": "run-tests",
+      "operationClassifications": [
+        "validation"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for targeted build and test execution in serious delivery workflows."
+    },
+    {
+      "kind": "skill",
+      "key": "writing-mstest-tests",
+      "displayName": "Writing MSTest Tests Skill",
+      "description": "Guidance for writing targeted MSTest validation in C# delivery workflows.",
+      "stableId": "skill:writing-mstest-tests:v1",
+      "stableGuidKey": "capabilities/writing-mstest-tests",
+      "endpointOrPath": "skill://writing-mstest-tests",
+      "skillSource": "file",
+      "skillRootKey": "writing-mstest-tests",
+      "operationClassifications": [
+        "validation"
+      ],
+      "proofNotes": "Seeded from the shared Codex skill registry for implementation and QA validation work."
+    },
+    {
+      "kind": "skill",
+      "key": "repository-playbook",
+      "displayName": "Repository Playbook",
+      "description": "Local workspace skill with references and scripts for delivery-oriented repository work.",
+      "stableId": "skill:repository-playbook:v1",
+      "stableGuidKey": "capabilities/repository-playbook",
+      "endpointOrPath": "skill://repository-playbook",
+      "skillSource": "file",
+      "skillRootKey": "repository-playbook",
+      "operationClassifications": [
+        "read",
+        "script-execution"
+      ],
+      "proofNotes": "Repo-local file skill that demonstrates Microsoft Agent Framework file-skill loading over workspace assets."
+    },
+    {
+      "kind": "skill",
+      "key": "mail-triage-inline-skill",
+      "displayName": "Mail Triage Inline Skill",
+      "description": "Inline skill instructions for summarizing inbox threads, classifying urgency, and drafting replies.",
+      "stableId": "skill:mail-triage-inline:v1",
+      "stableGuidKey": "capabilities/mail-triage-inline-skill",
+      "endpointOrPath": "inline://mail-triage-inline-skill",
+      "skillSource": "inline",
+      "includeManagedSeedVersion": false,
+      "inlineSkill": {
+        "name": "mail-triage-inline",
+        "description": "Classify urgency, surface follow-ups, and draft a concise reply.",
+        "instructionsAssetKey": "skills/mail-triage-inline.instructions",
+        "resources": [
+          {
+            "name": "mail-source-path",
+            "content": "Seeded mail fixture: samples/workloads/support-inbox.md",
+            "description": "Workspace path for the sample inbox thread."
+          }
+        ]
+      },
+      "operationClassifications": [
+        "read"
+      ],
+      "proofNotes": "Inline skill support proves that the wrapper can carry in-memory Microsoft Agent Framework skill definitions without inventing a parallel skill system."
+    },
+    {
+      "kind": "skill",
+      "key": "document-spreadsheet-reconciliation-inline-skill",
+      "displayName": "Document and Spreadsheet Reconciliation Skill",
+      "description": "Reusable workflow for reconciling records and facts across documents, spreadsheets, CSV files, and other structured artifacts.",
+      "stableId": "skill:document-spreadsheet-reconciliation:v1",
+      "stableGuidKey": "capabilities/document-spreadsheet-reconciliation-inline-skill",
+      "endpointOrPath": "inline://document-spreadsheet-reconciliation-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "document-spreadsheet-reconciliation",
+        "description": "Reusable workflow for reconciling records and facts across documents, spreadsheets, CSV files, and other structured artifacts.",
+        "instructionsAssetKey": "skills/document-spreadsheet-reconciliation.instructions",
+        "resources": [
+          {
+            "name": "reconciliation-output-example",
+            "contentAssetKey": "resources/reconciliation-output-example",
+            "description": "Generic JSON response shape for reconciliation tasks."
+          }
+        ]
+      },
+      "operationClassifications": [
+        "read",
+        "document-processing"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "concrete-deliverable-delivery-inline-skill",
+      "displayName": "Concrete Deliverable Delivery Skill",
+      "description": "Technology-neutral workflow for creating, validating, and proving apps, services, documents, spreadsheets, decks, scripts, and other durable deliverables.",
+      "stableId": "skill:concrete-deliverable-delivery:v1",
+      "stableGuidKey": "capabilities/concrete-deliverable-delivery-inline-skill",
+      "endpointOrPath": "inline://concrete-deliverable-delivery-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "concrete-deliverable-delivery",
+        "description": "Technology-neutral workflow for creating, validating, and proving apps, services, documents, spreadsheets, decks, scripts, and other durable deliverables.",
+        "instructionsAssetKey": "skills/concrete-deliverable-delivery.instructions"
+      },
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "dotnet-app-delivery-inline-skill",
+      "displayName": ".NET App Delivery Skill",
+      "description": "Reusable workflow guidance for scaffolding, building, testing, running, and proving generic .NET applications.",
+      "stableId": "skill:dotnet-app-delivery:v1",
+      "stableGuidKey": "capabilities/dotnet-app-delivery-inline-skill",
+      "endpointOrPath": "inline://dotnet-app-delivery-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "dotnet-app-delivery",
+        "description": "Reusable workflow guidance for scaffolding, building, testing, running, and proving generic .NET applications.",
+        "instructionsAssetKey": "skills/dotnet-app-delivery.instructions"
+      },
+      "operationClassifications": [
+        "validation",
+        "runtime-launch"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "blazor-ssr-delivery-inline-skill",
+      "displayName": "Blazor App Delivery Skill",
+      "description": "Reusable workflow guidance for creating, repairing, running, and validating Blazor Web App and component-driven ASP.NET Core UI deliverables.",
+      "stableId": "skill:blazor-ssr-delivery:v1",
+      "stableGuidKey": "capabilities/blazor-ssr-delivery-inline-skill",
+      "endpointOrPath": "inline://blazor-ssr-delivery-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "blazor-ssr-delivery",
+        "description": "Reusable workflow guidance for creating, repairing, running, and validating Blazor Web App and component-driven ASP.NET Core UI deliverables.",
+        "instructionsAssetKey": "skills/blazor-ssr-delivery.instructions",
+        "resources": [
+          {
+            "name": "net10-program-scaffold",
+            "contentAssetKey": "resources/net10-program-scaffold",
+            "description": "Reference shape for the modern .NET 10 Blazor Web App Program.cs scaffold."
+          },
+          {
+            "name": "net10-home-page-example",
+            "contentAssetKey": "resources/net10-home-page-example",
+            "description": "Reference shape for a static-SSR page using query parameters and a GET form."
+          },
+          {
+            "name": "dotnet-command-examples",
+            "contentAssetKey": "resources/dotnet-command-examples",
+            "description": "Concrete workspace_dotnet_new, workspace_dotnet_build, workspace_dotnet_test, and workspace_dotnet_run examples for generic .NET and Blazor app delivery."
+          }
+        ]
+      },
+      "operationClassifications": [
+        "validation",
+        "browser-access",
+        "runtime-launch"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "generated-app-summary-inline-skill",
+      "displayName": "Generated App Summary Skill",
+      "description": "Workflow for summarizing a generated application or runnable deliverable from concrete files and validation receipts.",
+      "stableId": "skill:generated-app-summary:v1",
+      "stableGuidKey": "capabilities/generated-app-summary-inline-skill",
+      "endpointOrPath": "inline://generated-app-summary-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "generated-app-summary",
+        "description": "Workflow for summarizing a generated application or runnable deliverable from concrete files and validation receipts.",
+        "instructionsAssetKey": "skills/generated-app-summary.instructions",
+        "resources": [
+          {
+            "name": "summary-checklist",
+            "contentAssetKey": "resources/generated-app-summary-checklist",
+            "description": "Required facts to include in the generated-app summary."
+          }
+        ]
+      },
+      "operationClassifications": [
+        "read"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "architecture-review-inline-skill",
+      "displayName": "Architecture Review Skill",
+      "description": "Task-specific workflow for reviewing the CanDoItAll.AgentFramework architecture from real source files.",
+      "stableId": "skill:architecture-review:v1",
+      "stableGuidKey": "capabilities/architecture-review-inline-skill",
+      "endpointOrPath": "inline://architecture-review-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "architecture-review",
+        "description": "Task-specific workflow for reviewing the CanDoItAll.AgentFramework architecture from real source files.",
+        "instructionsAssetKey": "skills/architecture-review.instructions"
+      },
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "architecture-map-inline-skill",
+      "displayName": "Architecture Map Skill",
+      "description": "Workflow for creating a Mermaid class diagram from generated app source files.",
+      "stableId": "skill:architecture-map:v1",
+      "stableGuidKey": "capabilities/architecture-map-inline-skill",
+      "endpointOrPath": "inline://architecture-map-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "architecture-map",
+        "description": "Workflow for creating a Mermaid class diagram from generated app source files.",
+        "instructionsAssetKey": "skills/architecture-map.instructions"
+      },
+      "operationClassifications": [
+        "read"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    },
+    {
+      "kind": "skill",
+      "key": "mail-summary-inline-skill",
+      "displayName": "Mail Summary Skill",
+      "description": "Task-specific workflow for summarizing the provided email PDF and extracting participant-owned tasks.",
+      "stableId": "skill:mail-summary:v1",
+      "stableGuidKey": "capabilities/mail-summary-inline-skill",
+      "endpointOrPath": "inline://mail-summary-inline-skill",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "mail-summary",
+        "description": "Task-specific workflow for summarizing the provided email PDF and extracting participant-owned tasks.",
+        "instructionsAssetKey": "skills/mail-summary.instructions"
+      },
+      "operationClassifications": [
+        "read",
+        "document-processing"
+      ],
+      "proofNotes": "Inline task workflow guidance seeded directly in the workspace catalog."
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text;
+using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -186,6 +187,124 @@ internal static class CapabilityConfigurationEditorSupport
         return [];
     }
 
+    public static ToolCapabilityEditorState ReadTool(CapabilityEditorModel editor)
+    {
+        var configuration = Deserialize<ToolCapabilityConfigurationModel>(editor.ConfigurationJson) ?? new ToolCapabilityConfigurationModel();
+        var process = configuration.ExternalProcess ?? new ExternalProcessToolConfigurationModel();
+        var http = configuration.ExternalHttp ?? new ExternalHttpToolConfigurationModel();
+        var sideEffects = configuration.SideEffects ?? new CapabilitySideEffectConfigurationModel();
+        var toolKind = string.IsNullOrWhiteSpace(configuration.ToolKind)
+            ? configuration.ExternalHttp is not null ? "externalHttp" : "externalProcess"
+            : configuration.ToolKind.Trim();
+
+        var state = new ToolCapabilityEditorState
+        {
+            ToolKind = toolKind,
+            RuntimeToolName = configuration.RuntimeToolName ?? NormalizeRuntimeToolName(editor.Key),
+            ImplementationKey = configuration.ImplementationKey ?? $"external.{NormalizeKey(editor.Key)}",
+            OperationClassificationsText = ToLineText(configuration.OperationClassifications ?? ["externalAction"]),
+            SideEffectKind = sideEffects.Kind ?? "ExternalAction",
+            RequiresApprovalByDefault = sideEffects.RequiresApprovalByDefault ?? true,
+            IsStateChanging = sideEffects.IsStateChanging ?? true,
+            Command = process.Command ?? ResolveCommandFromEditor(editor),
+            ArgumentsText = ToLineText(process.Arguments),
+            WorkingDirectory = string.IsNullOrWhiteSpace(process.WorkingDirectory) ? "." : process.WorkingDirectory,
+            AllowedExecutableNamesText = ToLineText(process.AllowedExecutableNames),
+            ProcessRequiredOutputPropertiesText = ToLineText(process.RequiredOutputProperties),
+            ProcessTimeoutSeconds = process.TimeoutSeconds ?? 30,
+            MaxOutputBytes = process.MaxOutputBytes ?? 4096,
+            HttpMethod = string.IsNullOrWhiteSpace(http.Method) ? "POST" : http.Method,
+            Endpoint = http.Endpoint ?? ResolveEndpointFromEditor(editor),
+            HeaderBindingsText = ToKeyValueText(http.HeaderBindings),
+            HttpRequiredOutputPropertiesText = ToLineText(http.RequiredOutputProperties),
+            HttpTimeoutSeconds = http.TimeoutSeconds ?? 30,
+            MaxResponseBytes = http.MaxResponseBytes ?? 4096
+        };
+
+        state.Configuration = configuration;
+        return state;
+    }
+
+    public static IReadOnlyList<string> WriteTool(CapabilityEditorModel editor, ToolCapabilityEditorState state)
+    {
+        var errors = new List<string>();
+        var configuration = state.Configuration ?? new ToolCapabilityConfigurationModel();
+        var toolKind = NormalizeToolKind(state.ToolKind);
+        var runtimeToolName = NormalizeOptionalText(state.RuntimeToolName) ?? NormalizeRuntimeToolName(editor.Key);
+        var implementationKey = NormalizeOptionalText(state.ImplementationKey) ?? $"external.{NormalizeKey(editor.Key)}";
+        if (!RuntimeToolName.TryCreate(runtimeToolName, out _))
+        {
+            errors.Add("Runtime tool name must be lower snake_case.");
+        }
+
+        if (!ImplementationKey.TryCreate(implementationKey, out _))
+        {
+            errors.Add("Implementation key must use lower ASCII segments separated by '.', '_' or '-'.");
+        }
+
+        configuration.ToolKind = toolKind;
+        configuration.RuntimeToolName = runtimeToolName;
+        configuration.ImplementationKey = implementationKey;
+        configuration.OperationClassifications = SplitLines(state.OperationClassificationsText) is { Count: > 0 } classifications
+            ? classifications
+            : ["externalAction"];
+        configuration.SideEffects = new CapabilitySideEffectConfigurationModel
+        {
+            Kind = NormalizeOptionalText(state.SideEffectKind) ?? "ExternalAction",
+            RequiresApprovalByDefault = state.RequiresApprovalByDefault,
+            IsStateChanging = state.IsStateChanging
+        };
+
+        if (toolKind == "externalHttp")
+        {
+            if (string.IsNullOrWhiteSpace(state.Endpoint))
+            {
+                errors.Add("External HTTP tool configuration requires an endpoint.");
+            }
+
+            var headerBindings = ParseKeyValueText(state.HeaderBindingsText, "header binding", errors);
+            configuration.ExternalHttp = new ExternalHttpToolConfigurationModel
+            {
+                Method = NormalizeOptionalText(state.HttpMethod) ?? "POST",
+                Endpoint = NormalizeOptionalText(state.Endpoint),
+                HeaderBindings = headerBindings.Count == 0 ? null : headerBindings,
+                RequiredOutputProperties = SplitLines(state.HttpRequiredOutputPropertiesText),
+                TimeoutSeconds = Math.Max(1, state.HttpTimeoutSeconds),
+                MaxResponseBytes = Math.Max(64, state.MaxResponseBytes)
+            };
+            configuration.ExternalProcess = null;
+            editor.EndpointOrPath = state.Endpoint.Trim();
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(state.Command))
+            {
+                errors.Add("External process tool configuration requires a command.");
+            }
+
+            configuration.ExternalProcess = new ExternalProcessToolConfigurationModel
+            {
+                Command = NormalizeOptionalText(state.Command),
+                Arguments = SplitLines(state.ArgumentsText),
+                WorkingDirectory = NormalizeOptionalText(state.WorkingDirectory) ?? ".",
+                AllowedExecutableNames = SplitLines(state.AllowedExecutableNamesText),
+                RequiredOutputProperties = SplitLines(state.ProcessRequiredOutputPropertiesText),
+                TimeoutSeconds = Math.Max(1, state.ProcessTimeoutSeconds),
+                MaxOutputBytes = Math.Max(64, state.MaxOutputBytes)
+            };
+            configuration.ExternalHttp = null;
+            editor.EndpointOrPath = state.Command.Trim();
+        }
+
+        if (errors.Count > 0)
+        {
+            return errors;
+        }
+
+        editor.ConfigurationJson = JsonSerializer.Serialize(configuration, SerializerOptions);
+        return [];
+    }
+
     public static string NormalizeKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -214,6 +333,12 @@ internal static class CapabilityConfigurationEditorSupport
         }
 
         return builder.ToString();
+    }
+
+    public static string NormalizeRuntimeToolName(string value)
+    {
+        var key = NormalizeKey(value);
+        return string.IsNullOrWhiteSpace(key) ? string.Empty : key.Replace('-', '_');
     }
 
     public static List<string> SplitLines(string value)
@@ -322,6 +447,18 @@ internal static class CapabilityConfigurationEditorSupport
         return allowedExternalRoots?.Count > 0 ? "ExternalSkillRoot" : "WorkspaceSkillRoot";
     }
 
+    private static string NormalizeToolKind(string value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? "externalProcess" : value.Trim();
+        return normalized.Replace("-", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("_", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .ToLowerInvariant() switch
+            {
+                "externalhttp" or "http" => "externalHttp",
+                _ => "externalProcess"
+            };
+    }
+
     private static string ToLineText(IEnumerable<string>? values)
         => values is null ? string.Empty : string.Join(Environment.NewLine, values.Where(item => !string.IsNullOrWhiteSpace(item)).Select(item => item.Trim()));
 
@@ -408,6 +545,67 @@ internal static class CapabilityConfigurationEditorSupport
 
         [JsonExtensionData]
         public Dictionary<string, JsonElement> ExtensionData { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    internal sealed class ToolCapabilityConfigurationModel
+    {
+        public string? ToolKind { get; set; }
+
+        public string? RuntimeToolName { get; set; }
+
+        public string? ImplementationKey { get; set; }
+
+        public List<string>? OperationClassifications { get; set; }
+
+        public CapabilitySideEffectConfigurationModel? SideEffects { get; set; }
+
+        public ExternalProcessToolConfigurationModel? ExternalProcess { get; set; }
+
+        public ExternalHttpToolConfigurationModel? ExternalHttp { get; set; }
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> ExtensionData { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    internal sealed class CapabilitySideEffectConfigurationModel
+    {
+        public string? Kind { get; set; }
+
+        public bool? RequiresApprovalByDefault { get; set; }
+
+        public bool? IsStateChanging { get; set; }
+    }
+
+    internal sealed class ExternalProcessToolConfigurationModel
+    {
+        public string? Command { get; set; }
+
+        public List<string>? Arguments { get; set; }
+
+        public string? WorkingDirectory { get; set; }
+
+        public List<string>? AllowedExecutableNames { get; set; }
+
+        public List<string>? RequiredOutputProperties { get; set; }
+
+        public int? TimeoutSeconds { get; set; }
+
+        public int? MaxOutputBytes { get; set; }
+    }
+
+    internal sealed class ExternalHttpToolConfigurationModel
+    {
+        public string? Method { get; set; }
+
+        public string? Endpoint { get; set; }
+
+        public Dictionary<string, string>? HeaderBindings { get; set; }
+
+        public List<string>? RequiredOutputProperties { get; set; }
+
+        public int? TimeoutSeconds { get; set; }
+
+        public int? MaxResponseBytes { get; set; }
     }
 
     internal sealed class SkillCapabilityConfigurationModel
@@ -519,5 +717,58 @@ internal static class CapabilityConfigurationEditorSupport
         public bool ScriptApproval { get; set; } = true;
 
         public string ScriptTrustLevel { get; set; } = string.Empty;
+    }
+
+    internal sealed class ToolCapabilityEditorState
+    {
+        private ToolCapabilityConfigurationModel? configuration;
+
+        internal ToolCapabilityConfigurationModel? Configuration
+        {
+            get => configuration;
+            set => configuration = value;
+        }
+
+        public string ToolKind { get; set; } = "externalProcess";
+
+        public string RuntimeToolName { get; set; } = string.Empty;
+
+        public string ImplementationKey { get; set; } = string.Empty;
+
+        public string OperationClassificationsText { get; set; } = "externalAction";
+
+        public string SideEffectKind { get; set; } = "ExternalAction";
+
+        public bool RequiresApprovalByDefault { get; set; } = true;
+
+        public bool IsStateChanging { get; set; } = true;
+
+        public string Command { get; set; } = string.Empty;
+
+        public string ArgumentsText { get; set; } = string.Empty;
+
+        public string WorkingDirectory { get; set; } = ".";
+
+        public string AllowedExecutableNamesText { get; set; } = string.Empty;
+
+        public string ProcessRequiredOutputPropertiesText { get; set; } = string.Empty;
+
+        public int ProcessTimeoutSeconds { get; set; } = 30;
+
+        public int MaxOutputBytes { get; set; } = 4096;
+
+        public string HttpMethod { get; set; } = "POST";
+
+        public string Endpoint { get; set; } = string.Empty;
+
+        public string HeaderBindingsText { get; set; } = string.Empty;
+
+        public string HttpRequiredOutputPropertiesText { get; set; } = string.Empty;
+
+        public int HttpTimeoutSeconds { get; set; } = 30;
+
+        public int MaxResponseBytes { get; set; } = 4096;
+
+        public string TestInputJson { get; set; } = "{}";
     }
 }

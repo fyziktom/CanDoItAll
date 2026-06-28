@@ -1,0 +1,79 @@
+{
+  "capabilities": [
+    {
+      "kind": "mcp-server",
+      "key": "playwright-local-mcp",
+      "displayName": "Playwright Local MCP",
+      "description": "Local Playwright MCP for browser control, console inspection, and screenshot-backed UI proof inside agent workspaces.",
+      "stableId": "mcp:playwright-local-mcp:v1",
+      "stableGuidKey": "capabilities/playwright-local-mcp",
+      "endpointOrPath": "npx",
+      "mcpServerKey": "playwright-local-mcp",
+      "operationClassifications": [
+        "browser-access",
+        "mcp-tool",
+        "external-action"
+      ],
+      "mcpTransport": {
+        "transport": "local-stdio",
+        "command": "npx",
+        "arguments": [
+          "@playwright/mcp@latest",
+          "--headless",
+          "--caps",
+          "vision",
+          "--ignore-https-errors",
+          "--isolated"
+        ],
+        "allowedTools": [
+          "browser_navigate",
+          "browser_snapshot",
+          "browser_console_messages",
+          "browser_take_screenshot",
+          "browser_click",
+          "browser_type",
+          "browser_fill_form",
+          "browser_wait_for",
+          "browser_select_option",
+          "browser_hover",
+          "browser_press_key",
+          "browser_evaluate",
+          "browser_resize",
+          "browser_close"
+        ]
+      },
+      "configuration": {
+        "transport": "stdio",
+        "serverName": "playwright-local",
+        "command": "npx",
+        "arguments": [
+          "@playwright/mcp@latest",
+          "--headless",
+          "--caps",
+          "vision",
+          "--ignore-https-errors",
+          "--isolated"
+        ],
+        "workingDirectory": ".",
+        "allowedTools": [
+          "browser_navigate",
+          "browser_snapshot",
+          "browser_console_messages",
+          "browser_take_screenshot",
+          "browser_click",
+          "browser_type",
+          "browser_fill_form",
+          "browser_wait_for",
+          "browser_select_option",
+          "browser_hover",
+          "browser_press_key",
+          "browser_evaluate",
+          "browser_resize",
+          "browser_close"
+        ],
+        "approvalMode": "NeverRequire"
+      },
+      "proofNotes": "Seeded built-in for UI-capable delivery agents. Runtime proof should confirm browser navigation, screenshot capture, and console evidence through real agent execution."
+    }
+  ]
+}

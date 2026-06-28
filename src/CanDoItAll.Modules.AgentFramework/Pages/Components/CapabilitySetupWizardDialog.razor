@@ -19,11 +19,12 @@
                                          Value="@editorModel.Kind"
                                          ValueChanged="HandleKindChangedAsync"
                                          ValueExpression="@(() => editorModel.Kind)"
-                                         class="cda-input"
-                                         data-testid="agents-capability-setup-kind">
-                                <option value="@CapabilityKind.McpServer">MCP server</option>
-                                <option value="@CapabilityKind.Skill">Skill</option>
-                            </InputSelect>
+                                 class="cda-input"
+                                 data-testid="agents-capability-setup-kind">
+                            <option value="@CapabilityKind.McpServer">MCP server</option>
+                            <option value="@CapabilityKind.Skill">Skill</option>
+                            <option value="@CapabilityKind.Tool">Tool</option>
+                        </InputSelect>
                         </div>
                         <div>
                             <label class="cda-field-label">Name</label>
@@ -145,6 +146,158 @@
                         </Grid>
                     </FormSection>
                 }
+                else if (editorModel.Kind == CapabilityKind.Tool)
+                {
+                    <FormSection Title="Tool configuration"
+                                 Description="Create an external process or HTTP tool descriptor with explicit runtime identity, bounded execution, and setup-test input.">
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                            <div>
+                                <label class="cda-field-label">Tool setup kind</label>
+                                <InputSelect @bind-Value="toolState.ToolKind"
+                                             class="cda-input"
+                                             data-testid="agents-capability-setup-tool-kind">
+                                    <option value="externalProcess">External process</option>
+                                    <option value="externalHttp">External HTTP</option>
+                                </InputSelect>
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Runtime tool name</label>
+                                <InputText @bind-Value="toolState.RuntimeToolName"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-tool-runtime-name" />
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Implementation key</label>
+                                <InputText @bind-Value="toolState.ImplementationKey"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-tool-implementation-key" />
+                            </div>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                            <div>
+                                <label class="cda-field-label">Operation classifications</label>
+                                <InputTextArea @bind-Value="toolState.OperationClassificationsText"
+                                               class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                               data-testid="agents-capability-setup-tool-classifications" />
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Side-effect kind</label>
+                                <InputText @bind-Value="toolState.SideEffectKind"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-tool-side-effect" />
+                            </div>
+                            <Stack Gap="0.5rem">
+                                <label class="cda-inline-option capability-setup-wizard__inline-option">
+                                    <InputCheckbox @bind-Value="toolState.RequiresApprovalByDefault"
+                                                   data-testid="agents-capability-setup-tool-approval" />
+                                    Requires approval
+                                </label>
+                                <label class="cda-inline-option capability-setup-wizard__inline-option">
+                                    <InputCheckbox @bind-Value="toolState.IsStateChanging"
+                                                   data-testid="agents-capability-setup-tool-state-changing" />
+                                    State changing
+                                </label>
+                            </Stack>
+                        </Grid>
+
+                        @if (string.Equals(toolState.ToolKind, "externalHttp", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                <div>
+                                    <label class="cda-field-label">HTTP method</label>
+                                    <InputText @bind-Value="toolState.HttpMethod"
+                                               class="cda-input"
+                                               data-testid="agents-capability-setup-tool-http-method" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Endpoint</label>
+                                    <InputText @bind-Value="toolState.Endpoint"
+                                               class="cda-input"
+                                               data-testid="agents-capability-setup-tool-http-endpoint" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Timeout seconds</label>
+                                    <InputNumber @bind-Value="toolState.HttpTimeoutSeconds"
+                                                 class="cda-input"
+                                                 data-testid="agents-capability-setup-tool-http-timeout" />
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                <div>
+                                    <label class="cda-field-label">Header bindings</label>
+                                    <InputTextArea @bind-Value="toolState.HeaderBindingsText"
+                                                   class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                                   data-testid="agents-capability-setup-tool-http-header-bindings" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Required output properties</label>
+                                    <InputTextArea @bind-Value="toolState.HttpRequiredOutputPropertiesText"
+                                                   class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                                   data-testid="agents-capability-setup-tool-http-output" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Max response bytes</label>
+                                    <InputNumber @bind-Value="toolState.MaxResponseBytes"
+                                                 class="cda-input"
+                                                 data-testid="agents-capability-setup-tool-http-max-response" />
+                                </div>
+                            </Grid>
+                        }
+                        else
+                        {
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                <div>
+                                    <label class="cda-field-label">Command</label>
+                                    <InputText @bind-Value="toolState.Command"
+                                               class="cda-input"
+                                               data-testid="agents-capability-setup-tool-process-command" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Working directory</label>
+                                    <InputText @bind-Value="toolState.WorkingDirectory"
+                                               class="cda-input"
+                                               data-testid="agents-capability-setup-tool-process-working-directory" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Timeout seconds</label>
+                                    <InputNumber @bind-Value="toolState.ProcessTimeoutSeconds"
+                                                 class="cda-input"
+                                                 data-testid="agents-capability-setup-tool-process-timeout" />
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                <div>
+                                    <label class="cda-field-label">Arguments</label>
+                                    <InputTextArea @bind-Value="toolState.ArgumentsText"
+                                                   class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                                   data-testid="agents-capability-setup-tool-process-arguments" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Allowed executable names</label>
+                                    <InputTextArea @bind-Value="toolState.AllowedExecutableNamesText"
+                                                   class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                                   data-testid="agents-capability-setup-tool-process-allowed-executables" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Required output properties</label>
+                                    <InputTextArea @bind-Value="toolState.ProcessRequiredOutputPropertiesText"
+                                                   class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                                   data-testid="agents-capability-setup-tool-process-output" />
+                                </div>
+                            </Grid>
+
+                            <div>
+                                <label class="cda-field-label">Max output bytes</label>
+                                <InputNumber @bind-Value="toolState.MaxOutputBytes"
+                                             class="cda-input"
+                                             data-testid="agents-capability-setup-tool-process-max-output" />
+                            </div>
+                        }
+                    </FormSection>
+                }
                 else
                 {
                     <FormSection Title="Skill configuration"
@@ -229,6 +382,63 @@
                                                class="cda-input cda-input--textarea capability-setup-wizard__large-textarea"
                                                data-testid="agents-capability-setup-inline-instructions" />
                             </div>
+                        }
+                    </FormSection>
+                }
+
+                @if (editorModel.Kind is CapabilityKind.Tool or CapabilityKind.McpServer)
+                {
+                    <FormSection Title="Setup test"
+                                 Description="Run the typed setup path before saving so startup, command policy, timeout, schema, and secret-binding errors are visible.">
+                        @if (editorModel.Kind == CapabilityKind.Tool)
+                        {
+                            <div>
+                                <label class="cda-field-label">Tool test input JSON</label>
+                                <InputTextArea @bind-Value="toolState.TestInputJson"
+                                               class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                               data-testid="agents-capability-setup-tool-test-input" />
+                            </div>
+                        }
+
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <Button Text="Test setup"
+                                    Icon="play_arrow"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@isBusy"
+                                    IsBusy="@isBusy"
+                                    Click="TestSetupAsync"
+                                    data-testid="agents-capability-setup-test" />
+                            @if (CurrentSetupSucceeded.HasValue)
+                            {
+                                <StatusBadge Tone="@(CurrentSetupSucceeded.Value ? "success" : "danger")"
+                                             Text="@(CurrentSetupSucceeded.Value ? "Setup passed" : "Setup failed")" />
+                            }
+                        </Cluster>
+
+                        @if (CurrentMcpDiscoveredTools.Count > 0)
+                        {
+                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                @foreach (var toolName in CurrentMcpDiscoveredTools.Take(8))
+                                {
+                                    <StatusBadge Tone="info" Text="@toolName" />
+                                }
+                            </Cluster>
+                        }
+
+                        @if (CurrentSetupDiagnostics.Count > 0)
+                        {
+                            <SurfaceCard Soft="true" data-testid="agents-capability-setup-diagnostics">
+                                <Stack GapScale="LayoutGap.Small">
+                                    @foreach (var diagnostic in CurrentSetupDiagnostics.Take(4))
+                                    {
+                                        <div>
+                                            <p class="cda-field-label">@diagnostic.Category.ToString()</p>
+                                            <p>@diagnostic.MaskedDetail</p>
+                                            <p class="cda-body-muted">@diagnostic.RepairHint</p>
+                                        </div>
+                                    }
+                                </Stack>
+                            </SurfaceCard>
                         }
                     </FormSection>
                 }

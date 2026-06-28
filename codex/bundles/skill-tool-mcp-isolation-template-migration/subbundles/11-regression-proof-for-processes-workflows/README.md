@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB09-SB10`
+- `Completed`
 
 ## Objective
 
@@ -101,14 +101,25 @@
 ## Browser Validation Logging
 
 - Target routes/windows: capability management, process/workflow launch or representative runtime screen.
-- Required viewports: maximized desktop and narrower viewport for setup dialog.
+- Required viewports: maximized/large desktop only for this execution; small and medium viewport tests were skipped per user instruction because the app targets large screens only.
 - Required actions: verify seeded capabilities, run setup tests, create/preview a deny policy, run representative process/workflow smoke with restrictions, inspect evidence.
 - Evidence paths: screenshots, traces, and console/network logs in `proof/SB11/manifest.md`.
 - Review questions: capability counts correct, setup errors actionable, no overlapping UI, runtime proof visible.
 
 ## Progression Gate
 
-- SB12 cleanup cannot start until SB11 proof shows behavior parity or records an explicit accepted exception.
+- SB12 cleanup is unblocked by `proof/SB11/manifest.md` and `proof/SB11/semantic-invariants.md`.
+
+## Completion Evidence
+
+- Unit regression matrix: `269 passed`.
+- Integration regression matrix: `34 passed`.
+- Component regression matrix: `60 passed`.
+- Large-screen Playwright matrix: `3 passed`.
+- Web build: `0 warnings`, `0 errors`.
+- Process/workflow restrictions deny representative Skill, Tool, MCP server, and MCP tool through `SB11_INV_ACCESS_001`.
+- API negative proof covers external Tool JSON parse failure, MCP list-tools failure, invalid policy selector, and denied required capability diagnostics.
+- Browser proof is large-screen-only and includes capability setup, process shell/live dashboard, and workflow runtime detail screenshots.
 
 ## Suggested Agent Prompt
 

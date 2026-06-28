@@ -1,0 +1,9 @@
+Command: rg -n "TODO|NotImplementedException|throw new NotImplemented|return \[\]|return null!|stub|fake" src/CanDoItAll.AgentFramework.Skills.Abstractions src/CanDoItAll.AgentFramework.Skills
+WorkingDirectory: C:\repositories\CanDoItAll
+Start: 2026-06-28T10:29:20.4608238-04:00
+End: 2026-06-28T10:29:20.5352079-04:00
+RawExitCode: 1
+ExitCode: 0
+
+Output:
+

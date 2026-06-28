@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CanDoItAll.Web.Api;
@@ -281,6 +282,27 @@ internal static class AgentsApi
             return Results.Ok(new ApiAck(true));
         })
         .WithName("VerifyAgentCapability");
+
+        agents.MapPost("/capabilities/setup-tests/tool", async (
+                CapabilityToolSetupTestRequest request,
+                IAgentCapabilitySetupFlowService setupFlowService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await setupFlowService.TestToolSetupAsync(request, cancellationToken)))
+            .WithName("TestAgentToolCapabilitySetup");
+
+        agents.MapPost("/capabilities/setup-tests/mcp", async (
+                CapabilityMcpSetupTestRequest request,
+                IAgentCapabilitySetupFlowService setupFlowService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await setupFlowService.TestMcpSetupAsync(request, cancellationToken)))
+            .WithName("TestAgentMcpCapabilitySetup");
+
+        agents.MapPost("/capabilities/access-preview", async (
+                CapabilityAccessPreviewRequest request,
+                IAgentCapabilitySetupFlowService setupFlowService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await setupFlowService.PreviewAccessAsync(request, cancellationToken)))
+            .WithName("PreviewAgentCapabilityAccess");
     }
 
     private static void MapMemoryEndpoints(RouteGroupBuilder agents)

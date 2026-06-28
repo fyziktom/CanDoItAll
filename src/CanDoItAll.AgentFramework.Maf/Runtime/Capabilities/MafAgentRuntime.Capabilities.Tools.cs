@@ -8,13 +8,14 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed partial class MafAgentRuntime
 {
-    private sealed class ToolCapabilityBuilder(
+    private sealed partial class ToolCapabilityBuilder(
         MafAgentRuntime owner,
         WorkspaceRuntimePlugin workspacePlugin,
         StorageRuntimePlugin? storagePlugin,
         IWorkspaceCommandExecutionService workspaceCommandExecutionService,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
-        IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies)
+        IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies,
+        RuntimeCapabilityAccessPlan capabilityAccessPlan)
     {
         private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
 
@@ -33,11 +34,6 @@ public sealed partial class MafAgentRuntime
             var configuration = DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
             var toolKey = configuration.Tool ?? capability.Key;
             if (!IsBuiltInToolEnabled(toolKey, configuration))
-            {
-                return [];
-            }
-
-            if (agent is not null && !IsWorkspaceToolAllowed(toolKey))
             {
                 return [];
             }
@@ -117,94 +113,6 @@ public sealed partial class MafAgentRuntime
             }
 
             return MafAgentRuntime.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
-        }
-
-        public IReadOnlyList<AITool> CreateConfiguredWorkspaceTools(
-            AgentDefinition agent,
-            bool suppressApprovalRequirements = false)
-        {
-            var access = workspaceToolAccess;
-            var auditScope = WorkspaceExecutionAuditContext.Current;
-            var hasGroundedExternalPath = auditScope is not null &&
-                                          (auditScope.AllowedExternalTargetAliases.Count > 0 ||
-                                           auditScope.ReadOnlyExternalTargetAliases.Count > 0);
-            var tools = new List<AITool>();
-            var attachFileTools = access.AllowedExternalTargetAliases.Count > 0 ||
-                                  access.CanWriteFiles ||
-                                  access.CanRunValidationCommands ||
-                                  access.CanRunLocalScripts ||
-                                  access.CanScaffoldProjects ||
-                                  access.CanManageWorkspacePaths ||
-                                  access.CanTransformArtifacts ||
-                                  hasGroundedExternalPath;
-            if (attachFileTools && (access.CanReadFiles || access.CanWriteFiles))
-            {
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.GetWorkspaceExecutionBoundary, "workspace_execution_boundary", "Describes the effective tool-execution boundary and whether the host provides real sandboxing."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.ListWorkspaceFiles, "workspace_list_files", "Lists files and directories from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.SearchWorkspace, "workspace_search", "Searches text across the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.ReadWorkspaceTextFile, "workspace_read_file", "Reads text files from the managed workspace, a configured external workspace root, or an absolute external path grounded by the current prompt."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.StatWorkspacePath, "workspace_stat_path", "Returns file or directory metadata for a managed workspace path, configured external workspace root, or prompt-grounded absolute external path."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.DiffWorkspaceTextFiles, "workspace_diff_text", "Computes a bounded line-level diff between two allowed workspace text files."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.GitWorkspaceStatus, "workspace_git_status", "Runs a bounded git status recipe in the managed workspace or configured external workspace root."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.GitWorkspaceDiff, "workspace_git_diff", "Runs a bounded git diff recipe in the managed workspace or configured external workspace root."));
-            }
-
-            if (attachFileTools && access.CanWriteFiles)
-            {
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CreateWorkspaceDirectory, "workspace_create_directory", "Creates a directory in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.WriteWorkspaceTextFile, "workspace_write_file", "Creates or overwrites a text file in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.AppendWorkspaceTextFile, "workspace_append_file", "Appends text to a workspace file in the managed workspace or configured external workspace root."), suppressApprovalRequirements));
-            }
-
-            if (attachFileTools && access.CanManageWorkspacePaths)
-            {
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CopyWorkspacePath, "workspace_copy_path", "Copies a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.MoveWorkspacePath, "workspace_move_path", "Moves or renames a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DeleteWorkspacePath, "workspace_delete_path", "Deletes a file or directory inside allowed workspace roots."), suppressApprovalRequirements));
-            }
-
-            if (attachFileTools && access.CanRunValidationCommands)
-            {
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the managed workspace or configured external workspace root."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the managed workspace or configured external workspace root."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the managed workspace or configured external workspace root."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or configured external workspace root. HTTP smoke stops the launched process tree by default. Use keepAlive true with lifetimeScope ExecutionRun for same-step browser proof, or lifetimeScope ProcessRun only when a later process step owns capture and cleanup."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceStop, "workspace_dotnet_stop", "Stops a kept-alive workspace_dotnet_run process tree using its startup.json receipt and records cleanup evidence next to that receipt."));
-            }
-
-            if (attachFileTools && access.CanScaffoldProjects)
-            {
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceNew, "workspace_dotnet_new", "Creates a bounded dotnet project or solution scaffold in the managed workspace or configured external workspace root. For a grounded product root, create the solution at the product root and create app/test projects under child folders such as src or tests."), suppressApprovalRequirements));
-            }
-
-            if (attachFileTools && access.CanRunLocalScripts)
-            {
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePythonFile, "workspace_python_run_file", "Runs a workspace Python file with structured arguments through the controlled execution plane."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane."), suppressApprovalRequirements));
-            }
-
-            if (attachFileTools && access.CanTransformArtifacts)
-            {
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFile, "workspace_analyze_image", "Analyzes a workspace PNG, JPEG, or GIF image through the provider's vision-capable analysis model and returns visible evidence plus provider token counts."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", "Analyzes two or more workspace screenshot images together through the provider's vision-capable analysis model and returns visible comparison evidence plus provider token counts."));
-            }
-
-            if (storagePlugin is not null && (access.CanReadStorage || access.CanWriteStorage))
-            {
-                tools.Add(AIFunctionFactory.Create(storagePlugin.ListStorageCatalogs, "storage_catalog_list", "Lists storage catalogs this agent is allowed to use."));
-                tools.Add(AIFunctionFactory.Create(storagePlugin.ReadStorageTextFile, "storage_read_text_file", "Reads a text object from an allowed storage catalog through the configured storage driver."));
-            }
-
-            if (storagePlugin is not null && access.CanWriteStorage)
-            {
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(storagePlugin.WriteStorageTextFile, "storage_write_text_file", "Writes a text object to an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
-                tools.Add(WrapWithApproval(AIFunctionFactory.Create(storagePlugin.DeleteStorageObject, "storage_delete_object", "Deletes an object from an allowed storage catalog through the configured storage driver."), suppressApprovalRequirements));
-            }
-
-            return tools;
         }
 
         public async Task<object?> RunSkillScriptAsync(
@@ -385,62 +293,6 @@ public sealed partial class MafAgentRuntime
             }
 
             throw new InvalidOperationException($"Registered plugin service '{configuration.RegisteredPluginServiceType}' for capability '{capability.Name}' does not expose AITool instances.");
-        }
-
-        private bool IsWorkspaceToolAllowed(string toolKey)
-        {
-            if (!AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(toolKey, out _))
-            {
-                return true;
-            }
-
-            return AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(
-                workspaceToolAccess,
-                toolKey);
-        }
-
-        private IReadOnlyList<AITool> CreateWorkspacePluginTools(bool suppressApprovalRequirements)
-        {
-            var tools = new List<AITool>();
-            AddWorkspacePluginTool(tools, "workspace_execution_boundary", () => AIFunctionFactory.Create(workspacePlugin.GetWorkspaceExecutionBoundary, "workspace_execution_boundary", "Describes the effective tool-execution boundary and whether the host provides real sandboxing."));
-            AddWorkspacePluginTool(tools, "workspace_list_files", () => AIFunctionFactory.Create(workspacePlugin.ListWorkspaceFiles, "workspace_list_files", "Lists files and directories from the managed workspace or a grounded external-target alias. Supports simple patterns and recursive globstar patterns such as **/* and **/*.cs. In external-target process runs, broad managed-root browsing is denied; list current-run artifacts or the grounded product alias instead."));
-            AddWorkspacePluginTool(tools, "workspace_search", () => AIFunctionFactory.Create(workspacePlugin.SearchWorkspace, "workspace_search", "Searches text across the current workspace; external-target paths require explicit current-run grounding. In external-target process runs, broad managed-root search is denied; search current-run artifacts or the grounded product alias instead."));
-            AddWorkspacePluginTool(tools, "workspace_read_file", () => AIFunctionFactory.Create(workspacePlugin.ReadWorkspaceTextFile, "workspace_read_file", "Reads text files from the managed workspace or a grounded external-target alias. In external-target process runs, do not read unmanaged source or helper roots unless they are current-run artifacts."));
-            AddWorkspacePluginTool(tools, "workspace_stat_path", () => AIFunctionFactory.Create(workspacePlugin.StatWorkspacePath, "workspace_stat_path", "Returns file or directory metadata for a managed workspace path or grounded external-target alias. In external-target process runs, prefer current-run artifacts and the grounded product alias."));
-            AddWorkspacePluginTool(tools, "workspace_diff_text", () => AIFunctionFactory.Create(workspacePlugin.DiffWorkspaceTextFiles, "workspace_diff_text", "Computes a bounded line-level diff between two workspace text files."));
-            AddWorkspacePluginTool(tools, "workspace_git_status", () => AIFunctionFactory.Create(workspacePlugin.GitWorkspaceStatus, "workspace_git_status", "Runs a bounded git status recipe in the current workspace."));
-            AddWorkspacePluginTool(tools, "workspace_git_diff", () => AIFunctionFactory.Create(workspacePlugin.GitWorkspaceDiff, "workspace_git_diff", "Runs a bounded git diff recipe in the current workspace."));
-            AddWorkspacePluginTool(tools, "workspace_dotnet_build", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying."));
-            AddWorkspacePluginTool(tools, "workspace_dotnet_test", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying."));
-            AddWorkspacePluginTool(tools, "workspace_dotnet_run", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias. Use lifetimeScope ProcessRun only when the process graph has a later cleanup step. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying."));
-            AddWorkspacePluginTool(tools, "workspace_dotnet_stop", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceStop, "workspace_dotnet_stop", "Stops a kept-alive workspace_dotnet_run process tree from its startup.json receipt and writes cleanup.json proof next to the receipt. Use this instead of workspace_pwsh_run_script for runtime cleanup."));
-            AddWorkspacePluginTool(tools, "workspace_create_directory", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CreateWorkspaceDirectory, "workspace_create_directory", "Creates a directory in the managed workspace or a grounded external-target alias. In external-target process runs, product source, tests, scripts, and assets must stay under the grounded product alias or current-run artifact folders."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_write_file", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.WriteWorkspaceTextFile, "workspace_write_file", "Creates or overwrites a text file in the managed workspace or a grounded external-target alias. In external-target process runs, product source and tests must be written under the grounded product alias, not managed src/tests/tools roots."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_append_file", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.AppendWorkspaceTextFile, "workspace_append_file", "Appends text to a workspace file. In external-target process runs, product source and tests must be written under the grounded product alias, not managed src/tests/tools roots."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_copy_path", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CopyWorkspacePath, "workspace_copy_path", "Copies a file or directory inside the current workspace."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_move_path", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.MoveWorkspacePath, "workspace_move_path", "Moves or renames a file or directory inside the current workspace."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_delete_path", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DeleteWorkspacePath, "workspace_delete_path", "Deletes a file or directory inside the current workspace."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_dotnet_restore", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the managed workspace or a grounded external-target alias."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_dotnet_new", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceNew, "workspace_dotnet_new", "Creates a bounded dotnet project or solution scaffold in the managed workspace or a grounded external-target alias. Approved templates include current SDK project templates and sln for empty solution files. Inspect an unsuccessful result before retrying. For an exact output root, pass its parent as parentDirectory and the root leaf as name. Timeout arguments are seconds, not milliseconds; prefer the default or use normal second values such as 120 or 300. For test projects, pass a parentDirectory under the grounded product root, such as <product-root>/tests, with name <AppName>.Tests; never reuse the product parent to create <AppName>.Tests as a sibling. Keep tests and support projects under child folders of the grounded product root unless another root is explicitly grounded. Do not scaffold product or test projects into managed src/tests/tools roots or sibling external-target roots during an external-target run."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_python_run_file", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePythonFile, "workspace_python_run_file", "Runs a workspace Python file with structured arguments through the controlled execution plane."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_pwsh_run_script", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_convert_document", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_inspect_spreadsheet", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."), suppressApprovalRequirements));
-            AddWorkspacePluginTool(tools, "workspace_inspect_image", () => AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
-            AddWorkspacePluginTool(tools, "workspace_analyze_image", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFile, "workspace_analyze_image", "Analyzes a workspace PNG, JPEG, or GIF image through the provider's vision-capable analysis model and returns visible evidence plus provider token counts."));
-            AddWorkspacePluginTool(tools, "workspace_analyze_images", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", "Analyzes two or more workspace screenshot images together through the provider's vision-capable analysis model and returns visible comparison evidence plus provider token counts."));
-            return tools;
-        }
-
-        private void AddWorkspacePluginTool(
-            List<AITool> tools,
-            string toolName,
-            Func<AITool> createTool)
-        {
-            if (IsWorkspaceToolAllowed(toolName))
-            {
-                tools.Add(createTool());
-            }
         }
 
         private static bool IsBuiltInToolEnabled(string toolKey, BuiltInToolConfiguration configuration)

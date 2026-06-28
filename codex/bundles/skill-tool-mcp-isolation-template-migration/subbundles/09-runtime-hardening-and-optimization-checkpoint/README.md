@@ -2,7 +2,10 @@
 
 ## Status
 
-- `Ready after SB08`
+- `Completed`
+- Closure proof: `proof/SB09/manifest.md`
+- Semantic proof: `proof/SB09/semantic-invariants.md`
+- Progression: `SB10 and SB11 may start`
 
 ## Objective
 
@@ -104,6 +107,7 @@
 ## Progression Gate
 
 - SB10 and SB11 may start only after SB09 proves runtime reconnection is hardened, diagnosable, and performance-reviewed.
+- Gate result: `Passed with accepted legacy-MAF size risk`.
 
 ## Suggested Agent Prompt
 

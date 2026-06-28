@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -107,6 +107,16 @@
 - `proof/SB01/manifest.md` with failing-first and passing transcripts.
 - `proof/SB01/semantic-invariants.md` proving preserved keys/names and no silent fallback.
 
+## Execution Proof
+
+- Failing-first transcript: `bundle://proof/SB01/transcripts/failing-first-capability-contracts-semantic.txt`
+- Passing targeted tests: `bundle://proof/SB01/transcripts/passing-capability-contracts.txt`
+- Full solution build: `bundle://proof/SB01/transcripts/dotnet-build-solution.txt`
+- Source assertions: `bundle://proof/SB01/transcripts/source-assertions.txt`
+- Anti-stub audit: `bundle://proof/SB01/transcripts/anti-stub-audit.txt`
+- Critical manifest: `bundle://proof/SB01/manifest.md`
+- Semantic invariant contract: `bundle://proof/SB01/semantic-invariants.md`
+
 ## Browser Validation Logging
 
 - N/A. This subbundle has no browser-visible surface.
@@ -114,6 +124,7 @@
 ## Progression Gate
 
 - SB02-SB04 may start only after SB01 proof shows contracts compile, invalid templates fail predictably, structured diagnostics are typed, and existing compatibility names pass.
+- Gate result: `Passed`. SB02-SB04 may start from these contracts.
 
 ## Suggested Agent Prompt
 

@@ -1,11 +1,86 @@
 # Templates
 
-Repository-owned template assets live here.
+Repository-owned template assets live here. These files are runtime inputs for managed seed materialization and UI/API previews, not examples to copy into generated output.
 
 ## Structure
+
 - `Agents/` - file-driven default agent template pack with team folders and per-member settings, skills, and instructions.
+- `Capabilities/` - file-driven Skill, Tool, MCP, RAG, context, and capability access policy pack used by seed materialization.
 - `Processes/` - file-driven process template pack used by the Processes module.
 - `Workflows/` - file-driven workflow example template pack used by the Agent Framework module.
 
-## Rule
-Add future template sets as sibling module folders under `Templates/` instead of placing them in generated or ignored output directories.
+Add future template sets as sibling module folders under `Templates/`. Do not place template packs in generated, ignored, or runtime output directories.
+
+## Capability Pack
+
+The default capability pack is rooted at `Templates/Capabilities/manifest.json`. The manifest lists capability files (`skills.json`, `tools.json`, `mcps.json`, `other.json`) and policy files (`policies/capability-access-policy.json`). `SandboxWorkspaceSeedBuilder` loads this pack through `CapabilityTemplatePackLoader` and creates catalog rows only through `CapabilityTemplateSeedMaterializer`; do not add new hardcoded `CapabilityCatalogItem` builders to the seed builder.
+
+Every capability descriptor must have:
+
+- `kind`: `skill`, `tool`, `mcp-server`, `rag`, `ai-context`, `memory`, or another supported enum value.
+- `key`: stable lower kebab-case catalog key.
+- `displayName` and `description`: user-facing catalog text.
+- `stableId` and `stableGuidKey`: stable identity inputs for deterministic seed IDs.
+- `operationClassifications`: typed policy classifications such as `read`, `write`, `mutation`, `validation`, `script-execution`, `external-action`, `browser-access`, `mcp-tool`, `provider-native`, or `runtime-launch`.
+- `proofNotes`: short current proof state when setup has not been live-tested.
+
+## Adding Skills
+
+For a file skill, add a `skill` descriptor to `skills.json` with `skillSource: "file"` and a `skillRootKey` that resolves through `SandboxWorkspaceSeedAssets`. The materializer writes `skillSource`, `skillRoot`, `allowedExternalRoots`, and script execution policy into the capability configuration. File skills become shared `SkillDescriptor` values through the MAF catalog adapter; do not add private MAF skill descriptor records.
+
+For an inline skill, use `skillSource: "inline"` and an `inlineSkill` block with `name`, `description`, `instructionsAssetKey`, and optional `resources`. Put reusable text under the seed assets read by `SandboxWorkspaceSeedAssets`; do not duplicate long instructions in C#.
+
+For a registered skill, bind through an implementation key and service registration in the skill implementation project. The catalog template owns the capability key and user-facing metadata; the implementation project owns execution.
+
+## Adding Tools
+
+For an internal workspace/runtime tool, add a `tool` descriptor to `tools.json` with `runtimeToolName` in snake_case and matching operation classifications. The runtime tool name must map to `ToolContractCatalog` or `ToolCapabilityRegistry` metadata, and MAF attachment must continue to expose it through typed `ToolDescriptor`/`CapabilityExposureDescriptor` conversion.
+
+For an external process or HTTP tool, define the descriptor and setup requirements in the capability template/descriptor layer, then execute setup through `IToolSetupTestService`. External setup failures must return `CapabilityDiagnostic` entries with category, field path, transport, correlation ID, bounded masked detail, and repair hint. Do not collapse process, HTTP, JSON, schema, timeout, cancellation, or command-policy failures into a generic setup error.
+
+If a tool is provided by a plugin or runtime provider, the provider must expose unique tool names and metadata. Runtime provider pruning must go through `ICapabilityAccessPolicyEvaluator` and record suppression diagnostics; do not add provider-specific hidden deny lists.
+
+## Adding MCP Servers
+
+Add MCP servers to `mcps.json` with `kind: "mcp-server"`, a stable `mcpServerKey`, operation classifications, and an `mcpTransport` block.
+
+For local stdio MCP servers, declare `transport: "local-stdio"`, `command`, `arguments`, and non-empty `allowedTools`. Local commands are checked by command policy, and raw environment values are rejected; use secret bindings instead.
+
+For remote HTTP MCP servers, declare the endpoint and header bindings. Raw headers are rejected. Setup runs through `IMcpSetupTestService`, validates startup/list-tools/allowed-tools/cleanup, and emits typed `CapabilityDiagnostic` values. MCP tool selectors must include both server key and tool name.
+
+## Access Policies
+
+Capability restrictions for agents, processes, workflows, runtime overrides, and UI previews use typed `CapabilityAccessPolicy` rules. Normal editing should happen through the typed UI/API, not hand-edited raw JSON.
+
+Supported selector kinds are:
+
+- `all`
+- `kind`
+- `capabilityKey`
+- `tag`
+- `operationClassification`
+- `runtimeToolName`
+- `mcpServerKey`
+- `mcpToolName`
+- `implementationKey`
+
+Use `deny` rules for suppression and `require` rules for required availability diagnostics. `allow` rules do not grant capabilities that are not already assigned or available. Required capability denial must include the rule ID, scope, selector kind, capability identity, correlation ID, and repair hint.
+
+Process `allowedOperations` are compiled into typed operation-classification policies through `ProcessAllowedOperationsCapabilityPolicyCompiler`. Agent workspace-tool settings are compiled through `AgentWorkspaceToolAccessCapabilityPolicyCompiler`. MAF composition consumes the resulting `EffectiveCapabilitySet`; do not reintroduce raw selector string comparisons or private runtime filters.
+
+## Setup And Repair Flow
+
+Use the capability setup UI/API to test external tools and MCP servers before enabling them. Representative failures should be interpreted from the diagnostic fields:
+
+- `JsonParse` at `$.jsonInput` or `$`: fix malformed setup input or non-JSON tool output.
+- `CommandPolicy` at `$.command` or `$.executablePath`: choose an approved command/executable.
+- `SecretBinding`: replace raw secret values with bindings.
+- `McpListTools` or `$.allowedTools`: update MCP allowed tools to match discovery or repair the server.
+- `Timeout` or `Cancellation`: check lifecycle ownership and timeout before retrying.
+- `ResourceCleanup`: inspect MCP shutdown cleanup before enabling the descriptor.
+
+Diagnostics shown in UI/API must keep raw detail bounded and masked. Logs and stored proof should never contain raw API keys, bearer tokens, authorization headers, or raw environment secrets.
+
+## Managed Seed Versioning
+
+When capability templates change default behavior, update the capability pack manifest version/seed version deliberately and keep compatibility with existing persisted catalogs. Existing persisted catalog rows may require compatibility adapters, but new default seed content must be template-backed. Guard tests under `CapabilityMigrationCleanupGuardTests` prevent reintroducing hardcoded default capability builders, private MAF capability descriptor DTOs, hidden suppression outside the shared evaluator, raw selector string matching in runtime access logic, and generic setup errors.

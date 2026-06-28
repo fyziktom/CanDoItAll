@@ -1,0 +1,1 @@
+No synchronous wait, sleep, or artificial delay patterns in SB08 changed runtime/test files.

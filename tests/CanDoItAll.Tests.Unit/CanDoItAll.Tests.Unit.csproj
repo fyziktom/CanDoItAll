@@ -20,12 +20,22 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Capabilities.Access\CanDoItAll.AgentFramework.Capabilities.Access.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Capabilities.Templates\CanDoItAll.AgentFramework.Capabilities.Templates.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.ProviderPipelines\CanDoItAll.AgentFramework.ProviderPipelines.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Providers\CanDoItAll.AgentFramework.Providers.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Git\CanDoItAll.Git.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Tools.Abstractions\CanDoItAll.AgentFramework.Tools.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Tools\CanDoItAll.AgentFramework.Tools.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Skills.Abstractions\CanDoItAll.AgentFramework.Skills.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Skills\CanDoItAll.AgentFramework.Skills.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Mcp\CanDoItAll.AgentFramework.Mcp.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />

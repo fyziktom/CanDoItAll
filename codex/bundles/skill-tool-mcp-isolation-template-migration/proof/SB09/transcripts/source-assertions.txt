@@ -1,0 +1,29 @@
+tests\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:324:        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+tests\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:352:            var effectiveCapabilities = ReadEffectiveCapabilities(state);
+tests\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:425:        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+tests\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:627:    private static EffectiveCapabilitySet ReadEffectiveCapabilities(object state)
+tests\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:629:            state.GetType().GetProperty("EffectiveCapabilities", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:40:            ? ToolDescriptorFactory.ProviderNative(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:47:            : ToolDescriptorFactory.Internal(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:71:            var descriptor = SkillDescriptorFactory.Inline(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:89:            var descriptor = SkillDescriptorFactory.Registered(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:104:            var descriptor = SkillDescriptorFactory.File(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:118:        var fallbackDescriptor = SkillDescriptorFactory.Registered(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:144:            descriptor = McpDescriptorFactory.LocalStdio(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:163:            descriptor = McpDescriptorFactory.RemoteHttp(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:179:            descriptor = McpDescriptorFactory.InternalHosted(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:19:    private RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:32:        var configuredWorkspaceDescriptors = CreateConfiguredWorkspaceToolDescriptors(workspaceToolAccess, storageToolsAvailable);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:111:    private static void AttachInitialCapabilityAccessState(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:116:        state.CapabilityAccessDiagnostics.AddRange(accessPlan.InitialDiagnostics);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:166:    private static CapabilityAccessEvaluationResult EvaluateRuntimeToolAccess(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:182:        state.CapabilityAccessDiagnostics.AddRange(result.Diagnostics);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:186:        EffectiveCapabilitySet EffectiveCapabilities,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.RuntimeToolDescriptors.cs:10:    private static IReadOnlyList<CapabilityExposureDescriptor> CreateConfiguredWorkspaceToolDescriptors(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.RuntimeToolDescriptors.cs:82:        var descriptor = ToolDescriptorFactory.Internal(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:59:        var capabilityAccessPlan = CreateRuntimeCapabilityAccessPlan(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:76:        AttachInitialCapabilityAccessState(composition.State, capabilityAccessPlan);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.RuntimeToolProviders.cs:308:        var accessResult = EvaluateRuntimeToolAccess(composition.CapabilityAccessPlan, candidates);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.ConfiguredWorkspace.cs:101:        private bool IsConfiguredRuntimeToolAllowed(string toolKey)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.ConfiguredWorkspace.cs:119:            if (IsConfiguredRuntimeToolAllowed(runtimeToolName))
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.ConfiguredWorkspace.cs:163:            if (IsConfiguredRuntimeToolAllowed(toolName))

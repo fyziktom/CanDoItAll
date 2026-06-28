@@ -53,7 +53,27 @@ public sealed partial class MafAgentRuntime
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent)
     {
-        var composition = CreateCapabilityComposition(agent, provider, model, capabilities, contextIntent);
+        var agentConfiguration = DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
+        var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent);
+        var storageToolsAvailable = HasStorageRuntimePluginServices();
+        var capabilityAccessPlan = CreateRuntimeCapabilityAccessPlan(
+            agent,
+            capabilities,
+            workspaceToolAccess,
+            contextIntent,
+            storageToolsAvailable);
+        var effectiveCapabilities = capabilityAccessPlan.AllowedCatalogCapabilities;
+        var composition = CreateCapabilityComposition(
+            agent,
+            provider,
+            model,
+            effectiveCapabilities,
+            contextIntent,
+            agentConfiguration,
+            workspaceToolAccess,
+            capabilityAccessPlan);
+
+        AttachInitialCapabilityAccessState(composition.State, capabilityAccessPlan);
 
         await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
         await AttachContextContributorsAsync(
@@ -63,13 +83,13 @@ public sealed partial class MafAgentRuntime
             progressCallback,
             suppressApprovalRequirements,
             contextWorkspaceScope);
-        await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements, contextIntent);
-        await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements, contextIntent);
+        await AttachSkillsAsync(composition, effectiveCapabilities, progressCallback, suppressApprovalRequirements);
+        await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachRegisteredRuntimeToolProvidersAsync(
             composition,
             agent,
             provider,
-            capabilities,
+            effectiveCapabilities,
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements,
@@ -80,11 +100,10 @@ public sealed partial class MafAgentRuntime
             composition,
             agent,
             provider,
-            capabilities,
+            effectiveCapabilities,
             progressCallback,
             cancellationToken,
-            suppressApprovalRequirements,
-            contextIntent);
+            suppressApprovalRequirements);
         await AttachCompactionAsync(composition, agent, progressCallback, suppressApprovalRequirements);
 
         DeduplicateTools(composition.State.Tools);
@@ -96,10 +115,11 @@ public sealed partial class MafAgentRuntime
         ProviderProfile provider,
         string model,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
-        AgentRuntimeContextIntent contextIntent)
+        AgentRuntimeContextIntent contextIntent,
+        AgentRuntimeConfiguration agentConfiguration,
+        AgentWorkspaceToolAccessSettings workspaceToolAccess,
+        RuntimeCapabilityAccessPlan capabilityAccessPlan)
     {
-        var agentConfiguration = DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
-        var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent, contextIntent);
         var workspaceFileService = services.GetService(typeof(IWorkspaceFileService)) as IWorkspaceFileService
             ?? new WorkspaceFileService(workspaceRoot, workspaceScope);
         var workspaceCommandExecutionService = services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
@@ -120,7 +140,14 @@ public sealed partial class MafAgentRuntime
         EnsureRuntimeToolProviderKeysAreUnique(runtimeToolProviders);
         var mcpBuilder = new McpCapabilityBuilder(this);
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
-        var toolBuilder = new ToolCapabilityBuilder(this, workspacePlugin, storagePlugin, workspaceCommandExecutionService, workspaceToolAccess, fileSkillExecutionPolicies);
+        var toolBuilder = new ToolCapabilityBuilder(
+            this,
+            workspacePlugin,
+            storagePlugin,
+            workspaceCommandExecutionService,
+            workspaceToolAccess,
+            fileSkillExecutionPolicies,
+            capabilityAccessPlan);
 
         return new RuntimeCapabilityComposition(
             new RuntimeCapabilityState(),
@@ -130,18 +157,23 @@ public sealed partial class MafAgentRuntime
             contextContributors,
             runtimeToolProviders,
             mcpBuilder,
-            toolBuilder);
+            toolBuilder,
+            capabilityAccessPlan);
     }
 
-    private static AgentWorkspaceToolAccessSettings ResolveWorkspaceToolAccessForRuntime(
-        AgentDefinition agent,
-        AgentRuntimeContextIntent contextIntent)
+    private bool HasStorageRuntimePluginServices()
+    {
+        return services.GetService(typeof(IStorageCatalogService)) is not null &&
+               services.GetService(typeof(IStorageDriverRegistry)) is not null;
+    }
+
+    private static AgentWorkspaceToolAccessSettings ResolveWorkspaceToolAccessForRuntime(AgentDefinition agent)
     {
         var configured = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
         var overrideProfile = WorkspaceExecutionAuditContext.Current?.WorkspaceToolProfileOverride;
         if (!overrideProfile.HasValue)
         {
-            return ResolveProcessScopedWorkspaceToolAccess(configured, contextIntent);
+            return AgentWorkspaceToolAccessMetadata.Normalize(configured);
         }
 
         var processProfile = AgentWorkspaceToolAccessProfiles.CreateSettings(overrideProfile.Value);
@@ -151,61 +183,7 @@ public sealed partial class MafAgentRuntime
         processProfile.AllowAllStorageCatalogs = configured.AllowAllStorageCatalogs;
         processProfile.AllowedStorageCatalogIds = configured.AllowedStorageCatalogIds.ToList();
 
-        return ResolveProcessScopedWorkspaceToolAccess(
-            AgentWorkspaceToolAccessMetadata.Normalize(processProfile),
-            contextIntent);
-    }
-
-    private static AgentWorkspaceToolAccessSettings ResolveProcessScopedWorkspaceToolAccess(
-        AgentWorkspaceToolAccessSettings configured,
-        AgentRuntimeContextIntent contextIntent)
-    {
-        var normalized = AgentWorkspaceToolAccessMetadata.Normalize(configured);
-        if (!contextIntent.IsGovernedProcessStep)
-        {
-            return normalized;
-        }
-
-        var allowedOperations = contextIntent.AllowedOperations
-            .Where(operation => !string.IsNullOrWhiteSpace(operation))
-            .Select(operation => operation.Trim())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var wantsValidation = allowedOperations.Contains(ProcessOperationContractNames.RunValidation) ||
-                              allowedOperations.Contains(ProcessOperationContractNames.LaunchRuntime) ||
-                              allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof);
-        var wantsMutation = contextIntent.AllowsProductMutation &&
-                            (allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget) ||
-                             allowedOperations.Contains(ProcessOperationContractNames.WriteExternalArtifactDestination) ||
-                             allowedOperations.Contains(ProcessOperationContractNames.WriteManagedProcessArtifacts) ||
-                             allowedOperations.Contains(ProcessOperationContractNames.RecoverArtifactsOnly));
-        var wantsScripts = allowedOperations.Contains(ProcessOperationContractNames.ExecuteExternalAction) ||
-                           allowedOperations.Contains(ProcessOperationContractNames.StartProjectNodeProcess) ||
-                           allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget);
-        var wantsScaffold = contextIntent.ScaffoldToolOnly ||
-                            (contextIntent.AllowsProductMutation &&
-                             (allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget) ||
-                              allowedOperations.Contains(ProcessOperationContractNames.StartProjectNodeProcess)));
-        var wantsTransform = wantsMutation ||
-                             allowedOperations.Contains(ProcessOperationContractNames.WriteManagedProcessArtifacts) ||
-                             allowedOperations.Contains(ProcessOperationContractNames.ReadUpstreamArtifacts) ||
-                             allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof);
-
-        return AgentWorkspaceToolAccessMetadata.Normalize(new AgentWorkspaceToolAccessSettings
-        {
-            Profile = AgentWorkspaceToolProfileKind.Custom,
-            CanReadFiles = normalized.CanReadFiles,
-            CanWriteFiles = normalized.CanWriteFiles && wantsMutation,
-            CanRunValidationCommands = normalized.CanRunValidationCommands && wantsValidation,
-            CanRunLocalScripts = normalized.CanRunLocalScripts && wantsScripts,
-            CanScaffoldProjects = normalized.CanScaffoldProjects && wantsScaffold,
-            CanManageWorkspacePaths = normalized.CanManageWorkspacePaths && wantsMutation,
-            CanTransformArtifacts = normalized.CanTransformArtifacts && wantsTransform,
-            AllowedExternalTargetAliases = normalized.AllowedExternalTargetAliases.ToList(),
-            CanReadStorage = normalized.CanReadStorage,
-            CanWriteStorage = normalized.CanWriteStorage && wantsMutation,
-            AllowAllStorageCatalogs = normalized.AllowAllStorageCatalogs,
-            AllowedStorageCatalogIds = normalized.AllowedStorageCatalogIds.ToList()
-        });
+        return AgentWorkspaceToolAccessMetadata.Normalize(processProfile);
     }
 
     private StorageRuntimePlugin? CreateStorageRuntimePlugin(AgentWorkspaceToolAccessSettings accessSettings)
@@ -305,22 +283,8 @@ public sealed partial class MafAgentRuntime
         RuntimeCapabilityComposition composition,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         Func<ExecutionState, string, string, Task> progressCallback,
-        bool suppressApprovalRequirements,
-        AgentRuntimeContextIntent contextIntent)
+        bool suppressApprovalRequirements)
     {
-        if (ShouldExcludeSkillsForProcessStep(contextIntent))
-        {
-            composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                AgentRuntimeContextSourceCategories.Skills,
-                "agent-skills-provider",
-                "governed process step did not declare a mutation, validation, external action, or runtime launch operation requiring agent skills"));
-            await progressCallback(
-                ExecutionState.Preparing,
-                "Skills",
-                "Skipped AgentSkillsProvider for this governed process step because the step operation profile does not require skill execution.");
-            return;
-        }
-
         var skillRoots = composition.SkillBuilder.ResolveSkillRoots(capabilities, composition.AgentConfiguration);
         var inlineSkills = composition.SkillBuilder.ResolveInlineSkills(capabilities);
         var serviceSkills = composition.SkillBuilder.ResolveRegisteredSkills(capabilities);
@@ -370,21 +334,6 @@ public sealed partial class MafAgentRuntime
             $"Loaded {skillRoots.Count} file skill root(s), {inlineSkills.Count} inline skill(s), and {serviceSkills.Count} DI-provided skill(s) through AgentSkillsProvider.");
     }
 
-    private static bool ShouldExcludeSkillsForProcessStep(AgentRuntimeContextIntent contextIntent)
-    {
-        if (!contextIntent.IsGovernedProcessStep)
-        {
-            return false;
-        }
-
-        var operations = contextIntent.AllowedOperations.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return !operations.Contains(ProcessOperationContractNames.MutateProductTarget) &&
-               !operations.Contains(ProcessOperationContractNames.RunValidation) &&
-               !operations.Contains(ProcessOperationContractNames.LaunchRuntime) &&
-               !operations.Contains(ProcessOperationContractNames.ExecuteExternalAction) &&
-               !operations.Contains(ProcessOperationContractNames.StartProjectNodeProcess);
-    }
-
     private async Task AttachCatalogCapabilitiesAsync(
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
@@ -392,20 +341,10 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
-        bool suppressApprovalRequirements,
-        AgentRuntimeContextIntent contextIntent)
+        bool suppressApprovalRequirements)
     {
         foreach (var capability in capabilities)
         {
-            if (!contextIntent.WorkspaceToolsEnabled && IsWorkspaceCatalogToolCapability(capability))
-            {
-                composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                    AgentRuntimeContextSourceCategories.CatalogCapability,
-                    capability.Key,
-                    "catalog workspace tool disabled by execution context"));
-                continue;
-            }
-
             await AttachCapabilityAsync(
                 composition,
                 capability,
@@ -445,18 +384,8 @@ public sealed partial class MafAgentRuntime
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
         Func<ExecutionState, string, string, Task> progressCallback,
-        bool suppressApprovalRequirements,
-        AgentRuntimeContextIntent contextIntent)
+        bool suppressApprovalRequirements)
     {
-        if (!contextIntent.WorkspaceToolsEnabled)
-        {
-            composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                AgentRuntimeContextSourceCategories.WorkspaceTools,
-                "configured-workspace-tools",
-                "configured workspace tools disabled by execution context"));
-            return;
-        }
-
         if (!agent.Permissions.CanUseTools)
         {
             return;
@@ -555,19 +484,6 @@ public sealed partial class MafAgentRuntime
     {
         if (await TrySkipUnsupportedProviderNativeCapabilityAsync(capability, provider, progressCallback))
         {
-            return;
-        }
-
-        if (ShouldSkipProcessBrowserMcpCapability(capability))
-        {
-            composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                AgentRuntimeContextSourceCategories.CatalogCapability,
-                capability.Key,
-                "governed process step does not allow browser proof tools"));
-            await progressCallback(
-                ExecutionState.Preparing,
-                "Capability boundary",
-                $"Skipping browser MCP capability '{capability.Name}' because this governed process step does not require browser proof.");
             return;
         }
 
@@ -682,22 +598,6 @@ public sealed partial class MafAgentRuntime
         }
 
         return false;
-    }
-
-    private static bool ShouldSkipProcessBrowserMcpCapability(CapabilityCatalogItem capability)
-    {
-        if (WorkspaceExecutionAuditContext.Current?.ProcessBrowserToolsAllowed != false ||
-            capability.Kind != CapabilityKind.McpServer)
-        {
-            return false;
-        }
-
-        var configuration = DeserializeConfiguration<McpCapabilityConfiguration>(capability.ConfigurationJson);
-        return capability.Key.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
-               capability.Name.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
-               capability.EndpointOrPath.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase) ||
-               (configuration?.Arguments?.Any(argument =>
-                   argument.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase)) ?? false);
     }
 
     private async Task AttachCompactionAsync(
@@ -1070,7 +970,8 @@ public sealed partial class MafAgentRuntime
         IReadOnlyList<IAgentContextContributor> ContextContributors,
         IReadOnlyList<RuntimeToolProviderRegistration> RuntimeToolProviders,
         McpCapabilityBuilder McpBuilder,
-        ToolCapabilityBuilder ToolBuilder);
+        ToolCapabilityBuilder ToolBuilder,
+        RuntimeCapabilityAccessPlan CapabilityAccessPlan);
 
     private sealed record RuntimeToolProviderRegistration(
         IAgentRuntimeToolProvider Provider,

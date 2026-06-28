@@ -1,16 +1,25 @@
 ﻿<Solution>
   <Folder Name="/src/">
     <Project Path="src/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Capabilities.Access/CanDoItAll.AgentFramework.Capabilities.Access.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Capabilities.Templates/CanDoItAll.AgentFramework.Capabilities.Templates.csproj" />
     <Project Path="src/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Mcp.Abstractions/CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Mcp/CanDoItAll.AgentFramework.Mcp.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.ProviderPipelines/CanDoItAll.AgentFramework.ProviderPipelines.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Skills.Abstractions/CanDoItAll.AgentFramework.Skills.Abstractions.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Skills/CanDoItAll.AgentFramework.Skills.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Tools.Abstractions/CanDoItAll.AgentFramework.Tools.Abstractions.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Tools/CanDoItAll.AgentFramework.Tools.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj" />
     <Project Path="src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />

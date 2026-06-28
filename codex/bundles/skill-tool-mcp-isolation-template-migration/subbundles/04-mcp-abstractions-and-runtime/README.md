@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB01`
+- `Completed`
 
 ## Objective
 
@@ -104,13 +104,26 @@
 - `proof/SB04/manifest.md`
 - `proof/SB04/semantic-invariants.md`
 
+## Execution Proof
+
+- Added `CanDoItAll.AgentFramework.Mcp.Abstractions` and `CanDoItAll.AgentFramework.Mcp`.
+- Implemented typed MCP server descriptors for internal hosted, local stdio, and remote HTTP transports.
+- Implemented deterministic fake MCP client/runtime fixtures and setup-test service with start, list-tools, allowed-tools filtering, cleanup, cancellation, timeout, process-start, handshake, list-tools, HTTP status, and cleanup diagnostics.
+- Preserved local command-policy checks through `LocalMcpCommandPolicy`.
+- Rejected raw environment variables and raw headers before client creation.
+- Mapped MCP servers and discovered child tools into shared `CapabilityExposureDescriptor` instances for SB01 access-policy evaluation.
+- Targeted MCP runtime contract tests passed: `bundle://proof/SB04/transcripts/passing-mcp-runtime-contracts.txt`.
+- Full solution build passed with 0 warnings and 0 errors: `bundle://proof/SB04/transcripts/dotnet-build-solution.txt`.
+- Source assertions, anti-stub audit, static/performance scan, and file-size scan passed: `bundle://proof/SB04/transcripts/source-assertions.txt`, `bundle://proof/SB04/transcripts/anti-stub-audit.txt`, `bundle://proof/SB04/transcripts/static-performance-scan.txt`, `bundle://proof/SB04/transcripts/file-size-scan.txt`.
+- Critical proof manifest and semantic invariants are recorded at `bundle://proof/SB04/manifest.md` and `bundle://proof/SB04/semantic-invariants.md`.
+
 ## Browser Validation Logging
 
 - N/A for runtime work. UI proof is SB10.
 
 ## Progression Gate
 
-- SB05 cannot harden the capability foundation until SB04 proves start/list/cleanup behavior and secret restrictions.
+- Passed. SB05 is unblocked because SB04 proves MCP start/list/cleanup behavior, cleanup failure diagnostics, command policy, secret restrictions, and shared policy participation.
 
 ## Suggested Agent Prompt
 

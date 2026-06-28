@@ -1,4 +1,6 @@
 using System.Reflection;
+using AccessCapabilityDiagnosticCategory = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityDiagnosticCategory;
+using EffectiveCapabilitySet = CanDoItAll.AgentFramework.Capabilities.Abstractions.EffectiveCapabilitySet;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -301,6 +303,67 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task SB08_INV_MAF_ACCESS_002_runtime_provider_filter_uses_shared_policy_diagnostics()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.project-structure-provider"),
+            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(ProcessOperationContractNames.StartProjectNodeProcess));
+
+        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+        Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+            capability.RuntimeToolName?.Value == AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart);
+        Assert.Contains(effectiveCapabilities.Diagnostics, diagnostic =>
+            diagnostic.Identity.Key.Value == AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate.Replace('_', '-') &&
+            diagnostic.Category == AccessCapabilityDiagnosticCategory.AccessPolicy);
+    }
+
+    [Fact]
+    public async Task SB08_INV_MAF_ACCESS_003_catalog_descriptors_use_isolated_factory_source_paths()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-sb08-descriptor-test-" + Guid.NewGuid().ToString("N"));
+        var skillRoot = Path.Combine(workspaceRoot, "skills", "sample");
+        Directory.CreateDirectory(skillRoot);
+        await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
+        try
+        {
+            var runtime = new MafAgentRuntime(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var state = await InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [
+                    CreateSkillCapability("skills/sample"),
+                    CreateToolCapability("workspace-read-file", "workspace_read_file")
+                ],
+                AgentRuntimeContextIntent.Empty);
+
+            var effectiveCapabilities = ReadEffectiveCapabilities(state);
+            Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+                capability.Identity.Key.Value == "sample-skill" &&
+                capability.SourcePath?.Value == "Templates/Capabilities/skills/file/sample-skill.json");
+            Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+                capability.RuntimeToolName?.Value == "workspace_read_file" &&
+                capability.SourcePath?.Value == "Templates/Capabilities/tools/workspace-read-file.json");
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeProcessContext_read_only_step_does_not_attach_broad_workspace_tools()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -344,6 +407,30 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             source.Category == AgentRuntimeContextSourceCategories.WorkspaceTools &&
             source.Decision == AgentRuntimeContextSourceDecision.Included &&
             source.ItemCount > 0);
+    }
+
+    [Fact]
+    public async Task SB08_INV_MAF_ACCESS_001_process_policy_records_effective_capability_diagnostics()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(ProcessOperationContractNames.RunValidation));
+
+        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+        Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+            capability.RuntimeToolName?.Value == "workspace_dotnet_test");
+        Assert.Contains(effectiveCapabilities.Diagnostics, diagnostic =>
+            diagnostic.Identity.Key.Value == "workspace-write-file" &&
+            diagnostic.Category == AccessCapabilityDiagnosticCategory.AccessPolicy &&
+            diagnostic.Reason.Contains("do not include", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(ReadTools(state), tool =>
+            string.Equals(tool.Name, "workspace_write_file", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -537,6 +624,10 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 state.GetType().GetProperty("RuntimeToolMetadata", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
             .ToList();
 
+    private static EffectiveCapabilitySet ReadEffectiveCapabilities(object state)
+        => Assert.IsType<EffectiveCapabilitySet>(
+            state.GetType().GetProperty("EffectiveCapabilities", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
     private static IReadOnlyList<AgentRuntimeContextManifestSource> ReadContextSources(object state)
         => Assert.IsAssignableFrom<IEnumerable<AgentRuntimeContextManifestSource>>(
                 state.GetType().GetProperty("ContextSources", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
@@ -660,7 +751,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             ProcessStepId: Guid.NewGuid().ToString("D"),
             TargetScope: ProcessOperationContractNames.ManagedOutputProduct,
             IsGovernedProcessStep: true,
-            BrowserToolsAllowed: false,
+            BrowserToolsAllowed: allowedOperations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase),
             ScaffoldToolOnly: false,
             AllowsProductMutation: allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase),
             WorkspaceToolProfile: null,

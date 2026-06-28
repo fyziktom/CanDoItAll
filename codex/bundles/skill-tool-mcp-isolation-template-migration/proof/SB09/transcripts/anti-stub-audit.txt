@@ -1,0 +1,13 @@
+src\CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:156:        return null;
+src\CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:173:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs:157:                return [];
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:158:        return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:902:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:911:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:118:        var fallbackDescriptor = SkillDescriptorFactory.Registered(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:127:        return SkillExposureDescriptorFactory.Create(fallbackDescriptor);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.CatalogDescriptors.cs:331:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Mcp.cs:143:                return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs:38:                return [];
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs:197:                return [];
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs:264:                return [];

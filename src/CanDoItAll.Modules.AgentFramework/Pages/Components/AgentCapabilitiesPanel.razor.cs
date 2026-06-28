@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Capabilities.Templates;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
@@ -17,6 +18,9 @@ public partial class AgentCapabilitiesPanel
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
+    public IAgentCapabilitySetupFlowService CapabilitySetupFlowService { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
@@ -32,7 +36,15 @@ public partial class AgentCapabilitiesPanel
     private string capabilitySearch = string.Empty;
     private CapabilityAssignmentFilter assignmentFilter = CapabilityAssignmentFilter.All;
     private CapabilityTypeFilter typeFilter = CapabilityTypeFilter.All;
+    private string accessRuleEffect = "deny";
+    private string accessRuleScope = "uiPreview";
+    private string accessRuleSelectorKind = "operationClassification";
+    private string accessRuleSelectorValue = "externalAction";
+    private string accessRuleSelectorServerKey = string.Empty;
+    private string accessRuleReason = "UI preview denies matching capabilities.";
+    private CapabilityAccessPreviewResult? accessPreviewResult;
     private bool isBusy;
+    private bool isAccessPreviewBusy;
 
     private IReadOnlyList<TreeViewNode> AgentTreeNodes
     {
@@ -218,6 +230,7 @@ public partial class AgentCapabilitiesPanel
         var capability = capabilities.FirstOrDefault(item => item.Id == capabilityId);
         try
         {
+            accessPreviewResult = null;
             var result = await DialogService.OpenAsync<CapabilityDetailsDialog>(
                 capability?.Name ?? "Capability details",
                 new Dictionary<string, object?>
@@ -251,7 +264,7 @@ public partial class AgentCapabilitiesPanel
         try
         {
             var result = await DialogService.OpenAsync<CapabilitySetupWizardDialog>(
-                initialKind == CapabilityKind.McpServer ? "New MCP server" : "New skill",
+                ResolveCapabilityWizardTitle(initialKind),
                 new Dictionary<string, object?>
                 {
                     [nameof(CapabilitySetupWizardDialog.InitialKind)] = initialKind,
@@ -260,7 +273,7 @@ public partial class AgentCapabilitiesPanel
                 new DialogOptions
                 {
                     Eyebrow = "Capability setup",
-                    Subtitle = "Create an MCP server or skill capability for assignment to technical agents.",
+                    Subtitle = "Create a skill, tool, or MCP capability for assignment to technical agents.",
                     Size = ModalSize.Wide,
                     DenseChrome = true,
                     AriaLabel = "Capability setup wizard",
@@ -282,6 +295,7 @@ public partial class AgentCapabilitiesPanel
     private async Task ReloadCapabilitiesAsync()
     {
         capabilities = await WorkspaceService.ListCapabilitiesAsync();
+        accessPreviewResult = null;
         if (selectedAgentId.HasValue)
         {
             selectedAgentEditor = await WorkspaceService.GetAgentEditorAsync(selectedAgentId.Value);
@@ -302,6 +316,62 @@ public partial class AgentCapabilitiesPanel
         capabilityTagFilters = [];
         assignmentFilter = CapabilityAssignmentFilter.All;
         typeFilter = CapabilityTypeFilter.All;
+    }
+
+    private async Task PreviewAccessAsync()
+    {
+        if (isAccessPreviewBusy)
+        {
+            return;
+        }
+
+        isAccessPreviewBusy = true;
+        try
+        {
+            var policy = new CapabilityAccessPolicyTemplateDto
+            {
+                DefaultEffect = "inherit",
+                Rules =
+                [
+                    new CapabilityAccessRuleTemplateDto
+                    {
+                        Id = "ui-preview-rule",
+                        Effect = accessRuleEffect,
+                        Scope = accessRuleScope,
+                        Selector = new CapabilitySelectorTemplateDto
+                        {
+                            Kind = accessRuleSelectorKind,
+                            Value = accessRuleSelectorValue,
+                            ServerKey = accessRuleSelectorServerKey
+                        },
+                        Reason = accessRuleReason
+                    }
+                ]
+            };
+
+            accessPreviewResult = await CapabilitySetupFlowService.PreviewAccessAsync(new CapabilityAccessPreviewRequest
+            {
+                CapabilityIds = selectedAgentEditor?.SelectedCapabilityIds ?? [],
+                Policy = policy
+            });
+
+            if (accessPreviewResult.ValidationResult.IsValid)
+            {
+                NotificationService.Success("Access preview ready", "Capability access policy preview completed.");
+            }
+            else
+            {
+                NotificationService.Warning("Access preview has validation issues", "Review the policy diagnostics.");
+            }
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Access preview failed", exception.Message);
+        }
+        finally
+        {
+            isAccessPreviewBusy = false;
+        }
     }
 
     private bool MatchesCapabilitySearch(CapabilityCatalogItem capability)
@@ -395,6 +465,16 @@ public partial class AgentCapabilitiesPanel
             CapabilityKind.McpServer => "MCP server",
             CapabilityKind.AiContext => "AI context",
             _ => kind.ToString()
+        };
+    }
+
+    private static string ResolveCapabilityWizardTitle(CapabilityKind kind)
+    {
+        return kind switch
+        {
+            CapabilityKind.McpServer => "New MCP server",
+            CapabilityKind.Tool => "New tool",
+            _ => "New skill"
         };
     }
 

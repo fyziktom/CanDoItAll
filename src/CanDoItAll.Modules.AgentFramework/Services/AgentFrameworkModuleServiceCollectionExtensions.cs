@@ -1,8 +1,12 @@
+using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.AgentFramework.Tools;
+using CanDoItAll.AgentFramework.Tools.Abstractions;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
@@ -35,6 +39,11 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();
         services.AddMafProviderRuntimeServices();
+        services.TryAddScoped<IExternalProcessToolInvoker, ExternalProcessToolInvoker>();
+        services.TryAddScoped<IExternalHttpToolInvoker, ExternalHttpToolInvoker>();
+        services.TryAddScoped<IToolSetupTestService, ToolSetupTestService>();
+        services.TryAddScoped<ICapabilityAccessPolicyEvaluator, CapabilityAccessPolicyEvaluator>();
+        services.TryAddScoped<IAgentCapabilitySetupFlowService, AgentCapabilitySetupFlowService>();
         services.AddScoped<ISandboxWorkspaceStore>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);

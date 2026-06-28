@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB11`
+- `Completed`
 
 ## Objective
 
@@ -64,6 +64,7 @@
 ## Scope Exceptions
 
 - Leave compatibility shims only when they are documented, tested, and scheduled for removal.
+- `SandboxWorkspaceSeedBuilder.cs` remains an existing seed aggregate over 500 lines after capability cleanup; SB12 removed obsolete capability construction paths and leaves unrelated provider/agent seed splitting to a future seed-organization refactor.
 
 ## Do Not Do
 
@@ -94,11 +95,24 @@
 ## Browser Validation Logging
 
 - Use SB11 UI routes for final smoke if docs or cleanup touched visible setup behavior.
-- Otherwise N/A with reference to SB11 proof.
+- Result: `N/A with reference to SB11 proof`; SB12 changed seed cleanup, guard tests, and documentation only, with no visible setup/process/workflow UI behavior changed.
 
 ## Progression Gate
 
-- Bundle may close only after SB12 proof and final validator pass.
+- Bundle may close. SB12 proof and final validator passed.
+
+## Completion Evidence
+
+- `proof/SB12/manifest.md`
+- `proof/SB12/semantic-invariants.md`
+- `proof/SB12/transcripts/unit-capability-cleanup-regression.txt` (`274` passed)
+- `proof/SB12/transcripts/integration-seed-filter-api-workflow-regression.txt` (`34` passed)
+- `proof/SB12/transcripts/component-setup-process-workflow-regression.txt` (`60` passed)
+- `proof/SB12/transcripts/dotnet-build-solution.txt` (`0` warnings, `0` errors)
+- `proof/SB12/transcripts/static-cleanup-scan.txt`
+- `proof/SB12/transcripts/documentation-review.txt`
+- `proof/SB12/transcripts/file-size-scan.txt`
+- `proof/SB12/transcripts/bundle-validator.txt`
 
 ## Suggested Agent Prompt
 

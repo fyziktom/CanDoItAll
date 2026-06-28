@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB06`
+- `Completed`
 
 ## Objective
 
@@ -106,6 +106,13 @@
 ## Progression Gate
 
 - SB08 may start only after SB07 proves template-backed seed behavior is stable, repairable, and no-fallback.
+
+## Execution Notes
+
+- Completed in `proof/SB07/manifest.md` and `proof/SB07/semantic-invariants.md`.
+- Added parity, negative fixture, operation compatibility, coarse workspace-tool policy, no-grant, and managed seed dry-run tests.
+- Solution build and SB01-SB07 focused regression passed.
+- Accepted risk: `SandboxWorkspaceSeedBuilder.cs` remains oversized with inactive legacy helper definitions; cleanup is deferred to SB11 after runtime reconnection proof.
 
 ## Suggested Agent Prompt
 

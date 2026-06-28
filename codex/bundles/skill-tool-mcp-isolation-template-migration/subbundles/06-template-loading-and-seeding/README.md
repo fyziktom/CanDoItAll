@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB05`
+- `Completed`
 
 ## Objective
 
@@ -120,7 +120,16 @@
 
 ## Progression Gate
 
-- SB07 cannot start until template-backed seed materialization proves parity with existing defaults.
+- `Passed` - template-backed seed materialization proves canonical catalog parity, agent assignment resolution, structured invalid-template diagnostics, and typed compatibility operation compilation.
+
+## Execution Notes
+
+- Added `Templates/Capabilities` with skill, tool, MCP, policy, schema, and other capability descriptor files.
+- Added `CapabilityTemplatePackLoader`, `CapabilityTemplateSeedMaterializer`, policy/assignment validators, and process allowed-operation compatibility compiler in persistence.
+- Replaced active hardcoded capability catalog construction in `SandboxWorkspaceSeedBuilder` with template materialization.
+- Preserved old seed helper methods for the later SB11 cleanup gate; they are no longer the active seed catalog path.
+- Added `CapabilityTemplateSeedMaterializationTests` covering template load, seed parity, invalid-template no-fallback behavior, agent assignment resolution, full seed integration, policy compilation, and allowed-operation compatibility.
+- Validation transcripts and hashes are under `proof/SB06/`.
 
 ## Suggested Agent Prompt
 

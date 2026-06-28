@@ -1,4 +1,5 @@
 using Azure.AI.OpenAI;
+using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -1742,6 +1743,14 @@ public sealed partial class MafAgentRuntime
         public List<AgentRuntimeContextManifestSource> ContextSources { get; } = [];
 
         public HashSet<string> FrameworkToolNames { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public List<CapabilityExposureDescriptor> EffectiveCapabilityDescriptors { get; } = [];
+
+        public List<SuppressedCapabilityDiagnostic> CapabilityAccessDiagnostics { get; } = [];
+
+        public EffectiveCapabilitySet EffectiveCapabilities => new(
+            EffectiveCapabilityDescriptors,
+            CapabilityAccessDiagnostics);
 
         public List<IAsyncDisposable> AsyncDisposables { get; } = [];
 

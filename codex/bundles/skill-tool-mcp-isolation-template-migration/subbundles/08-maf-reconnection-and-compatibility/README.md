@@ -2,7 +2,14 @@
 
 ## Status
 
-- `Ready after SB07`
+- `Completed`
+
+## Closure Notes
+
+- Completion proof: `proof/SB08/manifest.md`
+- Semantic proof: `proof/SB08/semantic-invariants.md`
+- Closure decision: `Passed with compatibility-adapter risk`
+- Browser/UI validation: `N/A`; no UI surface changed. Small/medium viewport validation skipped per large-screen-only app constraint.
 
 ## Objective
 

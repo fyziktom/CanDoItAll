@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB02-SB04`
+- `Completed`
 
 ## Objective
 
@@ -100,13 +100,28 @@
 - `proof/SB05/manifest.md`
 - `proof/SB05/semantic-invariants.md`
 
+## Execution Proof
+
+- Added SB05 hardening tests for typed diagnostics, cancellation, direct bearer-token masking, policy precedence, generic future capability suppression, and common exposure descriptor shape.
+- Fixed external tool diagnostics masking so bearer tokens are masked before generic assignment masking.
+- Split overgrown foundation files:
+  - `Capabilities.cs` became focused enum, identifier, model, text, and name-rule files.
+  - `CapabilityTemplateModels.cs` became template DTO, template validator, and policy compiler files.
+- Verified dependency direction: no MAF, Blazor/UI, Radzen, `Microsoft.Agents`, or `ModelContextProtocol` references in isolated capability projects.
+- Verified focused performance patterns: no sync-over-async, blocking read, ad hoc serializer-options, reflection, or service-locator matches.
+- Verified file-size gate: all isolated capability foundation files are below 500 lines.
+- Targeted SB05 hardening tests passed: `bundle://proof/SB05/transcripts/passing-capability-hardening-tests.txt`.
+- Existing SB02 tool implementation regression tests passed: `bundle://proof/SB05/transcripts/regression-tool-implementation-contracts.txt`.
+- Full solution build passed with 0 warnings and 0 errors: `bundle://proof/SB05/transcripts/dotnet-build-solution.txt`.
+- Critical proof manifest and semantic invariants are recorded at `bundle://proof/SB05/manifest.md` and `bundle://proof/SB05/semantic-invariants.md`.
+
 ## Browser Validation Logging
 
 - N/A. This checkpoint has no browser-visible surface.
 
 ## Progression Gate
 
-- SB06 may start only after SB05 proves isolated capability services are hardened enough for template materialization.
+- Passed. SB06 is unblocked because isolated capability services are hardened for dependency direction, diagnostics, policy behavior, file size, and performance guardrails.
 
 ## Suggested Agent Prompt
 

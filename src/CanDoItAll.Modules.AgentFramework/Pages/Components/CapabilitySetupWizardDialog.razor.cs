@@ -4,6 +4,9 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using CapabilityDiagnostic = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityDiagnostic;
+using CapabilitySetupTestResult = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilitySetupTestResult;
+using McpSetupTestResult = CanDoItAll.AgentFramework.Mcp.Abstractions.McpSetupTestResult;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -22,6 +25,9 @@ public partial class CapabilitySetupWizardDialog
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
+    public IAgentCapabilitySetupFlowService CapabilitySetupFlowService { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [CascadingParameter]
@@ -31,7 +37,10 @@ public partial class CapabilitySetupWizardDialog
     private IReadOnlyList<string> capabilityTags = [];
     private CapabilityConfigurationEditorSupport.McpCapabilityEditorState mcpState = new();
     private CapabilityConfigurationEditorSupport.SkillCapabilityEditorState skillState = new();
+    private CapabilityConfigurationEditorSupport.ToolCapabilityEditorState toolState = new();
     private CapabilityWizardSkillInputMode skillInputMode = CapabilityWizardSkillInputMode.FilePath;
+    private CapabilitySetupTestResult? toolSetupResult;
+    private McpSetupTestResult? mcpSetupResult;
     private string uploadedSkillFileName = string.Empty;
     private bool keyWasEdited;
     private bool isBusy;
@@ -48,6 +57,7 @@ public partial class CapabilitySetupWizardDialog
         editorModel = new CapabilityEditorModel
         {
             Kind = InitialKind is CapabilityKind.Skill or CapabilityKind.McpServer
+                or CapabilityKind.Tool
                 ? InitialKind
                 : CapabilityKind.McpServer,
             IsBuiltIn = false
@@ -58,7 +68,7 @@ public partial class CapabilitySetupWizardDialog
 
     private Task HandleKindChangedAsync(CapabilityKind kind)
     {
-        if (kind is not CapabilityKind.Skill and not CapabilityKind.McpServer)
+        if (kind is not CapabilityKind.Skill and not CapabilityKind.McpServer and not CapabilityKind.Tool)
         {
             kind = CapabilityKind.McpServer;
         }
@@ -85,6 +95,18 @@ public partial class CapabilitySetupWizardDialog
         {
             skillState.InlineName = CapabilityConfigurationEditorSupport.NormalizeKey(editorModel.Name);
         }
+        else if (editorModel.Kind == CapabilityKind.Tool)
+        {
+            if (string.IsNullOrWhiteSpace(toolState.RuntimeToolName))
+            {
+                toolState.RuntimeToolName = CapabilityConfigurationEditorSupport.NormalizeRuntimeToolName(editorModel.Name);
+            }
+
+            if (NeedsGeneratedToolImplementationKey(toolState.ImplementationKey))
+            {
+                toolState.ImplementationKey = $"external.{CapabilityConfigurationEditorSupport.NormalizeKey(editorModel.Name)}";
+            }
+        }
 
         return Task.CompletedTask;
     }
@@ -93,6 +115,11 @@ public partial class CapabilitySetupWizardDialog
     {
         keyWasEdited = true;
         editorModel.Key = CapabilityConfigurationEditorSupport.NormalizeKey(value ?? string.Empty);
+        if (editorModel.Kind == CapabilityKind.Tool)
+        {
+            ApplyToolIdentityDefaults();
+        }
+
         return Task.CompletedTask;
     }
 
@@ -198,10 +225,14 @@ public partial class CapabilitySetupWizardDialog
         {
             errors.AddRange(CapabilityConfigurationEditorSupport.WriteMcp(editorModel, mcpState));
         }
-        else
+        else if (editorModel.Kind == CapabilityKind.Skill)
         {
             ApplySkillModeBeforeSave();
             errors.AddRange(CapabilityConfigurationEditorSupport.WriteSkill(editorModel, skillState));
+        }
+        else
+        {
+            errors.AddRange(CapabilityConfigurationEditorSupport.WriteTool(editorModel, toolState));
         }
 
         return errors
@@ -239,6 +270,20 @@ public partial class CapabilitySetupWizardDialog
                      string.IsNullOrWhiteSpace(skillState.InlineInstructions))
             {
                 errors.Add("Inline or uploaded skill setup requires instructions.");
+            }
+        }
+        else if (step == 1 && editorModel.Kind == CapabilityKind.Tool)
+        {
+            if (string.Equals(toolState.ToolKind, "externalHttp", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(toolState.Endpoint))
+                {
+                    errors.Add("External HTTP tool setup requires an endpoint.");
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(toolState.Command))
+            {
+                errors.Add("External process tool setup requires a command.");
             }
         }
 
@@ -283,6 +328,19 @@ public partial class CapabilitySetupWizardDialog
             return;
         }
 
+        if (editorModel.Kind == CapabilityKind.Tool)
+        {
+            capabilityTags = MergeTags(capabilityTags, ["tool", "external"]);
+            if (string.IsNullOrWhiteSpace(toolState.ToolKind))
+            {
+                toolState.ToolKind = "externalProcess";
+            }
+
+            ApplyToolIdentityDefaults();
+
+            return;
+        }
+
         capabilityTags = MergeTags(capabilityTags, ["skill"]);
         skillState.SkillSource = skillInputMode == CapabilityWizardSkillInputMode.FilePath ? "file" : "inline";
         if (string.IsNullOrWhiteSpace(skillState.ScriptTrustLevel))
@@ -301,6 +359,13 @@ public partial class CapabilitySetupWizardDialog
             }
 
             return string.IsNullOrWhiteSpace(mcpState.Endpoint) ? "Not configured" : mcpState.Endpoint;
+        }
+
+        if (editorModel.Kind == CapabilityKind.Tool)
+        {
+            return string.Equals(toolState.ToolKind, "externalHttp", StringComparison.OrdinalIgnoreCase)
+                ? string.IsNullOrWhiteSpace(toolState.Endpoint) ? "Not configured" : toolState.Endpoint
+                : string.IsNullOrWhiteSpace(toolState.Command) ? "Not configured" : toolState.Command;
         }
 
         if (skillInputMode == CapabilityWizardSkillInputMode.FilePath)
@@ -329,6 +394,13 @@ public partial class CapabilitySetupWizardDialog
             return $"{mcpState.Transport} MCP setup with {toolCount} allowed tool(s).";
         }
 
+        if (editorModel.Kind == CapabilityKind.Tool)
+        {
+            return string.Equals(toolState.ToolKind, "externalHttp", StringComparison.OrdinalIgnoreCase)
+                ? $"{toolState.HttpMethod} external HTTP tool setup."
+                : "External process tool setup.";
+        }
+
         return skillInputMode switch
         {
             CapabilityWizardSkillInputMode.FilePath => "File-backed skill entry using the configured workspace or allowed external root.",
@@ -339,6 +411,31 @@ public partial class CapabilitySetupWizardDialog
 
     private Task CancelAsync()
         => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+
+    private void ApplyToolIdentityDefaults()
+    {
+        var capabilityKey = CapabilityConfigurationEditorSupport.NormalizeKey(editorModel.Key);
+        if (string.IsNullOrWhiteSpace(capabilityKey))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(toolState.RuntimeToolName))
+        {
+            toolState.RuntimeToolName = CapabilityConfigurationEditorSupport.NormalizeRuntimeToolName(capabilityKey);
+        }
+
+        if (NeedsGeneratedToolImplementationKey(toolState.ImplementationKey))
+        {
+            toolState.ImplementationKey = $"external.{capabilityKey}";
+        }
+    }
+
+    private static bool NeedsGeneratedToolImplementationKey(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ||
+               string.Equals(value.Trim(), "external.", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static IReadOnlyList<string> NormalizeTags(IEnumerable<string> tags)
     {
@@ -361,6 +458,7 @@ public partial class CapabilitySetupWizardDialog
         return kind switch
         {
             CapabilityKind.McpServer => "MCP server",
+            CapabilityKind.Tool => "Tool",
             _ => kind.ToString()
         };
     }

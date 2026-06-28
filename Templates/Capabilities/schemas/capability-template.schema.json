@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CanDoItAll capability template pack",
+  "type": "object",
+  "required": [
+    "capabilities"
+  ],
+  "properties": {
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "key",
+          "displayName",
+          "description",
+          "stableId",
+          "stableGuidKey"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "stableId": {
+            "type": "string"
+          },
+          "stableGuidKey": {
+            "type": "string"
+          },
+          "runtimeToolName": {
+            "type": "string"
+          },
+          "mcpTransport": {
+            "type": "object"
+          },
+          "capabilityAccessPolicy": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

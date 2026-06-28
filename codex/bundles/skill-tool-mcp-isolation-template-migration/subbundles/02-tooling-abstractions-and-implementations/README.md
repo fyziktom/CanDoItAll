@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB01`
+- `Completed`
 
 ## Objective
 
@@ -108,13 +108,26 @@
 - `proof/SB02/manifest.md` with failing-first, passing, and anti-stub transcripts.
 - `proof/SB02/semantic-invariants.md` covering name and policy parity.
 
+## Execution Proof
+
+- Manifest: `bundle://proof/SB02/manifest.md`
+- Semantic invariants: `bundle://proof/SB02/semantic-invariants.md`
+- Failing-first transcript: `bundle://proof/SB02/transcripts/failing-first-tool-implementation-contracts.txt`
+- Passing targeted tests: `bundle://proof/SB02/transcripts/passing-tool-implementation-contracts.txt`
+- Full build: `bundle://proof/SB02/transcripts/dotnet-build-solution.txt`
+- Source assertions: `bundle://proof/SB02/transcripts/source-assertions.txt`
+- Anti-stub audit: `bundle://proof/SB02/transcripts/anti-stub-audit.txt`
+- Static/performance scan: `bundle://proof/SB02/transcripts/static-performance-scan.txt`
+- Changed file hashes: `bundle://proof/SB02/changed-file-hashes.txt`
+
 ## Browser Validation Logging
 
 - N/A for implementation project work. UI setup proof is SB10.
 
 ## Progression Gate
 
-- SB05 cannot harden the capability foundation until SB02 proves tool resolution and call behavior without using old MAF hardcoded paths.
+- Result: `Passed`
+- SB02 proved internal tool resolution, external process/HTTP invocation contracts, setup-test propagation, access-policy participation, timeout/bounded-output diagnostics, and current tool metadata parity without connecting MAF runtime composition yet.
 
 ## Suggested Agent Prompt
 

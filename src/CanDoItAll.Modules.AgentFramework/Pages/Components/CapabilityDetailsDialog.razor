@@ -265,6 +265,178 @@ else
                                 }
                             </FormSection>
                         }
+                        else if (editorModel.Kind == CapabilityKind.Tool)
+                        {
+                            <FormSection Title="Tool configuration"
+                                         Description="Edit external process or HTTP runtime parameters, bounded execution, and setup-test input.">
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                    <div>
+                                        <label class="cda-field-label">Tool setup kind</label>
+                                        <InputSelect @bind-Value="toolState.ToolKind"
+                                                     class="cda-input"
+                                                     disabled="@editorModel.IsBuiltIn"
+                                                     data-testid="agents-capability-details-tool-kind">
+                                            <option value="externalProcess">External process</option>
+                                            <option value="externalHttp">External HTTP</option>
+                                        </InputSelect>
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Runtime tool name</label>
+                                        <InputText @bind-Value="toolState.RuntimeToolName"
+                                                   class="cda-input"
+                                                   disabled="@editorModel.IsBuiltIn"
+                                                   data-testid="agents-capability-details-tool-runtime-name" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Implementation key</label>
+                                        <InputText @bind-Value="toolState.ImplementationKey"
+                                                   class="cda-input"
+                                                   disabled="@editorModel.IsBuiltIn"
+                                                   data-testid="agents-capability-details-tool-implementation-key" />
+                                    </div>
+                                </Grid>
+
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                    <div>
+                                        <label class="cda-field-label">Operation classifications</label>
+                                        <InputTextArea @bind-Value="toolState.OperationClassificationsText"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                       disabled="@editorModel.IsBuiltIn"
+                                                       data-testid="agents-capability-details-tool-classifications" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Side-effect kind</label>
+                                        <InputText @bind-Value="toolState.SideEffectKind"
+                                                   class="cda-input"
+                                                   disabled="@editorModel.IsBuiltIn"
+                                                   data-testid="agents-capability-details-tool-side-effect" />
+                                    </div>
+                                    <Stack Gap="0.5rem">
+                                        <label class="cda-inline-option capability-details-dialog__inline-option">
+                                            <InputCheckbox @bind-Value="toolState.RequiresApprovalByDefault"
+                                                           disabled="@editorModel.IsBuiltIn"
+                                                           data-testid="agents-capability-details-tool-approval" />
+                                            Requires approval
+                                        </label>
+                                        <label class="cda-inline-option capability-details-dialog__inline-option">
+                                            <InputCheckbox @bind-Value="toolState.IsStateChanging"
+                                                           disabled="@editorModel.IsBuiltIn"
+                                                           data-testid="agents-capability-details-tool-state-changing" />
+                                            State changing
+                                        </label>
+                                    </Stack>
+                                </Grid>
+
+                                @if (string.Equals(toolState.ToolKind, "externalHttp", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                        <div>
+                                            <label class="cda-field-label">HTTP method</label>
+                                            <InputText @bind-Value="toolState.HttpMethod"
+                                                       class="cda-input"
+                                                       disabled="@editorModel.IsBuiltIn"
+                                                       data-testid="agents-capability-details-tool-http-method" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Endpoint</label>
+                                            <InputText @bind-Value="toolState.Endpoint"
+                                                       class="cda-input"
+                                                       disabled="@editorModel.IsBuiltIn"
+                                                       data-testid="agents-capability-details-tool-http-endpoint" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Timeout seconds</label>
+                                            <InputNumber @bind-Value="toolState.HttpTimeoutSeconds"
+                                                         class="cda-input"
+                                                         disabled="@editorModel.IsBuiltIn"
+                                                         data-testid="agents-capability-details-tool-http-timeout" />
+                                        </div>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                        <div>
+                                            <label class="cda-field-label">Header bindings</label>
+                                            <InputTextArea @bind-Value="toolState.HeaderBindingsText"
+                                                           class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                           disabled="@editorModel.IsBuiltIn"
+                                                           data-testid="agents-capability-details-tool-http-header-bindings" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Required output properties</label>
+                                            <InputTextArea @bind-Value="toolState.HttpRequiredOutputPropertiesText"
+                                                           class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                           disabled="@editorModel.IsBuiltIn"
+                                                           data-testid="agents-capability-details-tool-http-output" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Max response bytes</label>
+                                            <InputNumber @bind-Value="toolState.MaxResponseBytes"
+                                                         class="cda-input"
+                                                         disabled="@editorModel.IsBuiltIn"
+                                                         data-testid="agents-capability-details-tool-http-max-response" />
+                                        </div>
+                                    </Grid>
+                                }
+                                else
+                                {
+                                    <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                        <div>
+                                            <label class="cda-field-label">Command</label>
+                                            <InputText @bind-Value="toolState.Command"
+                                                       class="cda-input"
+                                                       disabled="@editorModel.IsBuiltIn"
+                                                       data-testid="agents-capability-details-tool-process-command" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Working directory</label>
+                                            <InputText @bind-Value="toolState.WorkingDirectory"
+                                                       class="cda-input"
+                                                       disabled="@editorModel.IsBuiltIn"
+                                                       data-testid="agents-capability-details-tool-process-working-directory" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Timeout seconds</label>
+                                            <InputNumber @bind-Value="toolState.ProcessTimeoutSeconds"
+                                                         class="cda-input"
+                                                         disabled="@editorModel.IsBuiltIn"
+                                                         data-testid="agents-capability-details-tool-process-timeout" />
+                                        </div>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                        <div>
+                                            <label class="cda-field-label">Arguments</label>
+                                            <InputTextArea @bind-Value="toolState.ArgumentsText"
+                                                           class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                           disabled="@editorModel.IsBuiltIn"
+                                                           data-testid="agents-capability-details-tool-process-arguments" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Allowed executable names</label>
+                                            <InputTextArea @bind-Value="toolState.AllowedExecutableNamesText"
+                                                           class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                           disabled="@editorModel.IsBuiltIn"
+                                                           data-testid="agents-capability-details-tool-process-allowed-executables" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Required output properties</label>
+                                            <InputTextArea @bind-Value="toolState.ProcessRequiredOutputPropertiesText"
+                                                           class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                           disabled="@editorModel.IsBuiltIn"
+                                                           data-testid="agents-capability-details-tool-process-output" />
+                                        </div>
+                                    </Grid>
+
+                                    <div>
+                                        <label class="cda-field-label">Max output bytes</label>
+                                        <InputNumber @bind-Value="toolState.MaxOutputBytes"
+                                                     class="cda-input"
+                                                     disabled="@editorModel.IsBuiltIn"
+                                                     data-testid="agents-capability-details-tool-process-max-output" />
+                                    </div>
+                                }
+                            </FormSection>
+                        }
                         else
                         {
                             <FormSection Title="Configuration JSON"
@@ -273,6 +445,63 @@ else
                                                class="cda-input cda-input--textarea capability-details-dialog__large-textarea"
                                                disabled="@editorModel.IsBuiltIn"
                                                data-testid="agents-capability-details-raw-config" />
+                            </FormSection>
+                        }
+
+                        @if (editorModel.Kind is CapabilityKind.Tool or CapabilityKind.McpServer)
+                        {
+                            <FormSection Title="Setup test"
+                                         Description="Run setup validation against the current editor state before saving.">
+                                @if (editorModel.Kind == CapabilityKind.Tool)
+                                {
+                                    <div>
+                                        <label class="cda-field-label">Tool test input JSON</label>
+                                        <InputTextArea @bind-Value="toolState.TestInputJson"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                       data-testid="agents-capability-details-tool-test-input" />
+                                    </div>
+                                }
+
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    <Button Text="Test setup"
+                                            Icon="play_arrow"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            Click="TestSetupAsync"
+                                            data-testid="agents-capability-details-test-setup" />
+                                    @if (CurrentSetupSucceeded.HasValue)
+                                    {
+                                        <StatusBadge Tone="@(CurrentSetupSucceeded.Value ? "success" : "danger")"
+                                                     Text="@(CurrentSetupSucceeded.Value ? "Setup passed" : "Setup failed")" />
+                                    }
+                                </Cluster>
+
+                                @if (CurrentMcpDiscoveredTools.Count > 0)
+                                {
+                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                        @foreach (var toolName in CurrentMcpDiscoveredTools.Take(8))
+                                        {
+                                            <StatusBadge Tone="info" Text="@toolName" />
+                                        }
+                                    </Cluster>
+                                }
+
+                                @if (CurrentSetupDiagnostics.Count > 0)
+                                {
+                                    <SurfaceCard Soft="true" data-testid="agents-capability-details-setup-diagnostics">
+                                        <Stack GapScale="LayoutGap.Small">
+                                            @foreach (var diagnostic in CurrentSetupDiagnostics.Take(4))
+                                            {
+                                                <div>
+                                                    <p class="cda-field-label">@diagnostic.Category.ToString()</p>
+                                                    <p>@diagnostic.MaskedDetail</p>
+                                                    <p class="cda-body-muted">@diagnostic.RepairHint</p>
+                                                </div>
+                                            }
+                                        </Stack>
+                                    </SurfaceCard>
+                                }
                             </FormSection>
                         }
                     </TabsItem>

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB09`
+- `Completed`
 
 ## Objective
 
@@ -110,14 +110,14 @@
 ## Browser Validation Logging
 
 - Target route/window: Agent Framework capability management surface.
-- Required viewports: maximized desktop plus narrower width where dialog layout can wrap.
-- Required actions: open setup wizard, create fake Tool, run external tool test, create fake MCP, run list-tools test, create a deny rule through typed controls, preview suppressed capabilities, verify save/validation messages.
-- Evidence paths: screenshots and Playwright traces recorded in `proof/SB10/manifest.md`.
-- Review questions: no clipped dialog content, no hidden errors, no raw secret display, and Tool/MCP/Skill counts remain understandable.
+- Required viewports: large desktop only for this execution; small and medium viewport passes intentionally skipped because the app targets large screens.
+- Completed actions: opened the capabilities tab for a seeded agent, previewed a deny policy over an assigned Tool, opened the New Tool wizard, filled external-process setup fields, ran setup with malformed JSON, and verified the visible typed `JsonParse` diagnostic plus repair hint.
+- Evidence paths: screenshot and command transcripts recorded in `proof/SB10/manifest.md`.
+- Review questions: diagnostic content is visible, no raw secret display was introduced, and Tool/MCP/Skill counts remain readable on the large-screen route.
 
 ## Progression Gate
 
-- SB11 cannot start until UI/API proof shows setup tests are callable, deterministic, and diagnostically useful.
+- SB11 is unblocked by `proof/SB10/manifest.md` and `proof/SB10/semantic-invariants.md`.
 
 ## Suggested Agent Prompt
 

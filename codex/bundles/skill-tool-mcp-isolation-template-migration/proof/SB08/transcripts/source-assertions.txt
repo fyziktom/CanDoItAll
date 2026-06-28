@@ -1,0 +1,41 @@
+No legacy MAF process-scope suppression or runtime-provider fallback methods remain in active source.
+
+Expected isolated descriptor factory references:
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:324:        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:352:            var effectiveCapabilities = ReadEffectiveCapabilities(state);
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:425:        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:627:    private static EffectiveCapabilitySet ReadEffectiveCapabilities(object state)
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:629:            state.GetType().GetProperty("EffectiveCapabilities", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+src/CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1749:        public List<SuppressedCapabilityDiagnostic> CapabilityAccessDiagnostics { get; } = [];
+src/CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1751:        public EffectiveCapabilitySet EffectiveCapabilities => new(
+src/CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1753:            CapabilityAccessDiagnostics);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:28:    private RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:57:        return new RuntimeCapabilityAccessPlan(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:270:            ? ToolDescriptorFactory.ProviderNative(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:277:            : ToolDescriptorFactory.Internal(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:285:        return ToolExposureDescriptorFactory.Create(descriptor) with
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:301:            var descriptor = SkillDescriptorFactory.Inline(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:312:            return SkillExposureDescriptorFactory.Create(descriptor);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:319:            var descriptor = SkillDescriptorFactory.Registered(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:328:            return SkillExposureDescriptorFactory.Create(descriptor);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:334:            var descriptor = SkillDescriptorFactory.File(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:345:            return SkillExposureDescriptorFactory.Create(descriptor);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:348:        var fallbackDescriptor = SkillDescriptorFactory.Registered(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:357:        return SkillExposureDescriptorFactory.Create(fallbackDescriptor);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:374:            descriptor = McpDescriptorFactory.LocalStdio(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:393:            descriptor = McpDescriptorFactory.RemoteHttp(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:409:            descriptor = McpDescriptorFactory.InternalHosted(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:422:        return McpExposureDescriptorFactory.CreateServer(descriptor) with
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:734:        var descriptor = ToolDescriptorFactory.Internal(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:741:        return ToolExposureDescriptorFactory.Create(descriptor) with
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:917:        RuntimeCapabilityAccessPlan accessPlan)
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:920:        state.CapabilityAccessDiagnostics.AddRange(accessPlan.InitialDiagnostics);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:934:        RuntimeCapabilityAccessPlan accessPlan)
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:971:        RuntimeCapabilityAccessPlan accessPlan,
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:986:        state.CapabilityAccessDiagnostics.AddRange(result.Diagnostics);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:989:    private sealed record RuntimeCapabilityAccessPlan(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Access.cs:990:        EffectiveCapabilitySet EffectiveCapabilities,
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:59:        var capabilityAccessPlan = CreateRuntimeCapabilityAccessPlan(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:121:        RuntimeCapabilityAccessPlan capabilityAccessPlan)
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:984:        RuntimeCapabilityAccessPlan CapabilityAccessPlan);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Tools.cs:19:        RuntimeCapabilityAccessPlan capabilityAccessPlan)

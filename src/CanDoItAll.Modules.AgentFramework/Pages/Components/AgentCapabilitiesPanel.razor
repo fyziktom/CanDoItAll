@@ -66,6 +66,13 @@
                      Wrap="FlexWrap.Wrap"
                      JustifyContent="JustifyContent.End"
                      Class="agent-capabilities-panel__header-actions">
+                <Button Text="New tool"
+                        Icon="build"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@isBusy"
+                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
+                        data-testid="agents-capability-new-tool" />
                 <Button Text="New MCP"
                         Icon="hub"
                         Size="ButtonSize.Small"
@@ -100,6 +107,119 @@
             }
             else
             {
+                <FormSection Title="Access preview"
+                             Description="Validate one capability access rule against the selected agent capability set before changing runtime policy templates.">
+                    <Grid Gap="LayoutGap.Large" ColumnsLg="5">
+                        <div>
+                            <label class="cda-field-label">Effect</label>
+                            <InputSelect @bind-Value="accessRuleEffect"
+                                         class="cda-input"
+                                         data-testid="agents-capability-access-effect">
+                                <option value="deny">Deny</option>
+                                <option value="allow">Allow</option>
+                                <option value="require">Require</option>
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Scope</label>
+                            <InputSelect @bind-Value="accessRuleScope"
+                                         class="cda-input"
+                                         data-testid="agents-capability-access-scope">
+                                <option value="uiPreview">UI preview</option>
+                                <option value="agentDefault">Agent default</option>
+                                <option value="workflowDefinition">Workflow definition</option>
+                                <option value="workflowNode">Workflow node</option>
+                                <option value="processDefinition">Process definition</option>
+                                <option value="processStep">Process step</option>
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Selector</label>
+                            <InputSelect @bind-Value="accessRuleSelectorKind"
+                                         class="cda-input"
+                                         data-testid="agents-capability-access-selector">
+                                <option value="all">All</option>
+                                <option value="kind">Kind</option>
+                                <option value="capabilityKey">Capability key</option>
+                                <option value="tag">Tag</option>
+                                <option value="operationClassification">Operation classification</option>
+                                <option value="runtimeToolName">Runtime tool name</option>
+                                <option value="mcpServerKey">MCP server key</option>
+                                <option value="mcpToolName">MCP tool name</option>
+                                <option value="implementationKey">Implementation key</option>
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Value</label>
+                            <InputText @bind-Value="accessRuleSelectorValue"
+                                       class="cda-input"
+                                       data-testid="agents-capability-access-value" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">MCP server key</label>
+                            <InputText @bind-Value="accessRuleSelectorServerKey"
+                                       class="cda-input"
+                                       data-testid="agents-capability-access-server-key" />
+                        </div>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                        <div>
+                            <label class="cda-field-label">Reason</label>
+                            <InputText @bind-Value="accessRuleReason"
+                                       class="cda-input"
+                                       data-testid="agents-capability-access-reason" />
+                        </div>
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.End">
+                            <Button Text="Preview access"
+                                    Icon="policy"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@isAccessPreviewBusy"
+                                    IsBusy="@isAccessPreviewBusy"
+                                    Click="PreviewAccessAsync"
+                                    data-testid="agents-capability-access-preview" />
+                            @if (accessPreviewResult is not null)
+                            {
+                                <StatusBadge Tone="@(accessPreviewResult.ValidationResult.IsValid ? "success" : "danger")"
+                                             Text="@($"{accessPreviewResult.EffectiveSet.AllowedCapabilities.Count} allowed")" />
+                                <StatusBadge Tone="@(accessPreviewResult.EffectiveSet.Diagnostics.Count == 0 ? "neutral" : "warning")"
+                                             Text="@($"{accessPreviewResult.EffectiveSet.Diagnostics.Count} suppressed")" />
+                            }
+                        </Cluster>
+                    </Grid>
+
+                    @if (accessPreviewResult is not null && !accessPreviewResult.ValidationResult.IsValid)
+                    {
+                        <SurfaceCard Soft="true" data-testid="agents-capability-access-validation">
+                            <Stack GapScale="LayoutGap.Small">
+                                @foreach (var issue in accessPreviewResult.ValidationResult.Issues.Take(4))
+                                {
+                                    <div>
+                                        <p class="cda-field-label">@issue.FieldPath</p>
+                                        <p>@issue.Message</p>
+                                        <p class="cda-body-muted">@issue.RepairHint</p>
+                                    </div>
+                                }
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                    else if (accessPreviewResult is not null && accessPreviewResult.EffectiveSet.Diagnostics.Count > 0)
+                    {
+                        <SurfaceCard Soft="true" data-testid="agents-capability-access-diagnostics">
+                            <Stack GapScale="LayoutGap.Small">
+                                @foreach (var diagnostic in accessPreviewResult.EffectiveSet.Diagnostics.Take(4))
+                                {
+                                    <div>
+                                        <p class="cda-field-label">@diagnostic.Identity.Key.Value</p>
+                                        <p>@diagnostic.Reason</p>
+                                        <p class="cda-body-muted">@diagnostic.RepairHint</p>
+                                    </div>
+                                }
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                </FormSection>
+
                 <FilterBar ResultText="@($"{FilteredCapabilities.Count} matching capability(s)")">
                     <div class="agent-capabilities-panel__filters">
                         <input @bind="capabilitySearch"

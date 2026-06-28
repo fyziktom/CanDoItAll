@@ -1,0 +1,15 @@
+
+Lines Path
+----- ----
+  759 src/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedBuilder.cs
+  484 tests/CanDoItAll.Tests.Unit/CapabilityTemplateSeedHardeningCheckpointTests.cs
+  374 src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplatePackLoader.cs
+  275 src/CanDoItAll.AgentFramework.Capabilities.Templates/CapabilityAccessPolicyTemplateCompiler.cs
+  214 src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplateSeedMaterializer.cs
+  142 src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplateSeedPolicyValidator.cs
+  126 src/CanDoItAll.AgentFramework.Capabilities.Abstractions/CapabilityEnums.cs
+  102 src/CanDoItAll.AgentFramework.Persistence/Seeds/ProcessAllowedOperationsCapabilityPolicyCompiler.cs
+   40 src/CanDoItAll.AgentFramework.Persistence/Seeds/AgentWorkspaceToolAccessCapabilityPolicyCompiler.cs
+   38 src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplateSeedAssignmentValidator.cs
+
+

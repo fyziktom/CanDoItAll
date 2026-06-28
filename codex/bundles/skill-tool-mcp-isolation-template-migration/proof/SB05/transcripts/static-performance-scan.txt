@@ -1,0 +1,2 @@
+Command: rg -n '\.Result|\.Wait\(|async void|ReadToEnd\(|ReadAsStringAsync|new JsonSerializerOptions|JsonSerializerOptions\(|Type\.GetType|GetService\(' capability implementation projects
+No focused performance anti-pattern matches found.

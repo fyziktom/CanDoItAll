@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after SB01`
+- `Completed`
 
 ## Objective
 
@@ -97,13 +97,26 @@
 - `proof/SB03/manifest.md`
 - `proof/SB03/semantic-invariants.md`
 
+## Execution Proof
+
+- Manifest: `bundle://proof/SB03/manifest.md`
+- Semantic invariants: `bundle://proof/SB03/semantic-invariants.md`
+- Failing-first transcript: `bundle://proof/SB03/transcripts/failing-first-skill-loader-contracts.txt`
+- Passing targeted tests: `bundle://proof/SB03/transcripts/passing-skill-loader-contracts.txt`
+- Full build: `bundle://proof/SB03/transcripts/dotnet-build-solution.txt`
+- Source assertions: `bundle://proof/SB03/transcripts/source-assertions.txt`
+- Anti-stub audit: `bundle://proof/SB03/transcripts/anti-stub-audit.txt`
+- Static/performance scan: `bundle://proof/SB03/transcripts/static-performance-scan.txt`
+- Changed file hashes: `bundle://proof/SB03/changed-file-hashes.txt`
+
 ## Browser Validation Logging
 
 - N/A for loader work. UI proof is SB10.
 
 ## Progression Gate
 
-- SB05 cannot harden the capability foundation until SB03 proves file, inline, and registered skill parity.
+- Result: `Passed`
+- SB03 proved file `SKILL.md` validation, explicit external-root policy, inline resource preservation, registered-key binding without loader reflection, retired/missing registered diagnostics, seeded inline asset parity, and shared access-policy participation.
 
 ## Suggested Agent Prompt
 

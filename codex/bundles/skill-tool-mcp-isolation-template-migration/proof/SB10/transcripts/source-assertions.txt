@@ -1,0 +1,13 @@
+Command:
+rg -n "class AgentCapabilitySetupFlowService|TestToolSetupAsync|TestMcpSetupAsync|PreviewAccessAsync|agents-capability-new-tool|agents-capability-access-preview|agents-capability-setup-tool-kind|agents-capability-setup-diagnostics|TestAgentToolCapabilitySetup|TestAgentMcpCapabilitySetup|PreviewAgentCapabilityAccess" src\CanDoItAll.Modules.AgentFramework src\CanDoItAll.Web\Api tests\CanDoItAll.Tests.Components tests\CanDoItAll.Tests.Playwright -g "*.cs" -g "*.razor"
+
+Result:
+Passed. Expected API endpoints, service methods, UI test IDs, component tests, and Playwright assertions were present.
+
+Key hits:
+- `src\CanDoItAll.Web\Api\AgentsApi.cs`: `TestAgentToolCapabilitySetup`, `TestAgentMcpCapabilitySetup`, `PreviewAgentCapabilityAccess`.
+- `src\CanDoItAll.Modules.AgentFramework\Services\CapabilitySetup\AgentCapabilitySetupFlowService.cs`: `TestToolSetupAsync`, `TestMcpSetupAsync`, `PreviewAccessAsync`.
+- `src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentCapabilitiesPanel.razor`: `agents-capability-new-tool`, `agents-capability-access-preview`.
+- `src\CanDoItAll.Modules.AgentFramework\Pages\Components\CapabilitySetupWizardDialog.razor`: `agents-capability-setup-tool-kind`, `agents-capability-setup-diagnostics`.
+- `tests\CanDoItAll.Tests.Components\CapabilitySetupFlowServiceTests.cs`: service and panel assertions.
+- `tests\CanDoItAll.Tests.Playwright\AgentCapabilitySetupFlowPlaywrightTests.cs`: large-screen browser flow assertions.

@@ -1,0 +1,103 @@
+Command: rg -n "CapabilityAccessPolicyEvaluator|SelectWinningDenyRule|CapabilityTemplateValidator|SecretBinding|CapabilityAccessPolicyTemplateCompiler|RuntimeToolName|CapabilityKey" src/CanDoItAll.AgentFramework.Capabilities.Abstractions src/CanDoItAll.AgentFramework.Capabilities.Access src/CanDoItAll.AgentFramework.Capabilities.Templates tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+Start: 2026-06-28T09:59:45.5612270-04:00
+End: 2026-06-28T09:59:45.6047053-04:00
+ExitCode: 0
+
+Output:
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:16:        var invalidRuntimeToolNames = ToolContractCatalog.KnownToolNames
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:17:            .Where(name => !RuntimeToolName.TryCreate(name, out _))
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:20:        var invalidCapabilityKeys = ReadAgentCapabilityKeys()
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:21:            .Where(key => !CapabilityKey.TryCreate(key, out _))
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:29:        Assert.Empty(invalidRuntimeToolNames);
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:30:        Assert.Empty(invalidCapabilityKeys);
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:41:        Assert.False(CapabilityKey.TryCreate(key, out _));
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:51:        Assert.False(RuntimeToolName.TryCreate(name, out _));
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:62:            RuntimeToolName = "external_audit",
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:83:        var result = new CapabilityTemplateValidator()
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:88:            issue.Category == CapabilityDiagnosticCategory.SecretBinding &&
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:89:            issue.CapabilityKey?.Value == "external-audit-tool" &&
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:94:            issue.Category == CapabilityDiagnosticCategory.SecretBinding &&
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:134:                CapabilitySelector.ByCapabilityKey(missingTool.Identity.Key),
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:138:        var result = new CapabilityAccessPolicyEvaluator().Evaluate(new CapabilityAccessEvaluationContext(
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:168:        var result = new CapabilityAccessPolicyEvaluator().Evaluate(new CapabilityAccessEvaluationContext(
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:185:            new CapabilityIdentity(CapabilityKind.McpServer, CapabilityKey.Create("playwright-local-mcp")),
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:207:        var result = new CapabilityAccessPolicyEvaluator().Evaluate(new CapabilityAccessEvaluationContext(
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:253:        var result = new CapabilityAccessPolicyTemplateCompiler()
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:274:            new CapabilityIdentity(CapabilityKind.Tool, CapabilityKey.Create(key)),
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:278:            RuntimeToolName.Create(runtimeToolName),
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:291:            new CapabilityIdentity(CapabilityKind.Skill, CapabilityKey.Create(key)),
+tests/CanDoItAll.Tests.Unit/CapabilityContractsTests.cs:305:    private static IReadOnlyList<string> ReadAgentCapabilityKeys()
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:5:public sealed class CapabilityAccessPolicyEvaluator : ICapabilityAccessPolicyEvaluator
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:33:            var denyRule = SelectWinningDenyRule(candidate, rules);
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:80:                new CapabilityIdentity(CapabilityKind.Tool, CapabilityKey.Create("required-capability-missing")),
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:93:    private static CapabilityAccessRule? SelectWinningDenyRule(
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:125:            CapabilitySelectorKind.CapabilityKey => selector.CapabilityKey == candidate.Identity.Key,
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:129:            CapabilitySelectorKind.RuntimeToolName => selector.RuntimeToolName is not null &&
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:130:                                                      selector.RuntimeToolName == candidate.RuntimeToolName,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:17:    public string? RuntimeToolName { get; init; }
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:49:public sealed record SecretBindingTemplateDto
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:64:    public IReadOnlyList<SecretBindingTemplateDto> EnvironmentVariableBindings { get; init; } = [];
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:77:    public IReadOnlyList<SecretBindingTemplateDto> HeaderBindings { get; init; } = [];
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:94:    public IReadOnlyList<SecretBindingTemplateDto> EnvironmentVariableBindings { get; init; } = [];
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:139:public sealed class CapabilityTemplateValidator
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:147:        var key = TryReadCapabilityKey(descriptor.Key, "$.key", templatePath, issues);
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:174:        if (!string.IsNullOrWhiteSpace(descriptor.RuntimeToolName) &&
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:175:            !RuntimeToolName.TryCreate(descriptor.RuntimeToolName, out _))
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:222:            var policyResult = new CapabilityAccessPolicyTemplateCompiler()
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:233:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:258:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:283:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:307:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:331:                CapabilityDiagnosticCategory.SecretBinding,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:340:        ValidateSecretBindings(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:352:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:388:                CapabilityDiagnosticCategory.SecretBinding,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:397:        ValidateSecretBindings(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:409:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:433:                CapabilityDiagnosticCategory.SecretBinding,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:459:        ValidateSecretBindings(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:468:    private static void ValidateSecretBindings(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:469:        IReadOnlyList<SecretBindingTemplateDto> bindings,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:472:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:482:                    CapabilityDiagnosticCategory.SecretBinding,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:494:                    CapabilityDiagnosticCategory.SecretBinding,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:529:    private static CapabilityKey? TryReadCapabilityKey(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:535:        if (CapabilityKey.TryCreate(value, out var key))
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:554:        CapabilityKey? key,
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:572:public sealed class CapabilityAccessPolicyTemplateCompiler
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:694:            CapabilitySelectorKind.CapabilityKey => ReadCapabilityKeySelector(selector.Value, valuePath, templatePath, issues),
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:697:            CapabilitySelectorKind.RuntimeToolName => ReadRuntimeToolNameSelector(selector.Value, valuePath, templatePath, issues),
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:720:    private static CapabilitySelector? ReadCapabilityKeySelector(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:726:        if (CapabilityKey.TryCreate(value, out var key))
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:728:            return CapabilitySelector.ByCapabilityKey(key);
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:765:    private static CapabilitySelector? ReadRuntimeToolNameSelector(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:771:        if (RuntimeToolName.TryCreate(value, out var name))
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateModels.cs:773:            return CapabilitySelector.ByRuntimeToolName(name);
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:29:    CapabilityKey,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:32:    RuntimeToolName,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:100:    SecretBinding,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:134:public readonly record struct CapabilityKey(string Value)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:136:    public static bool TryCreate(string? value, out CapabilityKey key)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:139:    public static CapabilityKey Create(string value)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:148:public readonly record struct RuntimeToolName(string Value)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:150:    public static bool TryCreate(string? value, out RuntimeToolName name)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:155:            name = new RuntimeToolName(normalized);
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:163:    public static RuntimeToolName Create(string value)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:176:        if (CapabilityNameRules.TryCreateKebab(value, out CapabilityKey capabilityKey))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:247:        if (CapabilityNameRules.TryCreateKebab(value, out CapabilityKey capabilityKey))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:294:        if (CapabilityNameRules.TryCreateKebab(value, out CapabilityKey capabilityKey))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:355:    CapabilityKey Key);
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:367:    RuntimeToolName? RuntimeToolName,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:380:    CapabilityKey? CapabilityKey,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:396:    CapabilityKey? CapabilityKey,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:418:    CapabilityKey? CapabilityKey = null,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:421:    RuntimeToolName? RuntimeToolName = null,
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:431:    public static CapabilitySelector ByCapabilityKey(CapabilityKey key)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:432:        => new(CapabilitySelectorKind.CapabilityKey, CapabilityKey: key);
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:440:    public static CapabilitySelector ByRuntimeToolName(RuntimeToolName name)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:441:        => new(CapabilitySelectorKind.RuntimeToolName, RuntimeToolName: name);
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:491:public interface ICapabilityAccessPolicyEvaluator
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:542:    internal static bool TryCreateKebab(string? value, out CapabilityKey key)
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\Capabilities.cs:547:            key = new CapabilityKey(normalized);
+

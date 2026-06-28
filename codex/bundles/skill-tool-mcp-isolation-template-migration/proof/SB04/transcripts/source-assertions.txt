@@ -1,0 +1,114 @@
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:11:    public async Task SB04_INV_INTERNAL_001_internal_hosted_mcp_setup_uses_application_lifecycle_and_implementation_key()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:13:        var descriptor = McpDescriptorFactory.InternalHosted(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:22:        var exposure = McpExposureDescriptorFactory.CreateServer(descriptor);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:23:        var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:29:        var result = await setup.TestAsync(descriptor, "SB04_INV_INTERNAL_001", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:40:    public async Task SB04_INV_LOCAL_001_fake_local_mcp_setup_lists_allowed_tools_and_cleans_up()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:42:        var descriptor = McpDescriptorFactory.LocalStdio(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:56:        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:62:        var setup = new McpSetupTestService(fakeFactory);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:64:        var result = await setup.TestAsync(descriptor, "SB04_INV_LOCAL_001", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:75:    public async Task SB04_INV_LOCAL_002_missing_allowed_tools_fails_before_start()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:77:        var descriptor = McpDescriptorFactory.LocalStdio(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:91:        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:92:        var setup = new McpSetupTestService(fakeFactory);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:94:        var result = await setup.TestAsync(descriptor, "SB04_INV_LOCAL_002", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:99:        Assert.Equal(CapabilityDiagnosticCategory.TemplateValidation, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:104:    public async Task SB04_INV_LOCAL_003_disallowed_command_is_rejected_before_start()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:106:        var descriptor = McpDescriptorFactory.LocalStdio(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:120:        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:121:        var setup = new McpSetupTestService(fakeFactory);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:123:        var result = await setup.TestAsync(descriptor, "SB04_INV_LOCAL_003", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:128:        Assert.Equal(CapabilityDiagnosticCategory.CommandPolicy, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:133:    public async Task SB04_INV_SECRET_001_raw_environment_and_headers_are_rejected()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:135:        var localDescriptor = McpDescriptorFactory.LocalStdio(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:149:        var remoteDescriptor = McpDescriptorFactory.RemoteHttp(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:160:        var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(Tools: [])));
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:162:        var local = await setup.TestAsync(localDescriptor, "SB04_INV_SECRET_001_LOCAL", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:163:        var remote = await setup.TestAsync(remoteDescriptor, "SB04_INV_SECRET_001_REMOTE", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:169:            Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:175:    public async Task SB04_INV_SETUP_001_list_tools_failure_returns_typed_diagnostic_and_cleanup_proof()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:178:        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:180:            ListToolsException: new McpSetupException(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:181:                CapabilityDiagnosticCategory.McpListTools,
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:185:        var setup = new McpSetupTestService(fakeFactory);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:187:        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_001", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:193:        Assert.Equal(CapabilityDiagnosticCategory.McpListTools, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:198:    public async Task SB04_INV_CLEANUP_001_cleanup_failure_returns_cleanup_diagnostic_without_hiding_original_failure()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:201:        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:203:            ListToolsException: new McpSetupException(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:204:                CapabilityDiagnosticCategory.McpListTools,
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:209:        var setup = new McpSetupTestService(fakeFactory);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:211:        var result = await setup.TestAsync(descriptor, "SB04_INV_CLEANUP_001", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:216:        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Category == CapabilityDiagnosticCategory.McpListTools);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:217:        var cleanup = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Category == CapabilityDiagnosticCategory.ResourceCleanup);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:222:    public async Task SB04_INV_SETUP_002_allowed_tools_mismatch_reports_missing_tool()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:225:        var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:228:        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_002", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:232:        Assert.Equal(CapabilityDiagnosticCategory.McpListTools, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:238:    public async Task SB04_INV_SETUP_003_startup_timeout_returns_timeout_diagnostic()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:241:        var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:245:        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_003", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:249:        Assert.Equal(CapabilityDiagnosticCategory.Timeout, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:255:    public async Task SB04_INV_SETUP_004_process_start_and_handshake_failures_return_typed_diagnostics()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:258:        var processStartSetup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:260:            StartException: new McpSetupException(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:261:                CapabilityDiagnosticCategory.ProcessStart,
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:265:        var handshakeSetup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:267:            StartException: new McpSetupException(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:268:                CapabilityDiagnosticCategory.McpHandshake,
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:273:        var processStart = await processStartSetup.TestAsync(descriptor, "SB04_INV_SETUP_004_PROCESS", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:274:        var handshake = await handshakeSetup.TestAsync(descriptor, "SB04_INV_SETUP_004_HANDSHAKE", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:282:        Assert.Equal(CapabilityDiagnosticCategory.ProcessStart, processDiagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:283:        Assert.Equal(CapabilityDiagnosticCategory.McpHandshake, handshakeDiagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:289:    public async Task SB04_INV_SETUP_005_cancellation_returns_cancellation_diagnostic_and_cleanup_proof()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:292:        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:295:        var setup = new McpSetupTestService(fakeFactory);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:297:        var result = await setup.TestAsync(descriptor, "SB04_INV_SETUP_005", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:303:        Assert.Equal(CapabilityDiagnosticCategory.Cancellation, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:307:    public async Task SB04_INV_RUNTIME_001_fake_mcp_client_can_start_list_call_and_stop()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:310:        var factory = new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:316:        var client = await factory.CreateAsync(descriptor, "SB04_INV_RUNTIME_001", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:332:    public void SB04_INV_POLICY_001_server_and_child_tool_descriptors_participate_in_access_policy()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:334:        var server = McpExposureDescriptorFactory.CreateServer(BrowserDescriptor([McpToolName.Create("browser_snapshot")]));
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:335:        var tool = McpExposureDescriptorFactory.CreateTool(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:359:            "SB04_INV_POLICY_001"));
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:367:    public async Task SB04_INV_REMOTE_001_remote_http_status_failure_maps_typed_diagnostic()
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:369:        var descriptor = McpDescriptorFactory.RemoteHttp(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:380:        var setup = new McpSetupTestService(new FakeMcpClientFactory(new FakeMcpServerScript(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:382:            StartException: new McpSetupException(
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:383:                CapabilityDiagnosticCategory.HttpStatus,
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:389:        var result = await setup.TestAsync(descriptor, "SB04_INV_REMOTE_001", CancellationToken.None);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:393:        Assert.Equal(CapabilityDiagnosticCategory.HttpStatus, diagnostic.Category);
+tests/CanDoItAll.Tests.Unit/McpRuntimeContractsTests.cs:400:        return McpDescriptorFactory.LocalStdio(
+src/CanDoItAll.AgentFramework.Mcp.Abstractions\Mcp.cs:199:public interface IMcpSetupTestService
+src/CanDoItAll.AgentFramework.Mcp\Descriptors\McpExposureDescriptorFactory.cs:6:public static class McpExposureDescriptorFactory
+src/CanDoItAll.AgentFramework.Mcp\Descriptors\McpDescriptorFactory.cs:6:public static class McpDescriptorFactory
+src/CanDoItAll.AgentFramework.Mcp\Fakes\FakeMcpServerScript.cs:14:public sealed class FakeMcpClientFactory(FakeMcpServerScript script) : IMcpClientFactory
+src/CanDoItAll.AgentFramework.Mcp\Fakes\FakeMcpServerScript.cs:18:    public FakeMcpRuntimeClient? LastClient { get; private set; }
+src/CanDoItAll.AgentFramework.Mcp\Fakes\FakeMcpServerScript.cs:27:        LastClient = new FakeMcpRuntimeClient(script);
+src/CanDoItAll.AgentFramework.Mcp\Fakes\FakeMcpServerScript.cs:32:public sealed class FakeMcpRuntimeClient(FakeMcpServerScript script) : IMcpRuntimeClient
+src/CanDoItAll.AgentFramework.Mcp\Fakes\FakeMcpServerScript.cs:78:        return Task.FromException<string>(new McpSetupException(
+src/CanDoItAll.AgentFramework.Mcp\Fakes\FakeMcpServerScript.cs:79:            CapabilityDiagnosticCategory.ImplementationMissing,
+src/CanDoItAll.AgentFramework.Mcp\Diagnostics\McpDiagnostics.cs:7:internal static class McpDiagnostics
+src/CanDoItAll.AgentFramework.Mcp\Diagnostics\McpDiagnostics.cs:18:        CapabilityDiagnosticCategory category,
+src/CanDoItAll.AgentFramework.Mcp\Diagnostics\McpDiagnostics.cs:37:            category == CapabilityDiagnosticCategory.Timeout ? descriptor.Timeout : null,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupException.cs:5:public sealed class McpSetupException(
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupException.cs:6:    CapabilityDiagnosticCategory category,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupException.cs:12:    public CapabilityDiagnosticCategory Category { get; } = category;
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:7:public sealed class McpSetupTestService(IMcpClientFactory clientFactory) : IMcpSetupTestService
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:58:                CapabilityDiagnosticCategory.Timeout,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:71:                CapabilityDiagnosticCategory.Cancellation,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:78:        catch (McpSetupException exception)
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:103:                CapabilityDiagnosticCategory.CapabilityUnavailable,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:114:                CapabilityDiagnosticCategory.TemplateValidation,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:127:                    CapabilityDiagnosticCategory.SecretBinding,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:133:            if (!LocalMcpCommandPolicy.IsAllowed(local.Command))
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:138:                    CapabilityDiagnosticCategory.CommandPolicy,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:141:                    $"Use an approved command. Allowed commands: {LocalMcpCommandPolicy.DescribeAllowedCommands()}.");
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:150:                CapabilityDiagnosticCategory.SecretBinding,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:179:            CapabilityDiagnosticCategory.McpListTools,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:204:            return new(false, McpDiagnostics.Create(
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:205:                CapabilityDiagnosticCategory.ResourceCleanup,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:233:        CapabilityDiagnosticCategory category,
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:245:                McpDiagnostics.Create(

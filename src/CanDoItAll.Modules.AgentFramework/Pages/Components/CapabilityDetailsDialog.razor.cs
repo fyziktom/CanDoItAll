@@ -3,6 +3,9 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
+using CapabilityDiagnostic = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityDiagnostic;
+using CapabilitySetupTestResult = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilitySetupTestResult;
+using McpSetupTestResult = CanDoItAll.AgentFramework.Mcp.Abstractions.McpSetupTestResult;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -20,6 +23,9 @@ public partial class CapabilityDetailsDialog
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
+    public IAgentCapabilitySetupFlowService CapabilitySetupFlowService { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [CascadingParameter]
@@ -29,6 +35,9 @@ public partial class CapabilityDetailsDialog
     private IReadOnlyList<string> capabilityTags = [];
     private CapabilityConfigurationEditorSupport.McpCapabilityEditorState mcpState = new();
     private CapabilityConfigurationEditorSupport.SkillCapabilityEditorState skillState = new();
+    private CapabilityConfigurationEditorSupport.ToolCapabilityEditorState toolState = new();
+    private CapabilitySetupTestResult? toolSetupResult;
+    private McpSetupTestResult? mcpSetupResult;
     private string rawConfigurationJson = string.Empty;
     private int selectedTabIndex;
     private bool isLoading = true;
@@ -40,7 +49,7 @@ public partial class CapabilityDetailsDialog
 
     private bool IsEndpointLocked => editorModel.IsBuiltIn && editorModel.Kind == CapabilityKind.Tool;
 
-    private bool IsRawConfigurationLocked => editorModel.Kind is CapabilityKind.McpServer or CapabilityKind.Skill ||
+    private bool IsRawConfigurationLocked => editorModel.Kind is CapabilityKind.McpServer or CapabilityKind.Skill or CapabilityKind.Tool ||
                                             editorModel.IsBuiltIn;
 
     private IReadOnlyList<string> VisibleTagSuggestions => TagSuggestions
@@ -162,6 +171,10 @@ public partial class CapabilityDetailsDialog
         {
             errors.AddRange(CapabilityConfigurationEditorSupport.WriteSkill(editorModel, skillState));
         }
+        else if (editorModel.Kind == CapabilityKind.Tool)
+        {
+            errors.AddRange(CapabilityConfigurationEditorSupport.WriteTool(editorModel, toolState));
+        }
         else if (!IsRawConfigurationLocked)
         {
             if (!IsValidJsonObject(rawConfigurationJson))
@@ -188,10 +201,100 @@ public partial class CapabilityDetailsDialog
         {
             skillState = CapabilityConfigurationEditorSupport.ReadSkill(editorModel);
         }
+        else if (editorModel.Kind == CapabilityKind.Tool)
+        {
+            toolState = CapabilityConfigurationEditorSupport.ReadTool(editorModel);
+        }
     }
 
     private Task CancelAsync()
         => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+
+    private async Task TestSetupAsync()
+    {
+        if (isBusy || editorModel.Kind is not (CapabilityKind.Tool or CapabilityKind.McpServer))
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var errors = PrepareEditorForSave();
+            if (errors.Count > 0)
+            {
+                NotificationService.Warning("Setup test was not started", string.Join(" ", errors));
+                return;
+            }
+
+            if (editorModel.Kind == CapabilityKind.Tool)
+            {
+                toolSetupResult = await CapabilitySetupFlowService.TestToolSetupAsync(new CapabilityToolSetupTestRequest
+                {
+                    Capability = editorModel,
+                    JsonInput = string.IsNullOrWhiteSpace(toolState.TestInputJson) ? "{}" : toolState.TestInputJson
+                });
+                NotifySetupResult(toolSetupResult.IsSuccess, "Tool setup test");
+            }
+            else
+            {
+                mcpSetupResult = await CapabilitySetupFlowService.TestMcpSetupAsync(new CapabilityMcpSetupTestRequest
+                {
+                    Capability = editorModel
+                });
+                NotifySetupResult(mcpSetupResult.IsSuccess, "MCP setup test");
+            }
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Setup test failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private IReadOnlyList<CapabilityDiagnostic> CurrentSetupDiagnostics
+    {
+        get
+        {
+            if (editorModel.Kind == CapabilityKind.Tool)
+            {
+                return toolSetupResult?.Diagnostics ?? [];
+            }
+
+            return mcpSetupResult?.Diagnostics ?? [];
+        }
+    }
+
+    private bool? CurrentSetupSucceeded
+    {
+        get
+        {
+            return editorModel.Kind switch
+            {
+                CapabilityKind.Tool => toolSetupResult?.IsSuccess,
+                CapabilityKind.McpServer => mcpSetupResult?.IsSuccess,
+                _ => null
+            };
+        }
+    }
+
+    private IReadOnlyList<string> CurrentMcpDiscoveredTools
+        => mcpSetupResult?.DiscoveredTools.Select(tool => tool.Name.Value).ToList() ?? [];
+
+    private void NotifySetupResult(bool isSuccess, string label)
+    {
+        if (isSuccess)
+        {
+            NotificationService.Success(label, "Setup test completed successfully.");
+        }
+        else
+        {
+            NotificationService.Warning(label, "Setup test returned diagnostics.");
+        }
+    }
 
     private string ResolveIdentityDescription()
     {
@@ -234,6 +337,7 @@ public partial class CapabilityDetailsDialog
         return kind switch
         {
             CapabilityKind.McpServer => "MCP server",
+            CapabilityKind.Tool => "Tool",
             CapabilityKind.AiContext => "AI context",
             _ => kind.ToString()
         };
