@@ -3,6 +3,7 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
@@ -671,6 +672,86 @@ public sealed class ProcessProjectionPipelineTests
                 Assert.Equal("implement-code-change", action.StepKey);
                 Assert.Equal(".NET Application Developer", action.ExecutorDisplayName);
             });
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_operator_actions_include_execution_result_summary_for_blocked_repair_branch()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New())
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    blockedStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    StrategyResultIdempotencyKey.New(),
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:result")
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var resultSummary = """
+            {"status":"Blocked","reason":"Browser QA found the Compute control clipped at the mobile viewport.","branchOutcomeKey":"repair-required","branchOutcomeTitle":"Repair required","nextActions":["Widen or reflow the Compute button and rerun browser proof."]}
+            """;
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, blockedStepId, "qa-validation", "Delivery QA Observer")
+            ]),
+            new InMemoryObservationReader(
+                CreateObservation(
+                    runId,
+                    blockedStepId,
+                    "Delivery QA Observer",
+                    "Completed",
+                    Now.AddMinutes(-1),
+                    resultSummary: resultSummary)));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            SelectedRunId: null));
+
+        var run = Assert.Single(workspace.Runs);
+        var action = Assert.Single(run.OperatorActions);
+        Assert.Contains("Compute control clipped", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("branch repair-required", action.ProblemSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("return a completed process-step outcome", action.RequiredOperatorDecision, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("branchOutcomeKey 'repair-required'", action.RequiredOperatorDecision, StringComparison.Ordinal);
+        Assert.Contains("Widen or reflow the Compute button", action.RecommendedInstruction, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1667,10 +1748,14 @@ public sealed class ProcessProjectionPipelineTests
         string agentName,
         string state,
         DateTimeOffset updatedAtUtc,
-        string avatarImageUrl = "")
+        string avatarImageUrl = "",
+        string resultSummary = "")
     {
         var isTerminal = string.Equals(state, "Completed", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(state, "Failed", StringComparison.OrdinalIgnoreCase);
+        var resolvedResultSummary = string.IsNullOrWhiteSpace(resultSummary)
+            ? (isTerminal ? "Execution run response persisted." : string.Empty)
+            : resultSummary;
         return new ProcessExecutionObservation(
             Guid.NewGuid(),
             runId,
@@ -1686,7 +1771,7 @@ public sealed class ProcessProjectionPipelineTests
             updatedAtUtc.AddMinutes(-1),
             isTerminal ? updatedAtUtc : null,
             $"Input for {agentName}.",
-            isTerminal ? "Execution run response persisted." : string.Empty,
+            resolvedResultSummary,
             [
                 new ProcessExecutionActivityObservation(
                     updatedAtUtc,
