@@ -21,12 +21,7 @@ public readonly record struct GitBranchName
 {
     public GitBranchName(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Git branch name cannot be empty.", nameof(value));
-        }
-
-        Value = value.Trim();
+        Value = GitReferenceValue.Normalize(value, "Git branch name");
     }
 
     public string Value { get; }
@@ -34,7 +29,53 @@ public readonly record struct GitBranchName
     public override string ToString() => Value;
 }
 
-public sealed record GitPathSpec(string RepositoryRelativePath, string FullPath);
+public readonly record struct GitRevision
+{
+    public GitRevision(string value)
+    {
+        Value = GitReferenceValue.Normalize(value, "Git revision");
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
+public sealed record GitPathSpec
+{
+    public GitPathSpec(string repositoryRelativePath, string fullPath)
+    {
+        if (string.IsNullOrWhiteSpace(repositoryRelativePath))
+        {
+            throw new ArgumentException("Git path cannot be empty.", nameof(repositoryRelativePath));
+        }
+
+        if (string.IsNullOrWhiteSpace(fullPath))
+        {
+            throw new ArgumentException("Git full path cannot be empty.", nameof(fullPath));
+        }
+
+        var candidateRelativePath = repositoryRelativePath.Trim().Replace('\\', '/');
+        if (Path.IsPathRooted(candidateRelativePath) ||
+            candidateRelativePath.StartsWith("/", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Git path must be repository-relative.", nameof(repositoryRelativePath));
+        }
+
+        var normalizedRelativePath = candidateRelativePath.Trim('/');
+        if (GitPathRules.IsForbiddenRepositoryRelativePath(normalizedRelativePath))
+        {
+            throw new ArgumentException("Git path is not an allowed repository-relative path.", nameof(repositoryRelativePath));
+        }
+
+        RepositoryRelativePath = normalizedRelativePath;
+        FullPath = Path.GetFullPath(fullPath);
+    }
+
+    public string RepositoryRelativePath { get; }
+
+    public string FullPath { get; }
+}
 
 public sealed record GitPathAuthorizationResult(
     bool IsAuthorized,
@@ -63,7 +104,7 @@ public static class GitPathAuthorizer
         }
 
         var relativePath = Path.GetRelativePath(repositoryPath.Value, fullPath).Replace('\\', '/');
-        if (relativePath == "." || relativePath.StartsWith("../", StringComparison.Ordinal) || relativePath.StartsWith(".git/", StringComparison.Ordinal))
+        if (GitPathRules.IsForbiddenRepositoryRelativePath(relativePath))
         {
             return Denied("GitPath.ForbiddenPath", "Git path is not an allowed repository-relative path.");
         }
@@ -85,5 +126,45 @@ public static class GitPathAuthorizer
         return path.EndsWith(Path.DirectorySeparatorChar)
             ? path
             : path + Path.DirectorySeparatorChar;
+    }
+}
+
+internal static class GitPathRules
+{
+    public static bool IsForbiddenRepositoryRelativePath(string relativePath)
+    {
+        return relativePath == "." ||
+            relativePath.StartsWith("../", StringComparison.Ordinal) ||
+            relativePath.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
+            relativePath.StartsWith(".git/", StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+internal static class GitReferenceValue
+{
+    public static string Normalize(string value, string description)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException($"{description} cannot be empty.", nameof(value));
+        }
+
+        var normalized = value.Trim();
+        if (normalized.StartsWith("-", StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"{description} cannot start with '-'.", nameof(value));
+        }
+
+        if (normalized.Any(char.IsWhiteSpace))
+        {
+            throw new ArgumentException($"{description} cannot contain whitespace.", nameof(value));
+        }
+
+        if (normalized.Any(char.IsControl))
+        {
+            throw new ArgumentException($"{description} cannot contain control characters.", nameof(value));
+        }
+
+        return normalized;
     }
 }

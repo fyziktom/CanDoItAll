@@ -19,6 +19,20 @@ public interface IWorkspaceCommandExecutionService
 
     Task<WorkspaceCommandExecutionResult> GitDiff(string? path = null, bool nameOnly = false, string? workingDirectory = null, int timeoutSeconds = 30);
 
+    Task<WorkspaceCommandExecutionResult> GitLog(int count = 10, string? workingDirectory = null, int timeoutSeconds = 30);
+
+    Task<WorkspaceCommandExecutionResult> GitShow(string revision, string? workingDirectory = null, int timeoutSeconds = 30);
+
+    Task<WorkspaceCommandExecutionResult> GitAdd(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30);
+
+    Task<WorkspaceCommandExecutionResult> GitUnstage(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30);
+
+    Task<WorkspaceCommandExecutionResult> GitCommit(string message, string? workingDirectory = null, int timeoutSeconds = 30);
+
+    Task<WorkspaceCommandExecutionResult> GitBranchCreate(string branchName, string? workingDirectory = null, int timeoutSeconds = 30);
+
+    Task<WorkspaceCommandExecutionResult> GitSwitch(string branchName, string? workingDirectory = null, int timeoutSeconds = 30);
+
     Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600);
 
     Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600);

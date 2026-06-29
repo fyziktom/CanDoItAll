@@ -100,6 +100,56 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
+    public void Git_standard_operations_skill_references_only_shipped_workspace_git_tools()
+    {
+        var pack = new CapabilityTemplatePackLoader().Load();
+        var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack)
+            .ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
+        var shippedToolNames = new[]
+        {
+            "workspace_git_status",
+            "workspace_git_diff",
+            "workspace_git_log",
+            "workspace_git_show",
+            "workspace_git_add",
+            "workspace_git_unstage",
+            "workspace_git_commit",
+            "workspace_git_branch_create",
+            "workspace_git_switch"
+        };
+        var unavailableToolNames = new[]
+        {
+            "workspace_git_push",
+            "workspace_git_pull",
+            "workspace_git_fetch",
+            "workspace_git_reset",
+            "workspace_git_checkout",
+            "workspace_git_rebase",
+            "workspace_git_clean",
+            "workspace_git_merge"
+        };
+
+        using var skillJson = JsonDocument.Parse(capabilities["git-standard-operations"].ConfigurationJson);
+        var instructions = skillJson.RootElement
+            .GetProperty("inlineSkill")
+            .GetProperty("instructions")
+            .GetString() ?? string.Empty;
+
+        foreach (var shippedToolName in shippedToolNames)
+        {
+            Assert.Contains(shippedToolName, instructions, StringComparison.Ordinal);
+            Assert.Contains(capabilities.Values, capability =>
+                capability.Kind == CanDoItAll.AgentFramework.Models.CapabilityKind.Tool &&
+                capability.ConfigurationJson.Contains(shippedToolName, StringComparison.Ordinal));
+        }
+
+        foreach (var unavailableToolName in unavailableToolNames)
+        {
+            Assert.DoesNotContain(unavailableToolName, instructions, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void SB06_INV_TEMPLATE_003_invalid_templates_block_materialization_without_fallback()
     {
         using var packDirectory = new TemporaryCapabilityTemplatePack(
@@ -271,6 +321,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "dotnet-app-delivery-inline-skill",
         "frontend-skill",
         "generated-app-summary-inline-skill",
+        "git-standard-operations",
         "mail-summary-inline-skill",
         "mail-triage-context",
         "mail-triage-inline-skill",
@@ -299,8 +350,15 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "workspace-dotnet-stop",
         "workspace-dotnet-test",
         "workspace-execution-boundary",
+        "workspace-git-add",
+        "workspace-git-branch-create",
+        "workspace-git-commit",
         "workspace-git-diff",
+        "workspace-git-log",
+        "workspace-git-show",
         "workspace-git-status",
+        "workspace-git-switch",
+        "workspace-git-unstage",
         "workspace-inspect-image",
         "workspace-inspect-spreadsheet",
         "workspace-list-files",

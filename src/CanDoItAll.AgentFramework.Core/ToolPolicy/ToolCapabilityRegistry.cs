@@ -199,6 +199,13 @@ public static class ToolCapabilityRegistry
             Read(ToolContractCatalog.WorkspaceExecutionBoundary, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceGitDiff, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceGitStatus, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceGitLog, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceGitShow, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Mutation(ToolContractCatalog.WorkspaceGitAdd, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceGitUnstage, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceGitCommit, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceGitBranchCreate, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceGitSwitch, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(
                 ToolContractCatalog.LocalMcpLaunch,
                 ToolCapabilitySideEffectKind.LocalProcessExecution,

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Git;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -71,14 +72,11 @@ internal sealed class WorkspaceCommandPlanBuilder
     public WorkspaceCommandPlan BuildGitStatus(bool includeBranch = true, string? workingDirectory = null, int timeoutSeconds = 30)
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
-        var arguments = new List<string> { "status", "--short" };
-        if (includeBranch)
-        {
-            arguments.Add("--branch");
-        }
+        var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+        var spec = commandBuilder.Status(includeBranch);
 
-        return CreatePlan(
-            toolName: "workspace_git_status",
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitStatus,
             recipeId: "git_status",
             riskClass: "ReadOnly",
             approvalRequired: false,
@@ -87,8 +85,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: [],
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
-            executableCandidates: ["git"],
-            arguments: arguments,
+            spec: spec,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 64 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -97,23 +94,23 @@ internal sealed class WorkspaceCommandPlanBuilder
     public WorkspaceCommandPlan BuildGitDiff(string? path = null, bool nameOnly = false, string? workingDirectory = null, int timeoutSeconds = 30)
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
-        var arguments = new List<string> { "diff" };
+        var repositoryPath = new GitRepositoryPath(workingDirectoryResolution.FullPath);
+        var commandBuilder = new GitRepositoryCommandBuilder(repositoryPath);
+        var outputMode = nameOnly
+            ? GitDiffOutputMode.NameOnly
+            : GitDiffOutputMode.Stat;
+        var options = new GitDiffOptions(outputMode);
         IReadOnlyList<string> targetPaths = [];
 
         if (!string.IsNullOrWhiteSpace(path))
         {
-            var targetResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: true);
-            arguments.Add("--");
-            arguments.Add(Path.GetRelativePath(workingDirectoryResolution.FullPath, targetResolution.FullPath));
+            var targetResolution = ResolveWorkspacePath(path);
+            options = new GitDiffOptions(Path: BuildGitPathSpec(repositoryPath, targetResolution));
             targetPaths = [targetResolution.RelativePath];
         }
-        else
-        {
-            arguments.Add(nameOnly ? "--name-only" : "--stat");
-        }
 
-        return CreatePlan(
-            toolName: "workspace_git_diff",
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitDiff,
             recipeId: "git_diff",
             riskClass: "ReadOnly",
             approvalRequired: false,
@@ -122,10 +119,154 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: targetPaths,
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
-            executableCandidates: ["git"],
-            arguments: arguments,
+            spec: commandBuilder.Diff(options),
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
+            stderrLimitCharacters: 32 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildGitLog(int count = 10, string? workingDirectory = null, int timeoutSeconds = 30)
+    {
+        var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
+        var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitLog,
+            recipeId: "git_log",
+            riskClass: "ReadOnly",
+            approvalRequired: false,
+            networkAllowed: false,
+            mutatesWorkspace: false,
+            targetPaths: [],
+            workingDirectory: workingDirectoryRelative,
+            workingDirectoryPath: workingDirectoryResolution.FullPath,
+            spec: commandBuilder.Log(count),
+            timeoutSeconds: timeoutSeconds,
+            stdoutLimitCharacters: 128 * 1024,
+            stderrLimitCharacters: 32 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildGitShow(string revision, string? workingDirectory = null, int timeoutSeconds = 30)
+    {
+        var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
+        var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitShow,
+            recipeId: "git_show",
+            riskClass: "ReadOnly",
+            approvalRequired: false,
+            networkAllowed: false,
+            mutatesWorkspace: false,
+            targetPaths: [],
+            workingDirectory: workingDirectoryRelative,
+            workingDirectoryPath: workingDirectoryResolution.FullPath,
+            spec: commandBuilder.Show(new GitRevision(revision)),
+            timeoutSeconds: timeoutSeconds,
+            stdoutLimitCharacters: 128 * 1024,
+            stderrLimitCharacters: 32 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildGitAdd(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
+    {
+        var target = BuildGitPathTarget(paths, workingDirectory);
+
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitAdd,
+            recipeId: "git_add",
+            riskClass: "WorkspaceMutation:Git",
+            approvalRequired: true,
+            networkAllowed: false,
+            mutatesWorkspace: true,
+            targetPaths: target.TargetPaths,
+            workingDirectory: target.WorkingDirectoryRelative,
+            workingDirectoryPath: target.WorkingDirectoryPath,
+            spec: target.CommandBuilder.Add(target.PathSpecs),
+            timeoutSeconds: timeoutSeconds,
+            stdoutLimitCharacters: 64 * 1024,
+            stderrLimitCharacters: 32 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildGitUnstage(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
+    {
+        var target = BuildGitPathTarget(paths, workingDirectory);
+
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitUnstage,
+            recipeId: "git_unstage",
+            riskClass: "WorkspaceMutation:Git",
+            approvalRequired: true,
+            networkAllowed: false,
+            mutatesWorkspace: true,
+            targetPaths: target.TargetPaths,
+            workingDirectory: target.WorkingDirectoryRelative,
+            workingDirectoryPath: target.WorkingDirectoryPath,
+            spec: target.CommandBuilder.Unstage(target.PathSpecs),
+            timeoutSeconds: timeoutSeconds,
+            stdoutLimitCharacters: 64 * 1024,
+            stderrLimitCharacters: 32 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildGitCommit(string message, string? workingDirectory = null, int timeoutSeconds = 30)
+    {
+        var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
+        var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitCommit,
+            recipeId: "git_commit",
+            riskClass: "WorkspaceMutation:Git",
+            approvalRequired: true,
+            networkAllowed: false,
+            mutatesWorkspace: true,
+            targetPaths: [],
+            workingDirectory: workingDirectoryRelative,
+            workingDirectoryPath: workingDirectoryResolution.FullPath,
+            spec: commandBuilder.Commit(message),
+            timeoutSeconds: timeoutSeconds,
+            stdoutLimitCharacters: 128 * 1024,
+            stderrLimitCharacters: 32 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildGitBranchCreate(string branchName, string? workingDirectory = null, int timeoutSeconds = 30)
+    {
+        var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
+        var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitBranchCreate,
+            recipeId: "git_branch_create",
+            riskClass: "WorkspaceMutation:Git",
+            approvalRequired: true,
+            networkAllowed: false,
+            mutatesWorkspace: true,
+            targetPaths: [],
+            workingDirectory: workingDirectoryRelative,
+            workingDirectoryPath: workingDirectoryResolution.FullPath,
+            spec: commandBuilder.CreateBranch(new GitBranchName(branchName)),
+            timeoutSeconds: timeoutSeconds,
+            stdoutLimitCharacters: 64 * 1024,
+            stderrLimitCharacters: 32 * 1024);
+    }
+
+    public WorkspaceCommandPlan BuildGitSwitch(string branchName, string? workingDirectory = null, int timeoutSeconds = 30)
+    {
+        var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
+        var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+
+        return CreateGitPlan(
+            toolName: ToolContractCatalog.WorkspaceGitSwitch,
+            recipeId: "git_switch",
+            riskClass: "WorkspaceMutation:Git",
+            approvalRequired: true,
+            networkAllowed: false,
+            mutatesWorkspace: true,
+            targetPaths: [],
+            workingDirectory: workingDirectoryRelative,
+            workingDirectoryPath: workingDirectoryResolution.FullPath,
+            spec: commandBuilder.Switch(new GitBranchName(branchName)),
+            timeoutSeconds: timeoutSeconds,
+            stdoutLimitCharacters: 64 * 1024,
             stderrLimitCharacters: 32 * 1024);
     }
 
@@ -804,6 +945,73 @@ internal sealed class WorkspaceCommandPlanBuilder
             TimeoutSeconds: Math.Clamp(timeoutSeconds, 1, 3600),
             StdoutLimitCharacters: stdoutLimitCharacters,
             StderrLimitCharacters: stderrLimitCharacters);
+    }
+
+    private WorkspaceCommandPlan CreateGitPlan(
+        string toolName,
+        string recipeId,
+        string riskClass,
+        bool approvalRequired,
+        bool networkAllowed,
+        bool mutatesWorkspace,
+        IReadOnlyList<string> targetPaths,
+        string workingDirectory,
+        string workingDirectoryPath,
+        GitCommandSpec spec,
+        int timeoutSeconds,
+        int stdoutLimitCharacters,
+        int stderrLimitCharacters)
+    {
+        return CreatePlan(
+            toolName,
+            recipeId,
+            riskClass,
+            approvalRequired,
+            networkAllowed,
+            mutatesWorkspace,
+            targetPaths,
+            workingDirectory,
+            workingDirectoryPath,
+            executableCandidates: [spec.Executable],
+            arguments: spec.Arguments.Select(argument => argument.Value).ToArray(),
+            timeoutSeconds,
+            stdoutLimitCharacters,
+            stderrLimitCharacters);
+    }
+
+    private GitPathTarget BuildGitPathTarget(string[]? paths, string? workingDirectory)
+    {
+        var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
+        var repositoryPath = new GitRepositoryPath(workingDirectoryResolution.FullPath);
+        var commandBuilder = new GitRepositoryCommandBuilder(repositoryPath);
+        var resolvedPaths = (paths ?? [])
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => ResolveWorkspacePath(path))
+            .DistinctBy(path => path.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var pathSpecs = resolvedPaths
+            .Select(path => BuildGitPathSpec(repositoryPath, path))
+            .ToArray();
+
+        return new GitPathTarget(
+            commandBuilder,
+            workingDirectoryResolution.FullPath,
+            workingDirectoryRelative,
+            pathSpecs,
+            resolvedPaths.Select(path => path.RelativePath).ToArray());
+    }
+
+    private static GitPathSpec BuildGitPathSpec(
+        GitRepositoryPath repositoryPath,
+        WorkspacePathResolution resolution)
+    {
+        var authorization = GitPathAuthorizer.Authorize(repositoryPath, resolution.FullPath);
+        if (!authorization.IsAuthorized || authorization.Path is null)
+        {
+            throw new InvalidOperationException(authorization.ErrorMessage ?? "Git path is not authorized.");
+        }
+
+        return authorization.Path;
     }
 
     private (string WorkingDirectoryPath, string WorkingDirectoryRelative, IReadOnlyList<string> TargetArguments, IReadOnlyList<string> TargetPaths) BuildDotnetTarget(string? targetPath, string? workingDirectory)
@@ -1636,4 +1844,11 @@ internal sealed class WorkspaceCommandPlanBuilder
         IReadOnlyList<string> Options);
 
     private sealed record DotnetRunUrls(string? ListenUrl, string? ProbeUrl);
+
+    private sealed record GitPathTarget(
+        GitRepositoryCommandBuilder CommandBuilder,
+        string WorkingDirectoryPath,
+        string WorkingDirectoryRelative,
+        IReadOnlyList<GitPathSpec> PathSpecs,
+        IReadOnlyList<string> TargetPaths);
 }

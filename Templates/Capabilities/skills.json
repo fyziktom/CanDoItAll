@@ -200,6 +200,26 @@
     },
     {
       "kind": "skill",
+      "key": "git-standard-operations",
+      "displayName": "Git Standard Operations",
+      "description": "Workflow guidance for the shipped local git workspace tools.",
+      "stableId": "skill:git-standard-operations:v1",
+      "stableGuidKey": "capabilities/git-standard-operations",
+      "endpointOrPath": "inline://git-standard-operations",
+      "skillSource": "inline",
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Template-owned inline skill for local git tool usage.",
+      "inlineSkill": {
+        "name": "git-standard-operations",
+        "description": "Workflow guidance for the shipped local git workspace tools.",
+        "instructionsAssetKey": "skills/instructions/git-standard-operations.md"
+      }
+    },
+    {
+      "kind": "skill",
       "key": "mail-triage-inline-skill",
       "displayName": "Mail Triage Inline Skill",
       "description": "Inline skill instructions for summarizing inbox threads, classifying urgency, and drafting replies.",

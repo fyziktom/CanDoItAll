@@ -417,6 +417,8 @@ public static class AgentWorkspaceToolAccessMetadata
             case "workspace_diff_text":
             case "workspace_git_status":
             case "workspace_git_diff":
+            case "workspace_git_log":
+            case "workspace_git_show":
             case "workspace_inspect_spreadsheet":
             case "workspace_inspect_image":
                 permission = AgentWorkspaceToolPermissionKind.ReadFiles;
@@ -429,6 +431,11 @@ public static class AgentWorkspaceToolAccessMetadata
             case "workspace_copy_path":
             case "workspace_move_path":
             case "workspace_delete_path":
+            case "workspace_git_add":
+            case "workspace_git_unstage":
+            case "workspace_git_commit":
+            case "workspace_git_branch_create":
+            case "workspace_git_switch":
                 permission = AgentWorkspaceToolPermissionKind.ManagePaths;
                 return true;
             case "workspace_dotnet_restore":

@@ -30,6 +30,13 @@ public static class ToolContractCatalog
     public const string WorkspaceExecutionBoundary = "workspace_execution_boundary";
     public const string WorkspaceGitDiff = "workspace_git_diff";
     public const string WorkspaceGitStatus = "workspace_git_status";
+    public const string WorkspaceGitLog = "workspace_git_log";
+    public const string WorkspaceGitShow = "workspace_git_show";
+    public const string WorkspaceGitAdd = "workspace_git_add";
+    public const string WorkspaceGitUnstage = "workspace_git_unstage";
+    public const string WorkspaceGitCommit = "workspace_git_commit";
+    public const string WorkspaceGitBranchCreate = "workspace_git_branch_create";
+    public const string WorkspaceGitSwitch = "workspace_git_switch";
     public const string LocalMcpLaunch = "local_mcp_launch";
 
     public const string BrowserNavigate = "browser_navigate";
@@ -77,6 +84,13 @@ public static class ToolContractCatalog
         WorkspaceExecutionBoundary,
         WorkspaceGitDiff,
         WorkspaceGitStatus,
+        WorkspaceGitLog,
+        WorkspaceGitShow,
+        WorkspaceGitAdd,
+        WorkspaceGitUnstage,
+        WorkspaceGitCommit,
+        WorkspaceGitBranchCreate,
+        WorkspaceGitSwitch,
         LocalMcpLaunch
     ];
 

@@ -674,6 +674,34 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeProcessContext_mutating_product_step_keeps_git_mutation_tools_for_software_development_agent()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.MutateProductTarget,
+                ProcessOperationContractNames.RunValidation));
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("workspace_git_status", toolNames);
+        Assert.Contains("workspace_git_diff", toolNames);
+        Assert.Contains("workspace_git_log", toolNames);
+        Assert.Contains("workspace_git_show", toolNames);
+        Assert.Contains("workspace_git_add", toolNames);
+        Assert.Contains("workspace_git_unstage", toolNames);
+        Assert.Contains("workspace_git_commit", toolNames);
+        Assert.Contains("workspace_git_branch_create", toolNames);
+        Assert.Contains("workspace_git_switch", toolNames);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeProcessContext_two_step_process_reduces_tool_surface_against_agent_baseline()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -702,6 +730,10 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         Assert.True(validationToolNames.Count < baselineToolNames.Count);
         Assert.Empty(readOnlyToolNames);
         Assert.Contains("workspace_dotnet_test", validationToolNames);
+        Assert.Contains("workspace_git_status", validationToolNames);
+        Assert.Contains("workspace_git_diff", validationToolNames);
+        Assert.DoesNotContain("workspace_git_add", validationToolNames);
+        Assert.DoesNotContain("workspace_git_commit", validationToolNames);
         Assert.DoesNotContain("workspace_write_file", validationToolNames);
         Assert.DoesNotContain("workspace_dotnet_new", validationToolNames);
         Assert.Contains(ReadContextSources(readOnlyStepState), source =>

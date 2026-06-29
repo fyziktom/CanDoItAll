@@ -150,6 +150,29 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     }
 
     [Fact]
+    public void IsWorkspaceToolAllowed_classifies_git_read_and_mutation_tools()
+    {
+        var readOnly = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.ReadOnly);
+        var softwareDevelopment = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_status"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_diff"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_log"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_show"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_add"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_unstage"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_commit"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_branch_create"));
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(readOnly, "workspace_git_switch"));
+
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(softwareDevelopment, "workspace_git_add"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(softwareDevelopment, "workspace_git_unstage"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(softwareDevelopment, "workspace_git_commit"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(softwareDevelopment, "workspace_git_branch_create"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(softwareDevelopment, "workspace_git_switch"));
+    }
+
+    [Fact]
     public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_allowed_alias_for_write_enabled_agent()
     {
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(

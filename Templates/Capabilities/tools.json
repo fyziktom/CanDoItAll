@@ -268,6 +268,107 @@
     },
     {
       "kind": "tool",
+      "key": "workspace-git-log",
+      "displayName": "Workspace Git Log",
+      "description": "Runs a bounded git log recipe in the current workspace.",
+      "stableId": "tool:workspace-git-log:v1",
+      "stableGuidKey": "capabilities/workspace-git-log",
+      "endpointOrPath": "sandbox://workspace-git-log",
+      "runtimeToolName": "workspace_git_log",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-git-show",
+      "displayName": "Workspace Git Show",
+      "description": "Runs a bounded git show recipe for a validated revision in the current workspace.",
+      "stableId": "tool:workspace-git-show:v1",
+      "stableGuidKey": "capabilities/workspace-git-show",
+      "endpointOrPath": "sandbox://workspace-git-show",
+      "runtimeToolName": "workspace_git_show",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-git-add",
+      "displayName": "Workspace Git Add",
+      "description": "Stages allowed workspace paths through the bounded local git add recipe.",
+      "stableId": "tool:workspace-git-add:v1",
+      "stableGuidKey": "capabilities/workspace-git-add",
+      "endpointOrPath": "sandbox://workspace-git-add",
+      "runtimeToolName": "workspace_git_add",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-git-unstage",
+      "displayName": "Workspace Git Unstage",
+      "description": "Removes allowed workspace paths from the local git staging area.",
+      "stableId": "tool:workspace-git-unstage:v1",
+      "stableGuidKey": "capabilities/workspace-git-unstage",
+      "endpointOrPath": "sandbox://workspace-git-unstage",
+      "runtimeToolName": "workspace_git_unstage",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-git-commit",
+      "displayName": "Workspace Git Commit",
+      "description": "Creates a local git commit with a masked commit message argument.",
+      "stableId": "tool:workspace-git-commit:v1",
+      "stableGuidKey": "capabilities/workspace-git-commit",
+      "endpointOrPath": "sandbox://workspace-git-commit",
+      "runtimeToolName": "workspace_git_commit",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-git-branch-create",
+      "displayName": "Workspace Git Branch Create",
+      "description": "Creates a local git branch using a validated branch name.",
+      "stableId": "tool:workspace-git-branch-create:v1",
+      "stableGuidKey": "capabilities/workspace-git-branch-create",
+      "endpointOrPath": "sandbox://workspace-git-branch-create",
+      "runtimeToolName": "workspace_git_branch_create",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-git-switch",
+      "displayName": "Workspace Git Switch",
+      "description": "Switches to a local git branch using a validated branch name.",
+      "stableId": "tool:workspace-git-switch:v1",
+      "stableGuidKey": "capabilities/workspace-git-switch",
+      "endpointOrPath": "sandbox://workspace-git-switch",
+      "runtimeToolName": "workspace_git_switch",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
       "key": "workspace-dotnet-restore",
       "displayName": "Workspace Dotnet Restore",
       "description": "Runs a bounded dotnet restore recipe in the managed workspace or a grounded external-target alias.",

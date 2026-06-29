@@ -32,7 +32,7 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
     public Task<WorkspaceCommandExecutionResult> GitStatus(bool includeBranch = true, string? workingDirectory = null, int timeoutSeconds = 30)
         => ExecutePlanAsync(
             () => planBuilder.BuildGitStatus(includeBranch, workingDirectory, timeoutSeconds),
-            "workspace_git_status",
+            ToolContractCatalog.WorkspaceGitStatus,
             "git_status",
             "ReadOnly",
             approvalRequired: false);
@@ -40,10 +40,66 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
     public Task<WorkspaceCommandExecutionResult> GitDiff(string? path = null, bool nameOnly = false, string? workingDirectory = null, int timeoutSeconds = 30)
         => ExecutePlanAsync(
             () => planBuilder.BuildGitDiff(path, nameOnly, workingDirectory, timeoutSeconds),
-            "workspace_git_diff",
+            ToolContractCatalog.WorkspaceGitDiff,
             "git_diff",
             "ReadOnly",
             approvalRequired: false);
+
+    public Task<WorkspaceCommandExecutionResult> GitLog(int count = 10, string? workingDirectory = null, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildGitLog(count, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceGitLog,
+            "git_log",
+            "ReadOnly",
+            approvalRequired: false);
+
+    public Task<WorkspaceCommandExecutionResult> GitShow(string revision, string? workingDirectory = null, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildGitShow(revision, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceGitShow,
+            "git_show",
+            "ReadOnly",
+            approvalRequired: false);
+
+    public Task<WorkspaceCommandExecutionResult> GitAdd(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildGitAdd(paths, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceGitAdd,
+            "git_add",
+            "WorkspaceMutation:Git",
+            approvalRequired: true);
+
+    public Task<WorkspaceCommandExecutionResult> GitUnstage(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildGitUnstage(paths, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceGitUnstage,
+            "git_unstage",
+            "WorkspaceMutation:Git",
+            approvalRequired: true);
+
+    public Task<WorkspaceCommandExecutionResult> GitCommit(string message, string? workingDirectory = null, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildGitCommit(message, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceGitCommit,
+            "git_commit",
+            "WorkspaceMutation:Git",
+            approvalRequired: true);
+
+    public Task<WorkspaceCommandExecutionResult> GitBranchCreate(string branchName, string? workingDirectory = null, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildGitBranchCreate(branchName, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceGitBranchCreate,
+            "git_branch_create",
+            "WorkspaceMutation:Git",
+            approvalRequired: true);
+
+    public Task<WorkspaceCommandExecutionResult> GitSwitch(string branchName, string? workingDirectory = null, int timeoutSeconds = 30)
+        => ExecutePlanAsync(
+            () => planBuilder.BuildGitSwitch(branchName, workingDirectory, timeoutSeconds),
+            ToolContractCatalog.WorkspaceGitSwitch,
+            "git_switch",
+            "WorkspaceMutation:Git",
+            approvalRequired: true);
 
     public Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600)
         => ExecutePlanAsync(

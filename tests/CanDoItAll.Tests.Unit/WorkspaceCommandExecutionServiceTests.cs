@@ -7,6 +7,112 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkspaceCommandExecutionServiceTests
 {
     [Fact]
+    public async Task GitWorkspaceTools_build_standard_read_command_plans()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var status = await service.GitStatus(includeBranch: true);
+            Assert.True(status.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_git_status", processHost.LastRequest!.ToolName);
+            Assert.Equal(["status", "--short", "--branch"], processHost.LastRequest.Arguments);
+
+            var diff = await service.GitDiff(nameOnly: true);
+            Assert.True(diff.Succeeded);
+            Assert.Equal("workspace_git_diff", processHost.LastRequest.ToolName);
+            Assert.Equal(["diff", "--name-only"], processHost.LastRequest.Arguments);
+
+            var log = await service.GitLog(count: 5);
+            Assert.True(log.Succeeded);
+            Assert.Equal("workspace_git_log", processHost.LastRequest.ToolName);
+            Assert.Equal(["log", "-5", "--oneline"], processHost.LastRequest.Arguments);
+
+            var show = await service.GitShow("HEAD");
+            Assert.True(show.Succeeded);
+            Assert.Equal("workspace_git_show", processHost.LastRequest.ToolName);
+            Assert.Equal(["show", "--stat", "HEAD"], processHost.LastRequest.Arguments);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task GitWorkspaceTools_build_standard_mutation_command_plans()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "src"));
+        await File.WriteAllTextAsync(Path.Combine(workspaceRoot, "src", "Feature.cs"), "namespace Sample;");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var add = await service.GitAdd(["src/Feature.cs"]);
+            Assert.True(add.Succeeded);
+            Assert.True(add.Receipt.MutatesWorkspace);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_git_add", processHost.LastRequest!.ToolName);
+            Assert.Equal(["add", "--", "src/Feature.cs"], processHost.LastRequest.Arguments);
+
+            var unstage = await service.GitUnstage(["src/Feature.cs"]);
+            Assert.True(unstage.Succeeded);
+            Assert.Equal("workspace_git_unstage", processHost.LastRequest.ToolName);
+            Assert.Equal(["restore", "--staged", "--", "src/Feature.cs"], processHost.LastRequest.Arguments);
+
+            var commit = await service.GitCommit("Implement git wrapper tools");
+            Assert.True(commit.Succeeded);
+            Assert.Equal("workspace_git_commit", processHost.LastRequest.ToolName);
+            Assert.Equal(["commit", "-m", "Implement git wrapper tools"], processHost.LastRequest.Arguments);
+
+            var branch = await service.GitBranchCreate("codex/git-tools");
+            Assert.True(branch.Succeeded);
+            Assert.Equal("workspace_git_branch_create", processHost.LastRequest.ToolName);
+            Assert.Equal(["branch", "codex/git-tools"], processHost.LastRequest.Arguments);
+
+            var switchBranch = await service.GitSwitch("codex/git-tools");
+            Assert.True(switchBranch.Succeeded);
+            Assert.Equal("workspace_git_switch", processHost.LastRequest.ToolName);
+            Assert.Equal(["switch", "codex/git-tools"], processHost.LastRequest.Arguments);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task GitWorkspaceTools_reject_unsafe_inputs_before_process_execution()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var show = await service.GitShow("--stat");
+            var add = await service.GitAdd([".git/config"]);
+
+            Assert.False(show.Succeeded);
+            Assert.Contains("Git revision cannot start with '-'", show.Message, StringComparison.Ordinal);
+            Assert.False(add.Succeeded);
+            Assert.Contains("Git path is not an allowed repository-relative path", add.Message, StringComparison.Ordinal);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task PowerShellRunScript_registers_declared_output_paths_as_artifacts()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");

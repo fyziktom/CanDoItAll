@@ -140,6 +140,50 @@ public sealed partial class MafAgentRuntime
             return commandExecutionService.GitDiff(allowedPath, nameOnly, allowedWorkingDirectory, timeoutSeconds);
         }
 
+        public Task<WorkspaceCommandExecutionResult> GitWorkspaceLog(int count = 10, string? workingDirectory = null, int timeoutSeconds = 30)
+        {
+            var allowedWorkingDirectory = PrepareFileReadPath(workingDirectory);
+            return commandExecutionService.GitLog(count, allowedWorkingDirectory, timeoutSeconds);
+        }
+
+        public Task<WorkspaceCommandExecutionResult> GitWorkspaceShow(string revision, string? workingDirectory = null, int timeoutSeconds = 30)
+        {
+            var allowedWorkingDirectory = PrepareFileReadPath(workingDirectory);
+            return commandExecutionService.GitShow(revision, allowedWorkingDirectory, timeoutSeconds);
+        }
+
+        public Task<WorkspaceCommandExecutionResult> GitWorkspaceAdd(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
+        {
+            var allowedPaths = PrepareGitMutationPaths(paths);
+            var allowedWorkingDirectory = PrepareGitMutationWorkingDirectory(workingDirectory);
+            return commandExecutionService.GitAdd(allowedPaths, allowedWorkingDirectory, timeoutSeconds);
+        }
+
+        public Task<WorkspaceCommandExecutionResult> GitWorkspaceUnstage(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
+        {
+            var allowedPaths = PrepareGitMutationPaths(paths);
+            var allowedWorkingDirectory = PrepareGitMutationWorkingDirectory(workingDirectory);
+            return commandExecutionService.GitUnstage(allowedPaths, allowedWorkingDirectory, timeoutSeconds);
+        }
+
+        public Task<WorkspaceCommandExecutionResult> GitWorkspaceCommit(string message, string? workingDirectory = null, int timeoutSeconds = 30)
+        {
+            var allowedWorkingDirectory = PrepareGitMutationWorkingDirectory(workingDirectory);
+            return commandExecutionService.GitCommit(message, allowedWorkingDirectory, timeoutSeconds);
+        }
+
+        public Task<WorkspaceCommandExecutionResult> GitWorkspaceBranchCreate(string branchName, string? workingDirectory = null, int timeoutSeconds = 30)
+        {
+            var allowedWorkingDirectory = PrepareGitMutationWorkingDirectory(workingDirectory);
+            return commandExecutionService.GitBranchCreate(branchName, allowedWorkingDirectory, timeoutSeconds);
+        }
+
+        public Task<WorkspaceCommandExecutionResult> GitWorkspaceSwitch(string branchName, string? workingDirectory = null, int timeoutSeconds = 30)
+        {
+            var allowedWorkingDirectory = PrepareGitMutationWorkingDirectory(workingDirectory);
+            return commandExecutionService.GitSwitch(branchName, allowedWorkingDirectory, timeoutSeconds);
+        }
+
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600)
         {
             var allowedTargetPath = PrepareValidationCommandPath(targetPath);
@@ -409,6 +453,21 @@ public sealed partial class MafAgentRuntime
             return NormalizeAllowedExternalPathForWorkspaceTools(path);
         }
 
+        private string? PrepareGitMutationWorkingDirectory(string? workingDirectory)
+        {
+            EnsureGitMutationAllowed(workingDirectory);
+            return NormalizeAllowedExternalPathForWorkspaceTools(workingDirectory);
+        }
+
+        private string[] PrepareGitMutationPaths(string[]? paths)
+        {
+            EnsureGitMutationAllowed(null);
+            return (paths ?? [])
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => PrepareFileWritePath(path) ?? path)
+                .ToArray();
+        }
+
         private string? PrepareValidationCommandPath(string? path)
         {
             EnsureValidationCommandAllowed(path);
@@ -462,6 +521,16 @@ public sealed partial class MafAgentRuntime
             }
 
             EnsureExternalAliasAllowed(path, requireWrite: true);
+        }
+
+        private void EnsureGitMutationAllowed(string? path)
+        {
+            if (!accessSettings.CanManageWorkspacePaths)
+            {
+                throw new InvalidOperationException($"This agent is not allowed to mutate git state. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant workspace path management.");
+            }
+
+            EnsureFileWriteAllowed(path);
         }
 
         private void EnsureValidationCommandAllowed(string? path)

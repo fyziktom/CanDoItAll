@@ -2,136 +2,121 @@ namespace CanDoItAll.Git;
 
 public sealed class GitRepositoryClient
 {
-    private readonly GitRepositoryPath repositoryPath;
+    private readonly GitRepositoryCommandBuilder commandBuilder;
     private readonly IGitCommandExecutor executor;
 
     public GitRepositoryClient(
         GitRepositoryPath repositoryPath,
         IGitCommandExecutor executor)
     {
-        this.repositoryPath = repositoryPath;
+        commandBuilder = new GitRepositoryCommandBuilder(repositoryPath);
         this.executor = executor;
     }
 
     public Task<GitCommandResult> StatusAsync(CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync([new("status"), new("--short")], cancellationToken);
+        return StatusAsync(includeBranch: false, cancellationToken);
+    }
+
+    public Task<GitCommandResult> StatusAsync(
+        bool includeBranch,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(commandBuilder.Status(includeBranch), cancellationToken);
     }
 
     public Task<GitCommandResult> DiffAsync(
         GitPathSpec? path = null,
         CancellationToken cancellationToken = default)
     {
-        var arguments = new List<GitCommandArgument>
-        {
-            new("diff"),
-            new("--")
-        };
+        return DiffAsync(new GitDiffOptions(Path: path), cancellationToken);
+    }
 
-        if (path is not null)
-        {
-            arguments.Add(new GitCommandArgument(path.RepositoryRelativePath));
-        }
-
-        return ExecuteAsync(arguments, cancellationToken);
+    public Task<GitCommandResult> DiffAsync(
+        GitDiffOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return ExecuteAsync(commandBuilder.Diff(options), cancellationToken);
     }
 
     public Task<GitCommandResult> AddAsync(
         IReadOnlyList<GitPathSpec> paths,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(paths);
-        if (paths.Count == 0)
-        {
-            throw new ArgumentException("At least one path is required.", nameof(paths));
-        }
+        return ExecuteAsync(commandBuilder.Add(paths), cancellationToken);
+    }
 
-        var arguments = new List<GitCommandArgument>
-        {
-            new("add"),
-            new("--")
-        };
-        arguments.AddRange(paths.Select(path => new GitCommandArgument(path.RepositoryRelativePath)));
-        return ExecuteAsync(arguments, cancellationToken);
+    public Task<GitCommandResult> UnstageAsync(
+        IReadOnlyList<GitPathSpec> paths,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(commandBuilder.Unstage(paths), cancellationToken);
     }
 
     public Task<GitCommandResult> CommitAsync(
         string message,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            throw new ArgumentException("Commit message cannot be empty.", nameof(message));
-        }
-
-        return ExecuteAsync(
-            [
-                new("commit"),
-                new("-m"),
-                new(message, IsSensitive: true)
-            ],
-            cancellationToken);
+        return ExecuteAsync(commandBuilder.Commit(message), cancellationToken);
     }
 
     public Task<GitCommandResult> CreateBranchAsync(
         GitBranchName branchName,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync([new("branch"), new(branchName.Value)], cancellationToken);
+        return ExecuteAsync(commandBuilder.CreateBranch(branchName), cancellationToken);
     }
 
     public Task<GitCommandResult> SwitchAsync(
         GitBranchName branchName,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync([new("switch"), new(branchName.Value)], cancellationToken);
+        return ExecuteAsync(commandBuilder.Switch(branchName), cancellationToken);
     }
 
     public Task<GitCommandResult> MergeAsync(
         GitBranchName branchName,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync([new("merge"), new("--no-ff"), new(branchName.Value)], cancellationToken);
+        return ExecuteAsync(commandBuilder.Merge(branchName), cancellationToken);
     }
 
     public Task<GitCommandResult> AbortMergeAsync(CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync([new("merge"), new("--abort")], cancellationToken);
+        return ExecuteAsync(commandBuilder.AbortMerge(), cancellationToken);
     }
 
     public Task<GitCommandResult> ListConflictsAsync(CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync([new("diff"), new("--name-only"), new("--diff-filter=U")], cancellationToken);
+        return ExecuteAsync(commandBuilder.ListConflicts(), cancellationToken);
     }
 
     public Task<GitCommandResult> LogAsync(
         int count,
         CancellationToken cancellationToken = default)
     {
-        if (count <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(count), count, "Log count must be positive.");
-        }
-
-        return ExecuteAsync([new("log"), new($"-{count}"), new("--oneline")], cancellationToken);
+        return ExecuteAsync(commandBuilder.Log(count), cancellationToken);
     }
 
     public Task<GitCommandResult> ShowAsync(
         string revision,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(revision))
-        {
-            throw new ArgumentException("Revision cannot be empty.", nameof(revision));
-        }
+        return ShowAsync(new GitRevision(revision), cancellationToken);
+    }
 
-        return ExecuteAsync([new("show"), new("--stat"), new(revision.Trim())], cancellationToken);
+    public Task<GitCommandResult> ShowAsync(
+        GitRevision revision,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(commandBuilder.Show(revision), cancellationToken);
     }
 
     private Task<GitCommandResult> ExecuteAsync(
-        IReadOnlyList<GitCommandArgument> arguments,
+        GitCommandSpec spec,
         CancellationToken cancellationToken)
     {
-        return executor.ExecuteAsync(new GitCommandSpec(repositoryPath, arguments), cancellationToken);
+        return executor.ExecuteAsync(spec, cancellationToken);
     }
 }

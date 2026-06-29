@@ -30,6 +30,56 @@ public sealed class ProcessTemplateGitFoundationTests
         Assert.Equal("templates/component.json", result.Path?.RepositoryRelativePath);
     }
 
+    [Theory]
+    [InlineData(".git")]
+    [InlineData(".git/config")]
+    [InlineData(".Git/config")]
+    public void Git_path_authorization_rejects_git_metadata_paths(string candidatePath)
+    {
+        var root = new GitRepositoryPath(Path.Combine(Path.GetTempPath(), "repo-root"));
+
+        var result = GitPathAuthorizer.Authorize(root, candidatePath);
+
+        Assert.False(result.IsAuthorized);
+        Assert.Equal("GitPath.ForbiddenPath", result.ErrorCode);
+    }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-danger")]
+    public void Git_branch_name_rejects_option_like_values(string branchName)
+    {
+        var exception = Assert.Throws<ArgumentException>(() => new GitBranchName(branchName));
+
+        Assert.Equal("value", exception.ParamName);
+    }
+
+    [Theory]
+    [InlineData("--stat")]
+    [InlineData("-1")]
+    public void Git_revision_rejects_option_like_values(string revision)
+    {
+        var exception = Assert.Throws<ArgumentException>(() => new GitRevision(revision));
+
+        Assert.Equal("value", exception.ParamName);
+    }
+
+    [Fact]
+    public void Git_repository_command_builder_builds_standard_operation_specs()
+    {
+        var root = new GitRepositoryPath(Path.GetTempPath());
+        var builder = new GitRepositoryCommandBuilder(root);
+        var path = GitPathAuthorizer.Authorize(root, "src/Feature/File.cs").Path!;
+
+        var status = builder.Status(includeBranch: true);
+        var diff = builder.Diff(new GitDiffOptions(GitDiffOutputMode.NameOnly));
+        var unstage = builder.Unstage([path]);
+
+        Assert.Equal(["status", "--short", "--branch"], status.Arguments.Select(argument => argument.Value));
+        Assert.Equal(["diff", "--name-only"], diff.Arguments.Select(argument => argument.Value));
+        Assert.Equal(["restore", "--staged", "--", "src/Feature/File.cs"], unstage.Arguments.Select(argument => argument.Value));
+    }
+
     [Fact]
     public async Task Git_repository_client_uses_argument_specs_and_sanitizes_commit_messages()
     {
@@ -55,6 +105,18 @@ public sealed class ProcessTemplateGitFoundationTests
 
         var spec = Assert.Single(executor.Specs);
         Assert.Equal(["add", "--", "Templates/Processes/component.json"], spec.Arguments.Select(argument => argument.Value));
+    }
+
+    [Fact]
+    public async Task Git_repository_client_uses_typed_revision_for_show()
+    {
+        var executor = new RecordingGitCommandExecutor();
+        var client = new GitRepositoryClient(new GitRepositoryPath(Path.GetTempPath()), executor);
+
+        await client.ShowAsync(new GitRevision("HEAD"));
+
+        var spec = Assert.Single(executor.Specs);
+        Assert.Equal(["show", "--stat", "HEAD"], spec.Arguments.Select(argument => argument.Value));
     }
 
     [Fact]

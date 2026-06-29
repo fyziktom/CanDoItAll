@@ -3,6 +3,7 @@
     "concrete-deliverable-delivery-inline-skill",
     "frontend-skill",
     "repository-playbook",
+    "git-standard-operations",
     "workspace-list-files",
     "workspace-search",
     "workspace-read-file",
@@ -13,6 +14,8 @@
     "workspace-diff-text",
     "workspace-git-status",
     "workspace-git-diff",
+    "workspace-git-log",
+    "workspace-git-show",
     "workspace-source-rag",
     "research-briefing-context",
     "provider-native-web-search"
