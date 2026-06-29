@@ -1,0 +1,75 @@
+- generic [ref=e135] [box=0,0,1440,1000]:
+  - complementary [ref=e334] [box=16,8,76,984]:
+    - generic [ref=e335] [box=27,19,54,962]:
+      - generic [ref=e336] [box=27,19,54,40]:
+        - generic [ref=e337] [box=27,19,10,40]:
+          - generic [ref=e338] [box=12,19,40,40]: CD
+          - generic [ref=e339] [box=32,38,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e340] [box=45,21,36,36]:
+          - generic [ref=e341] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e342] [box=27,67,54,804]:
+        - button "Dashboard" [ref=e344] [box=27,71,44,44]:
+          - generic [ref=e346] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e348] [box=27,121,44,44]:
+          - generic [ref=e350] [box=39,133,20,20]: folder_open
+        - button "Collaboration" [ref=e352] [box=27,171,44,44]:
+          - generic [ref=e354] [box=39,183,20,20]: forum
+        - button "CRM / HR" [ref=e372] [box=27,221,44,44]:
+          - generic [ref=e374] [box=39,233,20,20]: groups
+        - button "Agents" [ref=e376] [box=27,271,44,44]:
+          - generic [ref=e378] [box=39,283,20,20]: smart_toy
+        - button "Workflows" [ref=e380] [box=27,321,44,44]:
+          - generic [ref=e382] [box=39,333,20,20]: account_tree
+        - button "Processes" [ref=e384] [box=27,371,44,44]:
+          - generic [ref=e386] [box=39,383,20,20]: account_tree
+        - button "Live Processes" [ref=e388] [box=27,421,44,44]:
+          - generic [ref=e390] [box=39,433,20,20]: monitor_heart
+        - button "Cognitive Memory" [ref=e392] [box=27,471,44,44]:
+          - generic [ref=e394] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e396] [box=27,521,44,44]:
+          - generic [ref=e398] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e400] [box=27,571,44,44]:
+          - generic [ref=e402] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e404] [box=27,621,44,44]:
+          - generic [ref=e406] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e408] [box=27,671,44,44]:
+          - generic [ref=e410] [box=39,683,20,20]: construction
+        - button "Test Lab" [ref=e412] [box=27,721,44,44]:
+          - generic [ref=e414] [box=39,733,20,20]: science
+        - button "More pages" [ref=e356] [box=32,771,44,44]:
+          - generic [ref=e358] [box=44,783,20,20]: expand_less
+      - generic [ref=e360] [box=27,887,54,94]:
+        - button "Settings" [ref=e362] [box=27,887,54,44]:
+          - generic [ref=e364] [box=44,899,20,20]: settings
+          - generic [ref=e365] [box=54,909,1,1]: Settings
+        - button "Switch Database" [ref=e367] [box=27,937,54,44]:
+          - generic [ref=e369] [box=44,949,20,20]: storage
+          - generic [ref=e370] [box=54,959,1,1]: Switch Database
+  - main [ref=e136] [box=100,8,1324,984]:
+    - generic [ref=e139] [box=100,8,1324,42]:
+      - tablist "Open workspace tabs" [ref=e143] [box=100,8,806,38]:
+        - tab "Dashboard" [selected] [ref=e145] [box=111,17,786,20]:
+          - generic [ref=e146] [box=111,19,61,16]: Dashboard
+          - generic [ref=e148] [box=178,17,20,20]: push_pin
+      - generic [ref=e150] [box=922,14,502,30]:
+        - generic [ref=e151] [box=922,16,222,26]:
+          - generic [ref=e152] [box=932,22,136,13]: Delivery Workspace
+          - generic [ref=e153] [box=1074,21,59,16]: Dashboard
+        - generic [ref=e154] [box=1152,14,117,30]: Interactive Server
+        - generic [ref=e155] [box=1276,14,86,30]: Live items 0
+        - generic [ref=e156] [box=1370,14,54,30]: Tabs 1
+    - generic [ref=e221] [box=121,78,1282,807]:
+      - generic [ref=e223] [box=121,78,1267,36]:
+        - generic [ref=e224] [box=121,82,606,28]:
+          - generic [ref=e225] [box=121,82,289,28]
+          - generic [ref=e228] [box=422,86,306,22]
+        - generic [ref=e238] [box=1308,78,80,36]:
+          - button "New project" [ref=e240] [box=1308,78,36,36]
+          - button "Open projects" [ref=e244] [box=1352,78,36,36]
+      - generic [ref=e247] [box=121,130,1267,755]:
+        - generic [ref=e248] [box=121,130,1267,456]:
+          - generic [ref=e249] [box=121,130,653,456]
+          - generic [ref=e300] [box=797,130,591,456]
+        - generic [ref=e310] [box=121,610,1267,275]:
+          - generic [ref=e311] [box=121,610,653,275]
+          - generic [ref=e321] [box=797,610,591,275]

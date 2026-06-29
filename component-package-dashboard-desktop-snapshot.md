@@ -1,0 +1,35 @@
+- generic [active] [ref=e1] [box=0,0,1036,703]:
+  - main [ref=e136] [box=12,8,1012,687]:
+    - group [ref=e137] [box=12,8,1012,46]:
+      - generic "Workspace navigation" [ref=e138] [cursor=pointer] [box=29,21,978,20]
+    - generic [ref=e139] [box=12,62,1012,87]:
+      - tablist "Open workspace tabs" [ref=e143] [box=16,62,1004,38]:
+        - tab "Dashboard" [selected] [ref=e145] [box=27,70,87,20]
+      - generic [ref=e150] [box=12,119,1012,30]:
+        - generic [ref=e151] [box=522,121,222,26]
+        - generic [ref=e154] [box=752,119,117,30]: Interactive Server
+        - generic [ref=e155] [box=876,119,86,30]: Live items 0
+        - generic [ref=e156] [box=970,119,54,30]: Tabs 1
+    - generic [ref=e159] [box=29,174,978,174]:
+      - paragraph [ref=e160] [box=50,206,937,16]: Database startup
+      - heading "Continue with the active database to load the workspace" [level=3] [ref=e161] [box=50,230,937,28]
+      - paragraph [ref=e162] [box=182,266,672,48]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+  - dialog "Database profiles" [ref=e165] [box=12,21,1012,661]:
+    - banner [ref=e166] [box=13,22,1010,109]:
+      - generic [ref=e167] [box=33,38,970,76]:
+        - generic [ref=e168] [box=33,38,678,76]
+        - button "Close" [ref=e174] [box=911,38,92,42]
+    - generic [ref=e178] [box=33,151,955,520]:
+      - generic [ref=e179] [box=33,151,614,241]:
+        - generic [ref=e180] [box=50,167,580,44]
+        - generic [ref=e188] [box=50,223,580,123]
+        - paragraph [ref=e205] [box=50,359,580,16]: "Selection source: Explicit startup override"
+      - generic [ref=e206] [box=33,407,955,74]: Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
+      - generic [ref=e207] [box=33,497,714,174]:
+        - paragraph [ref=e208] [box=54,530,672,16]: No saved profiles
+        - heading "Create the first PostgreSQL profile" [level=3] [ref=e209] [box=54,554,672,28]
+        - paragraph [ref=e210] [box=54,590,672,48]: Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab.
+    - contentinfo [ref=e211] [box=13,607,1010,74]:
+      - generic [ref=e212] [box=33,624,970,42]:
+        - generic [ref=e213] [box=33,624,275,42]
+        - button "Running now" [disabled] [ref=e219] [box=876,624,127,42]

@@ -1,0 +1,30 @@
+- main [ref=e136] [box=8,8,359,2423]:
+  - group [ref=e137] [box=8,8,359,46]:
+    - generic "Workspace navigation" [ref=e138] [cursor=pointer] [box=25,21,326,20]
+  - generic [ref=e139] [box=8,62,359,125]:
+    - tablist "Open workspace tabs" [ref=e143] [box=12,62,351,38]:
+      - tab "Dashboard" [selected] [ref=e145] [box=23,70,87,20]:
+        - generic [ref=e146] [box=23,72,61,16]: Dashboard
+        - generic [ref=e148] [box=90,70,20,20]: push_pin
+    - generic [ref=e150] [box=8,119,359,67]:
+      - generic [ref=e151] [box=20,121,222,26]:
+        - generic [ref=e152] [box=31,127,136,13]: Delivery Workspace
+        - generic [ref=e153] [box=173,126,59,16]: Dashboard
+      - generic [ref=e154] [box=251,119,117,30]: Interactive Server
+      - generic [ref=e155] [box=220,157,86,30]: Live items 0
+      - generic [ref=e156] [box=314,157,54,30]: Tabs 1
+  - generic [ref=e221] [box=25,211,326,2203]:
+    - generic [ref=e223] [box=25,211,310,102]:
+      - generic [ref=e224] [box=25,211,306,58]:
+        - generic [ref=e225] [box=25,211,306,28]
+        - generic [ref=e228] [box=25,247,306,22]
+      - generic [ref=e238] [box=25,277,80,36]:
+        - button "New project" [ref=e240] [box=25,277,36,36]
+        - button "Open projects" [ref=e244] [box=69,277,36,36]
+    - generic [ref=e247] [box=25,327,310,2087]:
+      - generic [ref=e248] [box=25,327,310,1206]:
+        - generic [ref=e249] [box=25,327,310,862]
+        - generic [ref=e300] [box=25,1213,310,319]
+      - generic [ref=e310] [box=25,1556,310,858]:
+        - generic [ref=e311] [box=25,1556,310,343]
+        - generic [ref=e321] [box=25,1924,310,490]
