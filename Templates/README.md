@@ -28,6 +28,8 @@ Every capability descriptor must have:
 
 Internal-agent skills are app templates. Store their instructions under `Templates/Capabilities/skills/instructions/` and reusable resources under `Templates/Capabilities/skills/resources/`. Do not point managed app capabilities at `~/.codex/skills`; those are Codex development skills for building CanDoItAll, not runtime template inputs for internal agents.
 
+Template skills must stay generic to the capability they describe. They may guide .NET delivery, Blazor validation, Playwright proof, code analytics, components, mail, documents, or spreadsheets, but they must not contain one-off process-run instructions, task-specific generated-app content, or Codex bundle workflow guidance. Processes compose these skills with step briefs, allowed operations, artifact expectations, and launch variables at runtime.
+
 For an inline skill, use `skillSource: "inline"` and an `inlineSkill` block with `name`, `description`, `instructionsAssetKey`, and optional `resources`. `instructionsAssetKey` and resource `contentAssetKey` values are repository-relative paths under `Templates/Capabilities`, for example `skills/instructions/dotnet-app-delivery.md` or `skills/resources/dotnet-command-examples.md`. The capability template loader validates these files before seeding.
 
 File skills are reserved for explicitly user-provided workspace skills. Do not use file skills for the default app-owned capability pack unless the skill root also lives under the app template tree and the ownership boundary is reviewed.
@@ -49,6 +51,8 @@ Add MCP servers to `mcps.json` with `kind: "mcp-server"`, a stable `mcpServerKey
 For local stdio MCP servers, declare `transport: "local-stdio"`, `command`, `arguments`, and non-empty `allowedTools`. Local commands are checked by command policy, and raw environment values are rejected; use secret bindings instead.
 
 For remote HTTP MCP servers, declare the endpoint and header bindings. Raw headers are rejected. Setup runs through `IMcpSetupTestService`, validates startup/list-tools/allowed-tools/cleanup, and emits typed `CapabilityDiagnostic` values. MCP tool selectors must include both server key and tool name.
+
+`Playwright Local MCP` is the default browser-proof MCP capability. Its descriptor lives in `mcps.json`, starts through `npx @playwright/mcp@latest`, and exposes only the configured allowed browser tools to agents after runtime capability filtering. Validate it through the capability setup UI/API before relying on it in a process or workflow.
 
 ## Access Policies
 

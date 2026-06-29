@@ -1,8 +1,12 @@
 # Agent Runtime Tool Surface
 
+Last source review: 2026-06-29.
+
 This page defines the boundary between internal MAF/runtime-provider tools and the HTTP control-plane APIs.
 
 The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered by MAF itself or by an `IAgentRuntimeToolProvider`, and classified by `AgentToolInvocationPolicy`.
+
+Capability templates in `Templates/Capabilities` seed catalog metadata and access policy inputs. They do not by themselves create executable direct tools; the runtime still needs a MAF built-in tool, a provider-native tool, a local/remote MCP descriptor, or an `IAgentRuntimeToolProvider` that returns a typed `AITool`.
 
 ## Process Tools
 
@@ -20,7 +24,8 @@ The current source tree does not contain `src/CanDoItAll.Modules.Processes/Agent
 
 Current process control paths are:
 
-- HTTP routes in `src/CanDoItAll.Web/Api/ProcessesApi.cs`: launch, dispatch, cancel, step rework, live, detail, and history.
+- HTTP routes in `src/CanDoItAll.Web/Api/ProcessesApi.cs`: contract discovery, launch preflight, launch, dispatch, cancel, step rework, live, detail, and history.
+- Governed process execution through `AgentFrameworkProcessExecutionAdapter`, which attaches workspace, skill, MCP, provider-native, and registered runtime-provider tools according to the process step operation contract.
 - Project-structure runtime tools in Workbench that can link or start process definitions from project nodes.
 - Blazor process workspace UI backed by process projection services.
 

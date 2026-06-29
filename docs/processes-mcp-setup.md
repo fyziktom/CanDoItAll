@@ -18,6 +18,7 @@ Use the web API and the repo-managed process API skill:
 Current source-grounded routes:
 
 - `GET /api/processes/contract`
+- `POST /api/processes/launch/check`
 - `POST /api/processes/launch`
 - `POST /api/processes/runs/{runId}/dispatch`
 - `POST /api/processes/runs/{runId}/cancel`
@@ -27,6 +28,8 @@ Current source-grounded routes:
 - `GET /api/processes/runs/{runId}/history`
 
 The broader definition/template/artifact/assignment/escalation/approval/analytics route families described by older docs are not active in `ProcessesApi.cs`. Treat them as roadmap candidates, not current API.
+
+Use `POST /api/processes/launch/check` for launch readiness checks that must not create a run. `POST /api/processes/launch` is the durable launch command.
 
 ## Migration Guidance
 

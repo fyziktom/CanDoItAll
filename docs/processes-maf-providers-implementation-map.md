@@ -1,6 +1,6 @@
 # Processes, MAF, And Providers Implementation Map
 
-Last source review: 2026-06-25.
+Last source review: 2026-06-29.
 
 This is the current source-grounded map for the process runtime, Microsoft Agent Framework integration, provider runtime, and the next hardening-refactor roadmap. Historical bundle files remain useful evidence, but this document is the current orientation point for active docs.
 
@@ -12,7 +12,29 @@ MAF is the provider/tool/runtime adapter layer. It owns Microsoft Agent Framewor
 
 Provider execution is no longer a thin legacy gateway. It has provider descriptors, concrete provider drivers, runtime handle pooling, per-lane dispatch gates, streaming gates, batching, image generation, and provider-failure classification.
 
-The current hard gap: active docs and some policy/test names still describe direct `processes_*` runtime tools and `ProcessAgentRuntimeToolProvider`, but that concrete provider is not present in the current source tree. Current process control is HTTP API plus project-structure bridge/tools.
+The current hardening note: some policy/test names still describe legacy or planned direct `processes_*` runtime tools and `ProcessAgentRuntimeToolProvider`, but that concrete provider is not present in the current source tree. Current process control is HTTP API plus governed process execution adapters and project-structure bridge tools.
+
+Internal-agent skills, tools, MCP servers, and capability access policies are template-backed through `Templates/Capabilities`. Codex development skills under `codex/skills` or `%USERPROFILE%\.codex\skills` are not runtime template inputs for internal agents.
+
+## Current Capability And Tool Model
+
+AgentFramework composes executable capability surfaces from these sources:
+
+- MAF built-in workspace and execution tools.
+- Template-seeded skills from `Templates/Capabilities/skills.json`, with inline instructions and resources under `Templates/Capabilities/skills/`.
+- Template-seeded MCP descriptors from `Templates/Capabilities/mcps.json`, such as Playwright Local MCP.
+- Template-seeded internal or external tool descriptors from `Templates/Capabilities/tools.json`.
+- Provider-native tools exposed by a provider driver.
+- Registered `IAgentRuntimeToolProvider` implementations owned by product modules.
+
+Capability templates seed catalog rows and policy metadata; they do not alone make a direct tool executable. A direct runtime tool must still be registered by MAF or returned by an `IAgentRuntimeToolProvider`, with policy classification and tests.
+
+The current registered first-party runtime tool providers are:
+
+- `ProjectStructureAgentRuntimeToolProvider` in Workbench.
+- `ImageGenerationAgentRuntimeToolProvider` in the AgentFramework module.
+
+There is no direct process runtime tool provider. Process steps execute through `AgentFrameworkProcessExecutionAdapter`, which builds a governed step prompt and lets MAF attach the permitted workspace, skill, MCP, provider-native, and registered runtime-provider tools according to assignment context and capability policies.
 
 ## Current Source Boundaries
 
@@ -92,13 +114,14 @@ The module does not currently register a concrete `ProcessAgentRuntimeToolProvid
 
 Current launch entry points:
 
+- `POST /api/processes/launch/check`
 - `POST /api/processes/launch`
 - Process workspace UI through `ProcessWorkspaceShell`
 - Project-structure process start through `ProjectStructureProcessNodeService`
 - Project-structure runtime tool `project_structure_node_process_start`
 - Subprocess runtime tool `project_structure_process_subprocess_launch`
 
-`ProcessLaunchApplicationService.LaunchAsync` performs the real launch:
+`ProcessLaunchApplicationService.PreviewAsync` backs `launch/check` and returns a launch plan/readiness result without persistence. `ProcessLaunchApplicationService.LaunchAsync` performs the real launch:
 
 1. Resolve the process definition from template pack data or explicit process definition id.
 2. Load the standard process driver catalog.
@@ -147,6 +170,7 @@ The current source-grounded `/api/processes` route list is:
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Lists current process API routes and boundary note. |
+| `POST` | `/api/processes/launch/check` | Compiles a launch plan and readiness findings without creating a run. |
 | `POST` | `/api/processes/launch` | Launches a process from definition key or definition id. |
 | `POST` | `/api/processes/runs/{runId}/dispatch` | Dispatches ready work for a run. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Requests run cancellation. |
@@ -156,6 +180,8 @@ The current source-grounded `/api/processes` route list is:
 | `GET` | `/api/processes/runs/{runId}/history` | Reads timeline history projection. |
 
 Definition authoring, template import/export, assignments, artifacts, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `ProcessesApi.cs`. If those are required again, they need a deliberate API contract update and tests rather than doc-only resurrection.
+
+Use `launch/check` for non-mutating preflight. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only prevents immediate dispatch queueing.
 
 ## Process UI Surface
 
@@ -269,13 +295,13 @@ Concrete provider drivers currently registered:
 
 | Gap | Why it matters | Current handling |
 | --- | --- | --- |
-| No concrete `ProcessAgentRuntimeToolProvider` | Docs, policy constants, and some tests still discuss `processes_*` direct runtime tools, but current source does not register that provider. | Use `/api/processes` and project-structure runtime tools. Decide whether to reintroduce or retire direct process tools. |
+| No concrete `ProcessAgentRuntimeToolProvider` | Policy constants and some tests still discuss `processes_*` direct runtime tools, but current source does not register that provider. | Use `/api/processes`, governed process execution adapters, and project-structure runtime tools. Decide whether to reintroduce or retire direct process tools. |
 | Process API route scope is narrower than old docs | Old docs mention definitions/templates/artifacts/assignments/escalations/approvals/analytics routes that are absent. | Current API docs must match `ProcessesApi.cs`; broader endpoints require implementation. |
 | In-memory singleton dispatch queue | Works for local process lifetime, but not durable cross-process dispatch coordination. | EF stores hold run state/events; queue durability and multi-node dispatch need hardening. |
 | Projection freshness depends on catch-up calls and worker behavior | API/UI correctness depends on projector catch-up after mutations and dispatch. | Existing services call catch-up, but release gates should assert freshness under failure/recovery. |
 | Provider runtime descriptor invalidation is implicit at operation entry | Descriptor upsert happens before gateway operation, but profile edits should have explicit invalidation proof. | Pool supports invalidation; doc/test coverage should prove edit-to-handle lifecycle. |
-| MAF direct product-tool boundary is uneven | Project-structure and image generation use runtime providers; process direct tools are missing. | Treat as architecture gap, not runtime failure. |
-| Historical docs remain broad and stale | Old class names can mislead agents into coding against removed surfaces. | Active docs should link here and mark historical proof as historical. |
+| MAF direct product-tool boundary is intentionally narrow | Project-structure and image generation use runtime providers; process control is API/adapter/bridge based. | Treat missing `processes_*` tools as a product decision point, not a MAF attachment failure. |
+| Historical proof docs remain broad and stale | Old class names can mislead agents into coding against removed surfaces. | Active docs should link here, `docs/api-control-plane.md`, and `docs/agent-runtime-tool-surface.md`, and mark historical proof as historical. |
 
 ## Hardening-Refactor Roadmap
 
@@ -285,7 +311,7 @@ Goal: stop docs and skills from drifting away from source.
 
 - Add source-backed doc assertions for current route lists in `ProcessesApi.cs`, `AgentsApi.cs`, `WorkflowsApi.cs`, and project-structure API.
 - Add a docs static test that fails when active docs name non-existent current source files.
-- Decide which docs are historical and add an explicit banner instead of silently mixing old and current architecture.
+- Decide which remaining proof docs are historical and add an explicit banner instead of silently mixing old and current architecture.
 - Keep `docs/api-control-plane.md`, `docs/agent-runtime-tool-surface.md`, and this map as the active public path.
 
 Validation:
@@ -300,7 +326,7 @@ git diff --check
 Goal: make the web API contract explicit and stable.
 
 - Generate or snapshot the `/api/processes/contract` route list from `ProcessesApi.cs`.
-- Add endpoint tests for launch, dispatch, cancel, rework, live, detail, and history.
+- Add endpoint tests for launch preflight, launch, dispatch, cancel, rework, live, detail, and history.
 - Decide whether definition/template/artifact/assignment/operator endpoints return to the HTTP API. If yes, implement them as typed route groups with explicit authorization and readback tests.
 - Update `candoitall-api-processes` skill after route changes, not before.
 

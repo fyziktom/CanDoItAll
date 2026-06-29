@@ -14,6 +14,8 @@ internal static class ProcessesApi
 
         processes.MapGet("/contract", () => Results.Ok(new ProcessApiContractResponse(
             [
+                "GET /api/processes/contract",
+                "POST /api/processes/launch/check",
                 "POST /api/processes/launch",
                 "POST /api/processes/runs/{runId}/dispatch",
                 "POST /api/processes/runs/{runId}/cancel",
@@ -25,35 +27,30 @@ internal static class ProcessesApi
             "Runtime/core/dispatch remain generic. Module adapters resolve CanDoItAll agent execution through process driver strategies.")))
             .WithName("GetProcessesApiContract");
 
+        processes.MapPost("/launch/check", async (
+                ProcessLaunchApiRequest request,
+                ProcessLaunchApplicationService launchService,
+                ILoggerFactory loggerFactory,
+                CancellationToken cancellationToken) =>
+            await ExecuteLaunchOperationAsync(
+                request,
+                launchService,
+                loggerFactory,
+                previewOnly: true,
+                cancellationToken))
+        .WithName("CheckProcessLaunch");
+
         processes.MapPost("/launch", async (
                 ProcessLaunchApiRequest request,
                 ProcessLaunchApplicationService launchService,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var result = await launchService
-                    .LaunchAsync(MapLaunchRequest(request), cancellationToken)
-                    .ConfigureAwait(false);
-                return Results.Ok(MapLaunchResult(result));
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                loggerFactory
-                    .CreateLogger("CanDoItAll.Web.Api.ProcessesApi")
-                    .LogError(
-                        exception,
-                        "Process launch failed. DefinitionKey={DefinitionKey} LiveRunProfileKey={LiveRunProfileKey} ProjectId={ProjectId} ProjectNodeId={ProjectNodeId} Execute={Execute} RunReadiness={RunReadiness}",
-                        request.DefinitionKey,
-                        request.LiveRunProfileKey,
-                        request.ProjectId,
-                        request.ProjectNodeId,
-                        request.Execute,
-                        request.RunReadiness);
-                return ApiEndpointResults.BadRequest(exception.Message, "process.launch_failed");
-            }
-        })
+            await ExecuteLaunchOperationAsync(
+                request,
+                launchService,
+                loggerFactory,
+                previewOnly: false,
+                cancellationToken))
         .WithName("LaunchProcess");
 
         processes.MapPost("/runs/{runId:guid}/dispatch", async (
@@ -225,6 +222,40 @@ internal static class ProcessesApi
         .WithName("GetProcessRunHistory");
 
         return group;
+    }
+
+    private static async Task<IResult> ExecuteLaunchOperationAsync(
+        ProcessLaunchApiRequest request,
+        ProcessLaunchApplicationService launchService,
+        ILoggerFactory loggerFactory,
+        bool previewOnly,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var launchRequest = MapLaunchRequest(request);
+            var result = previewOnly
+                ? await launchService.PreviewAsync(launchRequest with { Execute = false }, cancellationToken).ConfigureAwait(false)
+                : await launchService.LaunchAsync(launchRequest, cancellationToken).ConfigureAwait(false);
+
+            return Results.Ok(MapLaunchResult(result));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            loggerFactory
+                .CreateLogger("CanDoItAll.Web.Api.ProcessesApi")
+                .LogError(
+                    exception,
+                    "Process launch operation failed. Operation={Operation} DefinitionKey={DefinitionKey} LiveRunProfileKey={LiveRunProfileKey} ProjectId={ProjectId} ProjectNodeId={ProjectNodeId} Execute={Execute} RunReadiness={RunReadiness}",
+                    previewOnly ? "check" : "launch",
+                    request.DefinitionKey,
+                    request.LiveRunProfileKey,
+                    request.ProjectId,
+                    request.ProjectNodeId,
+                    request.Execute,
+                    request.RunReadiness);
+            return ApiEndpointResults.BadRequest(exception.Message, previewOnly ? "process.launch_check_failed" : "process.launch_failed");
+        }
     }
 
     private static ProcessLaunchRequest MapLaunchRequest(ProcessLaunchApiRequest request)

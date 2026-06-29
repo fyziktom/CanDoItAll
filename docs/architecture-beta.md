@@ -181,9 +181,10 @@ The selected database profile can change, but control-plane metadata and local w
 The current automation boundary is split deliberately:
 
 - HTTP API: `/api/projects`, `/api/project-structure`, `/api/processes`, `/api/agents`, `/api/workflows`, `/api/cognitive-memory`, `/api/plugins`, and `/api/access`.
-- Repo-managed skills: `candoitall-api-project-structure`, `candoitall-api-processes`, `candoitall-api-agents`, `candoitall-api-workflows`, and `candoitall-api-cognitive-memory`.
+- Codex/operator API skills: `candoitall-api-project-structure`, `candoitall-api-processes`, `candoitall-api-agents`, `candoitall-api-workflows`, and `candoitall-api-cognitive-memory`.
+- Internal app capability templates: skills, tools, MCP servers, and access policies under `Templates/Capabilities`.
 - Selected MCP sidecars: development and diagnostics helpers from the sibling `CanDoItAll.Mcp` repo.
-- Suppressed MCPs: old Processes and ProjectStructure MCP servers are not current. Use the HTTP APIs and repo skills instead.
+- Suppressed MCPs: old Processes and ProjectStructure MCP servers are not current. Use the HTTP APIs plus Codex/operator API skills for external operation, and use template-backed app capabilities for internal agents.
 
 ## Validation Guidance
 

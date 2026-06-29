@@ -435,6 +435,30 @@ public sealed class WorkflowApiIntegrationTests
     }
 
     [Fact]
+    public async Task Workflow_contract_lists_control_and_validation_routes()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        using var contract = JsonDocument.Parse(await host.Client.GetStringAsync("/api/workflows/contract"));
+        var endpoints = contract.RootElement
+            .GetProperty("endpoints")
+            .EnumerateArray()
+            .Select(endpoint => endpoint.GetString())
+            .ToArray();
+
+        Assert.Contains("GET /api/workflows/contract", endpoints);
+        Assert.Contains("POST /api/workflows/validate", endpoints);
+        Assert.Contains("POST /api/workflows/test-runs", endpoints);
+        Assert.Contains("GET /api/workflows/executor-catalog", endpoints);
+        Assert.Contains("POST /api/workflows/runs/{runId}/cancel", endpoints);
+        var boundarySummary = contract.RootElement.GetProperty("boundarySummary").GetString() ?? string.Empty;
+        Assert.Contains(
+            "agent skill, tool, and MCP capability setup",
+            boundarySummary,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Openapi_exposes_workflow_routes()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
@@ -442,6 +466,7 @@ public sealed class WorkflowApiIntegrationTests
         using var payload = JsonDocument.Parse(await host.Client.GetStringAsync("/openapi/v1.json"));
         var paths = payload.RootElement.GetProperty("paths");
 
+        Assert.True(paths.TryGetProperty("/api/workflows/contract", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/definitions", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/provider-options", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/components", out _));

@@ -28,6 +28,7 @@ CanDoItAll persists workflow definitions in its domain model and executes them t
 - The current host registers only the `InProcess` backend as runnable. `DurableTask` and `AzureFunctions` remain planned and unavailable until real durable implementations are registered.
 - Workflow save, settings save, test-run, and start paths validate runtime policy against the registered backend catalog. An unavailable durable backend fails explicitly; the runtime must not silently fall back to in-process execution.
 - New workflow settings, example seed settings, and template metadata default to in-process preview execution with durable production disabled.
+- `/api/workflows/contract` exposes the current workflow control route list and the boundary that agent skill, tool, and MCP setup belongs to the Agents API.
 - `/api/workflows/runtime-backends` and the workflow editor runtime selector expose planned durable backends as disabled with an availability reason.
 
 ## Checkpoint Trust Boundary

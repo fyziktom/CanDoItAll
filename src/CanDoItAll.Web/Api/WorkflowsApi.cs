@@ -13,6 +13,50 @@ internal static class WorkflowsApi
             .WithTags("Workflows")
             .DisableAntiforgery();
 
+        workflows.MapGet("/contract", () => Results.Ok(new WorkflowApiContractResponse(
+            [
+                "GET /api/workflows/contract",
+                "GET /api/workflows/settings",
+                "POST /api/workflows/settings",
+                "GET /api/workflows/runtime-backends",
+                "GET /api/workflows/executor-catalog",
+                "GET /api/workflows/definitions",
+                "POST /api/workflows/definitions",
+                "GET /api/workflows/definitions/{workflowId}",
+                "GET /api/workflows/definitions/{workflowId}/versions/{versionId}",
+                "GET /api/workflows/definitions/{workflowId}/export",
+                "POST /api/workflows/definitions/import",
+                "POST /api/workflows/definitions/{workflowId}/publish",
+                "POST /api/workflows/definitions/{workflowId}/suspend",
+                "POST /api/workflows/definitions/{workflowId}/archive",
+                "DELETE /api/workflows/definitions/{workflowId}",
+                "POST /api/workflows/definitions/{workflowId}/validate",
+                "POST /api/workflows/definitions/{workflowId}/runs/start",
+                "POST /api/workflows/validate",
+                "GET /api/workflows/provider-options",
+                "GET /api/workflows/components",
+                "POST /api/workflows/components",
+                "GET /api/workflows/components/{componentId}",
+                "DELETE /api/workflows/components/{componentId}",
+                "POST /api/workflows/test-runs",
+                "POST /api/workflows/runs/start",
+                "GET /api/workflows/runs",
+                "GET /api/workflows/runs/page",
+                "GET /api/workflows/runs/{runId}",
+                "GET /api/workflows/runs/{runId}/detail",
+                "POST /api/workflows/runs/{runId}/cancel",
+                "GET /api/workflows/runs/{runId}/events",
+                "GET /api/workflows/runs/{runId}/events/page",
+                "GET /api/workflows/runs/{runId}/artifacts",
+                "GET /api/workflows/runs/{runId}/artifacts/{artifactId}/content",
+                "GET /api/workflows/runs/{runId}/checkpoints",
+                "GET /api/workflows/runs/{runId}/pending-requests",
+                "POST /api/workflows/external-requests/{requestId}/response",
+                "GET /api/workflows/analytics"
+            ],
+            "Workflow control remains HTTP/API-driven. Executor catalogs expose tool side-effect contracts; agent skill, tool, and MCP capability setup is validated through /api/agents/capabilities.")))
+        .WithName("GetWorkflowsApiContract");
+
         workflows.MapGet("/settings", async (
                 IWorkflowSettingsService settingsService,
                 CancellationToken cancellationToken) =>
@@ -656,6 +700,10 @@ internal static class WorkflowsApi
 }
 
 internal sealed record WorkflowExternalRequestResponseApiRequest(string ResponseJson);
+
+internal sealed record WorkflowApiContractResponse(
+    IReadOnlyList<string> Endpoints,
+    string BoundarySummary);
 
 internal sealed class WorkflowRunListApiQuery
 {

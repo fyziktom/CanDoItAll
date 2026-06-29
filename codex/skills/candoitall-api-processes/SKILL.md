@@ -22,6 +22,7 @@ Processes are the durable orchestration layer, but the current HTTP surface is i
 The current source-backed process API exposes these commands:
 
 - `GET /api/processes/contract`
+- `POST /api/processes/launch/check`
 - `POST /api/processes/launch`
 - `POST /api/processes/runs/{runId}/dispatch`
 - `POST /api/processes/runs/{runId}/cancel`
@@ -32,7 +33,11 @@ The current source-backed process API exposes these commands:
 
 Use `GET /api/processes/contract` first when building clients or smoke tests. It returns the current endpoint list and boundary summary from the running host.
 
+Use `POST /api/processes/launch/check` for non-mutating launch preflight. It compiles the selected process template, resolves step executors, returns the launch plan and readiness findings, and does not create a process run.
+
 ## Launch
+
+`POST /api/processes/launch/check`
 
 `POST /api/processes/launch`
 
@@ -51,7 +56,7 @@ Use `GET /api/processes/contract` first when building clients or smoke tests. It
 Example:
 
 ```http
-POST /api/processes/launch
+POST /api/processes/launch/check
 Content-Type: application/json
 ```
 
@@ -69,7 +74,9 @@ Content-Type: application/json
 }
 ```
 
-`execute: false` prepares a launch plan without dispatching the run. Use `execute: true` only when the caller intends to enqueue runtime execution immediately.
+`launch/check` ignores `execute` and is the safe preflight path when the caller must not create a durable run.
+
+`POST /api/processes/launch` always creates and schedules a durable run when readiness allows launch. `execute: false` avoids enqueuing immediate dispatcher execution; it is not a dry run. Use `execute: true` only when the caller intends to enqueue runtime execution immediately.
 
 The launch response includes:
 
@@ -199,6 +206,7 @@ Do not call those routes until they are reintroduced with typed handlers, OpenAP
 
 ## Validation
 
+- Before launch, call `POST /api/processes/launch/check` when you need readiness diagnostics without creating a run.
 - After launch, read back `GET /api/processes/runs/{runId}` when `runId` is present.
 - After dispatch, cancel, or rework, read the run and history routes.
 - For node-bound process starts, validate both the project-structure operation result and the process run readback.
@@ -209,12 +217,13 @@ Do not call those routes until they are reintroduced with typed handlers, OpenAP
 
 <!-- api-docs-skills-parity:routes:start -->
 
-Processes API route appendix. Generated from Minimal API registrations; rerun `.codex/tmp/api-docs-skills-gap-map/update-skill-route-appendices.mjs` when routes change.
+Processes API route appendix. Generated from Minimal API registrations; refresh from `src/CanDoItAll.Web/Api/ProcessesApi.cs` when routes change.
 
 | Method | Route |
 | --- | --- |
 | `GET` | `/api/processes/contract` |
 | `POST` | `/api/processes/launch` |
+| `POST` | `/api/processes/launch/check` |
 | `GET` | `/api/processes/live` |
 | `GET` | `/api/processes/runs/{runId:guid}` |
 | `POST` | `/api/processes/runs/{runId:guid}/cancel` |

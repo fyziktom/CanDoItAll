@@ -18,8 +18,10 @@ Current launch and dispatch ownership is:
 - `ProjectStructureProcessNodeService`
 - `ProcessesApi`
 
-Current operator readback is:
+Current operator checks and readback are:
 
+- `GET /api/processes/contract`
+- `POST /api/processes/launch/check`
 - `GET /api/processes/live`
 - `GET /api/processes/runs/{runId}`
 - `GET /api/processes/runs/{runId}/history`
@@ -33,7 +35,7 @@ Current process mutation routes are:
 
 ## Open Hardening Items
 
-- Decide whether direct `processes_*` MAF runtime tools should be reintroduced or retired from policy/test/docs.
+- Decide whether direct `processes_*` MAF runtime tools should be reintroduced or retired from remaining policy/test references.
 - Harden dispatch queue durability and recovery beyond the current local in-memory queue plus EF runtime stores.
 - Add source-backed API route snapshots for `/api/processes`.
 - Add provider runtime handle invalidation proof after provider profile edits.

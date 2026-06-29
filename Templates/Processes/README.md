@@ -35,6 +35,13 @@ This pack is the current-architecture-aligned replacement for the original execu
 - Baseline scenarios are fixture data for governance and regression proof. Live-run profiles must declare `FreshRunPolicy`, require a fresh run, and keep `AllowsSeededTransitions` and `AllowsSeededArtifacts` false unless a future migration profile explicitly documents why replaying seeded state is safe.
 - Live-run profile guidance must require current-run evidence checks before validation and project-structure writeback. Seeded artifacts, seeded transition receipts, and baseline scenario outputs are not live delivery evidence.
 
+## Runtime capability model
+
+- Process templates do not embed Codex bundle workflows. They declare roles, steps, dependencies, allowed operations, target scopes, artifact expectations, and recovery options.
+- Internal-agent skills, tools, MCP servers, and access policies are seeded from `Templates/Capabilities` and attached to agents through the AgentFramework capability catalog.
+- Step briefs may require skills, workspace tools, project-structure bridge tools, Playwright MCP proof, workflows, or subprocesses, but the step operation contract must still grant the necessary access. For example, browser validation needs `CaptureRuntimeProof`, product edits need `MutateProductTarget`, project-structure writeback needs `ExecuteExternalAction`, and managed process artifact writes need `WriteManagedProcessArtifacts`.
+- Runtime dispatcher code must stay generic. Do not add process-template logic that only works for a specific generated app or a specific UI framework; model those requirements as launch variables, artifact expectations, validation steps, or capability requirements.
+
 ## Source-aligned authoring checklist
 
 - Keep templates generic. A software-delivery template may mention product targets, but business, incident, governance, training, and review processes should use the same typed contracts without pretending every step mutates code.

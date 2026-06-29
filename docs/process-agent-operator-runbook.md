@@ -36,6 +36,7 @@ The active process API routes are:
 | Method | Route | Operator use |
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Confirm current route list and boundary note. |
+| `POST` | `/api/processes/launch/check` | Preflight process template, executor resolution, and readiness without creating a run. |
 | `POST` | `/api/processes/launch` | Launch a process from definition key or definition id. |
 | `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work for a run. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
@@ -45,6 +46,8 @@ The active process API routes are:
 | `GET` | `/api/processes/runs/{runId}/history` | Read timeline history projection. |
 
 Older routes for assignments, artifacts, escalations, direct messages, approvals, manager directives, template import/export, and analytics are not currently mapped in `ProcessesApi.cs`. Do not operate them through undocumented endpoints.
+
+Use `launch/check` for dry-run validation. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only avoids immediate dispatch queueing.
 
 ## Project-Structure Launches
 
