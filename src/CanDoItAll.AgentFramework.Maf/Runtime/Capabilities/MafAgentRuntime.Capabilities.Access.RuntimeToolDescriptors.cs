@@ -144,7 +144,9 @@ public sealed partial class MafAgentRuntime
 
         if (metadata.OperationRequirementKind == ToolCapabilityOperationRequirementKind.WorkspaceFileMutation)
         {
-            return ToClassificationSet(CapabilityOperationClassification.Mutation, CapabilityOperationClassification.Write);
+            return IsWorkspaceTextWriteTool(runtimeToolName)
+                ? ToClassificationSet(CapabilityOperationClassification.Write)
+                : ToClassificationSet(CapabilityOperationClassification.Mutation, CapabilityOperationClassification.Write);
         }
 
         if (metadata.OperationRequirementKind == ToolCapabilityOperationRequirementKind.WorkspaceScript)
@@ -192,6 +194,10 @@ public sealed partial class MafAgentRuntime
 
     private static CapabilityKey CreateRuntimeToolCapabilityKey(RuntimeToolName runtimeToolName)
         => CapabilityKey.Create(runtimeToolName.Value.Replace('_', '-'));
+
+    private static bool IsWorkspaceTextWriteTool(string runtimeToolName)
+        => string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceWriteFile, StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceAppendFile, StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlySet<CapabilityOperationClassification> ToClassificationSet(
         params CapabilityOperationClassification[] classifications)

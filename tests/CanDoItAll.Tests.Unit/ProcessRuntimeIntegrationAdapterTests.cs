@@ -661,6 +661,97 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_appends_validated_outcome_to_existing_managed_artifact()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "dotnet",
+                "solution-architect",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("validate-first-build", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var responseText = $$"""
+            {
+              "status": "Completed",
+              "reason": "Restore, build, and tests completed successfully. Restore exit code 0; build exit code 0 with 0 warnings and 0 errors; tests exit code 0.",
+              "branchOutcomeKey": "",
+              "branchOutcomeTitle": "",
+              "evidenceRefs": [
+                "{{primaryRef}}"
+              ],
+              "nextActions": [],
+              "humanReadableSummaryMarkdown": "Restore, build, and test proof is green."
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(
+                agent.Id,
+                executionRunId,
+                responseText,
+                [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.")]));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var artifactPath = Path.Combine(
+                workspaceRoot,
+                "artifacts",
+                "process-runs",
+                assignment.RunId.Value.ToString("D"),
+                "steps",
+                "validate-first-build.md");
+            Directory.CreateDirectory(Path.GetDirectoryName(artifactPath)!);
+            await File.WriteAllTextAsync(
+                artifactPath,
+                """
+                # Validate first build
+
+                ## Results
+
+                """);
+
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.True(
+                result.Outcome == StrategyOutcome.Succeeded,
+                result.UserSafeSummary);
+            Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            var content = await File.ReadAllTextAsync(artifactPath);
+            Assert.Contains("# Validate first build", content, StringComparison.Ordinal);
+            Assert.Contains("Runtime Validated Structured Outcome", content, StringComparison.Ordinal);
+            Assert.Contains("Restore, build, and tests completed successfully", content, StringComparison.Ordinal);
+            Assert.Contains("Restore, build, and test proof is green.", content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_materializes_pure_producer_self_evidence_blocker()
     {
         var agent = NewAgent(

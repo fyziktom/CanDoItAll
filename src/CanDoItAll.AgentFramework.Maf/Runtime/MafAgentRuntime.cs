@@ -20,6 +20,7 @@ public sealed partial class MafAgentRuntime(
     private const string LocalHistoryConversationId = "_agent_local_chat_history";
     private const int MaxRepeatedToolInvocationCount = 3;
     private const int MaxFinalizerRepairPreviousAssistantTextCharacters = 12_000;
+    private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly TimeSpan FinalizerSessionSerializationTimeout = TimeSpan.FromSeconds(5);
@@ -1752,7 +1753,7 @@ public sealed partial class MafAgentRuntime(
         };
     }
 
-    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterProviderFailureAsync(
+    private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterProviderFailureAsync(
         ProviderProfile provider,
         string model,
         AgentStructuredOutputContract? structuredOutput,
@@ -1776,6 +1777,24 @@ public sealed partial class MafAgentRuntime(
 
         var finalizerInvocations = snapshotFinalizerInvocations();
         var finalizerValidation = new DefaultAgentFinalizerValidator().Validate(policy, finalizerInvocations);
+        if ((!finalizerValidation.Succeeded || finalizerValidation.Output is null) &&
+            finalizerInvocations.Count == 0)
+        {
+            return await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
+                provider,
+                model,
+                runtimeAgent,
+                runtimeSession,
+                runtimeSessionKey,
+                runtimeOptions,
+                policy,
+                exception,
+                updates,
+                progressCallback,
+                cancellationToken,
+                snapshotToolInvocationTraces).ConfigureAwait(false);
+        }
+
         if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
         {
             return null;
@@ -1824,6 +1843,285 @@ public sealed partial class MafAgentRuntime(
                 ProviderUsageSourcePhases.FinalizerRecovery,
                 "Provider streaming failed after a valid required finalizer was captured.")
         };
+    }
+
+    private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
+        ProviderProfile provider,
+        string model,
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        string? runtimeSessionKey,
+        AgentRuntimeExecutionOptions runtimeOptions,
+        AgentFinalizerPolicy policy,
+        Exception exception,
+        IReadOnlyList<AgentResponseUpdate> updates,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+    {
+        if (!IsProviderStreamingTimeout(exception) ||
+            policy.OutputType != typeof(ProcessStepOutcomeResult))
+        {
+            return null;
+        }
+
+        var contextIntent = runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty;
+        if (!TryBuildCurrentStepPrimaryManagedArtifactPath(contextIntent, out var primaryArtifactRef, out _))
+        {
+            return null;
+        }
+
+        string artifactMarkdown;
+        try
+        {
+            var resolver = new WorkspacePathResolutionService(workspaceRoot, workspaceScope);
+            var resolvedArtifact = resolver.ResolveFilePath(primaryArtifactRef, allowMissing: false);
+            artifactMarkdown = await File.ReadAllTextAsync(resolvedArtifact.FullPath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception readException) when (readException is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return null;
+        }
+
+        if (!TryCreateProcessStepOutcomeFromPrimaryArtifact(
+                contextIntent,
+                primaryArtifactRef,
+                artifactMarkdown,
+                out var outcome,
+                out _))
+        {
+            return null;
+        }
+
+        var argumentsJson = JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions);
+        var existingToolTraces = snapshotToolInvocationTraces();
+        var finalizerSequence = existingToolTraces.Count == 0
+            ? 1
+            : existingToolTraces.Max(trace => trace.Sequence) + 1;
+        var timestamp = DateTimeOffset.UtcNow;
+        var finalizerInvocation = new AgentFinalizerInvocation(
+            policy.ToolName,
+            argumentsJson,
+            finalizerSequence);
+        var toolInvocationTraces = existingToolTraces
+            .Append(new AgentToolInvocationTrace(
+                policy.ToolName,
+                ToolInvocationClassification.Read,
+                finalizerSequence,
+                timestamp,
+                timestamp,
+                Succeeded: true,
+                FailureMessage: string.Empty))
+            .ToArray();
+
+        var recoveredResponse = TryBuildRequiredFinalizerRuntimeResponse(
+            policy.OutputContract,
+            AgentFinalizerMode.Required,
+            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            serializedSessionStateJson: null,
+            [finalizerInvocation],
+            toolInvocationTraces,
+            CreateProviderUsageObservations(
+                provider,
+                model,
+                runtimeSession,
+                runtimeSessionKey,
+                updates,
+                ProviderUsageSourcePhases.FinalizerRecovery,
+                $"Provider streaming timed out after the current process step primary artifact '{primaryArtifactRef}' was written. The required finalizer was synthesized from that artifact."));
+        if (recoveredResponse is null)
+        {
+            return null;
+        }
+
+        await progressCallback(
+            ExecutionState.Persisting,
+            "Finalizer recovery",
+            $"Provider streaming timed out after current process step artifact '{primaryArtifactRef}' was written with status '{outcome.Status}'. Persisting a validated required-finalizer result synthesized from that artifact.").ConfigureAwait(false);
+
+        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+            runtimeAgent,
+            runtimeSession,
+            runtimeOptions,
+            [],
+            progressCallback,
+            cancellationToken).ConfigureAwait(false);
+        return recoveredResponse with
+        {
+            SerializedSessionStateJson = serializedSessionStateJson
+        };
+    }
+
+    internal static bool TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        AgentRuntimeContextIntent contextIntent,
+        string primaryArtifactRef,
+        string artifactMarkdown,
+        out ProcessStepOutcomeResult outcome,
+        out string failureMessage)
+    {
+        outcome = default!;
+        failureMessage = string.Empty;
+
+        if (!contextIntent.IsGovernedProcessStep ||
+            !string.Equals(contextIntent.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(contextIntent.ProcessRunId) ||
+            string.IsNullOrWhiteSpace(contextIntent.SourceId))
+        {
+            failureMessage = "The runtime context is not a governed process step.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(primaryArtifactRef))
+        {
+            failureMessage = "The primary artifact reference is required.";
+            return false;
+        }
+
+        if (!TryReadProcessArtifactStatus(artifactMarkdown, out var status))
+        {
+            failureMessage = "The primary process artifact does not contain a recognizable Status line.";
+            return false;
+        }
+
+        var reason =
+            $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact declares status '{status}'.";
+        outcome = new ProcessStepOutcomeResult
+        {
+            Status = status,
+            Reason = reason,
+            EvidenceRefs = [primaryArtifactRef],
+            NextActions = CreateRecoveredProcessArtifactNextActions(status, primaryArtifactRef),
+            HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(primaryArtifactRef, artifactMarkdown)
+        };
+        return true;
+    }
+
+    internal static bool TryBuildCurrentStepPrimaryManagedArtifactPath(
+        AgentRuntimeContextIntent contextIntent,
+        out string primaryArtifactRef,
+        out string failureMessage)
+    {
+        primaryArtifactRef = string.Empty;
+        failureMessage = string.Empty;
+
+        if (!Guid.TryParse(contextIntent.ProcessRunId, out var processRunId))
+        {
+            failureMessage = "The process run id is not a GUID.";
+            return false;
+        }
+
+        var sourceId = contextIntent.SourceId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(sourceId) ||
+            sourceId.Contains('/') ||
+            sourceId.Contains('\\') ||
+            sourceId.Contains("..", StringComparison.Ordinal))
+        {
+            failureMessage = "The process step source id is not a safe artifact file name.";
+            return false;
+        }
+
+        primaryArtifactRef = WorkspaceScopeDescriptor.NormalizeRelativePath(
+            $"artifacts/process-runs/{processRunId:D}/steps/{sourceId}.md");
+        return true;
+    }
+
+    private static bool TryReadProcessArtifactStatus(
+        string artifactMarkdown,
+        out ProcessStepOutcomeStatus status)
+    {
+        status = default;
+        foreach (var rawLine in artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
+            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var key = line[..separatorIndex].Trim(' ', '*', '`');
+            if (!string.Equals(key, "Status", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return TryMapProcessArtifactStatus(line[(separatorIndex + 1)..], out status);
+        }
+
+        return false;
+    }
+
+    private static bool TryMapProcessArtifactStatus(
+        string value,
+        out ProcessStepOutcomeStatus status)
+    {
+        status = default;
+        var normalized = new string(
+            value
+                .Trim()
+                .Trim('*', '`', '.', ';')
+                .Where(character => char.IsLetterOrDigit(character))
+                .Select(char.ToLowerInvariant)
+                .ToArray());
+        status = normalized switch
+        {
+            "completed" or "complete" or "succeeded" or "success" => ProcessStepOutcomeStatus.Completed,
+            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" => ProcessStepOutcomeStatus.Blocked,
+            "failed" or "failure" => ProcessStepOutcomeStatus.Failed,
+            "waitingapproval" or "pendingapproval" => ProcessStepOutcomeStatus.WaitingApproval,
+            "refused" or "rejected" => ProcessStepOutcomeStatus.Refused,
+            _ => default
+        };
+        return normalized is "completed" or "complete" or "succeeded" or "success" or
+            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" or
+            "failed" or "failure" or
+            "waitingapproval" or "pendingapproval" or
+            "refused" or "rejected";
+    }
+
+    private static IReadOnlyList<string> CreateRecoveredProcessArtifactNextActions(
+        ProcessStepOutcomeStatus status,
+        string primaryArtifactRef)
+    {
+        if (status == ProcessStepOutcomeStatus.Completed)
+        {
+            return [];
+        }
+
+        return
+        [
+            $"Review '{primaryArtifactRef}' and re-dispatch or rework the governed process step with the recorded evidence."
+        ];
+    }
+
+    private static string BuildRecoveredProcessArtifactSummary(
+        string primaryArtifactRef,
+        string artifactMarkdown)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(artifactMarkdown)
+            ? string.Empty
+            : artifactMarkdown.Trim();
+        if (trimmed.Length > MaxRecoveredProcessArtifactSummaryCharacters)
+        {
+            trimmed = trimmed[..MaxRecoveredProcessArtifactSummaryCharacters] + Environment.NewLine + "[... artifact summary truncated during provider-timeout recovery ...]";
+        }
+
+        return string.IsNullOrWhiteSpace(trimmed)
+            ? $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout."
+            : $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout.{Environment.NewLine}{Environment.NewLine}{trimmed}";
+    }
+
+    private static bool IsProviderStreamingTimeout(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is TimeoutException)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(

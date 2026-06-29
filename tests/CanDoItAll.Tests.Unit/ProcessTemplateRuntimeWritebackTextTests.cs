@@ -24,6 +24,21 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
     }
 
     [Fact]
+    public void Dotnet_solution_setup_handoff_accepts_canonical_first_build_artifact()
+    {
+        var root = FindRepositoryRoot();
+        var handoff = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "dotnet-solution-setup", "steps", "setup-handoff.md"));
+        var definitionJson = File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "dotnet-solution-setup", "definition.json"));
+
+        Assert.Contains("steps/validate-first-build.md", handoff, StringComparison.Ordinal);
+        Assert.Contains("successful `workspace_stat_path` or `workspace_read_file` receipt", handoff, StringComparison.Ordinal);
+        Assert.Contains("Do not require or probe a sibling path", handoff, StringComparison.Ordinal);
+        Assert.Contains("steps/setup-handoff.md", handoff, StringComparison.Ordinal);
+        Assert.Contains("steps/validate-first-build.md", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("non-canonical sibling evidence path", definitionJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Software_delivery_parent_steps_require_runtime_and_screenshot_compatibility()
     {
         var root = FindRepositoryRoot();

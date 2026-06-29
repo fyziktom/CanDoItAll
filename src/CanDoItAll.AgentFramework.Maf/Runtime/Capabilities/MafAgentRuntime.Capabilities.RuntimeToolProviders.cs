@@ -373,13 +373,7 @@ public sealed partial class MafAgentRuntime
                                                                ProcessOperationContractNames.LaunchRuntime,
                                                                ProcessOperationContractNames.CaptureRuntimeProof),
             ToolCapabilityOperationRequirementKind.Static => AllStaticRequirementsSatisfied(capability, contextIntent),
-            ToolCapabilityOperationRequirementKind.WorkspaceFileMutation => contextIntent.AllowsProductMutation &&
-                                                                            HasAnyOperation(
-                                                                                contextIntent,
-                                                                                ProcessOperationContractNames.MutateProductTarget,
-                                                                                ProcessOperationContractNames.WriteExternalArtifactDestination,
-                                                                                ProcessOperationContractNames.WriteManagedProcessArtifacts,
-                                                                                ProcessOperationContractNames.RecoverArtifactsOnly),
+            ToolCapabilityOperationRequirementKind.WorkspaceFileMutation => IsWorkspaceFileMutationAllowedForProcessIntent(capability, contextIntent),
             ToolCapabilityOperationRequirementKind.WorkspaceScript => HasAnyOperation(
                 contextIntent,
                 ProcessOperationContractNames.ExecuteExternalAction,
@@ -411,6 +405,24 @@ public sealed partial class MafAgentRuntime
         return capability.OperationRequirements.All(requirement =>
             requirement.AnyOf.Count == 0 ||
             requirement.AnyOf.Any(allowedOperations.Contains));
+    }
+
+    private static bool IsWorkspaceFileMutationAllowedForProcessIntent(
+        ToolCapabilityMetadata capability,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        if (contextIntent.AllowsProductMutation &&
+            HasAnyOperation(contextIntent, ProcessOperationContractNames.MutateProductTarget))
+        {
+            return true;
+        }
+
+        return IsWorkspaceTextWriteTool(capability.Name) &&
+               HasAnyOperation(
+                   contextIntent,
+                   ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                   ProcessOperationContractNames.WriteExternalArtifactDestination,
+                   ProcessOperationContractNames.RecoverArtifactsOnly);
     }
 
     private static bool HasAnyOperation(

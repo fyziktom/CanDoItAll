@@ -11,6 +11,73 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class AgentFinalizerPolicyTests
 {
     [Fact]
+    public void Process_step_artifact_recovery_creates_completed_outcome_from_primary_artifact()
+    {
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "code-change");
+
+        var pathResolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+            context,
+            out var primaryArtifactRef,
+            out var pathFailure);
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # Feature implementation change set
+
+            Status: completed
+
+            ## Changed files
+            - external-target/C/programovani/dotnet/output/src/App/App.csproj
+            """,
+            out var outcome,
+            out var recoveryFailure);
+
+        Assert.True(pathResolved, pathFailure);
+        Assert.True(recovered, recoveryFailure);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
+        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+        Assert.Empty(outcome.NextActions);
+        Assert.Contains("provider timeout", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Status: completed", outcome.HumanReadableSummaryMarkdown, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_rejects_in_progress_artifact()
+    {
+        var context = CreateGovernedProcessContext(Guid.NewGuid(), "code-change");
+
+        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/code-change.md",
+            """
+            # Feature implementation change set
+
+            Status: in progress
+            """,
+            out _,
+            out var failure);
+
+        Assert.False(recovered);
+        Assert.Contains("Status line", failure, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_rejects_unsafe_step_artifact_file_name()
+    {
+        var context = CreateGovernedProcessContext(Guid.NewGuid(), "../code-change");
+
+        var resolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+            context,
+            out _,
+            out var failure);
+
+        Assert.False(resolved);
+        Assert.Contains("safe artifact file name", failure, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Validate_fails_when_required_finalizer_is_missing()
     {
         var validator = new DefaultAgentFinalizerValidator();
@@ -907,6 +974,25 @@ public sealed class AgentFinalizerPolicyTests
             HealthStatus: string.Empty,
             LastCheckedAtUtc: null,
             SuggestedModels: []);
+    }
+
+    private static AgentRuntimeContextIntent CreateGovernedProcessContext(
+        Guid processRunId,
+        string sourceId)
+    {
+        return new AgentRuntimeContextIntent(
+            SourceKind: "process-step",
+            SourceId: sourceId,
+            ProcessRunId: processRunId.ToString("D"),
+            ProcessStepId: Guid.NewGuid().ToString("D"),
+            TargetScope: "ExternalProductTargetMutable",
+            IsGovernedProcessStep: true,
+            BrowserToolsAllowed: false,
+            ScaffoldToolOnly: false,
+            AllowsProductMutation: true,
+            WorkspaceToolProfile: null,
+            WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+            AllowedOperations: ["MutateProductTarget", "WriteManagedProcessArtifacts"]);
     }
 
     private sealed class UnknownOutputContract

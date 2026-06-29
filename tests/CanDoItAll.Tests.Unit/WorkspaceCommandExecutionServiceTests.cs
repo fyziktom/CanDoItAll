@@ -281,6 +281,45 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task DotnetRun_http_smoke_with_port_zero_probes_actual_listening_url_from_log()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/SampleWeb/SampleWeb.csproj",
+                url: "http://127.0.0.1:0/health",
+                startupTimeoutSeconds: 5,
+                timeoutSeconds: 20,
+                keepAlive: true);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+
+            var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
+            Assert.Contains("$listenUrl = 'http://127.0.0.1:0'", script, StringComparison.Ordinal);
+            Assert.Contains("$probeUrl = 'http://127.0.0.1:0/health'", script, StringComparison.Ordinal);
+            Assert.Contains("function Resolve-ListeningUrlFromLog", script, StringComparison.Ordinal);
+            Assert.Contains("Now listening on:", script, StringComparison.Ordinal);
+            Assert.Contains("Resolve-EffectiveProbeUrl $probeUrl $listenUrl $stdoutLog", script, StringComparison.Ordinal);
+            Assert.Contains("Waiting for dotnet run to report a concrete listening URL.", script, StringComparison.Ordinal);
+            Assert.Contains("$builder.Path = $requested.AbsolutePath", script, StringComparison.Ordinal);
+            Assert.Contains("if ([string]::IsNullOrWhiteSpace($probeUrl) -and -not (Test-DynamicPortUrl $listenUrl))", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("Timed out after $startupTimeoutSeconds second(s) waiting for $probeUrl", script[..script.IndexOf("function Resolve-EffectiveProbeUrl", StringComparison.Ordinal)], StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetRun_http_smoke_can_keep_process_alive_for_browser_follow_up()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");

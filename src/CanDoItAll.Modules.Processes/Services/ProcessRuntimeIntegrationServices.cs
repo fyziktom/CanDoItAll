@@ -1068,11 +1068,6 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
         var hasManagedEvidence = HasAllManagedArtifactEvidence(assignment, output.EvidenceRefs);
         var hasWriteReceipt = HasManagedArtifactWriteReceipt(assignment, toolReceipts);
-        if (hasManagedEvidence && hasWriteReceipt)
-        {
-            return ManagedOutcomeArtifactMaterialization.Unchanged(output, toolReceipts);
-        }
-
         var primaryRef = BuildManagedStepArtifactPath(assignment);
         IReadOnlyList<ToolExecutionReceiptRecord> effectiveReceipts = toolReceipts;
         if (!hasWriteReceipt)
@@ -1097,6 +1092,33 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
             effectiveReceipts = toolReceipts
                 .Append(CreateManagedOutcomeArtifactReceipt(executionRunId, primaryRef, writeResult.Message))
+                .ToArray();
+        }
+        else
+        {
+            var appendResult = workspaceFiles.AppendTextFile(
+                primaryRef,
+                BuildManagedOutcomeArtifactAppendixContent(assignment, output, primaryRef));
+            if (!appendResult.Succeeded)
+            {
+                return ManagedOutcomeArtifactMaterialization.Failed(
+                    output,
+                    toolReceipts,
+                    new ProcessCompletionIssue(
+                        "process.adapter.managed_artifact_outcome_append_failed",
+                        $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not append the validated outcome to primary managed artifact '{primaryRef}': {appendResult.Message}",
+                        $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-outcome-append-failed:{primaryRef}:{appendResult.Message}",
+                        assignment.ProducedArtifactSlotIds,
+                        ProcessDiagnosticRetrySafety.SafeToRetry,
+                        ProcessDiagnosticIdempotencyClassification.Idempotent));
+            }
+
+            effectiveReceipts = toolReceipts
+                .Append(CreateManagedOutcomeArtifactReceipt(
+                    executionRunId,
+                    primaryRef,
+                    appendResult.Message,
+                    "workspace_append_file"))
                 .ToArray();
         }
 
@@ -1287,6 +1309,63 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         return builder.ToString();
     }
 
+    private static string BuildManagedOutcomeArtifactAppendixContent(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        string primaryRef)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine();
+        builder.AppendLine("---");
+        builder.AppendLine();
+        builder.AppendLine("## Runtime Validated Structured Outcome");
+        builder.AppendLine();
+        builder.AppendLine("The process runtime appended this section after validating the structured process step outcome.");
+        builder.AppendLine();
+        builder.AppendLine($"- Run id: {assignment.RunId.Value:D}");
+        builder.AppendLine($"- Step id: {assignment.StepInstanceId.Value:D}");
+        builder.AppendLine($"- Step key: {assignment.StepKey}");
+        builder.AppendLine($"- Executor: {assignment.ExecutorDisplayName}");
+        builder.AppendLine($"- Status: {output.Status}");
+        builder.AppendLine($"- Primary managed ref: {primaryRef}");
+        builder.AppendLine($"- Appended at UTC: {DateTimeOffset.UtcNow:u}");
+        builder.AppendLine();
+        builder.AppendLine("### Reason");
+        builder.AppendLine();
+        builder.AppendLine(output.Reason.Trim());
+        builder.AppendLine();
+
+        if (!string.IsNullOrWhiteSpace(output.BranchOutcomeKey) ||
+            !string.IsNullOrWhiteSpace(output.BranchOutcomeTitle))
+        {
+            builder.AppendLine("### Branch Outcome");
+            builder.AppendLine();
+            if (!string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
+            {
+                builder.AppendLine($"- Key: {output.BranchOutcomeKey.Trim()}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(output.BranchOutcomeTitle))
+            {
+                builder.AppendLine($"- Title: {output.BranchOutcomeTitle.Trim()}");
+            }
+
+            builder.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(output.HumanReadableSummaryMarkdown))
+        {
+            builder.AppendLine("### Summary");
+            builder.AppendLine();
+            builder.AppendLine(output.HumanReadableSummaryMarkdown.Trim());
+            builder.AppendLine();
+        }
+
+        AppendList(builder, "Agent Evidence Refs", output.EvidenceRefs);
+        AppendList(builder, "Next Actions", output.NextActions);
+        return builder.ToString();
+    }
+
     private static void AppendList(
         StringBuilder builder,
         string heading,
@@ -1314,12 +1393,13 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
     private static ToolExecutionReceiptRecord CreateManagedOutcomeArtifactReceipt(
         Guid executionRunId,
         string primaryRef,
-        string writeMessage)
+        string writeMessage,
+        string toolName = "workspace_write_file")
         => new(
             Guid.NewGuid(),
             executionRunId,
             "process-runtime",
-            "workspace_write_file",
+            toolName,
             "ManagedProcessArtifact",
             "NotRequired",
             "Process runtime persisted validated structured step outcome.",

@@ -543,6 +543,41 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeProcessContext_managed_artifact_write_step_attaches_text_writes_without_product_mutation_tools()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts));
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("workspace_write_file", toolNames);
+        Assert.Contains("workspace_append_file", toolNames);
+        Assert.Contains("workspace_read_file", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_new", toolNames);
+        Assert.DoesNotContain("workspace_create_directory", toolNames);
+        Assert.DoesNotContain("workspace_delete_path", toolNames);
+        Assert.DoesNotContain("workspace_pwsh_run_script", toolNames);
+        Assert.DoesNotContain("workspace_dotnet_test", toolNames);
+
+        var effectiveCapabilities = ReadEffectiveCapabilities(state);
+        Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+            capability.RuntimeToolName?.Value == "workspace_write_file");
+        Assert.Contains(effectiveCapabilities.Diagnostics, diagnostic =>
+            diagnostic.Identity.Key.Value == "workspace-dotnet-new" &&
+            diagnostic.Category == AccessCapabilityDiagnosticCategory.AccessPolicy);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_skips_configured_tools_when_context_disables_them()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
