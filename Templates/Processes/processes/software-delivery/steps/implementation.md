@@ -4,6 +4,8 @@ Launch and observe the .NET implementation slice subprocess for the approved sco
 
 When the approved scope is a full app or broad deliverable, launch the child with a first reviewable MVP implementation slice derived from the feature-intake and architecture artifacts. The MVP slice must not be scaffold-only, app-shell-only, setup-only, naming-only, or build-only proof; it must include the smallest observable product-specific path a user can exercise. Keep later runtime command writeback, screenshot writeback, security, release, and follow-up feature slices in their own downstream steps instead of forcing all work into this parent step.
 
+When project structure lists visual target assets, carry their ImageAsset node ids and media paths into the child implementation request as source design inputs. The child implementation must use those assets to shape the visible UI, not only the text summary. Do not accept a generic scaffold or visually unrelated product surface when a target image is listed.
+
 This parent step must not launch the app, navigate a browser, wait on browser state, capture screenshots, or perform viewport/runtime proof directly. Those actions belong to child targeted validation and later runtime/screenshot writeback steps that include `LaunchRuntime` and `CaptureRuntimeProof`. If accepted child evidence is missing, record a blocker or repair escalation instead of attempting browser proof from this parent step.
 
 Accepted child evidence can come from `slice-handoff` or `slice-handoff-after-repair`. A `slice-repair-escalation` packet is blocker/no-go evidence, not accepted implementation proof.

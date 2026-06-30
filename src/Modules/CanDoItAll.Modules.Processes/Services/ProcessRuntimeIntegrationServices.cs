@@ -672,6 +672,12 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
             lines.Add("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts for .NET subprocesses; use them for app type, product root, scaffold layout, test project, and target framework decisions.");
         }
 
+        if (TryResolveLaunchVariable(request.LaunchVariables, "ProjectStructureContextSummary", out var contextSummary) &&
+            ContainsVisualTargetAssetSummary(contextSummary))
+        {
+            lines.Add("The project-structure context lists visual target assets. For visible UI implementation, preserve the listed ImageAsset node ids and media paths as source design inputs. For QA or repair validation, fetch or analyze the relevant image asset content and compare the delivered screenshot against that visual target before accepting visual alignment. Do not accept visual quality from generated app screenshots in isolation when a source target image is listed.");
+        }
+
         if (TryResolveLaunchVariable(request.LaunchVariables, "ProductRoot", out _) ||
             TryResolveLaunchVariable(request.LaunchVariables, "OutputRoot", out _) ||
             TryResolveLaunchVariable(request.LaunchVariables, "ExternalTargetRoot", out _))
@@ -699,6 +705,10 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
 
         return string.Join(Environment.NewLine, lines);
     }
+
+    private static bool ContainsVisualTargetAssetSummary(string contextSummary)
+        => contextSummary.Contains("Visual target assets:", StringComparison.OrdinalIgnoreCase) ||
+           contextSummary.Contains("Visual target rule:", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryResolveLaunchVariable(
         IReadOnlyDictionary<string, string> launchVariables,

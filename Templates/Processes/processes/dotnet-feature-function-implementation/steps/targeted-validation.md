@@ -2,6 +2,8 @@
 
 Run the agreed proof and record commands, exit codes, relevant output, and screenshots when UI changed.
 
+When visual target ImageAsset ids or media paths are part of the feature boundary, the focused proof must compare the delivered screenshot with the target image asset. Name both image paths or asset ids and select `feature-repair-required` when the delivered UI does not materially follow the target.
+
 This step owns the feature validation branch decision:
 
 - Select `feature-accepted` only when the focused proof satisfies the accepted behavior.

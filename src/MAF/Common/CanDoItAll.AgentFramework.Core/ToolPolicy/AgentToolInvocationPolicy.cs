@@ -140,6 +140,11 @@ public static class AgentToolPolicyBlockGuard
         ToolContractCatalog.WorkspaceReadFile,
         ToolContractCatalog.WorkspaceStatPath
     };
+    private static readonly HashSet<string> RecoverableGovernedBrowserProofTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolContractCatalog.BrowserSnapshot,
+        ToolContractCatalog.BrowserTakeScreenshot
+    };
 
     public static bool TryCreateRecoverableDeniedResult(
         string toolName,
@@ -156,17 +161,53 @@ public static class AgentToolPolicyBlockGuard
             return false;
         }
 
-        if (!string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(context.ProcessRunId) ||
-            string.IsNullOrWhiteSpace(context.ProcessStepId) ||
-            context.Classification != ToolInvocationClassification.Read ||
-            !RecoverableGovernedReadDiscoveryTools.Contains(toolName))
+        if (!IsRecoverableGovernedProcessStep(context))
         {
             return false;
         }
 
-        result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments. When the denial gives a replacement external-target alias, retry the same structured workspace tool with that alias before finalizing Blocked. If this was only an optional context probe for an evidence-producing step, continue from launch variables or project-structure context and create the managed artifact instead of blocking.";
-        return true;
+        if (context.Classification == ToolInvocationClassification.Read &&
+            RecoverableGovernedReadDiscoveryTools.Contains(toolName))
+        {
+            result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments. When the denial gives a replacement external-target alias, retry the same structured workspace tool with that alias before finalizing Blocked. If this was only an optional context probe for an evidence-producing step, continue from launch variables or project-structure context and create the managed artifact instead of blocking.";
+            return true;
+        }
+
+        if (IsRecoverableGovernedBrowserProofBoundsDenial(toolName, decision, context))
+        {
+            result = $"PolicyDenied: Tool '{toolName}' was denied by governed browser proof bounds. {decision.Reason} Retry once with the bounded browser-proof arguments named in this denial. Do not report the process blocked until that bounded retry fails.";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsRecoverableGovernedProcessStep(ToolInvocationPolicyContext context)
+    {
+        return string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
+               !string.IsNullOrWhiteSpace(context.ProcessRunId) &&
+               !string.IsNullOrWhiteSpace(context.ProcessStepId);
+    }
+
+    private static bool IsRecoverableGovernedBrowserProofBoundsDenial(
+        string toolName,
+        ToolInvocationPolicyDecision decision,
+        ToolInvocationPolicyContext context)
+    {
+        if (!RecoverableGovernedBrowserProofTools.Contains(toolName) ||
+            context.Classification is not (ToolInvocationClassification.Read or ToolInvocationClassification.Validation) ||
+            !ProcessStepAllowsOperation(context, ProcessOperationContractNames.CaptureRuntimeProof))
+        {
+            return false;
+        }
+
+        return decision.Reason.StartsWith("Governed process browser snapshots", StringComparison.Ordinal) ||
+               decision.Reason.StartsWith("Governed process browser screenshots", StringComparison.Ordinal);
+    }
+
+    private static bool ProcessStepAllowsOperation(ToolInvocationPolicyContext context, string operationName)
+    {
+        return context.ProcessStepAllowedOperations?.Contains(operationName, StringComparer.OrdinalIgnoreCase) == true;
     }
 
     public static void ThrowIfBlocked(
