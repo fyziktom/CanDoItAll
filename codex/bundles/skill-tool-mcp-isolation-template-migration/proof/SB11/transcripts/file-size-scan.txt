@@ -1,0 +1,5 @@
+# SB11 File Size Scan
+tests\CanDoItAll.Tests.Unit\CapabilityContractsTests.cs	435 lines
+tests\CanDoItAll.Tests.Integration\AgentCapabilitySetupApiIntegrationTests.cs	288 lines
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj	46 lines
+tests\CanDoItAll.Tests.Playwright\WorkflowShellSmokeTests.cs	101 lines

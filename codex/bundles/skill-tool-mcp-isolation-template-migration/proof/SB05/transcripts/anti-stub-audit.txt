@@ -1,0 +1,2 @@
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented|return \[\]|return null!|stub' capability implementation projects excluding intentional MCP fake fixture
+No disallowed stub markers found in non-fixture capability projects.

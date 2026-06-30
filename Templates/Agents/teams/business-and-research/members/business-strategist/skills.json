@@ -1,6 +1,5 @@
 {
   "capabilityKeys": [
-    "candoitall-bundle-workflow",
     "concrete-deliverable-delivery-inline-skill",
     "workspace-list-files",
     "workspace-search",

@@ -658,16 +658,16 @@ workflows:
         - { source: summarize-mouser-purchase, target: store-project-structure-summary }
         - { source: store-project-structure-summary, target: end }
 
-  - key: seamark-xray-device-folder-summary
-    name: SEAMARK Xray Device Folder Summary
-    description: Summarizes a folder of SEAMARK x-ray device PDFs and stores device/use-case findings under the workflow node.
+  - key: offer-document-folder-summary
+    name: Offer Document Folder Summary
+    description: Summarizes a folder of product or offer PDFs and stores product, use-case, commercial, and evidence findings under the workflow node.
     routingInstructions: |-
-      Treat the loaded SEAMARK folder as the primary source. Read every loaded PDF text and produce a real device summary, not a placeholder.
-      Identify device/model families including X-5600, X-6600, X-6600A, product-series context, inspection use cases, tube voltage/current or focal-size evidence, stage size, detector/resolution evidence, operating system, power, weight/dimensions, and source file names.
-      Include quotation evidence when loaded: ZM-x5600 at $35,000, ZM-x6600 at $41,500.00, ZM-x6600A at $66,000, plus the listed marketing price ranges.
-      Critical price mapping: X-5600 is ZM-x5600 and costs $35,000; X-6600 is ZM-x6600 and costs $41,500.00; X-6600A is ZM-x6600A and costs $66,000. Never swap X-6600 and X-6600A prices.
-      If the catalogue PDF has no extractable text, record it as a scanned/unreadable gap while still using the extractable specification and quotation PDFs.
-      Set risk to `medium` when some sources are scanned or pricing needs current validation; set route to `summary`.
+      Treat the loaded offer folder as the primary source. Read every loaded document text and produce a real product and offer summary, not a placeholder.
+      Identify product families, variants, use cases, technical requirements, capacity or performance limits, operating constraints, commercial terms, pricing evidence, and source file names.
+      Include quotation evidence when loaded: quoted item names, aliases, currencies, quantities, discounts, price ranges, delivery terms, payment terms, warranty/service caveats, and validity dates.
+      Map product aliases only when the source text explicitly supports the mapping; flag ambiguous aliases, missing prices, stale dates, and scanned or unreadable files as review gaps.
+      If a catalogue has no extractable text, record it as a scanned/unreadable gap while still using the extractable specification, datasheet, and quotation documents.
+      Set risk to `medium` when some sources are scanned, price evidence is stale, or commercial terms need current validation; set route to `summary`.
     graph:
       startNodeId: start
       nodes:
@@ -690,7 +690,7 @@ workflows:
               maxCharactersPerFile: 14000
               maxTotalCharacters: 90000
           instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
-        - { id: summarize-seamark-folder, kind: LlmCall, name: Summarize SEAMARK folder, x: 640, y: 220 }
+        - { id: summarize-offer-folder, kind: LlmCall, name: Summarize offer folder, x: 640, y: 220 }
         - id: store-project-structure-summary
           kind: Executor
           name: Store workflow summary
@@ -702,7 +702,7 @@ workflows:
               operation: CreateAsset
               projectIdJsonPath: "$.projectId"
               nodeIdJsonPath: "$.nodeId"
-              title: SEAMARK xray device summary
+              title: Offer document summary
               assetKind: md
               contentFromInput: true
               contentType: text/markdown
@@ -710,20 +710,19 @@ workflows:
         - { id: end, kind: End, name: End, x: 1260, y: 220 }
       edges:
         - { source: start, target: ingest-sources }
-        - { source: ingest-sources, target: summarize-seamark-folder }
-        - { source: summarize-seamark-folder, target: store-project-structure-summary }
+        - { source: ingest-sources, target: summarize-offer-folder }
+        - { source: summarize-offer-folder, target: store-project-structure-summary }
         - { source: store-project-structure-summary, target: end }
 
-  - key: seamark-price-list-extraction
-    name: SEAMARK Price List Extraction
-    description: Extracts price-list highlights and uncertainty from the SEAMARK quote and device specification PDFs.
+  - key: offer-price-list-extraction
+    name: Offer Price List Extraction
+    description: Extracts price-list highlights, commercial terms, and uncertainty from supplied quotation, offer, and product specification documents.
     routingInstructions: |-
-      Focus on `X Ray Machine Agent Quotation List2018.pdf` and related specification PDFs.
-      Extract price evidence into a table with model, EWX Shenzhen USD price, marketing price range, quantity, and specification evidence from the device PDFs.
-      Required price facts when present: ZM-x5600 $35,000 and USD39900-42000, ZM-x6600 $41,500.00 and USD46000-49000, ZM-x6600A $66,000 and USD73000-78000.
-      Critical price mapping: X-5600 is ZM-x5600 and costs $35,000; X-6600 is ZM-x6600 and costs $41,500.00; X-6600A is ZM-x6600A and costs $66,000. Never swap X-6600 and X-6600A prices.
-      Include quotation date, delivery/payment/service terms, warranty/travel-cost caveat, and validity period.
-      Set needsReview true because the quotation is from 2018 and current prices must be confirmed.
+      Focus on quotation, offer, price-list, datasheet, and specification documents present in the loaded source set.
+      Extract price evidence into a table with product or SKU, quoted price, currency, quantity, price range, commercial terms, and supporting source file evidence.
+      Include quotation date, delivery terms, payment terms, service or warranty caveats, validity period, and any current-validation gaps.
+      Never invent missing prices or alias mappings. If two documents conflict, keep both values, cite the source files, and set needsReview true.
+      Set needsReview true when prices are stale, currencies are mixed, quantities are unclear, or product aliases are ambiguous.
     graph:
       startNodeId: start
       nodes:
@@ -746,7 +745,7 @@ workflows:
               maxCharactersPerFile: 14000
               maxTotalCharacters: 90000
           instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
-        - { id: extract-seamark-pricing, kind: LlmCall, name: Extract SEAMARK pricing, x: 640, y: 220 }
+        - { id: extract-offer-pricing, kind: LlmCall, name: Extract offer pricing, x: 640, y: 220 }
         - id: store-project-structure-summary
           kind: Executor
           name: Store workflow summary
@@ -758,7 +757,7 @@ workflows:
               operation: CreateAsset
               projectIdJsonPath: "$.projectId"
               nodeIdJsonPath: "$.nodeId"
-              title: SEAMARK price list summary
+              title: Offer price list summary
               assetKind: md
               contentFromInput: true
               contentType: text/markdown
@@ -766,8 +765,8 @@ workflows:
         - { id: end, kind: End, name: End, x: 1260, y: 220 }
       edges:
         - { source: start, target: ingest-sources }
-        - { source: ingest-sources, target: extract-seamark-pricing }
-        - { source: extract-seamark-pricing, target: store-project-structure-summary }
+        - { source: ingest-sources, target: extract-offer-pricing }
+        - { source: extract-offer-pricing, target: store-project-structure-summary }
         - { source: store-project-structure-summary, target: end }
 
   - key: iotfactory-financial-plan-review

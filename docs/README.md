@@ -5,7 +5,8 @@ This folder contains current operational and architecture documentation for the 
 ## Architecture
 
 - [Architecture beta](architecture-beta.md): current source-grounded architecture with GitHub-safe Mermaid flowcharts, C4, class, and sequence diagrams.
-- [Architecture index](../architecture/README.md): ADRs, historical reviews, and current architecture entry points.
+- [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md): source-grounded process runtime, AgentFramework, provider, API, and tool-boundary map.
+- [Agent runtime tool surface](agent-runtime-tool-surface.md): current direct runtime tools versus HTTP-only API operations.
 
 ## Enterprise And Product Orientation
 
@@ -45,6 +46,7 @@ These docs are for readers who need to understand what CanDoItAll does before th
 - [Prompt library implementation prompts](prompt-library-implementation-prompts.md)
 - [Prompt library integration checklist](prompt-library-integration-checklist.md)
 - [Portable Codex skill pack](../codex/README.md)
+- [Template workspace](../Templates/README.md): app-owned internal-agent skill, tool, MCP, policy, process, and workflow template packs.
 
 ## Templates
 

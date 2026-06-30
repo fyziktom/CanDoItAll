@@ -24,7 +24,7 @@ flowchart LR
     Processes --> AgentModule
     AgentModule --> AgentFramework[AgentFramework Core and MAF runtime]
     AgentFramework --> Providers[AI providers]
-    AgentFramework --> Tools[Workspace, process, project-structure, skill, API, and MCP tools]
+    AgentFramework --> Tools[Workspace, project-structure, skill, API, MCP, and runtime-provider tools]
 
     Infrastructure --> AppDb[(Active AppDbContext profile)]
     Infrastructure --> ControlPlane[(Control-plane files)]
@@ -43,7 +43,8 @@ flowchart LR
 - [Enterprise operating system](docs/enterprise-operating-system.md): customer-facing explanation of CanDoItAll as an operating system for projects.
 - [API control plane](docs/api-control-plane.md): current process, project-structure, project, and agent HTTP APIs.
 - [UI support scope](docs/ui-support-scope.md): current large-desktop-only UI target for product screens and validation.
-- [Architecture index](architecture/README.md): current architecture docs, ADRs, and historical architecture reviews.
+- [Processes, MAF, and providers implementation map](docs/processes-maf-providers-implementation-map.md): current source-grounded process runtime, AgentFramework, provider, API, and tool-boundary map.
+- [Agent runtime tool surface](docs/agent-runtime-tool-surface.md): current direct runtime tools versus HTTP-only API operations.
 - [Shared components](docs/ui-shared-components/README.md): current shared component-library split and usage guidance.
 
 ## Requirements
@@ -74,7 +75,7 @@ Run the web app after the containers are healthy:
 From the repo root:
 
 ```powershell
-dotnet run --project src/CanDoItAll.Web
+dotnet run --project src/App/CanDoItAll.Web
 ```
 
 The Development and Visual Studio `http`/`https` launch profiles point at:
@@ -93,7 +94,7 @@ Runtime notes:
 
 - The app uses Blazor Interactive Server rendering.
 - The default Development and Visual Studio `http`/`https` profiles use PostgreSQL database `candoitall_development` with username/password `candoitall`/`candoitall`.
-- Qdrant is configured in `src/CanDoItAll.Web/appsettings.json` under `Rag:Qdrant` with gRPC port `6334`, collection `candoitall-knowledge`, vector size `384`, and create-collection-if-missing enabled.
+- Qdrant is configured in `src/App/CanDoItAll.Web/appsettings.json` under `Rag:Qdrant` with gRPC port `6334`, collection `candoitall-knowledge`, vector size `384`, and create-collection-if-missing enabled.
 - Development control-plane and workspace files are rooted under `%LOCALAPPDATA%\CanDoItAll`, not repo `.artifacts`, so a clean clone can start without carrying local artifact settings.
 - Development readiness is exposed at `/_dev/runtime`.
 - Development database selection is exposed at `/_dev/database/selection`.
@@ -125,7 +126,7 @@ Current active MCP sidecar source lives in `C:\repositories\CanDoItAll.Mcp`. Act
 From the repo root:
 
 ```powershell
-dotnet run --project tools/CanDoItAll.Manager
+dotnet run --project tools/App/CanDoItAll.Manager
 ```
 
 The manager listens on `http://127.0.0.1:6407` by default. It supervises `dotnet watch` for the web app, confirms readiness through `/_dev/runtime`, exposes loopback-only watch/capsule/tuning endpoints, and writes capsule artifacts under `.artifacts/codex-capsules`.
@@ -141,16 +142,16 @@ dotnet build CanDoItAll.slnx
 Run the main test layers individually:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj
-dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj
+dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj
 ```
 
 Install Chromium for Playwright once per machine after the Playwright test project is built:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\playwright.ps1 install chromium
+powershell -ExecutionPolicy Bypass -File tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\playwright.ps1 install chromium
 ```
 
 ## Project Families
@@ -170,9 +171,9 @@ Each tracked `.csproj` directory under `src`, `tests`, and `tools` has a local `
 
 ## Process Runtime And AI Agents
 
-Processes are durable runtime workflows. A process run materializes assignments, step runs, work briefs, artifact expectations, dependencies, decisions, journals, and outbox work. Ready steps are dispatched by `ProcessRunAutomationDispatchService`, which resolves the assigned CRM/HR AI party to a technical AgentFramework agent, builds a governed process-step prompt, executes the agent, audits required tool and evidence use, projects execution artifacts into managed storage, records process artifacts, and transitions the step.
+Processes are durable runtime workflows. A process run materializes assignments, step runs, work briefs, artifact expectations, dependencies, decisions, journals, and outbox work. Ready steps are dispatched by `ProcessRuntimeDispatchApplicationService` directly or through `ProcessRuntimeDispatchQueueWorker`. The dispatch path resolves the assigned CRM/HR AI party to a technical AgentFramework agent, builds a governed process-step prompt, executes the agent through `AgentFrameworkProcessExecutionAdapter`, audits required tool and evidence use, projects execution artifacts into managed storage, records process artifacts, and transitions the step.
 
-Agent execution is handled by `CanDoItAll.AgentFramework.*`. The Microsoft Agent Framework adapter attaches permitted workspace, skill, API, MCP, provider-native, and registered runtime-provider tools. First-party product tools are providerized at their owning module boundary: `CanDoItAll.Modules.Processes` contributes the 23 direct process tools through `ProcessAgentRuntimeToolProvider`, `CanDoItAll.Modules.Workbench` contributes project-structure tools through `ProjectStructureAgentRuntimeToolProvider`, and `CanDoItAll.Modules.AgentFramework` contributes image-generation tools through `ImageGenerationAgentRuntimeToolProvider`. When an owning module is not registered, MAF starts without that provider's tools instead of adding direct product-module dependencies. Execution state, chat sessions, tool receipts, artifacts, approvals, and metrics are persisted in the active profile's file sandbox workspace. Provider-owned receipts can include optional `RuntimeToolProviderKey` and `RuntimeToolProviderName` values for diagnostics.
+Agent execution is handled by `CanDoItAll.AgentFramework.*`. The Microsoft Agent Framework adapter attaches permitted workspace, skill, API, MCP, provider-native, and registered runtime-provider tools. Current first-party runtime tool providers are `ProjectStructureAgentRuntimeToolProvider` from Workbench and `ImageGenerationAgentRuntimeToolProvider` from the AgentFramework module. A concrete direct `ProcessAgentRuntimeToolProvider` is not present in this source tree; process control goes through `/api/processes`, governed process execution adapters, and project-structure bridge tools that link or start process definitions. When an owning module is not registered, MAF starts without that provider's tools instead of adding direct product-module dependencies. Execution state, chat sessions, tool receipts, artifacts, approvals, and metrics are persisted in the active profile's file sandbox workspace. Provider-owned receipts can include optional `RuntimeToolProviderKey` and `RuntimeToolProviderName` values for diagnostics.
 
 Real process-agent automation should run against a PostgreSQL AppDbContext profile when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled. SQLite remains useful for local module smoke work, but governed multi-agent process runs are expected to use PostgreSQL so step journals, tool receipts, artifacts, and recovery attempts do not bottleneck the run.
 
@@ -189,6 +190,8 @@ The managed OpenAI agent/provider seed defaults to `gpt-5.4-mini`. The runtime o
 ## Codex Skills, API, And MCP Setup
 
 The portable Codex skill pack is documented in [codex/README.md](codex/README.md).
+
+Do not confuse the portable Codex skill pack with the app's internal agent capability templates. Internal-agent skills, tools, MCP descriptors, and capability policy inputs are seeded from `Templates/Capabilities`; skill instructions live under `Templates/Capabilities/skills/instructions` and reusable skill resources under `Templates/Capabilities/skills/resources`. The `codex/skills` and `%USERPROFILE%\.codex\skills` folders are development aids for building or operating CanDoItAll, not runtime template storage for internal agents.
 
 Install or refresh the CanDoItAll custom skills and required public sibling skills with:
 
@@ -214,7 +217,7 @@ npm install
 npm run tailwind:build
 ```
 
-The main output is written to `src/CanDoItAll.Web/wwwroot/css/output.css` and is loaded after `_content/CanDoItAll.Components.BaseLib/css/output.css`.
+The main output is written to `src/App/CanDoItAll.Web/wwwroot/css/output.css` and is loaded after `_content/CanDoItAll.Components.BaseLib/css/output.css`.
 
 Component package refresh flow:
 

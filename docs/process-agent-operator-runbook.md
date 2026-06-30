@@ -10,12 +10,12 @@ For the source-level map, read [Processes, MAF, and providers implementation map
 
 The current process runtime is source-backed by:
 
-- `src/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs`
-- `src/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`
-- `src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs`
-- `src/CanDoItAll.Modules.Processes/Services/ProcessRuntimeDispatchQueueServices.cs`
-- `src/CanDoItAll.Modules.Processes/Services/ProcessRuntimeIntegrationServices.cs`
-- `src/CanDoItAll.Web/Api/ProcessesApi.cs`
+- `src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs`
+- `src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`
+- `src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs`
+- `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRuntimeDispatchQueueServices.cs`
+- `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRuntimeIntegrationServices.cs`
+- `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`
 
 Do not use older docs that reference `ProcessesService`, `ProcessRunAutomationDispatchService`, `ProcessOutboxService`, `ProcessRunRecoveryWorker`, or a process-driver runtime host as current runtime entry points. Those names are historical or roadmap context unless source files are reintroduced.
 
@@ -36,6 +36,7 @@ The active process API routes are:
 | Method | Route | Operator use |
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Confirm current route list and boundary note. |
+| `POST` | `/api/processes/launch/check` | Preflight process template, executor resolution, and readiness without creating a run. |
 | `POST` | `/api/processes/launch` | Launch a process from definition key or definition id. |
 | `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work for a run. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
@@ -45,6 +46,8 @@ The active process API routes are:
 | `GET` | `/api/processes/runs/{runId}/history` | Read timeline history projection. |
 
 Older routes for assignments, artifacts, escalations, direct messages, approvals, manager directives, template import/export, and analytics are not currently mapped in `ProcessesApi.cs`. Do not operate them through undocumented endpoints.
+
+Use `launch/check` for dry-run validation. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only avoids immediate dispatch queueing.
 
 ## Project-Structure Launches
 
@@ -81,8 +84,8 @@ Cancellation should include a concrete reason. After cancellation, read live/det
 After changing process operator behavior, prefer focused tests first:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests"
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests"
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests"
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests"
 ```
 For documentation-only changes, run:
 

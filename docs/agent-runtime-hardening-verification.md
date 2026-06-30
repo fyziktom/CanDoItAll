@@ -48,23 +48,23 @@ Focused unit test classes referenced by this verification record:
 - `AgentRuntimeHardeningStaticRegressionTests`
 - `AgentOutputContractTests`
 
-`dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore`
+`dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore`
 
 Result: passed. 221 tests passed, 0 failed, 0 skipped.
 
-`dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --configuration Release --no-restore --filter SettingsPageProvidersTests`
+`dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --configuration Release --no-restore --filter SettingsPageProvidersTests`
 
 Result: passed. 2 tests passed, including the Ollama provider UI/save path assertion that persisted structured output remains false.
 
-`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~WorkspaceProviderCapabilityIntegrationTests|FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests"`
+`dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~WorkspaceProviderCapabilityIntegrationTests|FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests"`
 
 Result: passed. 11 tests passed. This covered provider capability persistence and required-finalizer sequencing failure after a post-finalizer validation tool.
 
-`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-build --filter MafAgentRuntimeTests`
+`dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-build --filter MafAgentRuntimeTests`
 
 Result: passed. 20 tests passed. This covered finalizer tool attachment and JSON-only instruction wording.
 
-`dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore --filter ProviderFeatureMatrixTests`
+`dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore --filter ProviderFeatureMatrixTests`
 
 Result: passed. 6 tests passed, including the managed OpenAI Responses structured-output source guard.
 
@@ -88,9 +88,9 @@ Round 3 added typed recovery/rework state, proof fingerprinting, retry ledger/ba
 
 Additional focused commands run:
 
-- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~AgentFinalizerPolicyTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests|FullyQualifiedName~SecretScanningTests"`: passed, 68/68.
-- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AgentRecoveryModelsTests|FullyQualifiedName~MafAgentRuntimeTests"`: passed, 37/37.
-- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"`: passed, 132/132.
+- `dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~AgentFinalizerPolicyTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests|FullyQualifiedName~SecretScanningTests"`: passed, 68/68.
+- `dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AgentRecoveryModelsTests|FullyQualifiedName~MafAgentRuntimeTests"`: passed, 37/37.
+- `dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"`: passed, 132/132.
 - `git grep -l "sk-[A-Za-z0-9_-]\{20,\}" -- . ":!**/bin/**" ":!**/obj/**" ":!**/.git/**"`: no tracked-file matches.
 
 Full solution validation was rerun:

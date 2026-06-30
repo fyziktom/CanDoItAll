@@ -1,0 +1,2 @@
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented|return \[\]|return null!|stub' src/CanDoItAll.AgentFramework.Mcp.Abstractions src/CanDoItAll.AgentFramework.Mcp --glob '!bin/**' --glob '!obj/**' --glob '!Fakes/**'
+No disallowed stub markers found in non-fixture SB04 production files.

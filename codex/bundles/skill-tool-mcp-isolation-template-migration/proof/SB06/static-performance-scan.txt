@@ -1,0 +1,14 @@
+SB06 static/performance scan
+
+Checking lazy template parsing, runtime materialization shape, sync-over-async markers, and raw secret fields.
+Lazy loader/materialization markers:
+20:private readonly Lazy<CapabilityTemplatePack> pack;
+25:pack = new Lazy<CapabilityTemplatePack>(LoadCore, LazyThreadSafetyMode.ExecutionAndPublication);
+30:public static string FindPackRoot(string? packRoot = null) => ResolvePackRoot(packRoot);
+32:private CapabilityTemplatePack LoadCore()
+
+Sync-over-async marker scan:
+No sync-over-async markers found.
+
+Raw secret/env/header scan:
+No raw secret fields found in default capability templates or SB06 seed loader code.

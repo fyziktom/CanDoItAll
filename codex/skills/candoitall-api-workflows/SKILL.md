@@ -16,6 +16,7 @@ Use this skill when a task needs workflow authoring, lifecycle control, runtime 
 
 ## Definition And Authoring Work
 
+- Contract discovery: `GET /api/workflows/contract`.
 - Settings: `GET /api/workflows/settings`, `POST /api/workflows/settings`.
 - Runtime and executor catalogs: `GET /api/workflows/runtime-backends`, `GET /api/workflows/executor-catalog`.
 - Definitions: `GET /api/workflows/definitions`, `GET /api/workflows/definitions/{workflowId}`, `GET /api/workflows/definitions/{workflowId}/versions/{versionId}`, `POST /api/workflows/definitions`, `DELETE /api/workflows/definitions/{workflowId}`.
@@ -74,6 +75,7 @@ Use `sourceProcessRunId` and `sourceProcessAssignmentId` when the workflow run i
 ## Operating Rules
 
 - Validate a draft or saved definition before publishing or running it.
+- Read `GET /api/workflows/contract` before building clients or smoke tests; use OpenAPI for full schema detail.
 - Prefer explicit lifecycle endpoints over resubmitting a full definition only to change status.
 - Use import/export envelopes for portable workflow definition movement; do not hand-copy internal persistence records.
 - Use `expectedVersionId` for lifecycle commands when another agent or UI may be editing the same definition.
@@ -91,6 +93,7 @@ Use `sourceProcessRunId` and `sourceProcessAssignmentId` when the workflow run i
 ## Validation
 
 - Use Swagger/OpenAPI to confirm route shape before writing client code.
+- Use `GET /api/workflows/contract` as the quick route and boundary check for operator automation.
 - After saving, importing, or changing lifecycle status, read back the specific definition id and version id.
 - After starting, cancelling, or responding to a run, read back the run detail plus events.
 - For artifacts, verify both the artifact metadata and the referenced storage path when content matters.
@@ -99,7 +102,7 @@ Use `sourceProcessRunId` and `sourceProcessAssignmentId` when the workflow run i
 
 <!-- api-docs-skills-parity:routes:start -->
 
-Workflows API route appendix. Generated from Minimal API registrations; rerun `.codex/tmp/api-docs-skills-gap-map/update-skill-route-appendices.mjs` when routes change.
+Workflows API route appendix. Generated from Minimal API registrations; refresh from `src/App/CanDoItAll.Web/Api/WorkflowsApi.cs` when routes change.
 
 | Method | Route |
 | --- | --- |
@@ -108,6 +111,7 @@ Workflows API route appendix. Generated from Minimal API registrations; rerun `.
 | `POST` | `/api/workflows/components` |
 | `DELETE` | `/api/workflows/components/{componentId:guid}` |
 | `GET` | `/api/workflows/components/{componentId:guid}` |
+| `GET` | `/api/workflows/contract` |
 | `GET` | `/api/workflows/definitions` |
 | `POST` | `/api/workflows/definitions` |
 | `DELETE` | `/api/workflows/definitions/{workflowId:guid}` |

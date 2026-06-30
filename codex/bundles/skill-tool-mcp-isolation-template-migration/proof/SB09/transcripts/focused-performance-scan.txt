@@ -1,0 +1,35 @@
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:478:            logging => logging.JsonSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web));
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1195:            var inspectedContent = File.ReadAllText(fullPath);
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1256:                inspectedChildScripts.Add(File.ReadAllText(childFullPath));
+src\CanDoItAll.AgentFramework.Core\OutputContracts\AgentOutputValidation.cs:112:        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs:161:            Capabilities = catalog.Capabilities.Where(item => item.Id != capabilityId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Memory.cs:53:            Memory = catalog.Memory.Where(item => item.Id != memoryId).ToList()
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:338:            Agents = document.Agents.Where(item => item.Id != agentId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:339:            Memory = document.Memory.Where(item => item.AgentId != agentId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:340:            ChatSessions = document.ChatSessions.Where(item => item.AgentId != agentId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:341:            ExecutionRuns = document.ExecutionRuns.Where(item => !runIdsToDelete.Contains(item.Id)).ToList(),
+src\CanDoItAll.AgentFramework.Core\Providers\WorkspaceBackedProviderProfileRegistry.cs:78:            Providers = catalog.Providers.Where(item => item.Id != providerId).ToList(),
+src\CanDoItAll.AgentFramework.Tools\External\ExternalProcessToolInvoker.cs:205:        process.StartInfo = new ProcessStartInfo
+src\CanDoItAll.AgentFramework.Core\Workspace\Guards\WorkspaceTextContentGuard.cs:83:            var content = File.ReadAllText(fullPath);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs:170:                    text = await File.ReadAllTextAsync(file, cancellationToken);
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathAliasSession.cs:174:            StartInfo = new ProcessStartInfo
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathAliasSession.cs:198:        var stdout = process.StandardOutput.ReadToEnd().Trim();
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathAliasSession.cs:199:        var stderr = process.StandardError.ReadToEnd().Trim();
+src\CanDoItAll.AgentFramework.Core\Workspace\Tools\WorkspaceArtifactToolService.cs:325:        var content = File.ReadAllText(resolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Process\LocalWorkspaceProcessHost.cs:33:            var startInfo = new ProcessStartInfo
+src\CanDoItAll.AgentFramework.Skills\Loading\FileSkillLoader.cs:52:            content = await File.ReadAllTextAsync(skillFilePath, cancellationToken);
+src\CanDoItAll.AgentFramework.Core\Workspace\Artifacts\WorkspaceArtifactToolService.cs:50:        var markdown = await File.ReadAllTextAsync(outputFullPath).ConfigureAwait(false);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:82:                await File.ReadAllTextAsync(artifactContentPath, cancellationToken));
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:92:                await File.ReadAllTextAsync(workspaceFilePath, cancellationToken));
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorObservability.cs:218:            var redactedJson = node?.ToJsonString(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? "{}";
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\GovernedScriptSideEffectManifest.cs:97:        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:593:        var scriptText = File.ReadAllText(scriptResolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ContinuationGuards.cs:104:                executionState.ExecutionApprovals.Where(item => item.ExecutionRunId == currentRun.Id).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:185:            executionState.ExecutionLog.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:186:            executionState.Metrics.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:187:            executionState.ProviderUsageObservations.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:188:            executionState.ExecutionApprovals.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:189:            executionState.ExecutionArtifacts.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:190:            executionState.ExecutionWorkflowCheckpoints.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:191:            executionState.ToolExecutionReceipts.Where(item => item.ExecutionRunId == executionRunId).ToList());
+src\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:171:        var runApprovals = approvals.Where(item => item.ExecutionRunId == run.Id).ToList();

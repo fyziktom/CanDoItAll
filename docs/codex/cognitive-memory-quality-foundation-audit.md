@@ -3,11 +3,11 @@
 Date: 2026-05-19
 
 Scope:
-- `src/CanDoItAll.Modules.CognitiveMemory/Foundation`
-- `src/CanDoItAll.Modules.CognitiveMemory/Consolidation`
-- `src/CanDoItAll.Modules.CognitiveMemory/Recall`
-- `src/CanDoItAll.Modules.CognitiveMemory/ReviewUi`
-- `src/CanDoItAll.Modules.CognitiveMemory/Advanced`
+- `src/Modules/CanDoItAll.Modules.CognitiveMemory/Foundation`
+- `src/Modules/CanDoItAll.Modules.CognitiveMemory/Consolidation`
+- `src/Modules/CanDoItAll.Modules.CognitiveMemory/Recall`
+- `src/Modules/CanDoItAll.Modules.CognitiveMemory/ReviewUi`
+- `src/Modules/CanDoItAll.Modules.CognitiveMemory/Advanced`
 
 Findings:
 - Incremental consolidation was source-item driven and did not have a separate substrate for multi-key memory clusters. Candidate creation operated on one source item at a time, which made cross-source duplicate, contradiction, temporal, and access/risk grouping unobservable before synthesis.

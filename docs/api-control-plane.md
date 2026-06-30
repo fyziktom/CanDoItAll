@@ -7,7 +7,7 @@ The current project, process, workflow, cognitive-memory, and agent automation p
 Start the web host:
 
 ```powershell
-dotnet run --project src/CanDoItAll.Web
+dotnet run --project src/App/CanDoItAll.Web
 ```
 
 Development readiness is exposed at `/_dev/runtime`. API status is exposed at `GET /api/access/status` when the API is enabled.
@@ -33,7 +33,7 @@ API settings live under the `Api` configuration section:
 
 ## Route Families
 
-All routes below are source-grounded in `src/CanDoItAll.Web/Api` and `src/CanDoItAll.Web/ProjectStructureAgentApi.cs`.
+All routes below are source-grounded in `src/App/CanDoItAll.Web/Api` and `src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`.
 
 ### Projects
 
@@ -61,6 +61,7 @@ Acquire a lease before mutating shared project structure. Prefer focused reads a
 Use `/api/processes` for the current process runtime control plane. The source-grounded route set is intentionally smaller than older process-rewrite docs:
 
 - `GET /api/processes/contract`
+- `POST /api/processes/launch/check`
 - `POST /api/processes/launch`
 - `POST /api/processes/runs/{runId}/dispatch`
 - `POST /api/processes/runs/{runId}/cancel`
@@ -69,7 +70,9 @@ Use `/api/processes` for the current process runtime control plane. The source-g
 - `GET /api/processes/runs/{runId}`
 - `GET /api/processes/runs/{runId}/history`
 
-Definition authoring, template import/export, artifact/assignment detail, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `src/CanDoItAll.Web/Api/ProcessesApi.cs`. Do not document or call those as current HTTP routes until they are reintroduced with typed handlers and tests.
+Definition authoring, template import/export, artifact/assignment detail, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`. Do not document or call those as current HTTP routes until they are reintroduced with typed handlers and tests.
+
+Use `POST /api/processes/launch/check` for non-mutating launch preflight. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only prevents immediate dispatch queueing.
 
 For source-level details, use [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md).
 
@@ -79,17 +82,22 @@ Use `/api/agents` for AgentFramework catalog, provider, capability, chat, and ex
 
 - agents: list, bootstrap, editor read, save, delete, clone, convert to template, export, import
 - providers: list, editor read, save, delete, test, test-chat, Ollama modelfile
-- capabilities and memory
+- capabilities: list, editor read, save, delete, tool setup tests, MCP setup tests, and access previews
+- memory
 - chat sessions and chat workspace
 - execution runs, pending approvals, artifacts, checkpoints, tool receipts, logs, metrics, approvals, runtime snapshots
 
 Validate execution by reading run detail, artifacts, tool receipts, checkpoints, and metrics. A single status field is not enough for process-critical work.
 
+Use capability setup tests for external tool and MCP descriptors before enabling them for agents or process roles. MCP setup tests start the descriptor, list tools, compare allowed tools, and clean up the runtime client; failures should be repaired from typed diagnostic fields rather than interpreted as generic setup errors.
+
 Provider behavior is part of this surface. Current provider profiles include private-provider flags, per-model token prices, tags, native hosted tool support, local MCP support, image generation support, structured output support, and reasoning-effort policy for OpenAI-like Responses models. See [Provider capability and pricing](provider-capability-and-pricing.md).
 
 ### Workflows
 
-Use `/api/workflows` for workflow settings, executor catalog, definitions, versions, components, test runs, runtime runs, external requests, artifacts, checkpoints, events, and analytics.
+Use `/api/workflows` for workflow settings, executor catalog, definitions, versions, components, test runs, runtime runs, external requests, artifacts, checkpoints, events, analytics, and contract discovery.
+
+Start workflow clients with `GET /api/workflows/contract` for the route list and boundary summary, then use OpenAPI for request and response schemas.
 
 Runtime runs can be started through `/api/workflows/runs/start` or from a definition version. `WorkflowRunStartApiRequest` supports `workflowId`, `versionId`, `inputJson`, `requestedBackend`, `sourceProcessRunId`, and `sourceProcessAssignmentId`. The source-process fields are important when workflow activity is part of a process run.
 
@@ -103,11 +111,11 @@ New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitiv
 
 ### Plugins And Projects
 
-`/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
+`/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/App/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
 
 ### Internal Agent Tools
 
-The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Current registered first-party runtime tool providers include project-structure tools from Workbench and image-generation tools from the AgentFramework module. A concrete direct process runtime tool provider is not present in the current source tree; process control currently goes through `/api/processes` and the project-structure bridge tools that can link and start processes. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for current direct tools and HTTP-only operations.
+The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Current registered first-party runtime tool providers include project-structure tools from Workbench and image-generation tools from the AgentFramework module. A concrete direct process runtime tool provider is not present in the current source tree; process control currently goes through `/api/processes`, governed process execution adapters, and project-structure bridge tools that can link and start processes. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for current direct tools and HTTP-only operations.
 
 ## Development Workflow
 

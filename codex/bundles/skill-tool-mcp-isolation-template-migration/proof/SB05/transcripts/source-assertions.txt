@@ -1,0 +1,54 @@
+src/CanDoItAll.AgentFramework.Tools/External/ToolDiagnostics.cs:7:internal static class ToolDiagnostics
+src/CanDoItAll.AgentFramework.Tools/External/ToolDiagnostics.cs:13:    private static readonly Regex BearerPattern = new(
+src/CanDoItAll.AgentFramework.Tools/External/ToolDiagnostics.cs:48:        var bearerMasked = BearerPattern.Replace(detail, "Bearer ***");
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:17:    public async Task SB05_INV_DIAGNOSTICS_001_external_http_status_masks_bearer_assignment_and_preserves_typed_shape()
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:29:        var invoker = new ExternalHttpToolInvoker(new FakeHttpTransport(new ExternalHttpResponse(
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:35:            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_001"),
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:45:        Assert.Equal("SB05_INV_DIAGNOSTICS_001", diagnostic.CorrelationId);
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:53:    public async Task SB05_INV_DIAGNOSTICS_002_external_process_cancellation_returns_typed_diagnostic()
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:56:        var invoker = new ExternalProcessToolInvoker(new FakeProcessRunner(new OperationCanceledException()));
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:60:            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_002"),
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:70:        Assert.Equal("SB05_INV_DIAGNOSTICS_002", diagnostic.CorrelationId);
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:76:    public async Task SB05_INV_DIAGNOSTICS_003_external_http_cancellation_returns_typed_diagnostic()
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:79:        var invoker = new ExternalHttpToolInvoker(new FakeHttpTransport(new OperationCanceledException()));
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:83:            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_003"),
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:93:        Assert.Equal("SB05_INV_DIAGNOSTICS_003", diagnostic.CorrelationId);
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:97:    public async Task SB05_INV_DIAGNOSTICS_004_external_http_exception_masks_authorization_bearer_assignment()
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:100:        var invoker = new ExternalHttpToolInvoker(new FakeHttpTransport(new InvalidOperationException(
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:105:            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_004"),
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:116:    public void SB05_INV_POLICY_001_deny_required_and_require_rule_failures_are_deterministic()
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:147:        var result = new CapabilityAccessPolicyEvaluator().Evaluate(new CapabilityAccessEvaluationContext(
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:151:            "SB05_INV_POLICY_001"));
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:165:    public void SB05_INV_POLICY_002_future_capability_kind_uses_tag_policy_without_evaluator_changes()
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:190:        var result = new CapabilityAccessPolicyEvaluator().Evaluate(new CapabilityAccessEvaluationContext(
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:194:            "SB05_INV_POLICY_002"));
+tests/CanDoItAll.Tests.Unit/CapabilityFoundationHardeningTests.cs:203:    public void SB05_INV_EXPOSURE_001_tool_skill_mcp_server_and_mcp_tool_share_policy_metadata_shape()
+src/CanDoItAll.AgentFramework.Tools/External\ToolDiagnostics.cs:7:internal static class ToolDiagnostics
+src/CanDoItAll.AgentFramework.Tools/External\ToolDiagnostics.cs:13:    private static readonly Regex BearerPattern = new(
+src/CanDoItAll.AgentFramework.Tools/External\ToolDiagnostics.cs:48:        var bearerMasked = BearerPattern.Replace(detail, "Bearer ***");
+src/CanDoItAll.AgentFramework.Tools/External\ExternalHttpToolInvoker.cs:10:public sealed class ExternalHttpToolInvoker(
+src/CanDoItAll.AgentFramework.Tools/External\ExternalHttpToolInvoker.cs:11:    IExternalHttpTransport? transport = null) : IExternalHttpToolInvoker
+src/CanDoItAll.AgentFramework.Tools/External\ExternalHttpToolInvoker.cs:130:            ToolDiagnostics.Create(
+src/CanDoItAll.AgentFramework.Tools/External\ExternalHttpToolInvoker.cs:144:        => string.Join(", ", headers.Select(pair => $"{pair.Key}={ToolDiagnostics.Mask(pair.Value)}"));
+src/CanDoItAll.AgentFramework.Tools/External\ExternalProcessToolInvoker.cs:9:public sealed class ExternalProcessToolInvoker(
+src/CanDoItAll.AgentFramework.Tools/External\ExternalProcessToolInvoker.cs:10:    IExternalProcessRunner? processRunner = null) : IExternalProcessToolInvoker
+src/CanDoItAll.AgentFramework.Tools/External\ExternalProcessToolInvoker.cs:26:                ToolDiagnostics.Create(
+src/CanDoItAll.AgentFramework.Tools/External\ExternalProcessToolInvoker.cs:176:            ToolDiagnostics.Create(
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityAccessPolicyTemplateCompiler.cs:5:public sealed class CapabilityAccessPolicyTemplateCompiler
+src/CanDoItAll.AgentFramework.Mcp\Diagnostics\McpDiagnostics.cs:13:    private static readonly Regex BearerPattern = new(
+src/CanDoItAll.AgentFramework.Mcp\Diagnostics\McpDiagnostics.cs:45:        var bearerMasked = BearerPattern.Replace(detail, "Bearer ***");
+src/CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs:5:public sealed class CapabilityAccessPolicyEvaluator : ICapabilityAccessPolicyEvaluator
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateValidator.cs:5:public sealed class CapabilityTemplateValidator
+src/CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateValidator.cs:88:            var policyResult = new CapabilityAccessPolicyTemplateCompiler()
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:6:        => CapabilityNameRules.TryCreateKebab(value, out key);
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:22:        if (CapabilityNameRules.LowerSnakeRegex.IsMatch(normalized))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:45:        if (CapabilityNameRules.TryCreateKebab(value, out CapabilityKey capabilityKey))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:69:        if (CapabilityNameRules.McpToolRegex.IsMatch(normalized))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:93:        if (CapabilityNameRules.ImplementationKeyRegex.IsMatch(normalized))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:116:        if (CapabilityNameRules.TryCreateKebab(value, out CapabilityKey capabilityKey))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:140:        if (CapabilityNameRules.PascalIdentifierRegex.IsMatch(normalized))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:163:        if (CapabilityNameRules.TryCreateKebab(value, out CapabilityKey capabilityKey))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs:187:        if (CapabilityNameRules.StableIdRegex.IsMatch(normalized))
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityModels.cs:141:public interface ICapabilityAccessPolicyEvaluator
+src/CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityNameRules.cs:5:public static class CapabilityNameRules
+src/CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs:7:public sealed class McpSetupTestService(IMcpClientFactory clientFactory) : IMcpSetupTestService

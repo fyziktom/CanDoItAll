@@ -18,7 +18,7 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 - Agents: `GET /api/agents`, `GET /api/agents/bootstrap`, `GET /api/agents/{agentId}`, `POST /api/agents`, `DELETE /api/agents/{agentId}`, clone, convert-to-template, export, and import routes.
 - Teams: `GET /api/agents/teams`, `GET /api/agents/teams/{teamId}`, `GET /api/agents/teams/{teamId}/editor`, `POST /api/agents/teams`, `PUT /api/agents/teams/{teamId}`, `DELETE /api/agents/teams/{teamId}`, `GET /api/agents/teams/{teamId}/agents`, `POST /api/agents/teams/{teamId}/members`, and `PUT /api/agents/teams/{teamId}/members`.
 - Providers: `/api/agents/providers`, `/providers/{providerId}/editor`, create/delete/test/test-chat, and Ollama modelfile routes.
-- Capabilities: `/api/agents/capabilities`, `/capabilities/{capabilityId}/editor`, create/delete, and per-agent capability verification.
+- Capabilities: `/api/agents/capabilities`, `/capabilities/{capabilityId}/editor`, create/delete, per-agent capability verification, tool setup tests, MCP setup tests, and access-policy previews.
 - Memory: `/api/agents/{agentId}/memory`, `POST /api/agents/memory`, and delete memory routes.
 
 ## Chat And Execution
@@ -33,7 +33,8 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 - Prefer agent-scoped routes when you already know `agentId`; use global execution-run routes for cross-agent review.
 - For debugging, query run detail first, then fetch artifacts/checkpoints/receipts/log only for the run under review.
 - Use provider test routes before assigning a provider to production-like agents.
-- Use capability verification before assuming a tool or skill is usable by an agent.
+- Use capability verification before assuming a tool or skill is assigned to an agent.
+- Use setup tests for external tool and MCP capability descriptors before enabling them for agents or process roles. Use access-preview when a process, team, or role policy might deny required skill/tool/MCP capabilities.
 - Provider profiles include `isPrivateProvider`, `modelPrices`, and `tags`. Provider capabilities include structured output, hosted tools, hosted/local MCP, image generation, vision, compaction, native code/file/web search, and approval support.
 - For OpenAI-like Responses models beginning with `gpt-5`, `o1`, `o3`, or `o4`, temperature is omitted and `modelParameters.reasoningEffort` can be set to `none`, `low`, `medium`, `high`, or `extraHigh`.
 
@@ -79,12 +80,13 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 - For created/updated agents, read back the agent editor/detail.
 - For execution, verify run state, artifacts, receipts, and metrics instead of relying on a single status field.
 - For provider changes, run provider health/test-chat when credentials and model availability are relevant.
+- For capability changes, run tool/MCP setup tests or access-preview when the change affects executable tools, local/remote MCP servers, or role-level capability policies.
 
 ## Source Route Appendix
 
 <!-- api-docs-skills-parity:routes:start -->
 
-Agents API route appendix. Generated from Minimal API registrations; rerun `.codex/tmp/api-docs-skills-gap-map/update-skill-route-appendices.mjs` when routes change.
+Agents API route appendix. Generated from Minimal API registrations; refresh from `src/App/CanDoItAll.Web/Api/AgentsApi.cs` when routes change.
 
 | Method | Route |
 | --- | --- |
@@ -119,6 +121,9 @@ Agents API route appendix. Generated from Minimal API registrations; rerun `.cod
 | `POST` | `/api/agents/capabilities` |
 | `DELETE` | `/api/agents/capabilities/{capabilityId:guid}` |
 | `GET` | `/api/agents/capabilities/{capabilityId:guid}/editor` |
+| `POST` | `/api/agents/capabilities/access-preview` |
+| `POST` | `/api/agents/capabilities/setup-tests/mcp` |
+| `POST` | `/api/agents/capabilities/setup-tests/tool` |
 | `GET` | `/api/agents/execution-runs` |
 | `POST` | `/api/agents/execution-runs` |
 | `GET` | `/api/agents/execution-runs/{executionRunId:guid}` |

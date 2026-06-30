@@ -1,0 +1,25 @@
+{
+  "defaultEffect": "inherit",
+  "rules": [
+    {
+      "id": "deny-mutation-by-default",
+      "effect": "deny",
+      "scope": "processStep",
+      "selector": {
+        "kind": "operationClassification",
+        "value": "mutation"
+      },
+      "reason": "Compatibility baseline for read-only process steps; explicit operation contracts can allow mutation later."
+    },
+    {
+      "id": "deny-external-action-by-default",
+      "effect": "deny",
+      "scope": "processStep",
+      "selector": {
+        "kind": "operationClassification",
+        "value": "externalAction"
+      },
+      "reason": "External actions require an explicit process or workflow operation contract."
+    }
+  ]
+}

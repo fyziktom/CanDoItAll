@@ -1,6 +1,6 @@
 # Processes, MAF, And Providers Implementation Map
 
-Last source review: 2026-06-25.
+Last source review: 2026-06-29.
 
 This is the current source-grounded map for the process runtime, Microsoft Agent Framework integration, provider runtime, and the next hardening-refactor roadmap. Historical bundle files remain useful evidence, but this document is the current orientation point for active docs.
 
@@ -12,26 +12,48 @@ MAF is the provider/tool/runtime adapter layer. It owns Microsoft Agent Framewor
 
 Provider execution is no longer a thin legacy gateway. It has provider descriptors, concrete provider drivers, runtime handle pooling, per-lane dispatch gates, streaming gates, batching, image generation, and provider-failure classification.
 
-The current hard gap: active docs and some policy/test names still describe direct `processes_*` runtime tools and `ProcessAgentRuntimeToolProvider`, but that concrete provider is not present in the current source tree. Current process control is HTTP API plus project-structure bridge/tools.
+The current hardening note: some policy/test names still describe legacy or planned direct `processes_*` runtime tools and `ProcessAgentRuntimeToolProvider`, but that concrete provider is not present in the current source tree. Current process control is HTTP API plus governed process execution adapters and project-structure bridge tools.
+
+Internal-agent skills, tools, MCP servers, and capability access policies are template-backed through `Templates/Capabilities`. Codex development skills under `codex/skills` or `%USERPROFILE%\.codex\skills` are not runtime template inputs for internal agents.
+
+## Current Capability And Tool Model
+
+AgentFramework composes executable capability surfaces from these sources:
+
+- MAF built-in workspace and execution tools.
+- Template-seeded skills from `Templates/Capabilities/skills.json`, with inline instructions and resources under `Templates/Capabilities/skills/`.
+- Template-seeded MCP descriptors from `Templates/Capabilities/mcps.json`, such as Playwright Local MCP.
+- Template-seeded internal or external tool descriptors from `Templates/Capabilities/tools.json`.
+- Provider-native tools exposed by a provider driver.
+- Registered `IAgentRuntimeToolProvider` implementations owned by product modules.
+
+Capability templates seed catalog rows and policy metadata; they do not alone make a direct tool executable. A direct runtime tool must still be registered by MAF or returned by an `IAgentRuntimeToolProvider`, with policy classification and tests.
+
+The current registered first-party runtime tool providers are:
+
+- `ProjectStructureAgentRuntimeToolProvider` in Workbench.
+- `ImageGenerationAgentRuntimeToolProvider` in the AgentFramework module.
+
+There is no direct process runtime tool provider. Process steps execute through `AgentFrameworkProcessExecutionAdapter`, which builds a governed step prompt and lets MAF attach the permitted workspace, skill, MCP, provider-native, and registered runtime-provider tools according to assignment context and capability policies.
 
 ## Current Source Boundaries
 
 | Area | Current owner | Source |
 | --- | --- | --- |
-| Runtime composition | Web host composition root | `src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs` |
-| Process module DI | Process module | `src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs` |
-| Process HTTP API | Web API | `src/CanDoItAll.Web/Api/ProcessesApi.cs` |
-| Process launch | Application layer | `src/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs` |
-| Process dispatch | Application/runtime layers | `src/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`, `src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs`, `src/CanDoItAll.Processes.Runtime/ProcessRuntimeScheduler.cs` |
-| Process persistence | EF-backed process persistence | `src/CanDoItAll.Processes.Persistence/*` |
-| Process projections | Projection contracts/projector/query services | `src/CanDoItAll.Processes.Projections/*`, `src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs` |
-| Process UI | Blazor module | `src/CanDoItAll.Modules.Processes/Pages/*`, `src/CanDoItAll.Modules.Processes/Components/*` |
-| Project-structure process bridge | Workbench module | `src/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessNodeService.cs` |
-| Project-structure runtime tools | Workbench runtime tool provider | `src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs` |
-| MAF runtime | AgentFramework MAF adapter | `src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` |
-| MAF workflow adapter | AgentFramework MAF workflows | `src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/*` |
-| Provider runtime | AgentFramework providers and MAF provider gateway | `src/CanDoItAll.AgentFramework.Providers/*`, `src/CanDoItAll.AgentFramework.Maf/Runtime/Providers/*` |
-| AgentFramework module facade | Current-profile agent workspace and provider gateway | `src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs` |
+| Runtime composition | Web host composition root | `src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs` |
+| Process module DI | Process module | `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs` |
+| Process HTTP API | Web API | `src/App/CanDoItAll.Web/Api/ProcessesApi.cs` |
+| Process launch | Application layer | `src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs` |
+| Process dispatch | Application/runtime layers | `src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`, `src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs`, `src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeScheduler.cs` |
+| Process persistence | EF-backed process persistence | `src/Processes/CanDoItAll.Processes.Persistence/*` |
+| Process projections | Projection contracts/projector/query services | `src/Processes/CanDoItAll.Processes.Projections/*`, `src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs` |
+| Process UI | Blazor module | `src/Modules/CanDoItAll.Modules.Processes/Pages/*`, `src/Modules/CanDoItAll.Modules.Processes/Components/*` |
+| Project-structure process bridge | Workbench module | `src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessNodeService.cs` |
+| Project-structure runtime tools | Workbench runtime tool provider | `src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs` |
+| MAF runtime | AgentFramework MAF adapter | `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` |
+| MAF workflow adapter | AgentFramework MAF workflows | `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/*` |
+| Provider runtime | AgentFramework providers and MAF provider gateway | `src/MAF/Common/CanDoItAll.AgentFramework.Providers/*`, `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/*` |
+| AgentFramework module facade | Current-profile agent workspace and provider gateway | `src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs` |
 
 ## Runtime Composition
 
@@ -92,13 +114,14 @@ The module does not currently register a concrete `ProcessAgentRuntimeToolProvid
 
 Current launch entry points:
 
+- `POST /api/processes/launch/check`
 - `POST /api/processes/launch`
 - Process workspace UI through `ProcessWorkspaceShell`
 - Project-structure process start through `ProjectStructureProcessNodeService`
 - Project-structure runtime tool `project_structure_node_process_start`
 - Subprocess runtime tool `project_structure_process_subprocess_launch`
 
-`ProcessLaunchApplicationService.LaunchAsync` performs the real launch:
+`ProcessLaunchApplicationService.PreviewAsync` backs `launch/check` and returns a launch plan/readiness result without persistence. `ProcessLaunchApplicationService.LaunchAsync` performs the real launch:
 
 1. Resolve the process definition from template pack data or explicit process definition id.
 2. Load the standard process driver catalog.
@@ -147,6 +170,7 @@ The current source-grounded `/api/processes` route list is:
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/processes/contract` | Lists current process API routes and boundary note. |
+| `POST` | `/api/processes/launch/check` | Compiles a launch plan and readiness findings without creating a run. |
 | `POST` | `/api/processes/launch` | Launches a process from definition key or definition id. |
 | `POST` | `/api/processes/runs/{runId}/dispatch` | Dispatches ready work for a run. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Requests run cancellation. |
@@ -156,6 +180,8 @@ The current source-grounded `/api/processes` route list is:
 | `GET` | `/api/processes/runs/{runId}/history` | Reads timeline history projection. |
 
 Definition authoring, template import/export, assignments, artifacts, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `ProcessesApi.cs`. If those are required again, they need a deliberate API contract update and tests rather than doc-only resurrection.
+
+Use `launch/check` for non-mutating preflight. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only prevents immediate dispatch queueing.
 
 ## Process UI Surface
 
@@ -269,13 +295,13 @@ Concrete provider drivers currently registered:
 
 | Gap | Why it matters | Current handling |
 | --- | --- | --- |
-| No concrete `ProcessAgentRuntimeToolProvider` | Docs, policy constants, and some tests still discuss `processes_*` direct runtime tools, but current source does not register that provider. | Use `/api/processes` and project-structure runtime tools. Decide whether to reintroduce or retire direct process tools. |
+| No concrete `ProcessAgentRuntimeToolProvider` | Policy constants and some tests still discuss `processes_*` direct runtime tools, but current source does not register that provider. | Use `/api/processes`, governed process execution adapters, and project-structure runtime tools. Decide whether to reintroduce or retire direct process tools. |
 | Process API route scope is narrower than old docs | Old docs mention definitions/templates/artifacts/assignments/escalations/approvals/analytics routes that are absent. | Current API docs must match `ProcessesApi.cs`; broader endpoints require implementation. |
 | In-memory singleton dispatch queue | Works for local process lifetime, but not durable cross-process dispatch coordination. | EF stores hold run state/events; queue durability and multi-node dispatch need hardening. |
 | Projection freshness depends on catch-up calls and worker behavior | API/UI correctness depends on projector catch-up after mutations and dispatch. | Existing services call catch-up, but release gates should assert freshness under failure/recovery. |
 | Provider runtime descriptor invalidation is implicit at operation entry | Descriptor upsert happens before gateway operation, but profile edits should have explicit invalidation proof. | Pool supports invalidation; doc/test coverage should prove edit-to-handle lifecycle. |
-| MAF direct product-tool boundary is uneven | Project-structure and image generation use runtime providers; process direct tools are missing. | Treat as architecture gap, not runtime failure. |
-| Historical docs remain broad and stale | Old class names can mislead agents into coding against removed surfaces. | Active docs should link here and mark historical proof as historical. |
+| MAF direct product-tool boundary is intentionally narrow | Project-structure and image generation use runtime providers; process control is API/adapter/bridge based. | Treat missing `processes_*` tools as a product decision point, not a MAF attachment failure. |
+| Historical proof docs remain broad and stale | Old class names can mislead agents into coding against removed surfaces. | Active docs should link here, `docs/api-control-plane.md`, and `docs/agent-runtime-tool-surface.md`, and mark historical proof as historical. |
 
 ## Hardening-Refactor Roadmap
 
@@ -285,13 +311,13 @@ Goal: stop docs and skills from drifting away from source.
 
 - Add source-backed doc assertions for current route lists in `ProcessesApi.cs`, `AgentsApi.cs`, `WorkflowsApi.cs`, and project-structure API.
 - Add a docs static test that fails when active docs name non-existent current source files.
-- Decide which docs are historical and add an explicit banner instead of silently mixing old and current architecture.
+- Decide which remaining proof docs are historical and add an explicit banner instead of silently mixing old and current architecture.
 - Keep `docs/api-control-plane.md`, `docs/agent-runtime-tool-surface.md`, and this map as the active public path.
 
 Validation:
 
 ```powershell
-rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/CanDoItAll.AgentFramework.Core src/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
+rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/MAF/Common/CanDoItAll.AgentFramework.Core src/MAF/Common/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
 git diff --check
 ```
 
@@ -300,7 +326,7 @@ git diff --check
 Goal: make the web API contract explicit and stable.
 
 - Generate or snapshot the `/api/processes/contract` route list from `ProcessesApi.cs`.
-- Add endpoint tests for launch, dispatch, cancel, rework, live, detail, and history.
+- Add endpoint tests for launch preflight, launch, dispatch, cancel, rework, live, detail, and history.
 - Decide whether definition/template/artifact/assignment/operator endpoints return to the HTTP API. If yes, implement them as typed route groups with explicit authorization and readback tests.
 - Update `candoitall-api-processes` skill after route changes, not before.
 
@@ -413,12 +439,12 @@ For documentation-only changes:
 
 ```powershell
 git diff --check
-rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/CanDoItAll.AgentFramework.Core src/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
+rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/MAF/Common/CanDoItAll.AgentFramework.Core src/MAF/Common/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
 ```
 
 For source changes in the next hardening-refactor, start with focused tests instead of the full suite:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests|FullyQualifiedName~ProviderDispatchLaneGateTests|FullyQualifiedName~ProviderRuntimeLifecycleTests|FullyQualifiedName~AgentProviderFailureDisplayFormatterTests|FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests"
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests|FullyQualifiedName~ProviderDispatchLaneGateTests|FullyQualifiedName~ProviderRuntimeLifecycleTests|FullyQualifiedName~AgentProviderFailureDisplayFormatterTests|FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests"
 ```

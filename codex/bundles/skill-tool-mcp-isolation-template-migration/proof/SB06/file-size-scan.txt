@@ -1,0 +1,9 @@
+SB06 file-size scan
+
+New or materially changed SB06 implementation files must stay under 500 lines unless explicitly accepted.
+461	src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplatePackLoader.cs
+242	src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplateSeedMaterializer.cs
+85	src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplateSeedPolicyValidator.cs
+44	src/CanDoItAll.AgentFramework.Persistence/Seeds/CapabilityTemplateSeedAssignmentValidator.cs
+88	src/CanDoItAll.AgentFramework.Persistence/Seeds/ProcessAllowedOperationsCapabilityPolicyCompiler.cs
+321	tests/CanDoItAll.Tests.Unit/CapabilityTemplateSeedMaterializationTests.cs

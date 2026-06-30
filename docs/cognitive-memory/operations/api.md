@@ -5,7 +5,7 @@ The Cognitive Memory HTTP API is hosted by `CanDoItAll.Web` under two route surf
 - legacy compatibility: `/api/cognitive-memory`
 - additive v1 aliases: `/api/cognitive-memory/v1`
 
-Both surfaces map the same operational behavior. The legacy routes remain for existing callers; new callers should prefer the v1 base path and inspect `GET /contract` before automation. The current implementation maps 38 routes per surface across grouped files named `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
+Both surfaces map the same operational behavior. The legacy routes remain for existing callers; new callers should prefer the v1 base path and inspect `GET /contract` before automation. The current implementation maps 38 routes per surface across grouped files named `src/App/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
 
 ## Contract And Status
 

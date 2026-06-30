@@ -45,7 +45,7 @@ The database selection endpoint should report provider `PostgreSql` and database
 
 ## Qdrant
 
-Qdrant is configured in `src\CanDoItAll.Web\appsettings.json` at `localhost:6334` with collection `candoitall-knowledge`, vector size `384`, cosine distance, and create-collection-if-missing enabled. It is needed for Cognitive Memory projection and vector recall validation. It is not authoritative storage; PostgreSQL remains the durable AppDbContext profile.
+Qdrant is configured in `src\App\CanDoItAll.Web\appsettings.json` at `localhost:6334` with collection `candoitall-knowledge`, vector size `384`, cosine distance, and create-collection-if-missing enabled. It is needed for Cognitive Memory projection and vector recall validation. It is not authoritative storage; PostgreSQL remains the durable AppDbContext profile.
 
 If the local vector index becomes disposable during development, reset only the container-backed Qdrant volume with:
 

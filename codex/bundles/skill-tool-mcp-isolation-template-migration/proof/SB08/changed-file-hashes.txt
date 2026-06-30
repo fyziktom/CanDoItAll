@@ -1,0 +1,12 @@
+SHA256 | File
+------ | ----
+A4E77633E4EAD9EA5D5788D85BD5344D96D218BE639814E74B4A90225CAFF10D | src/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj
+58FCB3AD6CED442324682E2BBA1A22C22FD1341BAA9F25CD3A6E7C33CAD637C0 | src/CanDoItAll.AgentFramework.Core/Capabilities/ProcessAllowedOperationsCapabilityPolicyCompiler.cs
+3835E5339547B4921269066FC257F8FE327CAC810AAD55A89E5C0A201FF57A7B | src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj
+52EE4F176BBE6C35D17FDBDDFAA8B3126565EEB7919EEE554B36DBEE9ED095C5 | src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Access.cs
+02A71561BD879DDDBCF6901122DA2F5F6E6002C26582323EAB954CFE65E4B785 | src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs
+F62C10F8D59DAF3104F3D679B1F261916DCB3C077527A769D9FF581326C1423F | src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Tools.cs
+040F6E8C289B08F57A6446211638D1E7CEE31775A11BAADD625F9F5C7F8B715A | src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.RuntimeToolProviders.cs
+B00E7EF43D5EB49E1B2C7984C83770FE3C6F4622131A889215F6BD0DB90F937B | src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs
+444B27521ABA78D8503FBDBAF2E0A4924AA7C1F64806BEDD267168373C80E80F | tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs
+DELETED | src/CanDoItAll.AgentFramework.Persistence/Seeds/ProcessAllowedOperationsCapabilityPolicyCompiler.cs

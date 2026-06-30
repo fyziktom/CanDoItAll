@@ -1,0 +1,17 @@
+Command:
+dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~CapabilitySetupFlowServiceTests
+
+Result:
+Passed.
+4 tests passed.
+0 failed.
+0 skipped.
+
+Covered tests:
+- Tool setup test returns typed JsonParse diagnostic before process launch.
+- MCP setup test reports missing runtime adapter as typed ImplementationMissing diagnostic.
+- Access preview denies a matching external-action Tool through the shared policy evaluator.
+- AgentCapabilitiesPanel renders Tool creation and access-preview controls.
+
+Final output included:
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4

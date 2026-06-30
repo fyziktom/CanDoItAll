@@ -548,7 +548,7 @@ if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
 $RepoRoot = Resolve-AbsolutePath $RepoRoot
 $InstallRoot = Resolve-AbsolutePath $InstallRoot
 $ShortcutPath = Resolve-AbsolutePath $ShortcutPath
-$projectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Web\CanDoItAll.Web.csproj")
+$projectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\App\CanDoItAll.Web\CanDoItAll.Web.csproj")
 $sourceTemplatesRoot = Resolve-AbsolutePath (Join-Path $RepoRoot "Templates")
 $appRoot = Join-Path $InstallRoot "app"
 $runtimeRoot = Join-Path $InstallRoot "runtime"

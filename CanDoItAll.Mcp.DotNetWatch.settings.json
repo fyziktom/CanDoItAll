@@ -5,8 +5,8 @@
     "SolutionPath": "CanDoItAll.slnx"
   },
   "DefaultApp": {
-    "ProjectPath": "src/CanDoItAll.Web/CanDoItAll.Web.csproj",
-    "WorkingDirectory": "src/CanDoItAll.Web",
+    "ProjectPath": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "WorkingDirectory": "src/App/CanDoItAll.Web",
     "Mode": "WatchRun",
     "Configuration": "Debug",
     "Framework": null,
@@ -44,16 +44,16 @@
     "ExtraArguments": []
   },
   "Tests": {
-    "DefaultTargetPath": "tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "DefaultTargetPath": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
     "DefaultWhenAppRunning": "StopAndResume",
     "DefaultTimeoutMs": 1800000,
     "RunnerPreference": "Auto",
     "DefaultFilter": null,
     "Projects": [
-      "tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
-      "tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
-      "tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
-      "tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
       "../CanDoItAll.Mcp/tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj",
       "../CanDoItAll.Mcp/tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj"
     ]

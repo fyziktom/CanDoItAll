@@ -12,20 +12,20 @@ The important architecture rule is still simple: product semantics live in modul
 
 Primary source references:
 
-- [`src/CanDoItAll.Web/Program.cs`](../src/CanDoItAll.Web/Program.cs)
-- [`src/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs`](../src/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs)
-- [`src/CanDoItAll.Web/Api/ProcessesApi.cs`](../src/CanDoItAll.Web/Api/ProcessesApi.cs)
-- [`src/CanDoItAll.Web/ProjectStructureAgentApi.cs`](../src/CanDoItAll.Web/ProjectStructureAgentApi.cs)
-- [`src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`](../src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs)
-- [`src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`](../src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs)
-- [`src/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs`](../src/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs)
-- [`src/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`](../src/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs)
-- [`src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs`](../src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs)
-- [`src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs`](../src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs)
-- [`src/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderRuntimeGateway.cs`](../src/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderRuntimeGateway.cs)
-- [`src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`](../src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs)
-- [`src/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs`](../src/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs)
-- [`src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`](../src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs)
+- [`src/App/CanDoItAll.Web/Program.cs`](../src/App/CanDoItAll.Web/Program.cs)
+- [`src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs)
+- [`src/App/CanDoItAll.Web/Api/ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs)
+- [`src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs)
+- [`src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`](../src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs)
+- [`src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs)
+- [`src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs`](../src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs)
+- [`src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`](../src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs)
+- [`src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs)
+- [`src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs`](../src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs)
+- [`src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderRuntimeGateway.cs`](../src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderRuntimeGateway.cs)
+- [`src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs)
+- [`src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs)
+- [`src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`](../src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs)
 
 ## Architecture Overview
 
@@ -181,9 +181,10 @@ The selected database profile can change, but control-plane metadata and local w
 The current automation boundary is split deliberately:
 
 - HTTP API: `/api/projects`, `/api/project-structure`, `/api/processes`, `/api/agents`, `/api/workflows`, `/api/cognitive-memory`, `/api/plugins`, and `/api/access`.
-- Repo-managed skills: `candoitall-api-project-structure`, `candoitall-api-processes`, `candoitall-api-agents`, `candoitall-api-workflows`, and `candoitall-api-cognitive-memory`.
+- Codex/operator API skills: `candoitall-api-project-structure`, `candoitall-api-processes`, `candoitall-api-agents`, `candoitall-api-workflows`, and `candoitall-api-cognitive-memory`.
+- Internal app capability templates: skills, tools, MCP servers, and access policies under `Templates/Capabilities`.
 - Selected MCP sidecars: development and diagnostics helpers from the sibling `CanDoItAll.Mcp` repo.
-- Suppressed MCPs: old Processes and ProjectStructure MCP servers are not current. Use the HTTP APIs and repo skills instead.
+- Suppressed MCPs: old Processes and ProjectStructure MCP servers are not current. Use the HTTP APIs plus Codex/operator API skills for external operation, and use template-backed app capabilities for internal agents.
 
 ## Validation Guidance
 

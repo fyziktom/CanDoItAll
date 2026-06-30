@@ -1,0 +1,7 @@
+SB06 anti-stub audit
+
+Searching for placeholder, stub, and unimplemented markers in SB06 production and test files. The word fallback is checked separately because SB06 intentionally includes no-fallback tests.
+No placeholder/stub/unimplemented markers found.
+
+Fallback scan:
+tests/CanDoItAll.Tests.Unit/CapabilityTemplateSeedMaterializationTests.cs:68:    public void SB06_INV_TEMPLATE_003_invalid_templates_block_materialization_without_fallback()

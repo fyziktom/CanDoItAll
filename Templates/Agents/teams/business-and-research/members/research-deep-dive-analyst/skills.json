@@ -1,7 +1,7 @@
 {
   "capabilityKeys": [
-    "candoitall-bundle-workflow",
     "generated-app-summary-inline-skill",
+    "git-standard-operations",
     "workspace-list-files",
     "workspace-search",
     "workspace-read-file",
@@ -10,6 +10,8 @@
     "workspace-execution-boundary",
     "workspace-git-status",
     "workspace-git-diff",
+    "workspace-git-log",
+    "workspace-git-show",
     "workspace-source-rag",
     "research-briefing-context",
     "provider-native-code-interpreter",

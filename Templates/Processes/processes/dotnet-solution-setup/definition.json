@@ -405,7 +405,7 @@
       "Key": "setup-handoff",
       "Title": "Hand off setup evidence",
       "Subtitle": "Ready for implementation",
-      "Notes": "Summarize what was created, what validated, and any residual setup notes the parent process needs.",
+      "Notes": "Summarize what was created, what validated, and any residual setup notes the parent process needs. Treat a successful workspace_stat_path or workspace_read_file receipt for the exact required canonical ref artifacts/process-runs/<setup-run-id>/steps/validate-first-build.md as durable first-build evidence. Do not require or probe sibling refs such as artifacts/process-runs/<setup-run-id>/validate-first-build.",
       "StepKind": "End",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -413,9 +413,9 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Validated scaffold outputs and first build evidence.",
       "OutputContractSummary": "Handoff packet for the parent development slice.",
-      "EvidenceContractSummary": "Created paths, commands run, validation status, and remaining risks.",
+      "EvidenceContractSummary": "Created paths, commands run, validation status from the canonical steps/validate-first-build.md managed artifact, and remaining risks.",
       "DecisionRightsSummary": "Setup manager closes only when the validation reviewer evidence is present.",
-      "ExceptionPolicySummary": "Do not close with missing build evidence or unresolved scaffold blockers.",
+      "ExceptionPolicySummary": "Do not close with missing build evidence or unresolved scaffold blockers. Do not block solely because a non-canonical sibling evidence path is absent when the required steps/validate-first-build.md ref is readable and reports successful validation.",
       "TargetLeadHours": 1,
       "DependsOnStepKey": "validate-first-build",
       "DependsOnBranchOutcomeKey": "",
@@ -450,7 +450,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 180,
           "AllowedFutureUsageSummary": "Used by parent runs and future slices to understand the generated solution baseline.",
-          "ValidationRequirementSummary": "Must summarize created paths, commands, validation result, and blockers."
+          "ValidationRequirementSummary": "Must summarize created paths, commands, validation result, blockers, the exact setup-handoff artifact path, and the exact canonical upstream first-build artifact path. Must not require a sibling non-steps first-build path."
         }
       ],
       "ArtifactInputs": [

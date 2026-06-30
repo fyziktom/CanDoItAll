@@ -1,0 +1,30 @@
+# SB11 Source Assertions
+
+## Generic restriction proof
+164:                CapabilitySelector.ByKind(CapabilityKind.Skill),
+220:    public void SB11_INV_ACCESS_001_process_workflow_restrictions_deny_all_capability_families_with_required_diagnostics()
+236:                CapabilitySelector.ByKind(CapabilityKind.Skill),
+242:                CapabilitySelector.ByOperationClassification(CapabilityOperationClassification.ExternalAction),
+248:                CapabilitySelector.ByMcpServerKey(McpServerKey.Create("browser-mcp")),
+254:                CapabilitySelector.ByMcpToolName(McpServerKey.Create("search-mcp"), McpToolName.Create("web_search")),
+262:            "SB11_INV_ACCESS_001"));
+407:            diagnostic.CorrelationId == "SB11_INV_ACCESS_001");
+
+## API negative proof
+19:    public async Task Capability_setup_api_returns_typed_negative_setup_and_access_diagnostics()
+30:                        CapabilityDiagnosticCategory.McpListTools,
+67:                            Id = "deny-invalid-key",
+102:                            Id = "deny-required-audit",
+120:            diagnostic.Category == CapabilityDiagnosticCategory.JsonParse &&
+127:            diagnostic.Category == CapabilityDiagnosticCategory.McpListTools &&
+160:                          EnumPropertyEquals(diagnostic, "category", CapabilityDiagnosticCategory.RequiredCapabilityDenied) &&
+161:                          ValueObjectPropertyEquals(diagnostic, "ruleId", "deny-required-audit") &&
+
+## Large-screen workflow proof
+16:    public async Task Workflow_shell_creates_and_runs_starter_preview_on_large_screen()
+32:                Width = 1600,
+33:                Height = 1000
+57:            Path = Path.Combine(artifactDirectory, "workflow-shell-runtime-large.png"),
+
+## Small viewport scan for executed SB11 workflow test
+No small/medium viewport mutation in WorkflowShellSmokeTests.cs.

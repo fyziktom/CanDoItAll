@@ -1,0 +1,7 @@
+src\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedBuilder.cs	616 lines
+tests\CanDoItAll.Tests.Unit\CapabilityMigrationCleanupGuardTests.cs	115 lines
+Templates\README.md	86 lines
+codex\bundles\skill-tool-mcp-isolation-template-migration\reviews\01-execution-report.md	321 lines
+codex\bundles\skill-tool-mcp-isolation-template-migration\README.md	64 lines
+codex\bundles\skill-tool-mcp-isolation-template-migration\subbundles\12-cleanup-hardening-and-docs\README.md	108 lines
+Accepted exception: SandboxWorkspaceSeedBuilder.cs is an existing seed aggregate reduced by SB12 cleanup; remaining non-capability seed construction is outside this capability-migration cleanup.

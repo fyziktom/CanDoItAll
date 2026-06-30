@@ -1,0 +1,46 @@
+
+Lines Path
+----- ----
+  436 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateValidator.cs
+  294 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityAccessPolicyTemplateCom…
+  289 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\External\ExternalProcessToolInvoker.cs
+  261 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupTestService.cs
+  222 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools.Abstractions\Tools.cs
+  221 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\External\ExternalHttpToolInvoker.cs
+  220 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityIdentifiers.cs
+  213 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Loading\FileSkillLoader.cs
+  205 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp.Abstractions\Mcp.cs
+  161 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs
+  159 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills.Abstractions\Skills.cs
+  147 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\Descriptors\McpDescriptorFactory.cs
+  144 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityModels.cs
+  137 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Templates\CapabilityTemplateDtos.cs
+  131 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Loading\InlineSkillLoader.cs
+  130 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityEnums.cs
+  122 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\Descriptors\ToolDescriptorFactory.cs
+  115 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Descriptors\SkillDescriptorFactory.cs
+   93 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\Fakes\FakeMcpServerScript.cs
+   69 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\Diagnostics\McpDiagnostics.cs
+   62 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Registered\RegisteredSkillResolver.cs
+   61 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\External\ToolDiagnostics.cs
+   53 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\Descriptors\McpExposureDescriptorFactory.cs
+   51 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Loading\SkillMarkdownParser.cs
+   49 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\Internal\InternalToolRegistry.cs
+   46 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\Setup\ToolSetupTestService.cs
+   44 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Diagnostics\SkillDiagnostics.cs
+   38 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityText.cs
+   26 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityNameRules.cs
+   26 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\Descriptors\ToolExposureDescriptorFactory.cs
+   26 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Descriptors\SkillExposureDescriptorFactory.cs
+   21 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\Runtime\McpSetupException.cs
+   20 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\Registered\RegisteredSkillRegistry.cs
+   15 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp\CanDoItAll.AgentFramework.Mcp.csproj
+   14 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills\CanDoItAll.AgentFramework.Skills.csproj
+   14 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools\CanDoItAll.AgentFramework.Tools.csproj
+   13 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Skills.Abstractions\CanDoItAll.AgentFramework.Skills.Abs…
+   13 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tools.Abstractions\CanDoItAll.AgentFramework.Tools.Abstr…
+   13 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Templates\CanDoItAll.AgentFramework.Capabil…
+   13 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Access\CanDoItAll.AgentFramework.Capabiliti…
+   13 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstracti…
+    9 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capa…
+

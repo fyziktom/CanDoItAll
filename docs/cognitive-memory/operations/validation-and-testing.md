@@ -5,15 +5,15 @@
 Run from the repository root.
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
 ```
 
 Use the Playwright project when UI behavior changes:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
 ```
 
 Run the solution build when persistence, API, or shared contracts change:
@@ -36,8 +36,8 @@ dotnet build CanDoItAll.slnx --no-restore -m:1 --verbosity:minimal
 The P1 beta closure pass was validated with Docker PostgreSQL/Qdrant and the public API path:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalServicesTests|FullyQualifiedName~CognitiveMemoryConsolidationEngineTests|FullyQualifiedName~CognitiveMemoryTaxonomyTests" --logger "console;verbosity=minimal" -m:1
-dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalServicesTests|FullyQualifiedName~CognitiveMemoryConsolidationEngineTests|FullyQualifiedName~CognitiveMemoryTaxonomyTests" --logger "console;verbosity=minimal" -m:1
+dotnet build src\App\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
 ```
 
 Results:
@@ -63,11 +63,11 @@ Browser proof:
 The P1 beta-hardening pass was validated with:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalSettingsTests" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalSettingsTests" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet build src\App\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
 ```
 
 Results:
@@ -92,10 +92,10 @@ Browser proof was run because this pass changed the health tab:
 The P0 maintainability and operations pass was validated with:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
-dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1
+dotnet build src\App\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal
 ```
 
 Results:

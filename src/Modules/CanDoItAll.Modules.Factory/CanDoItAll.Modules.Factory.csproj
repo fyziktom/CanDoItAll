@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="SeedAssets\PromptLibrary\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.1" />
+    <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+  </ItemGroup>
+
+</Project>
+

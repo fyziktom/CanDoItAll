@@ -1,0 +1,26 @@
+Command: rg coupling/sync scan plus production file-size scan for SB03 skill projects
+WorkingDirectory: C:\repositories\CanDoItAll
+Start: 2026-06-28T10:29:20.5383730-04:00
+End: 2026-06-28T10:29:20.7870566-04:00
+RegexRawExitCode: 1
+ExitCode: 0
+
+Sync/coupling scan output:
+
+File sizes:
+
+Path                                                                               Lines
+----                                                                               -----
+src/CanDoItAll.AgentFramework.Skills.Abstractions/Skills.cs                          140
+src/CanDoItAll.AgentFramework.Skills/Descriptors/SkillDescriptorFactory.cs           104
+src/CanDoItAll.AgentFramework.Skills/Descriptors/SkillExposureDescriptorFactory.cs    23
+src/CanDoItAll.AgentFramework.Skills/Diagnostics/SkillDiagnostics.cs                  40
+src/CanDoItAll.AgentFramework.Skills/Loading/FileSkillLoader.cs                      189
+src/CanDoItAll.AgentFramework.Skills/Loading/InlineSkillLoader.cs                    119
+src/CanDoItAll.AgentFramework.Skills/Loading/SkillMarkdownParser.cs                   44
+src/CanDoItAll.AgentFramework.Skills/Registered/RegisteredSkillRegistry.cs            15
+src/CanDoItAll.AgentFramework.Skills/Registered/RegisteredSkillResolver.cs            56
+
+
+Oversized production files > 500 lines:
+

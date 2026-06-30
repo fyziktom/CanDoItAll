@@ -9,6 +9,22 @@ CanDoItAll persists workflow definitions in its domain model and executes them t
 - Workflow definitions are validated before persistence. Invalid nodes, edges, components, executor settings, or unavailable executors fail the save operation instead of being stored for a later publish-time failure.
 - User-managed workflow definitions must not be overwritten by example seeding unless they carry the configured managed seed marker.
 
+## Current Project Ownership
+
+- `CanDoItAll.AgentFramework.Models` owns persisted workflow model contracts and JSON compatibility. Do not move serialized workflow ids, nodes, edges, ports, runtime policy, run state, events, checkpoints, artifacts, or value-shape contracts without migration proof.
+- `CanDoItAll.AgentFramework.Workflows.Abstractions` owns workflow service contracts and typed failure diagnostic envelopes.
+- `CanDoItAll.AgentFramework.Workflows.Builder` owns test and template graph builders. New template materialization paths should use these builders instead of hand-building graph dictionaries.
+- `CanDoItAll.AgentFramework.Workflows.Core` owns validation, catalog services, runtime policy validation, routing compilation, payload policy, preview simulation rendering, process bridge, test runner support, and user-facing failure display formatting.
+- `CanDoItAll.AgentFramework.Workflows.Runtime` owns runtime manager/store contracts, in-memory runtime stores, event sinks, checkpoints, external request runtime support, artifact content stores, event payload helpers, node progress, and runtime diagnostics.
+- `CanDoItAll.AgentFramework.Workflows.Templates` owns manifest/YAML parsing, template DTOs, input materialization, graph materialization, preview fixtures, descriptor-aware template validation, and template diagnostics.
+- `CanDoItAll.AgentFramework.Workflows.MafAdapter` owns MAF-specific workflow compilation, in-process backend execution, event normalization, LLM component invocation, handoff workflow creation, adapter registration, and adapter diagnostics.
+- `CanDoItAll.AgentFramework.Maf` remains the agent runtime adapter project. It must not regain workflow compiler/backend ownership, default workflow executor implementations, or workflow template loading.
+- `CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions` owns executor contracts, descriptors, catalog/invoker/approval contracts, execution context, and audit contracts.
+- `CanDoItAll.AgentFramework.WorkflowExecutors.Core` owns executor catalog composition, invoker, policy limits, side-effect safety, payload/redaction helpers, observability, JSON/settings helpers, descriptor factory, shared built-in descriptor constants, and executor diagnostics.
+- Default executors live in category projects under `CanDoItAll.AgentFramework.WorkflowExecutors.Standard.*`; the aggregate `CanDoItAll.AgentFramework.WorkflowExecutors.Standard` project composes the category registrations.
+- `CanDoItAll.AgentFramework.WorkflowExecutors.Plugins` owns plugin executor descriptor projection, grant evaluation boundary contracts, source/trust mapping, runtime package wrapping, and plugin activation diagnostics. `CanDoItAll.Modules.Plugins` keeps plugin persistence, package loading, grants, OAuth, connections, logs, and UI.
+- Feature-module executors stay with their owning feature modules and reference executor abstractions/core directly. Do not force domain executors into the standard executor category projects.
+
 ## Runtime Boundary
 
 - `IWorkflowMafCompiler` is the adapter seam between canonical workflow definitions and native MAF workflow instances.
@@ -28,6 +44,7 @@ CanDoItAll persists workflow definitions in its domain model and executes them t
 - The current host registers only the `InProcess` backend as runnable. `DurableTask` and `AzureFunctions` remain planned and unavailable until real durable implementations are registered.
 - Workflow save, settings save, test-run, and start paths validate runtime policy against the registered backend catalog. An unavailable durable backend fails explicitly; the runtime must not silently fall back to in-process execution.
 - New workflow settings, example seed settings, and template metadata default to in-process preview execution with durable production disabled.
+- `/api/workflows/contract` exposes the current workflow control route list and the boundary that agent skill, tool, and MCP setup belongs to the Agents API.
 - `/api/workflows/runtime-backends` and the workflow editor runtime selector expose planned durable backends as disabled with an availability reason.
 
 ## Checkpoint Trust Boundary
@@ -56,6 +73,29 @@ Workflow executors must expose a `WorkflowExecutorDescriptor` with:
 - `DeterministicTestMode` describing whether preview or fake execution can prove behavior without live external services.
 
 Executor descriptors default to no capabilities, no approval requirement, and no deterministic mode so legacy serialized descriptors remain safe and explicit.
+
+## Adding Workflow Templates
+
+- Add or update the template YAML under `Templates/Workflows` and keep the manifest entry stable.
+- Materialize through `WorkflowTemplatePackLoader`, which validates templates against `IWorkflowExecutorCatalog` when a catalog is supplied.
+- Template failures must throw `WorkflowTemplatePackException` with file, template key, workflow key, YAML path, node id, executor id, and repair hint when known.
+- UI pages and Workbench code must consume template services; they must not own YAML DTOs, duplicate graph materialization, or silently skip malformed templates.
+- Validation must include positive load/materialization proof and at least one negative test for malformed YAML, unknown executor, invalid settings, invalid routing, invalid input, or invalid preview fixture behavior when that area changes.
+
+## Adding Default Executors
+
+- Choose the narrowest standard category project: Control, Transforms, Workspace, Network, Documents, Media, or ProjectStructure. Add a new category only when dependencies or ownership justify it.
+- Describe the executor through `WorkflowExecutorDescriptorFactory` or the existing category descriptor source patterns. Preserve stable executor ids and value-shape compatibility.
+- Register implementations through the category service collection extension and aggregate through `AddStandardWorkflowExecutors(...)`. Do not reintroduce MAF-owned default executor registration aliases.
+- Declare `PermissionPolicy`, approval behavior, side-effect risk, payload limits, timeout behavior, and `DeterministicTestMode` explicitly.
+- Add category isolation tests and descriptor parity tests. If the executor touches external services, tests must use deterministic fakes unless live credentials are intentionally configured outside the default proof path.
+
+## Adding Plugin Executors
+
+- Bundled plugin executors live in their plugin projects and reference executor abstractions/core. Runtime package executors are wrapped through `CanDoItAll.AgentFramework.WorkflowExecutors.Plugins`.
+- Plugin manifests must declare capabilities and connection metadata that match the executor permission policy. External writes require approval; host commands require host-command capability and always-required approval.
+- Grant, OAuth, secret, package activation, dependency, and execution failures must carry plugin id, package id when known, executor type when known, operation, retryability, redacted technical detail, and a repair hint.
+- Plugin executor tests must prove descriptor projection, source/trust metadata, grant behavior, approval behavior, redaction, deterministic fake execution, cancellation, and failure diagnostics without live external mutation in the default path.
 
 ## Plugin Executor Governance
 
@@ -93,3 +133,13 @@ Current bundled policy intent:
 - Use plugin executor tests with fakes for success, failure, cancellation, redaction, approval denial, and artifact paths.
 - Live Gmail, Office365, and Docker proof remains optional unless the required local services and secrets are configured; deterministic fake proof is the required baseline.
 - A save response containing `Workflow definition save failed validation` means the definition was rejected before persistence. Fix the reported node, edge, component, or executor issue and retry the save.
+- UI/browser proof for this initiative is large-screen-only. Small and medium viewport checks are intentionally skipped while the product target remains large-screen desktop.
+
+## Diagnostic And File Responsibility Rules
+
+- `WorkflowFailureDiagnosticEnvelope` is the shared diagnostic contract. Validation, runtime, executor, plugin, template, MAF adapter, external tool/MCP, API, UI, and Workbench failures must preserve typed context instead of depending on exception-message parsing.
+- Diagnostics must include retryability, a concrete repair hint, redacted technical detail, and the most specific available workflow, node, executor, plugin, package, tool, operation, backend, or artifact context.
+- User-facing UI and Workbench text must go through `WorkflowFailureDisplayFormatter`. Blazor pages and Workbench files must not deserialize diagnostic envelopes directly or duplicate diagnostic parsing.
+- Secret values, OAuth tokens, authorization headers, prompt payloads, email contents, file contents, and sensitive host-command arguments must be masked before display, event payload storage, audit messages, and artifact summaries.
+- Do not introduce silent fallback paths for missing executors, unavailable plugins, failed package activation, missing grants, unavailable durable backends, artifact writes, or checkpoint writes. Fail explicitly with typed diagnostics.
+- Avoid copied monoliths. New non-trivial workflow, executor, plugin, template, adapter, or Workbench logic needs an obvious owner and focused helper/service files. Existing large UI page files and legacy Workbench project-structure orchestration services are approved exceptions only for their current responsibilities; new parsing, diagnostics, runtime, template, adapter, and executor behavior belongs outside those large files.
