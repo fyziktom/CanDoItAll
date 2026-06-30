@@ -2046,6 +2046,68 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task BlockGuard_returns_recoverable_result_for_governed_browser_snapshot_bounds_denial()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            ToolContractCatalog.BrowserSnapshot,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["depth"] = "4",
+                ["boxes"] = "True"
+            },
+            processStepAllowedOperations: [ProcessOperationContractNames.CaptureRuntimeProof],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.BrowserSnapshot,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.True(recoverable);
+        Assert.Contains("PolicyDenied", result, StringComparison.Ordinal);
+        Assert.Contains("governed browser proof bounds", result, StringComparison.Ordinal);
+        Assert.Contains("depth=2 or boxes=false", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BlockGuard_does_not_return_recoverable_result_for_browser_snapshot_without_runtime_proof_authorization()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            ToolContractCatalog.BrowserSnapshot,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["depth"] = "4",
+                ["boxes"] = "True"
+            },
+            processStepAllowedOperations: [ProcessOperationContractNames.ReadProcessContext],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.BrowserSnapshot,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.False(recoverable);
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
     public void BlockGuard_does_not_return_recoverable_result_for_mutation_denial()
     {
         var decision = ToolInvocationPolicyDecision.Deny(
