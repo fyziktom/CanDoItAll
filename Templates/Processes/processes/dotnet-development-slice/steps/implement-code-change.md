@@ -4,6 +4,8 @@ Launch the feature/function implementation subprocess for the bounded behavior i
 
 Before launching the child, carry forward one concrete feature request from the slice scope and architecture artifacts. Include the product root, app archetype, setup handoff, acceptance criteria, validation hooks, and exclusions. When the parent slice came from a full app request, the child request must be the derived first MVP behavior, not the whole app backlog.
 
+When the slice scope includes visual target ImageAsset ids or media paths, include them in the child request and require the visible implementation to use those assets as the design target. Do not launch a child request that only says to make the UI "look good" while dropping the listed source image.
+
 Do not launch the child when the slice scope only asks for scaffold readiness, solution setup, naming, or generic app-shell existence. A scaffold is prerequisite evidence, not an accepted implementation behavior. Reopen or block the slice intake unless the child request names an observable product-specific behavior and the acceptance checks for that behavior.
 
 Accepted child evidence can come from `feature-handoff` or `feature-handoff-after-repair`. A `feature-repair-escalation` packet is blocker evidence, not accepted implementation proof. If the child run is complete but only escalation/no-go evidence exists, record the blocker and do not mark this step accepted.

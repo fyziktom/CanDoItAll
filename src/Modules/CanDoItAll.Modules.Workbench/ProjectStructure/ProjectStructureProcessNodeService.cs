@@ -698,7 +698,8 @@ public sealed class ProjectStructureProcessNodeService(
 
     private static string BuildProjectStructureContextSummary(ProjectStructureSurface surface, ProjectStructureNode focusNode)
     {
-        var rows = EnumerateProjectStructureContextNodes(surface, focusNode)
+        var contextRows = EnumerateProjectStructureContextNodes(surface, focusNode);
+        var rows = contextRows
             .Take(40)
             .ToArray();
         if (rows.Length == 0)
@@ -709,6 +710,7 @@ public sealed class ProjectStructureProcessNodeService(
         var builder = new StringBuilder();
         builder.AppendLine($"Project structure source: {surface.ProjectName} ({surface.ProjectId:D}).");
         builder.AppendLine($"Selected node: {focusNode.Title} ({focusNode.Id}).");
+        AppendVisualTargetAssetSummary(builder, contextRows);
         foreach (var (node, depth) in rows)
         {
             var marker = string.Equals(node.Id, focusNode.Id, StringComparison.Ordinal)
@@ -740,6 +742,98 @@ public sealed class ProjectStructureProcessNodeService(
 
         return builder.ToString().TrimEnd();
     }
+
+    private static void AppendVisualTargetAssetSummary(
+        StringBuilder builder,
+        IReadOnlyList<(ProjectStructureNode Node, int Depth)> contextRows)
+    {
+        var assets = contextRows
+            .Select(row => row.Node)
+            .Where(IsVisualTargetAsset)
+            .Take(8)
+            .ToArray();
+        if (assets.Length == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine("Visual target assets:");
+        foreach (var asset in assets)
+        {
+            var subtype = string.IsNullOrWhiteSpace(asset.ObjectSubtype)
+                ? asset.ObjectType.ToString()
+                : $"{asset.ObjectType}/{asset.ObjectSubtype}";
+            var media = string.IsNullOrWhiteSpace(asset.MediaRelativePath)
+                ? "no media path"
+                : asset.MediaRelativePath;
+            var fileName = string.IsNullOrWhiteSpace(asset.MediaOriginalFileName)
+                ? "unknown file"
+                : asset.MediaOriginalFileName;
+            var contentType = string.IsNullOrWhiteSpace(asset.MediaContentType)
+                ? "unknown content type"
+                : asset.MediaContentType;
+            var notes = NormalizeContextText(string.Join(" ", asset.Subtitle, asset.Notes), 360);
+
+            builder.Append("- ");
+            builder.Append(asset.Title);
+            builder.Append(" (");
+            builder.Append(asset.Id);
+            builder.Append(") [");
+            builder.Append(subtype);
+            builder.Append("; ");
+            builder.Append(contentType);
+            builder.Append("; media=");
+            builder.Append(media);
+            builder.Append("; file=");
+            builder.Append(fileName);
+            builder.Append("; parent=");
+            builder.Append(asset.ParentId ?? "none");
+            builder.Append(']');
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                builder.Append(": ");
+                builder.Append(notes);
+            }
+
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Visual target rule: implementation and QA must fetch or analyze the relevant asset content before accepting visual alignment; do not rely only on this text summary or on generated app screenshots in isolation.");
+    }
+
+    private static bool IsVisualTargetAsset(ProjectStructureNode node)
+    {
+        if (node.ObjectType != ProjectObjectType.ImageAsset)
+        {
+            return false;
+        }
+
+        if (string.Equals(node.ObjectSubtype, "screenshot", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(node.ArtifactKind, "process-run-screenshot", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (string.Equals(node.ObjectSubtype, "generated", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(node.ObjectSubtype, "layout-recommendation", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var searchableText = string.Join(" ", node.Title, node.Subtitle, node.Notes, node.ObjectSubtype, node.ArtifactKind);
+        return ContainsVisualTargetKeyword(searchableText);
+    }
+
+    private static bool ContainsVisualTargetKeyword(string text)
+        => text.Contains("visual", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("target", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("proposal", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("mockup", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("wireframe", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("layout", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("design", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("look", StringComparison.OrdinalIgnoreCase) ||
+           text.Contains("ui", StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<(ProjectStructureNode Node, int Depth)> EnumerateProjectStructureContextNodes(
         ProjectStructureSurface surface,

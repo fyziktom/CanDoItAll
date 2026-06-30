@@ -14,4 +14,6 @@ Record the intended product root, whether it is existing or greenfield, the requ
 
 Copy explicit project-structure facts exactly: features, non-features, solution/project names, target framework, test framework, argument meanings, validation hooks, and no-go constraints. Treat explicit project-structure facts as resolved decisions, not unresolved questions or optional assumptions. Do not add optional behavior, extra controls, alternate SDK guidance, or test-framework defaults that are not grounded in the project structure or upstream artifacts.
 
+If project structure lists visual target assets, copy their ImageAsset node ids, media paths, and target-look notes into the slice acceptance criteria or validation hooks. Do not reduce a listed target image to a generic color/style hint when the requested deliverable has a visible UI.
+
 Preserve interface contracts exactly for the chosen MVP behavior. If the project structure names accepted input modes, command-line flags, file names, validation commands, or UI controls for that behavior, do not replace them with easier alternatives. If the exact contract cannot be implemented by the downstream generic subprocess, escalate that mismatch instead of widening the acceptance criteria.

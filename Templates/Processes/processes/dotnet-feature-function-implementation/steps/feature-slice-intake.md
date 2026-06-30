@@ -8,6 +8,8 @@ When the parent scope is a full app or broad deliverable, do not block only beca
 
 Use upstream facts as decisions, not questions. Preserve the named product root, app archetype, target framework, test framework, UI/no-UI classification, required controls, validation hooks, and no-go constraints. Do not invent optional behavior or substitute easier contracts.
 
+If upstream scope lists visual target ImageAsset ids or media paths, preserve them as acceptance inputs for the visible UI behavior. Record the target asset identity and media path in the feature boundary instead of translating it into an unsupported generic style sentence.
+
 For a generated app, the first derived behavior should normally be the smallest runnable user-visible workflow that proves the app shell and primary interaction path. A scaffold, empty app shell, starter page replacement note, or build-only proof is not a valid derived behavior. Record remaining requested capabilities as explicit exclusions or follow-up slice candidates, but do not exclude the core named interaction that makes the requested product recognizable.
 
 Block only when the upstream evidence is contradictory, when product root/app archetype/validation boundary is missing, or when selecting one behavior would require inventing requirements.

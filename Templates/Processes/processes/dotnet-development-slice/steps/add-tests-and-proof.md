@@ -11,3 +11,5 @@ This step owns the slice validation branch decision:
 - Return `Blocked` only when an environment, permission, unavailable tool, or process-contract issue prevents validation or repair routing.
 
 QA does not add or edit product tests in this step.
+
+When visual target ImageAsset ids or media paths are part of the slice scope, include source-target comparison in the proof. The validation artifact must name the target image asset, the delivered screenshot, and the comparison result before selecting `slice-accepted`.

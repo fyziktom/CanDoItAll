@@ -265,7 +265,12 @@ public sealed class ProcessLaunchPromptTests
             step,
             variables: new Dictionary<string, string>
             {
-                ["ProjectStructureContextSummary"] = "Project structure source: TetrisGame. Selected node: Delivery scope.",
+                ["ProjectStructureContextSummary"] = """
+                Project structure source: TetrisGame. Selected node: Delivery scope.
+                Visual target assets:
+                - Application layout proposal (custom:image1) [ImageAsset/generated; image/png; media=managed-files/project-media/images/tetris/proposal.png; file=proposal.png; parent=custom:architecture]: target look.
+                Visual target rule: implementation and QA must fetch or analyze the relevant asset content before accepting visual alignment.
+                """,
                 ["DotNetScaffoldContract"] = "AppArchetype: Blazor WebAssembly PWA",
                 ["ProductRoot"] = @"C:\programovani\dotnet\output",
                 ["ParentProcessRunId"] = "f22fa5af-9cad-44fb-a56d-e5d5d1eeae4d",
@@ -277,6 +282,9 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts", prompt, StringComparison.Ordinal);
         Assert.Contains("ProductRoot, OutputRoot, and ExternalTargetRoot launch variables identify the product target", prompt, StringComparison.Ordinal);
         Assert.Contains("Grounded external-target aliases for structured workspace tool path arguments: external-target/C/programovani/dotnet/output", prompt, StringComparison.Ordinal);
+        Assert.Contains("The project-structure context lists visual target assets", prompt, StringComparison.Ordinal);
+        Assert.Contains("compare the delivered screenshot against that visual target", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not accept visual quality from generated app screenshots in isolation", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not call workspace_read_file", prompt, StringComparison.Ordinal);
         Assert.Contains("with native absolute ProductRoot or OutputRoot paths", prompt, StringComparison.Ordinal);
         Assert.Contains("retry the same structured workspace tool with that alias before returning Blocked", prompt, StringComparison.Ordinal);
