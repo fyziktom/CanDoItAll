@@ -825,7 +825,7 @@ public sealed class ProjectStructureWorkflowNodeService(
         var currentStepIndex = ResolveCurrentStepIndex(definition, state, events, stepCount);
         var presentation = ResolvePresentation(state);
         var progressPercent = ResolveProgressPercent(state, currentStepIndex, stepCount);
-        var normalizedMessage = ResolveStatusMessage(state, message);
+        var normalizedMessage = ResolveWorkflowStatusMessage(state, message, events);
         var artifactSummaries = artifacts
             .OrderBy(item => item.CreatedAtUtc)
             .Select(MapArtifactSummary)
@@ -1025,9 +1025,10 @@ public sealed class ProjectStructureWorkflowNodeService(
     {
         return new ProjectStructureWorkflowRunEventSummary(
             workflowEvent.Kind,
-            workflowEvent.Message,
+            WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent),
             workflowEvent.NodeId?.Value ?? string.Empty,
-            workflowEvent.CreatedAtUtc);
+            workflowEvent.CreatedAtUtc,
+            workflowEvent.PayloadJson);
     }
 
     private static ProjectStructureNodeStatePresentation ResolvePresentation(WorkflowRunState state)
@@ -1136,11 +1137,29 @@ public sealed class ProjectStructureWorkflowNodeService(
         return Math.Clamp(percent, 5, 99);
     }
 
-    private static string ResolveStatusMessage(WorkflowRunState state, string? message)
+    internal static string ResolveWorkflowStatusMessage(
+        WorkflowRunState state,
+        string? message,
+        IReadOnlyList<WorkflowEventRecord> events)
     {
+        if (state == WorkflowRunState.Failed)
+        {
+            var failureMessage = events
+                .OrderByDescending(item => item.CreatedAtUtc)
+                .Where(item => item.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed)
+                .Select(WorkflowFailureDisplayFormatter.ToUserMessage)
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+            if (!string.IsNullOrWhiteSpace(failureMessage))
+            {
+                return failureMessage;
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(message))
         {
-            return message.Trim();
+            return state == WorkflowRunState.Failed
+                ? WorkflowFailureDisplayFormatter.ToUserMessage(message)
+                : message.Trim();
         }
 
         return state switch

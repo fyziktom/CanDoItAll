@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -245,7 +246,7 @@ public sealed class PluginConnectionStore(
 
 public sealed class PluginGrantEvaluator(
     PluginInstallationStore installationStore,
-    PluginGrantStore grantStore)
+    PluginGrantStore grantStore) : IPluginWorkflowExecutorGrantEvaluator
 {
     private readonly Dictionary<string, CachedInstallation> installationCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, CachedGrants> grantCache = new(StringComparer.OrdinalIgnoreCase);

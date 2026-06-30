@@ -20,6 +20,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Capabilities.Templates\CanDoItAll.AgentFramework.Capabilities.Templates.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />

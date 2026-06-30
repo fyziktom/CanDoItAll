@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Agents.AI.Workflows;
 
 namespace CanDoItAll.Tests.Unit;
@@ -72,6 +73,47 @@ public sealed class MafWorkflowEventNormalizerTests
         Assert.Contains("\"node\":\"work-a\"", completed.InlineJson, StringComparison.Ordinal);
         Assert.DoesNotContain("raw-token-value", completed.InlineJson, StringComparison.Ordinal);
         Assert.Contains("[REDACTED]", completed.InlineJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Runtime_compilation_failure_event_carries_typed_redacted_diagnostic_payload()
+    {
+        var manager = new WorkflowRuntimeManager(
+            [
+                new MafInProcessWorkflowExecutionBackend(
+                    new FailingWorkflowCompiler("Workflow compile failed token=raw-token-value."),
+                    [])
+            ],
+            new InMemoryWorkflowRunStore());
+        var definition = CreateDefinition();
+
+        var run = await manager.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"prompt\":\"hello\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null));
+        var error = Assert.Single(await manager.ListEventsAsync(run.RunId), workflowEvent =>
+            workflowEvent.Kind == WorkflowEventKind.Error);
+        var payload = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(error.PayloadJson, JsonOptions)!;
+        var diagnostic = JsonSerializer.Deserialize<WorkflowFailureDiagnosticEnvelope>(payload.InlineJson, JsonOptions)!;
+
+        Assert.Equal(WorkflowRunState.Failed, run.State);
+        Assert.Equal("WorkflowCompilationFailed", payload.EventType);
+        Assert.Equal(WorkflowFailureKind.Runtime, diagnostic.Kind);
+        Assert.Equal(WorkflowFailureRetryability.RetryableAfterRepair, diagnostic.Retryability);
+        Assert.Equal(WorkflowFailureSourceKind.RuntimeBackend, diagnostic.Source.Kind);
+        Assert.Equal(WorkflowRuntimeBackendKind.InProcess, diagnostic.Source.BackendKind);
+        Assert.Equal(definition.Id, diagnostic.WorkflowId);
+        Assert.Equal(definition.VersionId, diagnostic.WorkflowVersionId);
+        Assert.Equal(run.RunId, diagnostic.RunId);
+        Assert.Contains("MAF workflow adapter", diagnostic.RepairHint, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-token-value", run.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-token-value", error.PayloadJson, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", diagnostic.RedactedTechnicalDetail, StringComparison.Ordinal);
     }
 
     private static WorkflowDefinition CreateDefinition()
@@ -173,5 +215,21 @@ public sealed class MafWorkflowEventNormalizerTests
                 $$"""{"node":"{{context.Node.Id.Value}}","token":"raw-token-value"}""",
                 context.Descriptor.ResultShape));
         }
+    }
+
+    private sealed class FailingWorkflowCompiler(string errorMessage) : IWorkflowMafCompiler
+    {
+        public MafWorkflowBuildResult Compile(
+            WorkflowDefinition definition,
+            IReadOnlyList<LlmCallComponent> components)
+            => Compile(definition, components, WorkflowPreviewSimulationPlan.Empty);
+
+        public MafWorkflowBuildResult Compile(
+            WorkflowDefinition definition,
+            IReadOnlyList<LlmCallComponent> components,
+            WorkflowPreviewSimulationPlan? previewSimulationPlan)
+            => new(
+                null,
+                WorkflowCompilationResult.Failed(WorkflowValidationResult.Success, errorMessage));
     }
 }

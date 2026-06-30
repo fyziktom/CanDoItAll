@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Templates;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
@@ -53,7 +54,8 @@ internal static class WorkflowPreviewInputSupport
     public const string DefaultInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
 
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
-    private static readonly Lazy<WorkflowPreviewSimulationTemplateCatalog> SimulationTemplateCatalog = new(LoadSimulationTemplateCatalog);
+    private static readonly Lazy<WorkflowPreviewSimulationTemplateCatalog> SimulationTemplateCatalog = new(
+        () => new WorkflowPreviewSimulationTemplateLoader().Load());
 
     public static WorkflowPreviewRequirements Analyze(
         WorkflowDefinition definition,
@@ -353,43 +355,4 @@ internal static class WorkflowPreviewInputSupport
         return options;
     }
 
-    private static WorkflowPreviewSimulationTemplateCatalog LoadSimulationTemplateCatalog()
-    {
-        var root = WorkflowTemplatePackLoader.FindPackRoot();
-        var path = Path.Combine(root, "preview-simulations", "executors.json");
-        if (!File.Exists(path))
-        {
-            return new WorkflowPreviewSimulationTemplateCatalog();
-        }
-
-        try
-        {
-            using var stream = File.OpenRead(path);
-            return JsonSerializer.Deserialize<WorkflowPreviewSimulationTemplateCatalog>(stream, JsonOptions) ??
-                   new WorkflowPreviewSimulationTemplateCatalog();
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
-        {
-            throw new InvalidOperationException(
-                $"Workflow preview simulation template file '{path}' could not be loaded: {exception.Message}",
-                exception);
-        }
-    }
-
-    private sealed class WorkflowPreviewSimulationTemplateCatalog
-    {
-        public Dictionary<string, WorkflowPreviewSimulationExecutorTemplates> Executors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private sealed class WorkflowPreviewSimulationExecutorTemplates
-    {
-        public Dictionary<string, WorkflowPreviewSimulationTemplate> Operations { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private sealed class WorkflowPreviewSimulationTemplate
-    {
-        public string Description { get; set; } = string.Empty;
-
-        public JsonElement OutputTemplate { get; set; }
-    }
 }

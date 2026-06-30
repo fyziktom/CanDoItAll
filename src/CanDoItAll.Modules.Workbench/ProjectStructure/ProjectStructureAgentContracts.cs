@@ -527,7 +527,8 @@ public sealed record ProjectStructureWorkflowRunEventSummary(
     WorkflowEventKind Kind,
     string Message,
     string NodeId,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    string PayloadJson = "");
 
 public sealed record ProjectStructureWorkflowRunArtifactSummary(
     WorkflowArtifactKind Kind,

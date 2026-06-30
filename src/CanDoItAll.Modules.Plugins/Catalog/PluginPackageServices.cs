@@ -4,6 +4,7 @@ using System.Runtime.Loader;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -965,7 +966,7 @@ internal static class RuntimePluginAssemblyRegistrar
 
                 var assembly = LoadPluginAssembly(assemblyPath);
                 InvokeRegistrars(services, assembly);
-                RegisterWorkflowExecutors(services, assembly, manifest);
+                PluginWorkflowExecutorRuntimeRegistration.RegisterWorkflowExecutors(services, assembly, manifest.Plugin);
                 RegisterAssignableTypes<IPluginHostToolRecipeCatalogSource>(services, assembly, ServiceLifetime.Singleton);
             }
         }
@@ -1027,93 +1028,6 @@ internal static class RuntimePluginAssemblyRegistrar
             .Where(serviceType.IsAssignableFrom))
         {
             services.TryAddEnumerable(new ServiceDescriptor(serviceType, implementationType, lifetime));
-        }
-    }
-
-    private static void RegisterWorkflowExecutors(
-        IServiceCollection services,
-        Assembly assembly,
-        PluginPackageManifest manifest)
-    {
-        foreach (var implementationType in assembly.DefinedTypes
-            .Where(type => type is { IsClass: true, IsAbstract: false } && !type.ContainsGenericParameters)
-            .Select(type => type.AsType())
-            .Where(typeof(IWorkflowExecutor).IsAssignableFrom))
-        {
-            var runtimeExecutorType = implementationType;
-            services.AddScoped(typeof(IWorkflowExecutor), serviceProvider =>
-                CreateRuntimePackageWorkflowExecutor(serviceProvider, runtimeExecutorType, manifest.Plugin));
-            services.AddScoped<IWorkflowExecutorDescriptorSource>(serviceProvider =>
-                new RuntimePackageWorkflowExecutorDescriptorSource(
-                    CreateRuntimePackageWorkflowExecutor(serviceProvider, runtimeExecutorType, manifest.Plugin)));
-        }
-    }
-
-    private static RuntimePackageWorkflowExecutor CreateRuntimePackageWorkflowExecutor(
-        IServiceProvider serviceProvider,
-        Type implementationType,
-        PluginDescriptor pluginDescriptor)
-    {
-        var executor = (IWorkflowExecutor)ActivatorUtilities.CreateInstance(serviceProvider, implementationType);
-        return new RuntimePackageWorkflowExecutor(executor, pluginDescriptor);
-    }
-
-    private sealed class RuntimePackageWorkflowExecutor(
-        IWorkflowExecutor inner,
-        PluginDescriptor pluginDescriptor) : IWorkflowExecutor
-    {
-        public WorkflowExecutorDescriptor Descriptor
-        {
-            get
-            {
-                var descriptor = inner.Descriptor;
-                var package = pluginDescriptor.Package
-                    ?? throw new InvalidOperationException($"Runtime package plugin '{pluginDescriptor.Id}' is missing package metadata.");
-                return descriptor with
-                {
-                    Source = WorkflowExecutorSourceDescriptor.Package(
-                        MapSourceKind(pluginDescriptor.SourceKind),
-                        pluginDescriptor.Id.Value,
-                        package.PackageId.Value,
-                        pluginDescriptor.Version,
-                        MapTrustLevel(pluginDescriptor.TrustLevel),
-                        pluginDescriptor.DisplayName,
-                        pluginDescriptor.Icon ?? UiIconDescriptor.Default)
-                };
-            }
-        }
-
-        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
-            WorkflowExecutorExecutionContext context,
-            WorkflowNodeInput input,
-            CancellationToken cancellationToken = default)
-            => inner.ExecuteAsync(context, input, cancellationToken);
-
-        private static WorkflowExecutorSourceKind MapSourceKind(PluginSourceKind sourceKind)
-            => sourceKind switch
-            {
-                PluginSourceKind.LocalPackage => WorkflowExecutorSourceKind.LocalPackage,
-                PluginSourceKind.RemotePackage or PluginSourceKind.ShopCatalog => WorkflowExecutorSourceKind.RemotePackage,
-                PluginSourceKind.Bundled => WorkflowExecutorSourceKind.BundledPlugin,
-                _ => WorkflowExecutorSourceKind.RemotePackage
-            };
-
-        private static WorkflowExecutorTrustLevel MapTrustLevel(PluginTrustLevel trustLevel)
-            => trustLevel switch
-            {
-                PluginTrustLevel.Application => WorkflowExecutorTrustLevel.Application,
-                PluginTrustLevel.Bundled => WorkflowExecutorTrustLevel.BundledPlugin,
-                PluginTrustLevel.LocalPackage => WorkflowExecutorTrustLevel.LocalPackage,
-                PluginTrustLevel.RemotePackage => WorkflowExecutorTrustLevel.RemotePackage,
-                _ => WorkflowExecutorTrustLevel.Untrusted
-            };
-    }
-
-    private sealed class RuntimePackageWorkflowExecutorDescriptorSource(IWorkflowExecutor executor) : IWorkflowExecutorDescriptorSource
-    {
-        public IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors()
-        {
-            yield return executor.Descriptor;
         }
     }
 

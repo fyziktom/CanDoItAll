@@ -2,6 +2,7 @@ using Bunit;
 using AngleSharp.Dom;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework;
@@ -16,6 +17,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using WorkflowFailureDiagnosticEnvelope = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureDiagnosticEnvelope;
+using WorkflowFailureKind = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureKind;
+using WorkflowFailureRetryability = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureRetryability;
+using WorkflowFailureSourceContext = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureSourceContext;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -1000,6 +1005,78 @@ public sealed class WorkflowsPageTests
         {
             Assert.Contains("Page 2 of 2 - 12 runs", cut.Find("[data-testid='workflows-run-pager']").TextContent);
             Assert.Equal(4, cut.FindAll("[data-testid='workflows-run-item']").Count);
+        });
+    }
+
+    [Fact]
+    public async Task Workflow_history_displays_typed_failure_diagnostic_without_raw_message()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
+        var definition = await CreateHistoryDefinitionAsync(catalogService);
+        var runId = WorkflowRunId.New();
+        var now = DateTimeOffset.UtcNow;
+        var diagnostic = new WorkflowFailureDiagnosticEnvelope(
+            WorkflowFailureKind.Executor,
+            WorkflowFailureRetryability.RetryableAfterRepair,
+            "Executor settings are invalid.",
+            "Fix the executor settings JSON for node 'store-project'.",
+            "Executor settings parse failure: token=[REDACTED]",
+            "corr-workflows-page",
+            definition.Id,
+            definition.VersionId,
+            runId,
+            new WorkflowNodeId("store-project"),
+            WorkflowExecutorIds.ProjectStructure,
+            WorkflowFailureSourceContext.ForExecutor(WorkflowExecutorIds.ProjectStructure),
+            now);
+        var payloadJson = WorkflowEventPayloads.Serialize(
+            WorkflowEventPayloadSource.Runtime,
+            "WorkflowExecutorFailed",
+            nodeId: new WorkflowNodeId("store-project"),
+            executorId: WorkflowExecutorIds.ProjectStructure,
+            inlineJson: WorkflowRuntimeFailureDiagnosticMapper.Serialize(diagnostic));
+
+        await runStore.SaveRunAsync(new WorkflowRunSnapshot(
+            runId,
+            definition.Id,
+            definition.VersionId,
+            WorkflowRunState.Failed,
+            WorkflowRuntimeBackendKind.InProcess,
+            "failure-history-run",
+            "Workflow executor failed with token=raw-token-value.",
+            now,
+            now));
+        await runStore.SaveEventAsync(new WorkflowEventRecord(
+            Guid.NewGuid(),
+            runId,
+            WorkflowEventKind.ExecutorFailed,
+            new WorkflowNodeId("store-project"),
+            "Workflow executor failed with token=raw-token-value.",
+            payloadJson,
+            now));
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-history']");
+        cut.Find("[data-testid='workflows-tab-history']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Fix the executor settings JSON", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("raw-token-value", cut.Markup, StringComparison.Ordinal);
+        });
+
+        cut.Find("[data-testid='workflows-event-detail']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflows-event-detail-dialog", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Executor settings parse failure: token=[REDACTED]", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("raw-token-value", cut.Markup, StringComparison.Ordinal);
         });
     }
 

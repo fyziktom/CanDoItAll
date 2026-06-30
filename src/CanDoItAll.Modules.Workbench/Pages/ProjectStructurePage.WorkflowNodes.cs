@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
@@ -45,7 +46,7 @@ public partial class ProjectStructurePage
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
             workflowAddDialogRefreshVersion++;
-            workflowAddDialog = BuildWorkflowAddErrorDialog(node, inputSettings, exception.GetBaseException().Message);
+            workflowAddDialog = BuildWorkflowAddErrorDialog(node, inputSettings, FormatWorkflowUiException(exception));
             Logger.LogWarning(
                 exception,
                 "Project structure workflow add dialog failed to load. ProjectId={ProjectId} ParentNodeId={ParentNodeId}",
@@ -154,7 +155,7 @@ public partial class ProjectStructurePage
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
-            workflowAddDialog = dialog with { Error = exception.GetBaseException().Message };
+            workflowAddDialog = dialog with { Error = FormatWorkflowUiException(exception) };
             Logger.LogWarning(
                 exception,
                 "Project structure workflow node creation failed. ProjectId={ProjectId} ParentNodeId={ParentNodeId} WorkflowId={WorkflowId}",
@@ -187,7 +188,7 @@ public partial class ProjectStructurePage
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
-            error = exception.GetBaseException().Message;
+            error = FormatWorkflowUiException(exception);
         }
 
         workflowStartDialog = new ProjectStructureWorkflowStartDialogState(
@@ -244,7 +245,7 @@ public partial class ProjectStructurePage
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
-            var message = exception.GetBaseException().Message;
+            var message = FormatWorkflowUiException(exception);
             var status = await TryRefreshWorkflowStatusAsync(dialog.NodeId, reloadSurface: true);
             workflowStartDialog = dialog with
             {
@@ -330,7 +331,7 @@ public partial class ProjectStructurePage
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
             selectedWorkflowStatus = null;
-            workflowFeedback = exception.GetBaseException().Message;
+            workflowFeedback = FormatWorkflowUiException(exception);
             workflowFeedbackTone = "warn";
             Logger.LogWarning(
                 exception,
@@ -410,7 +411,7 @@ public partial class ProjectStructurePage
                 return;
             }
 
-            workflowAddDialog = requested with { Error = exception.GetBaseException().Message };
+            workflowAddDialog = requested with { Error = FormatWorkflowUiException(exception) };
         }
 
         await InvokeAsync(StateHasChanged);
@@ -489,4 +490,7 @@ public partial class ProjectStructurePage
 
     private static bool IsWorkflowUiException(Exception exception)
         => exception is ProjectStructureAgentException or InvalidOperationException or ArgumentException or KeyNotFoundException;
+
+    private static string FormatWorkflowUiException(Exception exception)
+        => WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
 }

@@ -666,8 +666,8 @@ public partial class WorkflowCanvasEditor
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow save failed", exception.Message);
+            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+            NotificationService.Error("Workflow save failed", errorMessage);
         }
         finally
         {
@@ -835,8 +835,8 @@ public partial class WorkflowCanvasEditor
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow preview failed", exception.Message);
+            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+            NotificationService.Error("Workflow preview failed", errorMessage);
         }
         finally
         {
@@ -936,8 +936,8 @@ public partial class WorkflowCanvasEditor
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or JsonException)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow node create failed", exception.Message);
+            errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+            NotificationService.Error("Workflow node create failed", errorMessage);
         }
     }
 

@@ -2,6 +2,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />

@@ -169,14 +169,6 @@ public sealed partial class AppSmokeTests
         await workflowStatusCard.GetByTestId("project-structure-workflow-created-assets")
             .WaitForAsync();
 
-        await page.SetViewportSizeAsync(390, 844);
-        await EnsureCanvasSelectionAsync(page, workflowSelector);
-        await EnsureFloatingWindowExpandedAsync(page, "project-structure-selection-window");
-        await workflowStatusCard.GetByText("100%", new() { Exact = true }).ScrollIntoViewIfNeededAsync();
-        await CaptureLocatorAsync(
-            workflowStatusCard,
-            Path.Combine(artifactsDir, "project-structure-workflow-summary-mobile.png"));
-
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 

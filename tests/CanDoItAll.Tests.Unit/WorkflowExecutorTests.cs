@@ -4,6 +4,14 @@ using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Standard;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,7 +52,7 @@ public sealed class WorkflowExecutorTests
     {
         var services = new ServiceCollection();
 
-        services.AddBuiltInWorkflowExecutors();
+        services.AddStandardWorkflowExecutors();
 
         var executorDescriptors = services
             .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
@@ -62,7 +70,7 @@ public sealed class WorkflowExecutorTests
         Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ImageGenerationWorkflowExecutor));
         Assert.Equal(
             BuiltInWorkflowExecutorDescriptors.Planned.Count,
-            executorDescriptors.Count(descriptor => descriptor.ImplementationInstance is PlannedWorkflowExecutor));
+            executorDescriptors.Count(descriptor => descriptor.ImplementationFactory is not null));
     }
 
     [Fact]

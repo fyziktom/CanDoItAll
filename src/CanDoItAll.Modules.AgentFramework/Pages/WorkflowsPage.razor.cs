@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
@@ -189,8 +190,8 @@ public partial class WorkflowsPage
         }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow refresh failed", exception.Message);
+            errorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Workflow refresh failed", errorMessage);
         }
         finally
         {
@@ -345,8 +346,8 @@ public partial class WorkflowsPage
         }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow create failed", exception.Message);
+            errorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Workflow create failed", errorMessage);
         }
         finally
         {
@@ -512,8 +513,8 @@ public partial class WorkflowsPage
         }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow test failed", exception.Message);
+            errorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Workflow test failed", errorMessage);
         }
         finally
         {
@@ -649,8 +650,8 @@ public partial class WorkflowsPage
         }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow cancel failed", exception.Message);
+            errorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Workflow cancel failed", errorMessage);
         }
     }
 
@@ -664,8 +665,8 @@ public partial class WorkflowsPage
         }
         catch (Exception exception)
         {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow response failed", exception.Message);
+            errorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Workflow response failed", errorMessage);
         }
     }
 
@@ -1204,17 +1205,38 @@ public partial class WorkflowsPage
     private static string FormatWorkflowMessage(string message)
         => WorkflowFailureDisplayFormatter.ToUserMessage(message);
 
+    private static string ResolveRunDisplaySummary(WorkflowRunSnapshot run)
+        => run.State == WorkflowRunState.Failed
+            ? WorkflowFailureDisplayFormatter.ToUserMessage(run.Summary)
+            : run.Summary;
+
     private static string ResolveEventDisplayMessage(WorkflowEventRecord workflowEvent)
-        => workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed
-            ? WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent.Message)
-            : workflowEvent.Message;
+        => WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent);
 
     private static bool HasTechnicalEventMessage(WorkflowEventRecord workflowEvent)
-        => workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed &&
-           !string.Equals(
-               ResolveEventDisplayMessage(workflowEvent),
-               workflowEvent.Message,
-               StringComparison.Ordinal);
+    {
+        if (WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail))
+        {
+            return !string.Equals(
+                ResolveEventDisplayMessage(workflowEvent),
+                technicalDetail,
+                StringComparison.Ordinal);
+        }
+
+        return workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed &&
+               !string.Equals(
+                   ResolveEventDisplayMessage(workflowEvent),
+                   workflowEvent.Message,
+                   StringComparison.Ordinal);
+    }
+
+    private static string ResolveEventTechnicalMessage(WorkflowEventRecord workflowEvent)
+        => WorkflowFailureDisplayFormatter.TryResolveDiagnosticTechnicalDetail(workflowEvent, out var technicalDetail)
+            ? technicalDetail
+            : workflowEvent.Message;
+
+    private static string FormatWorkflowException(Exception exception)
+        => WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
 
     private static string FormatShortId(Guid value)
     {

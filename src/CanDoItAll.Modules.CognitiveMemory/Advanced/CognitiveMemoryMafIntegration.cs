@@ -538,21 +538,16 @@ public static class CognitiveMemoryWorkflowExecutorDescriptors
         string description,
         string icon,
         TSettings defaultSettings)
-        => new(
+        => WorkflowExecutorDescriptorFactory.CreateImplemented(
             id,
             name,
             description,
             WorkflowExecutorCategoryKind.Data,
             icon,
             $"builtin.{id.Value}",
-            WorkflowValueShape.Text,
-            JsonShape,
-            "{\"type\":\"object\"}",
-            JsonSerializer.Serialize(defaultSettings, CognitiveMemoryAdvancedJson.Options),
-            WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 90, CaptureOutputArtifact = true },
-            IsImplemented: true)
-        {
-            Source = WorkflowExecutorSourceDescriptor.BuiltIn(),
-            Availability = WorkflowExecutorAvailabilityDescriptor.Available()
-        };
+            defaultSettings,
+            WorkflowExecutorSourceDescriptor.BuiltIn(),
+            resultShape: JsonShape,
+            defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 90, CaptureOutputArtifact = true },
+            settingsJsonOptions: CognitiveMemoryAdvancedJson.Options);
 }

@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj" />
     <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\..\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />

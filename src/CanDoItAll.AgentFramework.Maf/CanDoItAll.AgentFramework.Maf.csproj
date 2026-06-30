@@ -3,6 +3,8 @@
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Providers\CanDoItAll.AgentFramework.Providers.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
@@ -20,7 +22,6 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
-    <PackageReference Include="ExcelDataReader" Version="3.8.0" />
     <PackageReference Include="Microsoft.Agents.AI" Version="1.8.0" />
     <PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.8.0-preview.260528.1" />
     <PackageReference Include="Microsoft.Agents.AI.Mem0" Version="1.0.0-preview.251028.1" />
@@ -29,7 +30,6 @@
     <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
-    <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 
   <PropertyGroup>

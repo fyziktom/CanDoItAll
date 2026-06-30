@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

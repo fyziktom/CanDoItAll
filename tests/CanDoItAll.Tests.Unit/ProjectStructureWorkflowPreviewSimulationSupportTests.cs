@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Builder;
+using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workbench;
 
@@ -10,6 +12,42 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
+    [Fact]
+    public void Failed_workflow_status_message_prefers_typed_event_diagnostic()
+    {
+        var diagnostic = WorkflowFixtureFactory.CreateExecutorFailureDiagnostic(
+            new WorkflowNodeId("store-project"),
+            WorkflowExecutorIds.ProjectStructure,
+            "corr-workbench-status");
+        var payloadJson = WorkflowEventPayloads.Serialize(
+            WorkflowEventPayloadSource.Runtime,
+            "WorkflowExecutorFailed",
+            nodeId: new WorkflowNodeId("store-project"),
+            executorId: WorkflowExecutorIds.ProjectStructure,
+            inlineJson: WorkflowRuntimeFailureDiagnosticMapper.Serialize(diagnostic));
+        var events = new[]
+        {
+            new WorkflowEventRecord(
+                Guid.NewGuid(),
+                WorkflowRunId.New(),
+                WorkflowEventKind.ExecutorFailed,
+                new WorkflowNodeId("store-project"),
+                "Project-structure executor leaked raw-token-value.",
+                payloadJson,
+                DateTimeOffset.UtcNow)
+        };
+
+        var message = ProjectStructureWorkflowNodeService.ResolveWorkflowStatusMessage(
+            WorkflowRunState.Failed,
+            "Raw run summary with raw-token-value.",
+            events);
+
+        Assert.Contains("store-project", message, StringComparison.Ordinal);
+        Assert.Contains(WorkflowExecutorIds.ProjectStructure.Value, message, StringComparison.Ordinal);
+        Assert.Contains("Fix the executor settings JSON", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-token-value", message, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void Analyze_returns_generic_project_structure_write_options()

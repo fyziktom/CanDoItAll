@@ -12,7 +12,7 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
     PluginOAuthService oauthService,
     Office365GraphClient graphClient) : IWorkflowExecutor
 {
-    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly JsonSerializerOptions JsonOptions = Office365WorkflowJson.Options;
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 email message batch JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         Office365PluginConstants.PluginId.Value,
@@ -191,12 +191,6 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
             : WorkflowExecutorAvailabilityDescriptor.Unavailable(oauthGrant.Kind.ToString(), oauthGrant.Message);
     }
 
-    private static JsonSerializerOptions CreateJsonOptions()
-    {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
 }
 
 public sealed class Office365DownloadByAddressWorkflowExecutor(
@@ -204,7 +198,7 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
     PluginOAuthService oauthService,
     Office365GraphClient graphClient) : IWorkflowExecutor
 {
-    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly JsonSerializerOptions JsonOptions = Office365WorkflowJson.Options;
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 address-matched email message JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         Office365PluginConstants.PluginId.Value,
@@ -438,12 +432,6 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
             : WorkflowExecutorAvailabilityDescriptor.Unavailable(oauthGrant.Kind.ToString(), oauthGrant.Message);
     }
 
-    private static JsonSerializerOptions CreateJsonOptions()
-    {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
 }
 
 public sealed class Office365MarkProcessedWorkflowExecutor(
@@ -451,7 +439,7 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
     PluginOAuthService oauthService,
     Office365GraphClient graphClient) : IWorkflowExecutor
 {
-    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly JsonSerializerOptions JsonOptions = Office365WorkflowJson.Options;
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 category mutation JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         Office365PluginConstants.PluginId.Value,
@@ -652,6 +640,12 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
             ? WorkflowExecutorAvailabilityDescriptor.Available()
             : WorkflowExecutorAvailabilityDescriptor.Unavailable(oauthGrant.Kind.ToString(), oauthGrant.Message);
     }
+
+}
+
+internal static class Office365WorkflowJson
+{
+    public static JsonSerializerOptions Options { get; } = CreateJsonOptions();
 
     private static JsonSerializerOptions CreateJsonOptions()
     {

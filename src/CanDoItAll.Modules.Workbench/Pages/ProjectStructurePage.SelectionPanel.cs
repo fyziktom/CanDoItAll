@@ -1,4 +1,5 @@
 using System.Text;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 
@@ -176,7 +177,7 @@ public partial class ProjectStructurePage
             : null;
         var workflowName = cachedStatus?.Summary.WorkflowName ?? metadata.WorkflowName;
         var state = cachedStatus?.State ?? metadata.LastRunState ?? WorkflowRunState.NotStarted;
-        var message = cachedStatus?.Message ?? metadata.LastRunSummary;
+        var message = ResolveWorkflowSelectionMessage(state, cachedStatus?.Message ?? metadata.LastRunSummary);
         var currentStep = cachedStatus?.CurrentStepIndex ?? metadata.LastStepIndex;
         var stepCount = cachedStatus?.StepCount ?? metadata.LastStepCount;
         var createdNodeIds = cachedStatus?.Summary.CreatedNodeIds ?? metadata.LastCreatedNodeIds;
@@ -188,7 +189,7 @@ public partial class ProjectStructurePage
             string.IsNullOrWhiteSpace(workflowName) ? node.Title : workflowName,
             state.ToString(),
             node.Status,
-            string.IsNullOrWhiteSpace(message) ? "Workflow is ready to start from project structure." : message,
+            message,
             stepCount > 0 ? $"{Math.Clamp(currentStep, 0, stepCount)} / {stepCount}" : "Not started",
             cachedStatus is null ? ProjectStructureNodeHelpers.ResolveProgressLabel(node) : $"{cachedStatus.ProgressPercent}%",
             (cachedStatus?.RunId ?? metadata.LastRunId)?.ToString() ?? string.Empty,
@@ -196,6 +197,18 @@ public partial class ProjectStructurePage
             createdNodeIds,
             createdAssetIds,
             createdFilePaths);
+    }
+
+    private static string ResolveWorkflowSelectionMessage(WorkflowRunState state, string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "Workflow is ready to start from project structure.";
+        }
+
+        return state == WorkflowRunState.Failed
+            ? WorkflowFailureDisplayFormatter.ToUserMessage(message)
+            : message.Trim();
     }
 
     private ProjectStructureAttachmentPreviewCardState? BuildAttachmentPreviewCardState(ProjectStructureNode node)

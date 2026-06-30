@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 
 namespace CanDoItAll.Modules.Plugins;
@@ -18,12 +19,14 @@ public static class PluginsModuleServiceCollectionExtensions
         RuntimePluginAssemblyRegistrar.RegisterInstalledPackages(services, packageOptions);
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPluginCatalogSource, BundledPluginCatalogSource>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPluginCatalogSource, InstalledPluginPackageCatalogSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutorDescriptorSource, PluginWorkflowExecutorDescriptorSource>());
         services.AddHttpClient();
         services.AddScoped<PluginInstallationStore>();
         services.AddScoped<PluginGrantStore>();
         services.AddScoped<PluginConnectionStore>();
         services.AddScoped<PluginGrantEvaluator>();
+        services.TryAddScoped<IPluginWorkflowExecutorGrantEvaluator>(serviceProvider =>
+            serviceProvider.GetRequiredService<PluginGrantEvaluator>());
+        services.AddPluginWorkflowExecutorBoundary();
         services.AddScoped<PluginOAuthService>();
         services.AddScoped<PluginLogStore>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutorExecutionAuditSink, PluginWorkflowExecutorExecutionObserver>());

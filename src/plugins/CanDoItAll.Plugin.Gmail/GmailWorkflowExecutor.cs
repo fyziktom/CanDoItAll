@@ -13,7 +13,7 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
     GmailApiClient gmailApiClient) : IWorkflowExecutor
 {
     private const int MaxWorkflowMessages = 1;
-    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly JsonSerializerOptions JsonOptions = GmailWorkflowJson.Options;
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Gmail email message batch JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         GmailPluginConstants.PluginId.Value,
@@ -197,12 +197,6 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
             : WorkflowExecutorAvailabilityDescriptor.Unavailable(oauthGrant.Kind.ToString(), oauthGrant.Message);
     }
 
-    private static JsonSerializerOptions CreateJsonOptions()
-    {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
 }
 
 public sealed class GmailMarkProcessedWorkflowExecutor(
@@ -210,7 +204,7 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
     PluginOAuthService oauthService,
     GmailApiClient gmailApiClient) : IWorkflowExecutor
 {
-    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly JsonSerializerOptions JsonOptions = GmailWorkflowJson.Options;
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Gmail processed label mutation JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         GmailPluginConstants.PluginId.Value,
@@ -395,6 +389,12 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
             ? WorkflowExecutorAvailabilityDescriptor.Available()
             : WorkflowExecutorAvailabilityDescriptor.Unavailable(oauthGrant.Kind.ToString(), oauthGrant.Message);
     }
+
+}
+
+internal static class GmailWorkflowJson
+{
+    public static JsonSerializerOptions Options { get; } = CreateJsonOptions();
 
     private static JsonSerializerOptions CreateJsonOptions()
     {

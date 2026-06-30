@@ -437,7 +437,7 @@
                                                     <StatusBadge Tone="@ResolveRunTone(run.State)" Text="@run.State.ToString()" />
                                                     <small>@run.Backend · @FormatDate(run.UpdatedAtUtc)</small>
                                                 </span>
-                                                <span class="workflows-clamped-text">@Truncate(run.Summary, 120)</span>
+                                                <span class="workflows-clamped-text">@Truncate(ResolveRunDisplaySummary(run), 120)</span>
                                             </button>
                                             <Button Icon="open_in_full"
                                                     Size="ButtonSize.Small"
@@ -504,7 +504,7 @@
                                                 <div class="workflows-event__summary">
                                                     <StatusBadge Tone="@ResolveEventTone(workflowEvent.Kind)" Text="@workflowEvent.Kind.ToString()" />
                                                     <small>@FormatDate(workflowEvent.CreatedAtUtc)</small>
-                                                    <span class="workflows-clamped-text">@Truncate(workflowEvent.Message, 140)</span>
+                                                    <span class="workflows-clamped-text">@Truncate(ResolveEventDisplayMessage(workflowEvent), 140)</span>
                                                 </div>
                                                 <Button Icon="open_in_full"
                                                         Size="ButtonSize.Small"
@@ -781,7 +781,7 @@
             {
                 var resultPayloadJson = ResolveRunResultPayload(runDetailEvents);
                 var resultPreview = ResolveRunResultPreview(resultPayloadJson);
-                var summaryMessage = FormatWorkflowMessage(currentRunDetail.Summary);
+                var summaryMessage = ResolveRunDisplaySummary(currentRunDetail);
 
                 <Dialog IsOpen="true"
                         Title="Workflow run"
@@ -862,7 +862,7 @@
                                                 {
                                                     <details>
                                                         <summary>Technical details</summary>
-                                                        <pre class="workflows-detail-pre">@workflowEvent.Message</pre>
+                                                        <pre class="workflows-detail-pre">@ResolveEventTechnicalMessage(workflowEvent)</pre>
                                                     </details>
                                                 }
                                             </div>
@@ -887,6 +887,8 @@ UpdatedAt: @FormatFullDate(currentRunDetail.UpdatedAtUtc)</pre>
 
             @if (eventDetail is { } currentEventDetail)
             {
+                var eventDetailMessage = ResolveEventDisplayMessage(currentEventDetail);
+
                 <Dialog IsOpen="true"
                         Title="@currentEventDetail.Kind.ToString()"
                         Eyebrow="Event detail"
@@ -913,7 +915,7 @@ UpdatedAt: @FormatFullDate(currentRunDetail.UpdatedAtUtc)</pre>
 
                         <div class="workflows-section">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Message" />
-                            <pre class="workflows-detail-pre">@currentEventDetail.Message</pre>
+                            <pre class="workflows-detail-pre">@eventDetailMessage</pre>
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(currentEventDetail.PayloadJson))
@@ -921,6 +923,13 @@ UpdatedAt: @FormatFullDate(currentRunDetail.UpdatedAtUtc)</pre>
                             <div class="workflows-section">
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Payload JSON" />
                                 <pre class="workflows-detail-pre">@currentEventDetail.PayloadJson</pre>
+                            </div>
+                        }
+                        @if (HasTechnicalEventMessage(currentEventDetail))
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Technical details" />
+                                <pre class="workflows-detail-pre">@ResolveEventTechnicalMessage(currentEventDetail)</pre>
                             </div>
                         }
                     </div>
