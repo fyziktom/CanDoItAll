@@ -97,8 +97,28 @@ public sealed class WorkflowsPageTests
         cut.WaitForElement("[data-testid='workflows-create-starter']");
         cut.WaitForElement("[data-testid='workflows-tabs']");
 
+        Assert.Empty(cut.FindAll("[data-testid='workflows-tab-templates']"));
         Assert.Equal(0, counter.ListComponentsCount);
         Assert.Equal(0, counter.ListProviderOptionsCount);
+
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+
+        cut.WaitForElement("[data-testid='workflows-catalog']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(0, counter.ListComponentsCount);
+            Assert.Equal(0, counter.ListProviderOptionsCount);
+        });
+
+        cut.Find("[data-testid='workflows-open-template-catalogue']").Click();
+
+        cut.WaitForElement("[data-testid='workflows-template-catalogue-dialog']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(0, counter.ListComponentsCount);
+            Assert.Equal(0, counter.ListProviderOptionsCount);
+        });
+        cut.Find("[data-testid='workflows-template-catalogue-close']").Click();
 
         cut.Find("[data-testid='workflows-tab-editor']").Click();
 
@@ -108,12 +128,6 @@ public sealed class WorkflowsPageTests
             Assert.Equal(1, counter.ListComponentsCount);
             Assert.Equal(1, counter.ListProviderOptionsCount);
         });
-
-        cut.Find("[data-testid='workflows-tab-templates']").Click();
-
-        cut.WaitForElement("[data-testid='workflows-components']");
-        Assert.Equal(1, counter.ListComponentsCount);
-        Assert.Equal(1, counter.ListProviderOptionsCount);
     }
 
     [Fact]
@@ -273,7 +287,7 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
-    public async Task Workflows_templates_tab_lists_executor_catalog_examples()
+    public async Task Workflows_template_catalogue_dialog_loads_examples_from_workflows_tab()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("workflow-template-page-tests");
         await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
@@ -282,20 +296,118 @@ public sealed class WorkflowsPageTests
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.RenderComponent<WorkflowsPage>();
 
-        cut.WaitForElement("[data-testid='workflows-tab-templates']");
+        cut.WaitForElement("[data-testid='workflows-tab-workflows']");
+        Assert.Empty(cut.FindAll("[data-testid='workflows-tab-templates']"));
         AssertNoWorkflowPageError(cut);
-        ClickTabButton(cut, "Templates");
-        cut.WaitForElement("[data-testid='workflows-templates']");
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForElement("[data-testid='workflows-open-template-catalogue']");
+        cut.Find("[data-testid='workflows-open-template-catalogue']").Click();
+        cut.WaitForElement("[data-testid='workflows-template-catalogue-dialog']");
 
         cut.WaitForAssertion(() =>
         {
-            var templates = cut.FindAll("[data-testid='workflows-template-pack-item']");
+            var templates = cut.FindAll("[data-testid='workflows-template-catalogue-item']");
             Assert.Contains(templates, item => item.TextContent.Contains("Local Folder Summary Markdown Report", StringComparison.Ordinal));
             Assert.Contains(templates, item => item.TextContent.Contains("File Diff Markdown Report", StringComparison.Ordinal));
             Assert.Contains(templates, item => item.TextContent.Contains("HTTP Download Document Extraction Report", StringComparison.Ordinal));
             Assert.Contains(templates, item => item.TextContent.Contains("JSON Transform Project Task Creation", StringComparison.Ordinal));
             Assert.Contains(templates, item => item.TextContent.Contains("Approval Gated HTTP Action", StringComparison.Ordinal));
+            Assert.NotEmpty(cut.FindAll("[data-testid='workflows-template-preview']"));
+            Assert.Contains("Seed", cut.Find("[data-testid='workflows-template-catalogue-dialog']").TextContent, StringComparison.OrdinalIgnoreCase);
         });
+    }
+
+    [Fact]
+    public async Task Workflows_template_catalogue_loads_pack_only_when_dialog_opens()
+    {
+        var invalidPackRoot = Path.Combine(Path.GetTempPath(), $"invalid-workflow-template-pack-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(invalidPackRoot);
+        File.WriteAllText(Path.Combine(invalidPackRoot, "manifest.yaml"), "packKey: [");
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<WorkflowTemplatePackLoader>();
+            services.AddScoped(_ => new WorkflowTemplatePackLoader(invalidPackRoot));
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-workflows']");
+        Assert.Empty(cut.FindAll("[data-testid='workflows-error']"));
+
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForElement("[data-testid='workflows-catalog']");
+        Assert.Empty(cut.FindAll("[data-testid='workflows-error']"));
+
+        cut.Find("[data-testid='workflows-open-template-catalogue']").Click();
+        cut.WaitForElement("[data-testid='workflows-template-catalogue-dialog']");
+
+        cut.WaitForAssertion(() =>
+        {
+            var error = cut.Find("[data-testid='workflows-template-catalogue-error']");
+            Assert.False(string.IsNullOrWhiteSpace(error.TextContent));
+        });
+    }
+
+    [Fact]
+    public async Task Workflows_template_preview_dialog_renders_canvas_without_saving()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-template-preview-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var initialDefinitionCount = (await catalogService.ListDefinitionsAsync()).Count;
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        OpenTemplatePreview(cut, "Local Folder Summary Markdown Report");
+
+        cut.WaitForElement("[data-testid='workflows-template-preview-dialog']");
+        cut.WaitForElement("[data-testid='workflows-template-preview-canvas']");
+        cut.WaitForAssertion(() =>
+        {
+            var canvas = Assert.Single(cut.FindComponents<CanvasWorkbench>());
+            Assert.NotEmpty(canvas.Instance.Surface.Nodes);
+            Assert.Equal(0.48, canvas.Instance.Surface.UiState.Zoom, 2);
+            Assert.Equal(144, canvas.Instance.Surface.UiState.PanX, 2);
+            Assert.Equal(88, canvas.Instance.Surface.UiState.PanY, 2);
+            Assert.Empty(cut.FindAll("[data-testid='workflow-canvas-save']"));
+        });
+        Assert.Equal(initialDefinitionCount, (await catalogService.ListDefinitionsAsync()).Count);
+    }
+
+    [Fact]
+    public async Task Workflows_template_add_to_drafts_uses_next_prefix_when_name_exists()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-template-draft-name-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var componentLibrary = harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        var templatePack = new WorkflowTemplatePackLoader().Load();
+        var template = templatePack.Workflows.Single(item =>
+            string.Equals(item.Name, "Local Folder Summary Markdown Report", StringComparison.Ordinal));
+        await SaveTemplateDraftAsync(catalogService, componentLibrary, templatePack, template, template.Name);
+        await SaveTemplateDraftAsync(catalogService, componentLibrary, templatePack, template, $"01 {template.Name}");
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        OpenTemplatePreview(cut, template.Name);
+        cut.WaitForElement("[data-testid='workflows-template-add-draft']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Template added to drafts");
+        });
+
+        var definitions = await catalogService.ListDefinitionsAsync();
+        var created = Assert.Single(definitions, definition =>
+            string.Equals(definition.Name, $"02 {template.Name}", StringComparison.Ordinal));
+        Assert.Equal(WorkflowLifecycleStatus.Draft, created.Status);
     }
 
     [Fact]
@@ -1171,6 +1283,56 @@ public sealed class WorkflowsPageTests
             TestEnvironment = environment,
             ActiveProfile = profile,
             SchemaModules = TestSchemaBootstrapModules.Default
+        });
+    }
+
+    private static void OpenTemplatePreview(IRenderedFragment cut, string templateName)
+    {
+        cut.WaitForElement("[data-testid='workflows-tab-workflows']");
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        cut.WaitForElement("[data-testid='workflows-open-template-catalogue']").Click();
+        cut.WaitForElement("[data-testid='workflows-template-catalogue-dialog']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                cut.FindAll("[data-testid='workflows-template-catalogue-item']"),
+                item => item.TextContent.Contains(templateName, StringComparison.Ordinal));
+        });
+
+        var templateItem = cut.FindAll("[data-testid='workflows-template-catalogue-item']")
+            .First(item => item.TextContent.Contains(templateName, StringComparison.Ordinal));
+        templateItem.QuerySelector("[data-testid='workflows-template-preview']")
+            ?.Click();
+    }
+
+    private static async Task SaveTemplateDraftAsync(
+        IWorkflowCatalogService catalogService,
+        IWorkflowComponentLibraryService componentLibrary,
+        WorkflowTemplatePack templatePack,
+        WorkflowTemplateDefinition template,
+        string name)
+    {
+        var component = await componentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
+            Id: null,
+            Name: $"Test LLM: {name}",
+            ProviderProfileId: null,
+            Model: ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            WorkflowModality.Text,
+            templatePack.CreateModelSettings(),
+            templatePack.CreateComponentInstructions(template),
+            templatePack.JsonShape,
+            templatePack.JsonShape,
+            AgentPermissionsPolicy.Default));
+        await catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: name,
+            Description: template.Description,
+            Status: WorkflowLifecycleStatus.Draft,
+            Graph: templatePack.CreateGraph(template, component.Id),
+            RuntimePolicy: templatePack.RuntimePolicy)
+        {
+            InputParameters = templatePack.CreateInputParameters(template)
         });
     }
 

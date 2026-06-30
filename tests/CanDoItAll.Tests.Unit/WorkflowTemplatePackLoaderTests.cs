@@ -56,6 +56,65 @@ public sealed class WorkflowTemplatePackLoaderTests
     }
 
     [Fact]
+    public void Load_default_pack_uses_generic_offer_templates_without_branded_source_terms()
+    {
+        var pack = new WorkflowTemplatePackLoader().Load();
+        var combinedTemplateText = string.Join(
+            "\n",
+            pack.Workflows.SelectMany(template =>
+                new[]
+                {
+                    template.Key,
+                    template.Name,
+                    template.Description,
+                    template.RoutingInstructions
+                }
+                .Concat(template.Graph.Nodes.SelectMany(node =>
+                    new[]
+                    {
+                        node.Id,
+                        node.Name,
+                        node.Instructions,
+                        node.Executor?.Id ?? string.Empty,
+                        string.Join(
+                            " ",
+                            node.Executor?.Settings.Select(setting => $"{setting.Key} {setting.Value}") ?? [])
+                    }))
+                .Concat(template.Graph.Edges.SelectMany(edge =>
+                    new[]
+                    {
+                        edge.Id,
+                        edge.Source,
+                        edge.Target,
+                        edge.Routing?.Label ?? string.Empty,
+                        edge.Routing?.ExpectedValue ?? string.Empty,
+                        edge.Routing?.ExpectedValueJson ?? string.Empty
+                    }))));
+
+        Assert.Contains(pack.Workflows, template => template.Key == "offer-document-folder-summary");
+        Assert.Contains(pack.Workflows, template => template.Key == "offer-price-list-extraction");
+        Assert.Contains(pack.Workflows, template => template.Name == "Offer Document Folder Summary");
+        Assert.Contains(pack.Workflows, template => template.Name == "Offer Price List Extraction");
+
+        foreach (var forbidden in new[]
+                 {
+                     "SEAMARK",
+                     "seamark",
+                     "X-5600",
+                     "X-6600",
+                     "ZM-x5600",
+                     "X Ray Machine Agent Quotation",
+                     "Quotation List2018",
+                     "$35,000",
+                     "$41,500",
+                     "$66,000"
+                 })
+        {
+            Assert.DoesNotContain(forbidden, combinedTemplateText, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void Load_rejects_missing_executor_with_typed_repairable_context()
     {
         using var packDirectory = TemporaryWorkflowTemplatePack.Create(

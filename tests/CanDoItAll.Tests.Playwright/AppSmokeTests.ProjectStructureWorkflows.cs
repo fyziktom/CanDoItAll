@@ -49,8 +49,8 @@ public sealed partial class AppSmokeTests
             "add-block-feature",
             projectRootId,
             projectRootId,
-            "SEAMARK folder",
-            "X-ray device source folder",
+            "Offer documents folder",
+            "Product offer source folder",
             "Parent node for project-structure workflow input preview.");
         var parentSelector = SelectorForNodeId(parentNodeId);
 
@@ -71,19 +71,19 @@ public sealed partial class AppSmokeTests
         await addDialog.GetByTestId("project-structure-workflow-add-include-subtree")
             .CheckAsync();
         await addDialog.GetByTestId("project-structure-workflow-add-source-value")
-            .FillAsync(@"C:\programovani\testdata\testworkflows\SEAMARK");
+            .FillAsync(@"C:\programovani\testdata\testworkflows\offer-documents");
         await addDialog.GetByTestId("project-structure-workflow-add-source-kind")
             .SelectOptionAsync("FolderPath");
         await addDialog.GetByTestId("project-structure-workflow-add-source-key")
-            .FillAsync("seamark-folder");
+            .FillAsync("offer-documents");
         await addDialog.GetByTestId("project-structure-workflow-add-source-label")
-            .FillAsync("SEAMARK source folder");
+            .FillAsync("Offer source folder");
         await addDialog.GetByTestId("project-structure-workflow-add-manual-json")
-            .FillAsync("""{"task":"summarize-xray-devices"}""");
+            .FillAsync("""{"task":"summarize-offer-documents"}""");
         await addDialog.WaitForAsync();
         await addDialog.GetByText("Project", new() { Exact = true }).WaitForAsync();
         await addDialog.GetByText("Parent node", new() { Exact = true }).WaitForAsync();
-        await addDialog.GetByText("SEAMARK source folder", new() { Exact = false }).First.WaitForAsync();
+        await addDialog.GetByText("Offer source folder", new() { Exact = false }).First.WaitForAsync();
         await CaptureLocatorAsync(
             addDialog,
             Path.Combine(artifactsDir, "project-structure-add-workflow-desktop.png"));

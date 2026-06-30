@@ -2,6 +2,9 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 
@@ -13,9 +16,8 @@ public partial class WorkflowsPage
     private const int HistoryEventPageSize = 8;
     private const int WorkflowsTabIndex = 1;
     private const int EditorTabIndex = 2;
-    private const int TemplatesTabIndex = 3;
-    private const int HistoryTabIndex = 4;
-    private const int AnalyticsTabIndex = 5;
+    private const int HistoryTabIndex = 3;
+    private const int AnalyticsTabIndex = 4;
     private static readonly string[] RunResultPreviewPropertyNames =
     [
         "summary",
@@ -69,6 +71,10 @@ public partial class WorkflowsPage
     private IReadOnlyList<WorkflowExternalRequestRecord> pendingRequests = [];
     private IReadOnlyList<WorkflowValidationIssue> validationIssues = [];
     private WorkflowTemplatePack? templatePack;
+    private WorkflowTemplateDefinition? selectedTemplate;
+    private WorkflowTemplateDefinition? templatePreviewTemplate;
+    private WorkflowDefinition? templatePreviewDefinition;
+    private LlmCallComponent? templatePreviewComponent;
     private WorkflowSettings settings = WorkflowSettings.Default;
     private WorkflowId? selectedDefinitionId;
     private WorkflowDefinition? selectedDefinition;
@@ -83,6 +89,9 @@ public partial class WorkflowsPage
     private WorkflowPreviewInputState previewInputState = new();
     private IReadOnlyList<ProjectStructureRuntimeProjectSummary> previewProjectOptions = [];
     private string previewInputErrorMessage = string.Empty;
+    private string templateSearchText = string.Empty;
+    private string templateCatalogueErrorMessage = string.Empty;
+    private string templatePreviewErrorMessage = string.Empty;
     private string errorMessage = string.Empty;
     private int activeWorkflowTabIndex;
     private int historyRunPageIndex;
@@ -93,12 +102,17 @@ public partial class WorkflowsPage
     private bool isBusy;
     private bool isRunningTest;
     private bool isPreviewInputDialogOpen;
+    private bool isTemplateCatalogueDialogOpen;
+    private bool isTemplateCatalogueLoading;
+    private bool isTemplatePreviewDialogOpen;
     private bool componentLibraryLoaded;
     private bool historyLoaded;
     private bool selectedDefinitionDetailLoaded;
     private bool selectedDefinitionDetailUnavailable;
     private Task? componentLibraryLoadTask;
     private readonly HashSet<string> expandedWorkflowTreeNodeIds = [];
+    private CanvasWorkbenchUiState templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState("start");
+    private string? templatePreviewSelectedNodeId = "start";
 
     private WorkflowId? CurrentDefinitionId => selectedDefinition?.Id ?? selectedDefinitionId;
 
@@ -131,6 +145,79 @@ public partial class WorkflowsPage
     private IReadOnlyList<WorkflowTemplateDefinition> WorkflowTemplates => templatePack?.Workflows ?? [];
 
     private string WorkflowTemplateSeedText => templatePack?.Manifest.SeedVersion ?? "-";
+
+    private IReadOnlyList<WorkflowTemplateDefinition> FilteredWorkflowTemplates
+    {
+        get
+        {
+            if (templatePack is null)
+            {
+                return [];
+            }
+
+            if (string.IsNullOrWhiteSpace(templateSearchText))
+            {
+                return templatePack.Workflows;
+            }
+
+            var query = templateSearchText.Trim();
+            return templatePack.Workflows
+                .Where(template => WorkflowTemplateMatchesSearch(template, query))
+                .ToArray();
+        }
+    }
+
+    private WorkflowTemplateDefinition? SelectedWorkflowTemplate
+    {
+        get
+        {
+            var templates = FilteredWorkflowTemplates;
+            if (selectedTemplate is not null &&
+                templates.Any(template => IsSameWorkflowTemplate(template, selectedTemplate)))
+            {
+                return selectedTemplate;
+            }
+
+            return templates.FirstOrDefault();
+        }
+    }
+
+    private WorkflowNode? SelectedTemplatePreviewNode
+        => templatePreviewDefinition is null || string.IsNullOrWhiteSpace(templatePreviewSelectedNodeId)
+            ? null
+            : templatePreviewDefinition.Graph.Nodes.FirstOrDefault(node => node.Id.Value == templatePreviewSelectedNodeId);
+
+    private IReadOnlyList<CanvasWorkbenchStat> TemplatePreviewCanvasStats =>
+    [
+        new()
+        {
+            Label = "Nodes",
+            Value = templatePreviewDefinition?.Graph.Nodes.Count.ToString() ?? "0",
+            Tone = "info"
+        },
+        new()
+        {
+            Label = "Edges",
+            Value = templatePreviewDefinition?.Graph.Edges.Count.ToString() ?? "0",
+            Tone = "secondary"
+        },
+        new()
+        {
+            Label = "Inputs",
+            Value = templatePreviewDefinition?.InputParameters.Count.ToString() ?? "0",
+            Tone = "accent"
+        }
+    ];
+
+    private CanvasWorkbenchSurface? TemplatePreviewCanvasSurface
+        => templatePreviewDefinition is null || templatePreviewComponent is null
+            ? null
+            : BuildTemplatePreviewCanvasSurface(
+                templatePreviewDefinition,
+                templatePreviewComponent,
+                ExecutorCatalog.ListExecutors(),
+                templatePreviewCanvasUiState,
+                templatePreviewSelectedNodeId);
 
     private string ValidationText
         => selectedDefinitionDetailUnavailable
@@ -274,6 +361,174 @@ public partial class WorkflowsPage
             expandedWorkflowTreeNodeIds.Remove(nodeId);
         }
 
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenTemplateCatalogueDialogAsync()
+    {
+        if (isTemplateCatalogueLoading)
+        {
+            return;
+        }
+
+        isTemplateCatalogueDialogOpen = true;
+        templateCatalogueErrorMessage = string.Empty;
+
+        if (templatePack is not null)
+        {
+            SelectDefaultWorkflowTemplate();
+            return;
+        }
+
+        isTemplateCatalogueLoading = true;
+        try
+        {
+            await EnsureTemplatePackLoadedAsync();
+            SelectDefaultWorkflowTemplate();
+        }
+        catch (Exception exception)
+        {
+            templateCatalogueErrorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Template catalogue failed", templateCatalogueErrorMessage);
+        }
+        finally
+        {
+            isTemplateCatalogueLoading = false;
+        }
+    }
+
+    private void CloseTemplateCatalogueDialog()
+    {
+        isTemplateCatalogueDialogOpen = false;
+        templateCatalogueErrorMessage = string.Empty;
+    }
+
+    private void SelectWorkflowTemplate(WorkflowTemplateDefinition template)
+    {
+        selectedTemplate = template;
+    }
+
+    private void HandleWorkflowTemplateSearchChanged(ChangeEventArgs args)
+    {
+        templateSearchText = args.Value?.ToString() ?? string.Empty;
+        SelectDefaultWorkflowTemplate();
+    }
+
+    private void SelectDefaultWorkflowTemplate()
+    {
+        selectedTemplate = SelectedWorkflowTemplate ?? FilteredWorkflowTemplates.FirstOrDefault();
+    }
+
+    private async Task OpenTemplatePreviewDialogAsync(WorkflowTemplateDefinition template)
+    {
+        selectedTemplate = template;
+        templatePreviewErrorMessage = string.Empty;
+
+        try
+        {
+            await EnsureTemplatePackLoadedAsync();
+            if (templatePack is null)
+            {
+                return;
+            }
+
+            var component = CreateTransientTemplateComponent(templatePack, template);
+            var definition = CreateTemplateWorkflowDefinition(
+                templatePack,
+                template,
+                component,
+                NormalizeTemplateDraftBaseName(template.Name),
+                WorkflowLifecycleStatus.Draft);
+            templatePreviewTemplate = template;
+            templatePreviewComponent = component;
+            templatePreviewDefinition = definition;
+            templatePreviewSelectedNodeId = definition.Graph.StartNodeId.Value;
+            templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState(templatePreviewSelectedNodeId);
+            isTemplatePreviewDialogOpen = true;
+        }
+        catch (Exception exception)
+        {
+            templatePreviewErrorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Template preview failed", templatePreviewErrorMessage);
+        }
+    }
+
+    private void CloseTemplatePreviewDialog()
+    {
+        isTemplatePreviewDialogOpen = false;
+        templatePreviewErrorMessage = string.Empty;
+        templatePreviewTemplate = null;
+        templatePreviewDefinition = null;
+        templatePreviewComponent = null;
+        templatePreviewSelectedNodeId = "start";
+        templatePreviewCanvasUiState = CreateTemplatePreviewCanvasUiState(templatePreviewSelectedNodeId);
+    }
+
+    private async Task AddSelectedTemplateToDraftsAsync()
+    {
+        if (isBusy ||
+            templatePack is null ||
+            templatePreviewTemplate is null)
+        {
+            return;
+        }
+
+        isBusy = true;
+        templatePreviewErrorMessage = string.Empty;
+
+        try
+        {
+            await EnsureComponentLibraryLoadedAsync();
+            var draftName = ResolveTemplateDraftName(templatePreviewTemplate.Name, definitions);
+            var providerOption = ResolveTemplateProviderOption();
+            var component = await ComponentLibrary.SaveComponentAsync(CreateTemplateComponentSaveRequest(
+                templatePack,
+                templatePreviewTemplate,
+                draftName,
+                providerOption));
+            var definition = CreateTemplateWorkflowDefinition(
+                templatePack,
+                templatePreviewTemplate,
+                component,
+                draftName,
+                WorkflowLifecycleStatus.Draft);
+            var saved = await CatalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+                Id: null,
+                ExpectedVersionId: null,
+                Name: definition.Name,
+                Description: definition.Description,
+                Status: WorkflowLifecycleStatus.Draft,
+                Graph: definition.Graph,
+                RuntimePolicy: definition.RuntimePolicy)
+            {
+                InputParameters = definition.InputParameters
+            });
+
+            NotificationService.Success("Template added to drafts", saved.Name);
+            CloseTemplatePreviewDialog();
+            CloseTemplateCatalogueDialog();
+            await LoadPageAsync(preferredDefinitionId: saved.Id);
+        }
+        catch (Exception exception)
+        {
+            templatePreviewErrorMessage = FormatWorkflowException(exception);
+            NotificationService.Error("Template add failed", templatePreviewErrorMessage);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private Task HandleTemplatePreviewCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
+    {
+        templatePreviewSelectedNodeId = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTemplatePreviewCanvasStateChangedAsync(string stateJson)
+    {
+        templatePreviewCanvasUiState = CanvasWorkbenchUiState.Parse(stateJson);
         return Task.CompletedTask;
     }
 
@@ -694,11 +949,6 @@ public partial class WorkflowsPage
             await EnsureComponentLibraryLoadedAsync();
         }
 
-        if (WorkflowTabRequiresTemplatePack(index))
-        {
-            await EnsureTemplatePackLoadedAsync();
-        }
-
         if (WorkflowTabRequiresHistory(index))
         {
             await EnsureHistoryLoadedAsync();
@@ -766,16 +1016,13 @@ public partial class WorkflowsPage
     }
 
     private static bool WorkflowTabRequiresComponentLibrary(int index)
-        => index is EditorTabIndex or TemplatesTabIndex or AnalyticsTabIndex;
+        => index is EditorTabIndex or AnalyticsTabIndex;
 
     private static bool WorkflowTabRequiresHistory(int index)
         => index is HistoryTabIndex or AnalyticsTabIndex;
 
     private static bool WorkflowTabRequiresDefinitionDetail(int index)
         => index is WorkflowsTabIndex or EditorTabIndex or AnalyticsTabIndex;
-
-    private static bool WorkflowTabRequiresTemplatePack(int index)
-        => index is TemplatesTabIndex;
 
     private bool ShouldLoadHistory(WorkflowRunId? preferredRunId)
         => preferredRunId.HasValue ||
@@ -869,6 +1116,189 @@ public partial class WorkflowsPage
         var enabledCount = providerOptions.Count(option => option.IsEnabled);
         return $"{enabledCount} enabled chat provider(s) available from the agent provider registry.";
     }
+
+    private static bool WorkflowTemplateMatchesSearch(WorkflowTemplateDefinition template, string query)
+        => template.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+           template.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+           template.Key.Contains(query, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSameWorkflowTemplate(
+        WorkflowTemplateDefinition left,
+        WorkflowTemplateDefinition right)
+        => string.Equals(left.Key, right.Key, StringComparison.OrdinalIgnoreCase);
+
+    private static string BuildTemplateNodeKindSummary(WorkflowTemplateDefinition template)
+    {
+        if (template.Graph.Nodes.Count == 0)
+        {
+            return "No nodes";
+        }
+
+        return string.Join(
+            ", ",
+            template.Graph.Nodes
+                .GroupBy(node => string.IsNullOrWhiteSpace(node.Kind) ? "Unknown" : node.Kind)
+                .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(group => $"{group.Count()} {group.Key}"));
+    }
+
+    private static WorkflowDefinition CreateTemplateWorkflowDefinition(
+        WorkflowTemplatePack templatePack,
+        WorkflowTemplateDefinition template,
+        LlmCallComponent component,
+        string name,
+        WorkflowLifecycleStatus status)
+    {
+        var definition = templatePack.CreateDefinition(template, component);
+        return definition with
+        {
+            Name = name,
+            Description = template.Description,
+            Status = status,
+            RuntimePolicy = templatePack.RuntimePolicy,
+            InputParameters = templatePack.CreateInputParameters(template)
+        };
+    }
+
+    private static LlmCallComponent CreateTransientTemplateComponent(
+        WorkflowTemplatePack templatePack,
+        WorkflowTemplateDefinition template)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new LlmCallComponent(
+            WorkflowComponentId.New(),
+            $"Preview LLM: {NormalizeTemplateDraftBaseName(template.Name)}",
+            ProviderProfileId: null,
+            Model: ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            Modality: WorkflowModality.Text,
+            ModelSettings: templatePack.CreateModelSettings(),
+            Instructions: templatePack.CreateComponentInstructions(template),
+            InputShape: templatePack.JsonShape,
+            ResultShape: templatePack.JsonShape,
+            Permissions: CreateTemplateComponentPermissions(),
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now);
+    }
+
+    private static LlmCallComponentSaveRequest CreateTemplateComponentSaveRequest(
+        WorkflowTemplatePack templatePack,
+        WorkflowTemplateDefinition template,
+        string draftName,
+        WorkflowProviderOption? providerOption)
+        => new(
+            Id: null,
+            Name: $"Draft LLM: {draftName}",
+            ProviderProfileId: providerOption?.ProviderProfileId,
+            Model: ResolveTemplateModel(providerOption),
+            Modality: WorkflowModality.Text,
+            ModelSettings: templatePack.CreateModelSettings(),
+            Instructions: templatePack.CreateComponentInstructions(template),
+            InputShape: templatePack.JsonShape,
+            ResultShape: templatePack.JsonShape,
+            Permissions: CreateTemplateComponentPermissions());
+
+    private WorkflowProviderOption? ResolveTemplateProviderOption()
+        => providerOptions.FirstOrDefault(provider =>
+               provider.IsEnabled &&
+               provider.SupportsStructuredOutput &&
+               provider.ModelOptions.Contains(ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparer.OrdinalIgnoreCase)) ??
+           providerOptions.FirstOrDefault(provider => provider.IsEnabled && provider.SupportsStructuredOutput) ??
+           ResolveDefaultProviderOption();
+
+    private static string ResolveTemplateModel(WorkflowProviderOption? providerOption)
+    {
+        if (providerOption is null)
+        {
+            return ManagedSeedProviderFallbacks.OpenAiDefaultModel;
+        }
+
+        return providerOption.ModelOptions.FirstOrDefault(model =>
+                   string.Equals(model, ManagedSeedProviderFallbacks.OpenAiDefaultModel, StringComparison.OrdinalIgnoreCase)) ??
+               ResolveDefaultModel(providerOption);
+    }
+
+    private static AgentPermissionsPolicy CreateTemplateComponentPermissions()
+        => AgentPermissionsPolicy.Default with
+        {
+            CanUseTools = false,
+            CanAskOtherAgents = false,
+            CanEscalateToHuman = false,
+            RequiresApprovalForExternalCalls = false
+        };
+
+    private static string ResolveTemplateDraftName(
+        string baseName,
+        IReadOnlyList<WorkflowCatalogItem> existingDefinitions)
+    {
+        var normalizedBaseName = NormalizeTemplateDraftBaseName(baseName);
+        var existingNames = existingDefinitions
+            .Select(definition => definition.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!existingNames.Contains(normalizedBaseName))
+        {
+            return normalizedBaseName;
+        }
+
+        for (var index = 1; index <= 999; index++)
+        {
+            var candidate = $"{index:00} {normalizedBaseName}";
+            if (!existingNames.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException($"No available draft name remains for template '{normalizedBaseName}'.");
+    }
+
+    private static string NormalizeTemplateDraftBaseName(string name)
+    {
+        var trimmed = name.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            throw new InvalidOperationException("Workflow template name is required before it can be added to drafts.");
+        }
+
+        return trimmed;
+    }
+
+    private static CanvasWorkbenchSurface BuildTemplatePreviewCanvasSurface(
+        WorkflowDefinition definition,
+        LlmCallComponent component,
+        IReadOnlyList<WorkflowExecutorDescriptor> executors,
+        CanvasWorkbenchUiState uiState,
+        string? selectedNodeId)
+    {
+        var document = WorkflowCanvasDefinitionMapper.FromDefinition(definition, [component]);
+        var surface = WorkflowCanvasDefinitionMapper.BuildSurface(
+            document,
+            [component],
+            executors,
+            secrets: [],
+            validationIssues: [],
+            uiState,
+            selectedNodeId);
+        surface.Chrome.HintText = "Read-only workflow template preview.";
+        surface.Chrome.ShowQuickCreateRail = false;
+        surface.Chrome.QuickCreateActions.Clear();
+        surface.Chrome.GroupContextActions.Clear();
+        foreach (var node in surface.Nodes)
+        {
+            node.ContextActions.Clear();
+        }
+
+        return surface;
+    }
+
+    private static CanvasWorkbenchUiState CreateTemplatePreviewCanvasUiState(string? selectedNodeId)
+        => new()
+        {
+            ActiveInspectorTab = "workflow",
+            Zoom = 0.48,
+            PanX = 144,
+            PanY = 88,
+            SelectedNodeIds = string.IsNullOrWhiteSpace(selectedNodeId) ? [] : [selectedNodeId]
+        };
 
     private string ResolveComponentProviderLabel(LlmCallComponent component)
     {

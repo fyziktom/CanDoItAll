@@ -1,4 +1,5 @@
 @page "/agents/workflows"
+@using CanDoItAll.Components.CanvasLib
 
 <PageTitle>Workflows</PageTitle>
 
@@ -159,7 +160,15 @@
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Catalog" />
                                     <h2 class="workflows-card-title">Workflow definitions</h2>
                                 </div>
-                                <StatusBadge Tone="info" Text="@definitions.Count.ToString()" />
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End">
+                                    <StatusBadge Tone="info" Text="@definitions.Count.ToString()" />
+                                    <Button Text="Templates"
+                                            Icon="content_copy"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="OpenTemplateCatalogueDialogAsync"
+                                            Disabled="@isBusy"
+                                            data-testid="workflows-open-template-catalogue" />
+                                </Cluster>
                             </Split>
 
                             @if (definitions.Count == 0)
@@ -282,77 +291,6 @@
                                               PreviewRunCompleted="HandleCanvasPreviewRunCompletedAsync"
                                               ComponentLibraryChanged="RefreshComponentLibraryAsync" />
                     }
-                </TabsItem>
-
-                <TabsItem Text="Templates"
-                          Icon="content_copy"
-                          BadgeText="@ComponentCountText"
-                          data-testid="workflows-tab-templates">
-                    <Grid Gap="LayoutGap.Large"
-                          Class="workflows-layout"
-                          ColumnTemplateLg="minmax(0,0.9fr) minmax(0,1.1fr)">
-                        <SurfaceCard data-testid="workflows-templates">
-                            <Split Gap="LayoutGap.Small">
-                                <div>
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Templates" />
-                                    <h2 class="workflows-card-title">Starter workflow</h2>
-                                </div>
-                                <StatusBadge Tone="info" Text="@($"{WorkflowTemplates.Count} examples")" />
-                            </Split>
-                            <p class="workflows-muted mt-3">Seed @WorkflowTemplateSeedText</p>
-                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
-                                <Button Text="Create starter"
-                                        Icon="add"
-                                        Click="CreateStarterWorkflowAsync"
-                                        Disabled="@isBusy"
-                                        data-testid="workflows-template-create-starter" />
-                            </Cluster>
-                            @if (WorkflowTemplates.Count > 0)
-                            {
-                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                                    @foreach (var template in WorkflowTemplates)
-                                    {
-                                        <div class="workflows-artifact" data-testid="workflows-template-pack-item">
-                                            <strong>@template.Name</strong>
-                                            <span>@template.Description</span>
-                                            <small>@template.Key</small>
-                                        </div>
-                                    }
-                                </Stack>
-                            }
-                        </SurfaceCard>
-
-                        <SurfaceCard data-testid="workflows-components">
-                            <Split Gap="LayoutGap.Small">
-                                <div>
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
-                                    <h2 class="workflows-card-title">Prepared call library</h2>
-                                </div>
-                                <StatusBadge Tone="success" Text="@components.Count.ToString()" />
-                            </Split>
-                            <p class="workflows-muted mt-3">@BuildProviderOptionsSummary()</p>
-
-                            @if (components.Count == 0)
-                            {
-                                <EmptyState Eyebrow="No components"
-                                            Title="No prepared calls"
-                                            Description="Create a starter workflow or use the editor component window to add LLM call components." />
-                            }
-                            else
-                            {
-                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                                    @foreach (var component in components)
-                                    {
-                                        <div class="workflows-artifact" data-testid="workflows-component-item">
-                                            <strong>@component.Name</strong>
-                                            <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality</span>
-                                            <small>@component.ResultShape.Kind</small>
-                                        </div>
-                                    }
-                                </Stack>
-                            }
-                        </SurfaceCard>
-                    </Grid>
                 </TabsItem>
 
                 <TabsItem Text="History"
@@ -672,6 +610,283 @@
                     </Grid>
                 </TabsItem>
             </Tabs>
+
+            @if (isTemplateCatalogueDialogOpen)
+            {
+                var currentTemplate = SelectedWorkflowTemplate;
+
+                <Dialog IsOpen="true"
+                        Title="Workflow templates"
+                        Eyebrow="Template catalogue"
+                        Subtitle="Templates load only when this catalogue is opened."
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="CloseTemplateCatalogueDialog"
+                        TestId="workflows-template-catalogue-dialog">
+                    <ChildContent>
+                        <div class="workflows-template-dialog">
+                            @if (isTemplateCatalogueLoading)
+                            {
+                                <SurfaceCard Soft="true"
+                                             data-testid="workflows-template-catalogue-loading">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                                    <h2 class="workflows-card-title">Loading templates</h2>
+                                    <p class="workflows-muted">Reading workflow template pack metadata.</p>
+                                </SurfaceCard>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(templateCatalogueErrorMessage))
+                            {
+                                <p class="workflows-error-note"
+                                   data-testid="workflows-template-catalogue-error">@templateCatalogueErrorMessage</p>
+                            }
+                            else
+                            {
+                                <Grid Gap="LayoutGap.Large"
+                                      Class="workflows-template-catalogue-grid"
+                                      ColumnTemplateLg="minmax(20rem,0.85fr) minmax(0,1.25fr)">
+                                    <SurfaceCard Soft="true"
+                                                 Class="workflows-template-catalogue-list">
+                                        <Split Gap="LayoutGap.Small">
+                                            <div>
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Examples" />
+                                                <h2 class="workflows-card-title">Choose a starting point</h2>
+                                            </div>
+                                            <StatusBadge Tone="info" Text="@($"{WorkflowTemplates.Count} examples")" />
+                                        </Split>
+                                        <p class="workflows-muted mt-3">Seed @WorkflowTemplateSeedText</p>
+
+                                        <label class="workflows-field mt-4">
+                                            <span>Search</span>
+                                            <input class="cda-input"
+                                                   value="@templateSearchText"
+                                                   @onchange="HandleWorkflowTemplateSearchChanged"
+                                                   data-testid="workflows-template-catalogue-search" />
+                                        </label>
+
+                                        @if (FilteredWorkflowTemplates.Count == 0)
+                                        {
+                                            <EmptyState Eyebrow="No matches"
+                                                        Title="No templates found"
+                                                        Description="Adjust the search term to see workflow examples." />
+                                        }
+                                        else
+                                        {
+                                            <Stack GapScale="LayoutGap.Small" Class="workflows-template-catalogue-results mt-4">
+                                                @foreach (var template in FilteredWorkflowTemplates)
+                                                {
+                                                    var isSelectedTemplate = currentTemplate is not null &&
+                                                                             IsSameWorkflowTemplate(template, currentTemplate);
+                                                    <div class="workflows-template-catalogue-item @(isSelectedTemplate ? "workflows-template-catalogue-item--selected" : string.Empty)"
+                                                         data-testid="workflows-template-catalogue-item">
+                                                        <button type="button"
+                                                                class="workflows-template-catalogue-item__select"
+                                                                @onclick="@(() => SelectWorkflowTemplate(template))">
+                                                            <strong>@template.Name</strong>
+                                                            <span>@template.Description</span>
+                                                            <small>@template.Key</small>
+                                                        </button>
+                                                        <Button Text="Preview"
+                                                                Icon="visibility"
+                                                                Size="ButtonSize.Small"
+                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Click="@(() => OpenTemplatePreviewDialogAsync(template))"
+                                                                data-testid="workflows-template-preview" />
+                                                    </div>
+                                                }
+                                            </Stack>
+                                        }
+                                    </SurfaceCard>
+
+                                    <SurfaceCard Soft="true"
+                                                 data-testid="workflows-template-catalogue-detail">
+                                        @if (currentTemplate is null)
+                                        {
+                                            <EmptyState Eyebrow="Select template"
+                                                        Title="No template selected"
+                                                        Description="Choose a workflow example to inspect its basic structure." />
+                                        }
+                                        else
+                                        {
+                                            <Split Gap="LayoutGap.Small">
+                                                <div>
+                                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template preview" />
+                                                    <h2 class="workflows-card-title">@currentTemplate.Name</h2>
+                                                </div>
+                                                <StatusBadge Tone="secondary" Text="@currentTemplate.Key" />
+                                            </Split>
+                                            <p class="workflows-muted mt-3">@currentTemplate.Description</p>
+
+                                            <Grid Gap="LayoutGap.Small" ColumnsLg="4" Class="mt-4">
+                                                <div class="workflows-fact">
+                                                    <span>Nodes</span>
+                                                    <strong>@currentTemplate.Graph.Nodes.Count</strong>
+                                                </div>
+                                                <div class="workflows-fact">
+                                                    <span>Edges</span>
+                                                    <strong>@currentTemplate.Graph.Edges.Count</strong>
+                                                </div>
+                                                <div class="workflows-fact">
+                                                    <span>Inputs</span>
+                                                    <strong>@currentTemplate.InputParameters.Count</strong>
+                                                </div>
+                                                <div class="workflows-fact">
+                                                    <span>Backend</span>
+                                                    <strong>@(templatePack is null ? "-" : templatePack.RuntimePolicy.PreferredBackend.ToString())</strong>
+                                                </div>
+                                            </Grid>
+
+                                            <div class="workflows-section">
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Flow shape" />
+                                                <p class="workflows-muted">@BuildTemplateNodeKindSummary(currentTemplate)</p>
+                                            </div>
+
+                                            @if (currentTemplate.InputParameters.Count > 0)
+                                            {
+                                                <div class="workflows-section">
+                                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Expected input" />
+                                                    <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                                        @foreach (var parameter in currentTemplate.InputParameters.Take(4))
+                                                        {
+                                                            <div class="workflows-artifact">
+                                                                <strong>@parameter.Label</strong>
+                                                                <span>@parameter.Description</span>
+                                                                <small>@parameter.Key · @parameter.Kind · @(parameter.Required ? "Required" : "Optional")</small>
+                                                            </div>
+                                                        }
+                                                    </Stack>
+                                                </div>
+                                            }
+                                        }
+                                    </SurfaceCard>
+                                </Grid>
+                            }
+                        </div>
+                    </ChildContent>
+                    <Footer>
+                        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                            <Button Text="Close"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="CloseTemplateCatalogueDialog"
+                                    data-testid="workflows-template-catalogue-close" />
+                        </Cluster>
+                    </Footer>
+                </Dialog>
+            }
+
+            @if (isTemplatePreviewDialogOpen &&
+                 templatePreviewTemplate is { } currentPreviewTemplate &&
+                 templatePreviewDefinition is { } currentPreviewDefinition)
+            {
+                var previewSurface = TemplatePreviewCanvasSurface;
+                var selectedPreviewNode = SelectedTemplatePreviewNode;
+
+                <Dialog IsOpen="true"
+                        Title="@currentPreviewTemplate.Name"
+                        Eyebrow="Template preview"
+                        Subtitle="Read-only workflow canvas preview."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        OnClose="CloseTemplatePreviewDialog"
+                        TestId="workflows-template-preview-dialog">
+                    <ChildContent>
+                        <div class="workflows-template-preview-dialog">
+                            <aside class="workflows-template-preview-rail">
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template" />
+                                    <h2 class="workflows-card-title">@currentPreviewTemplate.Name</h2>
+                                    <p class="workflows-muted mt-3">@currentPreviewTemplate.Description</p>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+                                        <StatusBadge Tone="info" Text="@($"{currentPreviewDefinition.Graph.Nodes.Count} node(s)")" />
+                                        <StatusBadge Tone="secondary" Text="@($"{currentPreviewDefinition.Graph.Edges.Count} edge(s)")" />
+                                        <StatusBadge Tone="accent" Text="@($"{currentPreviewDefinition.InputParameters.Count} input(s)")" />
+                                    </Cluster>
+                                </SurfaceCard>
+
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected node" />
+                                    @if (selectedPreviewNode is null)
+                                    {
+                                        <p class="workflows-muted">Select a node on the canvas to inspect it.</p>
+                                    }
+                                    else
+                                    {
+                                        <h2 class="workflows-card-title">@selectedPreviewNode.Name</h2>
+                                        <p class="workflows-muted mt-3">@selectedPreviewNode.Settings.Instructions</p>
+                                        <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
+                                            <div class="workflows-fact">
+                                                <span>Kind</span>
+                                                <strong>@selectedPreviewNode.Kind</strong>
+                                            </div>
+                                            <div class="workflows-fact">
+                                                <span>Node id</span>
+                                                <strong>@selectedPreviewNode.Id.Value</strong>
+                                            </div>
+                                        </Grid>
+                                    }
+                                </SurfaceCard>
+
+                                @if (currentPreviewDefinition.InputParameters.Count > 0)
+                                {
+                                    <SurfaceCard Soft="true">
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Inputs" />
+                                        <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                            @foreach (var parameter in currentPreviewDefinition.InputParameters.Take(4))
+                                            {
+                                                <div class="workflows-artifact">
+                                                    <strong>@parameter.Label</strong>
+                                                    <span>@parameter.Description</span>
+                                                    <small>@parameter.Key · @(parameter.IsRequired ? "Required" : "Optional")</small>
+                                                </div>
+                                            }
+                                        </Stack>
+                                    </SurfaceCard>
+                                }
+                            </aside>
+
+                            <section class="workflows-template-preview-stage"
+                                     data-testid="workflows-template-preview-canvas">
+                                @if (!string.IsNullOrWhiteSpace(templatePreviewErrorMessage))
+                                {
+                                    <p class="workflows-error-note">@templatePreviewErrorMessage</p>
+                                }
+                                else if (previewSurface is null)
+                                {
+                                    <EmptyState Eyebrow="Preview unavailable"
+                                                Title="Canvas preview could not be prepared"
+                                                Description="Close the dialog and open the template preview again." />
+                                }
+                                else
+                                {
+                                    <CanvasWorkbenchStage Eyebrow=""
+                                                          Title="@currentPreviewDefinition.Name"
+                                                          Description=""
+                                                          Stats="TemplatePreviewCanvasStats">
+                                        <Canvas>
+                                            <CanvasWorkbench Surface="previewSurface"
+                                                             SelectionChanged="HandleTemplatePreviewCanvasSelectionChangedAsync"
+                                                             StateChanged="HandleTemplatePreviewCanvasStateChangedAsync" />
+                                        </Canvas>
+                                    </CanvasWorkbenchStage>
+                                }
+                            </section>
+                        </div>
+                    </ChildContent>
+                    <Footer>
+                        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                            <Button Text="Close"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="CloseTemplatePreviewDialog"
+                                    data-testid="workflows-template-preview-close" />
+                            <Button Text="Add to my drafts"
+                                    Icon="add"
+                                    Click="AddSelectedTemplateToDraftsAsync"
+                                    Disabled="@isBusy"
+                                    IsBusy="@isBusy"
+                                    data-testid="workflows-template-add-draft" />
+                        </Cluster>
+                    </Footer>
+                </Dialog>
+            }
 
             @if (isPreviewInputDialogOpen)
             {
