@@ -7,7 +7,7 @@ The current project, process, workflow, cognitive-memory, and agent automation p
 Start the web host:
 
 ```powershell
-dotnet run --project src/CanDoItAll.Web
+dotnet run --project src/App/CanDoItAll.Web
 ```
 
 Development readiness is exposed at `/_dev/runtime`. API status is exposed at `GET /api/access/status` when the API is enabled.
@@ -33,7 +33,7 @@ API settings live under the `Api` configuration section:
 
 ## Route Families
 
-All routes below are source-grounded in `src/CanDoItAll.Web/Api` and `src/CanDoItAll.Web/ProjectStructureAgentApi.cs`.
+All routes below are source-grounded in `src/App/CanDoItAll.Web/Api` and `src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`.
 
 ### Projects
 
@@ -70,7 +70,7 @@ Use `/api/processes` for the current process runtime control plane. The source-g
 - `GET /api/processes/runs/{runId}`
 - `GET /api/processes/runs/{runId}/history`
 
-Definition authoring, template import/export, artifact/assignment detail, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `src/CanDoItAll.Web/Api/ProcessesApi.cs`. Do not document or call those as current HTTP routes until they are reintroduced with typed handlers and tests.
+Definition authoring, template import/export, artifact/assignment detail, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`. Do not document or call those as current HTTP routes until they are reintroduced with typed handlers and tests.
 
 Use `POST /api/processes/launch/check` for non-mutating launch preflight. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only prevents immediate dispatch queueing.
 
@@ -111,7 +111,7 @@ New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitiv
 
 ### Plugins And Projects
 
-`/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
+`/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/App/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
 
 ### Internal Agent Tools
 

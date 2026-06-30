@@ -59,8 +59,8 @@ if ($forbiddenDatabases -contains $databaseName.ToLowerInvariant()) {
 }
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$migrationProject = Join-Path $repoRoot "src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj"
-$startupProject = Join-Path $repoRoot "src\CanDoItAll.Web\CanDoItAll.Web.csproj"
+$migrationProject = Join-Path $repoRoot "src\Foundation\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj"
+$startupProject = Join-Path $repoRoot "src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"
 
 if (!(Test-Path -LiteralPath $migrationProject)) {
     throw "PostgreSQL migration project was not found: $migrationProject"

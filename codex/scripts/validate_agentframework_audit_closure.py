@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--agentframework-root",
         type=Path,
-        default=Path("src/CanDoItAll.Modules.AgentFramework"),
+        default=Path("src/Modules/CanDoItAll.Modules.AgentFramework"),
         help="Path to the local AgentFramework module source root.",
     )
     return parser.parse_args()

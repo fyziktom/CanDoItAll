@@ -7,7 +7,7 @@ description: Use when launching, dispatching, cancelling, reworking, observing, 
 
 Use this skill when a task needs process runtime control through the CanDoItAll web API.
 
-Processes are the durable orchestration layer, but the current HTTP surface is intentionally narrow. Source of truth: `src/CanDoItAll.Web/Api/ProcessesApi.cs`.
+Processes are the durable orchestration layer, but the current HTTP surface is intentionally narrow. Source of truth: `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`.
 
 ## Access
 
@@ -186,7 +186,7 @@ If a prompt or older doc asks for `processes_definition_save`, `processes_runs_l
 
 ## Not Current HTTP Commands
 
-These older route families are not currently mapped by `src/CanDoItAll.Web/Api/ProcessesApi.cs`:
+These older route families are not currently mapped by `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`:
 
 - `/api/processes/definitions`
 - `/api/processes/templates`
@@ -217,7 +217,7 @@ Do not call those routes until they are reintroduced with typed handlers, OpenAP
 
 <!-- api-docs-skills-parity:routes:start -->
 
-Processes API route appendix. Generated from Minimal API registrations; refresh from `src/CanDoItAll.Web/Api/ProcessesApi.cs` when routes change.
+Processes API route appendix. Generated from Minimal API registrations; refresh from `src/App/CanDoItAll.Web/Api/ProcessesApi.cs` when routes change.
 
 | Method | Route |
 | --- | --- |

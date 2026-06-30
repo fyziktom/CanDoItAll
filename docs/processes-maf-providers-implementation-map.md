@@ -40,20 +40,20 @@ There is no direct process runtime tool provider. Process steps execute through 
 
 | Area | Current owner | Source |
 | --- | --- | --- |
-| Runtime composition | Web host composition root | `src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs` |
-| Process module DI | Process module | `src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs` |
-| Process HTTP API | Web API | `src/CanDoItAll.Web/Api/ProcessesApi.cs` |
-| Process launch | Application layer | `src/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs` |
-| Process dispatch | Application/runtime layers | `src/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`, `src/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs`, `src/CanDoItAll.Processes.Runtime/ProcessRuntimeScheduler.cs` |
-| Process persistence | EF-backed process persistence | `src/CanDoItAll.Processes.Persistence/*` |
-| Process projections | Projection contracts/projector/query services | `src/CanDoItAll.Processes.Projections/*`, `src/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs` |
-| Process UI | Blazor module | `src/CanDoItAll.Modules.Processes/Pages/*`, `src/CanDoItAll.Modules.Processes/Components/*` |
-| Project-structure process bridge | Workbench module | `src/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessNodeService.cs` |
-| Project-structure runtime tools | Workbench runtime tool provider | `src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs` |
-| MAF runtime | AgentFramework MAF adapter | `src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` |
-| MAF workflow adapter | AgentFramework MAF workflows | `src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/*` |
-| Provider runtime | AgentFramework providers and MAF provider gateway | `src/CanDoItAll.AgentFramework.Providers/*`, `src/CanDoItAll.AgentFramework.Maf/Runtime/Providers/*` |
-| AgentFramework module facade | Current-profile agent workspace and provider gateway | `src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs` |
+| Runtime composition | Web host composition root | `src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs` |
+| Process module DI | Process module | `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs` |
+| Process HTTP API | Web API | `src/App/CanDoItAll.Web/Api/ProcessesApi.cs` |
+| Process launch | Application layer | `src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs` |
+| Process dispatch | Application/runtime layers | `src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`, `src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs`, `src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeScheduler.cs` |
+| Process persistence | EF-backed process persistence | `src/Processes/CanDoItAll.Processes.Persistence/*` |
+| Process projections | Projection contracts/projector/query services | `src/Processes/CanDoItAll.Processes.Projections/*`, `src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs` |
+| Process UI | Blazor module | `src/Modules/CanDoItAll.Modules.Processes/Pages/*`, `src/Modules/CanDoItAll.Modules.Processes/Components/*` |
+| Project-structure process bridge | Workbench module | `src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessNodeService.cs` |
+| Project-structure runtime tools | Workbench runtime tool provider | `src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs` |
+| MAF runtime | AgentFramework MAF adapter | `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` |
+| MAF workflow adapter | AgentFramework MAF workflows | `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/*` |
+| Provider runtime | AgentFramework providers and MAF provider gateway | `src/MAF/Common/CanDoItAll.AgentFramework.Providers/*`, `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/*` |
+| AgentFramework module facade | Current-profile agent workspace and provider gateway | `src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs` |
 
 ## Runtime Composition
 
@@ -317,7 +317,7 @@ Goal: stop docs and skills from drifting away from source.
 Validation:
 
 ```powershell
-rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/CanDoItAll.AgentFramework.Core src/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
+rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/MAF/Common/CanDoItAll.AgentFramework.Core src/MAF/Common/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
 git diff --check
 ```
 
@@ -439,12 +439,12 @@ For documentation-only changes:
 
 ```powershell
 git diff --check
-rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/CanDoItAll.AgentFramework.Core src/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
+rg "registers .*ProcessAgentRuntimeToolProvider|Current direct runtime tools: 23|/api/processes/definitions|/api/processes/templates|/api/processes/runs/\{runId\}/detail|ProcessManagerTools" docs src/MAF/Common/CanDoItAll.AgentFramework.Core src/MAF/Common/CanDoItAll.AgentFramework.Maf -g "*.md" -g "!processes-maf-providers-implementation-map.md"
 ```
 
 For source changes in the next hardening-refactor, start with focused tests instead of the full suite:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests|FullyQualifiedName~ProviderDispatchLaneGateTests|FullyQualifiedName~ProviderRuntimeLifecycleTests|FullyQualifiedName~AgentProviderFailureDisplayFormatterTests|FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests"
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests|FullyQualifiedName~ProviderDispatchLaneGateTests|FullyQualifiedName~ProviderRuntimeLifecycleTests|FullyQualifiedName~AgentProviderFailureDisplayFormatterTests|FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests"
 ```

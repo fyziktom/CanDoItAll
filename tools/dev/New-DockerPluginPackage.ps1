@@ -12,8 +12,8 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = Join-Path $RepoRoot "codex\bundles\plugin-runtime-architecture-hardening-followup\reviews\artifacts\candoitall.docker.package.zip"
 }
 
-$projectPath = Join-Path $RepoRoot "src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj"
-$targetDir = Join-Path $RepoRoot "src\plugins\CanDoItAll.Plugin.Docker\bin\$Configuration\net10.0"
+$projectPath = Join-Path $RepoRoot "src\plugins\Implementations\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj"
+$targetDir = Join-Path $RepoRoot "src\plugins\Implementations\CanDoItAll.Plugin.Docker\bin\$Configuration\net10.0"
 $stageRoot = Join-Path $RepoRoot ".codex\plugin-packages\docker"
 $manifestPath = Join-Path $stageRoot "plugin.package.json"
 $iconPath = Join-Path $stageRoot "icon.svg"

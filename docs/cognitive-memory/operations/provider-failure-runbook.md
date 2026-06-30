@@ -5,7 +5,7 @@
 P1 adds unit proof for projection-provider failure without requiring Qdrant locally:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalServicesTests.ProjectionRebuildService_RecordsProviderFailureAndKeepsProjectionRebuildable" --logger "console;verbosity=minimal" -m:1
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemoryOperationalServicesTests.ProjectionRebuildService_RecordsProviderFailureAndKeepsProjectionRebuildable" --logger "console;verbosity=minimal" -m:1
 ```
 
 Expected result:

@@ -86,7 +86,7 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 
 <!-- api-docs-skills-parity:routes:start -->
 
-Agents API route appendix. Generated from Minimal API registrations; refresh from `src/CanDoItAll.Web/Api/AgentsApi.cs` when routes change.
+Agents API route appendix. Generated from Minimal API registrations; refresh from `src/App/CanDoItAll.Web/Api/AgentsApi.cs` when routes change.
 
 | Method | Route |
 | --- | --- |

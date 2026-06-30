@@ -12,7 +12,7 @@ Use the web API and the repo-managed project-structure API skill:
 
 - API overview: [API control plane](api-control-plane.md)
 - Skill guidance: [codex/skills/candoitall-api-project-structure/SKILL.md](../codex/skills/candoitall-api-project-structure/SKILL.md)
-- Source routes: [ProjectStructureAgentApi.cs](../src/CanDoItAll.Web/ProjectStructureAgentApi.cs)
+- Source routes: [ProjectStructureAgentApi.cs](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs)
 
 Key route families:
 
@@ -26,7 +26,7 @@ Key route families:
 
 ## Migration Guidance
 
-1. Start `src/CanDoItAll.Web`.
+1. Start `src/App/CanDoItAll.Web`.
 2. Check API status with `GET /api/access/status`.
 3. If API authorization is enabled, use a Settings-generated bearer token or an already-authorized token.
 4. Acquire a project lease before mutating shared structure.

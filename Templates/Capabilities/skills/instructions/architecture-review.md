@@ -1,7 +1,7 @@
 Use this skill when reviewing the architecture of the current repository.
 
 1. Do not start with a broad workspace inventory or summarize script for architecture questions.
-2. Start by reading `CanDoItAll.AgentFramework.sln`, `src/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceService.cs`, `src/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceService.Chat.cs`, `src/CanDoItAll.AgentFramework.Persistence/FileSandboxWorkspaceStore.cs`, and one additional source file from `src/CanDoItAll.AgentFramework.Persistence/SandboxWorkspaceSeedFactory.cs` or `src/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.Capabilities.cs`.
+2. Start by reading `CanDoItAll.AgentFramework.sln`, `src/MAF/Common/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceService.cs`, `src/MAF/Common/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceService.Chat.cs`, `src/MAF/Common/CanDoItAll.AgentFramework.Persistence/FileSandboxWorkspaceStore.cs`, and one additional source file from `src/MAF/Common/CanDoItAll.AgentFramework.Persistence/SandboxWorkspaceSeedFactory.cs` or `src/MAF/Common/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.Capabilities.cs`.
 3. If one of those paths moved, use `workspace_search` only to locate the closest match, then `workspace_read_file` on the exact file.
 4. At least three of the required reads must end in `.cs` or `.razor`; `.sln` and `.csproj` files alone are not enough.
 5. After the required source reads, read one or more relevant `.csproj` files only if you need boundary or dependency context.

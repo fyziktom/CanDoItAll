@@ -75,7 +75,7 @@ Run the web app after the containers are healthy:
 From the repo root:
 
 ```powershell
-dotnet run --project src/CanDoItAll.Web
+dotnet run --project src/App/CanDoItAll.Web
 ```
 
 The Development and Visual Studio `http`/`https` launch profiles point at:
@@ -94,7 +94,7 @@ Runtime notes:
 
 - The app uses Blazor Interactive Server rendering.
 - The default Development and Visual Studio `http`/`https` profiles use PostgreSQL database `candoitall_development` with username/password `candoitall`/`candoitall`.
-- Qdrant is configured in `src/CanDoItAll.Web/appsettings.json` under `Rag:Qdrant` with gRPC port `6334`, collection `candoitall-knowledge`, vector size `384`, and create-collection-if-missing enabled.
+- Qdrant is configured in `src/App/CanDoItAll.Web/appsettings.json` under `Rag:Qdrant` with gRPC port `6334`, collection `candoitall-knowledge`, vector size `384`, and create-collection-if-missing enabled.
 - Development control-plane and workspace files are rooted under `%LOCALAPPDATA%\CanDoItAll`, not repo `.artifacts`, so a clean clone can start without carrying local artifact settings.
 - Development readiness is exposed at `/_dev/runtime`.
 - Development database selection is exposed at `/_dev/database/selection`.
@@ -126,7 +126,7 @@ Current active MCP sidecar source lives in `C:\repositories\CanDoItAll.Mcp`. Act
 From the repo root:
 
 ```powershell
-dotnet run --project tools/CanDoItAll.Manager
+dotnet run --project tools/App/CanDoItAll.Manager
 ```
 
 The manager listens on `http://127.0.0.1:6407` by default. It supervises `dotnet watch` for the web app, confirms readiness through `/_dev/runtime`, exposes loopback-only watch/capsule/tuning endpoints, and writes capsule artifacts under `.artifacts/codex-capsules`.
@@ -142,16 +142,16 @@ dotnet build CanDoItAll.slnx
 Run the main test layers individually:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj
-dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj
+dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj
 ```
 
 Install Chromium for Playwright once per machine after the Playwright test project is built:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\playwright.ps1 install chromium
+powershell -ExecutionPolicy Bypass -File tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\playwright.ps1 install chromium
 ```
 
 ## Project Families
@@ -217,7 +217,7 @@ npm install
 npm run tailwind:build
 ```
 
-The main output is written to `src/CanDoItAll.Web/wwwroot/css/output.css` and is loaded after `_content/CanDoItAll.Components.BaseLib/css/output.css`.
+The main output is written to `src/App/CanDoItAll.Web/wwwroot/css/output.css` and is loaded after `_content/CanDoItAll.Components.BaseLib/css/output.css`.
 
 Component package refresh flow:
 

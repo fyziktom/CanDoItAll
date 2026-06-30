@@ -69,5 +69,5 @@ This pack is the current-architecture-aligned replacement for the original execu
 Use `ProcessTemplateGovernanceTests` to validate JSON references, dependency graphs, artifact inputs, live-run profiles, and current baseline expectations:
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessTemplateGovernanceTests"
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessTemplateGovernanceTests"
 ```

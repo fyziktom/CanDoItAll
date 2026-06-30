@@ -26,12 +26,12 @@ The durable schema, module registration, versioned API aliases, contract/example
 
 ## Primary Source References
 
-- `src/CanDoItAll.Modules.CognitiveMemory`
-- `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`
-- `src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`
-- `src/CanDoItAll.Composition/ModuleAssemblies.cs`
-- `src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs`
-- `src/CanDoItAll.AgentFramework.Core/Sources/MemorySourceSnapshotContracts.cs`
+- `src/Modules/CanDoItAll.Modules.CognitiveMemory`
+- `src/App/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`
+- `src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`
+- `src/App/CanDoItAll.Composition/ModuleAssemblies.cs`
+- `src/Foundation/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs`
+- `src/MAF/Common/CanDoItAll.AgentFramework.Core/Sources/MemorySourceSnapshotContracts.cs`
 - `tests/*/*CognitiveMemory*.cs`
 
 ## Architectural Summary

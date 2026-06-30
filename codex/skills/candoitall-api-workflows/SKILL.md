@@ -102,7 +102,7 @@ Use `sourceProcessRunId` and `sourceProcessAssignmentId` when the workflow run i
 
 <!-- api-docs-skills-parity:routes:start -->
 
-Workflows API route appendix. Generated from Minimal API registrations; refresh from `src/CanDoItAll.Web/Api/WorkflowsApi.cs` when routes change.
+Workflows API route appendix. Generated from Minimal API registrations; refresh from `src/App/CanDoItAll.Web/Api/WorkflowsApi.cs` when routes change.
 
 | Method | Route |
 | --- | --- |

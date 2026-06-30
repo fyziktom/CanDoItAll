@@ -2,7 +2,7 @@
 
 ## Project Shape
 
-The implementation lives primarily in `src/CanDoItAll.Modules.CognitiveMemory`. It is registered from `src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs` and exposed by grouped Minimal API files under `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
+The implementation lives primarily in `src/Modules/CanDoItAll.Modules.CognitiveMemory`. It is registered from `src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs` and exposed by grouped Minimal API files under `src/App/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
 
 | Folder | Source files | Responsibility |
 | --- | ---: | --- |
@@ -65,7 +65,7 @@ flowchart LR
 
 ## Operator UI Components
 
-The `/cognitive-memory` route still uses `CognitiveMemoryPage` as the orchestration owner, but the tab bodies are separated under `src/CanDoItAll.Modules.CognitiveMemory/Pages/Components`:
+The `/cognitive-memory` route still uses `CognitiveMemoryPage` as the orchestration owner, but the tab bodies are separated under `src/Modules/CanDoItAll.Modules.CognitiveMemory/Pages/Components`:
 
 | Component | Role |
 | --- | --- |

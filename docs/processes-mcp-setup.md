@@ -12,7 +12,7 @@ Use the web API and the repo-managed process API skill:
 
 - API overview: [API control plane](api-control-plane.md)
 - Skill guidance: [codex/skills/candoitall-api-processes/SKILL.md](../codex/skills/candoitall-api-processes/SKILL.md)
-- Source routes: [ProcessesApi.cs](../src/CanDoItAll.Web/Api/ProcessesApi.cs)
+- Source routes: [ProcessesApi.cs](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs)
 - Current implementation map: [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md)
 
 Current source-grounded routes:
@@ -33,7 +33,7 @@ Use `POST /api/processes/launch/check` for launch readiness checks that must not
 
 ## Migration Guidance
 
-1. Start `src/CanDoItAll.Web`.
+1. Start `src/App/CanDoItAll.Web`.
 2. Check API status with `GET /api/access/status`.
 3. If API authorization is enabled, use a Settings-generated bearer token or an already-authorized token.
 4. Use the focused route for the smallest operation instead of fetching full process run detail by default.

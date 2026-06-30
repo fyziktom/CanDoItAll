@@ -2,9 +2,9 @@
 
 Provider configuration is part of the Agents API surface. Keep docs and skills aligned with these source files:
 
-- `src/CanDoItAll.AgentFramework.Models/Providers/ProviderModels.cs`
-- `src/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs`
-- `src/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs`
+- `src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderModels.cs`
+- `src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs`
+- `src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentProviderModelParameterPolicy.cs`
 
 ## Capability Matrix Fields
 

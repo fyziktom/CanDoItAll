@@ -11,13 +11,13 @@
 | Mermaid diagrams | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid` |
 | Overlay windows | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib` |
 | WebGL workbench runtime | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib` |
-| Facade and app shell | `C:\repositories\CanDoItAll\src\CanDoItAll.AppComponents` |
+| Facade and app shell | `C:\repositories\CanDoItAll\src\UI\CanDoItAll.AppComponents` |
 | Component sandbox | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Sandbox` |
 | WebGL sandbox | `C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlSandbox` |
 | Target framework | `net10.0` |
 | Primary package dependency | `Microsoft.AspNetCore.Components.Web` |
 | Shared generated stylesheet | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css` |
-| Main generated stylesheet | `src/CanDoItAll.Web/wwwroot/css/output.css` |
+| Main generated stylesheet | `src/App/CanDoItAll.Web/wwwroot/css/output.css` |
 
 ## Actual Library Roles
 

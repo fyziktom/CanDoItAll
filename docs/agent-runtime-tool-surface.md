@@ -12,19 +12,19 @@ Capability templates in `Templates/Capabilities` seed catalog metadata and acces
 
 Source:
 
-- `src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
-- `src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
-- `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
-- `src/CanDoItAll.Web/Api/ProcessesApi.cs`
+- `src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`
+- `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
+- `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
+- `src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
+- `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`
 
 Current direct process runtime tools: 0.
 
-The current source tree does not contain `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`, and `AddProcessesModule` does not register an `IAgentRuntimeToolProvider` for direct `processes_*` tools. Policy constants and some tests still mention legacy or planned `processes_*` names; treat that as a hardening gap, not as proof that those tools are currently available.
+The current source tree does not contain `src/Modules/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`, and `AddProcessesModule` does not register an `IAgentRuntimeToolProvider` for direct `processes_*` tools. Policy constants and some tests still mention legacy or planned `processes_*` names; treat that as a hardening gap, not as proof that those tools are currently available.
 
 Current process control paths are:
 
-- HTTP routes in `src/CanDoItAll.Web/Api/ProcessesApi.cs`: contract discovery, launch preflight, launch, dispatch, cancel, step rework, live, detail, and history.
+- HTTP routes in `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`: contract discovery, launch preflight, launch, dispatch, cancel, step rework, live, detail, and history.
 - Governed process execution through `AgentFrameworkProcessExecutionAdapter`, which attaches workspace, skill, MCP, provider-native, and registered runtime-provider tools according to the process step operation contract.
 - Project-structure runtime tools in Workbench that can link or start process definitions from project nodes.
 - Blazor process workspace UI backed by process projection services.
@@ -35,10 +35,10 @@ If direct process tools are reintroduced, they must be implemented as a concrete
 
 Source:
 
-- `src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`
-- `src/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs`
-- `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
-- `src/CanDoItAll.Web/ProjectStructureAgentApi.cs`
+- `src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`
+- `src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs`
+- `src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
+- `src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`
 
 Current direct runtime tools: 51.
 

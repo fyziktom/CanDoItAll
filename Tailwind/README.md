@@ -20,7 +20,7 @@ Watch mode:
 npm run watch
 ```
 
-This workspace compiles to `src/CanDoItAll.Web/wwwroot/css/output.css`.
+This workspace compiles to `src/App/CanDoItAll.Web/wwwroot/css/output.css`.
 
 The web app loads styles in this order:
 
