@@ -283,6 +283,7 @@ public sealed class ProcessLaunchPromptTests
 
         Assert.Contains("AgentFramework project-structure context source:", prompt, StringComparison.Ordinal);
         Assert.Contains("ProjectStructureContextSummary in Launch variables is the current project-structure context for this run", prompt, StringComparison.Ordinal);
+        Assert.Contains("Ignore generated process evidence from prior runs", prompt, StringComparison.Ordinal);
         Assert.Contains("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts", prompt, StringComparison.Ordinal);
         Assert.Contains("ProductRoot, OutputRoot, and ExternalTargetRoot launch variables identify the product target", prompt, StringComparison.Ordinal);
         Assert.Contains("Grounded external-target aliases for structured workspace tool path arguments: external-target/C/programovani/dotnet/output", prompt, StringComparison.Ordinal);

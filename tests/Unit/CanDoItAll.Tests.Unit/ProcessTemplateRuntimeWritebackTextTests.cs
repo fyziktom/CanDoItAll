@@ -34,6 +34,8 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
         Assert.Contains("successful `workspace_stat_path` or `workspace_read_file` receipt", handoff, StringComparison.Ordinal);
         Assert.Contains("Do not require or probe a sibling path", handoff, StringComparison.Ordinal);
         Assert.Contains("steps/setup-handoff.md", handoff, StringComparison.Ordinal);
+        Assert.Contains("setup-repair-required", File.ReadAllText(Path.Combine(root, "Templates", "Processes", "processes", "dotnet-solution-setup", "steps", "validate-first-build.md")), StringComparison.Ordinal);
+        Assert.Contains("steps/setup-handoff-after-repair.md", definitionJson, StringComparison.Ordinal);
         Assert.Contains("steps/validate-first-build.md", definitionJson, StringComparison.Ordinal);
         Assert.Contains("non-canonical sibling evidence path", definitionJson, StringComparison.Ordinal);
     }

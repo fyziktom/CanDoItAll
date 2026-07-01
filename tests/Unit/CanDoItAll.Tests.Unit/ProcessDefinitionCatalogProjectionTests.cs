@@ -124,6 +124,55 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Dotnet_solution_setup_routes_repairable_first_build_failures_through_setup_repair()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-solution-setup");
+
+        var validate = Assert.Single(definition.Steps, step => string.Equals(step.Key, "validate-first-build", StringComparison.Ordinal));
+        var repair = Assert.Single(definition.Steps, step => string.Equals(step.Key, "repair-solution-setup", StringComparison.Ordinal));
+        var revalidate = Assert.Single(definition.Steps, step => string.Equals(step.Key, "validate-first-build-after-repair", StringComparison.Ordinal));
+        var handoff = Assert.Single(definition.Steps, step => string.Equals(step.Key, "setup-handoff", StringComparison.Ordinal));
+        var repairedHandoff = Assert.Single(definition.Steps, step => string.Equals(step.Key, "setup-handoff-after-repair", StringComparison.Ordinal));
+        var repairEscalation = Assert.Single(definition.Steps, step => string.Equals(step.Key, "setup-repair-escalation", StringComparison.Ordinal));
+
+        Assert.Contains(validate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-validated", StringComparison.Ordinal));
+        Assert.Contains(validate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-repair-required", StringComparison.Ordinal));
+        Assert.Contains("Select setup-repair-required", validate.ExceptionPolicySummary, StringComparison.Ordinal);
+
+        Assert.Equal("validate-first-build", repair.DependsOnStepKey);
+        Assert.Equal("setup-repair-required", repair.DependsOnBranchOutcomeKey);
+        Assert.Contains(ProcessOperationContractNames.MutateProductTarget, repair.AllowedOperations);
+        Assert.Contains(ProcessOperationContractNames.RunValidation, repair.AllowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.LaunchRuntime, repair.AllowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.CaptureRuntimeProof, repair.AllowedOperations);
+        Assert.Contains("Do not implement feature behavior", repair.Notes, StringComparison.Ordinal);
+
+        Assert.Equal("repair-solution-setup", revalidate.DependsOnStepKey);
+        Assert.Contains(revalidate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-validated", StringComparison.Ordinal));
+        Assert.Contains(revalidate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-repair-escalation", StringComparison.Ordinal));
+        Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, revalidate.AllowedOperations);
+
+        Assert.Equal("validate-first-build", handoff.DependsOnStepKey);
+        Assert.Equal("setup-validated", handoff.DependsOnBranchOutcomeKey);
+        Assert.Equal("validate-first-build-after-repair", repairedHandoff.DependsOnStepKey);
+        Assert.Equal("setup-validated", repairedHandoff.DependsOnBranchOutcomeKey);
+        Assert.Equal("validate-first-build-after-repair", repairEscalation.DependsOnStepKey);
+        Assert.Equal("setup-repair-escalation", repairEscalation.DependsOnBranchOutcomeKey);
+
+        var setupContract = string.Join(
+            Environment.NewLine,
+            definition.Steps.Select(step => string.Join(
+                Environment.NewLine,
+                step.Title,
+                step.Notes,
+                step.ExceptionPolicySummary,
+                string.Join(Environment.NewLine, step.ArtifactExpectations.Select(expectation => expectation.ValidationRequirementSummary)))));
+        Assert.DoesNotContain("tetris", setupContract, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("tetromino", setupContract, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Dotnet_feature_implementation_approach_requires_current_run_artifact_evidence()
     {
         var repositoryRoot = FindRepositoryRoot();

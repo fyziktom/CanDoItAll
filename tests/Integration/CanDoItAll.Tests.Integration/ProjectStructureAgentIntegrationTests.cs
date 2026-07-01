@@ -757,6 +757,39 @@ public sealed class ProjectStructureAgentIntegrationTests
                 architectureNode.Id,
                 "generated"),
             DefaultAgent);
+        await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.File,
+                "browser-proof-previous-run",
+                "Generated browser proof",
+                "Prior generated process evidence that must not seed a new process run.",
+                CreateMediaPayload("browser-proof-old.md", "text/markdown", "old browser proof"),
+                architectureNode.Id,
+                "markdown"),
+            DefaultAgent);
+        await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.File,
+                "office365-category-email-summary-old",
+                "Generated file summary",
+                "Prior file summary from another workflow that must not seed a new process run.",
+                CreateMediaPayload("office365-category-email-summary-old.md", "text/markdown", "old unrelated summary"),
+                architectureNode.Id,
+                "markdown"),
+            DefaultAgent);
+        await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.ImageAsset,
+                "Previous run screenshot",
+                "Generated screenshot evidence",
+                "Prior generated screenshot evidence that must not replace source design input.",
+                CreateMediaPayload("previous-run.png", "image/png", [0x89, 0x50, 0x4E, 0x47]),
+                architectureNode.Id,
+                "screenshot"),
+            DefaultAgent);
         var definitionId = ProcessDefinitionCatalogProjectionService
             .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
             .Value;
@@ -785,12 +818,18 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
         Assert.Equal(ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(definitionId), assignment.LaunchVariables["ProcessNodeId"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
-        Assert.Contains("Blazor WASM PWA app shape", assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
-        Assert.Contains(outputRoot, assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
-        Assert.Contains("Visual target assets:", assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
-        Assert.Contains(visualTargetAsset.Id, assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
-        Assert.Contains("calculator-target.png", assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
-        Assert.Contains("Visual target rule: implementation and QA must fetch or analyze the relevant asset content", assignment.LaunchVariables["ProjectStructureContextSummary"], StringComparison.Ordinal);
+        var contextSummary = assignment.LaunchVariables["ProjectStructureContextSummary"];
+        Assert.Contains("Blazor WASM PWA app shape", contextSummary, StringComparison.Ordinal);
+        Assert.Contains(outputRoot, contextSummary, StringComparison.Ordinal);
+        Assert.Contains("Visual target assets:", contextSummary, StringComparison.Ordinal);
+        Assert.Contains(visualTargetAsset.Id, contextSummary, StringComparison.Ordinal);
+        Assert.Contains("calculator-target.png", contextSummary, StringComparison.Ordinal);
+        Assert.Contains("Visual target rule: implementation and QA must fetch or analyze the relevant asset content", contextSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser-proof-previous-run", contextSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("browser-proof-old.md", contextSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("office365-category-email-summary-old", contextSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("previous-run.png", contextSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Ignore generated process evidence from prior runs", assignment.Prompt, StringComparison.Ordinal);
     }
 
     [Fact]

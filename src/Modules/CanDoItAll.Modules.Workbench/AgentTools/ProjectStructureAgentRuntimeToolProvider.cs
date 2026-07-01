@@ -500,16 +500,22 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     EnsureProjectReadAllowed(accessState, projectId);
                     var effectiveRequest = ResolveGovernedProcessReadRequest(accessState, request, out var appliedDefaultScope);
                     var response = await agentService.GetStructureAsync(projectId, effectiveRequest, cancellationToken);
+                    var nodes = appliedDefaultScope
+                        ? response.Nodes
+                            .Where(ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext)
+                            .ToList()
+                        : response.Nodes;
                     var warnings = appliedDefaultScope
                         ? response.Warnings
                             .Append(
                                 $"Governed process default applied: unfiltered project_structure_read returned only Active, Draft, Planned, and Published nodes with take={GovernedProcessDefaultStructureReadTake}. Pass an explicit request with statuses, take, nodeIds, subtreeRootIds, objectTypes, projectRoles, or maxPriority when broader graph context is required.")
+                            .Append("Generated process evidence, proof, report, log, screenshot, and file-summary nodes are omitted from the default governed process read. Pass explicit nodeIds or subtreeRootIds only when named historical evidence is required by the current step.")
                             .ToList()
                         : response.Warnings;
                     return new ProjectStructureReadToolData(
                         response.ProjectId,
                         response.ProjectName,
-                        response.Nodes.Select(MapCompactNode).ToList(),
+                        nodes.Select(MapCompactNode).ToList(),
                         response.Links,
                         warnings);
                 },

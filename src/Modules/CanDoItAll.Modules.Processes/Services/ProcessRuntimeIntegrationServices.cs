@@ -883,6 +883,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         if (TryResolveLaunchVariable(request.LaunchVariables, "ProjectStructureContextSummary", out _))
         {
             lines.Add("ProjectStructureContextSummary in Launch variables is the current project-structure context for this run; treat it as authoritative project-structure evidence when no richer project-structure tool result is required by the step.");
+            lines.Add("When using project-structure as source context, treat authored requirement, brief, spec, target, and explicitly current-run managed artifacts as source evidence. Ignore generated process evidence from prior runs such as proof files, screenshots, logs, execution reports, validation reports, summaries, and handoff packets unless the current step names the exact current-run artifact ref. Listed visual target ImageAsset nodes remain binding design inputs.");
         }
         else if (canReadProjectStructure)
         {

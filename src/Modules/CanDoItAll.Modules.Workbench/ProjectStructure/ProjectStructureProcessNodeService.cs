@@ -698,7 +698,11 @@ public sealed class ProjectStructureProcessNodeService(
 
     private static string BuildProjectStructureContextSummary(ProjectStructureSurface surface, ProjectStructureNode focusNode)
     {
-        var contextRows = EnumerateProjectStructureContextNodes(surface, focusNode);
+        var contextRows = EnumerateProjectStructureContextNodes(surface, focusNode)
+            .Where(row =>
+                string.Equals(row.Node.Id, focusNode.Id, StringComparison.Ordinal) ||
+                ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(row.Node))
+            .ToArray();
         var rows = contextRows
             .Take(40)
             .ToArray();

@@ -322,7 +322,7 @@
       "Key": "validate-first-build",
       "Title": "Validate first build and test discovery",
       "Subtitle": "Build proof",
-      "Notes": "Run restore/build and a targeted test discovery or initial test command so the scaffold is known good before handoff. Do not launch runtime, start a web app, run browser proof, or implement feature behavior in this setup validation step; runtime and browser proof belong to downstream validation steps unless the parent process defines a separate runtime-proof setup step.",
+      "Notes": "Run restore/build and a targeted test discovery or initial test command so the scaffold is known good before handoff. Select setup-validated only when proof is green. Select setup-repair-required for repairable restore, build, package, project-reference, template-integrity, or test-discovery failures and include a concrete repair packet. Do not launch runtime, start a web app, run browser proof, or implement feature behavior in this setup validation step; runtime and browser proof belong to downstream validation steps unless the parent process defines a separate runtime-proof setup step.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -332,7 +332,7 @@
       "OutputContractSummary": "Build and test command output that proves the new solution can be iterated safely.",
       "EvidenceContractSummary": "Command, exit code, warnings, and any accepted follow-up risks.",
       "DecisionRightsSummary": "Validation reviewer can reject the scaffold when build proof is missing or non-deterministic.",
-      "ExceptionPolicySummary": "Block on restore/build failure, missing test project, unexplained command output, or artifact recovery when required build or test discovery evidence is missing or invalid before branch routing.",
+      "ExceptionPolicySummary": "Select setup-repair-required for repairable scaffold, restore, build, package, reference, template-integrity, or test-discovery failures. Block only when an environment, permission, missing tool, or process-contract issue prevents evidence collection or branch routing.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "add-test-project",
       "DependsOnBranchOutcomeKey": "",
@@ -384,7 +384,18 @@
           "SourceStepKey": "add-test-project"
         }
       ],
-      "BranchOutcomes": [],
+      "BranchOutcomes": [
+        {
+          "Key": "setup-validated",
+          "Title": "Setup validated",
+          "Description": "Restore, build, and targeted test discovery or initial test command are green enough for parent implementation handoff."
+        },
+        {
+          "Key": "setup-repair-required",
+          "Title": "Setup repair required",
+          "Description": "The scaffold has repairable restore, build, package, project-reference, template-integrity, or test-discovery failures that should be fixed inside this setup subprocess."
+        }
+      ],
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
@@ -402,10 +413,176 @@
     },
     {
       "Order": 4,
+      "Key": "repair-solution-setup",
+      "Title": "Repair solution setup findings",
+      "Subtitle": "Bounded scaffold repair",
+      "Notes": "Repair only the setup findings recorded by validate-first-build. Keep this scoped to scaffold, project files, package/reference wiring, template-integrity, and test-discovery fixes. Do not implement feature behavior, replace starter UI beyond template repair, launch runtime, or capture browser proof.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Initial first-build evidence and concrete repair packet from setup validation.",
+      "OutputContractSummary": "Minimal setup repair change set ready for repaired first-build validation.",
+      "EvidenceContractSummary": "Changed files, root cause, exact repair actions, and commands to rerun.",
+      "DecisionRightsSummary": "Implementation engineer may mutate only setup scaffolding and test project wiring required to make first build proof possible.",
+      "ExceptionPolicySummary": "Block only when the repair target is contradictory, a required tool or permission is unavailable, or the product target cannot be accessed. Do not block just because the initial validation proof failed; that is the input to this repair step.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "validate-first-build",
+      "DependsOnBranchOutcomeKey": "setup-repair-required",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": 820,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "validate-first-build",
+          "DependsOnBranchOutcomeKey": "setup-repair-required"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a .NET-capable implementer allowed to mutate the external product target."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "setup-repair-change-set",
+          "TemplateKey": "implementation-change-set",
+          "Title": "Setup repair change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by repaired setup validation and parent implementation slices to understand scaffold repair.",
+          "ValidationRequirementSummary": "Must summarize initial validation failure, root cause, changed files, exact setup-only repair actions, and commands to rerun."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/repair-solution-setup.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
+    },
+    {
+      "Order": 5,
+      "Key": "validate-first-build-after-repair",
+      "Title": "Revalidate first build after setup repair",
+      "Subtitle": "Repaired build proof",
+      "Notes": "Rerun restore/build and the smallest targeted test discovery or initial test command after setup repair. Select setup-validated only when the repaired scaffold is green. Select setup-repair-escalation when proof still fails, repair evidence is detached from the original failure, or another repair would exceed setup scope.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Initial validation failure and setup repair change set.",
+      "OutputContractSummary": "Repaired first-build evidence with explicit setup-validated or setup-repair-escalation branch.",
+      "EvidenceContractSummary": "Rerun commands, exit codes, relevant output, original failure before/after assessment, and unresolved gaps after repair.",
+      "DecisionRightsSummary": "Validation reviewer can accept repaired setup evidence or escalate unresolved setup repair findings.",
+      "ExceptionPolicySummary": "Select setup-repair-escalation when repaired restore/build/test proof remains failing or detached from the original repair target. Block only when an environment, permission, missing tool, or process-contract issue prevents recheck execution.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "repair-solution-setup",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "qa-lead",
+      "CanvasX": 5660,
+      "CanvasY": 820,
+      "BranchCanvasX": 5920,
+      "BranchCanvasY": 1177,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "repair-solution-setup",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a reviewer capable of interpreting repaired .NET build and test output."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "repaired-first-build-evidence",
+          "TemplateKey": "test-evidence-pack",
+          "Title": "Repaired first build and test discovery evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by parent implementation slices to prove the repaired bootstrap baseline is usable.",
+          "ValidationRequirementSummary": "Must include command, exit code, relevant output, original failure before/after assessment, and unresolved warnings."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        },
+        {
+          "ArtifactExpectationKey": "setup-repair-change-set",
+          "SourceStepKey": "repair-solution-setup"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "setup-validated",
+          "Title": "Setup validated after repair",
+          "Description": "Repaired restore, build, and targeted test discovery or initial test command are green enough for parent implementation handoff."
+        },
+        {
+          "Key": "setup-repair-escalation",
+          "Title": "Setup repair escalation",
+          "Description": "Repaired setup proof still has blocking failures or gaps that require parent escalation or a new setup scope."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/validate-first-build-after-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 6,
       "Key": "setup-handoff",
       "Title": "Hand off setup evidence",
       "Subtitle": "Ready for implementation",
-      "Notes": "Summarize what was created, what validated, and any residual setup notes the parent process needs. Treat a successful workspace_stat_path or workspace_read_file receipt for the exact required canonical ref artifacts/process-runs/<setup-run-id>/steps/validate-first-build.md as durable first-build evidence. Do not require or probe sibling refs such as artifacts/process-runs/<setup-run-id>/validate-first-build.",
+      "Notes": "Summarize the initially validated setup path, what was created, what validated, and any residual setup notes the parent process needs. Treat a successful workspace_stat_path or workspace_read_file receipt for the exact required canonical ref artifacts/process-runs/<setup-run-id>/steps/validate-first-build.md as durable first-build evidence. Do not require or probe sibling refs such as artifacts/process-runs/<setup-run-id>/validate-first-build.",
       "StepKind": "End",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -415,10 +592,10 @@
       "OutputContractSummary": "Handoff packet for the parent development slice.",
       "EvidenceContractSummary": "Created paths, commands run, validation status from the canonical steps/validate-first-build.md managed artifact, and remaining risks.",
       "DecisionRightsSummary": "Setup manager closes only when the validation reviewer evidence is present.",
-      "ExceptionPolicySummary": "Do not close with missing build evidence or unresolved scaffold blockers. Do not block solely because a non-canonical sibling evidence path is absent when the required steps/validate-first-build.md ref is readable and reports successful validation.",
+      "ExceptionPolicySummary": "Do not close with missing build evidence, a non-selected setup-validated branch, or unresolved scaffold blockers. Do not block solely because a non-canonical sibling evidence path is absent when the required steps/validate-first-build.md ref is readable and reports successful validation.",
       "TargetLeadHours": 1,
       "DependsOnStepKey": "validate-first-build",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "setup-validated",
       "DecisionRoleKey": "",
       "CanvasX": 4580,
       "CanvasY": 0,
@@ -427,7 +604,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "validate-first-build",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "setup-validated"
         }
       ],
       "RoleAssignments": [
@@ -465,6 +642,178 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/setup-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 7,
+      "Key": "setup-handoff-after-repair",
+      "Title": "Hand off repaired setup evidence",
+      "Subtitle": "Ready for implementation after repair",
+      "Notes": "Summarize the repaired setup path, initial failure, repair actions, repaired validation proof, and any residual setup notes the parent process needs. Treat successful workspace_stat_path or workspace_read_file receipts for artifacts/process-runs/<setup-run-id>/steps/repair-solution-setup.md and artifacts/process-runs/<setup-run-id>/steps/validate-first-build-after-repair.md as durable repaired setup evidence.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Initial validation failure, setup repair change set, and repaired first-build evidence.",
+      "OutputContractSummary": "Repaired setup handoff packet for the parent development slice.",
+      "EvidenceContractSummary": "Created paths, repair actions, commands run, repaired validation status, and remaining risks.",
+      "DecisionRightsSummary": "Setup manager closes only when repaired validation selected setup-validated and evidence is present.",
+      "ExceptionPolicySummary": "Do not close when repaired validation selected setup-repair-escalation, repaired proof is missing, or scaffold blockers remain untriaged.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "validate-first-build-after-repair",
+      "DependsOnBranchOutcomeKey": "setup-validated",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 820,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "repair-solution-setup",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "validate-first-build-after-repair",
+          "DependsOnBranchOutcomeKey": "setup-validated"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report repaired setup evidence to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "setup-handoff-packet-after-repair",
+          "TemplateKey": "implementation-plan",
+          "Title": "Repaired setup handoff packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Used by parent runs and future slices to understand the repaired generated solution baseline.",
+          "ValidationRequirementSummary": "Must summarize created paths, initial validation failure, repair actions, repaired validation result, blockers, the exact setup-handoff-after-repair artifact path, and the exact canonical upstream repaired first-build artifact path."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        },
+        {
+          "ArtifactExpectationKey": "setup-repair-change-set",
+          "SourceStepKey": "repair-solution-setup"
+        },
+        {
+          "ArtifactExpectationKey": "repaired-first-build-evidence",
+          "SourceStepKey": "validate-first-build-after-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/setup-handoff-after-repair.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 8,
+      "Key": "setup-repair-escalation",
+      "Title": "Escalate unresolved setup repair",
+      "Subtitle": "Parent no-go packet",
+      "Notes": "Record unresolved repaired setup validation findings and make the parent no-go recommendation explicit instead of presenting the setup as accepted.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Initial validation failure, setup repair change set, and failed repaired recheck evidence.",
+      "OutputContractSummary": "Parent setup escalation packet with unresolved scaffold defects, proof gaps, risks, and recommended next action.",
+      "EvidenceContractSummary": "Unresolved blocker list, failing proof references, attempted repair, and parent escalation recommendation.",
+      "DecisionRightsSummary": "Setup manager can escalate unresolved repair findings but cannot present the setup as accepted.",
+      "ExceptionPolicySummary": "Do not continue to accepted setup handoff while repaired validation remains unresolved.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "validate-first-build-after-repair",
+      "DependsOnBranchOutcomeKey": "setup-repair-escalation",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 1220,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "repair-solution-setup",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "validate-first-build-after-repair",
+          "DependsOnBranchOutcomeKey": "setup-repair-escalation"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can report no-go setup evidence to the parent run."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "setup-repair-escalation-packet",
+          "TemplateKey": "regression-evidence-pack",
+          "Title": "Setup repair escalation packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 180,
+          "AllowedFutureUsageSummary": "Reusable by parent implementation planning and future setup repair.",
+          "ValidationRequirementSummary": "Must summarize unresolved setup findings, attempted repair, failing proof, no-go rationale, and required next scope."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "first-build-evidence",
+          "SourceStepKey": "validate-first-build"
+        },
+        {
+          "ArtifactExpectationKey": "setup-repair-change-set",
+          "SourceStepKey": "repair-solution-setup"
+        },
+        {
+          "ArtifactExpectationKey": "repaired-first-build-evidence",
+          "SourceStepKey": "validate-first-build-after-repair"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-solution-setup/steps/setup-repair-escalation.md"
       ],
       "AllowedOperations": [
         "ReadProcessContext",

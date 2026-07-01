@@ -209,7 +209,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         AppendLine(builder, context.ProjectNode.Subtitle);
         AppendLine(builder, context.ProjectNode.Notes);
 
-        foreach (var node in context.Surface.Nodes)
+        foreach (var node in context.Surface.Nodes.Where(ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext))
         {
             AppendLine(builder, node.Title);
             AppendLine(builder, node.Subtitle);
