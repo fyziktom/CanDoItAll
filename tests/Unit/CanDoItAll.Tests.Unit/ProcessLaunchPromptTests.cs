@@ -28,6 +28,7 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Do not list, search, stat, or read this run's managed artifact root to discover your own missing output before that write", prompt, StringComparison.Ordinal);
         Assert.Contains("Absence of your own output before you write it is expected and is not a blocker", prompt, StringComparison.Ordinal);
         Assert.Contains("consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed", prompt, StringComparison.Ordinal);
+        Assert.Contains("write this primary managed ref next instead of returning a generic no-prior-evidence blocker", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -93,6 +94,7 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Do not mark Completed until the child run receipt", prompt, StringComparison.Ordinal);
         Assert.Contains("Stopped-child rule:", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not return Blocked only because a stopped child run exists", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not relaunch a Blocked child or a child with escalation/no-go evidence", prompt, StringComparison.Ordinal);
         Assert.Contains("leave LiveRunProfileKey empty", prompt, StringComparison.Ordinal);
         Assert.Contains("BranchName, RepositoryRoot, SessionId", prompt, StringComparison.Ordinal);
         Assert.Contains("ChildManagedArtifactRoot", prompt, StringComparison.Ordinal);
@@ -165,6 +167,8 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Use workspace_stat_path or workspace_read_file on the listed refs", prompt, StringComparison.Ordinal);
         Assert.Contains("use the first existing readable ref for this slot", prompt, StringComparison.Ordinal);
         Assert.Contains("Project structure is supplemental context, not a substitute", prompt, StringComparison.Ordinal);
+        Assert.Contains("A successful stat or read of a listed current-run ref is process evidence for this step", prompt, StringComparison.Ordinal);
+        Assert.Contains("do not return Blocked claiming no prior assistant text, tool result, or process artifact evidence after that", prompt, StringComparison.Ordinal);
         Assert.Contains("cite the failed workspace file-tool receipt before returning Blocked", prompt, StringComparison.Ordinal);
         Assert.Contains("Must describe boundaries and testability.", prompt, StringComparison.Ordinal);
     }
@@ -337,6 +341,76 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Primary completed-step artifact ref: artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181/steps/feature-intake.md", prompt, StringComparison.Ordinal);
         Assert.Contains("before listing, searching, or using project-structure fallback context", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("artifacts/process-r...", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Step_brief_treats_artifact_expectation_keys_as_labels_not_filenames()
+    {
+        var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
+        var producer = CreatePromptStep("Draft feature intake packet.");
+        producer.Key = "feature-slice-intake";
+        producer.Title = "Feature slice intake";
+        producer.ArtifactExpectations =
+        [
+            new ProcessTemplateDefinitionArtifactExpectationDocument
+            {
+                Key = "feature-scope-packet",
+                Title = "Feature scope packet",
+                ArtifactKind = "Evidence",
+                IsRequired = true
+            },
+            new ProcessTemplateDefinitionArtifactExpectationDocument
+            {
+                Key = "feature-acceptance-criteria",
+                Title = "Feature acceptance criteria",
+                ArtifactKind = "Evidence",
+                IsRequired = true
+            }
+        ];
+        var consumer = CreatePromptStep("Plan implementation.");
+        consumer.Key = "implementation-approach";
+        consumer.Title = "Implementation approach";
+        consumer.ArtifactInputs =
+        [
+            new ProcessTemplateDefinitionArtifactInputDocument
+            {
+                ArtifactExpectationKey = "feature-scope-packet",
+                SourceStepKey = "feature-slice-intake"
+            },
+            new ProcessTemplateDefinitionArtifactInputDocument
+            {
+                ArtifactExpectationKey = "feature-acceptance-criteria",
+                SourceStepKey = "feature-slice-intake"
+            }
+        ];
+        var scopeSlot = ArtifactSlotId.New();
+        var acceptanceSlot = ArtifactSlotId.New();
+        var definition = new ProcessTemplateDefinitionDocument
+        {
+            Key = "dotnet-feature-function-implementation",
+            DisplayName = ".NET feature function implementation",
+            Summary = "Implement feature.",
+            Steps = [producer, consumer]
+        };
+
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            runId,
+            consumer,
+            definition,
+            requiredSlots: [scopeSlot, acceptanceSlot],
+            producedSlots: [],
+            artifactSlotByStepExpectation: new Dictionary<(string StepKey, string ExpectationKey), ArtifactSlotId>
+            {
+                [("feature-slice-intake", "feature-scope-packet")] = scopeSlot,
+                [("feature-slice-intake", "feature-acceptance-criteria")] = acceptanceSlot
+            });
+
+        Assert.Contains("Expectation key rule:", prompt, StringComparison.Ordinal);
+        Assert.Contains("the artifact expectation key is a contract label, not a filename", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not invent a managed file named artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181/steps/feature-acceptance-criteria.md", prompt, StringComparison.Ordinal);
+        Assert.Contains("its primary completed-step artifact ref can satisfy each slot when it is readable", prompt, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/d9450dd1-4920-457c-92a4-48d1ec648181/steps/feature-slice-intake.md", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

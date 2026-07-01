@@ -132,6 +132,11 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             }
 
             var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role);
+            if (!ValidateStepOperationContract(templateStep, roleKey, role, findings, planStep.StepKey))
+            {
+                continue;
+            }
+
             var candidate = executorOverride is null
                 ? SelectAgent(readinessRequest, agents, providerById, providerProfileService)
                 : ResolveOverrideAgent(executorOverride, agents, providerById, providerProfileService, findings, planStep.StepKey, roleKey);
@@ -392,6 +397,113 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             NormalizeOptional(templateStep.OperationTargetScope));
     }
 
+    private static bool ValidateStepOperationContract(
+        ProcessTemplateDefinitionStepDocument templateStep,
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        List<ProcessLaunchReadinessFinding> findings,
+        string stepKey)
+    {
+        var operations = NormalizeOperations(templateStep.AllowedOperations);
+        var targetScope = NormalizeOptional(templateStep.OperationTargetScope);
+        var valid = true;
+
+        if (IsArchitectureRole(roleKey, role) && AllowsProductMutation(operations, targetScope))
+        {
+            AddSemanticContractFinding(
+                findings,
+                stepKey,
+                roleKey,
+                $"Step '{stepKey}' assigns architecture role '{roleKey}' but allows product mutation.");
+            valid = false;
+        }
+
+        if (IsArchitectureRole(roleKey, role) &&
+            HasRuntimeProofOperations(operations) &&
+            !IsRuntimeOrBrowserProofStep(templateStep))
+        {
+            AddSemanticContractFinding(
+                findings,
+                stepKey,
+                roleKey,
+                $"Step '{stepKey}' assigns architecture role '{roleKey}' but allows runtime/browser proof operations.");
+            valid = false;
+        }
+
+        if (IsSubprocessStep(templateStep))
+        {
+            if (!operations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Subprocess step '{stepKey}' must allow {ProcessOperationContractNames.ExecuteExternalAction} so the child process can be launched.");
+                valid = false;
+            }
+
+            if (!string.Equals(targetScope, ProcessOperationContractNames.ExternalActionControlled, StringComparison.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Subprocess step '{stepKey}' must use {ProcessOperationContractNames.ExternalActionControlled} target scope.");
+                valid = false;
+            }
+
+            if (HasRuntimeProofOperations(operations) && !IsRuntimeOrBrowserProofStep(templateStep))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Subprocess step '{stepKey}' must not allow runtime/browser proof operations unless the subprocess owns runtime or screenshot proof.");
+                valid = false;
+            }
+        }
+
+        if (IsEngineeringProductWorkStep(templateStep, roleKey, role))
+        {
+            if (!operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Implementation step '{stepKey}' must allow {ProcessOperationContractNames.MutateProductTarget}.");
+                valid = false;
+            }
+
+            if (!string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Implementation step '{stepKey}' must use a mutable product target scope.");
+                valid = false;
+            }
+        }
+
+        return valid;
+    }
+
+    private static void AddSemanticContractFinding(
+        List<ProcessLaunchReadinessFinding> findings,
+        string stepKey,
+        string roleKey,
+        string message)
+    {
+        findings.Add(new ProcessLaunchReadinessFinding(
+            ProcessLaunchReadinessSeverity.Error,
+            "process.launch.step_operation_contract_invalid",
+            message,
+            stepKey,
+            roleKey));
+    }
+
     private static void AddReadinessFindings(
         List<ProcessLaunchReadinessFinding> findings,
         AgentProcessRoleReadinessResult readiness,
@@ -417,6 +529,115 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             .Distinct(StringComparer.Ordinal)
             .OrderBy(operation => operation, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static bool IsSubprocessStep(ProcessTemplateDefinitionStepDocument step)
+    {
+        return string.Equals(step.StepKind, ProcessTemplateStepKinds.Subprocess, StringComparison.OrdinalIgnoreCase) ||
+               !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
+    }
+
+    private static bool AllowsProductMutation(
+        IReadOnlyList<string> operations,
+        string targetScope)
+    {
+        return operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase) ||
+               string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasRuntimeProofOperations(IReadOnlyList<string> operations)
+    {
+        return operations.Contains(ProcessOperationContractNames.LaunchRuntime, StringComparer.OrdinalIgnoreCase) ||
+               operations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsArchitectureRole(
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        return ContainsRoleToken(roleKey, "architect") ||
+               ContainsRoleToken(roleKey, "architecture") ||
+               ContainsRoleToken(role?.RoleResourceKey, "architect") ||
+               ContainsRoleToken(role?.RoleResourceKey, "architecture") ||
+               ContainsRoleToken(role?.DisplayName, "architect") ||
+               ContainsRoleToken(role?.DisplayName, "architecture");
+    }
+
+    private static bool IsEngineeringProductWorkStep(
+        ProcessTemplateDefinitionStepDocument step,
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        if (IsSubprocessStep(step) ||
+            IsProcessClosureStep(step) ||
+            IsManagementRole(roleKey, role) ||
+            !IsEngineeringRole(roleKey, role))
+        {
+            return false;
+        }
+
+        return ContainsRoleToken(step.Key, "code") ||
+               ContainsRoleToken(step.Key, "implement") ||
+               ContainsRoleToken(step.Key, "implementation") ||
+               ContainsRoleToken(step.Key, "repair") ||
+               ContainsRoleToken(step.Title, "code") ||
+               ContainsRoleToken(step.Title, "implement") ||
+               ContainsRoleToken(step.Title, "implementation") ||
+               ContainsRoleToken(step.Title, "repair");
+    }
+
+    private static bool IsProcessClosureStep(ProcessTemplateDefinitionStepDocument step)
+    {
+        return string.Equals(step.StepKind, ProcessTemplateStepKinds.End, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsManagementRole(
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        return ContainsRoleToken(roleKey, "manager") ||
+               ContainsRoleToken(role?.RoleResourceKey, "manager") ||
+               ContainsRoleToken(role?.DisplayName, "manager");
+    }
+
+    private static bool IsEngineeringRole(
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        return ContainsRoleToken(roleKey, "engineer") ||
+               ContainsRoleToken(roleKey, "developer") ||
+               ContainsRoleToken(roleKey, "implementation") ||
+               ContainsRoleToken(role?.RoleResourceKey, "engineer") ||
+               ContainsRoleToken(role?.RoleResourceKey, "developer") ||
+               ContainsRoleToken(role?.RoleResourceKey, "implementation") ||
+               ContainsRoleToken(role?.DisplayName, "engineer") ||
+               ContainsRoleToken(role?.DisplayName, "developer") ||
+               ContainsRoleToken(role?.DisplayName, "implementation");
+    }
+
+    private static bool IsRuntimeOrBrowserProofStep(ProcessTemplateDefinitionStepDocument step)
+    {
+        return ContainsRoleToken(step.Key, "runtime") ||
+               ContainsRoleToken(step.Key, "browser") ||
+               ContainsRoleToken(step.Key, "screenshot") ||
+               ContainsRoleToken(step.Key, "screenshots") ||
+               ContainsRoleToken(step.Title, "runtime") ||
+               ContainsRoleToken(step.Title, "browser") ||
+               ContainsRoleToken(step.Title, "screenshot") ||
+               ContainsRoleToken(step.Title, "screenshots");
+    }
+
+    private static bool ContainsRoleToken(string? value, string token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value
+            .Split(['-', '_', ' ', '.', '/', '\\', ':', ';', ',', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string NormalizeOptional(string value)
@@ -642,6 +863,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
 
         AgentFramework upstream artifact read rule:
         When Required upstream artifact slots or AgentFramework dependency artifact refs list managed refs, call workspace_stat_path or workspace_read_file on those exact refs before using project-structure hierarchy as fallback context. Project-structure nodes may summarize a run, but upstream process artifacts are read through workspace file tools. Do not abbreviate, ellipsize, shorten, or guess managed refs; copy the full ref from this brief into the workspace tool call. Do not return Blocked for missing intake, design, implementation, QA, screenshot, runtime, or release evidence until every listed managed ref for the needed slot has a current failed workspace file-tool receipt.
+        Artifact expectation keys are contract labels, not managed filenames. Do not invent files named after expectation keys, such as feature-acceptance-criteria.md, when the brief lists a producer step artifact like feature-slice-intake.md. If launch variables contain acceptance criteria or the producer step artifact is readable, use that evidence and write this step's own managed artifact instead of blocking on an invented sibling file.
 
         Project-structure evidence hygiene:
         Do not create project-structure nodes for every subprocess, intermediate screenshot, log, or step detail. Keep subprocess detail in managed artifacts and live-process history. For multi-team app delivery, the visible project structure should contain one root process run plus only the durable handoff nodes the process asks for: the final accepted screenshot ImageAsset, one run-app proof node, one run-tests proof node, and one manager summary node describing what was built, how it works, and current validation state.
@@ -770,7 +992,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         }
 
         return $"""
-        This step has required upstream artifact slots and produced artifact slots. Read required upstream refs first, then create or update your own primary managed artifact before returning Completed.
+        This step has required upstream artifact slots and produced artifact slots. Read required upstream refs first, then create or update your own primary managed artifact before returning Completed. If at least one required upstream producer ref is readable and launch variables cover the remaining optional context, proceed with explicit assumptions instead of blocking on missing sibling files.
         Primary own-output write ref: {primaryWriteRef}
         """;
     }
@@ -861,7 +1083,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
             : step.SubprocessDefinitionSnapshotName.Trim();
         var launchInstruction = !hasSubprocessKey
             ? "This step is marked as a subprocess but has no child process definition key. Return Blocked unless upstream evidence already supplies the missing child run."
-            : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ProcessOperationContractNames.ExecuteExternalAction} is allowed. Do not mark Completed until the child run receipt and required child evidence are available. If required evidence is missing from a stopped child run and launch is allowed, call the launch tool again to create or reuse a non-stopped child run. Return Blocked only for a concrete missing tool, input, policy, environment, or irrecoverable evidence problem.";
+            : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ProcessOperationContractNames.ExecuteExternalAction} is allowed. Do not mark Completed until the child run receipt and required child evidence are available. If a stopped child run has Blocked status or escalation/no-go evidence, propagate that concrete blocker with child run and artifact refs instead of launching another child. Relaunch only when the stopped child has no blocker/escalation evidence, required evidence is recoverable by another child attempt, and launch is allowed. Return Blocked only for a concrete missing tool, input, policy, environment, or irrecoverable evidence problem.";
 
         return $"""
         - Child process definition key: {subprocessKey}
@@ -871,7 +1093,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         - Live-run profile rule: leave LiveRunProfileKey empty unless the launch variables explicitly provide a valid process live-run profile key for this child definition. BranchName, RepositoryRoot, SessionId, parent DefinitionKey, and child DefinitionKey are not live-run profile keys.
         - Scope rule: use the parent step's assigned project node. Leave ParentProjectNodeId empty unless the parent launch context has no project node. Do not pass ProcessRunNodeId as ParentProjectNodeId.
         - Retry rule: repeated launch-tool calls for the same parent run, parent step, project node, and child definition return the existing child run instead of creating another child.
-        - Stopped-child rule: a Completed, Failed, Cancelled, or Blocked child run is not an active wait. Inspect stopped-child evidence, then either complete from valid evidence or relaunch when required evidence is missing and launch is allowed. Do not return Blocked only because a stopped child run exists.
+        - Stopped-child rule: a Completed, Failed, Cancelled, or Blocked child run is not an active wait. Inspect stopped-child evidence, then complete from valid evidence, propagate concrete blocker/escalation evidence, or relaunch only when missing evidence is recoverable by another child attempt and the child did not stop Blocked. Do not return Blocked only because a stopped child run exists.
         - Active-child defer rule: when the launch tool result has RunId and Stage Running, call submit_process_step_outcome with ParentDeferredOutcomeJson exactly if that field is present. Do not inspect child evidence or write a hand-authored blocked finalizer while the child run is active; the process runtime will defer the parent step until the child run stops.
         - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, ExpectedChildEvidenceRefs, ParentDeferredOutcomeInstruction, and ParentDeferredOutcomeJson. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root. ExpectedChildEvidenceRefs are preferred lookup candidates after the child run is stopped, not an all-or-nothing checklist while it is still active; if one expected ref is missing after the child stops, inspect sibling files under ChildManagedArtifactRoot and child step directories before blocking.
         """;
@@ -980,6 +1202,14 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 throw CreatePendingChildRunDeferredException(assignment, pendingChildRunAfterExecution);
             }
 
+            if (TryBuildRetryableAgentTransientExecutionIssue(assignment, result, out var transientExecutionIssue))
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash($"{result.ExecutionRunId:D}:{result.Metric.Outcome}:{result.ResponseText}"),
+                    transientExecutionIssue);
+            }
+
             var validation = AgentOutputJson.DeserializeAndValidate(
                 result.ResponseText,
                 new ProcessStepOutcomeValidator());
@@ -1049,6 +1279,14 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                     assignment,
                     ComputeHash(exception.GetType().FullName + ":" + exception.Message),
                     outputContractIssue);
+            }
+
+            if (TryBuildRetryableAgentTransientExecutionIssue(assignment, exception, out var transientExecutionIssue))
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash(exception.GetType().FullName + ":" + exception.Message),
+                    transientExecutionIssue);
             }
 
             return Failed(
@@ -1839,6 +2077,24 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ProcessStepOutcomeStatus.Failed => StrategyOutcome.Failed,
             _ => StrategyOutcome.Failed
         };
+        if (outcome == StrategyOutcome.NeedsManager &&
+            IsRetryableManagedArtifactSelfEvidenceBlocker(assignment, output))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                CreateManagedArtifactSelfEvidenceRetryIssue(assignment, output));
+        }
+
+        if (outcome == StrategyOutcome.NeedsManager &&
+            IsRetryableManagedArtifactMissingPrimaryOutputBlocker(assignment, output))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                CreateManagedArtifactMissingPrimaryOutputRetryIssue(assignment, output));
+        }
+
         if (outcome == StrategyOutcome.Succeeded &&
             ValidateProductMutationCompletion(assignment, output) is { } productMutationIssue)
         {
@@ -1914,6 +2170,128 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             managerSignals,
             userSafeSummary,
             rawOutputHash);
+    }
+
+    private static bool IsRetryableManagedArtifactSelfEvidenceBlocker(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            assignment.ProducedArtifactSlotIds.Count == 0)
+        {
+            return false;
+        }
+
+        var operations = NormalizeOperations(assignment.AllowedOperations);
+        if (operations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.LaunchRuntime, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.RunValidation, StringComparer.OrdinalIgnoreCase) ||
+            operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase) ||
+            AllowsProductMutation(operations, assignment.OperationTargetScope))
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (LooksLikeRightsOrToolBoundary(text))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+            text,
+            "No prior assistant text",
+            "tool output",
+            "process artifact evidence",
+            "insufficient evidence",
+            "current-run evidence",
+            "concrete current-run evidence",
+            "managed artifact evidence",
+            "evidence reference");
+    }
+
+    private static bool IsRetryableManagedArtifactMissingPrimaryOutputBlocker(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            assignment.ProducedArtifactSlotIds.Count == 0)
+        {
+            return false;
+        }
+
+        var operations = NormalizeOperations(assignment.AllowedOperations);
+        if (!operations.Contains(ProcessOperationContractNames.WriteManagedProcessArtifacts, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (LooksLikeRightsOrToolBoundary(text))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+                   text,
+                   "missing-primary-output",
+                   "primary managed output not written",
+                   "primary output ref was not created",
+                   "primary managed artifact",
+                   "required primary managed output",
+                   "create the required primary managed")
+               && ContainsAny(
+                   text,
+                   "workspace_write_file",
+                   "workspace_append_file",
+                   "primary write ref",
+                   "managed artifact");
+    }
+
+    private static ProcessCompletionIssue CreateManagedArtifactSelfEvidenceRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var requiredSlotSummary = assignment.RequiredArtifactSlotIds.Count == 0
+            ? "none"
+            : string.Join(", ", assignment.RequiredArtifactSlotIds.Select(slotId => slotId.Value.ToString("D")));
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The agent reported a generic insufficient-evidence blocker."
+            : output.Reason.Trim();
+        var summary = $"Step '{assignment.StepKey}' returned a generic insufficient-evidence Blocked result before producing its required managed artifact. Retry the same step: read any required upstream refs listed in the step brief with workspace_read_file when a stat says the ref exists, do not invent sibling files from artifact expectation keys, then write primary managed artifact '{primaryRef}' with workspace_write_file or workspace_append_file and return Completed only with evidenceRefs containing that ref. Required upstream slot ids: {requiredSlotSummary}. Original reason: {originalReason}";
+
+        return new ProcessCompletionIssue(
+            "process.adapter.managed_artifact_self_evidence_retry",
+            summary,
+            $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-self-evidence:{primaryRef}:{requiredSlotSummary}:{ComputeHash(originalReason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue CreateManagedArtifactMissingPrimaryOutputRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The agent reported that the primary managed output was not written."
+            : output.Reason.Trim();
+        var summary = $"Step '{assignment.StepKey}' reported a missing primary managed artifact instead of creating its own output. Retry the same step: use the already-read upstream evidence, create primary managed artifact '{primaryRef}' with workspace_write_file or workspace_append_file, re-read or cite that ref, then return Completed or a concrete repair-required branch only after evidenceRefs contains that ref. Original reason: {originalReason}";
+
+        return new ProcessCompletionIssue(
+            "process.adapter.managed_artifact_missing_primary_output_retry",
+            summary,
+            $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-missing-primary:{primaryRef}:{ComputeHash(originalReason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
     private const string AgentRightsManagerRequestCode = "process.adapter.agent_rights_request";
@@ -2276,6 +2654,59 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         return true;
     }
 
+    private static bool TryBuildRetryableAgentTransientExecutionIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ExecutionRunResult result,
+        out ProcessCompletionIssue issue)
+    {
+        issue = null!;
+        if (result.Metric.Outcome != RunOutcome.Failed ||
+            !LooksLikeTransientAgentExecutionFailure(result.ResponseText))
+        {
+            return false;
+        }
+
+        issue = CreateRetryableAgentTransientExecutionIssue(
+            assignment,
+            $"executionRunId={result.ExecutionRunId:D}; outcome={result.Metric.Outcome}; provider={result.Metric.ProviderName}; model={result.Metric.Model}; detail={result.ResponseText}");
+        return true;
+    }
+
+    private static bool TryBuildRetryableAgentTransientExecutionIssue(
+        ProcessRuntimeStepAssignment assignment,
+        Exception exception,
+        out ProcessCompletionIssue issue)
+    {
+        issue = null!;
+        var text = exception.ToString();
+        if (!LooksLikeTransientAgentExecutionFailure(text))
+        {
+            return false;
+        }
+
+        issue = CreateRetryableAgentTransientExecutionIssue(
+            assignment,
+            $"{exception.GetType().Name}: {exception.Message}");
+        return true;
+    }
+
+    private static ProcessCompletionIssue CreateRetryableAgentTransientExecutionIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string detail)
+    {
+        IReadOnlyList<ArtifactSlotId> requestedArtifactSlotIds = assignment.ProducedArtifactSlotIds.Count > 0
+            ? assignment.ProducedArtifactSlotIds
+            : assignment.RequiredArtifactSlotIds;
+        var safeDetail = LimitDiagnosticText(detail);
+        return new ProcessCompletionIssue(
+            "process.adapter.agent_transient_execution_retry",
+            $"Agent execution for step '{assignment.StepKey}' failed with a transient provider/runtime error. Retry the same step without relaunching completed child work; preserve any existing managed artifacts and return a normal process-step outcome after the retry. Runtime detail: {safeDetail}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-transient-execution:{ComputeHash(safeDetail)}",
+            requestedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
     private static bool LooksLikeAgentOutputContractFailure(Exception exception)
     {
         var text = exception.ToString();
@@ -2288,6 +2719,44 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             "process.step_outcome",
             "agent.finalizer",
             "agent.output");
+    }
+
+    private static bool LooksLikeTransientAgentExecutionFailure(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text) ||
+            LooksLikeRightsOrToolBoundary(text))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+            text,
+            "Service request failed",
+            "Status: 408",
+            "Status: 429",
+            "Status: 500",
+            "Status: 502",
+            "Status: 503",
+            "Status: 504",
+            "Status: 520",
+            "Status: 529",
+            "temporarily unavailable",
+            "temporary failure",
+            "transient",
+            "rate limit",
+            "timeout",
+            "timed out",
+            "connection reset",
+            "connection refused",
+            "transport error");
+    }
+
+    private static string LimitDiagnosticText(string text, int maxLength = 800)
+    {
+        var normalized = text.ReplaceLineEndings(" ").Trim();
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength] + "...";
     }
 
     private static bool TryResolveInspectableProductRoot(

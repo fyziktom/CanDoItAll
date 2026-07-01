@@ -2,15 +2,17 @@
 
 Run the agreed proof and record commands, exit codes, relevant output, and screenshots when UI changed.
 
+Write or update `artifacts/process-runs/<current-process-run-id>/steps/targeted-validation.md` with the final evidence before returning. Do not leave this artifact as `in progress`. If any proof command ran, cite the targeted-validation artifact and the generated command receipt/output refs in `evidenceRefs`; do not return `Blocked` with empty evidence refs after proof artifacts exist.
+
 When visual target ImageAsset ids or media paths are part of the feature boundary, the focused proof must compare the delivered screenshot with the target image asset. Name both image paths or asset ids and select `feature-repair-required` when the delivered UI does not materially follow the target.
 
 This step owns the feature validation branch decision:
 
 - Select `feature-accepted` only when the focused proof satisfies the accepted behavior.
-- Select `feature-repair-required` when proof fails, artifacts are missing, the app cannot launch, implementation is incomplete, or evidence does not map to the accepted behavior.
+- Select `feature-repair-required` when proof fails, artifacts are missing, browser/runtime proof was required but not completed, the app cannot launch, implementation is incomplete, or evidence does not map to the accepted behavior.
 - For repair-sourced runs, the focused proof must include the inherited repair target. Do not accept a different behavior while the triggering defect remains untested or failing.
 - Return a completed process-step outcome with the selected branch outcome. Do not return `Blocked` only because product proof failed and can be repaired by the implementation role.
-- Return `Blocked` only when an environment, permission, unavailable tool, or process-contract issue prevents validation or prevents repair from being requested inside this subprocess.
+- Return `Blocked` only when an environment, permission, unavailable tool, or process-contract issue prevents validation or prevents repair from being requested inside this subprocess. If build/test receipts or source-read receipts already exist, use them as evidence and choose `feature-repair-required` for incomplete browser proof unless the browser/runtime tool itself is unavailable.
 
 Keep focused validation bounded. Use a `workspace_dotnet_test` timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and request targeted rework instead of waiting on a broad unbounded run.
 

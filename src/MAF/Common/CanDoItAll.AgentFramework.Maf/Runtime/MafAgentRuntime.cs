@@ -472,10 +472,14 @@ public sealed partial class MafAgentRuntime(
                     $"Cannot repair missing required finalizer '{finalizerPolicy.ToolName}' because tool invocation tracing is unavailable.");
             }
 
+            var repairContext = BuildRequiredFinalizerRepairContext(
+                response,
+                snapshotEffectiveToolInvocationTraces(),
+                inputMessages);
             var repairRunOptions = CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool);
             var repairMessages = new[]
             {
-                CreateRequiredFinalizerRepairMessage(finalizerPolicy, response)
+                CreateRequiredFinalizerRepairMessage(finalizerPolicy, response, repairContext)
             };
 
             try
@@ -514,6 +518,7 @@ public sealed partial class MafAgentRuntime(
                 var jsonRepairResponse = await TryRunRequiredFinalizerJsonRepairAsync(
                     finalizerPolicy,
                     response,
+                    repairContext,
                     toolInvocationTraceRecorder);
                 return jsonRepairResponse is null
                     ? null
@@ -592,6 +597,7 @@ public sealed partial class MafAgentRuntime(
         async Task<AgentRuntimeResponse?> TryRunRequiredFinalizerJsonRepairAsync(
             AgentFinalizerPolicy finalizerPolicy,
             AgentResponse previousResponse,
+            string repairContext,
             ToolInvocationTraceRecorder toolInvocationTraceRecorder)
         {
             await progressCallback(
@@ -609,7 +615,7 @@ public sealed partial class MafAgentRuntime(
             var jsonRepairRunOptions = CreateRequiredFinalizerJsonRepairRunOptions();
             var jsonRepairMessages = new[]
             {
-                CreateRequiredFinalizerJsonRepairMessage(finalizerPolicy, previousResponse)
+                CreateRequiredFinalizerJsonRepairMessage(finalizerPolicy, previousResponse, repairContext)
             };
             var jsonRepairUpdates = new List<AgentResponseUpdate>();
 
@@ -1065,28 +1071,43 @@ public sealed partial class MafAgentRuntime(
     internal static ChatMessage CreateRequiredFinalizerJsonRepairMessage(
         AgentFinalizerPolicy policy,
         AgentResponse previousResponse)
+        => CreateRequiredFinalizerJsonRepairMessage(policy, previousResponse, string.Empty);
+
+    internal static ChatMessage CreateRequiredFinalizerJsonRepairMessage(
+        AgentFinalizerPolicy policy,
+        AgentResponse previousResponse,
+        string repairContext)
     {
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(previousResponse);
 
         return new ChatMessage(
             ChatRole.User,
-            BuildRequiredFinalizerJsonRepairPrompt(policy, previousResponse.Text));
+            BuildRequiredFinalizerJsonRepairPrompt(policy, previousResponse.Text, repairContext));
     }
 
     internal static string BuildRequiredFinalizerJsonRepairPrompt(
         AgentFinalizerPolicy policy,
         string? previousAssistantText)
+        => BuildRequiredFinalizerJsonRepairPrompt(policy, previousAssistantText, string.Empty);
+
+    internal static string BuildRequiredFinalizerJsonRepairPrompt(
+        AgentFinalizerPolicy policy,
+        string? previousAssistantText,
+        string? repairContext)
     {
         ArgumentNullException.ThrowIfNull(policy);
 
         var previousTextSummary = BuildBoundedFinalizerRepairPreviousTextSummary(previousAssistantText);
+        var repairContextSummary = BuildBoundedFinalizerRepairContextSummary(repairContext);
 
         return
             $"The previous repair turn could not submit `{policy.ToolName}` through provider tool calling." + Environment.NewLine +
             $"Return exactly one JSON object for `{policy.OutputContract.ContractKey}` now." + Environment.NewLine +
             "Use only the prior response text, session context, tool results, and process artifacts already available in the conversation. If evidence is insufficient, return the contract's blocking or failure state with actionable next actions where the contract supports them." + Environment.NewLine +
-            previousTextSummary;
+            "Do not return a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. If completion is impossible because a required managed output was not written, name that missing primary write ref and the next tool action that must create it." + Environment.NewLine +
+            previousTextSummary + Environment.NewLine +
+            repairContextSummary;
     }
 
     private static async ValueTask DisposeAgentAsync(AIAgent agent)
@@ -1105,29 +1126,44 @@ public sealed partial class MafAgentRuntime(
     internal static ChatMessage CreateRequiredFinalizerRepairMessage(
         AgentFinalizerPolicy policy,
         AgentResponse previousResponse)
+        => CreateRequiredFinalizerRepairMessage(policy, previousResponse, string.Empty);
+
+    internal static ChatMessage CreateRequiredFinalizerRepairMessage(
+        AgentFinalizerPolicy policy,
+        AgentResponse previousResponse,
+        string repairContext)
     {
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(previousResponse);
 
         return new ChatMessage(
             ChatRole.User,
-            BuildRequiredFinalizerRepairPrompt(policy, previousResponse.Text));
+            BuildRequiredFinalizerRepairPrompt(policy, previousResponse.Text, repairContext));
     }
 
     internal static string BuildRequiredFinalizerRepairPrompt(
         AgentFinalizerPolicy policy,
         string? previousAssistantText)
+        => BuildRequiredFinalizerRepairPrompt(policy, previousAssistantText, string.Empty);
+
+    internal static string BuildRequiredFinalizerRepairPrompt(
+        AgentFinalizerPolicy policy,
+        string? previousAssistantText,
+        string? repairContext)
     {
         ArgumentNullException.ThrowIfNull(policy);
 
         var previousTextSummary = BuildBoundedFinalizerRepairPreviousTextSummary(previousAssistantText);
+        var repairContextSummary = BuildBoundedFinalizerRepairContextSummary(repairContext);
 
         return
             $"The previous turn ended without the required `{policy.ToolName}` finalizer tool call.{Environment.NewLine}" +
             $"Call `{policy.ToolName}` exactly once now to submit the final governed `{policy.OutputContract.ContractKey}` outcome.{Environment.NewLine}" +
             "Use only the current session context, prior tool results, and process artifacts. If the available evidence is insufficient for a successful outcome, submit the contract's failure or blocking state with actionable next actions where the contract supports them." + Environment.NewLine +
+            "Do not submit a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. If completion is impossible because a required managed output was not written, name that missing primary write ref and the next tool action that must create it." + Environment.NewLine +
             "Do not call any other tool. Do not emit Markdown, prose, or machine JSON outside the finalizer tool call." + Environment.NewLine +
-            previousTextSummary;
+            previousTextSummary + Environment.NewLine +
+            repairContextSummary;
     }
 
     internal static string BuildBoundedFinalizerRepairPreviousTextSummary(string? previousAssistantText)
@@ -1152,6 +1188,164 @@ public sealed partial class MafAgentRuntime(
             head + Environment.NewLine +
             Environment.NewLine +
             "[... middle of previous assistant text omitted for bounded finalizer repair ...]" + Environment.NewLine +
+            Environment.NewLine +
+            tail;
+    }
+
+    private static string BuildRequiredFinalizerRepairContext(
+        AgentResponse previousResponse,
+        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces,
+        IEnumerable<ChatMessage> originalInputMessages)
+    {
+        ArgumentNullException.ThrowIfNull(previousResponse);
+        ArgumentNullException.ThrowIfNull(toolInvocationTraces);
+        ArgumentNullException.ThrowIfNull(originalInputMessages);
+
+        var builder = new StringBuilder();
+        var toolCallSummaries = BuildPreviousTurnToolCallSummaries(previousResponse);
+        if (toolCallSummaries.Count > 0)
+        {
+            builder.AppendLine("Previous turn tool calls observed by the provider:");
+            foreach (var summary in toolCallSummaries)
+            {
+                builder.AppendLine($"- {summary}");
+            }
+        }
+
+        if (toolInvocationTraces.Count > 0)
+        {
+            if (builder.Length > 0)
+            {
+                builder.AppendLine();
+            }
+
+            builder.AppendLine("Previous turn tool trace results:");
+            foreach (var trace in toolInvocationTraces.OrderBy(item => item.Sequence).Take(20))
+            {
+                var status = trace.CompletedAtUtc is null
+                    ? "started"
+                    : trace.Succeeded
+                        ? "succeeded"
+                        : $"failed: {WorkflowExecutorRedaction.RedactText(trace.FailureMessage)}";
+                builder.AppendLine($"- #{trace.Sequence} {trace.ToolName}: {status}");
+            }
+        }
+
+        var inputSummary = BuildRequiredFinalizerRepairInputSummary(originalInputMessages);
+        if (!string.IsNullOrWhiteSpace(inputSummary))
+        {
+            if (builder.Length > 0)
+            {
+                builder.AppendLine();
+            }
+
+            builder.AppendLine("Original governed process brief lines relevant to finalization:");
+            builder.Append(inputSummary);
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    private static IReadOnlyList<string> BuildPreviousTurnToolCallSummaries(AgentResponse previousResponse)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var summaries = new List<string>();
+        foreach (var toolCall in previousResponse.Messages.SelectMany(message => message.Contents).OfType<ToolCallContent>())
+        {
+            var key = ResolveToolCallKey(toolCall);
+            if (!seen.Add(key))
+            {
+                continue;
+            }
+
+            summaries.Add(DescribeToolInvocation(toolCall));
+            if (summaries.Count >= 20)
+            {
+                break;
+            }
+        }
+
+        return summaries;
+    }
+
+    private static string BuildRequiredFinalizerRepairInputSummary(IEnumerable<ChatMessage> originalInputMessages)
+    {
+        var lines = new List<string>();
+        foreach (var text in originalInputMessages
+                     .SelectMany(message => message.Contents)
+                     .OfType<TextContent>()
+                     .Select(content => content.Text)
+                     .Where(text => !string.IsNullOrWhiteSpace(text)))
+        {
+            foreach (var rawLine in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+            {
+                var line = rawLine.Trim();
+                if (!IsFinalizerRepairRelevantInputLine(line))
+                {
+                    continue;
+                }
+
+                lines.Add(line);
+                if (lines.Count >= 120)
+                {
+                    return string.Join(Environment.NewLine, lines);
+                }
+            }
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static bool IsFinalizerRepairRelevantInputLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return false;
+        }
+
+        return line.StartsWith("Process:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Step key:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Step title:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Process run id:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Managed artifact root:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Allowed operations:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Operation target scope:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Required upstream artifact slots:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Produced artifact slots:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Artifact refs to inspect", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Expectation key rule:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Primary write ref:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Runtime rule:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Completion rule:", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("Validation:", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains("workspace_write_file", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains("workspace_read_file", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains("submit_process_step_outcome", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains("evidenceRefs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildBoundedFinalizerRepairContextSummary(string? repairContext)
+    {
+        if (string.IsNullOrWhiteSpace(repairContext))
+        {
+            return "Repair context summary: no prior tool call or governed brief summary was available.";
+        }
+
+        var trimmed = repairContext.Trim();
+        if (trimmed.Length <= MaxFinalizerRepairPreviousAssistantTextCharacters)
+        {
+            return $"Repair context summary:{Environment.NewLine}{trimmed}";
+        }
+
+        var headLength = MaxFinalizerRepairPreviousAssistantTextCharacters / 2;
+        var tailLength = MaxFinalizerRepairPreviousAssistantTextCharacters - headLength;
+        var head = trimmed[..headLength];
+        var tail = trimmed[^tailLength..];
+        return
+            $"Repair context summary (truncated from {trimmed.Length} to {MaxFinalizerRepairPreviousAssistantTextCharacters} characters):" + Environment.NewLine +
+            head + Environment.NewLine +
+            Environment.NewLine +
+            "[... middle of repair context omitted for bounded finalizer repair ...]" + Environment.NewLine +
             Environment.NewLine +
             tail;
     }

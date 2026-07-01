@@ -169,7 +169,8 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
           Producer step: {sourceStep.Key} - {sourceStep.Title}
           Artifact expectation: {expectationKey} - {expectationTitle} ({artifactKind})
           Artifact refs to inspect (alternatives for this same slot): {BuildStepArtifactPath(request.ManagedArtifactRoot, sourceStep.Key)}; {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, sourceStep.Key)}
-          Runtime rule: this slot is available only after the producer completed. Use workspace_stat_path or workspace_read_file on the listed refs and use the first existing readable ref for this slot; do not block only because one alternative ref is missing when another listed ref exists. Project structure is supplemental context, not a substitute for probing these managed artifact refs. If every listed ref is unreadable, cite the failed workspace file-tool receipt before returning Blocked.
+          Expectation key rule: the artifact expectation key is a contract label, not a filename. Do not invent a managed file named {BuildStepArtifactPath(request.ManagedArtifactRoot, expectationKey)} unless that exact ref is listed as an artifact ref above. When one producer step creates multiple slots, its primary completed-step artifact ref can satisfy each slot when it is readable.
+          Runtime rule: this slot is available only after the producer completed. Use workspace_stat_path or workspace_read_file on the listed refs and use the first existing readable ref for this slot; do not block only because one alternative ref is missing when another listed ref exists. A successful stat or read of a listed current-run ref is process evidence for this step; do not return Blocked claiming no prior assistant text, tool result, or process artifact evidence after that. Project structure is supplemental context, not a substitute for probing these managed artifact refs. If every listed ref is unreadable, cite the failed workspace file-tool receipt before returning Blocked.
           Validation: {validation}
         """;
     }
@@ -204,7 +205,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
               Primary write ref: {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}
               Additional write root: {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}
               Runtime rule: this is your own output, so your first workspace mutation for this slot must create the primary write ref with workspace_write_file or workspace_append_file. Do not list, search, stat, or read this run's managed artifact root to discover your own missing output before that write. Absence of your own output before you write it is expected and is not a blocker.
-              Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed. Do not invent sibling output files for this slot unless the step contract explicitly lists them here.
+              Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed. If you read or observed any required current-run artifact, write this primary managed ref next instead of returning a generic no-prior-evidence blocker. Do not invent sibling output files for this slot unless the step contract explicitly lists them here.
             """);
         }
 
@@ -232,7 +233,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
           Primary write ref: {BuildStepArtifactPath(request.ManagedArtifactRoot, request.Step.Key)}
           Additional write roots: {BuildSlotArtifactRoot(request.ManagedArtifactRoot, slotId)}; {BuildStepArtifactRoot(request.ManagedArtifactRoot, request.Step.Key)}
           Runtime rule: this is your own output, so your first workspace mutation for this slot must create the primary write ref with workspace_write_file or workspace_append_file. Do not list, search, stat, or read this run's managed artifact root to discover your own missing output before that write. Absence of your own output before you write it is expected and is not a blocker.
-          Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed. Do not invent sibling output files for this slot unless the step contract explicitly lists them here.
+          Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed. If you read or observed any required current-run artifact, write this primary managed ref next instead of returning a generic no-prior-evidence blocker. Do not invent sibling output files for this slot unless the step contract explicitly lists them here.
           Validation: {validation}
         """;
     }
@@ -254,14 +255,14 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
             : step.SubprocessDefinitionSnapshotName.Trim();
         var completionRule = string.IsNullOrWhiteSpace(step.SubprocessProcessKey)
             ? "This step is marked as a subprocess but has no child process definition key. Return a blocked result unless upstream evidence already supplies the missing child run."
-            : "Complete only after the child process result and required child artifacts are available through the configured subprocess driver. A stopped child run is historical evidence, not an active wait; inspect it, then complete from valid evidence or relaunch the child when evidence is missing and launch is allowed.";
+            : "Complete only after the child process result and required child artifacts are available through the configured subprocess driver. A stopped child run is historical evidence, not an active wait; inspect it, then complete from valid evidence or propagate a concrete child blocker. Relaunch only when the stopped child has no blocker/escalation evidence and the missing evidence is recoverable by another child attempt.";
 
         return $"""
         - Child process definition key: {subprocessKey}
         - Child definition snapshot name: {snapshotName}
         - Scope rule: use the parent step's assigned project node. Leave ParentProjectNodeId empty unless the parent launch context has no project node. Do not pass ProcessRunNodeId as ParentProjectNodeId.
         - Completion rule: {completionRule}
-        - Stopped-child rule: do not return blocked only because a previous child run is Completed, Failed, Cancelled, or Blocked.
+        - Stopped-child rule: do not return blocked only because a previous child run is Completed, Failed, Cancelled, or Blocked. Do not relaunch a Blocked child or a child with escalation/no-go evidence; propagate that blocker with child run and artifact refs.
         """;
     }
 
@@ -307,5 +308,8 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
 
 public static class ProcessTemplateStepKinds
 {
+    public const string Activity = "Activity";
+    public const string End = "End";
     public const string Subprocess = "Subprocess";
+    public const string Work = "Work";
 }

@@ -681,6 +681,29 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
+    public void Required_finalizer_repair_prompts_preserve_prior_tool_and_artifact_context()
+    {
+        var policy = CreatePolicy();
+        var repairContext = string.Join(
+            Environment.NewLine,
+            "Previous turn tool calls observed by the provider:",
+            "- Invoking tool 'workspace_read_file' with path=\"artifacts/process-runs/run-001/steps/feature-slice-intake.md\".",
+            "Original governed process brief lines relevant to finalization:",
+            "Primary write ref: artifacts/process-runs/run-001/steps/implementation-approach.md",
+            "Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed.");
+
+        var toolRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerRepairPrompt(policy, null, repairContext);
+        var jsonRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerJsonRepairPrompt(policy, null, repairContext);
+
+        Assert.Contains("Do not submit a generic no-prior-evidence blocker", toolRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_file", toolRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/run-001/steps/implementation-approach.md", toolRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("Do not return a generic no-prior-evidence blocker", jsonRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_file", jsonRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/run-001/steps/implementation-approach.md", jsonRepairPrompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Governed_process_steps_force_framework_managed_history_for_responses_provider()
     {
         var agent = CreateAgent(AgentChatHistoryMode.ProviderManaged);

@@ -317,7 +317,7 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                     new ProcessStepInstanceId(parentStep.StepInstanceId),
                     ProcessRuntimeOperatorActionKind.RequestRework,
                     NormalizeRequestedBy(requestedBy),
-                    $"Child process run '{childRunId:D}' stopped with status '{childStatus}'. Treat that child as historical evidence, not an active wait. If required child evidence is already available, complete from that evidence. If required child evidence is missing and this subprocess step can execute external action, call the subprocess launch tool again so the launch service can create or reuse a non-stopped child run. Do not return Blocked only because the stopped child exists."),
+                    $"Child process run '{childRunId:D}' stopped with status '{childStatus}'. Treat that child as historical evidence, not an active wait. If required child evidence is already available, complete from that evidence. If the child stopped as Blocked or produced escalation/no-go evidence, propagate that concrete blocker with child run and artifact refs instead of launching another child. Relaunch only when the stopped child has no blocker/escalation evidence, required evidence is recoverable by another child attempt, and this subprocess step can execute external action. Do not return Blocked only because the stopped child exists."),
                 cancellationToken).ConfigureAwait(false);
             if (rework.Succeeded)
             {

@@ -124,6 +124,57 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Dotnet_feature_implementation_approach_requires_current_run_artifact_evidence()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-feature-function-implementation");
+        var implementationApproach = Assert.Single(definition.Steps, step => string.Equals(step.Key, "implementation-approach", StringComparison.Ordinal));
+        var implementationApproachDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-feature-function-implementation",
+            "steps",
+            "implementation-approach.md"));
+
+        Assert.Contains("current-run feature intake artifact", implementationApproach.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not invent or require", implementationApproach.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("artifacts/process-runs/<current-process-run-id>/steps/implementation-approach.md", implementationApproach.Notes, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            implementationApproach.ArtifactInputs,
+            input => string.Equals(input.ArtifactExpectationKey, "feature-acceptance-criteria", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("intake artifact path", implementationApproach.ArtifactExpectations[0].ValidationRequirementSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("current-run feature intake artifact", implementationApproachDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not invent or require", implementationApproachDoc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not block only because there is no prior assistant prose", implementationApproachDoc, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Dotnet_feature_targeted_validation_requires_finalized_evidence_refs()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-feature-function-implementation");
+        var targetedValidation = Assert.Single(definition.Steps, step => string.Equals(step.Key, "targeted-validation", StringComparison.Ordinal));
+        var targetedValidationDoc = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Processes",
+            "processes",
+            "dotnet-feature-function-implementation",
+            "steps",
+            "targeted-validation.md"));
+
+        Assert.Contains("do not leave the artifact as in progress", targetedValidation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not return Blocked with empty evidence refs", targetedValidation.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("command receipt/output refs", targetedValidation.ArtifactExpectations[0].ValidationRequirementSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not leave this artifact as `in progress`", targetedValidationDoc, StringComparison.Ordinal);
+        Assert.Contains("do not return `Blocked` with empty evidence refs", targetedValidationDoc, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Full_app_templates_reject_scaffold_only_mvp_slices()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -261,6 +312,28 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Software_delivery_parent_subprocess_steps_only_launch_and_observe_children()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("software-delivery");
+
+        var subprocessSteps = new[]
+        {
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "architecture-review", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "implementation", StringComparison.Ordinal))
+        };
+
+        foreach (var step in subprocessSteps)
+        {
+            Assert.Equal(ProcessOperationContractNames.ExternalActionControlled, step.OperationTargetScope);
+            Assert.Contains(ProcessOperationContractNames.ExecuteExternalAction, step.AllowedOperations);
+            Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, step.AllowedOperations);
+            Assert.DoesNotContain(ProcessOperationContractNames.LaunchRuntime, step.AllowedOperations);
+            Assert.DoesNotContain(ProcessOperationContractNames.CaptureRuntimeProof, step.AllowedOperations);
+        }
+    }
+
+    [Fact]
     public void Software_delivery_screenshot_writeback_steps_can_launch_and_capture_browser_proof()
     {
         var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
@@ -288,6 +361,19 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
         var definition = loader.LoadDefinition("software-delivery");
 
+        static string BuildStepContract(ProcessTemplateDefinitionStepDocument step)
+        {
+            var contractParts = new[]
+            {
+                step.Notes,
+                step.InputContractSummary,
+                step.OutputContractSummary,
+                step.EvidenceContractSummary
+            }.Concat(step.ArtifactExpectations.Select(expectation => expectation.ValidationRequirementSummary));
+
+            return string.Join(Environment.NewLine, contractParts);
+        }
+
         var visualGateSteps = new[]
         {
             Assert.Single(definition.Steps, step => string.Equals(step.Key, "qa-validation", StringComparison.Ordinal)),
@@ -300,18 +386,28 @@ public sealed class ProcessDefinitionCatalogProjectionTests
 
         foreach (var step in visualGateSteps)
         {
-            var stepContract = string.Join(
-                Environment.NewLine,
-                step.Notes,
-                step.InputContractSummary,
-                step.OutputContractSummary,
-                step.EvidenceContractSummary,
-                step.ArtifactExpectations.Select(expectation => expectation.ValidationRequirementSummary));
+            var stepContract = BuildStepContract(step);
 
             Assert.Contains("workspace_analyze_image", stepContract, StringComparison.Ordinal);
             Assert.Contains("provider-backed image-analysis", stepContract, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("tetris", stepContract, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("tetromino", stepContract, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var qaSteps = new[]
+        {
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "qa-validation", StringComparison.Ordinal)),
+            Assert.Single(definition.Steps, step => string.Equals(step.Key, "qa-recheck", StringComparison.Ordinal))
+        };
+
+        foreach (var step in qaSteps)
+        {
+            var stepContract = BuildStepContract(step);
+
+            Assert.Contains("Visual target comparison", stepContract, StringComparison.Ordinal);
+            Assert.Contains("source ImageAsset", stepContract, StringComparison.Ordinal);
+            Assert.Contains("media path", stepContract, StringComparison.Ordinal);
+            Assert.Contains("screenshot ref", stepContract, StringComparison.Ordinal);
         }
 
         var stepDocs = string.Join(
@@ -324,6 +420,10 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             File.ReadAllText(Path.Combine(repositoryRoot, "Templates", "Processes", "processes", "software-delivery", "steps", "release-approval-after-repair.md")));
 
         Assert.Contains("workspace_analyze_images", stepDocs, StringComparison.Ordinal);
+        Assert.Contains("Visual target comparison", stepDocs, StringComparison.Ordinal);
+        Assert.Contains("source ImageAsset", stepDocs, StringComparison.Ordinal);
+        Assert.Contains("media path", stepDocs, StringComparison.Ordinal);
+        Assert.Contains("screenshot ref", stepDocs, StringComparison.Ordinal);
         Assert.DoesNotContain("tetris", stepDocs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tetromino", stepDocs, StringComparison.OrdinalIgnoreCase);
     }

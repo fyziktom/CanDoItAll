@@ -206,6 +206,97 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.Empty(result.Diagnostics);
     }
 
+    [Fact]
+    public void Managed_artifact_self_evidence_blocker_with_required_input_is_retryable()
+    {
+        var assignment = CreateManagedArtifactAssignment(
+            "implementation-approach",
+            requiredArtifactSlotIds: [ArtifactSlotId.New()]);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Blocked,
+                Reason = "No prior assistant text, tool output, or process artifact evidence is available in the conversation to support a completed submission.",
+                BranchOutcomeKey = "insufficient_evidence",
+                BranchOutcomeTitle = "Insufficient Evidence",
+                EvidenceRefs = [],
+                NextActions = ["Provide current-run evidence references before completing."],
+                HumanReadableSummaryMarkdown = "I cannot complete the process-step outcome because there is no available evidence."
+            });
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("process.adapter.managed_artifact_self_evidence_retry", diagnostic.Code.Value);
+        Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.Contains(BuildStepArtifactRef(assignment), diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.managed_artifact_self_evidence_retry");
+        Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+    }
+
+    [Fact]
+    public void Managed_artifact_missing_primary_output_blocker_is_retryable_when_step_can_write_artifacts()
+    {
+        var assignment = CreateManagedArtifactAssignment(
+            "qa-validation",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            requiredArtifactSlotIds: [ArtifactSlotId.New()]);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Blocked,
+                Reason = $"The current-run QA validation primary output ref was not created. Create the required primary managed artifact at {BuildStepArtifactRef(assignment)} with workspace_write_file.",
+                BranchOutcomeKey = "qa-validation.blocked.missing-primary-output",
+                BranchOutcomeTitle = "Blocked: QA validation primary managed output not written",
+                EvidenceRefs = ["artifacts/process-runs/run-001/steps/implementation.md"],
+                NextActions = [$"Create the required primary managed QA artifact at {BuildStepArtifactRef(assignment)} with the validation proof pack."],
+                HumanReadableSummaryMarkdown = "QA validation cannot be finalized because the required primary managed output was not written."
+            });
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("process.adapter.managed_artifact_missing_primary_output_retry", diagnostic.Code.Value);
+        Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.Contains(BuildStepArtifactRef(assignment), diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.managed_artifact_missing_primary_output_retry");
+        Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+    }
+
+    [Fact]
+    public void Managed_artifact_rights_blocker_is_not_reclassified_as_self_evidence_retry()
+    {
+        var assignment = CreateManagedArtifactAssignment(
+            "implementation-approach",
+            requiredArtifactSlotIds: [ArtifactSlotId.New()]);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Blocked,
+                Reason = "The step is blocked because workspace_write_file was blocked by policy.",
+                EvidenceRefs = [],
+                NextActions = ["Manager action request: grant workspace_write_file or reassign the step."],
+                HumanReadableSummaryMarkdown = "Denied tool: workspace_write_file."
+            });
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.managed_artifact_self_evidence_retry");
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.agent_rights_request");
+        Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.agent_rights_request");
+    }
+
 
     [Fact]
     public void Runtime_readiness_rejects_delivery_manager_for_implementation_step()
@@ -582,6 +673,62 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.Contains(BuildStepArtifactRef(assignment), result.UserSafeSummary, StringComparison.Ordinal);
         Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
         Assert.True(workspace.ExecuteRunCalled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_retries_transient_provider_failure_result()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("architecture-handoff", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var responseText = "The agent run failed while using provider 'OpenAI default'. Provider detail: Service request failed. Status: 520 (<none>)";
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText, RunOutcome.Failed));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            var diagnostic = Assert.Single(result.Diagnostics);
+            Assert.Equal("process.adapter.agent_transient_execution_retry", diagnostic.Code.Value);
+            Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+            Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+            Assert.Contains("Status: 520", result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.agent_transient_execution_retry");
+            Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
+            Assert.True(workspace.ExecuteRunCalled);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
     }
 
     [Fact]
@@ -964,7 +1111,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
     private static ProcessRuntimeStepAssignment CreateManagedArtifactAssignment(
         string stepKey,
-        Guid? agentId = null)
+        Guid? agentId = null,
+        IReadOnlyList<ArtifactSlotId>? requiredArtifactSlotIds = null,
+        IReadOnlyList<string>? allowedOperations = null)
     {
         return new ProcessRuntimeStepAssignment(
             ProcessRunId.New(),
@@ -981,8 +1130,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             "sha256:readiness",
             "Resolved from role fit.",
             [ArtifactSlotId.New()],
-            [],
-            [ProcessOperationContractNames.WriteManagedProcessArtifacts],
+            requiredArtifactSlotIds ?? [],
+            allowedOperations ?? [ProcessOperationContractNames.WriteManagedProcessArtifacts],
             ProcessOperationContractNames.ExternalProductTargetReadOnly,
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
             BranchGate: null,
@@ -1025,7 +1174,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     private static ExecutionRunResult CreateExecutionRunResult(
         Guid agentId,
         Guid executionRunId,
-        string responseText)
+        string responseText,
+        RunOutcome outcome = RunOutcome.Succeeded)
         => new(
             executionRunId,
             null,
@@ -1036,7 +1186,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 agentId,
                 null,
                 DateTimeOffset.UtcNow,
-                RunOutcome.Succeeded,
+                outcome,
                 "test-provider",
                 "test-model",
                 1,

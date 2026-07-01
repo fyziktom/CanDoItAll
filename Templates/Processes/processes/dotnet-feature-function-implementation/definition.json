@@ -171,18 +171,6 @@
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation, validation, and parent process handoff.",
           "ValidationRequirementSummary": "Must identify one behavior, acceptance criteria, exclusions, target repository surface, proof commands, and any broader parent-scope items intentionally deferred to follow-up slices. For repair launches, the packet must preserve the inherited repair target and must not replace it with a fresh MVP behavior."
-        },
-        {
-          "Key": "feature-acceptance-criteria",
-          "TemplateKey": "acceptance-criteria-pack",
-          "Title": "Feature acceptance criteria",
-          "ArtifactKind": "Evidence",
-          "IsRequired": true,
-          "TrustRequirement": "ReviewRequired",
-          "SensitivityLevel": "Internal",
-          "RetentionDays": 365,
-          "AllowedFutureUsageSummary": "Reusable by test contract and validation steps.",
-          "ValidationRequirementSummary": "Must be concrete enough that validation can pass or fail without interpreting intent. For repair launches, it must include the exact failed criteria or metric from the parent repair target."
         }
       ],
       "ArtifactInputs": [],
@@ -206,7 +194,7 @@
       "Key": "implementation-approach",
       "Title": "Decide implementation approach",
       "Subtitle": "Fit the local architecture",
-      "Notes": "Identify existing patterns, canonical data ownership, UI/application/domain/infrastructure boundaries, required services, and the smallest file set likely to change. When visual target ImageAsset ids or media paths are in scope, inspect or analyze the target image before selecting the UI file set and name how the visible layout will map to the source image. For repair runs, plan against the inherited repair target instead of broadening scope; name the failing proof, the product surfaces likely responsible, and the focused verification that must pass before handoff.",
+      "Notes": "Read the current-run feature intake artifact first and use it as sufficient evidence to produce a managed implementation approach when product-source inspection is unavailable to this read-only architecture step. Acceptance criteria supplied in launch variables or inside the intake artifact are sufficient; do not invent or require artifacts/process-runs/<current-process-run-id>/steps/feature-acceptance-criteria.md. Write the managed plan artifact to artifacts/process-runs/<current-process-run-id>/steps/implementation-approach.md before completing, and include that path plus the intake artifact path in evidenceRefs. Identify existing patterns, canonical data ownership, UI/application/domain/infrastructure boundaries, required services, and the smallest file set likely to change. When visual target ImageAsset ids or media paths are in scope, inspect or analyze the target image before selecting the UI file set and name how the visible layout will map to the source image. For repair runs, plan against the inherited repair target instead of broadening scope; name the failing proof, the product surfaces likely responsible, and the focused verification that must pass before handoff. Return Blocked only when required upstream evidence cannot be read, canonical ownership is genuinely undecidable, or the requested scope must be split before implementation can start; do not block only because there is no prior assistant prose, no product-file inspection, or no previous tool result beyond the current-run intake artifact.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -251,7 +239,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementer, validator, and manager rework decisions.",
-          "ValidationRequirementSummary": "Must name the intended change surface, architecture constraints, and proof strategy."
+          "ValidationRequirementSummary": "Must name the intended change surface, architecture constraints, proof strategy, current-run implementation-approach artifact path, and the intake artifact path used as evidence."
         },
         {
           "Key": "feature-architecture-decision",
@@ -270,12 +258,8 @@
         {
           "ArtifactExpectationKey": "feature-scope-packet",
           "SourceStepKey": "feature-slice-intake"
-        },
-        {
-          "ArtifactExpectationKey": "feature-acceptance-criteria",
-          "SourceStepKey": "feature-slice-intake"
-        }
-      ],
+          }
+        ],
       "BranchOutcomes": [],
       "ChecklistRefs": [],
       "ValidationRefs": [],
@@ -350,10 +334,10 @@
         }
       ],
       "ArtifactInputs": [
-        {
-          "ArtifactExpectationKey": "feature-acceptance-criteria",
-          "SourceStepKey": "feature-slice-intake"
-        },
+          {
+            "ArtifactExpectationKey": "feature-scope-packet",
+            "SourceStepKey": "feature-slice-intake"
+          },
         {
           "ArtifactExpectationKey": "feature-implementation-plan",
           "SourceStepKey": "implementation-approach"
@@ -472,7 +456,7 @@
       "Key": "targeted-validation",
       "Title": "Run focused validation",
       "Subtitle": "Pass or request rework",
-      "Notes": "Run the agreed validation commands and browser proof. When visual target ImageAsset ids or media paths are part of the feature boundary, compare the delivered screenshot with the target image asset, name both image paths or asset ids, and choose feature-repair-required when the delivered UI does not materially follow the target. For repair-sourced runs, the focused proof must include the inherited repair target; do not accept a different behavior while the triggering defect remains untested or failing. Keep focused validation bounded: use a workspace_dotnet_test timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and choose the feature-repair-required branch instead of waiting on a broad unbounded run. For UI proof, launch or verify the app first, use the returned URL, then collect browser snapshot, console messages, and screenshot. If proof fails because an artifact is missing, the app cannot launch, or the implementation is incomplete, choose feature-repair-required and route the defect to the owning implementation role. Use blocked status only for an unrecoverable environment, permission, or process-contract problem that cannot be repaired inside this subprocess.",
+      "Notes": "Run the agreed validation commands and browser proof. Write or update artifacts/process-runs/<current-process-run-id>/steps/targeted-validation.md with final evidence before returning; do not leave the artifact as in progress. If any proof command ran, cite the targeted-validation artifact and generated command receipt/output refs in evidenceRefs, and do not return Blocked with empty evidence refs after proof artifacts exist. When visual target ImageAsset ids or media paths are part of the feature boundary, compare the delivered screenshot with the target image asset, name both image paths or asset ids, and choose feature-repair-required when the delivered UI does not materially follow the target. For repair-sourced runs, the focused proof must include the inherited repair target; do not accept a different behavior while the triggering defect remains untested or failing. Keep focused validation bounded: use a workspace_dotnet_test timeout of 300 seconds or less for generated or focused tests unless a current diagnostic proves the test suite needs more time. If validation hangs or times out, record the command and timeout as failing proof and choose the feature-repair-required branch instead of waiting on a broad unbounded run. For UI proof, launch or verify the app first, use the returned URL, then collect browser snapshot, console messages, and screenshot. If proof fails because an artifact is missing, browser/runtime proof was required but not completed, the app cannot launch, or the implementation is incomplete, choose feature-repair-required and route the defect to the owning implementation role. Use blocked status only for an unrecoverable environment, permission, unavailable proof tool, launch capability, product-root, or process-contract problem that prevents validation execution or prevents repair from being requested inside this subprocess.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -528,7 +512,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent QA and release readiness.",
-          "ValidationRequirementSummary": "Must include commands, exit codes, relevant output, UI proof when applicable, and unresolved gaps."
+          "ValidationRequirementSummary": "Must include the finalized targeted-validation artifact path, command receipt/output refs for any proof command that ran, commands, exit codes, relevant output, UI proof when applicable, and unresolved gaps. Must not remain in progress or return empty evidence refs when proof receipts exist."
         }
       ],
       "ArtifactInputs": [
