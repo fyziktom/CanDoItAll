@@ -34,7 +34,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     IProcessRuntimeStrategyFactoryResolver strategyFactoryResolver,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
     ProcessRuntimeDispatchOptions? options = null,
-    IProcessRuntimeDispatchQueue? dispatchQueue = null)
+    IProcessRuntimeDispatchQueue? dispatchQueue = null,
+    IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null)
 {
     private const int MaximumDispatchIterations = 200;
     private const int MaximumStepDispatchAttempts = 20;
@@ -47,12 +48,13 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     private const string AutomaticReworkInstructionHeading = "Runtime automatic rework instruction";
     private static readonly TimeSpan ClaimCleanupConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
     private readonly ProcessRuntimeDispatchOptions dispatchOptions = NormalizeOptions(options);
-    private readonly ProcessRuntimeBranchSignalApplicationService branchSignalRouter = new(
-        clock,
-        stateStore,
-        unitOfWork,
-        assignmentStore,
-        projectionCatchupService);
+    private readonly IProcessRuntimeBranchSignalRouter branchSignalRouter =
+        branchSignalRouterOverride ?? new ProcessRuntimeBranchSignalApplicationService(
+            clock,
+            stateStore,
+            unitOfWork,
+            assignmentStore,
+            projectionCatchupService);
 
     public async Task<ProcessRuntimeDispatchResult> ExecuteReadyAsync(
         ProcessRunId runId,

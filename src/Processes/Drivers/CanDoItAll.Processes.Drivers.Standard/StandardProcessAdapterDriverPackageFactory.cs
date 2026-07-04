@@ -5,40 +5,41 @@ namespace CanDoItAll.Processes.Drivers.Standard;
 
 public static class StandardProcessAdapterDriverPackageFactory
 {
-    public static IReadOnlyList<ProcessDriverPackage> CreateLayeredPackages(IProcessExecutionAdapter adapter)
+    public static IReadOnlyList<ProcessDriverPackage> CreateLayeredPackages(IProcessStepExecutionDriver driver)
     {
-        ArgumentNullException.ThrowIfNull(adapter);
+        ArgumentNullException.ThrowIfNull(driver);
 
-        return [CreateFoundationPackage(), CreateAdapterPackage(adapter, ProcessDriverLayer.Platform)];
+        return [CreateFoundationPackage(), CreateAdapterPackage(driver, ProcessDriverLayer.Platform)];
     }
 
     public static ProcessDriverPackage CreateAdapterPackage(
-        IProcessExecutionAdapter adapter,
+        IProcessStepExecutionDriver driver,
         ProcessDriverLayer layer)
     {
-        ArgumentNullException.ThrowIfNull(adapter);
+        ArgumentNullException.ThrowIfNull(driver);
 
+        var adapter = driver.Descriptor.Adapter;
         var descriptor = new ProcessDriverDescriptor(
-            ResolveDriverId(adapter.Descriptor.Kind),
-            $"{adapter.Descriptor.Kind} Adapter Driver",
+            driver.Descriptor.DriverId,
+            $"{adapter.Kind} Adapter Driver",
             "1.0.0",
             "runtime/1.0",
             "runtime/2.x",
             layer,
-            adapter.Descriptor.CapabilityTags,
+            adapter.CapabilityTags,
             [new ProcessDriverDependency(StandardProcessAdapterDriverIds.Foundation, ">=1.0")],
             [],
             [
                 new ProcessDriverFacetDescriptor(
-                    new DriverFacetKey("adapter." + GetAdapterKindToken(adapter.Descriptor.Kind)),
+                    new DriverFacetKey("adapter." + GetAdapterKindToken(adapter.Kind)),
                     "1.0",
                     "Adapter execution facet.")
             ],
-            [adapter.Descriptor.Strategy]);
+            [adapter.Strategy]);
 
         return new ProcessDriverPackage(
             descriptor,
-            [new StandardProcessAdapterStrategyFactory(adapter)],
+            [new StandardProcessAdapterStrategyFactory(driver)],
             [],
             [],
             [],
@@ -77,15 +78,6 @@ public static class StandardProcessAdapterDriverPackageFactory
             [],
             [],
             []);
-    }
-
-    private static DriverId ResolveDriverId(ProcessExecutionAdapterKind kind)
-    {
-        return kind switch
-        {
-            ProcessExecutionAdapterKind.Workflow => StandardProcessAdapterDriverIds.Workflow,
-            _ => new DriverId("process.driver.adapters." + GetAdapterKindToken(kind))
-        };
     }
 
     private static string GetAdapterKindToken(ProcessExecutionAdapterKind kind)

@@ -10,12 +10,27 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
 
+public interface IProcessRuntimeBranchSignalRouter
+{
+    Task ApplyForResultAsync(
+        ProcessRuntimeStateSnapshot initialState,
+        ProcessInstancePlan plan,
+        StrategyResultEnvelope result,
+        string requestedBy,
+        CancellationToken cancellationToken = default);
+
+    Task<ProcessRuntimeStateSnapshot> PropagateSkippedBranchGatesAsync(
+        ProcessRuntimeStateSnapshot initialState,
+        string requestedBy,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class ProcessRuntimeBranchSignalApplicationService(
     IProcessProjectionClock clock,
     IProcessRuntimeStateStore stateStore,
     IProcessRuntimeUnitOfWork unitOfWork,
     IProcessRuntimeStepAssignmentStore assignmentStore,
-    ProcessRuntimeProjectionCatchupService projectionCatchupService)
+    ProcessRuntimeProjectionCatchupService projectionCatchupService) : IProcessRuntimeBranchSignalRouter
 {
     private const int MaximumConcurrencyRetries = 3;
     private const string ActorId = "process-runtime-branch-router";

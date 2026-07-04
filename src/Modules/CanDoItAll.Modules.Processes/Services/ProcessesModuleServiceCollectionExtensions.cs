@@ -50,8 +50,12 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessRuntimeProjector, ProcessRuntimeProjectionProjector>();
         services.TryAddScoped<ProcessRuntimeProjectionCatchupService>();
         services.TryAddScoped<ProcessRuntimeBranchSignalApplicationService>();
-        services.TryAddScoped<IProcessStepBriefBuilder, AgentFrameworkProcessStepBriefBuilder>();
-        services.TryAddScoped<IProcessExecutionAdapter, AgentFrameworkProcessExecutionAdapter>();
+        services.TryAddScoped<IProcessRuntimeBranchSignalRouter>(serviceProvider => serviceProvider.GetRequiredService<ProcessRuntimeBranchSignalApplicationService>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessPromptCompositionDriver, AgentFrameworkProcessStepBriefBuilder>());
+        services.TryAddScoped<IProcessStepBriefBuilder, DriverProcessStepBriefBuilder>();
+        services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
+        services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
+        services.TryAddScoped<IProcessStepExecutionDriver>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
         services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, AgentFrameworkProcessRuntimeUsageTelemetryReader>();
         services.TryAddScoped<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>();

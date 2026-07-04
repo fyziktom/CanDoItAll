@@ -67,6 +67,27 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
+    public void Driver_step_brief_builder_uses_replaceable_prompt_composition_driver()
+    {
+        var builder = new DriverProcessStepBriefBuilder(
+        [
+            new FakePromptCompositionDriver("business-analysis-driver")
+        ]);
+
+        var prompt = BuildStepPrompt(
+            builder,
+            ProcessRunId.New(),
+            CreatePromptStep("Prepare supplier risk analysis."),
+            CreateDefinition("supplier-risk-review", "Supplier risk review", "Review supplier risk."),
+            variables: new Dictionary<string, string>
+            {
+                ["SupplierPortfolio"] = "critical-vendors"
+            });
+
+        Assert.Equal("fake prompt from business-analysis-driver for supplier-risk-review/resolve-contract", prompt);
+    }
+
+    [Fact]
     public void Generic_step_brief_bounds_large_launch_variable_values()
     {
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
@@ -614,5 +635,16 @@ public sealed class ProcessLaunchPromptTests
             DisplayName = displayName,
             Summary = summary
         };
+    }
+
+    private sealed class FakePromptCompositionDriver(string name) : IProcessPromptCompositionDriver
+    {
+        public DriverId DriverId { get; } = new(name);
+
+        public bool CanCompose(ProcessStepBriefBuildRequest request)
+            => string.Equals(request.Definition.Key, "supplier-risk-review", StringComparison.Ordinal);
+
+        public string Compose(ProcessStepBriefBuildRequest request)
+            => $"fake prompt from {DriverId.Value} for {request.Definition.Key}/{request.Step.Key}";
     }
 }
