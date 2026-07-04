@@ -2,6 +2,8 @@
 
 Run the agreed focused build and test proof and record commands, exit codes, and relevant output. For .NET product changes, run the grounded solution or project `dotnet build` and focused `dotnet test` commands from the validation contract unless the contract names a narrower equivalent command. Do not accept from upstream prose alone.
 
+When `DotNetSolutionFileAlias` or `DotNetSolutionFile` is present, use it for restore and build proof. When `DotNetTestProjectFileAlias` or `DotNetTestProjectFile` is present, use that test project target for `workspace_dotnet_test`, preferably with `noBuild=true` after a successful solution build; do not run solution-level tests for Blazor WebAssembly targets unless no test project target exists.
+
 When the validation contract uses `--no-restore` build/test checks, make sure this validation execution has a fresh successful restore receipt first. If a build fails in `ResolvePackageAssets` or another stale asset-file path before compiling product source, rerun restore and then rerun the build before choosing the repair branch.
 
 Required validation receipts must be emitted by this validation step execution. Upstream implementation receipts may explain what happened, but they do not satisfy this step's current-execution proof contract by themselves.

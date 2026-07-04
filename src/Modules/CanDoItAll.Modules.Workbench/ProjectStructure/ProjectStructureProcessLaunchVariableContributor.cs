@@ -430,7 +430,7 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         builder.AppendLine($"AllowedTemplateSwitches: {appArchetype.AllowedTemplateSwitches}");
         builder.AppendLine($"SolutionScaffoldToolContract: use workspace_dotnet_new with template 'sln', parentDirectory set to WorkspaceAlias, and name '{solutionName}'. Never use the product root parent folder as the solution scaffold parent.");
         builder.AppendLine($"ScaffoldToolContract: use workspace_dotnet_new with template '{BuildTemplateSpec(appArchetype)}' for the app project; do not hand-author SDK/package scaffolding unless repairing an existing project in place.");
-        builder.AppendLine("SolutionValidationTargetRule: restore, build, and test validation must target DotNetSolutionFile or DotNetSolutionFileAlias when present. Do not infer <SolutionName>.sln from SolutionName, and do not report a missing .sln when the canonical .slnx validation target exists or has successful current-run receipts. If the canonical target is absent, list SolutionFileCandidates and use the existing candidate, preferring .slnx when both exist.");
+        builder.AppendLine("SolutionValidationTargetRule: restore and build validation must target DotNetSolutionFile or DotNetSolutionFileAlias when present. Test validation must target DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build; fall back to the solution target only when no test project target exists. Do not infer <SolutionName>.sln from SolutionName, and do not report a missing .sln when the canonical .slnx validation target exists or has successful current-run restore/build receipts. If the canonical target is absent, list SolutionFileCandidates and use the existing candidate, preferring .slnx when both exist.");
         builder.AppendLine("ExternalTargetScriptRule: external-target/... aliases are only for structured workspace tool path arguments. Do not put external-target aliases inside PowerShell, Python, or shell script content; scripts must use the native absolute ProductRoot or DotNet* launch variable paths.");
         builder.AppendLine("EvidenceSourceRule: cite project-media file paths only when they are present in current launch variables, current prompt context, inherited upstream artifacts, or current-run tool receipts. Do not introduce source document paths from unrelated projects or prior runs.");
         if (string.Equals(appArchetype.Template, "blazorwasm", StringComparison.OrdinalIgnoreCase))
@@ -447,7 +447,14 @@ internal sealed partial class DotNetProcessLaunchVariableContributor : IProjectS
         builder.AppendLine("ExistingScaffoldRule: existing files are not enough; if the app project already exists, compare template-critical files to the current template baseline and repair stale or hand-authored scaffold drift before first build validation.");
         builder.AppendLine($"TestProjectName: {testProjectName}");
         builder.AppendLine($"TestProjectDirectory: {testProjectDirectory}");
-        builder.AppendLine($"TestProjectFile: {CombinePath(testProjectDirectory, $"{testProjectName}.csproj")}");
+        var testProjectFile = CombinePath(testProjectDirectory, $"{testProjectName}.csproj");
+        builder.AppendLine($"TestProjectFile: {testProjectFile}");
+        var testProjectFileAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(testProjectFile);
+        if (!string.IsNullOrWhiteSpace(testProjectFileAlias))
+        {
+            builder.AppendLine($"TestProjectFileAlias: {testProjectFileAlias}");
+        }
+
         builder.AppendLine($"TestTemplate: {DefaultTestTemplate}");
         builder.AppendLine($"TestFrameworkPreference: {DefaultTestFramework}");
         builder.AppendLine($"TargetFramework: {targetFramework}");

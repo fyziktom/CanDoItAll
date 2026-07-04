@@ -156,9 +156,13 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.Contains("external-target/", variables["DotNetAppProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("/src/Calculator/Calculator.csproj", variables["DotNetAppProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
         Assert.Equal(@"C:\temp\CanDoItAll\Calculator\tests\Calculator.Tests\Calculator.Tests.csproj", variables["DotNetTestProjectFile"]);
+        Assert.Contains("external-target/", variables["DotNetTestProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/tests/Calculator.Tests/Calculator.Tests.csproj", variables["DotNetTestProjectFileAlias"], StringComparison.OrdinalIgnoreCase);
         Assert.Equal("blazorwasm", variables["DotNetAppTemplate"]);
         Assert.Contains("BlazorWasmNamespaceRule", variables["DotNetScaffoldContract"]);
         Assert.Contains("SolutionValidationTargetRule", variables["DotNetScaffoldContract"]);
+        Assert.Contains("Test validation must target DotNetTestProjectFileAlias or DotNetTestProjectFile", variables["DotNetScaffoldContract"]);
+        Assert.Contains("fall back to the solution target only when no test project target exists", variables["DotNetScaffoldContract"]);
         Assert.Contains("DotNetRunProjectTargetRule", variables["DotNetScaffoldContract"]);
         Assert.Contains("workspace_dotnet_run targetPath must be DotNetAppProjectFileAlias", variables["DotNetScaffoldContract"]);
         Assert.Contains("Never call workspace_dotnet_run with DotNetSolutionFile", variables["DotNetScaffoldContract"]);

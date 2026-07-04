@@ -163,7 +163,10 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
                 artifact.DisplayName,
                 artifact.RelativePath,
                 artifact.Summary,
-                artifact.CreatedAtUtc))
+                artifact.CreatedAtUtc)
+            {
+                ProducedBy = artifact.ProducedBy
+            })
             .ToArray() ?? [];
 
     private static string ResolveLastError(ExecutionRunDetail? detail)
