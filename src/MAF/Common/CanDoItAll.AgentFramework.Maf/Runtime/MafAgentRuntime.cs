@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -17,9 +16,7 @@ public sealed partial class MafAgentRuntime(
     IServiceProvider services,
     WorkspaceScopeDescriptor? workspaceScope = null) : IAgentRuntime
 {
-    private const string LocalHistoryConversationId = "_agent_local_chat_history";
     private const int MaxRepeatedToolInvocationCount = 3;
-    private const int MaxFinalizerRepairPreviousAssistantTextCharacters = 12_000;
     private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
     private const string ProcessArtifactBranchOutcomeKeyLineKey = "Branch outcome key";
 
@@ -71,7 +68,7 @@ public sealed partial class MafAgentRuntime(
         AgentStructuredOutputContract? structuredOutput = null,
         AgentRuntimeExecutionOptions? executionOptions = null)
     {
-        var model = ResolveRuntimeModel(agent, provider);
+        var model = MafModelParametersBuilder.ResolveRuntimeModel(agent, provider);
         try
         {
             return await RunCoreAsync(
@@ -89,9 +86,9 @@ public sealed partial class MafAgentRuntime(
                 executionOptions,
                 forceOmitTemperature: false);
         }
-        catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, model, exception))
+        catch (Exception exception) when (MafModelParametersBuilder.ShouldRetryWithoutTemperature(provider, model, exception))
         {
-            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureRetryMessage(model));
+            await progressCallback(ExecutionState.Preparing, "Model parameters", MafModelParametersBuilder.BuildTemperatureRetryMessage(model));
             return await RunCoreAsync(
                 agent,
                 provider,
@@ -154,11 +151,11 @@ public sealed partial class MafAgentRuntime(
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
-            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureOmittedMessage(runtimeBuild.Model));
+            await progressCallback(ExecutionState.Preparing, "Model parameters", MafModelParametersBuilder.BuildTemperatureOmittedMessage(runtimeBuild.Model));
         }
 
-        await progressCallback(ExecutionState.Preparing, "Session", ResolveSessionMessage(agent, runtimeBuild.Provider, session, runtimeOptions));
-        var runtimeSession = await RestoreOrCreateSessionAsync(
+        await progressCallback(ExecutionState.Preparing, "Session", MafRuntimeSessionBuilder.ResolveSessionMessage(agent, runtimeBuild.Provider, session, runtimeOptions));
+        var runtimeSession = await MafRuntimeSessionBuilder.RestoreOrCreateSessionAsync(
             runtimeBuild.Agent,
             agent,
             runtimeBuild.Provider,
@@ -166,7 +163,7 @@ public sealed partial class MafAgentRuntime(
             runtimeOptions,
             cancellationToken,
             isApprovalContinuation: false);
-        var runOptions = CreateRunOptions(
+        var runOptions = MafRuntimeSessionBuilder.CreateRunOptions(
             agent,
             runtimeBuild.Provider,
             runtimeBuild.Model,
@@ -174,13 +171,18 @@ public sealed partial class MafAgentRuntime(
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
             runtimeOptions);
-        var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt, runtimeOptions).ToList();
-        var contextManifest = CreateContextAssemblyManifest(
+        var inputMessages = MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt, runtimeOptions).ToList();
+        var capabilityState = runtimeBuild.CapabilityState;
+        var contextManifest = MafContextManifestBuilder.Create(
             agent,
             runtimeBuild.Provider,
             runtimeBuild.Model,
             runtimeOptions,
-            runtimeBuild,
+            capabilityState?.Tools ?? [],
+            capabilityState?.ContextSources ?? [],
+            capabilityState?.FrameworkToolNames ?? [],
+            capabilityState?.ContextProviders.Count ?? 0,
+            capabilityState?.RuntimeToolProviderDescriptors.Count ?? 0,
             inputMessages);
 
         var response = await ExecuteRunAsync(
@@ -223,7 +225,7 @@ public sealed partial class MafAgentRuntime(
         AgentStructuredOutputContract? structuredOutput = null,
         AgentRuntimeExecutionOptions? executionOptions = null)
     {
-        var model = ResolveRuntimeModel(agent, provider);
+        var model = MafModelParametersBuilder.ResolveRuntimeModel(agent, provider);
         try
         {
             return await RespondToPendingApprovalsCoreAsync(
@@ -241,9 +243,9 @@ public sealed partial class MafAgentRuntime(
                 executionOptions,
                 forceOmitTemperature: false);
         }
-        catch (Exception exception) when (ShouldRetryWithoutTemperature(provider, model, exception))
+        catch (Exception exception) when (MafModelParametersBuilder.ShouldRetryWithoutTemperature(provider, model, exception))
         {
-            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureRetryMessage(model));
+            await progressCallback(ExecutionState.Preparing, "Model parameters", MafModelParametersBuilder.BuildTemperatureRetryMessage(model));
             return await RespondToPendingApprovalsCoreAsync(
                 agent,
                 provider,
@@ -296,11 +298,11 @@ public sealed partial class MafAgentRuntime(
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
-            await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureOmittedMessage(runtimeBuild.Model));
+            await progressCallback(ExecutionState.Preparing, "Model parameters", MafModelParametersBuilder.BuildTemperatureOmittedMessage(runtimeBuild.Model));
         }
 
         await progressCallback(ExecutionState.Preparing, "Session", "Restoring the session state prior to replaying the approval response.");
-        var runtimeSession = await RestoreOrCreateSessionAsync(
+        var runtimeSession = await MafRuntimeSessionBuilder.RestoreOrCreateSessionAsync(
             runtimeBuild.Agent,
             agent,
             runtimeBuild.Provider,
@@ -308,7 +310,7 @@ public sealed partial class MafAgentRuntime(
             runtimeOptions,
             cancellationToken,
             isApprovalContinuation: true);
-        var runOptions = CreateRunOptions(
+        var runOptions = MafRuntimeSessionBuilder.CreateRunOptions(
             agent,
             runtimeBuild.Provider,
             runtimeBuild.Model,
@@ -317,12 +319,17 @@ public sealed partial class MafAgentRuntime(
             forceOmitTemperature: forceOmitTemperature,
             runtimeOptions);
         var inputMessages = CreateApprovalInputMessages(session, approved).ToList();
-        var contextManifest = CreateContextAssemblyManifest(
+        var capabilityState = runtimeBuild.CapabilityState;
+        var contextManifest = MafContextManifestBuilder.Create(
             agent,
             runtimeBuild.Provider,
             runtimeBuild.Model,
             runtimeOptions,
-            runtimeBuild,
+            capabilityState?.Tools ?? [],
+            capabilityState?.ContextSources ?? [],
+            capabilityState?.FrameworkToolNames ?? [],
+            capabilityState?.ContextProviders.Count ?? 0,
+            capabilityState?.RuntimeToolProviderDescriptors.Count ?? 0,
             inputMessages);
 
         return await ExecuteRunAsync(
@@ -378,13 +385,13 @@ public sealed partial class MafAgentRuntime(
         var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var repeatedToolInvocationGuard = new RepeatedToolInvocationGuard();
         var synthesizedFinalizerInvocations = new List<AgentFinalizerInvocation>();
-        var streamedFinalizerRecorder = new StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
+        var streamedFinalizerRecorder = new MafFinalizerDriver.StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotEffectiveToolInvocationTraces = () =>
-            CreateEffectiveToolInvocationTraces(
+            MafFinalizerDriver.CreateEffectiveToolInvocationTraces(
                 snapshotToolInvocationTraces(),
                 streamedFinalizerRecorder.SnapshotToolInvocationTraces());
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotEffectiveFinalizerInvocations = () =>
-            CreateEffectiveFinalizerInvocations(
+            MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
                 structuredOutput,
                 finalizerMode,
                 snapshotFinalizerInvocations(),
@@ -416,7 +423,7 @@ public sealed partial class MafAgentRuntime(
 
             foreach (var toolCall in snapshot.Contents.OfType<ToolCallContent>())
             {
-                var toolKey = ResolveToolCallKey(toolCall);
+                var toolKey = MafToolInvocationArgumentFormatter.ResolveToolCallKey(toolCall);
                 if (toolCall.CallId is null || guardedToolCallIds.Add(toolCall.CallId))
                 {
                     repeatedToolInvocationGuard.Guard(toolCall);
@@ -428,7 +435,7 @@ public sealed partial class MafAgentRuntime(
                     continue;
                 }
 
-                await progressCallback(ExecutionState.WaitingOnTool, "Tool", DescribeToolInvocation(toolCall));
+                await progressCallback(ExecutionState.WaitingOnTool, "Tool", MafToolInvocationArgumentFormatter.DescribeToolInvocation(toolCall));
             }
 
             return await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
@@ -452,7 +459,7 @@ public sealed partial class MafAgentRuntime(
             AgentResponse response,
             IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests)
         {
-            if (!ShouldRequestMissingRequiredFinalizerRepair(
+            if (!MafFinalizerDriver.ShouldRequestMissingRequiredFinalizerRepair(
                     structuredOutput,
                     finalizerMode,
                     runtimeOptions,
@@ -487,21 +494,21 @@ public sealed partial class MafAgentRuntime(
                 "Finalizer repair",
                 $"Required finalizer tool '{finalizerPolicy.ToolName}' was missing after the provider completed. Requesting one bounded repair turn.");
 
-            var finalizerTool = ResolveRequiredFinalizerTool(finalizerPolicy, finalizerTools);
+            var finalizerTool = MafFinalizerDriver.ResolveRequiredFinalizerTool(finalizerPolicy, finalizerTools);
             if (toolInvocationTraceRecorder is null)
             {
                 throw new InvalidOperationException(
                     $"Cannot repair missing required finalizer '{finalizerPolicy.ToolName}' because tool invocation tracing is unavailable.");
             }
 
-            var repairContext = BuildRequiredFinalizerRepairContext(
+            var repairContext = MafFinalizerDriver.BuildRequiredFinalizerRepairContext(
                 response,
                 snapshotEffectiveToolInvocationTraces(),
                 inputMessages);
-            var repairRunOptions = CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool);
+            var repairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(finalizerPolicy, finalizerTool);
             var repairMessages = new[]
             {
-                CreateRequiredFinalizerRepairMessage(finalizerPolicy, response, repairContext)
+                MafFinalizerDriver.CreateRequiredFinalizerRepairMessage(finalizerPolicy, response, repairContext)
             };
 
             try
@@ -634,10 +641,10 @@ public sealed partial class MafAgentRuntime(
                 forceOmitTemperature,
                 finalizerPolicy);
             var jsonRepairSession = await jsonRepairAgent.CreateSessionAsync(cancellationToken);
-            var jsonRepairRunOptions = CreateRequiredFinalizerJsonRepairRunOptions();
+            var jsonRepairRunOptions = MafFinalizerDriver.CreateRequiredFinalizerJsonRepairRunOptions();
             var jsonRepairMessages = new[]
             {
-                CreateRequiredFinalizerJsonRepairMessage(finalizerPolicy, previousResponse, repairContext)
+                MafFinalizerDriver.CreateRequiredFinalizerJsonRepairMessage(finalizerPolicy, previousResponse, repairContext)
             };
             var jsonRepairUpdates = new List<AgentResponseUpdate>();
 
@@ -878,7 +885,7 @@ public sealed partial class MafAgentRuntime(
 
             pollCount++;
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-            runOptions = CreateRunOptions(
+            runOptions = MafRuntimeSessionBuilder.CreateRunOptions(
                 agent,
                 provider,
                 resolvedModel,
@@ -890,88 +897,6 @@ public sealed partial class MafAgentRuntime(
         }
     }
 
-    internal static bool ShouldRequestMissingRequiredFinalizerRepair(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentFinalizerMode finalizerMode,
-        AgentRuntimeExecutionOptions runtimeOptions,
-        IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests,
-        IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations,
-        out AgentFinalizerPolicy policy)
-    {
-        ArgumentNullException.ThrowIfNull(runtimeOptions);
-        ArgumentNullException.ThrowIfNull(approvalRequests);
-        ArgumentNullException.ThrowIfNull(finalizerInvocations);
-
-        policy = AgentFinalizerPolicy.NotRequired;
-        if (finalizerMode != AgentFinalizerMode.Required ||
-            runtimeOptions.MaxStructuredOutputRepairAttempts <= 0 ||
-            approvalRequests.Count > 0 ||
-            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out policy))
-        {
-            return false;
-        }
-
-        var toolName = policy.ToolName;
-        return !finalizerInvocations.Any(invocation =>
-            string.Equals(invocation.ToolName, toolName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    internal static AITool ResolveRequiredFinalizerTool(
-        AgentFinalizerPolicy policy,
-        IReadOnlyList<AITool> finalizerTools)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentNullException.ThrowIfNull(finalizerTools);
-
-        var matchingFinalizerTools = finalizerTools
-            .Where(tool => string.Equals(tool.Name, policy.ToolName, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        if (matchingFinalizerTools.Count != 1)
-        {
-            throw new InvalidOperationException(
-                $"Cannot repair missing required finalizer '{policy.ToolName}' because the runtime did not expose exactly one matching finalizer tool.");
-        }
-
-        return matchingFinalizerTools[0];
-    }
-
-    internal static void ConfigureRequiredFinalizerRepairChatOptions(
-        ChatOptions chatOptions,
-        AgentFinalizerPolicy policy,
-        AITool finalizerTool)
-    {
-        ArgumentNullException.ThrowIfNull(chatOptions);
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentNullException.ThrowIfNull(finalizerTool);
-
-        chatOptions.AllowMultipleToolCalls = false;
-        chatOptions.Instructions = BuildRequiredFinalizerRepairInstructions(policy);
-        chatOptions.Tools = [finalizerTool];
-        chatOptions.ToolMode = ChatToolMode.RequireSpecific(policy.ToolName);
-    }
-
-    internal static ChatClientAgentRunOptions CreateRequiredFinalizerRepairRunOptions(
-        AgentFinalizerPolicy policy,
-        AITool finalizerTool)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentNullException.ThrowIfNull(finalizerTool);
-
-        var chatOptions = new ChatOptions
-        {
-            AllowMultipleToolCalls = false,
-            Instructions = BuildRequiredFinalizerRepairInstructions(policy),
-            Tools = [finalizerTool],
-            ToolMode = ChatToolMode.RequireSpecific(policy.ToolName)
-        };
-
-        return new ChatClientAgentRunOptions(chatOptions)
-        {
-            AllowBackgroundResponses = false,
-            ContinuationToken = null
-        };
-    }
-
     private AIAgent CreateRequiredFinalizerRepairAgent(
         AgentDefinition agent,
         ProviderProfile provider,
@@ -981,13 +906,13 @@ public sealed partial class MafAgentRuntime(
         AITool finalizerTool,
         ToolInvocationTraceRecorder toolInvocationTraceRecorder)
     {
-        var chatOptions = CreateModelCompatibleChatOptions(
+        var chatOptions = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
             provider,
             model,
             (float)agent.Temperature,
             forceOmitTemperature,
             agent.ConfigurationJson);
-        ConfigureRequiredFinalizerRepairChatOptions(chatOptions, policy, finalizerTool);
+        MafFinalizerDriver.ConfigureRequiredFinalizerRepairChatOptions(chatOptions, policy, finalizerTool);
 
         var repairOptions = new ChatClientAgentOptions
         {
@@ -1019,14 +944,14 @@ public sealed partial class MafAgentRuntime(
         bool forceOmitTemperature,
         AgentFinalizerPolicy policy)
     {
-        var chatOptions = CreateModelCompatibleChatOptions(
+        var chatOptions = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
             provider,
             model,
             (float)agent.Temperature,
             forceOmitTemperature,
             agent.ConfigurationJson);
         chatOptions.AllowMultipleToolCalls = false;
-        chatOptions.Instructions = BuildRequiredFinalizerJsonRepairInstructions(policy);
+        chatOptions.Instructions = MafFinalizerDriver.BuildRequiredFinalizerJsonRepairInstructions(policy);
         chatOptions.Tools = [];
         chatOptions.ToolMode = null;
 
@@ -1053,85 +978,6 @@ public sealed partial class MafAgentRuntime(
         return CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false);
     }
 
-    private static string BuildRequiredFinalizerRepairInstructions(
-        AgentFinalizerPolicy policy)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-
-        return
-            $"You are completing a bounded finalizer repair turn for `{policy.OutputContract.ContractKey}`." + Environment.NewLine +
-            $"Call `{policy.ToolName}` exactly once." + Environment.NewLine +
-            "Do not call any other tool. Do not emit Markdown, prose, code fences, or machine JSON outside the finalizer tool call." + Environment.NewLine +
-            BuildRequiredFinalizerArgumentInstructions(policy);
-    }
-
-    private static string BuildRequiredFinalizerJsonRepairInstructions(
-        AgentFinalizerPolicy policy)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-
-        return
-            $"You are completing a bounded typed-output repair turn for `{policy.OutputContract.ContractKey}`." + Environment.NewLine +
-            "Return exactly one JSON object matching the requested contract. Do not use Markdown, prose, code fences, or tool calls." + Environment.NewLine +
-            BuildRequiredFinalizerArgumentInstructions(policy);
-    }
-
-    internal static ChatClientAgentRunOptions CreateRequiredFinalizerJsonRepairRunOptions()
-    {
-        return new ChatClientAgentRunOptions(new ChatOptions
-        {
-            AllowMultipleToolCalls = false,
-            ToolMode = null,
-            Tools = []
-        })
-        {
-            AllowBackgroundResponses = false,
-            ContinuationToken = null
-        };
-    }
-
-    internal static ChatMessage CreateRequiredFinalizerJsonRepairMessage(
-        AgentFinalizerPolicy policy,
-        AgentResponse previousResponse)
-        => CreateRequiredFinalizerJsonRepairMessage(policy, previousResponse, string.Empty);
-
-    internal static ChatMessage CreateRequiredFinalizerJsonRepairMessage(
-        AgentFinalizerPolicy policy,
-        AgentResponse previousResponse,
-        string repairContext)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentNullException.ThrowIfNull(previousResponse);
-
-        return new ChatMessage(
-            ChatRole.User,
-            BuildRequiredFinalizerJsonRepairPrompt(policy, previousResponse.Text, repairContext));
-    }
-
-    internal static string BuildRequiredFinalizerJsonRepairPrompt(
-        AgentFinalizerPolicy policy,
-        string? previousAssistantText)
-        => BuildRequiredFinalizerJsonRepairPrompt(policy, previousAssistantText, string.Empty);
-
-    internal static string BuildRequiredFinalizerJsonRepairPrompt(
-        AgentFinalizerPolicy policy,
-        string? previousAssistantText,
-        string? repairContext)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-
-        var previousTextSummary = BuildBoundedFinalizerRepairPreviousTextSummary(previousAssistantText);
-        var repairContextSummary = BuildBoundedFinalizerRepairContextSummary(repairContext);
-
-        return
-            $"The previous repair turn could not submit `{policy.ToolName}` through provider tool calling." + Environment.NewLine +
-            $"Return exactly one JSON object for `{policy.OutputContract.ContractKey}` now." + Environment.NewLine +
-            "Use only the prior response text, session context, tool results, and process artifacts already available in the conversation. If evidence is insufficient, return the contract's blocking or failure state with actionable next actions where the contract supports them." + Environment.NewLine +
-            "Do not return a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. If completion is impossible because a required managed output was not written, name that missing primary write ref and the next tool action that must create it." + Environment.NewLine +
-            previousTextSummary + Environment.NewLine +
-            repairContextSummary;
-    }
-
     private static async ValueTask DisposeAgentAsync(AIAgent agent)
     {
         switch (agent)
@@ -1143,233 +989,6 @@ public sealed partial class MafAgentRuntime(
                 disposable.Dispose();
                 break;
         }
-    }
-
-    internal static ChatMessage CreateRequiredFinalizerRepairMessage(
-        AgentFinalizerPolicy policy,
-        AgentResponse previousResponse)
-        => CreateRequiredFinalizerRepairMessage(policy, previousResponse, string.Empty);
-
-    internal static ChatMessage CreateRequiredFinalizerRepairMessage(
-        AgentFinalizerPolicy policy,
-        AgentResponse previousResponse,
-        string repairContext)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentNullException.ThrowIfNull(previousResponse);
-
-        return new ChatMessage(
-            ChatRole.User,
-            BuildRequiredFinalizerRepairPrompt(policy, previousResponse.Text, repairContext));
-    }
-
-    internal static string BuildRequiredFinalizerRepairPrompt(
-        AgentFinalizerPolicy policy,
-        string? previousAssistantText)
-        => BuildRequiredFinalizerRepairPrompt(policy, previousAssistantText, string.Empty);
-
-    internal static string BuildRequiredFinalizerRepairPrompt(
-        AgentFinalizerPolicy policy,
-        string? previousAssistantText,
-        string? repairContext)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-
-        var previousTextSummary = BuildBoundedFinalizerRepairPreviousTextSummary(previousAssistantText);
-        var repairContextSummary = BuildBoundedFinalizerRepairContextSummary(repairContext);
-
-        return
-            $"The previous turn ended without the required `{policy.ToolName}` finalizer tool call.{Environment.NewLine}" +
-            $"Call `{policy.ToolName}` exactly once now to submit the final governed `{policy.OutputContract.ContractKey}` outcome.{Environment.NewLine}" +
-            "Use only the current session context, prior tool results, and process artifacts. If the available evidence is insufficient for a successful outcome, submit the contract's failure or blocking state with actionable next actions where the contract supports them." + Environment.NewLine +
-            "Do not submit a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. If completion is impossible because a required managed output was not written, name that missing primary write ref and the next tool action that must create it." + Environment.NewLine +
-            "Do not call any other tool. Do not emit Markdown, prose, or machine JSON outside the finalizer tool call." + Environment.NewLine +
-            previousTextSummary + Environment.NewLine +
-            repairContextSummary;
-    }
-
-    internal static string BuildBoundedFinalizerRepairPreviousTextSummary(string? previousAssistantText)
-    {
-        if (string.IsNullOrWhiteSpace(previousAssistantText))
-        {
-            return "The previous turn returned no assistant text.";
-        }
-
-        var trimmed = previousAssistantText.Trim();
-        if (trimmed.Length <= MaxFinalizerRepairPreviousAssistantTextCharacters)
-        {
-            return $"Previous assistant text:{Environment.NewLine}{trimmed}";
-        }
-
-        var headLength = MaxFinalizerRepairPreviousAssistantTextCharacters / 2;
-        var tailLength = MaxFinalizerRepairPreviousAssistantTextCharacters - headLength;
-        var head = trimmed[..headLength];
-        var tail = trimmed[^tailLength..];
-        return
-            $"Previous assistant text (truncated from {trimmed.Length} to {MaxFinalizerRepairPreviousAssistantTextCharacters} characters for bounded finalizer repair):" + Environment.NewLine +
-            head + Environment.NewLine +
-            Environment.NewLine +
-            "[... middle of previous assistant text omitted for bounded finalizer repair ...]" + Environment.NewLine +
-            Environment.NewLine +
-            tail;
-    }
-
-    private static string BuildRequiredFinalizerRepairContext(
-        AgentResponse previousResponse,
-        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces,
-        IEnumerable<ChatMessage> originalInputMessages)
-    {
-        ArgumentNullException.ThrowIfNull(previousResponse);
-        ArgumentNullException.ThrowIfNull(toolInvocationTraces);
-        ArgumentNullException.ThrowIfNull(originalInputMessages);
-
-        var builder = new StringBuilder();
-        var toolCallSummaries = BuildPreviousTurnToolCallSummaries(previousResponse);
-        if (toolCallSummaries.Count > 0)
-        {
-            builder.AppendLine("Previous turn tool calls observed by the provider:");
-            foreach (var summary in toolCallSummaries)
-            {
-                builder.AppendLine($"- {summary}");
-            }
-        }
-
-        if (toolInvocationTraces.Count > 0)
-        {
-            if (builder.Length > 0)
-            {
-                builder.AppendLine();
-            }
-
-            builder.AppendLine("Previous turn tool trace results:");
-            foreach (var trace in toolInvocationTraces.OrderBy(item => item.Sequence).Take(20))
-            {
-                var status = trace.CompletedAtUtc is null
-                    ? "started"
-                    : trace.Succeeded
-                        ? "succeeded"
-                        : $"failed: {WorkflowExecutorRedaction.RedactText(trace.FailureMessage)}";
-                builder.AppendLine($"- #{trace.Sequence} {trace.ToolName}: {status}");
-            }
-        }
-
-        var inputSummary = BuildRequiredFinalizerRepairInputSummary(originalInputMessages);
-        if (!string.IsNullOrWhiteSpace(inputSummary))
-        {
-            if (builder.Length > 0)
-            {
-                builder.AppendLine();
-            }
-
-            builder.AppendLine("Original governed process brief lines relevant to finalization:");
-            builder.Append(inputSummary);
-        }
-
-        return builder.ToString().Trim();
-    }
-
-    private static IReadOnlyList<string> BuildPreviousTurnToolCallSummaries(AgentResponse previousResponse)
-    {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var summaries = new List<string>();
-        foreach (var toolCall in previousResponse.Messages.SelectMany(message => message.Contents).OfType<ToolCallContent>())
-        {
-            var key = ResolveToolCallKey(toolCall);
-            if (!seen.Add(key))
-            {
-                continue;
-            }
-
-            summaries.Add(DescribeToolInvocation(toolCall));
-            if (summaries.Count >= 20)
-            {
-                break;
-            }
-        }
-
-        return summaries;
-    }
-
-    private static string BuildRequiredFinalizerRepairInputSummary(IEnumerable<ChatMessage> originalInputMessages)
-    {
-        var lines = new List<string>();
-        foreach (var text in originalInputMessages
-                     .SelectMany(message => message.Contents)
-                     .OfType<TextContent>()
-                     .Select(content => content.Text)
-                     .Where(text => !string.IsNullOrWhiteSpace(text)))
-        {
-            foreach (var rawLine in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-            {
-                var line = rawLine.Trim();
-                if (!IsFinalizerRepairRelevantInputLine(line))
-                {
-                    continue;
-                }
-
-                lines.Add(line);
-                if (lines.Count >= 120)
-                {
-                    return string.Join(Environment.NewLine, lines);
-                }
-            }
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    private static bool IsFinalizerRepairRelevantInputLine(string line)
-    {
-        if (string.IsNullOrWhiteSpace(line))
-        {
-            return false;
-        }
-
-        return line.StartsWith("Process:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Step key:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Step title:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Process run id:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Managed artifact root:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Allowed operations:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Operation target scope:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Required upstream artifact slots:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Produced artifact slots:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Artifact refs to inspect", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Expectation key rule:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Primary write ref:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Runtime rule:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Completion rule:", StringComparison.OrdinalIgnoreCase) ||
-               line.StartsWith("Validation:", StringComparison.OrdinalIgnoreCase) ||
-               line.Contains("workspace_write_file", StringComparison.OrdinalIgnoreCase) ||
-               line.Contains("workspace_read_file", StringComparison.OrdinalIgnoreCase) ||
-               line.Contains("submit_process_step_outcome", StringComparison.OrdinalIgnoreCase) ||
-               line.Contains("evidenceRefs", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string BuildBoundedFinalizerRepairContextSummary(string? repairContext)
-    {
-        if (string.IsNullOrWhiteSpace(repairContext))
-        {
-            return "Repair context summary: no prior tool call or governed brief summary was available.";
-        }
-
-        var trimmed = repairContext.Trim();
-        if (trimmed.Length <= MaxFinalizerRepairPreviousAssistantTextCharacters)
-        {
-            return $"Repair context summary:{Environment.NewLine}{trimmed}";
-        }
-
-        var headLength = MaxFinalizerRepairPreviousAssistantTextCharacters / 2;
-        var tailLength = MaxFinalizerRepairPreviousAssistantTextCharacters - headLength;
-        var head = trimmed[..headLength];
-        var tail = trimmed[^tailLength..];
-        return
-            $"Repair context summary (truncated from {trimmed.Length} to {MaxFinalizerRepairPreviousAssistantTextCharacters} characters):" + Environment.NewLine +
-            head + Environment.NewLine +
-            Environment.NewLine +
-            "[... middle of repair context omitted for bounded finalizer repair ...]" + Environment.NewLine +
-            Environment.NewLine +
-            tail;
     }
 
     private static bool TryCaptureSynthesizedFinalizerInvocation(
@@ -1384,7 +1003,7 @@ public sealed partial class MafAgentRuntime(
         ArgumentNullException.ThrowIfNull(synthesizedInvocations);
 
         failureMessage = string.Empty;
-        if (!TryNormalizeFinalizerJsonRepairText(policy, repairText, out var argumentsJson, out failureMessage))
+        if (!MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(policy, repairText, out var argumentsJson, out failureMessage))
         {
             return false;
         }
@@ -1405,515 +1024,6 @@ public sealed partial class MafAgentRuntime(
             succeeded: true,
             failureMessage: "Captured from a typed JSON required-finalizer repair response.");
         return true;
-    }
-
-    internal static bool TryNormalizeFinalizerJsonRepairText(
-        AgentFinalizerPolicy policy,
-        string? repairText,
-        out string argumentsJson,
-        out string failureMessage)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-
-        argumentsJson = string.Empty;
-        failureMessage = string.Empty;
-        if (!TryExtractJsonObject(repairText, out var rawJson))
-        {
-            failureMessage = "No JSON object was found in the repair response.";
-            return false;
-        }
-
-        if (TryNormalizeKnownFinalizerOutput(policy, rawJson, out argumentsJson, out failureMessage))
-        {
-            return true;
-        }
-
-        if (TryDeserializeFinalizerOutput(policy, rawJson, out argumentsJson, out failureMessage))
-        {
-            return true;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(rawJson);
-            if (document.RootElement.ValueKind == JsonValueKind.Object &&
-                document.RootElement.TryGetProperty("result", out var resultElement) &&
-                resultElement.ValueKind == JsonValueKind.Object)
-            {
-                var resultRawJson = resultElement.GetRawText();
-                if (TryNormalizeKnownFinalizerOutput(policy, resultRawJson, out argumentsJson, out failureMessage))
-                {
-                    return true;
-                }
-
-                if (TryDeserializeFinalizerOutput(policy, resultRawJson, out argumentsJson, out failureMessage))
-                {
-                    return true;
-                }
-            }
-        }
-        catch (JsonException exception)
-        {
-            failureMessage = exception.Message;
-        }
-
-        return false;
-    }
-
-    private static bool TryDeserializeFinalizerOutput(
-        AgentFinalizerPolicy policy,
-        string rawJson,
-        out string argumentsJson,
-        out string failureMessage)
-    {
-        argumentsJson = string.Empty;
-        failureMessage = string.Empty;
-
-        try
-        {
-            var output = JsonSerializer.Deserialize(rawJson, policy.OutputType, AgentOutputJson.SerializerOptions);
-            if (output is null)
-            {
-                failureMessage = "The JSON payload deserialized to null.";
-                return false;
-            }
-
-            argumentsJson = JsonSerializer.Serialize(output, policy.OutputType, AgentOutputJson.SerializerOptions);
-            return true;
-        }
-        catch (JsonException exception)
-        {
-            failureMessage = exception.Message;
-            return false;
-        }
-    }
-
-    private static bool TryNormalizeKnownFinalizerOutput(
-        AgentFinalizerPolicy policy,
-        string rawJson,
-        out string argumentsJson,
-        out string failureMessage)
-    {
-        argumentsJson = string.Empty;
-        failureMessage = string.Empty;
-
-        if (policy.OutputType == typeof(ProcessStepOutcomeResult))
-        {
-            return TryNormalizeProcessStepOutcomeResultJson(rawJson, out argumentsJson, out failureMessage);
-        }
-
-        return false;
-    }
-
-    private static bool TryNormalizeProcessStepOutcomeResultJson(
-        string rawJson,
-        out string argumentsJson,
-        out string failureMessage)
-    {
-        argumentsJson = string.Empty;
-        failureMessage = string.Empty;
-
-        try
-        {
-            if (JsonNode.Parse(rawJson) is not JsonObject jsonObject)
-            {
-                failureMessage = "The JSON payload was not an object.";
-                return false;
-            }
-
-            NormalizeStringArrayProperty(jsonObject, "evidenceRefs");
-            NormalizeStringArrayProperty(jsonObject, "nextActions");
-            NormalizeProcessStepOutcomeReason(jsonObject);
-
-            var output = jsonObject.Deserialize<ProcessStepOutcomeResult>(AgentOutputJson.SerializerOptions);
-            if (output is null)
-            {
-                failureMessage = "The normalized JSON payload deserialized to null.";
-                return false;
-            }
-
-            argumentsJson = JsonSerializer.Serialize(output, AgentOutputJson.SerializerOptions);
-            return true;
-        }
-        catch (JsonException exception)
-        {
-            failureMessage = exception.Message;
-            return false;
-        }
-    }
-
-    private static void NormalizeProcessStepOutcomeReason(JsonObject jsonObject)
-    {
-        if (TryReadNonEmptyStringProperty(jsonObject, "reason", out _))
-        {
-            return;
-        }
-
-        if (TryReadNonEmptyStringProperty(jsonObject, "humanReadableSummaryMarkdown", out var humanSummary) ||
-            TryReadNonEmptyStringProperty(jsonObject, "branchOutcomeTitle", out humanSummary))
-        {
-            jsonObject["reason"] = humanSummary;
-        }
-    }
-
-    private static bool TryReadNonEmptyStringProperty(
-        JsonObject jsonObject,
-        string propertyName,
-        out string value)
-    {
-        value = string.Empty;
-        if (!jsonObject.TryGetPropertyValue(propertyName, out var node))
-        {
-            return false;
-        }
-
-        value = ConvertJsonNodeToString(node).Trim();
-        return !string.IsNullOrWhiteSpace(value);
-    }
-
-    private static void NormalizeStringArrayProperty(JsonObject jsonObject, string propertyName)
-    {
-        if (!jsonObject.TryGetPropertyValue(propertyName, out var value) ||
-            value is not JsonArray values)
-        {
-            return;
-        }
-
-        var normalizedValues = new JsonArray();
-        foreach (var item in values)
-        {
-            var text = ConvertJsonNodeToString(item);
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                normalizedValues.Add(text);
-            }
-        }
-
-        jsonObject[propertyName] = normalizedValues;
-    }
-
-    private static string ConvertJsonNodeToString(JsonNode? node)
-    {
-        if (node is null)
-        {
-            return string.Empty;
-        }
-
-        if (node is JsonValue value)
-        {
-            return value.TryGetValue<string>(out var text)
-                ? text
-                : value.ToJsonString();
-        }
-
-        if (node is JsonObject jsonObject)
-        {
-            return string.Join(
-                "; ",
-                jsonObject.Select(property => $"{property.Key}: {ConvertJsonNodeToString(property.Value)}"));
-        }
-
-        if (node is JsonArray jsonArray)
-        {
-            return string.Join(", ", jsonArray.Select(ConvertJsonNodeToString));
-        }
-
-        return node.ToJsonString();
-    }
-
-    private static bool TryExtractJsonObject(
-        string? text,
-        out string rawJson)
-    {
-        rawJson = string.Empty;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        var trimmed = text.Trim();
-        if (trimmed.StartsWith("```", StringComparison.Ordinal))
-        {
-            var firstLineEnd = trimmed.IndexOf('\n');
-            var fenceEnd = trimmed.LastIndexOf("```", StringComparison.Ordinal);
-            if (firstLineEnd >= 0 && fenceEnd > firstLineEnd)
-            {
-                trimmed = trimmed[(firstLineEnd + 1)..fenceEnd].Trim();
-            }
-        }
-
-        if (trimmed.StartsWith('{') && trimmed.EndsWith('}'))
-        {
-            rawJson = trimmed;
-            return true;
-        }
-
-        var start = trimmed.IndexOf('{');
-        var end = trimmed.LastIndexOf('}');
-        if (start < 0 || end <= start)
-        {
-            return false;
-        }
-
-        rawJson = trimmed[start..(end + 1)].Trim();
-        return true;
-    }
-
-    internal static IReadOnlyList<AgentFinalizerInvocation> CreateEffectiveFinalizerInvocations(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentFinalizerMode finalizerMode,
-        IReadOnlyList<AgentFinalizerInvocation> capturedInvocations,
-        IReadOnlyList<AgentToolInvocationTrace> capturedToolInvocationTraces,
-        IReadOnlyList<AgentFinalizerInvocation> streamedInvocations,
-        IReadOnlyList<AgentFinalizerInvocation> synthesizedInvocations)
-    {
-        if (finalizerMode != AgentFinalizerMode.Required ||
-            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
-        {
-            return synthesizedInvocations.Count == 0
-                ? capturedInvocations
-                : capturedInvocations
-                    .Concat(synthesizedInvocations)
-                    .OrderBy(invocation => invocation.Sequence)
-                    .ToList();
-        }
-
-        var normalizedCapturedInvocations = AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, capturedInvocations);
-        if (IsValidFinalizerInvocationSet(policy, normalizedCapturedInvocations))
-        {
-            return normalizedCapturedInvocations;
-        }
-
-        if (TrySelectLastValidFinalizerInvocation(policy, capturedInvocations, out var capturedInvocation))
-        {
-            return [capturedInvocation];
-        }
-
-        var normalizedStreamedInvocations = AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, streamedInvocations);
-        if (IsValidFinalizerInvocationSet(policy, normalizedStreamedInvocations))
-        {
-            return normalizedStreamedInvocations;
-        }
-
-        if (TrySelectLastValidFinalizerInvocation(policy, streamedInvocations, out var streamedInvocation))
-        {
-            return [streamedInvocation];
-        }
-
-        var normalizedSynthesizedInvocations = AgentFinalizerInvocationNormalizer.NormalizeRequired(policy, synthesizedInvocations);
-        if (IsValidFinalizerInvocationSet(policy, normalizedSynthesizedInvocations))
-        {
-            return normalizedSynthesizedInvocations;
-        }
-
-        if (TrySelectLastValidFinalizerInvocation(policy, synthesizedInvocations, out var synthesizedInvocation))
-        {
-            return [synthesizedInvocation];
-        }
-
-        if (synthesizedInvocations.Count > 0)
-        {
-            return synthesizedInvocations;
-        }
-
-        if (capturedInvocations.Count > 0)
-        {
-            return capturedInvocations;
-        }
-
-        return streamedInvocations;
-    }
-
-    private static bool IsValidFinalizerInvocationSet(
-        AgentFinalizerPolicy policy,
-        IReadOnlyList<AgentFinalizerInvocation> invocations)
-    {
-        if (invocations.Count == 0)
-        {
-            return false;
-        }
-
-        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
-        return validation.Succeeded && validation.Output is not null;
-    }
-
-    private static bool TrySelectLastValidFinalizerInvocation(
-        AgentFinalizerPolicy policy,
-        IReadOnlyList<AgentFinalizerInvocation> invocations,
-        out AgentFinalizerInvocation invocation)
-    {
-        invocation = default!;
-        for (var index = invocations.Count - 1; index >= 0; index--)
-        {
-            var candidate = invocations[index];
-            var validation = new DefaultAgentFinalizerValidator().Validate(policy, [candidate]);
-            if (validation.Succeeded && validation.Output is not null)
-            {
-                invocation = candidate;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static IReadOnlyList<AgentToolInvocationTrace> CreateEffectiveToolInvocationTraces(
-        IReadOnlyList<AgentToolInvocationTrace> capturedToolInvocationTraces,
-        IReadOnlyList<AgentToolInvocationTrace> streamedToolInvocationTraces)
-    {
-        if (streamedToolInvocationTraces.Count == 0)
-        {
-            return capturedToolInvocationTraces;
-        }
-
-        var capturedToolNames = capturedToolInvocationTraces
-            .Select(trace => trace.ToolName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var missingStreamedTraces = streamedToolInvocationTraces
-            .Where(trace => !capturedToolNames.Contains(trace.ToolName))
-            .ToList();
-        if (missingStreamedTraces.Count == 0)
-        {
-            return capturedToolInvocationTraces;
-        }
-
-        return capturedToolInvocationTraces
-            .Concat(missingStreamedTraces)
-            .OrderBy(trace => trace.Sequence)
-            .ToList();
-    }
-
-    private static AgentFinalizerInvocation? TryCreateStreamedFinalizerInvocation(
-        AgentFinalizerPolicy policy,
-        ToolCallContent toolCall,
-        int sequence)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentNullException.ThrowIfNull(toolCall);
-
-        if (!policy.IsRequired ||
-            !string.Equals(ResolveToolName(toolCall), policy.ToolName, StringComparison.OrdinalIgnoreCase) ||
-            toolCall is not FunctionCallContent functionCall ||
-            functionCall.Arguments is null)
-        {
-            return null;
-        }
-
-        var payload = functionCall.Arguments.Count == 1 &&
-                      functionCall.Arguments.TryGetValue("result", out var result)
-            ? result
-            : functionCall.Arguments;
-        var argumentsJson = SerializeStreamedFinalizerPayload(payload);
-        if (string.IsNullOrWhiteSpace(argumentsJson))
-        {
-            return null;
-        }
-
-        return new AgentFinalizerInvocation(
-            policy.ToolName,
-            argumentsJson,
-            sequence);
-    }
-
-    private static string SerializeStreamedFinalizerPayload(object? payload)
-    {
-        return payload switch
-        {
-            null => "null",
-            JsonElement jsonElement => SerializeStreamedFinalizerJsonElement(jsonElement),
-            string text when TryUseRawJsonObjectOrArray(text, out var rawJson) => rawJson,
-            string text => JsonSerializer.Serialize(text, AgentOutputJson.SerializerOptions),
-            _ => JsonSerializer.Serialize(payload, AgentOutputJson.SerializerOptions)
-        };
-    }
-
-    private static string SerializeStreamedFinalizerJsonElement(JsonElement jsonElement)
-    {
-        if (jsonElement.ValueKind == JsonValueKind.String &&
-            TryUseRawJsonObjectOrArray(jsonElement.GetString(), out var rawJson))
-        {
-            return rawJson;
-        }
-
-        return jsonElement.GetRawText();
-    }
-
-    private static bool TryUseRawJsonObjectOrArray(string? text, out string rawJson)
-    {
-        rawJson = string.Empty;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        var trimmed = text.Trim();
-        if ((trimmed.StartsWith('{') && trimmed.EndsWith('}')) ||
-            (trimmed.StartsWith('[') && trimmed.EndsWith(']')))
-        {
-            rawJson = trimmed;
-            return true;
-        }
-
-        return false;
-    }
-
-    internal sealed class StreamedFinalizerInvocationRecorder(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentFinalizerMode finalizerMode)
-    {
-        private readonly object gate = new();
-        private readonly AgentFinalizerPolicy? policy = finalizerMode == AgentFinalizerMode.Required &&
-                                                        AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var resolvedPolicy)
-            ? resolvedPolicy
-            : null;
-        private readonly List<AgentFinalizerInvocation> finalizerInvocations = [];
-        private readonly List<AgentToolInvocationTrace> toolInvocationTraces = [];
-        private int nextSequence;
-
-        public void Record(ToolCallContent toolCall)
-        {
-            var sequence = Interlocked.Increment(ref nextSequence);
-            if (policy is null)
-            {
-                return;
-            }
-
-            var invocation = TryCreateStreamedFinalizerInvocation(policy, toolCall, sequence);
-            if (invocation is null)
-            {
-                return;
-            }
-
-            lock (gate)
-            {
-                finalizerInvocations.Add(invocation);
-                toolInvocationTraces.Add(new AgentToolInvocationTrace(
-                    policy.ToolName,
-                    ToolInvocationClassification.Read,
-                    sequence,
-                    DateTimeOffset.UtcNow,
-                    DateTimeOffset.UtcNow,
-                    Succeeded: true,
-                    FailureMessage: "Captured from a streamed required-finalizer tool call."));
-            }
-        }
-
-        public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
-        {
-            lock (gate)
-            {
-                return finalizerInvocations.ToList();
-            }
-        }
-
-        public IReadOnlyList<AgentToolInvocationTrace> SnapshotToolInvocationTraces()
-        {
-            lock (gate)
-            {
-                return toolInvocationTraces.ToList();
-            }
-        }
     }
 
     private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
@@ -3082,7 +2192,7 @@ public sealed partial class MafAgentRuntime(
 
     private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)
     {
-        var arguments = DeserializeArguments(record.ArgumentsJson);
+        var arguments = MafToolInvocationArgumentFormatter.DeserializeArguments(record.ArgumentsJson);
         ToolCallContent toolCall = record.ToolKind switch
         {
             "mcp" or "hosted-mcp" => new McpServerToolCallContent(record.CallId, record.ToolName, record.Details)
@@ -3121,7 +2231,7 @@ public sealed partial class MafAgentRuntime(
         return new PendingToolApprovalRecord(
             ApprovalId: request.RequestId ?? toolCall.CallId ?? Guid.NewGuid().ToString("N"),
             CallId: toolCall.CallId ?? string.Empty,
-            ToolName: ResolveToolName(toolCall),
+            ToolName: MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),
             ToolKind: toolKind,
             Details: details ?? string.Empty,
             ArgumentsJson: argumentsJson);
@@ -3145,10 +2255,10 @@ public sealed partial class MafAgentRuntime(
             Environment.NewLine,
             pendingApprovals.Select(item =>
             {
-                var argumentSummary = DescribeArguments(item.ArgumentsJson);
+                var argumentSummary = MafToolInvocationArgumentFormatter.DescribeArguments(item.ArgumentsJson);
                 return item.ToolKind == "mcp"
-                    ? $"- Approval required for MCP tool '{item.ToolName}' on server '{item.Details}'{FormatInlineArgumentSummary(argumentSummary)}."
-                    : $"- Approval required for tool '{item.ToolName}'{FormatInlineArgumentSummary(argumentSummary)}.";
+                    ? $"- Approval required for MCP tool '{item.ToolName}' on server '{item.Details}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}."
+                    : $"- Approval required for tool '{item.ToolName}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}.";
             }));
 
         return $"Approval is required before the run can continue.{Environment.NewLine}{summary}";
@@ -3184,7 +2294,7 @@ public sealed partial class MafAgentRuntime(
         }
 
         return agent.EnableBackgroundResponses
-            && SupportsBackgroundResponses(provider)
+            && MafRuntimeSessionBuilder.SupportsBackgroundResponses(provider)
             && response.ContinuationToken is not null;
     }
 
@@ -3195,7 +2305,7 @@ public sealed partial class MafAgentRuntime(
             .Select(content => content switch
             {
                 ToolApprovalRequestContent approval => approval.ToolCall?.CallId ?? approval.ToolCall?.ToString(),
-                ToolCallContent toolCall => toolCall.CallId ?? ResolveToolName(toolCall),
+                ToolCallContent toolCall => toolCall.CallId ?? MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),
                 _ => null
             })
             .Where(item => !string.IsNullOrWhiteSpace(item))
@@ -3237,22 +2347,6 @@ public sealed partial class MafAgentRuntime(
         public string ToolName { get; } = toolName;
     }
 
-    private static string ResolveToolName(ToolCallContent toolCall)
-    {
-        return toolCall switch
-        {
-            FunctionCallContent functionCall when !string.IsNullOrWhiteSpace(functionCall.Name) => functionCall.Name,
-            McpServerToolCallContent mcpToolCall when !string.IsNullOrWhiteSpace(mcpToolCall.Name) => mcpToolCall.Name,
-            _ => "Unnamed tool"
-        };
-    }
-
-    private static string ResolveToolCallKey(ToolCallContent toolCall)
-    {
-        return toolCall.CallId
-            ?? $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall)}";
-    }
-
     private sealed class RepeatedToolInvocationGuard
     {
         private readonly Dictionary<string, int> repeatedToolInvocationCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -3260,13 +2354,13 @@ public sealed partial class MafAgentRuntime(
 
         public void Guard(ToolCallContent toolCall)
         {
-            var toolName = ResolveToolName(toolCall);
+            var toolName = MafToolInvocationArgumentFormatter.ResolveToolName(toolCall);
             if (!ShouldGuardRepeatedToolInvocation(toolName))
             {
                 return;
             }
 
-            var signature = ResolveToolInvocationSignature(toolCall);
+            var signature = MafToolInvocationArgumentFormatter.ResolveToolInvocationSignature(toolCall);
             if (IsValidationToolInvocation(toolName))
             {
                 signature = $"{signature}|mutationGeneration={mutationGeneration}";
@@ -3300,137 +2394,4 @@ public sealed partial class MafAgentRuntime(
     private static bool IsMutationToolInvocation(string toolName)
         => AgentToolInvocationPolicyMetadata.IsMutationTool(toolName);
 
-    private static string ResolveToolInvocationSignature(ToolCallContent toolCall)
-    {
-        return $"{ResolveToolName(toolCall)}|{DescribeToolCallArguments(toolCall)}";
-    }
-
-    private static string DescribeToolInvocation(ToolCallContent toolCall)
-    {
-        var toolName = ResolveToolName(toolCall);
-        var arguments = DescribeToolCallArguments(toolCall);
-        return string.IsNullOrWhiteSpace(arguments)
-            ? $"Invoking tool '{toolName}'."
-            : $"Invoking tool '{toolName}' with {arguments}.";
-    }
-
-    private static string DescribeToolCallArguments(ToolCallContent toolCall)
-    {
-        return toolCall switch
-        {
-            FunctionCallContent functionCall => SummarizeArguments(functionCall.Arguments),
-            McpServerToolCallContent mcpToolCall => SummarizeArguments(mcpToolCall.Arguments),
-            _ => string.Empty
-        };
-    }
-
-    private static string DescribeArguments(string? argumentsJson)
-    {
-        return string.IsNullOrWhiteSpace(argumentsJson)
-            ? string.Empty
-            : FormatArgumentSummary(DeserializeArguments(argumentsJson));
-    }
-
-    private static string FormatInlineArgumentSummary(string argumentSummary)
-    {
-        return string.IsNullOrWhiteSpace(argumentSummary)
-            ? string.Empty
-            : $" with {argumentSummary}";
-    }
-
-    private static string SummarizeArguments(IDictionary<string, object?>? arguments)
-    {
-        if (arguments is null || arguments.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        return FormatArgumentSummary(arguments);
-    }
-
-    private static string FormatArgumentSummary(IEnumerable<KeyValuePair<string, object?>> arguments)
-    {
-        var parts = arguments
-            .Where(item => item.Value is not null)
-            .Select(item => $"{item.Key}={FormatArgumentValue(item.Value)}")
-            .ToList();
-
-        return parts.Count == 0
-            ? string.Empty
-            : string.Join(", ", parts);
-    }
-
-    private static string FormatArgumentValue(object? value)
-    {
-        if (value is null)
-        {
-            return "<null>";
-        }
-
-        var text = value switch
-        {
-            string stringValue => stringValue,
-            JsonElement jsonValue => jsonValue.ToString(),
-            _ => JsonSerializer.Serialize(value, SerializerOptions)
-        };
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "\"\"";
-        }
-
-        text = text.ReplaceLineEndings(" ").Trim();
-        if (text.Length > 120)
-        {
-            text = text[..120] + $"...#{ComputeStableHash(text)}";
-        }
-
-        return $"\"{text}\"";
-    }
-
-    private static string ComputeStableHash(string text)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
-        return Convert.ToHexString(bytes, 0, 6).ToLowerInvariant();
-    }
-
-    private static Dictionary<string, object?> DeserializeArguments(string? argumentsJson)
-    {
-        if (string.IsNullOrWhiteSpace(argumentsJson))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return [];
-            }
-
-            return document.RootElement.EnumerateObject()
-                .ToDictionary(property => property.Name, property => ConvertJsonValue(property.Value));
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
-
-    private static object? ConvertJsonValue(JsonElement value)
-    {
-        return value.ValueKind switch
-        {
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            JsonValueKind.String => value.GetString(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Number when value.TryGetInt64(out var longValue) => longValue,
-            JsonValueKind.Number when value.TryGetDouble(out var doubleValue) => doubleValue,
-            JsonValueKind.Array => value.EnumerateArray().Select(ConvertJsonValue).ToList(),
-            JsonValueKind.Object => value.EnumerateObject().ToDictionary(property => property.Name, property => ConvertJsonValue(property.Value)),
-            _ => value.ToString()
-        };
-    }
 }

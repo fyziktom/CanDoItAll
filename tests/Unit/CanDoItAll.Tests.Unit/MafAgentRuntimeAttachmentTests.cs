@@ -13,7 +13,7 @@ public sealed class MafAgentRuntimeAttachmentTests
     [Fact]
     public void CreateUserInputMessage_AddsImageAttachmentsAsDataContent()
     {
-        var message = MafAgentRuntime.CreateUserInputMessage(
+        var message = MafRuntimeSessionBuilder.CreateUserInputMessage(
             "Inspect the screenshot.",
             [TestImageAttachment]);
 
@@ -372,12 +372,6 @@ public sealed class MafAgentRuntimeAttachmentTests
         string prompt,
         AgentRuntimeExecutionOptions runtimeOptions)
     {
-        var method = typeof(MafAgentRuntime).GetMethod("CreatePromptInputMessages", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("CreatePromptInputMessages method was not found.");
-
-        var result = method.Invoke(null, [agent, provider, session, prompt, runtimeOptions])
-            ?? throw new InvalidOperationException("CreatePromptInputMessages did not return messages.");
-
-        return ((IEnumerable<ChatMessage>)result).ToList();
+        return MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, provider, session, prompt, runtimeOptions).ToList();
     }
 }

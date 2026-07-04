@@ -93,9 +93,9 @@ public sealed partial class MafAgentRuntime
                 $"Using provider image-analysis model '{model}' for request-scoped image attachment(s) because runtime model '{requestedModel}' is not vision-capable.");
         }
 
-        if (IsReasoningEffortConfiguredButTransportUnsupported(effectiveProvider, model, agent.ConfigurationJson))
+        if (MafModelParametersBuilder.IsReasoningEffortConfiguredButTransportUnsupported(effectiveProvider, model, agent.ConfigurationJson))
         {
-            throw new InvalidOperationException(BuildReasoningEffortUnsupportedTransportMessage(effectiveProvider, model));
+            throw new InvalidOperationException(MafModelParametersBuilder.BuildReasoningEffortUnsupportedTransportMessage(effectiveProvider, model));
         }
 
         EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions);
@@ -125,8 +125,8 @@ public sealed partial class MafAgentRuntime
                 $"Attached {runtimeOptions.FinalizerMode} finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
         }
 
-        var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider, runtimeOptions);
-        var chatOptions = CreateModelCompatibleChatOptions(
+        var frameworkManagedHistory = MafRuntimeSessionBuilder.ShouldUseFrameworkManagedHistory(agent, effectiveProvider, runtimeOptions);
+        var chatOptions = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
             effectiveProvider,
             model,
             (float)agent.Temperature,
@@ -136,7 +136,7 @@ public sealed partial class MafAgentRuntime
             agent.Instructions,
             finalizerCapture?.Policy,
             runtimeOptions.FinalizerMode,
-            ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
+            MafRuntimeSessionBuilder.ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
         chatOptions.AllowMultipleToolCalls = !capabilityState.HasApprovalTools;
 
         if (capabilityState.Tools.Count > 0)
@@ -171,7 +171,7 @@ public sealed partial class MafAgentRuntime
             capabilityState.AsyncDisposables,
             capabilityState.Disposables,
             capabilityState.HasApprovalTools,
-            ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
+            MafModelParametersBuilder.ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
             finalizerCapture,
             toolInvocationTraceRecorder,
             capabilityState.ContextContributionTraceCollector,
@@ -1127,7 +1127,7 @@ public sealed partial class MafAgentRuntime
               $"- Call `{finalizerPolicy.ToolName}` exactly once after all other significant tool work is complete.{Environment.NewLine}" +
               "- A normal assistant response without that finalizer tool is invalid for this run and will fail the execution even if the work itself succeeded." + Environment.NewLine +
               $"- The finalizer arguments are the authoritative machine output for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
-              BuildRequiredFinalizerArgumentInstructions(finalizerPolicy) +
+              MafFinalizerDriver.BuildRequiredFinalizerArgumentInstructions(finalizerPolicy) +
               (hasStructuredResponseFormat
                   ? $"- After the tool call, return exactly one JSON object matching the same `{finalizerPolicy.OutputContract.ContractKey}` schema through the configured structured response format.{Environment.NewLine}" +
                     "- Do not use Markdown, prose, code fences, or any extra text around the JSON object."
@@ -1136,22 +1136,6 @@ public sealed partial class MafAgentRuntime
         return string.IsNullOrWhiteSpace(instructions)
             ? finalizerInstructions.Trim()
             : instructions.TrimEnd() + finalizerInstructions;
-    }
-
-    private static string BuildRequiredFinalizerArgumentInstructions(AgentFinalizerPolicy finalizerPolicy)
-    {
-        if (!string.Equals(
-                finalizerPolicy.OutputContract.ContractKey,
-                AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Empty;
-        }
-
-        return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
-               "- The `result` object must include `status`, `reason`, `branchOutcomeKey`, `branchOutcomeTitle`, `evidenceRefs`, `nextActions`, and `humanReadableSummaryMarkdown`. Use `Completed`, `Blocked`, `Failed`, `WaitingApproval`, or `Refused` for `status`." + Environment.NewLine +
-               "- Do not copy placeholder evidence values. Evidence refs must be exact current-run refs already created or observed during this turn." + Environment.NewLine +
-               "- If `status` is `Completed`, `evidenceRefs` must contain at least one concrete current-run evidence reference. If no such evidence exists, return `Blocked` or `Failed` with a concrete `nextActions` entry instead of claiming completion." + Environment.NewLine;
     }
 
     private ScriptContentInspection ResolveScriptContentInspectionForPolicy(
@@ -1882,12 +1866,10 @@ public sealed partial class MafAgentRuntime
 
         private string CaptureJsonElement<TOutput>(JsonElement result, string message)
         {
-            var rawJson = result.ValueKind == JsonValueKind.String &&
-                          TryUseRawJsonObjectOrArray(result.GetString(), out var parsedRawJson)
-                ? parsedRawJson
+            var rawJson = result.ValueKind == JsonValueKind.String
+                ? result.GetString()
                 : result.GetRawText();
-            if (!TryNormalizeKnownFinalizerOutput(Policy, rawJson, out var argumentsJson, out var failureMessage) &&
-                !TryDeserializeFinalizerOutput(Policy, rawJson, out argumentsJson, out failureMessage))
+            if (!MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(Policy, rawJson, out var argumentsJson, out var failureMessage))
             {
                 throw new InvalidOperationException($"Finalizer payload for '{Policy.ToolName}' is invalid: {failureMessage}");
             }

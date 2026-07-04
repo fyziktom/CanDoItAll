@@ -574,14 +574,14 @@ public sealed class AgentFinalizerPolicyTests
             Tools = [unrelatedTool, finalizerTool]
         };
 
-        var resolvedTool = MafAgentRuntime.ResolveRequiredFinalizerTool(
+        var resolvedTool = MafFinalizerDriver.ResolveRequiredFinalizerTool(
             policy,
             [finalizerTool]);
-        MafAgentRuntime.ConfigureRequiredFinalizerRepairChatOptions(
+        MafFinalizerDriver.ConfigureRequiredFinalizerRepairChatOptions(
             chatOptions,
             policy,
             resolvedTool);
-        var repairOptions = MafAgentRuntime.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool);
+        var repairOptions = MafFinalizerDriver.CreateRequiredFinalizerRepairRunOptions(policy, resolvedTool);
 
         Assert.Same(finalizerTool, resolvedTool);
         Assert.False(chatOptions.AllowMultipleToolCalls);
@@ -626,12 +626,12 @@ public sealed class AgentFinalizerPolicyTests
         }
         """;
 
-        var directResult = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var directResult = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             directPayload,
             out var directJson,
             out var directFailure);
-        var wrappedResult = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var wrappedResult = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             wrappedPayload,
             out var wrappedJson,
@@ -674,7 +674,7 @@ public sealed class AgentFinalizerPolicyTests
         }
         """;
 
-        var result = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var result = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             payload,
             out var argumentsJson,
@@ -708,7 +708,7 @@ public sealed class AgentFinalizerPolicyTests
         }
         """;
 
-        var result = MafAgentRuntime.TryNormalizeFinalizerJsonRepairText(
+        var result = MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(
             policy,
             payload,
             out var argumentsJson,
@@ -727,7 +727,7 @@ public sealed class AgentFinalizerPolicyTests
     public void Streamed_finalizer_recorder_captures_complete_later_chunk_for_same_call()
     {
         var policy = CreatePolicy();
-        var recorder = new MafAgentRuntime.StreamedFinalizerInvocationRecorder(
+        var recorder = new MafFinalizerDriver.StreamedFinalizerInvocationRecorder(
             AgentStructuredOutputContracts.ProcessStepOutcomeResult,
             AgentFinalizerMode.Required);
         const string outcomeJson = """
@@ -837,7 +837,7 @@ public sealed class AgentFinalizerPolicyTests
             SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Repair produced a valid outcome."),
             Sequence: 2);
 
-        var effective = MafAgentRuntime.CreateEffectiveFinalizerInvocations(
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
             AgentStructuredOutputContracts.ProcessStepOutcomeResult,
             AgentFinalizerMode.Required,
             [invalidCaptured],
@@ -872,7 +872,7 @@ public sealed class AgentFinalizerPolicyTests
             SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Third valid outcome."),
             Sequence: 3);
 
-        var effective = MafAgentRuntime.CreateEffectiveFinalizerInvocations(
+        var effective = MafFinalizerDriver.CreateEffectiveFinalizerInvocations(
             AgentStructuredOutputContracts.ProcessStepOutcomeResult,
             AgentFinalizerMode.Required,
             [first, second, third],
@@ -896,8 +896,8 @@ public sealed class AgentFinalizerPolicyTests
         var policy = CreatePolicy();
         var previousText = "START-" + new string('x', 30_000) + "-TAIL";
 
-        var toolRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerRepairPrompt(policy, previousText);
-        var jsonRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerJsonRepairPrompt(policy, previousText);
+        var toolRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerRepairPrompt(policy, previousText);
+        var jsonRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerJsonRepairPrompt(policy, previousText);
 
         AssertBoundedRepairPrompt(toolRepairPrompt);
         AssertBoundedRepairPrompt(jsonRepairPrompt);
@@ -915,8 +915,8 @@ public sealed class AgentFinalizerPolicyTests
             "Primary write ref: artifacts/process-runs/run-001/steps/implementation-approach.md",
             "Completion rule: consolidate this slot into the primary managed ref first and include that exact primary ref in evidenceRefs before returning Completed.");
 
-        var toolRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerRepairPrompt(policy, null, repairContext);
-        var jsonRepairPrompt = MafAgentRuntime.BuildRequiredFinalizerJsonRepairPrompt(policy, null, repairContext);
+        var toolRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerRepairPrompt(policy, null, repairContext);
+        var jsonRepairPrompt = MafFinalizerDriver.BuildRequiredFinalizerJsonRepairPrompt(policy, null, repairContext);
 
         Assert.Contains("Do not submit a generic no-prior-evidence blocker", toolRepairPrompt, StringComparison.Ordinal);
         Assert.Contains("workspace_read_file", toolRepairPrompt, StringComparison.Ordinal);
@@ -943,7 +943,7 @@ public sealed class AgentFinalizerPolicyTests
                 IsGovernedProcessStep = true
             });
 
-        var useFrameworkHistory = MafAgentRuntime.ShouldUseFrameworkManagedHistory(
+        var useFrameworkHistory = MafRuntimeSessionBuilder.ShouldUseFrameworkManagedHistory(
             agent,
             provider,
             options);
@@ -982,10 +982,6 @@ public sealed class AgentFinalizerPolicyTests
     [Fact]
     public void Chat_completions_provider_ignores_reasoning_effort_configuration()
     {
-        var method = typeof(MafAgentRuntime).GetMethod(
-            "IsReasoningEffortConfiguredButTransportUnsupported",
-            BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("IsReasoningEffortConfiguredButTransportUnsupported method was not found.");
         var provider = CreateProvider(
             ProviderTransportKind.ChatCompletions,
             preferFrameworkManagedHistory: true) with
@@ -993,7 +989,10 @@ public sealed class AgentFinalizerPolicyTests
             ConfigurationJson = "{\"reasoningEffort\":\"medium\"}"
         };
 
-        var isUnsupported = Assert.IsType<bool>(method.Invoke(null, [provider, "gpt-5.4-mini", "{\"reasoningEffort\":\"high\"}"]));
+        var isUnsupported = MafModelParametersBuilder.IsReasoningEffortConfiguredButTransportUnsupported(
+            provider,
+            "gpt-5.4-mini",
+            "{\"reasoningEffort\":\"high\"}");
 
         Assert.False(isUnsupported);
     }

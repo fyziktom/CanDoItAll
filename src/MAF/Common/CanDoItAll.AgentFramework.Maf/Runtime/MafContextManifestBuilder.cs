@@ -1,23 +1,24 @@
 using System.Reflection;
 using CanDoItAll.AgentFramework.Models;
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal static class MafContextManifestBuilder
 {
-    private static AgentRuntimeContextAssemblyManifest CreateContextAssemblyManifest(
+    public static AgentRuntimeContextAssemblyManifest Create(
         AgentDefinition agent,
         ProviderProfile provider,
         string model,
         AgentRuntimeExecutionOptions runtimeOptions,
-        RuntimeBuildResult runtimeBuild,
+        IReadOnlyList<AITool> tools,
+        IReadOnlyList<AgentRuntimeContextManifestSource> contextSources,
+        IReadOnlyCollection<string> frameworkToolNames,
+        int contextProviderCount,
+        int runtimeToolProviderCount,
         IReadOnlyList<ChatMessage> inputMessages)
     {
-        var capabilityState = runtimeBuild.CapabilityState;
-        var toolCount = capabilityState?.Tools.Count ?? 0;
-        var toolSchemaChars = EstimateToolSchemaChars(capabilityState?.Tools ?? []);
+        var toolSchemaChars = EstimateToolSchemaChars(tools);
         var inputChars = inputMessages.Sum(message => message.Text?.Length ?? 0);
         var instructionChars = agent.Instructions?.Length ?? 0;
         var inputTokens = EstimateTokens(inputChars);
@@ -35,36 +36,33 @@ public sealed partial class MafAgentRuntime
         }
 
         sources.Add(AgentRuntimeContextManifestSource.Included(
-                AgentRuntimeContextSourceCategories.InputMessages,
-                "runtime-input",
-                "messages passed to Microsoft Agent Framework for this provider call",
-                inputMessages.Count,
-                inputChars));
+            AgentRuntimeContextSourceCategories.InputMessages,
+            "runtime-input",
+            "messages passed to Microsoft Agent Framework for this provider call",
+            inputMessages.Count,
+            inputChars));
 
-        if (capabilityState is not null)
+        sources.AddRange(contextSources);
+        foreach (var frameworkToolName in frameworkToolNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
         {
-            sources.AddRange(capabilityState.ContextSources);
-            foreach (var frameworkToolName in capabilityState.FrameworkToolNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
-            {
-                sources.Add(AgentRuntimeContextManifestSource.Included(
-                    AgentRuntimeContextSourceCategories.FrameworkTool,
-                    frameworkToolName,
-                    "framework tool exposed by an attached context provider",
-                    1,
-                    frameworkToolName.Length));
-            }
+            sources.Add(AgentRuntimeContextManifestSource.Included(
+                AgentRuntimeContextSourceCategories.FrameworkTool,
+                frameworkToolName,
+                "framework tool exposed by an attached context provider",
+                1,
+                frameworkToolName.Length));
         }
 
         var totals = new AgentRuntimeContextManifestTotals(
             InputMessageCount: inputMessages.Count,
             InputMessageChars: inputChars,
             InputMessageEstimatedTokens: inputTokens,
-            ToolCount: toolCount,
+            ToolCount: tools.Count,
             ToolSchemaEstimatedChars: toolSchemaChars,
             ToolSchemaEstimatedTokens: toolSchemaTokens,
-            ContextProviderCount: capabilityState?.ContextProviders.Count ?? 0,
-            FrameworkToolCount: capabilityState?.FrameworkToolNames.Count ?? 0,
-            RuntimeToolProviderCount: capabilityState?.RuntimeToolProviderDescriptors.Count ?? 0,
+            ContextProviderCount: contextProviderCount,
+            FrameworkToolCount: frameworkToolNames.Count,
+            RuntimeToolProviderCount: runtimeToolProviderCount,
             EstimatedInputTokens: sources.Sum(source => source.EstimatedTokens));
 
         return new AgentRuntimeContextAssemblyManifest(
@@ -84,10 +82,10 @@ public sealed partial class MafAgentRuntime
                 .ToList());
     }
 
-    private static int EstimateToolSchemaChars(IReadOnlyList<AITool> tools)
+    public static int EstimateToolSchemaChars(IReadOnlyList<AITool> tools)
         => tools.Sum(EstimateToolSchemaChars);
 
-    private static int EstimateToolSchemaChars(AITool tool)
+    public static int EstimateToolSchemaChars(AITool tool)
     {
         var name = tool.Name ?? string.Empty;
         var description = ResolvePublicStringProperty(tool, "Description") ?? string.Empty;

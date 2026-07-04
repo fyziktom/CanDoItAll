@@ -5,7 +5,7 @@ using OllamaSharp.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal static class MafModelParametersBuilder
 {
     private const string TemperatureParameterName = "temperature";
 
@@ -18,7 +18,7 @@ public sealed partial class MafAgentRuntime
         "not supported"
     ];
 
-    private static ChatOptions CreateModelCompatibleChatOptions(
+    public static ChatOptions CreateModelCompatibleChatOptions(
         ProviderProfile provider,
         string model,
         float? requestedTemperature,
@@ -68,7 +68,7 @@ public sealed partial class MafAgentRuntime
         return options;
     }
 
-    private static bool ShouldOmitTemperature(
+    public static bool ShouldOmitTemperature(
         ProviderProfile provider,
         string model,
         bool forceOmitTemperature)
@@ -81,7 +81,7 @@ public sealed partial class MafAgentRuntime
         return AgentProviderModelParameterPolicy.ShouldOmitTemperature(provider.Kind, model);
     }
 
-    private static bool ShouldRetryWithoutTemperature(
+    public static bool ShouldRetryWithoutTemperature(
         ProviderProfile provider,
         string model,
         Exception exception)
@@ -89,6 +89,48 @@ public sealed partial class MafAgentRuntime
         return AgentProviderModelParameterPolicy.IsOpenAiLikeProvider(provider.Kind) &&
                !ShouldOmitTemperature(provider, model, forceOmitTemperature: false) &&
                IsUnsupportedTemperatureException(exception);
+    }
+
+    public static string ResolveRuntimeModel(AgentDefinition agent, ProviderProfile provider)
+    {
+        return string.IsNullOrWhiteSpace(agent.Model)
+            ? provider.DefaultModel
+            : agent.Model;
+    }
+
+    public static string BuildTemperatureRetryMessage(string model)
+    {
+        return $"Provider rejected the configured temperature for model '{model}'. Retrying once without the temperature parameter.";
+    }
+
+    public static string BuildTemperatureOmittedMessage(string model)
+    {
+        return $"The runtime will omit temperature for model '{model}' and use the provider default.";
+    }
+
+    public static bool IsReasoningEffortConfiguredButTransportUnsupported(
+        ProviderProfile provider,
+        string model,
+        string? agentConfigurationJson)
+    {
+        if (provider.Transport == ProviderTransportKind.ChatCompletions)
+        {
+            return false;
+        }
+
+        return AgentProviderModelParameterPolicy.ResolveConfiguredReasoningEffort(
+                   provider.Kind,
+                   model,
+                   provider.ConfigurationJson,
+                   agentConfigurationJson ?? string.Empty) is not null &&
+               !AgentProviderModelParameterPolicy.CanApplyReasoningEffort(provider.Kind, provider.Transport, model);
+    }
+
+    public static string BuildReasoningEffortUnsupportedTransportMessage(
+        ProviderProfile provider,
+        string model)
+    {
+        return $"Provider '{provider.Name}' has reasoning effort configured for model '{model}', but the {provider.Transport} transport cannot apply it. Use the Responses transport for reasoning-capable OpenAI runs.";
     }
 
     private static bool IsUnsupportedTemperatureException(Exception exception)
@@ -131,47 +173,5 @@ public sealed partial class MafAgentRuntime
                 yield return currentException.Message;
             }
         }
-    }
-
-    private static string ResolveRuntimeModel(AgentDefinition agent, ProviderProfile provider)
-    {
-        return string.IsNullOrWhiteSpace(agent.Model)
-            ? provider.DefaultModel
-            : agent.Model;
-    }
-
-    private static string BuildTemperatureRetryMessage(string model)
-    {
-        return $"Provider rejected the configured temperature for model '{model}'. Retrying once without the temperature parameter.";
-    }
-
-    private static string BuildTemperatureOmittedMessage(string model)
-    {
-        return $"The runtime will omit temperature for model '{model}' and use the provider default.";
-    }
-
-    private static bool IsReasoningEffortConfiguredButTransportUnsupported(
-        ProviderProfile provider,
-        string model,
-        string? agentConfigurationJson)
-    {
-        if (provider.Transport == ProviderTransportKind.ChatCompletions)
-        {
-            return false;
-        }
-
-        return AgentProviderModelParameterPolicy.ResolveConfiguredReasoningEffort(
-                   provider.Kind,
-                   model,
-                   provider.ConfigurationJson,
-                   agentConfigurationJson ?? string.Empty) is not null &&
-               !AgentProviderModelParameterPolicy.CanApplyReasoningEffort(provider.Kind, provider.Transport, model);
-    }
-
-    private static string BuildReasoningEffortUnsupportedTransportMessage(
-        ProviderProfile provider,
-        string model)
-    {
-        return $"Provider '{provider.Name}' has reasoning effort configured for model '{model}', but the {provider.Transport} transport cannot apply it. Use the Responses transport for reasoning-capable OpenAI runs.";
     }
 }
