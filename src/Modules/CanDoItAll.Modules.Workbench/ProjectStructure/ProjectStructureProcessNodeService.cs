@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,16 @@ public sealed class ProjectStructureProcessNodeService(
     private const string RepositoryRootVariableName = "RepositoryRoot";
     private const string BranchNameVariableName = "BranchName";
     private const string SessionIdVariableName = "SessionId";
+    private const string AllowedOperationsVariableName = "AllowedOperations";
+    private const string OperationTargetScopeVariableName = "OperationTargetScope";
+    private const string ProcessStepAllowedOperationsVariableName = "ProcessStepAllowedOperations";
+    private const string ProcessStepTargetScopeVariableName = "ProcessStepTargetScope";
+    private const string ProcessStepAllowsProductMutationVariableName = "ProcessStepAllowsProductMutation";
+    private const string ProcessStepKindVariableName = ProcessRuntimeLaunchVariables.ProcessStepKind;
+    private const string ProcessStepSubprocessDefinitionKeyVariableName = ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey;
+    private const string AgentProcessStepAllowedOperationsVariableName = "agentProcessStepAllowedOperations";
+    private const string AgentProcessStepTargetScopeVariableName = "agentProcessStepTargetScope";
+    private const string AgentProcessStepAllowsProductMutationVariableName = "agentProcessStepAllowsProductMutation";
 
     private static readonly string[] OutputRootMetadataKeys =
     [
@@ -46,6 +57,68 @@ public sealed class ProjectStructureProcessNodeService(
         "targetPath",
         "repositoryRoot",
         "workspaceRoot"
+    ];
+
+    private static readonly string[] SubprocessReservedLaunchVariableKeys =
+    [
+        AllowedOperationsVariableName,
+        OperationTargetScopeVariableName,
+        ProcessStepAllowedOperationsVariableName,
+        ProcessStepTargetScopeVariableName,
+        ProcessStepAllowsProductMutationVariableName,
+        ProcessStepKindVariableName,
+        ProcessStepSubprocessDefinitionKeyVariableName,
+        AgentProcessStepAllowedOperationsVariableName,
+        AgentProcessStepTargetScopeVariableName,
+        AgentProcessStepAllowsProductMutationVariableName
+    ];
+
+    private static readonly string[] SubprocessDerivedScopeLaunchVariableKeys =
+    [
+        ProjectStructureContextSummaryVariableName,
+        "OutputRoot",
+        "ProductRoot",
+        "ExternalTargetRoot",
+        "OutputRootAlias",
+        "ProductRootAlias",
+        "WorkspaceAlias",
+        "ScopeSummary",
+        "ScopeBoundarySummary",
+        "ChildScopeMvp",
+        "SourceCitations",
+        "SourceOfTruth",
+        "DotNetSolutionFile",
+        "DotNetSolutionFileAlias",
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep
+    ];
+
+    private static readonly string[] ParentOutcomeTargetContextVariableKeys =
+    [
+        "OutputRoot",
+        "ProductRoot",
+        "ExternalTargetRoot",
+        "OutputRootAlias",
+        "ProductRootAlias",
+        "WorkspaceAlias",
+        "DotNetSolutionName",
+        "DotNetSolutionFile",
+        "DotNetSolutionFileAlias",
+        "DotNetSolutionFileCandidates",
+        "DotNetAppProjectName",
+        "DotNetAppProjectDirectory",
+        "DotNetTestProjectName",
+        "DotNetTestProjectDirectory",
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks,
+        ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep
     ];
 
     public async Task<ProjectStructureProcessNodeStartResult> StartAsync(
@@ -63,6 +136,81 @@ public sealed class ProjectStructureProcessNodeService(
             request,
             agent,
             cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> BuildProjectScopedLaunchVariablesAsync(
+        ProjectStructureProcessLaunchVariableBuildRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.ProjectId == Guid.Empty)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "ProjectIdRequired",
+                "Project id is required to build project-scoped process launch variables.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ProjectNodeId))
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "ProjectNodeIdRequired",
+                "Project node id is required to build project-scoped process launch variables.");
+        }
+
+        await using var scope = serviceScopeFactory.CreateAsyncScope();
+        var dependencies = ResolveScopedDependencies(scope.ServiceProvider);
+        var surface = await LoadSurfaceAsync(
+            dependencies.ProjectWorkbenchService,
+            request.ProjectId,
+            cancellationToken).ConfigureAwait(false);
+        var targetNode = surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, request.ProjectNodeId, StringComparison.Ordinal))
+            ?? throw new ProjectStructureAgentException(
+                404,
+                "ProjectStructureNodeNotFound",
+                $"Node '{request.ProjectNodeId}' was not found in project '{request.ProjectId:D}'.");
+
+        var processDefinitionId = request.ProcessDefinitionId?.Value ?? Guid.Empty;
+        var processDefinitionNodeId = processDefinitionId == Guid.Empty
+            ? "process-api"
+            : ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(processDefinitionId);
+        var definitionKey = FirstNonEmpty(
+            request.DefinitionKey,
+            processDefinitionId == Guid.Empty
+                ? string.Empty
+                : dependencies.ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
+        var agent = new ProjectStructureAgentContext(
+            AgentId: "process-api",
+            AgentName: string.IsNullOrWhiteSpace(request.RequestedBy) ? "Process API" : request.RequestedBy.Trim(),
+            MachineName: Environment.MachineName,
+            RepositoryRoot: string.Empty,
+            BranchName: string.Empty,
+            SessionId: $"process-api-{Guid.NewGuid():N}");
+        var derivedVariables = CreateVariables(
+            surface,
+            processNode: null,
+            processDefinitionNodeId,
+            processDefinitionId,
+            targetNode,
+            agent,
+            dependencies.LaunchVariableContributors,
+            definitionKey);
+        var variables = CopyLaunchVariables(request.Variables);
+
+        foreach (var item in derivedVariables)
+        {
+            variables[item.Key] = item.Value;
+        }
+
+        variables.TryAdd("LaunchSource", "process-api-project-structure");
+        if (!string.IsNullOrWhiteSpace(definitionKey))
+        {
+            variables.TryAdd("RequestedProcessDefinitionKey", definitionKey);
+        }
+
+        return variables;
     }
 
     private static async Task<ProjectStructureProcessNodeStartResult> StartAsync(
@@ -139,10 +287,11 @@ public sealed class ProjectStructureProcessNodeService(
                 $"Process definition node '{processDefinitionNodeId ?? nodeId}' is not linked from a project-structure source node.");
         }
 
+        var definitionKey = dependencies.ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId.Value));
         var launch = await dependencies.ProcessLaunchApplicationService
             .LaunchAsync(
                 new ProcessLaunchRequest(
-                    DefinitionKey: null,
+                    DefinitionKey: NormalizeOptional(definitionKey),
                     new ProcessDefinitionId(processDefinitionId.Value),
                     LiveRunProfileKey: null,
                     ProjectId: projectId,
@@ -157,7 +306,8 @@ public sealed class ProjectStructureProcessNodeService(
                         processDefinitionId.Value,
                         targetNode,
                         agent,
-                        dependencies.LaunchVariableContributors),
+                        dependencies.LaunchVariableContributors,
+                        definitionKey),
                     RunReadiness: request.RunHrMatch,
                     Execute: request.Execute),
                 cancellationToken)
@@ -308,6 +458,21 @@ public sealed class ProjectStructureProcessNodeService(
             parentStepId,
             definitionKey,
             request.LiveRunProfileKey);
+        if (await TryCreateStoppedBlockingSubprocessLaunchResultAsync(
+                dependencies,
+                projectId,
+                projectNode.Id,
+                parentRunId,
+                parentStepId,
+                parentAssignment,
+                definitionKey,
+                subprocessIdentityVariables,
+                request.IncludeLaunchPlan,
+                cancellationToken).ConfigureAwait(false) is { } stoppedBlockingChild)
+        {
+            return stoppedBlockingChild;
+        }
+
         var launch = await dependencies.ProcessLaunchApplicationService
             .FindExistingLaunchAsync(
                 new ProcessExistingLaunchLookupRequest(
@@ -382,6 +547,11 @@ public sealed class ProjectStructureProcessNodeService(
             ? $"/projects/{projectId:D}/processes/live?runId={routeRunId.Value:D}"
             : string.Empty;
         var expectedChildEvidenceRefs = BuildExpectedChildEvidenceRefs(childManagedArtifactRoot, launch.LaunchPlan);
+        var parentTargetContext = BuildParentOutcomeTargetContext(launchVariables);
+        var parentEvidenceRefs = expectedChildEvidenceRefs
+            .Concat(parentTargetContext.EvidenceRefs)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         return new ProjectStructureProcessSubprocessLaunchResult(
             projectId,
@@ -399,13 +569,130 @@ public sealed class ProjectStructureProcessNodeService(
             childManagedArtifactRoot,
             childStepsArtifactRoot,
             childLiveProcessesRoute,
-            expectedChildEvidenceRefs,
+            parentEvidenceRefs,
             warnings)
         {
-            ParentDeferredOutcomeInstruction = BuildParentDeferredOutcomeInstruction(launch.RunId),
-            ParentDeferredOutcomeJson = BuildParentDeferredOutcomeJson(launch.RunId, expectedChildEvidenceRefs, childLiveProcessesRoute)
+            ParentDeferredOutcomeInstruction = BuildParentOutcomeInstruction(launch.RunId, launch.Stage),
+            ParentDeferredOutcomeJson = BuildParentOutcomeJson(
+                launch.RunId,
+                launch.Stage,
+                definitionKey,
+                parentEvidenceRefs,
+                childLiveProcessesRoute,
+                parentTargetContext,
+                warnings)
         };
     }
+
+    private static async Task<ProjectStructureProcessSubprocessLaunchResult?> TryCreateStoppedBlockingSubprocessLaunchResultAsync(
+        ProjectStructureProcessNodeScopedDependencies dependencies,
+        Guid projectId,
+        string projectNodeId,
+        ProcessRunId parentRunId,
+        ProcessStepInstanceId parentStepId,
+        ProcessRuntimeStepAssignment parentAssignment,
+        string definitionKey,
+        IReadOnlyDictionary<string, string> subprocessIdentityVariables,
+        bool includeLaunchPlan,
+        CancellationToken cancellationToken)
+    {
+        var matchingAssignments = await dependencies.AssignmentStore
+            .FindByLaunchVariablesAsync(subprocessIdentityVariables, cancellationToken)
+            .ConfigureAwait(false);
+        foreach (var runGroup in matchingAssignments
+            .GroupBy(assignment => assignment.RunId)
+            .OrderByDescending(group => group.Max(assignment => assignment.CreatedAtUtc)))
+        {
+            var state = await dependencies.StateStore.LoadAsync(runGroup.Key, cancellationToken).ConfigureAwait(false);
+            if (state is null || !IsStoppedBlockingSubprocessStatus(state.Status))
+            {
+                continue;
+            }
+
+            var plan = await dependencies.PlanStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Blocked subprocess lookup found process run '{state.RunId}' with missing plan '{state.PlanId}'.");
+            var childAssignments = await dependencies.AssignmentStore
+                .LoadByRunAsync(state.RunId, cancellationToken)
+                .ConfigureAwait(false);
+            var childManagedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(state.RunId);
+            var childStepsArtifactRoot = $"{childManagedArtifactRoot}/steps";
+            var childLiveProcessesRoute = BuildScopedRunRoute(projectId, state.RunId);
+            var expectedChildEvidenceRefs = BuildExpectedChildEvidenceRefs(
+                childManagedArtifactRoot,
+                childAssignments.Select(assignment => assignment.StepKey));
+            var childLaunchVariables = runGroup
+                .OrderBy(assignment => assignment.CreatedAtUtc)
+                .Select(assignment => assignment.LaunchVariables)
+                .FirstOrDefault()
+                ?? new Dictionary<string, string>(StringComparer.Ordinal);
+            var parentTargetContext = BuildParentOutcomeTargetContext(childLaunchVariables);
+            var parentEvidenceRefs = expectedChildEvidenceRefs
+                .Concat(parentTargetContext.EvidenceRefs)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var warning = $"Subprocess launch did not start a replacement child because matching child process run '{state.RunId.Value:D}' is {state.Status}. Propagate that stopped child blocker with child run and evidence refs, or explicitly rework the child run before relaunch.";
+
+            return new ProjectStructureProcessSubprocessLaunchResult(
+                projectId,
+                projectNodeId,
+                parentRunId.ToString(),
+                parentStepId.ToString(),
+                parentAssignment.StepKey,
+                definitionKey,
+                plan.Definition.DefinitionId.Value,
+                state.PlanId.Value,
+                state.RunId.Value,
+                MapStoppedBlockingSubprocessStage(state.Status),
+                childLiveProcessesRoute,
+                includeLaunchPlan ? BuildStoppedSubprocessLaunchPlanSummary(plan, definitionKey, childAssignments, state.Status) : null,
+                childManagedArtifactRoot,
+                childStepsArtifactRoot,
+                childLiveProcessesRoute,
+                parentEvidenceRefs,
+                [warning])
+            {
+                ParentDeferredOutcomeInstruction = "Do not launch a replacement child for this parent step while the matching child run is stopped with blocker status. Submit ParentDeferredOutcomeJson exactly, or rework the stopped child run explicitly.",
+                ParentDeferredOutcomeJson = BuildParentStoppedChildOutcomeJson(state.RunId, state.Status, parentEvidenceRefs, childLiveProcessesRoute, parentTargetContext)
+            };
+        }
+
+        return null;
+    }
+
+    private static bool IsStoppedBlockingSubprocessStatus(ProcessRuntimeStatus status)
+        => status is ProcessRuntimeStatus.Blocked or ProcessRuntimeStatus.Failed;
+
+    private static string MapStoppedBlockingSubprocessStage(ProcessRuntimeStatus status)
+        => status == ProcessRuntimeStatus.Failed
+            ? ProcessLaunchStage.Failed.ToString()
+            : ProcessLaunchStage.Blocked.ToString();
+
+    private static string BuildScopedRunRoute(Guid projectId, ProcessRunId runId)
+        => $"/projects/{projectId:D}/processes/live?runId={runId.Value:D}";
+
+    private static object BuildStoppedSubprocessLaunchPlanSummary(
+        ProcessInstancePlan plan,
+        string definitionKey,
+        IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
+        ProcessRuntimeStatus status)
+        => new
+        {
+            planId = plan.Header.PlanId.Value,
+            definitionId = plan.Definition.DefinitionId.Value,
+            definitionKey,
+            status = status.ToString(),
+            steps = assignments
+                .OrderBy(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase)
+                .Select(assignment => new
+                {
+                    stepInstanceId = assignment.StepInstanceId.Value,
+                    stepKey = assignment.StepKey,
+                    roleKey = assignment.RoleKey,
+                    executorKind = assignment.ExecutorKind,
+                    executorId = assignment.ExecutorId
+                })
+                .ToArray()
+        };
 
     private static IReadOnlyDictionary<string, string> CreateSubprocessIdentityVariables(
         Guid projectId,
@@ -435,6 +722,13 @@ public sealed class ProjectStructureProcessNodeService(
     private static IReadOnlyList<string> BuildExpectedChildEvidenceRefs(
         string childManagedArtifactRoot,
         ProcessLaunchPlanView launchPlan)
+        => BuildExpectedChildEvidenceRefs(
+            childManagedArtifactRoot,
+            launchPlan.Steps.Select(step => step.StepKey));
+
+    private static IReadOnlyList<string> BuildExpectedChildEvidenceRefs(
+        string childManagedArtifactRoot,
+        IEnumerable<string> stepKeys)
     {
         if (string.IsNullOrWhiteSpace(childManagedArtifactRoot))
         {
@@ -447,49 +741,338 @@ public sealed class ProjectStructureProcessNodeService(
             $"{childManagedArtifactRoot}/steps"
         };
 
-        foreach (var step in launchPlan.Steps.Where(step => !string.IsNullOrWhiteSpace(step.StepKey)))
+        foreach (var stepKey in stepKeys.Where(stepKey => !string.IsNullOrWhiteSpace(stepKey)))
         {
-            evidenceRefs.Add($"{childManagedArtifactRoot}/steps/{step.StepKey}.md");
+            evidenceRefs.Add($"{childManagedArtifactRoot}/steps/{stepKey}.md");
         }
 
         return evidenceRefs;
     }
 
-    private static string BuildParentDeferredOutcomeInstruction(ProcessRunId? childRunId)
+    private static string BuildParentOutcomeInstruction(
+        ProcessRunId? childRunId,
+        ProcessLaunchStage childStage)
     {
         if (childRunId is null)
         {
-            return "No child run was started, so no parent deferral outcome is available.";
+            return "No child run was started, so no parent outcome is available.";
         }
 
-        return "If the child run is still active, call submit_process_step_outcome with ParentDeferredOutcomeJson exactly. Do not inspect child evidence or return a hand-written blocked result until the child run stops.";
+        return childStage switch
+        {
+            ProcessLaunchStage.Completed => "The matching child run is completed. Call submit_process_step_outcome with ParentDeferredOutcomeJson exactly to complete the parent step from child evidence. Do not launch a replacement child.",
+            ProcessLaunchStage.Blocked or ProcessLaunchStage.Failed => "The matching child run is stopped. Submit ParentDeferredOutcomeJson exactly to propagate the stopped child status, or explicitly rework that child before relaunch.",
+            _ => "If the child run is still active, call submit_process_step_outcome with ParentDeferredOutcomeJson exactly. Do not inspect child evidence or return a hand-written blocked result until the child run stops."
+        };
     }
 
-    private static string BuildParentDeferredOutcomeJson(
+    private static string BuildParentOutcomeJson(
         ProcessRunId? childRunId,
+        ProcessLaunchStage childStage,
+        string definitionKey,
         IReadOnlyList<string> expectedChildEvidenceRefs,
-        string childLiveProcessesRoute)
+        string childLiveProcessesRoute,
+        ParentOutcomeTargetContext targetContext,
+        IReadOnlyList<string> launchWarnings)
     {
         if (childRunId is null)
         {
-            return string.Empty;
+            return childStage is ProcessLaunchStage.Blocked or ProcessLaunchStage.Failed
+                ? BuildParentNoChildLaunchStoppedOutcomeJson(definitionKey, childStage, expectedChildEvidenceRefs, targetContext, launchWarnings)
+                : string.Empty;
         }
 
-        var childRunIdText = childRunId.Value.ToString();
-        var nextActions = string.IsNullOrWhiteSpace(childLiveProcessesRoute)
-            ? new[] { $"Wait for active child process run {childRunIdText} to produce required evidence." }
-            : new[] { $"Wait for active child process run {childRunIdText} to produce required evidence at {childLiveProcessesRoute}." };
+        var childRunIdValue = childRunId.Value;
+        return childStage switch
+        {
+            ProcessLaunchStage.Completed => BuildParentCompletedChildOutcomeJson(childRunIdValue, expectedChildEvidenceRefs, childLiveProcessesRoute, targetContext),
+            ProcessLaunchStage.Blocked => BuildParentStoppedChildOutcomeJson(
+                childRunIdValue,
+                ProcessRuntimeStatus.Blocked,
+                expectedChildEvidenceRefs,
+                childLiveProcessesRoute,
+                targetContext),
+            ProcessLaunchStage.Failed => BuildParentStoppedChildOutcomeJson(
+                childRunIdValue,
+                ProcessRuntimeStatus.Failed,
+                expectedChildEvidenceRefs,
+                childLiveProcessesRoute,
+                targetContext),
+            _ => BuildParentActiveChildOutcomeJson(childRunIdValue, expectedChildEvidenceRefs, childLiveProcessesRoute, targetContext)
+        };
+    }
+
+    private static string BuildParentNoChildLaunchStoppedOutcomeJson(
+        string definitionKey,
+        ProcessLaunchStage childStage,
+        IReadOnlyList<string> evidenceRefs,
+        ParentOutcomeTargetContext targetContext,
+        IReadOnlyList<string> launchWarnings)
+    {
+        var normalizedDefinitionKey = NormalizeOptional(definitionKey) ?? "mapped child process";
+        var targetSummary = BuildParentOutcomeTargetContextMarkdown(targetContext);
+        var warnings = launchWarnings
+            .Where(warning => !string.IsNullOrWhiteSpace(warning))
+            .Select(warning => warning.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var warningSummary = warnings.Length == 0
+            ? string.Empty
+            : $"{Environment.NewLine}{Environment.NewLine}Launch warnings:{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", warnings)}";
+        var summary = $"Mapped child process `{normalizedDefinitionKey}` launch returned `{childStage}` before a child run was started. Parent step is blocked until the child launch contract, readiness, or policy boundary is repaired.{warningSummary}";
         return JsonSerializer.Serialize(
             new
             {
                 status = "Blocked",
-                reason = $"Waiting for active child process run {childRunIdText} to finish and materialize required evidence.",
+                reason = $"Mapped child process launch for DefinitionKey {normalizedDefinitionKey} returned {childStage} without starting a child run. Repair the child launch contract, readiness findings, or policy boundary before retrying this parent step.{BuildParentOutcomeTargetContextReasonSuffix(targetContext)}{BuildLaunchWarningReasonSuffix(warnings)}",
+                branchOutcomeKey = string.Empty,
+                branchOutcomeTitle = string.Empty,
+                evidenceRefs,
+                nextActions = new[]
+                {
+                    $"Inspect launch readiness and policy findings for mapped child process DefinitionKey {normalizedDefinitionKey}.",
+                    "Retry the parent subprocess step after the child launch can create a child run."
+                },
+                humanReadableSummaryMarkdown = string.IsNullOrWhiteSpace(targetSummary)
+                    ? summary
+                    : $"{summary}{Environment.NewLine}{Environment.NewLine}{targetSummary}"
+            });
+    }
+
+    private static string BuildLaunchWarningReasonSuffix(IReadOnlyList<string> launchWarnings)
+    {
+        if (launchWarnings.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return $" Launch warnings: {string.Join(" ", launchWarnings)}";
+    }
+
+    private static string BuildParentCompletedChildOutcomeJson(
+        ProcessRunId childRunId,
+        IReadOnlyList<string> expectedChildEvidenceRefs,
+        string childLiveProcessesRoute,
+        ParentOutcomeTargetContext targetContext)
+    {
+        var childRunIdText = childRunId.Value.ToString("D");
+        var summary = string.IsNullOrWhiteSpace(childLiveProcessesRoute)
+            ? $"Child process run `{childRunIdText}` completed. Parent step is completed from child managed artifact evidence."
+            : $"Child process run `{childRunIdText}` completed at `{childLiveProcessesRoute}`. Parent step is completed from child managed artifact evidence.";
+        var targetSummary = BuildParentOutcomeTargetContextMarkdown(targetContext);
+        return JsonSerializer.Serialize(
+            new
+            {
+                status = "Completed",
+                reason = $"Child process run {childRunIdText} completed and produced managed child evidence for this parent step.{BuildParentOutcomeTargetContextReasonSuffix(targetContext)}",
+                branchOutcomeKey = string.Empty,
+                branchOutcomeTitle = string.Empty,
+                evidenceRefs = expectedChildEvidenceRefs,
+                nextActions = Array.Empty<string>(),
+                humanReadableSummaryMarkdown = string.IsNullOrWhiteSpace(targetSummary)
+                    ? summary
+                    : $"{summary}{Environment.NewLine}{Environment.NewLine}{targetSummary}"
+            });
+    }
+
+    private static string BuildParentActiveChildOutcomeJson(
+        ProcessRunId childRunId,
+        IReadOnlyList<string> expectedChildEvidenceRefs,
+        string childLiveProcessesRoute,
+        ParentOutcomeTargetContext targetContext)
+    {
+        var childRunIdText = childRunId.Value.ToString("D");
+        var nextActions = string.IsNullOrWhiteSpace(childLiveProcessesRoute)
+            ? new[] { $"Wait for active child process run {childRunIdText} to produce required evidence." }
+            : new[] { $"Wait for active child process run {childRunIdText} to produce required evidence at {childLiveProcessesRoute}." };
+        var targetSummary = BuildParentOutcomeTargetContextMarkdown(targetContext);
+        var summary = $"Waiting for active child process run `{childRunIdText}`. The parent step should be deferred until the child run is no longer active.";
+        return JsonSerializer.Serialize(
+            new
+            {
+                status = "Blocked",
+                reason = $"Waiting for active child process run {childRunIdText} to finish and materialize required evidence.{BuildParentOutcomeTargetContextReasonSuffix(targetContext)}",
                 branchOutcomeKey = string.Empty,
                 branchOutcomeTitle = string.Empty,
                 evidenceRefs = expectedChildEvidenceRefs,
                 nextActions,
-                humanReadableSummaryMarkdown = $"Waiting for active child process run `{childRunIdText}`. The parent step should be deferred until the child run is no longer active."
+                humanReadableSummaryMarkdown = string.IsNullOrWhiteSpace(targetSummary)
+                    ? summary
+                    : $"{summary}{Environment.NewLine}{Environment.NewLine}{targetSummary}"
             });
+    }
+
+    private static string BuildParentStoppedChildOutcomeJson(
+        ProcessRunId childRunId,
+        ProcessRuntimeStatus childStatus,
+        IReadOnlyList<string> expectedChildEvidenceRefs,
+        string childLiveProcessesRoute,
+        ParentOutcomeTargetContext targetContext)
+    {
+        var childRunIdText = childRunId.Value.ToString("D");
+        var nextActions = string.IsNullOrWhiteSpace(childLiveProcessesRoute)
+            ? new[] { $"Inspect stopped child process run {childRunIdText} and propagate its concrete blocker, or explicitly rework that child before relaunch." }
+            : new[] { $"Inspect stopped child process run {childRunIdText} at {childLiveProcessesRoute} and propagate its concrete blocker, or explicitly rework that child before relaunch." };
+        var targetSummary = BuildParentOutcomeTargetContextMarkdown(targetContext);
+        var summary = $"Child process run `{childRunIdText}` is `{childStatus}`. Propagate the stopped child blocker with evidence refs, or explicitly rework that child before relaunch.";
+        return JsonSerializer.Serialize(
+            new
+            {
+                status = "Blocked",
+                reason = $"Child process run {childRunIdText} is {childStatus}; this parent step must not launch a replacement child automatically.{BuildParentOutcomeTargetContextReasonSuffix(targetContext)}",
+                branchOutcomeKey = string.Empty,
+                branchOutcomeTitle = string.Empty,
+                evidenceRefs = expectedChildEvidenceRefs,
+                nextActions,
+                humanReadableSummaryMarkdown = string.IsNullOrWhiteSpace(targetSummary)
+                    ? summary
+                    : $"{summary}{Environment.NewLine}{Environment.NewLine}{targetSummary}"
+            });
+    }
+
+    private static ParentOutcomeTargetContext BuildParentOutcomeTargetContext(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        var facts = ParentOutcomeTargetContextVariableKeys
+            .Select(key => new ParentOutcomeTargetContextFact(key, ResolveLaunchVariable(launchVariables, key)))
+            .Where(fact => !string.IsNullOrWhiteSpace(fact.Value))
+            .ToArray();
+
+        var evidenceRefs = BuildParentOutcomeTargetEvidenceRefs(launchVariables)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new ParentOutcomeTargetContext(facts, evidenceRefs);
+    }
+
+    private static IReadOnlyList<string> BuildParentOutcomeTargetEvidenceRefs(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        var refs = new List<string>();
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "ProductRootAlias"));
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "OutputRootAlias"));
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "ExternalTargetAlias"));
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"));
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "WorkspaceAlias"));
+
+        var productRootAlias = ResolveLaunchVariable(launchVariables, "ProductRootAlias");
+        if (string.IsNullOrWhiteSpace(productRootAlias))
+        {
+            productRootAlias = ResolveLaunchVariable(launchVariables, "OutputRootAlias");
+        }
+
+        if (string.IsNullOrWhiteSpace(productRootAlias))
+        {
+            return refs;
+        }
+
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "DotNetSolutionFileAlias"));
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "DotNetAppProjectFileAlias"));
+        AddExternalTargetRef(refs, ResolveLaunchVariable(launchVariables, "DotNetTestProjectFileAlias"));
+
+        var solutionName = ResolveLaunchVariable(launchVariables, "DotNetSolutionName");
+        if (!string.IsNullOrWhiteSpace(solutionName))
+        {
+            refs.Add($"{productRootAlias}/{solutionName}.slnx");
+            refs.Add($"{productRootAlias}/{solutionName}.sln");
+        }
+
+        AddProjectFileRef(refs, productRootAlias, ResolveLaunchVariable(launchVariables, "DotNetAppProjectDirectory"), ResolveLaunchVariable(launchVariables, "DotNetAppProjectName"));
+        AddProjectFileRef(refs, productRootAlias, ResolveLaunchVariable(launchVariables, "DotNetTestProjectDirectory"), ResolveLaunchVariable(launchVariables, "DotNetTestProjectName"));
+
+        return refs;
+    }
+
+    private static void AddProjectFileRef(
+        ICollection<string> refs,
+        string productRootAlias,
+        string projectDirectory,
+        string projectName)
+    {
+        if (string.IsNullOrWhiteSpace(productRootAlias) ||
+            string.IsNullOrWhiteSpace(projectDirectory) ||
+            string.IsNullOrWhiteSpace(projectName))
+        {
+            return;
+        }
+
+        var relativeDirectory = TryCreateRelativePath(ResolveLaunchVariablePath(productRootAlias), projectDirectory);
+        var projectPath = string.IsNullOrWhiteSpace(relativeDirectory)
+            ? $"{productRootAlias}/{projectName}.csproj"
+            : $"{productRootAlias}/{NormalizePathSeparators(relativeDirectory)}/{projectName}.csproj";
+        refs.Add(projectPath);
+    }
+
+    private static string ResolveLaunchVariablePath(string value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().Replace("external-target/C/", "C:/", StringComparison.OrdinalIgnoreCase).Replace('/', Path.DirectorySeparatorChar);
+    }
+
+    private static string TryCreateRelativePath(string root, string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(path))
+            {
+                return string.Empty;
+            }
+
+            var relative = Path.GetRelativePath(root, path);
+            return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)
+                ? string.Empty
+                : relative;
+        }
+        catch (ArgumentException)
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string NormalizePathSeparators(string value)
+        => value.Replace('\\', '/').Trim('/');
+
+    private static void AddExternalTargetRef(ICollection<string> refs, string value)
+    {
+        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(value);
+        if (!string.IsNullOrWhiteSpace(alias) &&
+            alias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        {
+            refs.Add(alias);
+        }
+    }
+
+    private static string BuildParentOutcomeTargetContextReasonSuffix(ParentOutcomeTargetContext targetContext)
+        => targetContext.Facts.Count == 0
+            ? string.Empty
+            : " Grounded product-target launch variables are included in the parent handoff summary.";
+
+    private static string BuildParentOutcomeTargetContextMarkdown(ParentOutcomeTargetContext targetContext)
+    {
+        if (targetContext.Facts.Count == 0 && targetContext.EvidenceRefs.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("## Grounded product-target context");
+        foreach (var fact in targetContext.Facts)
+        {
+            builder.AppendLine(CultureInfo.InvariantCulture, $"- {fact.Key}: `{fact.Value}`");
+        }
+
+        if (targetContext.EvidenceRefs.Count > 0)
+        {
+            builder.AppendLine("- Product target refs for downstream validation:");
+            foreach (var evidenceRef in targetContext.EvidenceRefs)
+            {
+                builder.AppendLine(CultureInfo.InvariantCulture, $"  - `{evidenceRef}`");
+            }
+        }
+
+        builder.Append("Downstream QA should use the grounded product root alias or launch-variable native path for restore/build/test validation; the process artifact workspace `.` is not the product root.");
+        return builder.ToString();
     }
 
     private static async Task<ProjectStructureSurface> LoadSurfaceAsync(
@@ -515,6 +1098,8 @@ public sealed class ProjectStructureProcessNodeService(
         return new ProjectStructureProcessNodeScopedDependencies(
             serviceProvider.GetRequiredService<ProjectWorkbenchService>(),
             serviceProvider.GetRequiredService<ProcessLaunchApplicationService>(),
+            serviceProvider.GetRequiredService<ProcessDefinitionCatalogProjectionService>(),
+            serviceProvider.GetRequiredService<IProcessInstancePlanStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>(),
             serviceProvider.GetRequiredService<IProcessRuntimeStateStore>(),
             serviceProvider.GetServices<IProjectStructureProcessLaunchVariableContributor>().ToArray());
@@ -527,7 +1112,8 @@ public sealed class ProjectStructureProcessNodeService(
         Guid processDefinitionId,
         ProjectStructureNode targetNode,
         ProjectStructureAgentContext agent,
-        IEnumerable<IProjectStructureProcessLaunchVariableContributor> contributors)
+        IEnumerable<IProjectStructureProcessLaunchVariableContributor> contributors,
+        string? definitionKey)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -578,7 +1164,7 @@ public sealed class ProjectStructureProcessNodeService(
                 surface.ProjectId,
                 surface,
                 targetNode,
-                DefinitionKey: null,
+                definitionKey,
                 ProcessDefinitionId: processDefinitionId,
                 ParentRunId: null,
                 ParentStepId: null,
@@ -601,19 +1187,23 @@ public sealed class ProjectStructureProcessNodeService(
         ProjectStructureAgentContext agent,
         IEnumerable<IProjectStructureProcessLaunchVariableContributor> contributors)
     {
-        var variables = new Dictionary<string, string>(parentAssignment.LaunchVariables, StringComparer.Ordinal);
+        var variables = CopyInheritableSubprocessLaunchVariables(parentAssignment.LaunchVariables);
         if (request.Variables is not null)
         {
             foreach (var item in request.Variables)
             {
-                if (!string.IsNullOrWhiteSpace(item.Key))
+                var key = NormalizeOptional(item.Key);
+                if (key is not null &&
+                    !IsSubprocessReservedLaunchVariableKey(key) &&
+                    !IsSubprocessDerivedScopeLaunchVariableKey(key))
                 {
-                    variables[item.Key.Trim()] = NormalizeLaunchVariableValue(item.Value);
+                    variables[key] = NormalizeLaunchVariableValue(item.Value);
                 }
             }
         }
 
         variables[ProjectIdVariableName] = projectId.ToString("D");
+        variables["ProjectName"] = surface.ProjectName;
         variables[ProjectNodeIdVariableName] = projectNode.Id;
         variables[ProjectNodeTitleVariableName] = projectNode.Title;
         variables[ProjectNodeSubtitleVariableName] = projectNode.Subtitle;
@@ -636,10 +1226,26 @@ public sealed class ProjectStructureProcessNodeService(
         variables[BranchNameVariableName] = agent.BranchName;
         variables[SessionIdVariableName] = agent.SessionId;
 
+        var outputRoot = ResolveOutputRoot(surface, projectNode);
+        if (!string.IsNullOrWhiteSpace(outputRoot))
+        {
+            ApplyProductRootLaunchVariables(variables, outputRoot);
+        }
+
         var liveRunProfileKey = NormalizeOptional(request.LiveRunProfileKey);
         if (!string.IsNullOrWhiteSpace(liveRunProfileKey))
         {
             variables[SubprocessLiveRunProfileKeyVariableName] = liveRunProfileKey;
+        }
+
+        var contextSummary = BuildProjectStructureContextSummary(surface, projectNode);
+        if (!string.IsNullOrWhiteSpace(contextSummary))
+        {
+            variables[ProjectStructureContextSummaryVariableName] = contextSummary;
+        }
+        else
+        {
+            variables.Remove(ProjectStructureContextSummaryVariableName);
         }
 
         ApplyLaunchVariableContributors(
@@ -655,9 +1261,65 @@ public sealed class ProjectStructureProcessNodeService(
                 parentAssignment,
                 IsSubprocess: true),
             variables);
+        RemoveSubprocessReservedLaunchVariables(variables);
 
         return variables;
     }
+
+    private static Dictionary<string, string> CopyInheritableSubprocessLaunchVariables(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        var variables = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var item in launchVariables)
+        {
+            if (!IsSubprocessReservedLaunchVariableKey(item.Key) &&
+                !IsSubprocessDerivedScopeLaunchVariableKey(item.Key))
+            {
+                variables[item.Key] = item.Value;
+            }
+        }
+
+        return variables;
+    }
+
+    private static Dictionary<string, string> CopyLaunchVariables(
+        IReadOnlyDictionary<string, string>? launchVariables)
+    {
+        var variables = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (launchVariables is null)
+        {
+            return variables;
+        }
+
+        foreach (var item in launchVariables)
+        {
+            var key = NormalizeOptional(item.Key);
+            if (key is null)
+            {
+                continue;
+            }
+
+            variables[key] = NormalizeLaunchVariableValue(item.Value);
+        }
+
+        return variables;
+    }
+
+    private static void RemoveSubprocessReservedLaunchVariables(IDictionary<string, string> variables)
+    {
+        foreach (var key in variables.Keys
+            .Where(IsSubprocessReservedLaunchVariableKey)
+            .ToArray())
+        {
+            variables.Remove(key);
+        }
+    }
+
+    private static bool IsSubprocessReservedLaunchVariableKey(string key)
+        => SubprocessReservedLaunchVariableKeys.Contains(key.Trim(), StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsSubprocessDerivedScopeLaunchVariableKey(string key)
+        => SubprocessDerivedScopeLaunchVariableKeys.Contains(key.Trim(), StringComparer.OrdinalIgnoreCase);
 
     private static string NormalizeLaunchVariableValue(object? value)
     {
@@ -807,6 +1469,11 @@ public sealed class ProjectStructureProcessNodeService(
 
     private static bool IsVisualTargetAsset(ProjectStructureNode node)
     {
+        if (!ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(node))
+        {
+            return false;
+        }
+
         if (node.ObjectType != ProjectObjectType.ImageAsset)
         {
             return false;
@@ -844,7 +1511,12 @@ public sealed class ProjectStructureProcessNodeService(
         ProjectStructureNode focusNode)
     {
         var projectRootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(surface.ProjectId);
-        var childrenByParent = surface.Nodes
+        var contextNodes = surface.Nodes
+            .Where(node =>
+                string.Equals(node.Id, focusNode.Id, StringComparison.Ordinal) ||
+                ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(node))
+            .ToArray();
+        var childrenByParent = contextNodes
             .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
             .GroupBy(node => node.ParentId!, StringComparer.Ordinal)
             .ToDictionary(
@@ -881,7 +1553,7 @@ public sealed class ProjectStructureProcessNodeService(
             }
         }
 
-        foreach (var node in surface.Nodes.OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase))
+        foreach (var node in contextNodes.OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase))
         {
             Visit(node, 0);
         }
@@ -1115,10 +1787,23 @@ public sealed class ProjectStructureProcessNodeService(
             return string.Empty;
         }
 
-        var normalized = Regex.Replace(value, @"\s+", " ").Trim();
+        var normalized = RedactNonCitableContextPaths(Regex.Replace(value, @"\s+", " ").Trim());
         return normalized.Length <= maxLength
             ? normalized
             : normalized[..maxLength].TrimEnd() + "...";
+    }
+
+    private static string RedactNonCitableContextPaths(string value)
+    {
+        var withoutNativePaths = Regex.Replace(
+            value,
+            @"(?:file://[^\s""'<>]+|[A-Za-z]:\\[^\s""'<>|]+|\\\\[^\s""'<>|]+)",
+            "[storage-path]");
+        return Regex.Replace(
+            withoutNativePaths,
+            @"\b(?:artifacts/scopes|project-media|managed-files|tool-runs)[^\s""'<>]*",
+            "[storage-path]",
+            RegexOptions.IgnoreCase);
     }
 
     private static ProcessRunId ParseProcessRunId(string value)
@@ -1219,10 +1904,28 @@ public sealed class ProjectStructureProcessNodeService(
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
+    private sealed record ParentOutcomeTargetContext(
+        IReadOnlyList<ParentOutcomeTargetContextFact> Facts,
+        IReadOnlyList<string> EvidenceRefs);
+
+    private sealed record ParentOutcomeTargetContextFact(
+        string Key,
+        string Value);
+
     private sealed record ProjectStructureProcessNodeScopedDependencies(
         ProjectWorkbenchService ProjectWorkbenchService,
         ProcessLaunchApplicationService ProcessLaunchApplicationService,
+        ProcessDefinitionCatalogProjectionService ProcessDefinitionCatalogService,
+        IProcessInstancePlanStore PlanStore,
         IProcessRuntimeStepAssignmentStore AssignmentStore,
         IProcessRuntimeStateStore StateStore,
         IReadOnlyList<IProjectStructureProcessLaunchVariableContributor> LaunchVariableContributors);
 }
+
+public sealed record ProjectStructureProcessLaunchVariableBuildRequest(
+    Guid ProjectId,
+    string ProjectNodeId,
+    string? DefinitionKey,
+    ProcessDefinitionId? ProcessDefinitionId,
+    string RequestedBy,
+    IReadOnlyDictionary<string, string> Variables);

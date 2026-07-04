@@ -515,9 +515,12 @@ public sealed partial class MafAgentRuntime
                 ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,
                 ProcessStepAllowedOperations: auditScope?.ProcessStepAllowedOperations ?? [],
                 ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
+                ContextWorkspaceScopeKind: auditScope?.ContextWorkspaceScope?.Kind.ToString() ?? string.Empty,
+                ContextWorkspaceScopeKey: auditScope?.ContextWorkspaceScope?.Key ?? string.Empty,
                 InspectedScriptContent: scriptInspection.Content,
                 ScriptInspectionFailure: scriptInspection.FailureMessage,
-                ScriptSideEffectManifestJson: scriptSideEffectManifestJson)
+                ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
+                ToolInvocationTraces: toolInvocationTraceRecorder.Snapshot())
             {
                 SourceId = auditScope?.SourceId ?? string.Empty
             };
@@ -553,7 +556,7 @@ public sealed partial class MafAgentRuntime
                 runtimeToolOwnership?.ProviderKey ?? string.Empty,
                 policyDecision.Signature);
 
-            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification, runtimeToolOwnership);
+            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification, policyDecision.Signature, runtimeToolOwnership);
             var succeeded = false;
             var failureMessage = string.Empty;
             using var runtimeToolOwnershipScope = AgentRuntimeToolOwnershipContext.BeginScope(runtimeToolOwnership);
@@ -1773,6 +1776,7 @@ public sealed partial class MafAgentRuntime
         public int Start(
             string toolName,
             ToolInvocationClassification classification,
+            string signature,
             AgentRuntimeToolOwnership? runtimeToolOwnership)
         {
             lock (gate)
@@ -1788,7 +1792,8 @@ public sealed partial class MafAgentRuntime
                     FailureMessage: string.Empty)
                 {
                     RuntimeToolProviderKey = runtimeToolOwnership?.ProviderKey ?? string.Empty,
-                    RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty
+                    RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty,
+                    Signature = signature
                 });
                 return nextSequence;
             }

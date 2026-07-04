@@ -47,6 +47,12 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal("stdio", playwrightJson.RootElement.GetProperty("transport").GetString());
         Assert.Equal("npx", playwrightJson.RootElement.GetProperty("command").GetString());
         Assert.Equal("newlineDelimitedJson", playwrightJson.RootElement.GetProperty("messageFraming").GetString());
+        var playwrightArguments = playwrightJson.RootElement.GetProperty("arguments")
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToList();
+        Assert.Contains(playwrightArguments, item => item == "--yes");
+        Assert.Contains(playwrightArguments, item => item == "@playwright/mcp@latest");
         Assert.Contains(
             playwrightJson.RootElement.GetProperty("allowedTools").EnumerateArray(),
             item => item.GetString() == "browser_take_screenshot");

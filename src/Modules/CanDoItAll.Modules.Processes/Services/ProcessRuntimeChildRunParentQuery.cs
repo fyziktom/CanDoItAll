@@ -126,14 +126,19 @@ internal static class ProcessRuntimeChildRunParentQuery
                 item.Step.ActiveClaimToken == null &&
                 (item.Step.Status == ProcessRuntimeStepStatus.Waiting ||
                  item.Step.Status == ProcessRuntimeStepStatus.Blocked ||
-                 item.Step.Status == ProcessRuntimeStepStatus.Failed ||
-                 item.Step.Status == ProcessRuntimeStepStatus.Ready))
+                 item.Step.Status == ProcessRuntimeStepStatus.Failed))
             .Select(item => new ParentStep(item.RunId, item.Step.StepInstanceId))
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        var activeSiblingParentSteps = await LoadActiveSiblingParentStepsAsync(
+            dbContext,
+            childRunId,
+            cancellationToken).ConfigureAwait(false);
+
         return candidates
             .Distinct()
+            .Where(parentStep => !activeSiblingParentSteps.Contains(parentStep))
             .OrderBy(parentStep => parentStep.RunId)
             .ThenBy(parentStep => parentStep.StepInstanceId)
             .ToArray();
@@ -269,6 +274,32 @@ internal static class ProcessRuntimeChildRunParentQuery
             .Select(parentStep => parentStep!)
             .Distinct()
             .ToArray();
+    }
+
+    private static async Task<HashSet<ParentStep>> LoadActiveSiblingParentStepsAsync(
+        ProcessPersistenceDbContext dbContext,
+        Guid childRunId,
+        CancellationToken cancellationToken)
+    {
+        var activeChildLaunchVariables = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                state.RunId != childRunId &&
+                state.Status == ProcessRuntimeStatus.Active)
+            .Join(
+                dbContext.RuntimeStepAssignments.AsNoTracking(),
+                state => state.RunId,
+                assignment => assignment.RunId,
+                (state, assignment) => assignment.LaunchVariablesJson)
+            .Where(launchVariablesJson => launchVariablesJson.Contains(ParentRunKeySnippet))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return activeChildLaunchVariables
+            .Select(TryReadParentStep)
+            .Where(parentStep => parentStep is not null)
+            .Select(parentStep => parentStep!)
+            .ToHashSet();
     }
 
     private static Guid? TryReadParentRunId(string launchVariablesJson)

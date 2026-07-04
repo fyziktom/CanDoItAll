@@ -307,6 +307,37 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeProcessContext_external_action_project_structure_write_step_keeps_node_and_asset_create_tools()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.project-structure-provider"),
+            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            CreateProcessContextIntent(
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ExecuteExternalAction,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts));
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureRead, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate, toolNames);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate, toolNames);
+        Assert.DoesNotContain(AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart, toolNames);
+    }
+
+    [Fact]
     public async Task SB08_INV_MAF_ACCESS_002_runtime_provider_filter_uses_shared_policy_diagnostics()
     {
         var services = new ServiceCollection();
@@ -671,6 +702,51 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         Assert.Contains("workspace_dotnet_new", toolNames);
         Assert.Contains("workspace_write_file", toolNames);
         Assert.Contains("workspace_dotnet_build", toolNames);
+        Assert.Contains("workspace_pwsh_run_script", toolNames);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeProcessContext_mutating_product_step_keeps_configured_workspace_tools_when_catalog_contains_same_tool()
+    {
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var workspaceAccess = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(workspaceAccess));
+        var capabilities = LoadDefaultTemplateCapabilities(
+            "workspace-dotnet-new",
+            "workspace-pwsh-run-script",
+            "workspace-dotnet-build",
+            "workspace-write-file");
+        var processIntent = CreateProcessContextIntent(
+            ProcessOperationContractNames.ReadProjectStructure,
+            ProcessOperationContractNames.MutateProductTarget,
+            ProcessOperationContractNames.RunValidation,
+            ProcessOperationContractNames.WriteManagedProcessArtifacts);
+
+        var accessPlan = InvokeCreateRuntimeCapabilityAccessPlan(
+            runtime,
+            agent,
+            capabilities,
+            workspaceAccess,
+            processIntent);
+
+        var configuredTag = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityTag.Create("configured");
+        var initialAllowed = ReadInitialAllowedCapabilities(accessPlan);
+        Assert.Contains(initialAllowed, capability =>
+            capability.RuntimeToolName?.Value == "workspace_pwsh_run_script" &&
+            capability.Tags.Contains(configuredTag));
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            capabilities,
+            processIntent);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("workspace_dotnet_new", toolNames);
+        Assert.Contains("workspace_write_file", toolNames);
+        Assert.Contains("workspace_dotnet_build", toolNames);
+        Assert.Contains("workspace_pwsh_run_script", toolNames);
     }
 
     [Fact]

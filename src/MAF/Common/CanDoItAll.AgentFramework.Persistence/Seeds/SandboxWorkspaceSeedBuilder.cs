@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v26";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v30";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -80,7 +80,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 true,
                 true,
                 false,
-                SerializeConfiguration(new { history = "framework-managed" }),
+                SerializeConfiguration(new { history = "framework-managed", timeoutSeconds = 600 }),
                 "Chat-completions profile for local history, approvals, compaction, and workload-specific skill runs.",
                 "Not checked",
                 null,

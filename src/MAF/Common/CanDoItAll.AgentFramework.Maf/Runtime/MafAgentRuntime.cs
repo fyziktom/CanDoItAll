@@ -21,6 +21,7 @@ public sealed partial class MafAgentRuntime(
     private const int MaxRepeatedToolInvocationCount = 3;
     private const int MaxFinalizerRepairPreviousAssistantTextCharacters = 12_000;
     private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
+    private const string ProcessArtifactBranchOutcomeKeyLineKey = "Branch outcome key";
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly TimeSpan FinalizerSessionSerializationTimeout = TimeSpan.FromSeconds(5);
@@ -156,12 +157,13 @@ public sealed partial class MafAgentRuntime(
             await progressCallback(ExecutionState.Preparing, "Model parameters", BuildTemperatureOmittedMessage(runtimeBuild.Model));
         }
 
-        await progressCallback(ExecutionState.Preparing, "Session", ResolveSessionMessage(agent, runtimeBuild.Provider, session));
+        await progressCallback(ExecutionState.Preparing, "Session", ResolveSessionMessage(agent, runtimeBuild.Provider, session, runtimeOptions));
         var runtimeSession = await RestoreOrCreateSessionAsync(
             runtimeBuild.Agent,
             agent,
             runtimeBuild.Provider,
             session,
+            runtimeOptions,
             cancellationToken,
             isApprovalContinuation: false);
         var runOptions = CreateRunOptions(
@@ -303,6 +305,7 @@ public sealed partial class MafAgentRuntime(
             agent,
             runtimeBuild.Provider,
             session,
+            runtimeOptions,
             cancellationToken,
             isApprovalContinuation: true);
         var runOptions = CreateRunOptions(
@@ -458,6 +461,25 @@ public sealed partial class MafAgentRuntime(
                     out var finalizerPolicy))
             {
                 return null;
+            }
+
+            var recoveredArtifactResponse = await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
+                provider,
+                resolvedModel,
+                runtimeAgent,
+                runtimeSession,
+                runtimeSessionKey,
+                runtimeOptions,
+                finalizerPolicy,
+                updates,
+                ProviderUsageSourcePhases.FinalizerRecovery,
+                "The provider completed without the required finalizer after the current process step primary artifact was written.",
+                progressCallback,
+                cancellationToken,
+                snapshotEffectiveToolInvocationTraces).ConfigureAwait(false);
+            if (recoveredArtifactResponse is not null)
+            {
+                return AttachContextDiagnostics(recoveredArtifactResponse);
             }
 
             await progressCallback(
@@ -1370,6 +1392,9 @@ public sealed partial class MafAgentRuntime(
         var sequence = toolInvocationTraceRecorder.Start(
             policy.ToolName,
             ToolInvocationClassification.Read,
+            AgentToolInvocationPolicyMetadata.BuildSignature(
+                policy.ToolName,
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)),
             runtimeToolOwnership: null);
         synthesizedInvocations.Add(new AgentFinalizerInvocation(
             policy.ToolName,
@@ -1974,19 +1999,25 @@ public sealed partial class MafAgentRuntime(
         if ((!finalizerValidation.Succeeded || finalizerValidation.Output is null) &&
             finalizerInvocations.Count == 0)
         {
-            return await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
-                provider,
-                model,
-                runtimeAgent,
-                runtimeSession,
-                runtimeSessionKey,
-                runtimeOptions,
-                policy,
-                exception,
-                updates,
-                progressCallback,
-                cancellationToken,
-                snapshotToolInvocationTraces).ConfigureAwait(false);
+            if (IsProviderStreamingTimeout(exception))
+            {
+                return await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
+                    provider,
+                    model,
+                    runtimeAgent,
+                    runtimeSession,
+                    runtimeSessionKey,
+                    runtimeOptions,
+                    policy,
+                    updates,
+                    ProviderUsageSourcePhases.FinalizerRecovery,
+                    "Provider streaming timed out after the current process step primary artifact was written.",
+                    progressCallback,
+                    cancellationToken,
+                    snapshotToolInvocationTraces).ConfigureAwait(false);
+            }
+
+            return null;
         }
 
         if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
@@ -2047,14 +2078,14 @@ public sealed partial class MafAgentRuntime(
         string? runtimeSessionKey,
         AgentRuntimeExecutionOptions runtimeOptions,
         AgentFinalizerPolicy policy,
-        Exception exception,
         IReadOnlyList<AgentResponseUpdate> updates,
+        string usageSourcePhase,
+        string recoveryReason,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
     {
-        if (!IsProviderStreamingTimeout(exception) ||
-            policy.OutputType != typeof(ProcessStepOutcomeResult))
+        if (policy.OutputType != typeof(ProcessStepOutcomeResult))
         {
             return null;
         }
@@ -2121,8 +2152,8 @@ public sealed partial class MafAgentRuntime(
                 runtimeSession,
                 runtimeSessionKey,
                 updates,
-                ProviderUsageSourcePhases.FinalizerRecovery,
-                $"Provider streaming timed out after the current process step primary artifact '{primaryArtifactRef}' was written. The required finalizer was synthesized from that artifact."));
+                usageSourcePhase,
+                $"{recoveryReason} The required finalizer was synthesized from current process step primary artifact '{primaryArtifactRef}'."));
         if (recoveredResponse is null)
         {
             return null;
@@ -2131,7 +2162,7 @@ public sealed partial class MafAgentRuntime(
         await progressCallback(
             ExecutionState.Persisting,
             "Finalizer recovery",
-            $"Provider streaming timed out after current process step artifact '{primaryArtifactRef}' was written with status '{outcome.Status}'. Persisting a validated required-finalizer result synthesized from that artifact.").ConfigureAwait(false);
+            $"{recoveryReason} Persisting a validated required-finalizer result synthesized from current process step artifact '{primaryArtifactRef}' with status '{outcome.Status}'.").ConfigureAwait(false);
 
         var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
@@ -2171,18 +2202,47 @@ public sealed partial class MafAgentRuntime(
             return false;
         }
 
-        if (!TryReadProcessArtifactStatus(artifactMarkdown, out var status))
+        var statusWasDeclared = TryReadProcessArtifactStatus(artifactMarkdown, out var status, out var hasStatusLine);
+        if (!statusWasDeclared &&
+            hasStatusLine)
         {
-            failureMessage = "The primary process artifact does not contain a recognizable Status line.";
+            failureMessage = "The primary process artifact does not contain a recoverable Status line.";
+            return false;
+        }
+
+        if (!statusWasDeclared &&
+            !TryInferProcessArtifactStatus(artifactMarkdown, out status))
+        {
+            failureMessage = "The primary process artifact is empty or does not contain recoverable process outcome evidence.";
+            return false;
+        }
+
+        if (statusWasDeclared &&
+            status == ProcessStepOutcomeStatus.Blocked &&
+            IsStatusOnlyRecoveredBlockedArtifact(artifactMarkdown))
+        {
+            failureMessage = "The primary process artifact declares Blocked without concrete blocker evidence.";
+            return false;
+        }
+
+        if (!TryReadProcessArtifactBranchOutcomeKey(
+            artifactMarkdown,
+            out var branchOutcomeKey,
+            out var branchOutcomeFailure))
+        {
+            failureMessage = branchOutcomeFailure;
             return false;
         }
 
         var reason =
-            $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact declares status '{status}'.";
+            statusWasDeclared
+                ? $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact declares status '{status}'."
+                : $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact did not declare a Status line, so the runtime inferred status '{status}' from the artifact text.";
         outcome = new ProcessStepOutcomeResult
         {
             Status = status,
             Reason = reason,
+            BranchOutcomeKey = branchOutcomeKey,
             EvidenceRefs = [primaryArtifactRef],
             NextActions = CreateRecoveredProcessArtifactNextActions(status, primaryArtifactRef),
             HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(primaryArtifactRef, artifactMarkdown)
@@ -2221,9 +2281,11 @@ public sealed partial class MafAgentRuntime(
 
     private static bool TryReadProcessArtifactStatus(
         string artifactMarkdown,
-        out ProcessStepOutcomeStatus status)
+        out ProcessStepOutcomeStatus status,
+        out bool hasStatusLine)
     {
         status = default;
+        hasStatusLine = false;
         foreach (var rawLine in artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
         {
             var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
@@ -2239,10 +2301,193 @@ public sealed partial class MafAgentRuntime(
                 continue;
             }
 
+            hasStatusLine = true;
             return TryMapProcessArtifactStatus(line[(separatorIndex + 1)..], out status);
         }
 
         return false;
+    }
+
+    private static bool TryReadProcessArtifactBranchOutcomeKey(
+        string artifactMarkdown,
+        out string branchOutcomeKey,
+        out string failureMessage)
+    {
+        branchOutcomeKey = string.Empty;
+        failureMessage = string.Empty;
+        var declaredKeys = new HashSet<string>(StringComparer.Ordinal);
+        var lines = artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = NormalizeProcessArtifactMetadataLine(lines[index]);
+            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                if (!string.Equals(line, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (index + 1 >= lines.Length ||
+                    !TryAddProcessArtifactBranchOutcomeKey(
+                        NormalizeProcessArtifactBranchOutcomeKeyValue(NormalizeProcessArtifactMetadataLine(lines[index + 1])),
+                        declaredKeys,
+                        out failureMessage))
+                {
+                    failureMessage = string.IsNullOrWhiteSpace(failureMessage)
+                        ? "The primary process artifact contains an invalid Branch outcome key section."
+                        : failureMessage;
+                    return false;
+                }
+
+                continue;
+            }
+
+            var key = line[..separatorIndex].Trim(' ', '*', '`');
+            if (!string.Equals(key, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = NormalizeProcessArtifactBranchOutcomeKeyValue(line[(separatorIndex + 1)..]);
+            if (!TryAddProcessArtifactBranchOutcomeKey(value, declaredKeys, out failureMessage))
+            {
+                return false;
+            }
+        }
+
+        branchOutcomeKey = declaredKeys.SingleOrDefault() ?? string.Empty;
+        return true;
+    }
+
+    private static string NormalizeProcessArtifactMetadataLine(string value)
+        => value.Trim().TrimStart('#', '-', '*', ' ');
+
+    private static bool TryAddProcessArtifactBranchOutcomeKey(
+        string value,
+        ISet<string> declaredKeys,
+        out string failureMessage)
+    {
+        failureMessage = string.Empty;
+        if (!IsSafeProcessArtifactBranchOutcomeKey(value))
+        {
+            failureMessage = "The primary process artifact contains an invalid Branch outcome key line.";
+            return false;
+        }
+
+        declaredKeys.Add(value);
+        if (declaredKeys.Count <= 1)
+        {
+            return true;
+        }
+
+        failureMessage = "The primary process artifact contains multiple different Branch outcome key lines.";
+        return false;
+    }
+
+    private static string NormalizeProcessArtifactBranchOutcomeKeyValue(string value)
+    {
+        var trimmed = value.Trim().Trim('*', '`', '.', ';');
+        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
+        if (commentIndex >= 0)
+        {
+            trimmed = trimmed[..commentIndex].Trim();
+        }
+
+        return trimmed.Trim('*', '`', '.', ';');
+    }
+
+    private static bool IsSafeProcessArtifactBranchOutcomeKey(string value)
+        => !string.IsNullOrWhiteSpace(value) &&
+           char.IsLetterOrDigit(value[0]) &&
+           value.All(character => char.IsLetterOrDigit(character) || character is '-' or '_' or '.');
+
+    private static bool TryInferProcessArtifactStatus(
+        string artifactMarkdown,
+        out ProcessStepOutcomeStatus status)
+    {
+        status = default;
+        var text = artifactMarkdown.ReplaceLineEndings(" ").Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        if (ContainsAny(
+            text,
+            "waiting approval",
+            "approval required",
+            "pending approval",
+            "human approval"))
+        {
+            status = ProcessStepOutcomeStatus.WaitingApproval;
+            return true;
+        }
+
+        if (ContainsAny(
+            text,
+            "blocked",
+            "cannot proceed",
+            "unable to proceed",
+            "missing required",
+            "requires manager",
+            "manager action required",
+            "policydenied",
+            "permission denied",
+            "access denied",
+            "not authorized"))
+        {
+            status = ProcessStepOutcomeStatus.Blocked;
+            return true;
+        }
+
+        if (ContainsAny(
+            text,
+            "unrecoverable failure",
+            "unrecoverable error",
+            "execution failed",
+            "validation failed",
+            "failed to complete"))
+        {
+            status = ProcessStepOutcomeStatus.Failed;
+            return true;
+        }
+
+        status = ProcessStepOutcomeStatus.Completed;
+        return true;
+    }
+
+    private static bool ContainsAny(string text, params string[] values)
+        => values.Any(value => text.Contains(value, StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsStatusOnlyRecoveredBlockedArtifact(string artifactMarkdown)
+    {
+        var normalized = artifactMarkdown.Trim();
+        if (normalized.Length > 700)
+        {
+            return false;
+        }
+
+        return !ContainsAny(
+            normalized,
+            "PolicyDenied",
+            "denied",
+            "failed",
+            "failure",
+            "exception",
+            "error",
+            "cannot proceed",
+            "unable to proceed",
+            "missing",
+            "required tool",
+            "unavailable",
+            "approval",
+            "dependency",
+            "environment",
+            "boundary",
+            "evidence",
+            "receipt");
     }
 
     private static bool TryMapProcessArtifactStatus(
@@ -2250,13 +2495,7 @@ public sealed partial class MafAgentRuntime(
         out ProcessStepOutcomeStatus status)
     {
         status = default;
-        var normalized = new string(
-            value
-                .Trim()
-                .Trim('*', '`', '.', ';')
-                .Where(character => char.IsLetterOrDigit(character))
-                .Select(char.ToLowerInvariant)
-                .ToArray());
+        var normalized = NormalizeProcessArtifactStatusValue(value);
         status = normalized switch
         {
             "completed" or "complete" or "succeeded" or "success" => ProcessStepOutcomeStatus.Completed,
@@ -2271,6 +2510,22 @@ public sealed partial class MafAgentRuntime(
             "failed" or "failure" or
             "waitingapproval" or "pendingapproval" or
             "refused" or "rejected";
+    }
+
+    private static string NormalizeProcessArtifactStatusValue(string value)
+    {
+        var trimmed = value.Trim().Trim('*', '`', '.', ';');
+        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
+        if (commentIndex >= 0)
+        {
+            trimmed = trimmed[..commentIndex].Trim();
+        }
+
+        return new string(
+            trimmed
+                .Where(character => char.IsLetterOrDigit(character))
+                .Select(char.ToLowerInvariant)
+                .ToArray());
     }
 
     private static IReadOnlyList<string> CreateRecoveredProcessArtifactNextActions(

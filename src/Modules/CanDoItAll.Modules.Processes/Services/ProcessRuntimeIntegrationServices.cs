@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -131,7 +132,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 continue;
             }
 
-            var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role);
+            var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role, request.Variables);
             if (!ValidateStepOperationContract(templateStep, roleKey, role, findings, planStep.StepKey))
             {
                 continue;
@@ -144,12 +145,24 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             {
                 if (executorOverride is null)
                 {
-                    findings.Add(new ProcessLaunchReadinessFinding(
-                        ProcessLaunchReadinessSeverity.Error,
-                        "process.launch.agent_missing",
-                        FormatMissingAgentMessage(roleQuery, planStep.StepKey),
+                    var addedReadinessFailure = AddBestRoleFitReadinessFailure(
+                        findings,
+                        readinessRequest,
+                        agents,
+                        providerById,
+                        providerProfileService,
                         planStep.StepKey,
-                        roleKey));
+                        roleKey);
+
+                    if (!addedReadinessFailure)
+                    {
+                        findings.Add(new ProcessLaunchReadinessFinding(
+                            ProcessLaunchReadinessSeverity.Error,
+                            "process.launch.agent_missing",
+                            FormatMissingAgentMessage(roleQuery, planStep.StepKey),
+                            planStep.StepKey,
+                            roleKey));
+                    }
                 }
 
                 continue;
@@ -326,6 +339,54 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 bestMatch.ReadinessSummary);
     }
 
+    private static bool AddBestRoleFitReadinessFailure(
+        List<ProcessLaunchReadinessFinding> findings,
+        AgentProcessRoleReadinessRequest readinessRequest,
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService,
+        string stepKey,
+        string roleKey)
+    {
+        var bestFailure = agents
+            .Where(agent => !agent.IsTemplate && agent.Status == AgentLifecycleStatus.Active)
+            .Select(agent => ResolveReadinessFailure(agent, readinessRequest, providerById, providerProfileService))
+            .OfType<AgentReadinessFailure>()
+            .OrderByDescending(failure => failure.Readiness.Score)
+            .ThenBy(failure => failure.Agent.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        if (bestFailure is null)
+        {
+            return false;
+        }
+
+        AddReadinessFindings(findings, bestFailure.Readiness, stepKey, roleKey);
+        return true;
+    }
+
+    private static AgentReadinessFailure? ResolveReadinessFailure(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest readinessRequest,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService)
+    {
+        if (agent.ProviderProfileId is not { } providerId ||
+            !providerById.TryGetValue(providerId, out var provider) ||
+            !provider.IsEnabled ||
+            !ProcessProviderReadinessRules.CanExecuteGovernedProcessStep(provider, providerProfileService))
+        {
+            return null;
+        }
+
+        var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, readinessRequest);
+        return readiness.HasRoleFit &&
+               !readiness.IsExecutionReady &&
+               readiness.Findings.Any(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error)
+            ? new AgentReadinessFailure(agent, readiness)
+            : null;
+    }
+
     private static AgentProviderCandidate? ResolveOverrideAgent(
         ProcessLaunchExecutorOverride executorOverride,
         IReadOnlyList<AgentDefinition> agents,
@@ -385,7 +446,8 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         string stepKey,
         ProcessTemplateDefinitionStepDocument templateStep,
         string roleKey,
-        ProcessTemplateDefinitionRoleUsageDocument? role)
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        IReadOnlyDictionary<string, string> variables)
     {
         return new AgentProcessRoleReadinessRequest(
             stepKey,
@@ -394,7 +456,91 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             role?.RoleResourceKey ?? string.Empty,
             role?.DisplayName ?? roleKey,
             NormalizeOperations(templateStep.AllowedOperations),
-            NormalizeOptional(templateStep.OperationTargetScope));
+            NormalizeOptional(templateStep.OperationTargetScope),
+            ResolveLaunchRequiredRuntimeToolNames(variables, stepKey));
+    }
+
+    private static IReadOnlyList<string> ResolveLaunchRequiredRuntimeToolNames(
+        IReadOnlyDictionary<string, string> variables,
+        string stepKey)
+    {
+        if (variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, out var direct) &&
+            !string.IsNullOrWhiteSpace(direct))
+        {
+            return ParseLaunchRequiredRuntimeToolNames(direct);
+        }
+
+        if (!variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep, out var byStep) ||
+            string.IsNullOrWhiteSpace(byStep) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(byStep);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ParseLaunchRequiredRuntimeToolNames(property.Value);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<string> ParseLaunchRequiredRuntimeToolNames(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return ParseLaunchRequiredRuntimeToolNames(element.GetString() ?? string.Empty);
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()?.Trim() ?? string.Empty)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ParseLaunchRequiredRuntimeToolNames(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return ParseLaunchRequiredRuntimeToolNames(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return value
+                .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
     }
 
     private static bool ValidateStepOperationContract(
@@ -657,6 +803,10 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         string BindingRoleKey,
         IReadOnlyList<string> MatchKeys);
 
+    private sealed record AgentReadinessFailure(
+        AgentDefinition Agent,
+        AgentProcessRoleReadinessResult Readiness);
+
     private sealed record AgentProviderCandidate(
         AgentDefinition Agent,
         ProviderProfile Provider,
@@ -782,7 +932,107 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             NormalizeOperations(assignment.AllowedOperations),
             string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
                 ? string.Empty
-                : assignment.OperationTargetScope.Trim());
+                : assignment.OperationTargetScope.Trim(),
+            ResolveRequiredRuntimeToolNames(assignment.LaunchVariables, assignment.StepKey));
+    }
+
+    private static IReadOnlyList<string> ResolveRequiredRuntimeToolNames(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+    {
+        var direct = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return ParseRequiredRuntimeToolNames(direct);
+        }
+
+        var byStep = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep);
+        if (string.IsNullOrWhiteSpace(byStep) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(byStep);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ParseRequiredRuntimeToolNames(property.Value);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<string> ParseRequiredRuntimeToolNames(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return ParseRequiredRuntimeToolNames(element.GetString() ?? string.Empty);
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()?.Trim() ?? string.Empty)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ParseRequiredRuntimeToolNames(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return ParseRequiredRuntimeToolNames(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return value
+                .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+    }
+
+    private static string ResolveAssignmentLaunchVariable(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string key)
+    {
+        if (launchVariables.TryGetValue(key, out var exact) &&
+            !string.IsNullOrWhiteSpace(exact))
+        {
+            return exact.Trim();
+        }
+
+        return launchVariables
+            .Where(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
+            .Select(pair => pair.Value?.Trim() ?? string.Empty)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
 
     private static IReadOnlyList<string> NormalizeOperations(IReadOnlyList<string> operations)
@@ -832,6 +1082,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         var dependencyArtifactGuidance = BuildDependencyArtifactGuidance(request);
         var ownOutputBootstrapGuidance = BuildOwnOutputBootstrapGuidance(request);
         var projectStructureContextGuidance = BuildProjectStructureContextGuidance(request);
+        var productMutationGuidance = BuildProductMutationGuidance(request);
 
         return $"""
         {genericBrief}
@@ -839,10 +1090,15 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         AgentFramework execution contract:
         This is a tool-backed process step, not a chat-only response. First use the available workspace, project-structure, subprocess, runtime, validation, or browser tools needed by the step contract. Only after the required evidence exists, submit the final process_step_outcome_result through the required finalizer tool. If the runtime explicitly asks for a JSON fallback, return one JSON object matching that same contract.
         Use Status Completed when the step is done, Blocked when required input or tools are missing, Failed for unrecoverable execution failure, or WaitingApproval when a human approval is required.
-        If branch outcomes are listed, set BranchOutcomeKey to exactly one listed outcome key.
+        If branch outcomes are listed, set BranchOutcomeKey to exactly one listed outcome key. Selecting a branch outcome means the step completed its decision work, even when the selected branch sends downstream repair, recheck, escalation, rejection, or no-go work. Use Status Completed with BranchOutcomeKey for those evidence-backed branch decisions; use Status Blocked only when no branch can be selected because a concrete tool, input, permission, policy, approval, or environment boundary prevents the decision.
 
         AgentFramework manager escalation rule:
         If you are blocked by a missing or denied tool, permission, right, capability, workspace boundary, approval path, or policy contract, make the first nextActions entry a manager action request. Include the assigned agent name, step key, process run id, denied tool or right, allowed operations, operation target scope, and whether the manager should grant the right to this agent or reassign the step to an agent that already has it. Include the exact policy or tool denial text in Reason and in HumanReadableSummaryMarkdown; do not only say that you cannot proceed.
+        Do not return Blocked only because the required work has not been attempted yet. When the step has the needed operations and tools are available, use the tools now and return Blocked only after a current denied-tool receipt, missing mandatory input, explicit approval wait, policy boundary, or unrecoverable environment failure proves the step cannot proceed.
+        Current-run helper script ordering rule: before invoking workspace_pwsh_run_script or workspace_python_run_file for a managed helper script, create or overwrite that helper with workspace_write_file or workspace_append_file, verify the exact helper path with workspace_stat_path or workspace_read_file, then invoke the script execution tool. If a prior script invocation was denied because the helper path did not exist or could not be inspected, create or verify the helper and retry the script execution tool before returning Blocked.
+
+        AgentFramework evidence citation rule:
+        Cite a managed artifact ref, external-target alias, project-structure node id, source document id, or current-run tool receipt ref only when it is present in the current step brief, launch variables, required upstream artifact refs, current project-structure tool output, or a current-run tool receipt/readback. Do not put native absolute filesystem paths, scoped storage paths under artifacts/scopes/..., project-media file paths, managed-files paths, tool-runs stdout/stderr paths, or SourceDocLink values in managed artifact bodies, reason, summary, next actions, or evidenceRefs. A native or storage path-like value remains non-citable final evidence even when it appears in launch variables, project-structure context, source-document metadata, retry diagnostics, or previous failed attempts. Translate current product paths to external-target aliases. Cite source documents by stable document id, node id, or title instead of path-like storage refs. Do not say a source document was provided, inherited, or inspected unless one of those current-run sources contains the exact non-path source id or node id.
 
         Project-scoped launch context:
         Project id: {request.LaunchRequest.ProjectId?.ToString("D") ?? "not scoped"}
@@ -851,8 +1107,12 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         AgentFramework project-structure context source:
         {projectStructureContextGuidance}
 
+        AgentFramework product mutation gate:
+        {productMutationGuidance}
+
         AgentFramework evidence write rule:
-        Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths from this brief in evidenceRefs; if a workspace tool echoes a longer scoped storage path for the same artifact, keep the managed relative ref in evidenceRefs and use the scoped echo only as extra context. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
+        Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths from this brief in evidenceRefs; if a workspace tool echoes a longer scoped storage path for the same artifact, ignore that scoped echo in artifact prose and evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
+        Every primary managed Markdown artifact must include exactly one Status line near the top before step-specific sections: `Status: Completed`, `Status: Blocked`, `Status: Failed`, `Status: WaitingApproval`, or `Status: Refused`. Use the same status in the final process_step_outcome_result. When a branch outcome is selected, the artifact status and finalizer status must be `Completed`, with the branch key carrying the disposition. Include an exact `Branch outcome key: <listed-key>` line in the artifact for every selected branch outcome. These lines are part of the runtime recovery contract if the provider stream fails after writing evidence.
         If Produced artifact slots are listed, the first workspace mutation for that produced output must be workspace_write_file or workspace_append_file to the listed Primary write ref. Do not list, search, stat, or read this run's managed artifact root to discover your own missing output before that write. For intake, planning, scope, architecture, review, governance, or summary steps with no required upstream slot, write a managed Markdown artifact with assumptions and known gaps instead of blocking on optional context. Do not finalize Completed with an empty evidenceRefs array.
 
         AgentFramework own-output bootstrap:
@@ -884,15 +1144,16 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         {
             lines.Add("ProjectStructureContextSummary in Launch variables is the current project-structure context for this run; treat it as authoritative project-structure evidence when no richer project-structure tool result is required by the step.");
             lines.Add("When using project-structure as source context, treat authored requirement, brief, spec, target, and explicitly current-run managed artifacts as source evidence. Ignore generated process evidence from prior runs such as proof files, screenshots, logs, execution reports, validation reports, summaries, and handoff packets unless the current step names the exact current-run artifact ref. Listed visual target ImageAsset nodes remain binding design inputs.");
+            lines.Add("Path-like storage details in ProjectStructureContextSummary are lookup context only. Do not copy native absolute paths, scoped storage paths, project-media paths, managed-files paths, tool-runs paths, or SourceDocLink values from that summary into managed artifacts or final outcome fields.");
         }
         else if (canReadProjectStructure)
         {
             lines.Add("This step may read project structure, but no ProjectStructureContextSummary launch variable was supplied; use available project-structure tools or the supplied launch variables instead of inventing a managed file path.");
         }
 
-        if (TryResolveLaunchVariable(request.LaunchVariables, "DotNetScaffoldContract", out _))
+        if (request.LaunchVariables.Keys.Any(IsTypedLaunchContractVariableName))
         {
-            lines.Add("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts for .NET subprocesses; use them for app type, product root, scaffold layout, test project, and target framework decisions.");
+            lines.Add("Launch variables whose names end with Contract are typed project-structure facts for this process; use them for the specific scaffold, output, validation, and handoff decisions described by those variables.");
         }
 
         if (TryResolveLaunchVariable(request.LaunchVariables, "ProjectStructureContextSummary", out var contextSummary) &&
@@ -929,9 +1190,43 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         return string.Join(Environment.NewLine, lines);
     }
 
+    private static string BuildProductMutationGuidance(ProcessStepBriefBuildRequest request)
+    {
+        var allowedOperations = request.Step.AllowedOperations;
+        var targetScope = request.Step.OperationTargetScope;
+        if (!StepAllowsProductMutation(allowedOperations, targetScope))
+        {
+            return "This step is not allowed to mutate product files. Use read, validation, subprocess, browser, or managed-artifact tools according to its allowed operations.";
+        }
+
+        var aliases = ResolveLaunchExternalTargetAliases(request.LaunchVariables);
+        var aliasSummary = aliases.Count == 0
+            ? "No grounded external-target alias was resolved; use a tool-provided grounded product alias or return Blocked with the concrete missing target evidence."
+            : $"Use one of these grounded external-target aliases for structured product path arguments: {string.Join("; ", aliases)}.";
+        return $"""
+        This step is product-mutating. Before writing the final managed artifact or submitting Completed, produce a current-run successful product-target mutation receipt unless an earlier attempt for this same step already produced one and the product readback verifies the requested state.
+        {aliasSummary}
+        Product mutation receipts come from product-target tools such as workspace_write_file, workspace_append_file, workspace_copy_path, workspace_move_path, workspace_delete_path, workspace_dotnet_new, or workspace_pwsh_run_script when the request path or workingDirectory targets the grounded product alias. Writing only artifacts/process-runs/... is managed evidence, not product mutation.
+        After mutating, read or stat the changed product files and cite the concrete product refs and mutation/validation receipt refs in the primary managed artifact. Do not claim changed product files until those files exist under the grounded product target.
+        If a product-mutation tool is denied, missing, or cannot target the grounded product alias, return Blocked with that exact current-run tool receipt and manager action request instead of writing a status-only or false completion artifact.
+        """;
+    }
+
+    private static bool StepAllowsProductMutation(
+        IReadOnlyList<string> allowedOperations,
+        string targetScope)
+    {
+        return allowedOperations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase) ||
+               string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool ContainsVisualTargetAssetSummary(string contextSummary)
         => contextSummary.Contains("Visual target assets:", StringComparison.OrdinalIgnoreCase) ||
            contextSummary.Contains("Visual target rule:", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsTypedLaunchContractVariableName(string variableName)
+        => variableName.EndsWith("Contract", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryResolveLaunchVariable(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -1091,11 +1386,13 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         - Child definition snapshot name: {snapshotName}
         - Governed launch tool: {SubprocessLaunchToolName}
         - Completion rule: {launchInstruction}
+        - Mandatory-launch rule: for a mapped subprocess step with {ProcessOperationContractNames.ExecuteExternalAction}, do not write only a parent artifact and return Blocked because the child was not launched. If no active or stopped child run evidence is already available, your first non-read external action for this step must be {SubprocessLaunchToolName}.
+        - Parent-tool boundary rule: direct child-work tools are not required in the parent subprocess step. If {SubprocessLaunchToolName} is available, launch the child even when direct implementation, scaffold, validation, browser, or runtime tools are absent from the parent toolset; those tools belong to the child run.
         - Live-run profile rule: leave LiveRunProfileKey empty unless the launch variables explicitly provide a valid process live-run profile key for this child definition. BranchName, RepositoryRoot, SessionId, parent DefinitionKey, and child DefinitionKey are not live-run profile keys.
         - Scope rule: use the parent step's assigned project node. Leave ParentProjectNodeId empty unless the parent launch context has no project node. Do not pass ProcessRunNodeId as ParentProjectNodeId.
         - Retry rule: repeated launch-tool calls for the same parent run, parent step, project node, and child definition return the existing child run instead of creating another child.
         - Stopped-child rule: a Completed, Failed, Cancelled, or Blocked child run is not an active wait. Inspect stopped-child evidence, then complete from valid evidence, propagate concrete blocker/escalation evidence, or relaunch only when missing evidence is recoverable by another child attempt and the child did not stop Blocked. Do not return Blocked only because a stopped child run exists.
-        - Active-child defer rule: when the launch tool result has RunId and Stage Running, call submit_process_step_outcome with ParentDeferredOutcomeJson exactly if that field is present. Do not inspect child evidence or write a hand-authored blocked finalizer while the child run is active; the process runtime will defer the parent step until the child run stops.
+        - Parent child-outcome rule: when the launch tool result has RunId and ParentDeferredOutcomeJson, call submit_process_step_outcome with that JSON exactly. For Stage Running this defers the parent step until the child run stops; for Stage Completed it completes the parent from child evidence; for stopped-child stages it propagates the stopped child status. Do not hand-author a different finalizer for the same child run.
         - Evidence rule: the launch tool result includes ChildManagedArtifactRoot, ChildStepsArtifactRoot, ChildLiveProcessesRoute, ExpectedChildEvidenceRefs, ParentDeferredOutcomeInstruction, and ParentDeferredOutcomeJson. Treat artifacts under ChildManagedArtifactRoot as the child evidence bundle; do not require child evidence to be copied into the parent run root. ExpectedChildEvidenceRefs are preferred lookup candidates after the child run is stopped, not an all-or-nothing checklist while it is still active; if one expected ref is missing after the child stops, inspect sibling files under ChildManagedArtifactRoot and child step directories before blocking.
         """;
     }
@@ -1106,8 +1403,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
     IAgentReferenceDataProvider agentReferenceDataProvider,
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeStateStore stateStore,
-    IWorkspaceFileService workspaceFiles) : IProcessExecutionAdapter
+    IWorkspaceFileService workspaceFiles,
+    IEnumerable<IProcessSubprocessLaunchCoordinator>? subprocessLaunchCoordinators = null) : IProcessExecutionAdapter
 {
+    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
+
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
 
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
@@ -1136,6 +1436,24 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             throw new ProcessRuntimeDispatchDeferredException(
                 $"Step '{assignment.StepKey}' is waiting for active child process run '{existingPendingChildRunId}'.",
                 existingPendingChildRunId);
+        }
+
+        if (await TryResolveExistingCompletedChildOutcomeAsync(
+                assignment,
+                assignmentStore,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } completedChildOutcome)
+        {
+            return CompleteSynthesizedSubprocessOutcome(assignment, completedChildOutcome);
+        }
+
+        if (await TryLaunchMappedSubprocessAsync(
+                assignment,
+                assignmentStore,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } launchedSubprocessResult)
+        {
+            return launchedSubprocessResult;
         }
 
         if (!string.Equals(assignment.ExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase) ||
@@ -1203,6 +1521,15 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 throw CreatePendingChildRunDeferredException(assignment, pendingChildRunAfterExecution);
             }
 
+            if (await TryResolveExistingCompletedChildOutcomeAsync(
+                    assignment,
+                    assignmentStore,
+                    stateStore,
+                    cancellationToken).ConfigureAwait(false) is { } completedChildOutcomeAfterExecution)
+            {
+                return CompleteSynthesizedSubprocessOutcome(assignment, completedChildOutcomeAfterExecution);
+            }
+
             if (TryBuildRetryableAgentTransientExecutionIssue(assignment, result, out var transientExecutionIssue))
             {
                 return NeedsManagerForCompletionIssue(
@@ -1223,13 +1550,14 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                     validation.RawOutputHash);
             }
 
-            if (await TryResolvePendingChildRunAsync(
+            if (await TryResolveDeferredOrCompletedSubprocessOutputAsync(
                     assignment,
                     validation.Output,
+                    assignmentStore,
                     stateStore,
-                    cancellationToken).ConfigureAwait(false) is { } pendingChildRunId)
+                    cancellationToken).ConfigureAwait(false) is { } subprocessResult)
             {
-                throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
+                return subprocessResult;
             }
 
             var executionDetail = await workspaceService
@@ -1246,11 +1574,40 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 return NeedsManagerForCompletionIssue(assignment, validation.RawOutputHash, materializationIssue);
             }
 
+            if (await TryResolveDeferredOrCompletedSubprocessOutputAsync(
+                    assignment,
+                    materialization.Output,
+                    assignmentStore,
+                    stateStore,
+                    cancellationToken).ConfigureAwait(false) is { } materializedSubprocessResult)
+            {
+                return materializedSubprocessResult;
+            }
+
+            var completionToolReceipts = await LoadStepCompletionToolReceiptsAsync(
+                    workspaceService,
+                    assignment,
+                    result.ExecutionRunId,
+                    materialization.ToolReceipts,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (ValidateManagedArtifactBodyReferences(
+                    assignment,
+                    materialization.Output,
+                    completionToolReceipts) is { } ungroundedArtifactReferenceIssue)
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    validation.RawOutputHash,
+                    ungroundedArtifactReferenceIssue);
+            }
+
             return ToAdapterResult(
                 assignment,
                 materialization.Output,
                 validation.RawOutputHash,
-                materialization.ToolReceipts);
+                completionToolReceipts);
         }
         catch (ProcessRuntimeDispatchDeferredException)
         {
@@ -1297,12 +1654,261 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         }
     }
 
+    private async ValueTask<ProcessExecutionAdapterResult?> TryLaunchMappedSubprocessAsync(
+        ProcessRuntimeStepAssignment assignment,
+        IProcessRuntimeStepAssignmentStore assignmentStore,
+        IProcessRuntimeStateStore stateStore,
+        CancellationToken cancellationToken)
+    {
+        if (!RequiresSubprocessLaunch(assignment))
+        {
+            return null;
+        }
+
+        if (!ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessDefinitionKey(
+                assignment.LaunchVariables,
+                out var subprocessDefinitionKey))
+        {
+            var issue = CreateSubprocessLaunchDefinitionMissingIssue(assignment);
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                ComputeHash(issue.Evidence),
+                issue);
+        }
+
+        if (subprocessLaunchCoordinators?.FirstOrDefault() is not { } coordinator)
+        {
+            var issue = CreateSubprocessLaunchCoordinatorUnavailableIssue(assignment, subprocessDefinitionKey);
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                ComputeHash(issue.Evidence),
+                issue);
+        }
+
+        var launch = await coordinator
+            .TryLaunchAsync(
+                new ProcessSubprocessLaunchCoordinatorRequest(
+                    assignment,
+                    subprocessDefinitionKey),
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (launch is null)
+        {
+            var issue = CreateSubprocessLaunchNotHandledIssue(assignment, subprocessDefinitionKey);
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                ComputeHash(issue.Evidence),
+                issue);
+        }
+
+        if (launch.ChildRunId is { } childRunId &&
+            IsActiveSubprocessLaunchStage(launch.Stage))
+        {
+            throw CreatePendingChildRunDeferredException(assignment, childRunId);
+        }
+
+        var rawOutputHash = ComputeHash(
+            $"{assignment.RunId}:{assignment.StepInstanceId}:coordinated-subprocess-launch:{launch.DefinitionKey}:{launch.ChildRunId}:{launch.Stage}:{launch.ParentDeferredOutcomeJson}");
+        if (string.IsNullOrWhiteSpace(launch.ParentDeferredOutcomeJson))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                CreateSubprocessLaunchCoordinatorMissingOutcomeIssue(assignment, launch));
+        }
+
+        var validation = AgentOutputJson.DeserializeAndValidate(
+            launch.ParentDeferredOutcomeJson,
+            new ProcessStepOutcomeValidator());
+        if (!validation.Succeeded || validation.Output is null)
+        {
+            return Failed(
+                "process.adapter.subprocess_launch_output_invalid",
+                FormatValidationErrors(validation.Validation.Errors),
+                validation.RawOutputHash);
+        }
+
+        if (await TryResolveDeferredOrCompletedSubprocessOutputAsync(
+                assignment,
+                validation.Output,
+                assignmentStore,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } subprocessResult)
+        {
+            return subprocessResult;
+        }
+
+        return ToAdapterResult(
+            assignment,
+            validation.Output,
+            validation.RawOutputHash,
+            [CreateCoordinatedSubprocessLaunchReceipt(assignment, launch)]);
+    }
+
+    private static bool IsActiveSubprocessLaunchStage(string stage)
+    {
+        return !Enum.TryParse<ProcessLaunchStage>(stage, ignoreCase: true, out var parsed) ||
+               parsed is ProcessLaunchStage.Running or ProcessLaunchStage.Planned;
+    }
+
+    private ProcessExecutionAdapterResult CompleteSynthesizedSubprocessOutcome(
+        ProcessRuntimeStepAssignment assignment,
+        CompletedSubprocessOutcome completedChildOutcome)
+    {
+        var output = BuildCompletedSubprocessProcessStepOutcome(assignment, completedChildOutcome);
+        var materialization = MaterializeManagedOutcomeArtifactIfNeeded(
+            assignment,
+            output,
+            completedChildOutcome.SyntheticExecutionRunId,
+            completedChildOutcome.ToolReceipts);
+        if (materialization.Issue is { } materializationIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, completedChildOutcome.RawOutputHash, materializationIssue);
+        }
+
+        if (ValidateManagedArtifactBodyReferences(
+                assignment,
+                materialization.Output,
+                materialization.ToolReceipts) is { } ungroundedArtifactReferenceIssue)
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                completedChildOutcome.RawOutputHash,
+                ungroundedArtifactReferenceIssue);
+        }
+
+        return ToAdapterResult(
+            assignment,
+            materialization.Output,
+            completedChildOutcome.RawOutputHash,
+            materialization.ToolReceipts);
+    }
+
+    private async ValueTask<ProcessExecutionAdapterResult?> TryResolveDeferredOrCompletedSubprocessOutputAsync(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IProcessRuntimeStepAssignmentStore assignmentStore,
+        IProcessRuntimeStateStore stateStore,
+        CancellationToken cancellationToken)
+    {
+        if (output.Status is not (ProcessStepOutcomeStatus.Blocked or ProcessStepOutcomeStatus.WaitingApproval) ||
+            !CanWaitOnControlledChildRun(assignment))
+        {
+            return null;
+        }
+
+        if (await TryResolvePendingChildRunAsync(
+                assignment,
+                output,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } pendingChildRunId)
+        {
+            throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
+        }
+
+        if (IsWaitingOnStoppedSubprocessOutcome(output) &&
+            await TryResolveExistingCompletedChildOutcomeAsync(
+                assignment,
+                assignmentStore,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } completedChildOutcome)
+        {
+            return CompleteSynthesizedSubprocessOutcome(assignment, completedChildOutcome);
+        }
+
+        if (await TryResolveExistingPendingChildRunAsync(
+                assignment,
+                assignmentStore,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } existingPendingChildRunId)
+        {
+            throw CreatePendingChildRunDeferredException(assignment, existingPendingChildRunId);
+        }
+
+        if (IsWaitingOnStoppedSubprocessOutcome(output) &&
+            await TryResolveExistingCompletedChildOutcomeAsync(
+                assignment,
+                assignmentStore,
+                stateStore,
+                cancellationToken).ConfigureAwait(false) is { } existingCompletedChildOutcome)
+        {
+            return CompleteSynthesizedSubprocessOutcome(assignment, existingCompletedChildOutcome);
+        }
+
+        return null;
+    }
+
+    private static async Task<IReadOnlyList<ToolExecutionReceiptRecord>> LoadStepCompletionToolReceiptsAsync(
+        IAgentExecutionHistoryReader workspaceService,
+        ProcessRuntimeStepAssignment assignment,
+        Guid currentExecutionRunId,
+        IReadOnlyList<ToolExecutionReceiptRecord> currentToolReceipts,
+        CancellationToken cancellationToken)
+    {
+        if (currentToolReceipts.Count == 0 &&
+            !AllowsProductMutation(NormalizeOperations(assignment.AllowedOperations), assignment.OperationTargetScope))
+        {
+            return currentToolReceipts;
+        }
+
+        var stepRuns = await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    Take: 20,
+                    ProcessRunId: assignment.RunId.Value.ToString("D"),
+                    ProcessStepId: assignment.StepInstanceId.Value.ToString("D")),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (stepRuns.Count <= 1)
+        {
+            return currentToolReceipts;
+        }
+
+        var receiptById = new Dictionary<Guid, ToolExecutionReceiptRecord>();
+        foreach (var receipt in currentToolReceipts)
+        {
+            receiptById[receipt.Id] = receipt;
+        }
+
+        foreach (var stepRun in stepRuns)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (stepRun.Id == currentExecutionRunId)
+            {
+                continue;
+            }
+
+            var detail = await workspaceService
+                .GetExecutionRunDetailAsync(stepRun.Id, cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var receipt in detail.ToolReceipts)
+            {
+                receiptById.TryAdd(receipt.Id, receipt);
+            }
+        }
+
+        return receiptById.Values
+            .OrderBy(receipt => receipt.StartedAtUtc)
+            .ThenBy(receipt => receipt.Id)
+            .ToArray();
+    }
+
     private ManagedOutcomeArtifactMaterialization MaterializeManagedOutcomeArtifactIfNeeded(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
     {
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var acceptedCompletedPrimaryArtifact = false;
+        if (output.Status != ProcessStepOutcomeStatus.Completed &&
+            TryReadCompletedPrimaryManagedArtifactOutcome(assignment, output, primaryRef, out var completedOutput))
+        {
+            output = completedOutput;
+            acceptedCompletedPrimaryArtifact = true;
+        }
+
         var isSelfEvidenceBlocker = IsPureManagedArtifactSelfEvidenceBlocker(assignment, output);
         if (output.Status != ProcessStepOutcomeStatus.Completed &&
             !isSelfEvidenceBlocker)
@@ -1317,9 +1923,35 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
         var hasManagedEvidence = HasAllManagedArtifactEvidence(assignment, output.EvidenceRefs);
         var hasWriteReceipt = HasManagedArtifactWriteReceipt(assignment, toolReceipts);
-        var primaryRef = BuildManagedStepArtifactPath(assignment);
         IReadOnlyList<ToolExecutionReceiptRecord> effectiveReceipts = toolReceipts;
-        if (!hasWriteReceipt)
+        if (!hasWriteReceipt && acceptedCompletedPrimaryArtifact)
+        {
+            var appendResult = workspaceFiles.AppendTextFile(
+                primaryRef,
+                BuildManagedOutcomeArtifactAppendixContent(assignment, output, primaryRef));
+            if (!appendResult.Succeeded)
+            {
+                return ManagedOutcomeArtifactMaterialization.Failed(
+                    output,
+                    toolReceipts,
+                    new ProcessCompletionIssue(
+                        "process.adapter.managed_artifact_outcome_append_failed",
+                        $"Step '{assignment.StepKey}' recovered a completed primary managed artifact, but the runtime could not append the validated outcome to '{primaryRef}': {appendResult.Message}",
+                        $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-outcome-append-failed:{primaryRef}:{appendResult.Message}",
+                        assignment.ProducedArtifactSlotIds,
+                        ProcessDiagnosticRetrySafety.SafeToRetry,
+                        ProcessDiagnosticIdempotencyClassification.Idempotent));
+            }
+
+            effectiveReceipts = toolReceipts
+                .Append(CreateManagedOutcomeArtifactReceipt(
+                    executionRunId,
+                    primaryRef,
+                    appendResult.Message,
+                    "workspace_append_file"))
+                .ToArray();
+        }
+        else if (!hasWriteReceipt)
         {
             var writeResult = workspaceFiles.WriteTextFile(
                 primaryRef,
@@ -1377,6 +2009,150 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 ? output
                 : CopyWithEvidenceRef(output, primaryRef);
         return ManagedOutcomeArtifactMaterialization.Succeeded(effectiveOutput, effectiveReceipts);
+    }
+
+    private bool TryReadCompletedPrimaryManagedArtifactOutcome(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        string primaryRef,
+        out ProcessStepOutcomeResult completedOutput)
+    {
+        completedOutput = default!;
+
+        var readResult = workspaceFiles.ReadTextFile(primaryRef, maxCharacters: 200000);
+        if (!readResult.Succeeded ||
+            !TryReadManagedArtifactStatus(readResult.Content, out var artifactStatus) ||
+            artifactStatus != ProcessStepOutcomeStatus.Completed ||
+            !ManagedArtifactBelongsToStep(readResult.Content, assignment))
+        {
+            return false;
+        }
+
+        completedOutput = CopyAsCompletedFromPrimaryManagedArtifact(output, primaryRef);
+        return true;
+    }
+
+    private static bool TryReadManagedArtifactStatus(
+        string content,
+        out ProcessStepOutcomeStatus status)
+    {
+        status = default;
+        foreach (var rawLine in content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
+            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var key = line[..separatorIndex].Trim(' ', '*', '`');
+            if (!string.Equals(key, "Status", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return TryMapManagedArtifactStatus(line[(separatorIndex + 1)..], out status);
+        }
+
+        return false;
+    }
+
+    private static bool TryMapManagedArtifactStatus(
+        string value,
+        out ProcessStepOutcomeStatus status)
+    {
+        status = default;
+        var normalized = NormalizeManagedArtifactStatusValue(value);
+        status = normalized switch
+        {
+            "completed" or "complete" or "succeeded" or "success" => ProcessStepOutcomeStatus.Completed,
+            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" => ProcessStepOutcomeStatus.Blocked,
+            "failed" or "failure" => ProcessStepOutcomeStatus.Failed,
+            "waitingapproval" or "pendingapproval" => ProcessStepOutcomeStatus.WaitingApproval,
+            "refused" or "rejected" => ProcessStepOutcomeStatus.Refused,
+            _ => default
+        };
+        return normalized is "completed" or "complete" or "succeeded" or "success" or
+            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" or
+            "failed" or "failure" or
+            "waitingapproval" or "pendingapproval" or
+            "refused" or "rejected";
+    }
+
+    private static string NormalizeManagedArtifactStatusValue(string value)
+    {
+        var trimmed = value.Trim().Trim('*', '`', '.', ';');
+        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
+        if (commentIndex >= 0)
+        {
+            trimmed = trimmed[..commentIndex].Trim();
+        }
+
+        return new string(
+            trimmed
+                .Where(character => char.IsLetterOrDigit(character))
+                .Select(char.ToLowerInvariant)
+                .ToArray());
+    }
+
+    private static bool ManagedArtifactBelongsToStep(
+        string content,
+        ProcessRuntimeStepAssignment assignment)
+    {
+        return ContainsManagedArtifactField(content, "Run id", assignment.RunId.Value.ToString("D")) &&
+            ContainsManagedArtifactField(content, "Step id", assignment.StepInstanceId.Value.ToString("D")) &&
+            ContainsManagedArtifactField(content, "Step key", assignment.StepKey);
+    }
+
+    private static bool ContainsManagedArtifactField(
+        string content,
+        string key,
+        string expectedValue)
+    {
+        foreach (var rawLine in content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
+            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var fieldKey = line[..separatorIndex].Trim(' ', '*', '`');
+            if (!string.Equals(fieldKey, key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = line[(separatorIndex + 1)..].Trim(' ', '*', '`');
+            return string.Equals(value, expectedValue, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private static ProcessStepOutcomeResult CopyAsCompletedFromPrimaryManagedArtifact(
+        ProcessStepOutcomeResult output,
+        string primaryRef)
+    {
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The primary managed artifact already declares a completed outcome for this step."
+            : output.Reason.Trim();
+        return new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = $"Runtime accepted the completed primary managed artifact after the finalizer returned a nonterminal retry outcome. Original reason: {originalReason}",
+            BranchOutcomeKey = output.BranchOutcomeKey,
+            BranchOutcomeTitle = output.BranchOutcomeTitle,
+            EvidenceRefs = output.EvidenceRefs
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Append(primaryRef)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
+            NextActions = [],
+            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
+        };
     }
 
     private static bool IsPureManagedArtifactSelfEvidenceBlocker(
@@ -1680,9 +2456,17 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             => new(output, toolReceipts, issue);
     }
 
+    private sealed record CompletedSubprocessOutcome(
+        ProcessRunId ChildRunId,
+        DateTimeOffset ChildCompletedAtUtc,
+        IReadOnlyList<string> EvidenceRefs,
+        string RawOutputHash,
+        Guid SyntheticExecutionRunId,
+        IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts);
+
     private static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
     {
-        var allowedOperations = ResolveEffectiveOperations(assignment.StepKey, assignment.AllowedOperations);
+        var allowedOperations = NormalizeOperations(assignment.AllowedOperations);
         var targetScope = string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
             ? string.Empty
             : assignment.OperationTargetScope.Trim();
@@ -1790,31 +2574,6 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             .ToArray();
     }
 
-    private static IReadOnlyList<string> ResolveEffectiveOperations(
-        string stepKey,
-        IReadOnlyList<string> allowedOperations)
-    {
-        var normalized = NormalizeOperations(allowedOperations);
-        if (!IsRuntimeProofCaptureStep(stepKey))
-        {
-            return normalized;
-        }
-
-        return NormalizeOperations(
-        [
-            .. normalized,
-            ProcessOperationContractNames.LaunchRuntime,
-            ProcessOperationContractNames.CaptureRuntimeProof
-        ]);
-    }
-
-    private static bool IsRuntimeProofCaptureStep(string stepKey)
-    {
-        return stepKey.Contains("screenshot", StringComparison.OrdinalIgnoreCase) ||
-            stepKey.Contains("browser-proof", StringComparison.OrdinalIgnoreCase) ||
-            stepKey.Contains("runtime-proof", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static bool AllowsProductMutation(
         IReadOnlyList<string> allowedOperations,
         string targetScope)
@@ -1895,7 +2654,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         foreach (var candidateRunId in ExtractReferencedRunIds(output))
         {
             var pendingRunId = await TryResolveNonTerminalProcessTreeRunAsync(
-                assignment.RunId,
+                assignment,
                 currentState,
                 candidateRunId,
                 stateStore,
@@ -1916,6 +2675,71 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         return new ProcessRuntimeDispatchDeferredException(
             $"Step '{assignment.StepKey}' is waiting for active child process run '{pendingChildRunId}'.",
             pendingChildRunId);
+    }
+
+    private async ValueTask<CompletedSubprocessOutcome?> TryResolveExistingCompletedChildOutcomeAsync(
+        ProcessRuntimeStepAssignment assignment,
+        IProcessRuntimeStepAssignmentStore assignmentStore,
+        IProcessRuntimeStateStore stateStore,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(assignment);
+        ArgumentNullException.ThrowIfNull(assignmentStore);
+        ArgumentNullException.ThrowIfNull(stateStore);
+
+        if (!RequiresSubprocessLaunch(assignment))
+        {
+            return null;
+        }
+
+        var currentState = await stateStore.LoadAsync(assignment.RunId, cancellationToken).ConfigureAwait(false);
+        if (currentState is null)
+        {
+            return null;
+        }
+
+        var childAssignments = await assignmentStore
+            .FindByLaunchVariablesAsync(
+                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                    assignment.RunId,
+                    assignment.StepInstanceId),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var childGroup in childAssignments
+            .GroupBy(childAssignment => childAssignment.RunId)
+            .OrderByDescending(group => group.Max(childAssignment => childAssignment.CreatedAtUtc)))
+        {
+            var childRunId = childGroup.Key;
+            var childState = await stateStore.LoadAsync(childRunId, cancellationToken).ConfigureAwait(false);
+            if (childState is null ||
+                !IsSameProcessTree(currentState, childState))
+            {
+                continue;
+            }
+
+            if (childState.Status != ProcessRuntimeStatus.Completed)
+            {
+                return null;
+            }
+
+            var evidenceRefs = ResolveCompletedChildEvidenceRefs(childRunId, childGroup);
+            var syntheticExecutionRunId = CreateSyntheticSubprocessExecutionRunId(
+                assignment,
+                childRunId,
+                childState.UpdatedAtUtc);
+            var rawOutputHash = ComputeHash(
+                $"{assignment.RunId}:{assignment.StepInstanceId}:completed-child:{childRunId}:{childState.UpdatedAtUtc:O}:{string.Join("|", evidenceRefs)}");
+            return new CompletedSubprocessOutcome(
+                childRunId,
+                childState.UpdatedAtUtc,
+                evidenceRefs,
+                rawOutputHash,
+                syntheticExecutionRunId,
+                [CreateSubprocessOutcomeReceipt(syntheticExecutionRunId, assignment, childRunId, evidenceRefs)]);
+        }
+
+        return null;
     }
 
     internal static async ValueTask<ProcessRunId?> TryResolveExistingPendingChildRunAsync(
@@ -1953,7 +2777,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             .Distinct())
         {
             var pendingRunId = await TryResolveNonTerminalProcessTreeRunAsync(
-                assignment.RunId,
+                assignment,
                 currentState,
                 candidateRunId,
                 stateStore,
@@ -1967,14 +2791,172 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         return null;
     }
 
+    private IReadOnlyList<string> ResolveCompletedChildEvidenceRefs(
+        ProcessRunId childRunId,
+        IEnumerable<ProcessRuntimeStepAssignment> childAssignments)
+    {
+        var childManagedArtifactRoot = $"artifacts/process-runs/{childRunId.Value:D}";
+        var refs = new List<string>();
+        foreach (var childAssignment in childAssignments.OrderBy(childAssignment => childAssignment.CreatedAtUtc))
+        {
+            if (string.IsNullOrWhiteSpace(childAssignment.StepKey))
+            {
+                continue;
+            }
+
+            var candidateRef = $"{childManagedArtifactRoot}/steps/{SanitizeManagedArtifactPathSegment(childAssignment.StepKey)}.md";
+            var stat = workspaceFiles.StatPath(candidateRef);
+            if (stat.Exists)
+            {
+                refs.Add(candidateRef);
+            }
+        }
+
+        if (refs.Count == 0)
+        {
+            refs.Add($"{childManagedArtifactRoot}/steps");
+        }
+
+        return refs
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static ProcessStepOutcomeResult BuildCompletedSubprocessProcessStepOutcome(
+        ProcessRuntimeStepAssignment assignment,
+        CompletedSubprocessOutcome completedChildOutcome)
+    {
+        var childRunId = completedChildOutcome.ChildRunId.Value.ToString("D");
+        var childCompletedAt = completedChildOutcome.ChildCompletedAtUtc.UtcDateTime.ToString("u", CultureInfo.InvariantCulture);
+        return new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = $"Matching child process run {childRunId} completed at {childCompletedAt}; the parent subprocess step is completed from managed child evidence.",
+            BranchOutcomeKey = string.Empty,
+            BranchOutcomeTitle = string.Empty,
+            EvidenceRefs = completedChildOutcome.EvidenceRefs,
+            NextActions = [],
+            HumanReadableSummaryMarkdown = $"""
+            ## Subprocess handoff completed
+
+            The process runtime completed parent step `{assignment.StepKey}` from matching completed child process run `{childRunId}`.
+
+            ## Child evidence
+
+            {FormatMarkdownEvidenceList(completedChildOutcome.EvidenceRefs)}
+            """
+        };
+    }
+
+    private static string FormatMarkdownEvidenceList(IReadOnlyList<string> evidenceRefs)
+    {
+        if (evidenceRefs.Count == 0)
+        {
+            return "- No child managed evidence refs were available.";
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            evidenceRefs.Select(evidenceRef => $"- `{evidenceRef}`"));
+    }
+
+    private static ToolExecutionReceiptRecord CreateSubprocessOutcomeReceipt(
+        Guid syntheticExecutionRunId,
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRunId childRunId,
+        IReadOnlyList<string> evidenceRefs)
+    {
+        var childDefinitionKey = ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessDefinitionKey(
+            assignment.LaunchVariables,
+            out var definitionKey)
+            ? definitionKey
+            : "unknown";
+        var evidenceSummary = evidenceRefs.Count == 0
+            ? "no child evidence refs"
+            : string.Join("; ", evidenceRefs);
+        return new ToolExecutionReceiptRecord(
+            Guid.NewGuid(),
+            syntheticExecutionRunId,
+            "process-runtime",
+            SubprocessLaunchToolName,
+            "ProcessRuntime",
+            "NotRequired",
+            "Process runtime resolved a previously completed matching child subprocess.",
+            $"definitionKey={childDefinitionKey}; parentRunId={assignment.RunId.Value:D}; parentStepId={assignment.StepInstanceId.Value:D}; childRunId={childRunId.Value:D}",
+            ".",
+            $"Succeeded: matching child run {childRunId.Value:D} completed with evidence refs: {evidenceSummary}",
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+    }
+
+    private static ToolExecutionReceiptRecord CreateCoordinatedSubprocessLaunchReceipt(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessSubprocessLaunchCoordinatorResult launch)
+    {
+        var childRunSummary = launch.ChildRunId is { } childRunId
+            ? childRunId.Value.ToString("D")
+            : "none";
+        var evidenceSummary = launch.ExpectedChildEvidenceRefs.Count == 0
+            ? "no expected child evidence refs"
+            : string.Join("; ", launch.ExpectedChildEvidenceRefs);
+        return new ToolExecutionReceiptRecord(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "process-runtime",
+            SubprocessLaunchToolName,
+            "ProcessRuntime",
+            "NotRequired",
+            "Process runtime coordinated the mapped subprocess launch before parent agent execution.",
+            $"definitionKey={launch.DefinitionKey}; parentRunId={assignment.RunId.Value:D}; parentStepId={assignment.StepInstanceId.Value:D}; childRunId={childRunSummary}; stage={launch.Stage}",
+            ".",
+            $"Succeeded: coordinated subprocess launch returned stage '{launch.Stage}' for child run '{childRunSummary}' with evidence refs: {evidenceSummary}",
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+    }
+
+    private static Guid CreateSyntheticSubprocessExecutionRunId(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRunId childRunId,
+        DateTimeOffset childUpdatedAtUtc)
+    {
+        var input = Encoding.UTF8.GetBytes(
+            $"completed-child:{assignment.RunId.Value:D}:{assignment.StepInstanceId.Value:D}:{childRunId.Value:D}:{childUpdatedAtUtc.UtcDateTime:O}");
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(input, hash);
+        return new Guid(hash[..16]);
+    }
+
+    private static bool IsWaitingOnStoppedSubprocessOutcome(ProcessStepOutcomeResult output)
+    {
+        if (output.Status is not (ProcessStepOutcomeStatus.Blocked or ProcessStepOutcomeStatus.WaitingApproval))
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        return ContainsAny(
+            text,
+            "waiting for active child process run",
+            "wait for active child process run",
+            "parent step should be deferred",
+            "child run is still active",
+            "child run is still running",
+            "child run id",
+            "child subprocess",
+            "child process run") &&
+            ContainsAny(text, "active", "running", "finish", "stops", "stopped");
+    }
+
     private static async ValueTask<ProcessRunId?> TryResolveNonTerminalProcessTreeRunAsync(
-        ProcessRunId currentRunId,
+        ProcessRuntimeStepAssignment assignment,
         ProcessRuntimeStateSnapshot currentState,
         ProcessRunId candidateRunId,
         IProcessRuntimeStateStore stateStore,
         CancellationToken cancellationToken)
     {
-        if (candidateRunId == currentRunId)
+        if (IsCurrentOrAncestorRunReference(assignment, currentState, candidateRunId))
         {
             return null;
         }
@@ -1988,6 +2970,22 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         }
 
         return candidateRunId;
+    }
+
+    private static bool IsCurrentOrAncestorRunReference(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeStateSnapshot currentState,
+        ProcessRunId candidateRunId)
+    {
+        if (candidateRunId == assignment.RunId ||
+            candidateRunId == currentState.RunId ||
+            candidateRunId == currentState.RootRunId)
+        {
+            return true;
+        }
+
+        return ProcessRuntimeLaunchVariables.TryReadParentRunId(assignment.LaunchVariables, out var parentRunId) &&
+            candidateRunId == parentRunId;
     }
 
     private static bool CanWaitOnControlledChildRun(ProcessRuntimeStepAssignment assignment)
@@ -2070,6 +3068,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         string rawOutputHash,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null)
     {
+        output = RemoveNonCitableSourceMetadataFromOutcome(output);
+
         var outcome = output.Status switch
         {
             ProcessStepOutcomeStatus.Completed => StrategyOutcome.Succeeded,
@@ -2078,6 +3078,15 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ProcessStepOutcomeStatus.Failed => StrategyOutcome.Failed,
             _ => StrategyOutcome.Failed
         };
+        if (outcome == StrategyOutcome.NeedsManager &&
+            IsRetryableNonTerminalPrimaryArtifactBlocker(assignment, output, toolReceipts))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                CreateNonTerminalPrimaryArtifactRetryIssue(assignment, output));
+        }
+
         if (outcome == StrategyOutcome.NeedsManager &&
             IsRetryableManagedArtifactSelfEvidenceBlocker(assignment, output))
         {
@@ -2096,10 +3105,98 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 CreateManagedArtifactMissingPrimaryOutputRetryIssue(assignment, output));
         }
 
+        if (outcome == StrategyOutcome.NeedsManager &&
+            IsRetryableSubprocessLaunchSkippedBlocker(assignment, output, toolReceipts))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                CreateSubprocessLaunchSkippedRetryIssue(assignment, output));
+        }
+
+        if (outcome == StrategyOutcome.NeedsManager &&
+            TryCreateProductRequiredToolReceiptBlockedRetryIssue(assignment, output, toolReceipts, out var requiredToolReceiptBlockedIssue))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                requiredToolReceiptBlockedIssue);
+        }
+
+        if (outcome == StrategyOutcome.NeedsManager &&
+            TryCreateProductRequiredStateBlockedRetryIssue(assignment, output, toolReceipts, out var requiredStateBlockedIssue))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                requiredStateBlockedIssue);
+        }
+
+        if (outcome == StrategyOutcome.NeedsManager &&
+            IsRetryableProductMutationEvidenceBlocker(assignment, output, toolReceipts))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                CreateProductMutationEvidenceRetryIssue(assignment, output, toolReceipts!));
+        }
+
+        if ((outcome == StrategyOutcome.NeedsManager || outcome == StrategyOutcome.Succeeded) &&
+            TryInferEvidenceBackedBranchOutcome(assignment, output, out var inferredBranchOutcomeKey))
+        {
+            output = CopyWithBranchOutcomeKey(output, inferredBranchOutcomeKey);
+        }
+
+        if (outcome == StrategyOutcome.NeedsManager &&
+            ShouldRouteBlockedBranchOutcome(assignment, output))
+        {
+            output = CopyAsCompletedBranchOutcome(output);
+            outcome = StrategyOutcome.Succeeded;
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            IsRetryableSubprocessLaunchSkippedCompletion(assignment, output, toolReceipts))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                CreateSubprocessLaunchSkippedRetryIssue(assignment, output));
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateGroundedOutcomeReferences(assignment, output, toolReceipts) is { } ungroundedReferenceIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, ungroundedReferenceIssue);
+        }
+
         if (outcome == StrategyOutcome.Succeeded &&
             ValidateProductMutationCompletion(assignment, output) is { } productMutationIssue)
         {
             return NeedsManagerForCompletionIssue(assignment, rawOutputHash, productMutationIssue);
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateProductMutationWriteReceipt(assignment, output, toolReceipts) is { } productMutationWriteIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, productMutationWriteIssue);
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateRequiredProductToolReceipts(assignment, toolReceipts) is { } requiredToolReceiptIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, requiredToolReceiptIssue);
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateRequiredProductStateCompletion(assignment, output) is { } requiredProductStateIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, requiredProductStateIssue);
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateCompletedOutcomeDoesNotDeclareBlockers(assignment, output) is { } declaredBlockerIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, declaredBlockerIssue);
         }
 
         if (outcome == StrategyOutcome.Succeeded &&
@@ -2171,6 +3268,395 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             managerSignals,
             userSafeSummary,
             rawOutputHash);
+    }
+
+    private static bool ShouldRouteBlockedBranchOutcome(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+        => output.Status == ProcessStepOutcomeStatus.Blocked &&
+           !string.IsNullOrWhiteSpace(output.BranchOutcomeKey) &&
+           (assignment.ProducedArtifactSlotIds.Count == 0 || output.EvidenceRefs.Count > 0);
+
+    private static bool TryInferEvidenceBackedBranchOutcome(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        out string branchOutcomeKey)
+    {
+        branchOutcomeKey = string.Empty;
+        if (output.Status is not (ProcessStepOutcomeStatus.Blocked or ProcessStepOutcomeStatus.Completed) ||
+            !string.IsNullOrWhiteSpace(output.BranchOutcomeKey) ||
+            assignment.ProducedArtifactSlotIds.Count > 0 && output.EvidenceRefs.Count == 0)
+        {
+            return false;
+        }
+
+        var outputTextParts = EnumerateOutcomeText(output)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToArray();
+        var outputText = string.Join(" ", outputTextParts);
+        var declaredBranchOutcomes = EnumerateDeclaredBranchOutcomes(assignment.Prompt)
+            .GroupBy(outcome => outcome.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+
+        if (TryReadExplicitBranchOutcomeKey(string.Join(Environment.NewLine, outputTextParts), declaredBranchOutcomes, out branchOutcomeKey))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(outputText) ||
+            LooksLikeRightsOrToolBoundary(outputText) ||
+            !LooksLikeBranchSelectionText(outputText))
+        {
+            return false;
+        }
+
+        var mentionedBranchKeys = declaredBranchOutcomes
+            .Where(outcome => ContainsBranchOutcomeKey(outputText, outcome.Key))
+            .Select(outcome => outcome.Key)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (mentionedBranchKeys.Length == 1)
+        {
+            branchOutcomeKey = mentionedBranchKeys[0];
+            return true;
+        }
+
+        if (mentionedBranchKeys.Length > 1)
+        {
+            return false;
+        }
+
+        var mentionedBranchTitles = declaredBranchOutcomes
+            .Where(outcome => ContainsBranchOutcomeTitle(outputText, outcome.Title))
+            .Select(outcome => outcome.Key)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (mentionedBranchTitles.Length != 1)
+        {
+            return false;
+        }
+
+        branchOutcomeKey = mentionedBranchTitles[0];
+        return true;
+    }
+
+    private static bool TryReadExplicitBranchOutcomeKey(
+        string text,
+        IReadOnlyCollection<BranchOutcomePromptDescriptor> declaredBranchOutcomes,
+        out string branchOutcomeKey)
+    {
+        branchOutcomeKey = string.Empty;
+        if (string.IsNullOrWhiteSpace(text) ||
+            declaredBranchOutcomes.Count == 0)
+        {
+            return false;
+        }
+
+        var explicitKeys = ReadExplicitBranchOutcomeKeys(text)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (explicitKeys.Length != 1)
+        {
+            return false;
+        }
+
+        var declaredMatches = declaredBranchOutcomes
+            .Where(outcome => string.Equals(outcome.Key, explicitKeys[0], StringComparison.OrdinalIgnoreCase))
+            .Select(outcome => outcome.Key)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (declaredMatches.Length != 1)
+        {
+            return false;
+        }
+
+        branchOutcomeKey = declaredMatches[0];
+        return true;
+    }
+
+    private static IEnumerable<string> ReadExplicitBranchOutcomeKeys(string text)
+    {
+        foreach (Match match in ExplicitBranchOutcomeKeyLineRegex().Matches(text))
+        {
+            var value = match.Groups["key"].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                yield return value;
+            }
+        }
+
+        var lines = text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        for (var index = 0; index < lines.Length - 1; index++)
+        {
+            var line = NormalizeOutcomeMarkdownMetadataLine(lines[index]);
+            if (!string.Equals(line, "Branch outcome key", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = NormalizeBranchOutcomeKeyCandidate(lines[index + 1]);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                yield return value;
+            }
+        }
+    }
+
+    private static string NormalizeOutcomeMarkdownMetadataLine(string value)
+        => value.Trim().TrimStart('#', '-', '*', ' ').Trim(' ', '*', '`', ':');
+
+    private static string NormalizeBranchOutcomeKeyCandidate(string value)
+    {
+        var trimmed = NormalizeOutcomeMarkdownMetadataLine(value).Trim('.', ';');
+        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
+        if (commentIndex >= 0)
+        {
+            trimmed = trimmed[..commentIndex].Trim();
+        }
+
+        return Regex.IsMatch(
+            trimmed,
+            @"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            RegexOptions.CultureInvariant)
+            ? trimmed
+            : string.Empty;
+    }
+
+    private static bool LooksLikeBranchSelectionText(string text)
+        => ContainsAny(
+            text,
+            "branch outcome",
+            "branch key",
+            "selected branch",
+            "select branch",
+            "selected outcome",
+            "select outcome",
+            "choose outcome",
+            "chose outcome",
+            "validation decision",
+            "repair decision",
+            "acceptance decision",
+            "selected decision",
+            "route to",
+            "routing to",
+            "# outcome",
+            "outcome -",
+            "outcome:");
+
+    private static IEnumerable<string> EnumerateDeclaredBranchOutcomeKeys(string prompt)
+        => EnumerateDeclaredBranchOutcomes(prompt).Select(outcome => outcome.Key);
+
+    private static IEnumerable<BranchOutcomePromptDescriptor> EnumerateDeclaredBranchOutcomes(string prompt)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            yield break;
+        }
+
+        foreach (Match match in BranchOutcomePromptLineRegex().Matches(prompt))
+        {
+            var key = match.Groups["key"].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                yield return new BranchOutcomePromptDescriptor(
+                    key,
+                    ExtractBranchOutcomeTitle(match.Groups["rest"].Value));
+            }
+        }
+    }
+
+    private static string ExtractBranchOutcomeTitle(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var title = value.Trim();
+        var separatorIndex = title.IndexOf(" - ", StringComparison.Ordinal);
+        if (separatorIndex >= 0)
+        {
+            title = title[..separatorIndex];
+        }
+
+        return title.Trim(' ', '`', '*', '.', ':', ';', '-');
+    }
+
+    private static bool ContainsBranchOutcomeKey(string text, string branchOutcomeKey)
+    {
+        if (string.IsNullOrWhiteSpace(text) ||
+            string.IsNullOrWhiteSpace(branchOutcomeKey))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+            text,
+            $@"(?<![A-Za-z0-9._-]){Regex.Escape(branchOutcomeKey.Trim())}(?![A-Za-z0-9._-])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContainsBranchOutcomeTitle(string text, string branchOutcomeTitle)
+    {
+        if (string.IsNullOrWhiteSpace(text) ||
+            !IsInferableBranchOutcomeTitle(branchOutcomeTitle))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+            text,
+            $@"(?<![A-Za-z0-9]){Regex.Escape(branchOutcomeTitle.Trim())}(?![A-Za-z0-9])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool IsInferableBranchOutcomeTitle(string branchOutcomeTitle)
+    {
+        if (string.IsNullOrWhiteSpace(branchOutcomeTitle))
+        {
+            return false;
+        }
+
+        var words = Regex.Matches(branchOutcomeTitle, @"[A-Za-z0-9]+", RegexOptions.CultureInvariant)
+            .Select(match => match.Value)
+            .ToArray();
+        return words.Length >= 2 && words.Sum(word => word.Length) >= 8;
+    }
+
+    private sealed record BranchOutcomePromptDescriptor(string Key, string Title);
+
+    private static bool IsRetryableNonTerminalPrimaryArtifactBlocker(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            assignment.ProducedArtifactSlotIds.Count == 0)
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (!ContainsNonTerminalStatusDeclaration(text) ||
+            LooksLikeRightsOrToolBoundary(text))
+        {
+            return false;
+        }
+
+        var primaryRef = NormalizeManagedArtifactRef(BuildManagedStepArtifactPath(assignment));
+        var hasPrimaryEvidenceRef = output.EvidenceRefs.Any(evidenceRef =>
+            !string.IsNullOrWhiteSpace(evidenceRef) &&
+            ReceiptTargetsManagedRef(evidenceRef, primaryRef));
+        var hasPrimaryWriteReceipt = toolReceipts is not null &&
+                                     HasManagedArtifactWriteReceipt(toolReceipts, primaryRef);
+        return hasPrimaryEvidenceRef || hasPrimaryWriteReceipt;
+    }
+
+    private static bool ContainsNonTerminalStatusDeclaration(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        if (NonTerminalStatusDeclarationRegex().IsMatch(text))
+        {
+            return true;
+        }
+
+        foreach (var rawLine in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
+            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var key = line[..separatorIndex].Trim(' ', '*', '`');
+            if (!string.Equals(key, "Status", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var statusValue = line[(separatorIndex + 1)..].Trim();
+            var commentIndex = statusValue.IndexOf('#', StringComparison.Ordinal);
+            if (commentIndex >= 0)
+            {
+                statusValue = statusValue[..commentIndex].Trim();
+            }
+
+            var normalized = new string(
+                statusValue
+                    .Where(character => char.IsLetterOrDigit(character))
+                    .Select(char.ToLowerInvariant)
+                    .ToArray());
+            if (normalized is "inprogress" or "progress" or "working" or "running" or "started")
+            {
+                return true;
+            }
+        }
+
+        return ContainsAny(
+            text,
+            "non-terminal status",
+            "non terminal status",
+            "not a terminal status");
+    }
+
+    private static ProcessCompletionIssue CreateNonTerminalPrimaryArtifactRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The primary managed artifact declared a non-terminal status."
+            : output.Reason.Trim();
+        var summary = $"Step '{assignment.StepKey}' wrote primary managed artifact '{primaryRef}' with a non-terminal Status line. Retry the same step: preserve or overwrite that artifact only with a final Status line of Completed, Blocked, Failed, WaitingApproval, or Refused after the step's required work and evidence readbacks are complete. Original reason: {originalReason}";
+
+        return new ProcessCompletionIssue(
+            "process.adapter.non_terminal_primary_artifact_retry",
+            summary,
+            $"{assignment.RunId}:{assignment.StepInstanceId}:non-terminal-primary-artifact:{primaryRef}:{ComputeHash(originalReason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessStepOutcomeResult CopyAsCompletedBranchOutcome(ProcessStepOutcomeResult output)
+    {
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The agent returned Blocked while selecting a branch outcome."
+            : output.Reason.Trim();
+        return new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = $"Runtime routed evidence-backed branch outcome '{output.BranchOutcomeKey.Trim()}' after the agent returned Blocked with a selected branch. Original reason: {originalReason}",
+            BranchOutcomeKey = output.BranchOutcomeKey,
+            BranchOutcomeTitle = output.BranchOutcomeTitle,
+            EvidenceRefs = output.EvidenceRefs,
+            NextActions = output.NextActions,
+            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
+        };
+    }
+
+    private static ProcessStepOutcomeResult CopyWithBranchOutcomeKey(
+        ProcessStepOutcomeResult output,
+        string branchOutcomeKey)
+    {
+        return new ProcessStepOutcomeResult
+        {
+            Status = output.Status,
+            Reason = output.Reason,
+            BranchOutcomeKey = branchOutcomeKey,
+            BranchOutcomeTitle = output.BranchOutcomeTitle,
+            EvidenceRefs = output.EvidenceRefs,
+            NextActions = output.NextActions,
+            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
+        };
     }
 
     private static bool IsRetryableManagedArtifactSelfEvidenceBlocker(
@@ -2295,6 +3781,270 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
+    private static bool IsRetryableSubprocessLaunchSkippedBlocker(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            !RequiresSubprocessLaunch(assignment) ||
+            HasToolReceipt(toolReceipts, SubprocessLaunchToolName))
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (LooksLikeParentExpectedDirectChildTools(text))
+        {
+            return true;
+        }
+
+        if (LooksLikeSubprocessLaunchToolBoundary(text))
+        {
+            return false;
+        }
+
+        if (LooksLikeUnverifiedSubprocessLaunchCapabilityBlocker(text))
+        {
+            return true;
+        }
+
+        if (LooksLikeRightsOrToolBoundary(text))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+            text,
+            "subprocess was not launched",
+            "subprocess were not launched",
+            "child subprocess was not launched",
+            "required subprocess was not launched",
+            "required child run was not launched",
+            "child run was not launched",
+            "no current child run",
+            "no child run receipt",
+            "missing child run receipt");
+    }
+
+    private static bool IsRetryableSubprocessLaunchSkippedCompletion(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        return output.Status == ProcessStepOutcomeStatus.Completed &&
+               RequiresSubprocessLaunch(assignment) &&
+               !HasToolReceipt(toolReceipts, SubprocessLaunchToolName) &&
+               !HasChildProcessEvidenceRef(assignment, output.EvidenceRefs);
+    }
+
+    private static bool RequiresSubprocessLaunch(ProcessRuntimeStepAssignment assignment)
+    {
+        return ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessDefinitionKey(
+                   assignment.LaunchVariables,
+                   out _) &&
+               assignment.AllowedOperations.Contains(
+                   ProcessOperationContractNames.ExecuteExternalAction,
+                   StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool HasChildProcessEvidenceRef(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<string> evidenceRefs)
+    {
+        var ownRunId = assignment.RunId.Value.ToString("D");
+        foreach (var evidenceRef in evidenceRefs)
+        {
+            var normalizedRef = evidenceRef.Replace('\\', '/');
+            var match = Regex.Match(
+                normalizedRef,
+                @"(?:^|/)process-runs/(?<runId>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:/|$)",
+                RegexOptions.CultureInvariant);
+            if (match.Success &&
+                !string.Equals(match.Groups["runId"].Value, ownRunId, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool LooksLikeSubprocessLaunchToolBoundary(string text)
+    {
+        if (ContainsAny(text, SubprocessLaunchToolName))
+        {
+            return ContainsAny(
+                text,
+                $"Tool '{SubprocessLaunchToolName}'",
+                $"tool '{SubprocessLaunchToolName}'",
+                $"Tool \"{SubprocessLaunchToolName}\"",
+                $"tool \"{SubprocessLaunchToolName}\"",
+                $"no {SubprocessLaunchToolName}",
+                $"{SubprocessLaunchToolName} not available",
+                $"{SubprocessLaunchToolName} unavailable",
+                $"not authorized to use {SubprocessLaunchToolName}",
+                $"denied tool {SubprocessLaunchToolName}");
+        }
+
+        return ContainsAny(
+            text,
+            "subprocess launch tool is not available",
+            "subprocess launch tool unavailable");
+    }
+
+    private static bool LooksLikeParentExpectedDirectChildTools(string text)
+    {
+        if (!ContainsAny(text, "subprocess", "child process", "child run"))
+        {
+            return false;
+        }
+
+        if (ContainsAny(
+            text,
+            "step contract explicitly says to launch",
+            "only project-structure subprocess launch tools are available",
+            "only subprocess launch tools are available"))
+        {
+            return true;
+        }
+
+        return ContainsAny(
+                   text,
+                   "direct child-work tools",
+                   "direct implementation",
+                   "direct scaffold",
+                   "direct validation",
+                   "parent toolset",
+                   "child-work capability") &&
+               ContainsAny(
+                   text,
+                   "not available",
+                   "not exposed",
+                   "missing tool",
+                   "capability",
+                   "cannot proceed");
+    }
+
+    private static bool LooksLikeUnverifiedSubprocessLaunchCapabilityBlocker(string text)
+    {
+        if (ContainsAny(text, "composed capability set", "not part of the composed capability set"))
+        {
+            return false;
+        }
+
+        if (!ContainsAny(text, "subprocess", "child process", "child run", SubprocessLaunchToolName))
+        {
+            return false;
+        }
+
+        if (!ContainsAny(text, "launch capability", "child launch", "launch path", "ExecuteExternalAction", SubprocessLaunchToolName))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+            text,
+            "unavailable",
+            "not available",
+            "does not expose",
+            "not expose",
+            "missing",
+            "cannot launch",
+            "grant",
+            "reassign");
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessLaunchSkippedRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessDefinitionKey(
+            assignment.LaunchVariables,
+            out var subprocessDefinitionKey);
+        var childKeySummary = string.IsNullOrWhiteSpace(subprocessDefinitionKey)
+            ? "the mapped child process definition"
+            : $"DefinitionKey '{subprocessDefinitionKey}'";
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? $"The agent returned {output.Status} before launching the required subprocess."
+            : output.Reason.Trim();
+        var requestedSlots = assignment.ProducedArtifactSlotIds.Count > 0
+            ? assignment.ProducedArtifactSlotIds
+            : assignment.RequiredArtifactSlotIds;
+
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_launch_skipped_retry",
+            $"Step '{assignment.StepKey}' is mapped to a subprocess and has ExecuteExternalAction, but the agent returned {output.Status} before invoking {SubprocessLaunchToolName} or citing child-run evidence. Retry the same step: call {SubprocessLaunchToolName} with {childKeySummary}; if launch returns ParentDeferredOutcomeJson, submit that deferred outcome exactly. Complete from child evidence only after a stopped child run is cited through managed artifact refs. Block only after a current launch-tool denial, missing required launch input, or concrete stopped-child blocker. Original reason: {originalReason}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-skipped:{subprocessDefinitionKey}:{ComputeHash(originalReason)}",
+            requestedSlots,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessLaunchCoordinatorMissingOutcomeIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessSubprocessLaunchCoordinatorResult launch)
+    {
+        var childRunSummary = launch.ChildRunId is { } childRunId
+            ? childRunId.Value.ToString("D")
+            : "no child run";
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_launch_missing_parent_outcome",
+            $"Step '{assignment.StepKey}' launched mapped subprocess DefinitionKey '{launch.DefinitionKey}' with stage '{launch.Stage}' and {childRunSummary}, but the launch coordinator did not return a parent deferred outcome.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-missing-parent-outcome:{launch.DefinitionKey}:{childRunSummary}:{launch.Stage}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.Unknown,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessLaunchDefinitionMissingIssue(
+        ProcessRuntimeStepAssignment assignment)
+    {
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_launch_definition_missing",
+            $"Step '{assignment.StepKey}' is configured as a mapped subprocess launch, but the runtime assignment does not contain a child process definition key.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-definition-missing",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.Unknown,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessLaunchCoordinatorUnavailableIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string subprocessDefinitionKey)
+    {
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_launch_coordinator_unavailable",
+            $"Step '{assignment.StepKey}' is mapped to subprocess DefinitionKey '{subprocessDefinitionKey}', but no subprocess launch coordinator is registered for this runtime.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-coordinator-unavailable:{subprocessDefinitionKey}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.Unknown,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessLaunchNotHandledIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string subprocessDefinitionKey)
+    {
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_launch_not_handled",
+            $"Step '{assignment.StepKey}' is mapped to subprocess DefinitionKey '{subprocessDefinitionKey}', but the registered subprocess launch coordinator did not handle this assignment.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-not-handled:{subprocessDefinitionKey}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.Unknown,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static bool HasToolReceipt(
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        string toolName)
+    {
+        return toolReceipts?.Any(receipt =>
+            string.Equals(receipt.ToolName, toolName, StringComparison.OrdinalIgnoreCase)) == true;
+    }
+
     private const string AgentRightsManagerRequestCode = "process.adapter.agent_rights_request";
 
     private static bool TryBuildAgentRightsManagerRequest(
@@ -2374,6 +4124,97 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         return values.Any(value => text.Contains(value, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static ProcessCompletionIssue? ValidateRequiredProductStateCompletion(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            !TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+        {
+            return null;
+        }
+
+        if (ValidateRequiredProductPaths(assignment, productRoot) is { } requiredPathIssue)
+        {
+            return requiredPathIssue;
+        }
+
+        return ValidateRequiredProductFileContentChecks(assignment, output, productRoot);
+    }
+
+    private static ProcessCompletionIssue? ValidateCompletedOutcomeDoesNotDeclareBlockers(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed)
+        {
+            return null;
+        }
+
+        var blockerLines = EnumerateOutcomeText(output)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .SelectMany(value => SplitOutcomeLines(value!))
+            .Where(DeclaresUnresolvedBlocker)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToArray();
+        if (blockerLines.Length == 0)
+        {
+            return null;
+        }
+
+        var blockerSummary = string.Join(" | ", blockerLines);
+        return new ProcessCompletionIssue(
+            "process.adapter.completed_outcome_declares_unresolved_blocker",
+            $"Step '{assignment.StepKey}' returned Completed while its outcome text still declares unresolved blocker or missing-acceptance state: {blockerSummary}. Return Blocked or repair the missing state before claiming completion.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:completed-outcome-declares-blocker:{ComputeHash(blockerSummary)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static IEnumerable<string> SplitOutcomeLines(string value)
+        => value.Split(
+                ['\r', '\n'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(line => !string.IsNullOrWhiteSpace(line));
+
+    private static bool DeclaresUnresolvedBlocker(string line)
+    {
+        if (ContainsNegatedBlockerPhrase(line))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+                line,
+                "remaining blocker",
+                "unresolved blocker",
+                "still blocked",
+                "cannot be treated as accepted",
+                "cannot be accepted",
+                "not launcher-compatible",
+                "not launcher compatible",
+                "pending writeback receipt") ||
+            MissingRequiredReceiptRegex().IsMatch(line);
+    }
+
+    private static bool ContainsNegatedBlockerPhrase(string line)
+        => ContainsAny(
+            line,
+            "no remaining blocker",
+            "no remaining blockers",
+            "no unresolved blocker",
+            "no unresolved blockers",
+            "without remaining blocker",
+            "without unresolved blocker",
+            "no missing receipt",
+            "no missing receipts",
+            "no required receipt missing",
+            "no required receipts missing",
+            "without missing receipt",
+            "blockers: none");
+
     private static ProcessCompletionIssue? ValidateProductMutationCompletion(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
@@ -2401,6 +4242,16 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             return null;
         }
 
+        if (ValidateRequiredProductPaths(assignment, productRoot) is { } requiredPathIssue)
+        {
+            return requiredPathIssue;
+        }
+
+        if (ValidateRequiredProductFileContentChecks(assignment, output, productRoot) is { } requiredFileContentIssue)
+        {
+            return requiredFileContentIssue;
+        }
+
         var inspection = InspectProductRoot(productRoot);
         if (inspection.HasProductFiles)
         {
@@ -2414,6 +4265,808 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                 : $"Step '{assignment.StepKey}' claimed completion but the configured product output root '{productRoot}' is not usable: {inspection.Summary}",
             productRoot,
             [],
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue? ValidateRequiredProductPaths(
+        ProcessRuntimeStepAssignment assignment,
+        string productRoot)
+    {
+        var requiredPaths = ResolveProductCompletionRequiredPaths(assignment.LaunchVariables, assignment.StepKey);
+        if (requiredPaths.Count == 0)
+        {
+            return null;
+        }
+
+        var invalidPaths = new List<string>();
+        var missingPaths = new List<string>();
+        foreach (var requiredPath in requiredPaths)
+        {
+            if (!TryResolveRequiredProductPath(productRoot, requiredPath, out var resolvedPath, out var invalidReason))
+            {
+                invalidPaths.Add($"{requiredPath} ({invalidReason})");
+                continue;
+            }
+
+            if (!File.Exists(resolvedPath) &&
+                !Directory.Exists(resolvedPath))
+            {
+                missingPaths.Add(resolvedPath);
+            }
+        }
+
+        if (invalidPaths.Count > 0)
+        {
+            var invalidSummary = string.Join("; ", invalidPaths);
+            return new ProcessCompletionIssue(
+                "process.adapter.product_required_output_path_invalid",
+                $"Step '{assignment.StepKey}' claimed completion but declared required product path(s) are invalid or outside the configured product root '{productRoot}': {invalidSummary}.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-path-invalid:{invalidSummary}",
+                [],
+                ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Unknown);
+        }
+
+        if (missingPaths.Count == 0)
+        {
+            return null;
+        }
+
+        var missingSummary = string.Join("; ", missingPaths);
+        return new ProcessCompletionIssue(
+            "process.adapter.product_required_output_missing",
+            $"Step '{assignment.StepKey}' claimed completion but required product output path(s) are missing under the configured product root '{productRoot}': {missingSummary}.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-path-missing:{missingSummary}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue? ValidateRequiredProductFileContentChecks(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        string productRoot)
+    {
+        var resolution = ResolveProductCompletionRequiredFileContentChecks(assignment.LaunchVariables, assignment.StepKey);
+        if (!string.IsNullOrWhiteSpace(resolution.InvalidReason))
+        {
+            return new ProcessCompletionIssue(
+                "process.adapter.product_required_file_content_check_invalid",
+                $"Step '{assignment.StepKey}' claimed completion but declared required product file content check(s) are invalid: {resolution.InvalidReason}.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-check-invalid:{resolution.InvalidReason}",
+                [],
+                ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Unknown);
+        }
+
+        if (resolution.Checks.Count == 0)
+        {
+            return null;
+        }
+
+        var failures = new List<string>();
+        foreach (var check in resolution.Checks)
+        {
+            if (check.EnforceBranchOutcomeKeys.Count > 0 &&
+                !check.EnforceBranchOutcomeKeys.Contains(output.BranchOutcomeKey, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!TryResolveRequiredProductFileContentCheckPath(productRoot, check, out var resolvedPath, out var pathFailure, out var skippedMissingOptionalPath))
+            {
+                if (skippedMissingOptionalPath)
+                {
+                    continue;
+                }
+
+                failures.Add(pathFailure);
+                continue;
+            }
+
+            string content;
+            try
+            {
+                content = File.ReadAllText(resolvedPath);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DirectoryNotFoundException or ArgumentException or NotSupportedException)
+            {
+                failures.Add($"{resolvedPath} could not be read: {exception.Message}");
+                continue;
+            }
+
+            foreach (var requiredTextGroup in check.RequiredTextAnyGroups)
+            {
+                if (requiredTextGroup.Count == 0)
+                {
+                    failures.Add($"{resolvedPath} has an empty required text group.");
+                    continue;
+                }
+
+                if (!requiredTextGroup.Any(requiredText => content.Contains(requiredText, StringComparison.OrdinalIgnoreCase)))
+                {
+                    failures.Add($"{resolvedPath} does not contain any expected text from [{string.Join(" | ", requiredTextGroup)}]");
+                }
+            }
+
+            foreach (var forbiddenTextGroup in check.ForbiddenTextAnyGroups)
+            {
+                if (forbiddenTextGroup.Count == 0)
+                {
+                    failures.Add($"{resolvedPath} has an empty forbidden text group.");
+                    continue;
+                }
+
+                var foundForbiddenText = forbiddenTextGroup
+                    .Where(forbiddenText => content.Contains(forbiddenText, StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+                if (foundForbiddenText.Length > 0)
+                {
+                    failures.Add($"{resolvedPath} contains forbidden text [{string.Join(" | ", foundForbiddenText)}]");
+                }
+            }
+        }
+
+        if (failures.Count == 0)
+        {
+            return null;
+        }
+
+        var failureSummary = string.Join("; ", failures.Distinct(StringComparer.OrdinalIgnoreCase));
+        return new ProcessCompletionIssue(
+            "process.adapter.product_required_file_content_missing",
+            $"Step '{assignment.StepKey}' claimed completion but required product file content/readback check(s) failed: {failureSummary}.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-missing:{failureSummary}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static bool TryResolveRequiredProductFileContentCheckPath(
+        string productRoot,
+        ProductCompletionRequiredFileContentCheck check,
+        out string resolvedPath,
+        out string failure,
+        out bool skippedMissingOptionalPath)
+    {
+        resolvedPath = string.Empty;
+        failure = string.Empty;
+        skippedMissingOptionalPath = false;
+        var invalidPaths = new List<string>();
+        var missingPaths = new List<string>();
+        foreach (var pathCandidate in check.PathCandidates)
+        {
+            if (!TryResolveRequiredProductPath(productRoot, pathCandidate, out var candidatePath, out var invalidReason))
+            {
+                invalidPaths.Add($"{pathCandidate} ({invalidReason})");
+                continue;
+            }
+
+            if (!File.Exists(candidatePath))
+            {
+                missingPaths.Add(candidatePath);
+                continue;
+            }
+
+            resolvedPath = candidatePath;
+            return true;
+        }
+
+        if (invalidPaths.Count == check.PathCandidates.Count)
+        {
+            failure = $"all required content-check path candidates were invalid: {string.Join("; ", invalidPaths)}";
+            return false;
+        }
+
+        if (!check.MustExist)
+        {
+            skippedMissingOptionalPath = true;
+            return false;
+        }
+
+        failure = $"none of the required content-check path candidates existed: {string.Join("; ", missingPaths)}";
+        return false;
+    }
+
+    private static ProcessCompletionIssue? ValidateProductMutationWriteReceipt(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            toolReceipts is null ||
+            !AllowsProductMutation(NormalizeOperations(assignment.AllowedOperations), assignment.OperationTargetScope))
+        {
+            return null;
+        }
+
+        var productTargetRefs = ResolveProductTargetReceiptRefs(assignment.LaunchVariables);
+        if (productTargetRefs.Count == 0 ||
+            HasProductMutationReceipt(toolReceipts, productTargetRefs) ||
+            CanAcceptBranchGatedValidationOnlyCompletion(assignment, toolReceipts, productTargetRefs))
+        {
+            return null;
+        }
+
+        var targetSummary = string.Join("; ", productTargetRefs);
+        return new ProcessCompletionIssue(
+            "process.adapter.product_mutation_receipt_missing",
+            $"Step '{assignment.StepKey}' claimed completion for a product-mutating scope but did not produce a successful product-target mutation receipt for {targetSummary}. Retry the same step by mutating the required product source or test files under the grounded product target with a product mutation tool before writing the final managed artifact; writing only artifacts/process-runs/... is not product mutation.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-mutation-receipt-missing:{string.Join("|", toolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
+            [],
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue? ValidateRequiredProductToolReceipts(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        var requiredToolReceipts = ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey);
+        if (!ShouldEnforceRequiredProductToolReceipts(assignment, requiredToolReceipts))
+        {
+            return null;
+        }
+
+        var observedToolReceipts = toolReceipts ?? [];
+        var allowFailedExecutionReceipt = AllowsFailedRequiredToolReceipt(assignment);
+        var missingToolReceipts = requiredToolReceipts
+            .Where(requiredToolReceipt => !HasRequiredToolReceipt(observedToolReceipts, requiredToolReceipt, allowFailedExecutionReceipt))
+            .ToArray();
+        if (missingToolReceipts.Length == 0)
+        {
+            return null;
+        }
+
+        var missingSummary = string.Join("; ", missingToolReceipts);
+        var failedReceiptGuidance = BuildFailedRequiredToolReceiptGuidance(
+            assignment,
+            observedToolReceipts,
+            missingToolReceipts,
+            allowFailedExecutionReceipt);
+        var missingReceiptGuidance = BuildMissingRequiredToolReceiptGuidance(assignment, missingToolReceipts);
+        return new ProcessCompletionIssue(
+            "process.adapter.product_required_tool_receipt_missing",
+            $"Step '{assignment.StepKey}' claimed completion but required current-run product tool receipt(s) are missing: {missingSummary}.{failedReceiptGuidance}{missingReceiptGuidance}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-missing:{missingSummary}:{string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static bool ShouldEnforceRequiredProductToolReceipts(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<string> requiredToolReceipts)
+    {
+        if (requiredToolReceipts.Count == 0)
+        {
+            return false;
+        }
+
+        var operations = NormalizeOperations(assignment.AllowedOperations);
+        return AllowsProductMutation(operations, assignment.OperationTargetScope) ||
+               operations.Contains(ProcessOperationContractNames.RunValidation, StringComparer.OrdinalIgnoreCase) ||
+               operations.Contains(ProcessOperationContractNames.LaunchRuntime, StringComparer.OrdinalIgnoreCase) ||
+               operations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase) ||
+               operations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool AllowsFailedRequiredToolReceipt(ProcessRuntimeStepAssignment assignment)
+    {
+        var operations = NormalizeOperations(assignment.AllowedOperations);
+        return operations.Contains(ProcessOperationContractNames.RunValidation, StringComparer.OrdinalIgnoreCase) &&
+               !AllowsProductMutation(operations, assignment.OperationTargetScope);
+    }
+
+    private static bool HasRequiredToolReceipt(
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+        string requiredToolReceipt,
+        bool allowFailedExecutionReceipt)
+    {
+        var normalizedRequirement = requiredToolReceipt.Trim();
+        if (TryResolveDotNetNewTemplateRequirement(normalizedRequirement, out var requiredTemplate))
+        {
+            return toolReceipts.Any(receipt =>
+                IsSuccessfulReceipt(receipt.ExitSummary) &&
+                IsRequiredToolReceiptMatch(receipt, normalizedRequirement));
+        }
+
+        return !string.IsNullOrWhiteSpace(normalizedRequirement) &&
+               toolReceipts.Any(receipt =>
+                   IsRequiredToolReceiptUsable(receipt, allowFailedExecutionReceipt) &&
+                   IsRequiredToolReceiptMatch(receipt, normalizedRequirement));
+    }
+
+    private static bool IsRequiredToolReceiptMatch(
+        ToolExecutionReceiptRecord receipt,
+        string normalizedRequirement)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedRequirement))
+        {
+            return false;
+        }
+
+        if (TryResolveDotNetNewTemplateRequirement(normalizedRequirement, out var requiredTemplate))
+        {
+            return IsDotNetNewTemplateReceipt(receipt, requiredTemplate);
+        }
+
+        if (LooksLikeConcreteToolName(normalizedRequirement))
+        {
+            return string.Equals(receipt.ToolName, normalizedRequirement, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(receipt.ToolName, normalizedRequirement, StringComparison.OrdinalIgnoreCase) ||
+               ReceiptText(receipt).Contains(normalizedRequirement, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeConcreteToolName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+            value.Trim(),
+            @"^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static string BuildFailedRequiredToolReceiptGuidance(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ToolExecutionReceiptRecord> observedToolReceipts,
+        IReadOnlyList<string> missingToolReceipts,
+        bool allowFailedExecutionReceipt)
+    {
+        if (allowFailedExecutionReceipt || missingToolReceipts.Count == 0 || observedToolReceipts.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var failedMatches = missingToolReceipts
+            .SelectMany(requiredToolReceipt =>
+            {
+                var normalizedRequirement = requiredToolReceipt.Trim();
+                if (string.IsNullOrWhiteSpace(normalizedRequirement))
+                {
+                    return Array.Empty<string>();
+                }
+
+                return observedToolReceipts
+                    .Where(receipt =>
+                        IsRequiredToolReceiptMatch(receipt, normalizedRequirement) &&
+                        !IsSuccessfulReceipt(receipt.ExitSummary) &&
+                        !IsConcreteToolBoundaryReceipt(receipt))
+                    .Select(receipt => $"{receipt.ToolName} ({SummarizeReceiptExit(receipt.ExitSummary)})");
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToArray();
+        if (failedMatches.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var operations = NormalizeOperations(assignment.AllowedOperations);
+        var repairGuidance = AllowsProductMutation(operations, assignment.OperationTargetScope)
+            ? " For product-mutating steps, inspect the failing command output, mutate the product target before rerunning validation, and complete only after the required receipts succeed."
+            : " Retry the required commands and complete only after the required receipts succeed.";
+
+        return $" Matching current-run receipt(s) were present but failed: {string.Join("; ", failedMatches)}.{repairGuidance}";
+    }
+
+    private static string BuildMissingRequiredToolReceiptGuidance(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<string> missingToolReceipts)
+    {
+        if (!missingToolReceipts.Any(required =>
+                string.Equals(required.Trim(), "workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase)))
+        {
+            return string.Empty;
+        }
+
+        if (!TryResolveStepScriptLaunchVariableNames(
+                assignment,
+                out var scriptVariableName,
+                out var scriptRefVariableName,
+                out var manifestVariableName))
+        {
+            return " Before retrying, invoke the reviewed current-run helper with workspace_pwsh_run_script and read back the affected product files before rewriting the primary managed artifact.";
+        }
+
+        var scriptRef = assignment.LaunchVariables.TryGetValue(scriptRefVariableName, out var configuredScriptRef) &&
+                        !string.IsNullOrWhiteSpace(configuredScriptRef)
+            ? configuredScriptRef.Trim()
+            : scriptRefVariableName;
+        var manifestGuidance = string.IsNullOrWhiteSpace(manifestVariableName)
+            ? string.Empty
+            : $" and sideEffectManifest from {manifestVariableName}";
+
+        return $" Before retrying, write launch variable {scriptVariableName} verbatim to '{scriptRef}', verify that .ps1 ref, invoke workspace_pwsh_run_script with path '{scriptRef}'{manifestGuidance}, then read back the product files and rewrite the primary managed artifact only after the script receipt exists.";
+    }
+
+    private static bool TryResolveStepScriptLaunchVariableNames(
+        ProcessRuntimeStepAssignment assignment,
+        out string scriptVariableName,
+        out string scriptRefVariableName,
+        out string manifestVariableName)
+    {
+        var prefix = assignment.StepKey switch
+        {
+            "create-dotnet-project" => "DotNetCreateProject",
+            "add-test-project" => "DotNetAddTestProject",
+            "repair-solution-setup" when assignment.LaunchVariables.ContainsKey("DotNetAddTestProjectScriptRef") => "DotNetAddTestProject",
+            "repair-solution-setup" => "DotNetCreateProject",
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            scriptVariableName = string.Empty;
+            scriptRefVariableName = string.Empty;
+            manifestVariableName = string.Empty;
+            return false;
+        }
+
+        scriptVariableName = $"{prefix}Script";
+        scriptRefVariableName = $"{prefix}ScriptRef";
+        manifestVariableName = $"{prefix}SideEffectManifest";
+        return assignment.LaunchVariables.ContainsKey(scriptVariableName) ||
+               assignment.LaunchVariables.ContainsKey(scriptRefVariableName);
+    }
+
+    private static string SummarizeReceiptExit(string exitSummary)
+    {
+        var normalized = NormalizeReceiptCommandText(exitSummary);
+        return normalized.Length <= 160 ? normalized : normalized[..160];
+    }
+
+    private static bool TryResolveDotNetNewTemplateRequirement(string requiredToolReceipt, out string requiredTemplate)
+    {
+        requiredTemplate = string.Empty;
+        if (string.IsNullOrWhiteSpace(requiredToolReceipt))
+        {
+            return false;
+        }
+
+        const string prefix = "template=";
+        if (!requiredToolReceipt.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        requiredTemplate = requiredToolReceipt[prefix.Length..].Trim();
+        return !string.IsNullOrWhiteSpace(requiredTemplate);
+    }
+
+    private static bool IsDotNetNewTemplateReceipt(
+        ToolExecutionReceiptRecord receipt,
+        string requiredTemplate)
+    {
+        if (!string.Equals(receipt.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var requestSummary = NormalizeReceiptCommandText(receipt.RequestSummary);
+        var requiredTemplateText = NormalizeReceiptCommandText(requiredTemplate);
+        if (requestSummary.Length == 0 || requiredTemplateText.Length == 0)
+        {
+            return false;
+        }
+
+        return string.Equals(requestSummary, $"new {requiredTemplateText}", StringComparison.OrdinalIgnoreCase) ||
+               requestSummary.StartsWith($"new {requiredTemplateText} ", StringComparison.OrdinalIgnoreCase) ||
+               requestSummary.Contains($" template={requiredTemplateText} ", StringComparison.OrdinalIgnoreCase) ||
+               requestSummary.Contains($" --template {requiredTemplateText} ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeReceiptCommandText(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value
+            .Replace('"', ' ')
+            .Replace('\'', ' ')
+            .ReplaceLineEndings(" ")
+            .Trim();
+        return string.Join(
+            " ",
+            normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    private static string ReceiptText(ToolExecutionReceiptRecord receipt)
+        => $"{receipt.ToolName} {receipt.RequestSummary} {receipt.WorkingDirectory} {receipt.ExitSummary}";
+
+    private static bool TryCreateProductRequiredToolReceiptBlockedRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        out ProcessCompletionIssue issue)
+    {
+        issue = null!;
+        if (output.Status != ProcessStepOutcomeStatus.Blocked)
+        {
+            return false;
+        }
+
+        var requiredToolReceipts = ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey);
+        if (!ShouldEnforceRequiredProductToolReceipts(assignment, requiredToolReceipts))
+        {
+            return false;
+        }
+
+        var observedToolReceipts = toolReceipts ?? [];
+        var allowFailedExecutionReceipt = AllowsFailedRequiredToolReceipt(assignment);
+        var missingToolReceipts = requiredToolReceipts
+            .Where(requiredToolReceipt => !HasRequiredToolReceipt(observedToolReceipts, requiredToolReceipt, allowFailedExecutionReceipt))
+            .ToArray();
+        var outputReportsMissingRequiredToolReceipts = OutputReportsMissingRequiredToolReceipts(output, requiredToolReceipts);
+        if (missingToolReceipts.Length == 0 && !outputReportsMissingRequiredToolReceipts)
+        {
+            return false;
+        }
+
+        var retryToolReceipts = missingToolReceipts.Length == 0
+            ? requiredToolReceipts.Where(requiredToolReceipt => !string.IsNullOrWhiteSpace(requiredToolReceipt)).ToArray()
+            : missingToolReceipts;
+        var hasRecoverableScriptHelperOrdering = HasRecoverableRequiredScriptHelperOrderingEvidence(
+            assignment,
+            retryToolReceipts,
+            observedToolReceipts);
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (!hasRecoverableScriptHelperOrdering &&
+            LooksLikeRightsOrToolBoundary(text) &&
+            HasConcreteToolBoundaryReceipt(observedToolReceipts))
+        {
+            return false;
+        }
+
+        var missingSummary = string.Join("; ", retryToolReceipts);
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The step returned Blocked before all required product tool receipts were present."
+            : output.Reason.Trim();
+        var receiptGateGuidance = missingToolReceipts.Length == 0
+            ? "The step output itself reported missing required receipt evidence even though matching receipt records are present in the current run. Retry the same step and reconcile the primary managed artifact, branch outcome, and evidence refs with those receipts before routing to a branch or manager."
+            : $"Step '{assignment.StepKey}' returned Blocked while required current-run product tool receipt(s) are still missing: {missingSummary}. Retry the same step, invoke the missing required tool receipt(s), update primary managed artifact '{primaryRef}', and return Blocked only for a concrete tool, permission, policy, or environment blocker.";
+        var failedReceiptGuidance = BuildFailedRequiredToolReceiptGuidance(
+            assignment,
+            observedToolReceipts,
+            retryToolReceipts,
+            allowFailedExecutionReceipt);
+        var scriptHelperOrderingGuidance = hasRecoverableScriptHelperOrdering
+            ? " A required script execution was denied before a current-run helper script was available, but the same run now has a successful helper script write receipt. Retry by verifying that helper path and invoking the missing script execution tool before returning a final status. This is not a manager grant or reassignment case unless the verified retry is denied for a concrete policy, permission, or environment boundary."
+            : string.Empty;
+        var receiptSummary = string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"));
+        issue = new ProcessCompletionIssue(
+            "process.adapter.product_required_tool_receipt_blocked_retry",
+            $"{receiptGateGuidance}{failedReceiptGuidance}{scriptHelperOrderingGuidance} Original reason: {originalReason}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-blocked-retry:{missingSummary}:{ComputeHash(receiptSummary)}:{ComputeHash(originalReason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        return true;
+    }
+
+    private static bool OutputReportsMissingRequiredToolReceipts(
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<string> requiredToolReceipts)
+    {
+        var normalizedText = NormalizeReceiptCommandText(string.Join(
+                " ",
+                EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value))))
+            .ToLowerInvariant();
+        if (normalizedText.Length == 0 ||
+            !LooksLikeMissingRequiredEvidence(normalizedText))
+        {
+            return false;
+        }
+
+        return requiredToolReceipts.Any(requiredToolReceipt =>
+            EnumerateRequiredToolReceiptSearchTerms(requiredToolReceipt)
+                .Any(term => normalizedText.Contains(term, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool LooksLikeMissingRequiredEvidence(string normalizedText)
+        => normalizedText.Contains("missing", StringComparison.OrdinalIgnoreCase) ||
+           normalizedText.Contains("not yet", StringComparison.OrdinalIgnoreCase) ||
+           normalizedText.Contains("not produced", StringComparison.OrdinalIgnoreCase) ||
+           normalizedText.Contains("not been produced", StringComparison.OrdinalIgnoreCase) ||
+           normalizedText.Contains("no current-run", StringComparison.OrdinalIgnoreCase) ||
+           normalizedText.Contains("no current run", StringComparison.OrdinalIgnoreCase);
+
+    private static IEnumerable<string> EnumerateRequiredToolReceiptSearchTerms(string requiredToolReceipt)
+    {
+        var normalizedRequirement = NormalizeReceiptCommandText(requiredToolReceipt).ToLowerInvariant();
+        if (normalizedRequirement.Length == 0)
+        {
+            yield break;
+        }
+
+        yield return normalizedRequirement;
+        if (TryResolveDotNetNewTemplateRequirement(normalizedRequirement, out var requiredTemplate))
+        {
+            yield return NormalizeReceiptCommandText(requiredTemplate).ToLowerInvariant();
+            yield return $"template {NormalizeReceiptCommandText(requiredTemplate).ToLowerInvariant()}";
+            yield break;
+        }
+
+        const string workspaceDotNetPrefix = "workspace_dotnet_";
+        if (normalizedRequirement.StartsWith(workspaceDotNetPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var verb = normalizedRequirement[workspaceDotNetPrefix.Length..];
+            if (!string.IsNullOrWhiteSpace(verb))
+            {
+                yield return verb;
+                yield return $"dotnet {verb}";
+            }
+        }
+    }
+
+    private static bool HasRecoverableRequiredScriptHelperOrderingEvidence(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<string> missingToolReceipts,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+    {
+        if (!missingToolReceipts.Any(IsWorkspaceScriptExecutionTool))
+        {
+            return false;
+        }
+
+        return toolReceipts.Any(receipt =>
+                   IsWorkspaceScriptExecutionTool(receipt.ToolName) &&
+                   !IsSuccessfulReceipt(receipt.ExitSummary)) &&
+               toolReceipts.Any(receipt =>
+                   IsManagedArtifactWriteTool(receipt.ToolName) &&
+                   IsSuccessfulReceipt(receipt.ExitSummary) &&
+                   ReceiptTargetsCurrentRunScript(receipt.RequestSummary, assignment.RunId));
+    }
+
+    private static bool IsWorkspaceScriptExecutionTool(string toolName)
+        => string.Equals(toolName, "workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_python_run_file", StringComparison.OrdinalIgnoreCase);
+
+    private static bool ReceiptTargetsCurrentRunScript(string requestSummary, ProcessRunId runId)
+    {
+        var normalizedRequest = NormalizeManagedArtifactRef(requestSummary);
+        if (!normalizedRequest.Contains($"process-runs/{runId}/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return normalizedRequest.Contains(".ps1", StringComparison.OrdinalIgnoreCase) ||
+               normalizedRequest.Contains(".py", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryCreateProductRequiredStateBlockedRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        out ProcessCompletionIssue issue)
+    {
+        issue = null!;
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            toolReceipts is null ||
+            !AllowsProductMutation(NormalizeOperations(assignment.AllowedOperations), assignment.OperationTargetScope) ||
+            !TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+        {
+            return false;
+        }
+
+        var requiredIssues = new List<ProcessCompletionIssue>();
+        if (ValidateRequiredProductPaths(assignment, productRoot) is { } requiredPathIssue)
+        {
+            requiredIssues.Add(requiredPathIssue);
+        }
+
+        if (ValidateRequiredProductFileContentChecks(assignment, output, productRoot) is { } requiredFileContentIssue)
+        {
+            requiredIssues.Add(requiredFileContentIssue);
+        }
+
+        var retryableIssues = requiredIssues
+            .Where(requiredIssue => requiredIssue.RetrySafety == ProcessDiagnosticRetrySafety.SafeToRetry)
+            .ToArray();
+        if (retryableIssues.Length == 0)
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (LooksLikeRightsOrToolBoundary(text) &&
+            HasConcreteToolBoundaryReceipt(toolReceipts))
+        {
+            return false;
+        }
+
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var requiredSummary = string.Join(" ", retryableIssues.Select(requiredIssue => requiredIssue.Summary));
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The step returned Blocked while declared product state was still incomplete."
+            : output.Reason.Trim();
+        var receiptSummary = string.Join("|", toolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"));
+        issue = new ProcessCompletionIssue(
+            "process.adapter.product_required_state_blocked_retry",
+            $"Step '{assignment.StepKey}' returned Blocked while required product output/readback gate(s) are still unsatisfied. Retry the same step, satisfy the declared product path and file-content checks, update primary managed artifact '{primaryRef}', and return Blocked only for a concrete tool, permission, policy, or environment blocker. Missing state: {requiredSummary} Original reason: {originalReason}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-state-blocked-retry:{ComputeHash(requiredSummary)}:{ComputeHash(receiptSummary)}:{ComputeHash(originalReason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        return true;
+    }
+
+    private static bool IsRetryableProductMutationEvidenceBlocker(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Blocked ||
+            toolReceipts is null ||
+            !AllowsProductMutation(NormalizeOperations(assignment.AllowedOperations), assignment.OperationTargetScope))
+        {
+            return false;
+        }
+
+        var productTargetRefs = ResolveProductTargetReceiptRefs(assignment.LaunchVariables);
+        if (productTargetRefs.Count == 0 ||
+            HasProductMutationReceipt(toolReceipts, productTargetRefs))
+        {
+            return false;
+        }
+
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (LooksLikeRightsOrToolBoundary(text) &&
+            HasConcreteToolBoundaryReceipt(toolReceipts))
+        {
+            return false;
+        }
+
+        return HasPrimaryManagedEvidence(assignment, output, toolReceipts);
+    }
+
+    private static bool HasPrimaryManagedEvidence(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+    {
+        var primaryRef = NormalizeManagedArtifactRef(BuildManagedStepArtifactPath(assignment));
+        return HasManagedArtifactWriteReceipt(toolReceipts, primaryRef) ||
+               output.EvidenceRefs.Any(evidenceRef =>
+                   !string.IsNullOrWhiteSpace(evidenceRef) &&
+                   ReceiptTargetsManagedRef(evidenceRef, primaryRef));
+    }
+
+    private static ProcessCompletionIssue CreateProductMutationEvidenceRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+    {
+        var productTargetRefs = ResolveProductTargetReceiptRefs(assignment.LaunchVariables);
+        var targetSummary = productTargetRefs.Count == 0
+            ? "the configured product target"
+            : string.Join("; ", productTargetRefs);
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The step returned Blocked after writing managed evidence but before product mutation evidence was present."
+            : output.Reason.Trim();
+        var receiptSummary = string.Join("|", toolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"));
+        return new ProcessCompletionIssue(
+            "process.adapter.product_mutation_blocked_retry",
+            $"Step '{assignment.StepKey}' returned Blocked after writing managed evidence but did not produce a successful product-target mutation receipt for {targetSummary}. Retry the same step: apply the requested product changes under the product target, update primary managed artifact '{primaryRef}', and return Blocked only for a concrete tool, permission, policy, or environment blocker. Original reason: {originalReason}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-mutation-blocked-retry:{ComputeHash(receiptSummary)}:{ComputeHash(originalReason)}",
+            assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
@@ -2499,8 +5152,87 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
         => string.Equals(toolName, "workspace_write_file", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(toolName, "workspace_append_file", StringComparison.OrdinalIgnoreCase);
 
+    private static bool HasProductMutationReceipt(
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+        IReadOnlyList<string> productTargetRefs)
+        => toolReceipts.Any(receipt =>
+            IsProductMutationTool(receipt.ToolName) &&
+            IsSuccessfulReceipt(receipt.ExitSummary) &&
+            (ReceiptTargetsAnyProductRef(receipt.RequestSummary, productTargetRefs) ||
+             ReceiptTargetsAnyProductRef(receipt.WorkingDirectory, productTargetRefs)));
+
+    private static bool CanAcceptBranchGatedValidationOnlyCompletion(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+        IReadOnlyList<string> productTargetRefs)
+    {
+        var operations = NormalizeOperations(assignment.AllowedOperations);
+        return assignment.BranchGate is not null &&
+               operations.Contains(ProcessOperationContractNames.RunValidation, StringComparer.OrdinalIgnoreCase) &&
+               HasManagedArtifactWriteReceipt(assignment, toolReceipts) &&
+               HasProductValidationReceipt(toolReceipts, productTargetRefs);
+    }
+
+    private static bool HasProductValidationReceipt(
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+        IReadOnlyList<string> productTargetRefs)
+        => toolReceipts.Any(receipt =>
+            IsProductValidationTool(receipt.ToolName) &&
+            IsSuccessfulReceipt(receipt.ExitSummary) &&
+            (ReceiptTargetsAnyProductRef(receipt.RequestSummary, productTargetRefs) ||
+             ReceiptTargetsAnyProductRef(receipt.WorkingDirectory, productTargetRefs)));
+
+    private static bool IsProductValidationTool(string toolName)
+        => string.Equals(toolName, "workspace_dotnet_build", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_dotnet_test", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsProductMutationTool(string toolName)
+        => string.Equals(toolName, "workspace_write_file", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_append_file", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_copy_path", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_move_path", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_delete_path", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, "workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase);
+
     private static bool IsSuccessfulReceipt(string exitSummary)
         => exitSummary.StartsWith("Succeeded", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsRequiredToolReceiptUsable(
+        ToolExecutionReceiptRecord receipt,
+        bool allowFailedExecutionReceipt)
+    {
+        if (IsSuccessfulReceipt(receipt.ExitSummary))
+        {
+            return true;
+        }
+
+        return allowFailedExecutionReceipt && !IsConcreteToolBoundaryReceipt(receipt);
+    }
+
+    private static bool HasConcreteToolBoundaryReceipt(IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+        => toolReceipts.Any(IsConcreteToolBoundaryReceipt);
+
+    private static bool IsConcreteToolBoundaryReceipt(ToolExecutionReceiptRecord receipt)
+        => ContainsAny(
+            $"{receipt.RequestSummary} {receipt.ExitSummary}",
+            "PolicyDenied",
+            "blocked by policy",
+            "not authorized to use tool",
+            "access denied",
+            "workspace boundary",
+            "outside the current run boundary",
+            "denied tool",
+            "tool is not part of the composed capability set");
+
+    private static bool ReceiptTargetsAnyProductRef(
+        string requestSummary,
+        IReadOnlyList<string> productTargetRefs)
+    {
+        var normalizedRequest = NormalizeReceiptPathText(requestSummary);
+        return productTargetRefs.Any(productTargetRef =>
+            normalizedRequest.Contains(NormalizeReceiptPathText(productTargetRef), StringComparison.OrdinalIgnoreCase));
+    }
 
     private static bool ReceiptTargetsManagedRef(string requestSummary, string expectedRef)
     {
@@ -2512,6 +5244,39 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
                normalizedRequest.Contains(expectedRef, StringComparison.OrdinalIgnoreCase) ||
                normalizedRequest.Contains(expectedTail, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static IReadOnlyList<string> ResolveProductTargetReceiptRefs(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        return launchVariables
+            .Where(item => TrustedExternalTargetVariableNames.Contains(item.Key))
+            .SelectMany(item => EnumerateProductTargetReceiptRefs(item.Value))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IEnumerable<string> EnumerateProductTargetReceiptRefs(string value)
+    {
+        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(value);
+        if (!string.IsNullOrWhiteSpace(normalizedAlias) &&
+            normalizedAlias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return normalizedAlias;
+        }
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            yield return value;
+        }
+    }
+
+    private static string NormalizeReceiptPathText(string value)
+        => value
+            .Trim()
+            .Replace('\\', '/')
+            .Replace("\"", string.Empty, StringComparison.Ordinal)
+            .Replace("'", string.Empty, StringComparison.Ordinal);
 
     private static bool HasManagedArtifactEvidence(
         ProcessRuntimeStepAssignment assignment,
@@ -2708,6 +5473,313 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
+    private static ProcessCompletionIssue? ValidateGroundedOutcomeReferences(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        var ungroundedRefs = FindUngroundedPathReferences(
+            assignment,
+            EnumerateOutcomePathReferences(output),
+            toolReceipts);
+        if (ungroundedRefs.Length == 0)
+        {
+            return null;
+        }
+
+        var refSummary = DescribeUngroundedReferenceSet(ungroundedRefs);
+        return new ProcessCompletionIssue(
+            "process.adapter.ungrounded_outcome_reference",
+            $"Step '{assignment.StepKey}' claimed completion but cited {refSummary}. Those refs are not grounded in the current step brief, launch variables, required upstream refs, or current-run tool receipts. Retry the same step, remove the rejected path-like refs from the reason, summary, next actions, and evidence refs, and overwrite the managed artifact if needed. Do not quote or restate rejected literal path strings from diagnostics or earlier attempts. Keep a path-like ref only if this same retry first reads or writes current-run evidence that grounds the exact ref.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:ungrounded-outcome-reference:{ComputeHash(string.Join("|", ungroundedRefs))}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private ProcessCompletionIssue? ValidateManagedArtifactBodyReferences(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        if (output.Status != ProcessStepOutcomeStatus.Completed ||
+            assignment.ProducedArtifactSlotIds.Count == 0)
+        {
+            return null;
+        }
+
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var readResult = workspaceFiles.ReadTextFile(primaryRef, maxCharacters: 200000);
+        if (!readResult.Succeeded || string.IsNullOrWhiteSpace(readResult.Content))
+        {
+            return null;
+        }
+
+        var content = readResult.Content;
+        if (TryRemoveNonCitableSourceMetadataLines(content, out var sanitizedContent))
+        {
+            var writeResult = workspaceFiles.WriteTextFile(primaryRef, sanitizedContent, overwrite: true);
+            if (writeResult.Succeeded)
+            {
+                content = sanitizedContent;
+            }
+        }
+
+        var ungroundedRefs = FindUngroundedPathReferences(
+            assignment,
+            EnumerateTextPathReferences(content),
+            toolReceipts);
+        if (ungroundedRefs.Length == 0)
+        {
+            return null;
+        }
+
+        var refSummary = DescribeUngroundedReferenceSet(ungroundedRefs);
+        return new ProcessCompletionIssue(
+            "process.adapter.ungrounded_managed_artifact_reference",
+            $"Step '{assignment.StepKey}' wrote primary managed artifact '{primaryRef}' with {refSummary}. Those refs are not grounded in the current step brief, launch variables, required upstream refs, or current-run successful tool receipts. Retry the same step, overwrite the artifact, and remove rejected path-like refs from the artifact body, reason, summary, next actions, and evidence refs. Do not quote or restate rejected literal path strings from diagnostics or earlier attempts. Keep a path-like ref only if this same retry first reads or writes current-run evidence that grounds the exact ref.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:ungrounded-managed-artifact-reference:{ComputeHash(string.Join("|", ungroundedRefs))}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static string DescribeUngroundedReferenceSet(IReadOnlyList<string> ungroundedRefs)
+        => ungroundedRefs.Count == 1
+            ? "1 ungrounded path-like ref"
+            : $"{ungroundedRefs.Count} ungrounded path-like refs";
+
+    private static bool TryRemoveNonCitableSourceMetadataLines(
+        string content,
+        out string sanitizedContent)
+    {
+        sanitizedContent = Regex.Replace(
+            content,
+            @"(?im)^\s*(?:[-*]\s*)?SourceDoc(?:Name|Link)\s*:\s*.*(?:\r?\n|$)",
+            string.Empty);
+        sanitizedContent = Regex.Replace(
+            sanitizedContent,
+            @"(?im)^.*(?:[A-Za-z]:\\[^\r\n]*\\CanDoItAll\\workspace\\|artifacts/scopes[\\/]|managed-files[\\/]|project-media[\\/]|tool-runs[\\/]).*(?:\r?\n|$)",
+            string.Empty);
+        sanitizedContent = Regex.Replace(
+            sanitizedContent,
+            @"(\r?\n){3,}",
+            $"{Environment.NewLine}{Environment.NewLine}");
+        return !string.Equals(content, sanitizedContent, StringComparison.Ordinal);
+    }
+
+    private static ProcessStepOutcomeResult RemoveNonCitableSourceMetadataFromOutcome(
+        ProcessStepOutcomeResult output)
+    {
+        var reason = RemoveNonCitableSourceMetadataText(output.Reason);
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            reason = "Runtime removed non-citable source metadata from the structured outcome; no citable reason text remained.";
+        }
+
+        var summary = RemoveNonCitableSourceMetadataText(output.HumanReadableSummaryMarkdown);
+        return new ProcessStepOutcomeResult
+        {
+            Status = output.Status,
+            Reason = reason,
+            BranchOutcomeKey = RemoveNonCitableSourceMetadataText(output.BranchOutcomeKey),
+            BranchOutcomeTitle = RemoveNonCitableSourceMetadataText(output.BranchOutcomeTitle),
+            EvidenceRefs = output.EvidenceRefs
+                .Select(RemoveNonCitableEvidenceRef)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
+            NextActions = output.NextActions
+                .Select(RemoveNonCitableSourceMetadataText)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .ToArray(),
+            HumanReadableSummaryMarkdown = string.IsNullOrWhiteSpace(summary) ? null : summary
+        };
+    }
+
+    private static string RemoveNonCitableSourceMetadataText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        return TryRemoveNonCitableSourceMetadataLines(normalized, out var sanitized)
+            ? sanitized.Trim()
+            : normalized;
+    }
+
+    private static string RemoveNonCitableEvidenceRef(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (Regex.IsMatch(normalized, @"(?im)^\s*(?:[-*]\s*)?SourceDoc(?:Name|Link)\s*:\s*.*$"))
+        {
+            return string.Empty;
+        }
+
+        var containsManagedProcessRef = normalized.Contains("/process-runs/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("\\process-runs\\", StringComparison.OrdinalIgnoreCase);
+        if (containsManagedProcessRef)
+        {
+            return normalized;
+        }
+
+        return Regex.IsMatch(
+            normalized,
+            @"(?im)(?:[A-Za-z]:\\[^\r\n]*\\CanDoItAll\\workspace\\|artifacts/scopes[\\/]|managed-files[\\/]|project-media[\\/]|tool-runs[\\/])")
+                ? string.Empty
+                : normalized;
+    }
+
+    private static string[] FindUngroundedPathReferences(
+        ProcessRuntimeStepAssignment assignment,
+        IEnumerable<string> candidateRefs,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        var distinctRefs = candidateRefs
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (distinctRefs.Length == 0)
+        {
+            return [];
+        }
+
+        var groundingTexts = BuildOutcomeReferenceGroundingTexts(assignment, toolReceipts);
+        return distinctRefs
+            .Where(candidateRef => !IsOutcomeReferenceGrounded(assignment, candidateRef, groundingTexts))
+            .Take(5)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> BuildOutcomeReferenceGroundingTexts(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        var groundingTexts = new List<string>
+        {
+            assignment.Prompt,
+            BuildManagedStepArtifactPath(assignment),
+            BuildManagedStepArtifactRoot(assignment)
+        };
+        groundingTexts.AddRange(assignment.LaunchVariables.SelectMany(item => new[] { item.Key, item.Value }));
+        groundingTexts.AddRange(assignment.RequiredArtifactSlotIds.SelectMany(slotId => EnumerateManagedArtifactEvidenceRefs(assignment, slotId)));
+        groundingTexts.AddRange(assignment.ProducedArtifactSlotIds.SelectMany(slotId => EnumerateManagedArtifactEvidenceRefs(assignment, slotId)));
+
+        if (toolReceipts is not null)
+        {
+            groundingTexts.AddRange(toolReceipts
+                .Where(IsGroundingToolReceipt)
+                .SelectMany(receipt => new[]
+                {
+                    receipt.ToolName,
+                    receipt.RequestSummary,
+                    receipt.ExitSummary,
+                    receipt.WorkingDirectory
+                }));
+        }
+
+        return groundingTexts
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(NormalizeOutcomeReferenceText)
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool IsOutcomeReferenceGrounded(
+        ProcessRuntimeStepAssignment assignment,
+        string candidateRef,
+        IReadOnlyList<string> groundingTexts)
+    {
+        var normalizedCandidate = NormalizeOutcomeReferenceText(candidateRef);
+        if (normalizedCandidate.Length == 0)
+        {
+            return true;
+        }
+
+        var currentRunManagedRoot = $"process-runs/{assignment.RunId.Value:D}";
+        if (normalizedCandidate.Contains(currentRunManagedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return groundingTexts.Any(groundingText =>
+            groundingText.Contains(normalizedCandidate, StringComparison.OrdinalIgnoreCase) ||
+            IsPathReferenceUnderGroundedRoot(normalizedCandidate, groundingText));
+    }
+
+    private static bool IsPathReferenceUnderGroundedRoot(string normalizedCandidate, string groundingText)
+    {
+        var normalizedRoot = NormalizeOutcomeReferenceText(groundingText).TrimEnd('/');
+        if (normalizedRoot.Length == 0 ||
+            normalizedCandidate.Length <= normalizedRoot.Length ||
+            !normalizedCandidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return normalizedCandidate[normalizedRoot.Length] == '/';
+    }
+
+    private static bool IsGroundingToolReceipt(ToolExecutionReceiptRecord receipt)
+        => receipt.ExitSummary.StartsWith("Succeeded", StringComparison.OrdinalIgnoreCase);
+
+    private static IEnumerable<string> EnumerateOutcomePathReferences(ProcessStepOutcomeResult output)
+    {
+        foreach (var text in EnumerateOutcomeNarrativeText(output))
+        {
+            foreach (var candidate in EnumerateTextPathReferences(text))
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateTextPathReferences(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            yield break;
+        }
+
+        foreach (Match match in OutcomePathReferenceRegex().Matches(text))
+        {
+            var candidate = TrimOutcomeReference(match.Value);
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    private static IEnumerable<string?> EnumerateOutcomeNarrativeText(ProcessStepOutcomeResult output)
+    {
+        yield return output.Reason;
+        yield return output.BranchOutcomeKey;
+        yield return output.BranchOutcomeTitle;
+        yield return output.HumanReadableSummaryMarkdown;
+
+        foreach (var nextAction in output.NextActions)
+        {
+            yield return nextAction;
+        }
+    }
+
+    private static string TrimOutcomeReference(string value)
+        => value.Trim().Trim('`', '"', '\'', '.', ',', ';', ':', ')', ']', '}');
+
+    private static string NormalizeOutcomeReferenceText(string value)
+        => TrimOutcomeReference(value)
+            .Replace('\\', '/')
+            .Replace("%5C", "/", StringComparison.OrdinalIgnoreCase)
+            .Replace("%2F", "/", StringComparison.OrdinalIgnoreCase);
+
     private static bool LooksLikeAgentOutputContractFailure(Exception exception)
     {
         var text = exception.ToString();
@@ -2724,13 +5796,12 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
     private static bool LooksLikeTransientAgentExecutionFailure(string text)
     {
-        if (string.IsNullOrWhiteSpace(text) ||
-            LooksLikeRightsOrToolBoundary(text))
+        if (string.IsNullOrWhiteSpace(text))
         {
             return false;
         }
 
-        return ContainsAny(
+        var hasTransientMarker = ContainsAny(
             text,
             "Service request failed",
             "Status: 408",
@@ -2750,6 +5821,26 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             "connection reset",
             "connection refused",
             "transport error");
+        if (!hasTransientMarker)
+        {
+            return false;
+        }
+
+        return !LooksLikeRightsOrToolBoundary(text) ||
+               LooksLikeProviderRuntimeTransientFailure(text);
+    }
+
+    private static bool LooksLikeProviderRuntimeTransientFailure(string text)
+    {
+        return ContainsAny(
+            text,
+            "provider detail",
+            "provider runtime",
+            "service request failed",
+            "initialization timed out",
+            "initialisation timed out",
+            "runtime initialization timed out",
+            "runtime initialisation timed out");
     }
 
     private static string LimitDiagnosticText(string text, int maxLength = 800)
@@ -2779,6 +5870,482 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
         productRoot = Path.GetFullPath(productRoot);
         return true;
+    }
+
+    private static IReadOnlyList<string> ResolveProductCompletionRequiredPaths(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+        => ResolveProductCompletionRequiredStringList(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
+            stepKey);
+
+    private static IReadOnlyList<string> ResolveProductCompletionRequiredToolReceipts(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+        => ResolveProductCompletionRequiredStringList(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+            stepKey);
+
+    private static IReadOnlyList<string> ResolveProductCompletionRequiredStringList(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string directKey,
+        string byStepKey,
+        string stepKey)
+    {
+        var direct = ResolveLaunchVariable(launchVariables, directKey);
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return ParseProductCompletionRequiredStringList(direct);
+        }
+
+        var byStep = ResolveLaunchVariable(launchVariables, byStepKey);
+        if (string.IsNullOrWhiteSpace(byStep) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(byStep);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                return ParseProductCompletionRequiredStringListElement(property.Value);
+            }
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<string> ParseProductCompletionRequiredStringListElement(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return ParseProductCompletionRequiredStringList(element.GetString() ?? string.Empty);
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()?.Trim() ?? string.Empty)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ParseProductCompletionRequiredStringList(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return ParseProductCompletionRequiredStringListElement(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return value
+                .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+    }
+
+    private static ProductCompletionRequiredFileContentCheckResolution ResolveProductCompletionRequiredFileContentChecks(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+    {
+        var direct = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return ParseProductCompletionRequiredFileContentChecks(direct);
+        }
+
+        var byStep = ResolveLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep);
+        if (string.IsNullOrWhiteSpace(byStep) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return ProductCompletionRequiredFileContentCheckResolution.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(byStep);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return ProductCompletionRequiredFileContentCheckResolution.Invalid("by-step value must be a JSON object.");
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ParseProductCompletionRequiredFileContentChecks(property.Value);
+                }
+            }
+        }
+        catch (JsonException exception)
+        {
+            return ProductCompletionRequiredFileContentCheckResolution.Invalid(exception.Message);
+        }
+
+        return ProductCompletionRequiredFileContentCheckResolution.Empty;
+    }
+
+    private static ProductCompletionRequiredFileContentCheckResolution ParseProductCompletionRequiredFileContentChecks(string value)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return ParseProductCompletionRequiredFileContentChecks(document.RootElement);
+        }
+        catch (JsonException exception)
+        {
+            return ProductCompletionRequiredFileContentCheckResolution.Invalid(exception.Message);
+        }
+    }
+
+    private static ProductCompletionRequiredFileContentCheckResolution ParseProductCompletionRequiredFileContentChecks(JsonElement element)
+    {
+        var checks = new List<ProductCompletionRequiredFileContentCheck>();
+        var errors = new List<string>();
+
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            AddProductCompletionRequiredFileContentCheck(element, checks, errors);
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                AddProductCompletionRequiredFileContentCheck(item, checks, errors);
+            }
+        }
+        else
+        {
+            errors.Add("value must be a JSON object or array of objects.");
+        }
+
+        if (errors.Count > 0)
+        {
+            return ProductCompletionRequiredFileContentCheckResolution.Invalid(string.Join("; ", errors));
+        }
+
+        return new ProductCompletionRequiredFileContentCheckResolution(checks, string.Empty);
+    }
+
+    private static void AddProductCompletionRequiredFileContentCheck(
+        JsonElement element,
+        List<ProductCompletionRequiredFileContentCheck> checks,
+        List<string> errors)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add("each check must be a JSON object.");
+            return;
+        }
+
+        var pathCandidates = ReadStringPropertyValues(element, "pathCandidates", "paths", "path");
+        if (pathCandidates.Count == 0)
+        {
+            errors.Add("each check must declare at least one path candidate.");
+            return;
+        }
+
+        var requiredTextAnyGroups = ReadRequiredTextAnyGroups(element);
+        var forbiddenTextAnyGroups = ReadForbiddenTextAnyGroups(element);
+        if (requiredTextAnyGroups.Count == 0 &&
+            forbiddenTextAnyGroups.Count == 0)
+        {
+            errors.Add("each check must declare at least one required or forbidden text group.");
+            return;
+        }
+
+        checks.Add(new ProductCompletionRequiredFileContentCheck(
+            pathCandidates,
+            requiredTextAnyGroups,
+            forbiddenTextAnyGroups,
+            ReadBooleanProperty(element, defaultValue: true, "mustExist", "requiresPath"),
+            ReadStringPropertyValues(element, "enforceBranchOutcomeKeys", "branchOutcomeKeys", "whenBranchOutcomeKey")));
+    }
+
+    private static IReadOnlyList<IReadOnlyList<string>> ReadRequiredTextAnyGroups(JsonElement element)
+    {
+        if (TryGetPropertyCaseInsensitive(element, "requiredTextAnyGroups", out var groupsElement) ||
+            TryGetPropertyCaseInsensitive(element, "containsAnyGroups", out groupsElement))
+        {
+            return ReadStringGroups(groupsElement);
+        }
+
+        if (TryGetPropertyCaseInsensitive(element, "requiredTextAny", out var anyElement) ||
+            TryGetPropertyCaseInsensitive(element, "containsAny", out anyElement))
+        {
+            var values = ReadStringValues(anyElement);
+            return values.Count == 0
+                ? []
+                : [values];
+        }
+
+        if (TryGetPropertyCaseInsensitive(element, "requiredText", out var allElement) ||
+            TryGetPropertyCaseInsensitive(element, "containsAll", out allElement))
+        {
+            return ReadStringValues(allElement)
+                .Select(value => (IReadOnlyList<string>)[value])
+                .ToArray();
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<IReadOnlyList<string>> ReadForbiddenTextAnyGroups(JsonElement element)
+    {
+        if (TryGetPropertyCaseInsensitive(element, "forbiddenTextAnyGroups", out var groupsElement) ||
+            TryGetPropertyCaseInsensitive(element, "mustNotContainAnyGroups", out groupsElement) ||
+            TryGetPropertyCaseInsensitive(element, "absentTextAnyGroups", out groupsElement))
+        {
+            return ReadStringGroups(groupsElement);
+        }
+
+        if (TryGetPropertyCaseInsensitive(element, "forbiddenTextAny", out var anyElement) ||
+            TryGetPropertyCaseInsensitive(element, "mustNotContainAny", out anyElement) ||
+            TryGetPropertyCaseInsensitive(element, "absentTextAny", out anyElement))
+        {
+            var values = ReadStringValues(anyElement);
+            return values.Count == 0
+                ? []
+                : [values];
+        }
+
+        if (TryGetPropertyCaseInsensitive(element, "forbiddenText", out var allElement) ||
+            TryGetPropertyCaseInsensitive(element, "mustNotContain", out allElement) ||
+            TryGetPropertyCaseInsensitive(element, "absentText", out allElement))
+        {
+            return ReadStringValues(allElement)
+                .Select(value => (IReadOnlyList<string>)[value])
+                .ToArray();
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<IReadOnlyList<string>> ReadStringGroups(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            var scalarValues = ReadStringValues(element);
+            return scalarValues.Count == 0
+                ? []
+                : [scalarValues];
+        }
+
+        var groups = new List<IReadOnlyList<string>>();
+        foreach (var item in element.EnumerateArray())
+        {
+            var values = ReadStringValues(item);
+            if (values.Count > 0)
+            {
+                groups.Add(values);
+            }
+        }
+
+        return groups;
+    }
+
+    private static IReadOnlyList<string> ReadStringPropertyValues(JsonElement element, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            if (TryGetPropertyCaseInsensitive(element, propertyName, out var property))
+            {
+                return ReadStringValues(property);
+            }
+        }
+
+        return [];
+    }
+
+    private static bool ReadBooleanProperty(JsonElement element, bool defaultValue, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            if (!TryGetPropertyCaseInsensitive(element, propertyName, out var property))
+            {
+                continue;
+            }
+
+            if (property.ValueKind == JsonValueKind.True)
+            {
+                return true;
+            }
+
+            if (property.ValueKind == JsonValueKind.False)
+            {
+                return false;
+            }
+        }
+
+        if (TryGetPropertyCaseInsensitive(element, "allowMissing", out var allowMissingProperty))
+        {
+            if (allowMissingProperty.ValueKind == JsonValueKind.True)
+            {
+                return false;
+            }
+
+            if (allowMissingProperty.ValueKind == JsonValueKind.False)
+            {
+                return true;
+            }
+        }
+
+        return defaultValue;
+    }
+
+
+    private static IReadOnlyList<string> ReadStringValues(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            var value = element.GetString()?.Trim() ?? string.Empty;
+            return string.IsNullOrWhiteSpace(value)
+                ? []
+                : [value];
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()?.Trim() ?? string.Empty)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool TryGetPropertyCaseInsensitive(
+        JsonElement element,
+        string propertyName,
+        out JsonElement property)
+    {
+        foreach (var candidate in element.EnumerateObject())
+        {
+            if (string.Equals(candidate.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                property = candidate.Value;
+                return true;
+            }
+        }
+
+        property = default;
+        return false;
+    }
+
+    private static bool TryResolveRequiredProductPath(
+        string productRoot,
+        string requiredPath,
+        out string resolvedPath,
+        out string invalidReason)
+    {
+        resolvedPath = string.Empty;
+        invalidReason = string.Empty;
+        var candidate = requiredPath.Trim().Trim('"', '\'');
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            invalidReason = "empty path";
+            return false;
+        }
+
+        if (TryConvertExternalTargetAliasToNativePath(candidate, out var nativePath))
+        {
+            candidate = nativePath;
+        }
+
+        try
+        {
+            resolvedPath = Path.GetFullPath(Path.IsPathFullyQualified(candidate)
+                ? candidate
+                : Path.Combine(productRoot, candidate));
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            invalidReason = exception.Message;
+            return false;
+        }
+
+        if (!IsSameOrChildPath(productRoot, resolvedPath))
+        {
+            invalidReason = "outside product root";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryConvertExternalTargetAliasToNativePath(string value, out string nativePath)
+    {
+        nativePath = string.Empty;
+        var normalized = value.Trim().Replace('\\', '/');
+        if (!normalized.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length < 2 ||
+            segments[1].Length != 1 ||
+            !char.IsLetter(segments[1][0]))
+        {
+            return false;
+        }
+
+        var driveRoot = $"{char.ToUpperInvariant(segments[1][0])}:{Path.DirectorySeparatorChar}";
+        nativePath = segments.Length == 2
+            ? driveRoot
+            : Path.Combine(new[] { driveRoot }.Concat(segments.Skip(2)).ToArray());
+        return true;
+    }
+
+    private static bool IsSameOrChildPath(string root, string candidate)
+    {
+        var normalizedRoot = Path.GetFullPath(root)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedCandidate = Path.GetFullPath(candidate)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(normalizedRoot, normalizedCandidate, StringComparison.OrdinalIgnoreCase) ||
+               normalizedCandidate.StartsWith(
+                   normalizedRoot + Path.DirectorySeparatorChar,
+                   StringComparison.OrdinalIgnoreCase) ||
+               normalizedCandidate.StartsWith(
+                   normalizedRoot + Path.AltDirectorySeparatorChar,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static ProductRootInspection InspectProductRoot(string productRoot)
@@ -2915,7 +6482,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
             assignment.RoleResourceKey,
             assignment.RoleDisplayName,
             NormalizeOperations(assignment.AllowedOperations),
-            assignment.OperationTargetScope);
+            assignment.OperationTargetScope,
+            ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey));
     }
 
     private static string FormatValidationErrors(IReadOnlyList<AgentOutputValidationError> errors)
@@ -2944,6 +6512,44 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter(
 
     [GeneratedRegex("[^A-Za-z0-9._-]+", RegexOptions.CultureInvariant)]
     private static partial Regex ManagedArtifactPathSegmentInvalidCharactersRegex();
+
+    [GeneratedRegex(@"\bStatus\s*:\s*(?:in\s*progress|inprogress|progress|working|running|started)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex NonTerminalStatusDeclarationRegex();
+
+    [GeneratedRegex(@"^\s*-\s*(?<key>[A-Za-z0-9][A-Za-z0-9._-]*)\s*:\s*(?<rest>[^\r\n]*)$", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex BranchOutcomePromptLineRegex();
+
+    [GeneratedRegex(@"^\s*(?:\*\*)?Branch\s+outcome\s+key(?:\*\*)?\s*:\s*`?(?<key>[A-Za-z0-9][A-Za-z0-9._-]*)`?\s*\.?\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ExplicitBranchOutcomeKeyLineRegex();
+
+    [GeneratedRegex(@"\b(?:missing|required)\b[^\r\n]{0,80}\breceipt\b|\breceipt\b[^\r\n]{0,80}\bmissing\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex MissingRequiredReceiptRegex();
+
+    [GeneratedRegex(
+        @"(?ix)
+        (?:managed-files[/\\]project-media[/\\](?:files|images)[/\\][^\s`""'<>]+)
+        |(?:artifacts[/\\](?:scopes[/\\][^\s`""'<>]+[/\\])?process-runs[/\\][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:[/\\][^\s`""'<>]+)*)
+        |(?:external-target[/\\][^\s`""'<>]+)
+        |(?:(?<![a-z])[a-z]:[/\\][^\s`""'<>]+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex OutcomePathReferenceRegex();
+
+    private sealed record ProductCompletionRequiredFileContentCheckResolution(
+        IReadOnlyList<ProductCompletionRequiredFileContentCheck> Checks,
+        string InvalidReason)
+    {
+        public static ProductCompletionRequiredFileContentCheckResolution Empty { get; } = new([], string.Empty);
+
+        public static ProductCompletionRequiredFileContentCheckResolution Invalid(string reason)
+            => new([], reason);
+    }
+
+    private sealed record ProductCompletionRequiredFileContentCheck(
+        IReadOnlyList<string> PathCandidates,
+        IReadOnlyList<IReadOnlyList<string>> RequiredTextAnyGroups,
+        IReadOnlyList<IReadOnlyList<string>> ForbiddenTextAnyGroups,
+        bool MustExist,
+        IReadOnlyList<string> EnforceBranchOutcomeKeys);
 
     private sealed record ProcessCompletionIssue(
         string Code,
@@ -3492,11 +7098,14 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
 }
 
 internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
+    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProcessProjectionClock clock,
     IProcessRuntimeStateStore stateStore,
+    IProcessInstancePlanStore planStore,
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeUnitOfWork unitOfWork,
     IProcessRuntimeDispatchQueue dispatchQueue,
+    ProcessRuntimeBranchSignalApplicationService branchSignalRouter,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
     ILogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator> logger)
 {
@@ -3607,7 +7216,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             !CanAssociateClaimWithRecoveredExecution(claim.CreatedAtUtc, executionCreatedAtUtc))
         {
             logger.LogInformation(
-                "Skipping process claim recovery release for execution run {ExecutionRunId} because claim {ClaimToken} was created after the recovered execution association window. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ClaimCreatedAtUtc={ClaimCreatedAtUtc} ExecutionCreatedAtUtc={ExecutionCreatedAtUtc}",
+                "Skipping process claim recovery release for execution run {ExecutionRunId} because the execution does not belong to active claim {ClaimToken}. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ClaimCreatedAtUtc={ClaimCreatedAtUtc} ExecutionCreatedAtUtc={ExecutionCreatedAtUtc}",
                 executionRunId,
                 claim.ClaimToken,
                 runId.Value,
@@ -3713,7 +7322,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         if (!CanAssociateClaimWithRecoveredExecution(claim.CreatedAtUtc, executionRun.CreatedAtUtc))
         {
             logger.LogInformation(
-                "Skipping recovered AgentFramework execution result {ExecutionRunId} because claim {ClaimToken} was created after the recovered execution association window. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ClaimCreatedAtUtc={ClaimCreatedAtUtc} ExecutionCreatedAtUtc={ExecutionCreatedAtUtc}",
+                "Skipping recovered AgentFramework execution result {ExecutionRunId} because the execution does not belong to active claim {ClaimToken}. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ClaimCreatedAtUtc={ClaimCreatedAtUtc} ExecutionCreatedAtUtc={ExecutionCreatedAtUtc}",
                 executionRun.Id,
                 claim.ClaimToken,
                 runId.Value,
@@ -3726,10 +7335,15 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         var context = CreateContext(
             requestedBy,
             NormalizeRecoveredResultTimestamp(executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc, claim.ExpiresAtUtc));
+        var toolReceipts = await LoadRecoveredExecutionToolReceiptsAsync(
+                executionRun,
+                cancellationToken)
+            .ConfigureAwait(false);
         var adapterResult = AgentFrameworkProcessExecutionAdapter.ToAdapterResult(
             assignment,
             validation.Output,
-            validation.RawOutputHash);
+            validation.RawOutputHash,
+            toolReceipts);
         var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var commit = await engine.SubmitStrategyResultAsync(
@@ -3754,6 +7368,14 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         }
 
         await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+        var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Process run '{runId}' references missing plan '{state.PlanId}'.");
+        await branchSignalRouter.ApplyForResultAsync(
+            commit.State,
+            plan,
+            result,
+            requestedBy,
+            cancellationToken).ConfigureAwait(false);
         await dispatchQueue.EnqueueAsync(
             new ProcessRuntimeDispatchQueueRequest(runId, requestedBy),
             cancellationToken).ConfigureAwait(false);
@@ -3765,6 +7387,28 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             stepInstanceId.Value,
             adapterResult.Outcome);
         return true;
+    }
+
+    private async Task<IReadOnlyList<ToolExecutionReceiptRecord>> LoadRecoveredExecutionToolReceiptsAsync(
+        ExecutionRunRecord executionRun,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+            var executionDetail = await workspaceService
+                .GetExecutionRunDetailAsync(executionRun.Id, cancellationToken)
+                .ConfigureAwait(false);
+            return executionDetail.ToolReceipts;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(
+                exception,
+                "Completed AgentFramework execution run {ExecutionRunId} could not load tool receipts during process recovery. Recovery will fall back to the structured result without receipts.",
+                executionRun.Id);
+            return [];
+        }
     }
 
     private static StrategyResultEnvelope CreateRecoveredStrategyResult(
@@ -3839,7 +7483,12 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     internal static bool CanAssociateClaimWithRecoveredExecution(
         DateTimeOffset claimCreatedAtUtc,
         DateTimeOffset executionCreatedAtUtc)
-        => NormalizeUtc(claimCreatedAtUtc) <= NormalizeUtc(executionCreatedAtUtc).Add(RecoveredExecutionClaimAssociationWindow);
+    {
+        var normalizedClaimCreatedAtUtc = NormalizeUtc(claimCreatedAtUtc);
+        var normalizedExecutionCreatedAtUtc = NormalizeUtc(executionCreatedAtUtc);
+        return normalizedExecutionCreatedAtUtc >= normalizedClaimCreatedAtUtc &&
+               normalizedExecutionCreatedAtUtc - normalizedClaimCreatedAtUtc <= RecoveredExecutionClaimAssociationWindow;
+    }
 
     private static DateTimeOffset NormalizeUtc(DateTimeOffset value)
         => value.Offset == TimeSpan.Zero ? value : value.ToUniversalTime();
@@ -4198,6 +7847,9 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
         var latestExecution = executionRuns
             .Where(executionRun =>
                 executionRun.CreatedAtUtc >= earliestCreatedAtUtc &&
+                AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+                    candidate.CreatedAtUtc,
+                    executionRun.CreatedAtUtc) &&
                 string.Equals(executionRun.ProcessRunId, runId, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(executionRun.ProcessStepId, stepId, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(executionRun => executionRun.CreatedAtUtc)
@@ -4255,6 +7907,9 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
     {
         var earliestCreatedAtUtc = NormalizeUtc(candidate.CreatedAtUtc - ExecutionCreationSkew);
         return NormalizeUtc(executionRun.CreatedAtUtc) >= earliestCreatedAtUtc &&
+               AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+                   candidate.CreatedAtUtc,
+                   executionRun.CreatedAtUtc) &&
                string.Equals(executionRun.ProcessRunId, candidate.RunId.ToString("D"), StringComparison.OrdinalIgnoreCase) &&
                string.Equals(executionRun.ProcessStepId, candidate.StepInstanceId.ToString("D"), StringComparison.OrdinalIgnoreCase);
     }

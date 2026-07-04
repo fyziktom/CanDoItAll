@@ -155,6 +155,11 @@ public sealed partial class MafAgentRuntime
         string model,
         string? agentConfigurationJson)
     {
+        if (provider.Transport == ProviderTransportKind.ChatCompletions)
+        {
+            return false;
+        }
+
         return AgentProviderModelParameterPolicy.ResolveConfiguredReasoningEffort(
                    provider.Kind,
                    model,

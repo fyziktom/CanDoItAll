@@ -254,7 +254,10 @@ internal sealed class WorkspaceCommandReceiptWriter
     {
         var stamp = startedAtUtc.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
         var safeRecipeId = string.Concat(recipeId.Select(character => char.IsLetterOrDigit(character) ? character : '-')).Trim('-');
-        var relativePath = workspaceScope.CombineArtifactPath("process-runs", startedAtUtc.UtcDateTime.ToString("yyyyMMdd"), $"{stamp}-{safeRecipeId}");
+        var processRunId = WorkspaceExecutionAuditContext.Current?.ProcessRunId;
+        var relativePath = Guid.TryParse(processRunId, out var processRunGuid)
+            ? workspaceScope.CombineArtifactPath("process-runs", processRunGuid.ToString("D"), "tool-runs", $"{stamp}-{safeRecipeId}")
+            : workspaceScope.CombineArtifactPath("tool-runs", startedAtUtc.UtcDateTime.ToString("yyyyMMdd"), $"{stamp}-{safeRecipeId}");
         var fullPath = Path.GetFullPath(Path.Combine(workspaceRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
         return new ArtifactDirectory(fullPath, relativePath);
     }
@@ -262,7 +265,8 @@ internal sealed class WorkspaceCommandReceiptWriter
     private bool TryClassifyArtifactZone(string targetPath, out string zone)
     {
         var normalized = WorkspacePathPolicy.NormalizeRelativePath(targetPath);
-        if (IsWithinScopedRoot(normalized, workspaceScope.CombineArtifactPath("process-runs")))
+        if (IsWithinScopedRoot(normalized, workspaceScope.CombineArtifactPath("process-runs")) ||
+            IsWithinScopedRoot(normalized, workspaceScope.CombineArtifactPath("tool-runs")))
         {
             zone = "tool-receipt";
             return true;

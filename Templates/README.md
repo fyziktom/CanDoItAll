@@ -52,7 +52,7 @@ For local stdio MCP servers, declare `transport: "local-stdio"`, `command`, `arg
 
 For remote HTTP MCP servers, declare the endpoint and header bindings. Raw headers are rejected. Setup runs through `IMcpSetupTestService`, validates startup/list-tools/allowed-tools/cleanup, and emits typed `CapabilityDiagnostic` values. MCP tool selectors must include both server key and tool name.
 
-`Playwright Local MCP` is the default browser-proof MCP capability. Its descriptor lives in `mcps.json`, starts through `npx @playwright/mcp@latest`, and exposes only the configured allowed browser tools to agents after runtime capability filtering. Validate it through the capability setup UI/API before relying on it in a process or workflow.
+`Playwright Local MCP` is the default browser-proof MCP capability. Its descriptor lives in `mcps.json`, starts through non-interactive `npx --yes @playwright/mcp@latest`, and exposes only the configured allowed browser tools to agents after runtime capability filtering. Validate it through the capability setup UI/API before relying on it in a process or workflow.
 
 ## Access Policies
 

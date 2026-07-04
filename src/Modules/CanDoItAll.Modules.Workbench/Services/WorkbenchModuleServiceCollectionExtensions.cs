@@ -7,6 +7,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -46,6 +47,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionWorker>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProjectStructureProcessLaunchVariableContributor, DotNetProcessLaunchVariableContributor>());
         services.AddScoped<ProjectStructureProcessNodeService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessSubprocessLaunchCoordinator, ProjectStructureProcessSubprocessLaunchCoordinator>());
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {

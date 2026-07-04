@@ -222,6 +222,153 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_unscoped_managed_project_media_file_for_governed_external_target_run()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/office365-category-email-summary.md"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("outside current-run evidence folders", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("grounded external-target alias", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(ToolContractCatalog.WorkspaceStatPath)]
+    [InlineData(ToolContractCatalog.WorkspaceReadFile)]
+    public async Task EvaluateAsync_allows_managed_project_media_file_read_with_project_structure_right_for_governed_external_target_run(
+        string toolName)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            toolName,
+            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/source-brief.md"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_managed_project_media_file_from_different_project_for_governed_external_target_run()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/files/ee266fad590440ff9b30d96804aadcb2/office365-category-email-summary.md"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("outside current-run evidence folders", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(ToolContractCatalog.WorkspaceStatPath)]
+    [InlineData(ToolContractCatalog.WorkspaceReadFile)]
+    [InlineData(ToolContractCatalog.WorkspaceInspectImage)]
+    [InlineData(ToolContractCatalog.WorkspaceAnalyzeImage)]
+    public async Task EvaluateAsync_allows_managed_project_media_image_read_for_governed_external_target_run(
+        string toolName)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            toolName,
+            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_managed_project_media_image_analysis_without_project_or_runtime_proof_right()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImage,
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains(ProcessOperationContractNames.ReadProjectStructure, decision.Reason, StringComparison.Ordinal);
+        Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_shallow_shared_scope_artifact_for_governed_external_target_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -1220,6 +1367,38 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_force_dotnet_new_for_governed_process_step()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_dotnet_new",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["parentDirectory"] = "external-target/C/programovani/dotnet/PocketMeetingCostPlanner",
+                ["name"] = "PocketMeetingCostPlanner",
+                ["template"] = "sln",
+                ["force"] = "True"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recovered = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            context.ToolName,
+            decision,
+            context,
+            out var recoverableResult);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("force=true", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.True(recovered);
+        Assert.Contains("unsafe scaffold overwrite", recoverableResult, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_allows_dotnet_new_template_switch_when_previous_attempt_was_not_successful()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -1528,7 +1707,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_allows_native_absolute_project_media_file_read_for_external_target_process_run()
+    public async Task EvaluateAsync_denies_native_absolute_project_media_file_read_for_external_target_process_run()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -1552,7 +1731,8 @@ public sealed class AgentToolInvocationPolicyTests
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
-        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("outside the current-run external-target roots", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1706,6 +1886,72 @@ public sealed class AgentToolInvocationPolicyTests
                 ["path"] = "artifacts/process-run-001/scope.md"
             },
             allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_current_step_primary_output_read_before_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/steps/architecture-review.md"
+            },
+            processRunId: "process-run-001",
+            sourceId: "architecture-review");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("before creating it", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_current_step_primary_output_read_after_successful_write_trace()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string primaryRef = "artifacts/process-runs/process-run-001/steps/architecture-review.md";
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef
+            },
+            processRunId: "process-run-001",
+            sourceId: "architecture-review",
+            toolInvocationTraces:
+            [
+                new AgentToolInvocationTrace(
+                    "workspace_write_file",
+                    ToolInvocationClassification.Mutation,
+                    1,
+                    DateTimeOffset.UtcNow.AddSeconds(-1),
+                    DateTimeOffset.UtcNow,
+                    Succeeded: true,
+                    FailureMessage: string.Empty)
+                {
+                    Signature = AgentToolInvocationPolicyMetadata.BuildSignature(
+                        "workspace_write_file",
+                        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["content"] = "# Architecture handoff",
+                            ["path"] = primaryRef
+                        })
+                }
+            ]);
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
@@ -2046,6 +2292,229 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task BlockGuard_returns_write_first_guidance_for_current_step_own_output_read_denial()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/add-tests-and-proof.md";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef
+            },
+            processRunId: runId,
+            sourceId: "add-tests-and-proof");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceReadFile,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("own primary managed output", decision.Reason, StringComparison.Ordinal);
+        Assert.True(recoverable);
+        Assert.Contains("not a missing tool permission", result, StringComparison.Ordinal);
+        Assert.Contains("not a blocker", result, StringComparison.Ordinal);
+        Assert.Contains("Do not retry the read, stat, list, or search", result, StringComparison.Ordinal);
+        Assert.Contains("Do not write a status-only InProgress or Blocked placeholder and stop", result, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_file or workspace_append_file", result, StringComparison.Ordinal);
+        Assert.Contains("submit_process_step_outcome", result, StringComparison.Ordinal);
+        Assert.Contains(primaryRef, result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Policy_denies_current_step_primary_output_inprogress_placeholder_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/repair-solution-setup.md";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = """
+                    Status: InProgress
+
+                    # Repair solution setup findings
+
+                    Reviewing upstream evidence before finalizing.
+                    """
+            },
+            processRunId: runId,
+            sourceId: "repair-solution-setup");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceWriteFile,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("cannot write primary managed output", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("status InProgress", decision.Reason, StringComparison.Ordinal);
+        Assert.True(recoverable);
+        Assert.Contains("not a missing tool permission", result, StringComparison.Ordinal);
+        Assert.Contains("Do not retry the placeholder write", result, StringComparison.Ordinal);
+        Assert.Contains("Continue the step's required product", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Policy_denies_current_step_primary_output_spaced_inprogress_placeholder_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/code-change.md";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = """
+                    Status: In Progress
+
+                    # Feature implementation change set
+
+                    Work has started.
+                    """
+            },
+            processRunId: runId,
+            sourceId: "code-change");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceWriteFile,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("status InProgress", decision.Reason, StringComparison.Ordinal);
+        Assert.True(recoverable);
+        Assert.Contains("Do not retry the placeholder write", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Policy_denies_current_step_primary_output_status_only_blocked_placeholder_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/setup-handoff.md";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = """
+                    Status: Blocked
+
+                    # Setup handoff
+
+                    Waiting for more context.
+                    """
+            },
+            processRunId: runId,
+            sourceId: "setup-handoff");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceWriteFile,
+            decision,
+            context,
+            out var result);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("status-only Blocked placeholder", decision.Reason, StringComparison.Ordinal);
+        Assert.True(recoverable);
+        Assert.Contains("Do not retry the placeholder write", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Policy_allows_current_step_primary_output_completed_evidence_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/setup-handoff.md";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = """
+                    Status: Completed
+
+                    # Setup handoff
+
+                    Evidence refs:
+                    - artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/validate-first-build.md
+                    """
+            },
+            processRunId: runId,
+            sourceId: "setup-handoff");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task Policy_allows_current_step_primary_output_blocked_with_concrete_evidence_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string runId = "11111111-2222-3333-4444-555555555555";
+        const string primaryRef = $"artifacts/process-runs/{runId}/steps/setup-handoff.md";
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = primaryRef,
+                ["content"] = """
+                    Status: Blocked
+
+                    # Setup handoff
+
+                    The required tool workspace_dotnet_build failed with exit code 1.
+                    Evidence refs:
+                    - artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/validate-first-build.md
+                    """
+            },
+            processRunId: runId,
+            sourceId: "setup-handoff");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task BlockGuard_returns_recoverable_result_for_governed_browser_snapshot_bounds_denial()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2130,6 +2599,33 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.False(recoverable);
         Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public void BlockGuard_returns_recoverable_result_for_governed_workspace_boundary_mutation_denial()
+    {
+        var decision = ToolInvocationPolicyDecision.Deny(
+            "workspace_dotnet_new|name=Calculator,parentDirectory=external-target/C/programovani/dotnet,template=sln",
+            "Governed process runs may only access external-target paths grounded by the current run. The requested external-target path is outside the current run boundary; current-run roots: external-target/C/programovani/dotnet/calculator-output.");
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceDotNetNew,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: true,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetMutable);
+
+        var recoverable = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            ToolContractCatalog.WorkspaceDotNetNew,
+            decision,
+            context,
+            out var result);
+
+        Assert.True(recoverable);
+        Assert.Contains("PolicyDenied", result, StringComparison.Ordinal);
+        Assert.Contains("wrong tool argument", result, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/programovani/dotnet/calculator-output", result, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2926,6 +3422,43 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public void Recoverable_denied_result_treats_missing_current_run_script_as_ordering_retry()
+    {
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/wire-project.ps1"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "MutateProductTarget",
+                "WriteManagedProcessArtifacts"
+            ],
+            processStepTargetScope: "ExternalProductTargetMutable");
+        var decision = ToolInvocationPolicyDecision.Deny(
+            "workspace_pwsh_run_script|path=artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/wire-project.ps1",
+            "This governed step is not authorized to run scripts without declared side effects. Script 'artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/wire-project.ps1' could not be inspected before execution: script path 'artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/wire-project.ps1' does not exist.");
+
+        var recovered = AgentToolPolicyBlockGuard.TryCreateRecoverableDeniedResult(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            decision,
+            context,
+            out var result);
+
+        Assert.True(recovered);
+        Assert.Contains("helper-script ordering", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workspace_write_file", result, StringComparison.Ordinal);
+        Assert.Contains("retry workspace_pwsh_run_script", result, StringComparison.Ordinal);
+        Assert.Contains("Do not submit Blocked", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_copying_previous_run_product_into_current_product_target()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -3215,7 +3748,10 @@ public sealed class AgentToolInvocationPolicyTests
         string scriptInspectionFailure = "",
         string scriptSideEffectManifestJson = "",
         string processRunId = "process-run-001",
-        string sourceId = "feature-intake")
+        string sourceId = "feature-intake",
+        string contextWorkspaceScopeKind = "",
+        string contextWorkspaceScopeKey = "",
+        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null)
     {
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -3238,9 +3774,12 @@ public sealed class AgentToolInvocationPolicyTests
             ProcessAllowsProductMutation: processAllowsProductMutation,
             ProcessStepAllowedOperations: processStepAllowedOperations ?? ProcessOperationContractNames.AllOperations,
             ProcessStepTargetScope: processStepTargetScope,
+            ContextWorkspaceScopeKind: contextWorkspaceScopeKind,
+            ContextWorkspaceScopeKey: contextWorkspaceScopeKey,
             InspectedScriptContent: inspectedScriptContent,
             ScriptInspectionFailure: scriptInspectionFailure,
-            ScriptSideEffectManifestJson: scriptSideEffectManifestJson)
+            ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
+            ToolInvocationTraces: toolInvocationTraces)
         {
             SourceId = sourceId
         };

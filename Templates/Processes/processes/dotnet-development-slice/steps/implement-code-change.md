@@ -2,6 +2,8 @@
 
 Launch the feature/function implementation subprocess for the bounded behavior in this slice. Keep the parent step focused on observing the child run status, change-set artifact, targeted validation evidence, accepted handoff evidence, repair escalation evidence, blockers, and manager rework directives.
 
+First call `project_structure_process_subprocess_launch` with `definitionKey` set to `dotnet-feature-function-implementation`. Do not wait silently or return `Blocked` before attempting that child launch unless mandatory launch inputs are missing. If the launch response includes `ParentDeferredOutcomeJson`, submit that parent outcome exactly: active child runs defer the parent, completed child runs complete the parent from child evidence, and stopped child runs propagate their concrete blocker.
+
 Before launching the child, carry forward one concrete feature request from the slice scope and architecture artifacts. Include the product root, app archetype, setup handoff, acceptance criteria, validation hooks, and exclusions. When the parent slice came from a full app request, the child request must be the derived first MVP behavior, not the whole app backlog.
 
 When the slice scope includes visual target ImageAsset ids or media paths, include them in the child request and require the visible implementation to use those assets as the design target. Do not launch a child request that only says to make the UI "look good" while dropping the listed source image.

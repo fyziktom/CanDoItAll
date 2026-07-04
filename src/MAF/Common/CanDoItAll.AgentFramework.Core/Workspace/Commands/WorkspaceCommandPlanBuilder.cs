@@ -548,8 +548,11 @@ internal sealed class WorkspaceCommandPlanBuilder
                 $"workspace_dotnet_new parentDirectory '{workingDirectoryRelative}' ends with a project-file extension. Pass the containing directory as parentDirectory and the project name separately.");
         }
 
+        var isSolutionTemplate = string.Equals(normalizedTemplate, "sln", StringComparison.OrdinalIgnoreCase);
         if (Directory.Exists(workingDirectoryResolution.FullPath) &&
-            ContainsTopLevelProjectFile(workingDirectoryResolution.FullPath))
+            ContainsTopLevelProjectFile(
+                workingDirectoryResolution.FullPath,
+                includeSolutionFiles: !isSolutionTemplate))
         {
             throw new InvalidOperationException(
                 $"workspace_dotnet_new is not allowed inside existing .NET project directory '{workingDirectoryRelative}'. Inspect and repair that project in place, or create a sibling project from its parent directory.");
@@ -657,9 +660,27 @@ internal sealed class WorkspaceCommandPlanBuilder
                 })
             .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
 
-    private static bool ContainsTopLevelProjectFile(string directory)
+    private static bool ContainsTopLevelProjectFile(
+        string directory,
+        bool includeSolutionFiles = true)
         => Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-            .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
+            .Any(path => IsProjectFileExtension(Path.GetExtension(path), includeSolutionFiles));
+
+    private static bool IsProjectFileExtension(
+        string extension,
+        bool includeSolutionFiles)
+    {
+        if (!AllowedProjectExtensions.Contains(extension))
+        {
+            return false;
+        }
+
+        return includeSolutionFiles || !IsSolutionExtension(extension);
+    }
+
+    private static bool IsSolutionExtension(string extension)
+        => string.Equals(extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(extension, ".slnx", StringComparison.OrdinalIgnoreCase);
 
     public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
     {
@@ -671,7 +692,7 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         var workingDirectoryRelative = ResolveScriptWorkingDirectory(workingDirectory, scriptResolution.FullPath, allowedExternalRoots: null, out var workingDirectoryPath);
         var normalizedArguments = new List<string> { scriptResolution.FullPath };
-        normalizedArguments.AddRange(NormalizeStructuredArguments(arguments));
+        normalizedArguments.AddRange(NormalizeScriptArguments(arguments));
         return CreatePlan(
             toolName: "workspace_python_run_file",
             recipeId: "python_run_file",
@@ -709,7 +730,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             "-File",
             scriptResolution.FullPath
         };
-        normalizedArguments.AddRange(NormalizeStructuredArguments(arguments));
+        normalizedArguments.AddRange(NormalizeScriptArguments(arguments));
         return CreatePlan(
             toolName: "workspace_pwsh_run_script",
             recipeId: "pwsh_run_script",
@@ -1802,6 +1823,42 @@ internal sealed class WorkspaceCommandPlanBuilder
 
     private WorkspacePathResolution ResolveExistingPath(string path, bool allowFiles, bool allowDirectories, IReadOnlyList<string>? allowedExternalRoots = null)
         => pathPolicy.ResolveExistingPath(path, allowFiles, allowDirectories, allowedExternalRoots);
+
+    private IReadOnlyList<string> NormalizeScriptArguments(string[]? arguments)
+        => NormalizeStructuredArguments(arguments)
+            .Select(NormalizeScriptArgument)
+            .ToArray();
+
+    private string NormalizeScriptArgument(string argument)
+    {
+        if (!LooksLikeScriptPathArgument(argument) ||
+            !pathPolicy.TryResolveWorkspacePath(argument, allowWorkspaceRoot: false, out var resolution, out _))
+        {
+            return argument;
+        }
+
+        return resolution.FullPath;
+    }
+
+    private static bool LooksLikeScriptPathArgument(string argument)
+    {
+        if (string.IsNullOrWhiteSpace(argument) ||
+            argument.StartsWith("-", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (Uri.TryCreate(argument, UriKind.Absolute, out var uri) && !uri.IsFile)
+        {
+            return false;
+        }
+
+        var expandedArgument = WorkspacePathPolicy.ExpandPortablePath(argument);
+        return WorkspacePathPolicy.IsExternalTargetAliasPath(argument) ||
+               Path.IsPathRooted(expandedArgument) ||
+               argument.Contains(Path.DirectorySeparatorChar) ||
+               argument.Contains(Path.AltDirectorySeparatorChar);
+    }
 
     private static string[] NormalizeStructuredArguments(string[]? arguments)
     {

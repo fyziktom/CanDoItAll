@@ -13,6 +13,9 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
 
         Assert.Contains("ProjectStructureRuntimeLauncher", resolve, StringComparison.Ordinal);
         Assert.Contains("launcher-compatible", write, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("project_structure_node_create", write, StringComparison.Ordinal);
+        Assert.Contains("project_structure_read", write, StringComparison.Ordinal);
+        Assert.Contains("do not return `Completed` with only intended node payloads", write, StringComparison.Ordinal);
         Assert.Contains("return `Blocked` with the missing field", write, StringComparison.Ordinal);
         Assert.Contains("steps/run-command-node-receipts.md", write, StringComparison.Ordinal);
         Assert.Contains("do not use `runtime-command-handoff.md` for this step", write, StringComparison.Ordinal);
@@ -20,6 +23,9 @@ public sealed class ProcessTemplateRuntimeWritebackTextTests
         Assert.Contains("metadata.environment.projectPath", definitionJson, StringComparison.Ordinal);
         Assert.Contains("metadata.environment.workingDirectory", definitionJson, StringComparison.Ordinal);
         Assert.Contains("ProjectStructureRuntimeLauncher.Resolve", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_create", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("project_structure_read", definitionJson, StringComparison.Ordinal);
+        Assert.Contains("do not return Completed with only intended node payloads", definitionJson, StringComparison.Ordinal);
         Assert.Contains("steps/run-command-node-receipts.md", definitionJson, StringComparison.Ordinal);
     }
 

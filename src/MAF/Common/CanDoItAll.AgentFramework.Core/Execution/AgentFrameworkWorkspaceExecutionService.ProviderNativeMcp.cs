@@ -15,11 +15,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private ExecutionRunDetail EnrichProviderNativeMcpDetail(ExecutionRunDetail detail)
     {
-        if (string.IsNullOrWhiteSpace(detail.Run.SerializedSessionStateJson))
-        {
-            return detail;
-        }
-
         var launchReceipt = ResolvePlaywrightLaunchReceipt(detail.ToolReceipts);
         if (launchReceipt is null)
         {
@@ -284,7 +279,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     }
 
     private static IReadOnlyList<SuccessfulSessionToolCall> ResolveSuccessfulSessionToolCalls(
-        string serializedSessionStateJson)
+        string? serializedSessionStateJson)
     {
         if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
         {

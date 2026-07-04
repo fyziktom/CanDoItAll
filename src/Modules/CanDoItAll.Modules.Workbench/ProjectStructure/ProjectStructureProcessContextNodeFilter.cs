@@ -54,6 +54,8 @@ internal static class ProjectStructureProcessContextNodeFilter
 
     public static bool ShouldIncludeInProcessContext(ProjectStructureNode node)
         => !IsGeneratedProcessEvidence(
+            node.Id,
+            node.ParentId,
             node.ObjectType,
             node.ObjectSubtype,
             node.Title,
@@ -66,6 +68,8 @@ internal static class ProjectStructureProcessContextNodeFilter
 
     public static bool ShouldIncludeInProcessContext(ProjectStructureNodeSummary node)
         => !IsGeneratedProcessEvidence(
+            node.Id,
+            node.ParentId,
             node.ObjectType,
             node.ObjectSubtype,
             node.Title,
@@ -77,6 +81,8 @@ internal static class ProjectStructureProcessContextNodeFilter
             node.MediaOriginalFileName);
 
     private static bool IsGeneratedProcessEvidence(
+        string nodeId,
+        string? parentId,
         ProjectObjectType objectType,
         string objectSubtype,
         string title,
@@ -87,6 +93,12 @@ internal static class ProjectStructureProcessContextNodeFilter
         string? mediaRelativePath,
         string? mediaOriginalFileName)
     {
+        if (IsGeneratedProcessRunNodeKey(nodeId) ||
+            IsGeneratedProcessRunNodeKey(parentId))
+        {
+            return true;
+        }
+
         if (objectType is ProjectObjectType.ProcessRun or ProjectObjectType.ValidationRun or ProjectObjectType.TestEvidence)
         {
             return true;
@@ -134,6 +146,14 @@ internal static class ProjectStructureProcessContextNodeFilter
     private static bool ContainsProcessRunPath(string? value)
         => !string.IsNullOrWhiteSpace(value) &&
            value.Replace('\\', '/').Contains("/process-runs/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGeneratedProcessRunNodeKey(string? nodeKey)
+        => !string.IsNullOrWhiteSpace(nodeKey) &&
+           (nodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunPrefix, StringComparison.Ordinal) ||
+            nodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunOutputPrefix, StringComparison.Ordinal) ||
+            nodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunRuntimePrefix, StringComparison.Ordinal) ||
+            nodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunSummaryPrefix, StringComparison.Ordinal) ||
+            nodeKey.StartsWith(ProjectStructureProcessNodeKeys.ProcessRunScreenshotPrefix, StringComparison.Ordinal));
 
     private static bool IsManagedProjectMediaFile(string? mediaRelativePath)
         => !string.IsNullOrWhiteSpace(mediaRelativePath) &&

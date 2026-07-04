@@ -14,9 +14,15 @@ public sealed partial class MafAgentRuntime
         AgentDefinition agent,
         ProviderProfile provider,
         ChatSessionRecord session,
+        AgentRuntimeExecutionOptions runtimeOptions,
         CancellationToken cancellationToken,
         bool isApprovalContinuation = false)
     {
+        if (!isApprovalContinuation && runtimeOptions.ContextIntent?.IsGovernedProcessStep == true)
+        {
+            return await runtimeAgent.CreateSessionAsync(cancellationToken);
+        }
+
         if (ShouldRestoreSerializedSession(agent, provider, session, isApprovalContinuation))
         {
             using var document = JsonDocument.Parse(session.Compatibility!.SerializedSessionStateJson!);
@@ -40,6 +46,14 @@ public sealed partial class MafAgentRuntime
         AgentRuntimeExecutionOptions runtimeOptions)
     {
         var inputAttachments = runtimeOptions.InputAttachments ?? [];
+        if (runtimeOptions.ContextIntent?.IsGovernedProcessStep == true)
+        {
+            return
+            [
+                CreateUserInputMessage(prompt, inputAttachments)
+            ];
+        }
+
         if (ShouldRestoreSerializedSession(agent, provider, session))
         {
             return
@@ -482,8 +496,14 @@ public sealed partial class MafAgentRuntime
     private static string ResolveSessionMessage(
         AgentDefinition agent,
         ProviderProfile provider,
-        ChatSessionRecord session)
+        ChatSessionRecord session,
+        AgentRuntimeExecutionOptions runtimeOptions)
     {
+        if (runtimeOptions.ContextIntent?.IsGovernedProcessStep == true)
+        {
+            return "Creating an isolated Microsoft Agent Framework session for this governed process step.";
+        }
+
         if (ShouldRestoreSerializedSession(agent, provider, session))
         {
             return "Restoring the serialized Microsoft Agent Framework session for this conversation.";

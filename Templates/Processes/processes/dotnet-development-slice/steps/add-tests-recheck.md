@@ -1,10 +1,22 @@
 # Recheck slice proof after repair
 
-Review the repair child run and rerun the smallest proof needed for the chosen slice behavior.
+Review the repair child run and rerun the smallest proof needed for the chosen slice behavior. This step has validation-command ownership after repair: do not defer restore, build, or test execution to a later root proof step. Use the governed validation tools `workspace_dotnet_restore`, `workspace_dotnet_build`, and `workspace_dotnet_test` for the current run. If current-run restore/build/test receipts are missing and those validation tools plus the grounded product root are available, run the validation chain now; missing receipts are not an escalation finding by themselves.
+
+Use current-run repair coordinator artifacts (`add-tests-and-proof` and `slice-repair-code-change`) as the subprocess evidence packets. Child-run refs cited inside those artifacts are trace links, not direct read requirements for this QA validation step. Do not read `artifacts/process-runs/<child-run-id>/...` files directly unless the step brief explicitly lists that exact child artifact as a required upstream ref. If the coordinator packets show a completed repair child, independently validate from the product root with build/test/readback proof and select the appropriate branch.
+
+Managed artifact evidence rule: cite this step's managed artifact and current-run validation tool receipts as proof. Do not put product source/test file aliases, native product paths, `external-target/...` file paths, `managed-files/...` paths, or project-media storage paths in `evidenceRefs`. In the artifact body, prefer product-root-relative file names. If a retry diagnostic names an ungrounded product path but the grounded product root and validation tools are available, rerun the restore/build/test chain or read/list the file with a current-run workspace tool, then overwrite the artifact with grounded receipt-based proof instead of selecting `slice-repair-escalation` or returning `Blocked`.
+
+For .NET product roots, run and record a current-run validation chain: `dotnet restore`, `dotnet build --no-restore`, and `dotnet test --no-restore` when a test project exists or tests are expected. Do not accept the repair from child handoff text alone, and do not select `slice-repair-escalation` only because the receipts were absent before this step ran. If `--no-restore` fails because restore assets are stale or missing, run restore and then rerun build/test; select `slice-repair-escalation` only when the restored validation chain still fails or product proof does not satisfy the original repair target.
+
+External generated product roots may not be Git repositories. Do not call `workspace_git_status` as a validation precondition for a grounded product root, and do not treat a `not a git repository` result as a product-root, validation-tool, or repair blocker. If you already attempted Git status and it failed only because the product root is not a Git repository, record Git status as not applicable and continue immediately with product-root file listing plus the restore/build/test validation chain.
+
+Before running validation commands, resolve the actual solution target from the setup handoff, repaired evidence, product readback, or product-root file listing. Inspect `<ProductRoot>/<SolutionName>.slnx` and `<ProductRoot>/<SolutionName>.sln`; use the existing file, preferring `.slnx` when both exist. Never synthesize or require `<SolutionName>.sln` when only `<SolutionName>.slnx` exists. If prior validation failed only because a guessed solution path was missing, rerun the current-run validation chain against the discovered `.slnx` or `.sln` target before selecting `slice-repair-escalation`.
+
+Do not launch the app, open a browser, or capture runtime screenshots in this slice recheck step; root runtime-command and screenshot writeback steps own live visual proof.
 
 This step owns the repaired slice branch decision:
 
-- Select `slice-accepted` only when repaired evidence satisfies the chosen slice behavior.
+- Select `slice-accepted` only when repaired evidence, current-run build proof, current-run executed-test proof when tests exist or are expected, and focused proof satisfy the chosen slice behavior.
 - Select `slice-repair-escalation` when the original repair target proof still fails, accepted child handoff evidence is missing, or another repair would exceed the slice boundary.
 - Validate the same defect recorded in `add-tests-and-proof`; do not accept a repair child that proved a different behavior while leaving the triggering failure unresolved.
 - Return a completed process-step outcome with the selected branch outcome. Do not return `Blocked` for evaluated product proof that can be escalated to the parent.

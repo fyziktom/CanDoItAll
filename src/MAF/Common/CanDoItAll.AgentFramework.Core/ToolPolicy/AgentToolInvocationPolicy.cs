@@ -58,6 +58,8 @@ public sealed record AgentToolInvocationTrace(
     public string RuntimeToolProviderKey { get; init; } = string.Empty;
 
     public string RuntimeToolProviderName { get; init; } = string.Empty;
+
+    public string Signature { get; init; } = string.Empty;
 }
 
 public sealed record AgentToolPolicyMetadata(
@@ -87,11 +89,16 @@ public sealed record ToolInvocationPolicyContext(
     bool ProcessAllowsProductMutation = true,
     IReadOnlyList<string>? ProcessStepAllowedOperations = null,
     string ProcessStepTargetScope = "",
+    string ContextWorkspaceScopeKind = "",
+    string ContextWorkspaceScopeKey = "",
     string InspectedScriptContent = "",
     string ScriptInspectionFailure = "",
-    string ScriptSideEffectManifestJson = "")
+    string ScriptSideEffectManifestJson = "",
+    IReadOnlyList<AgentToolInvocationTrace>? ToolInvocationTraces = null)
 {
     public string SourceId { get; init; } = string.Empty;
+
+    public IReadOnlyList<AgentToolInvocationTrace> RecentToolInvocationTraces { get; } = ToolInvocationTraces ?? [];
 
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
@@ -133,6 +140,16 @@ public interface IAgentToolInvocationPolicy
 
 public static class AgentToolPolicyBlockGuard
 {
+    private const string OwnPrimaryManagedOutputReadDenialMarker =
+        "cannot read, stat, list, or search its own primary managed output";
+    private const string OwnPrimaryManagedOutputPreCreationMarker = "before creating it";
+    private const string OwnPrimaryManagedOutputInProgressWriteDenialMarker =
+        "cannot write primary managed output";
+    private const string OwnPrimaryManagedOutputBlockedPlaceholderWriteDenialMarker =
+        "cannot write a status-only Blocked placeholder";
+    private const string GovernedDotnetNewForceDeniedMarker =
+        "cannot run workspace_dotnet_new with force=true";
+
     private static readonly HashSet<string> RecoverableGovernedReadDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
     {
         ToolContractCatalog.WorkspaceListFiles,
@@ -144,6 +161,23 @@ public static class AgentToolPolicyBlockGuard
     {
         ToolContractCatalog.BrowserSnapshot,
         ToolContractCatalog.BrowserTakeScreenshot
+    };
+    private static readonly HashSet<string> RecoverableGovernedWorkspaceBoundaryTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolContractCatalog.WorkspaceCreateDirectory,
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile,
+        ToolContractCatalog.WorkspaceCopyPath,
+        ToolContractCatalog.WorkspaceMovePath,
+        ToolContractCatalog.WorkspaceDeletePath,
+        ToolContractCatalog.WorkspaceDotNetNew,
+        ToolContractCatalog.WorkspaceDotNetRestore,
+        ToolContractCatalog.WorkspaceDotNetBuild,
+        ToolContractCatalog.WorkspaceDotNetTest,
+        ToolContractCatalog.WorkspaceDotNetRun,
+        ToolContractCatalog.WorkspacePowerShellRunScript,
+        ToolContractCatalog.WorkspacePythonRunFile,
+        ToolContractCatalog.WorkspaceCommandRun
     };
 
     public static bool TryCreateRecoverableDeniedResult(
@@ -167,9 +201,44 @@ public static class AgentToolPolicyBlockGuard
         }
 
         if (context.Classification == ToolInvocationClassification.Read &&
+            RecoverableGovernedReadDiscoveryTools.Contains(toolName) &&
+            IsRecoverableCurrentStepOwnOutputPreCreationReadDenial(decision))
+        {
+            result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} This is not a missing tool permission and not a blocker. Do not retry the read, stat, list, or search. Do not write a status-only InProgress or Blocked placeholder and stop. Continue the step's required product, validation, or external work from launch variables, upstream artifacts, project-structure context, or product readback. When recording the step outcome, create or overwrite the named primary managed artifact with workspace_write_file or workspace_append_file, then return submit_process_step_outcome with evidenceRefs containing that managed ref. Submit Blocked only if the artifact write is denied, or if a required tool is denied or fails on a concrete environment boundary.";
+            return true;
+        }
+
+        if (context.Classification == ToolInvocationClassification.Mutation &&
+            IsManagedOutputWriteTool(toolName) &&
+            IsRecoverableCurrentStepOwnOutputPlaceholderWriteDenial(decision))
+        {
+            result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} This is not a missing tool permission and not a blocker. Do not retry the placeholder write. Continue the step's required product, validation, or external work from launch variables, upstream artifacts, project-structure context, or product readback. When the work is complete, create or overwrite the primary managed artifact with final evidence and Status: Completed, Failed, Blocked, WaitingApproval, or Refused, then return submit_process_step_outcome with matching evidenceRefs.";
+            return true;
+        }
+
+        if (context.Classification == ToolInvocationClassification.Read &&
             RecoverableGovernedReadDiscoveryTools.Contains(toolName))
         {
             result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Use the grounded external-target alias or current-run artifact folder named in the tool boundary, then retry with narrower arguments. When the denial gives a replacement external-target alias, retry the same structured workspace tool with that alias before finalizing Blocked. If this was only an optional context probe for an evidence-producing step, continue from launch variables or project-structure context and create the managed artifact instead of blocking.";
+            return true;
+        }
+
+        if (IsRecoverableScriptInspectionDenial(toolName, decision))
+        {
+            result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Treat this as helper-script ordering, not as missing permission. Create or overwrite the current-run helper script with workspace_write_file, verify that exact helper path with workspace_stat_path or workspace_read_file, then retry {toolName} with the same helper path. Do not submit Blocked only because a pre-creation script invocation was denied; submit Blocked only if the verified retry is denied or fails on a concrete policy, permission, or environment boundary.";
+            return true;
+        }
+
+        if (IsRecoverableDotnetNewForceDenial(toolName, decision))
+        {
+            result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Treat this as an unsafe scaffold overwrite request, not as missing permission. Retry without force only when the target scaffold is absent; when files already exist, inspect them and repair precise drift with governed product-mutation tools or a reviewed ProductMutation helper script.";
+            return true;
+        }
+
+        if (RecoverableGovernedWorkspaceBoundaryTools.Contains(toolName) &&
+            IsRecoverableWorkspaceBoundaryDenial(decision))
+        {
+            result = $"PolicyDenied: Tool '{toolName}' was denied for this governed process step. {decision.Reason} Treat this as a wrong tool argument, not as missing permission. Retry with the grounded current-run external-target alias or current-run artifact path named in the denial before finalizing Blocked.";
             return true;
         }
 
@@ -182,11 +251,62 @@ public static class AgentToolPolicyBlockGuard
         return false;
     }
 
+    private static bool IsRecoverableCurrentStepOwnOutputPreCreationReadDenial(
+        ToolInvocationPolicyDecision decision)
+    {
+        return decision.Reason.Contains(OwnPrimaryManagedOutputReadDenialMarker, StringComparison.OrdinalIgnoreCase) &&
+               decision.Reason.Contains(OwnPrimaryManagedOutputPreCreationMarker, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRecoverableCurrentStepOwnOutputPlaceholderWriteDenial(
+        ToolInvocationPolicyDecision decision)
+    {
+        return decision.Reason.Contains(OwnPrimaryManagedOutputInProgressWriteDenialMarker, StringComparison.OrdinalIgnoreCase) ||
+               decision.Reason.Contains(OwnPrimaryManagedOutputBlockedPlaceholderWriteDenialMarker, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsManagedOutputWriteTool(string toolName)
+    {
+        return string.Equals(toolName, ToolContractCatalog.WorkspaceWriteFile, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(toolName, ToolContractCatalog.WorkspaceAppendFile, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRecoverableScriptInspectionDenial(
+        string toolName,
+        ToolInvocationPolicyDecision decision)
+    {
+        if (!string.Equals(toolName, ToolContractCatalog.WorkspacePowerShellRunScript, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(toolName, ToolContractCatalog.WorkspacePythonRunFile, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return decision.Reason.Contains("could not be inspected", StringComparison.OrdinalIgnoreCase) ||
+               decision.Reason.Contains("must be inspected", StringComparison.OrdinalIgnoreCase) ||
+               (decision.Reason.Contains("script path", StringComparison.OrdinalIgnoreCase) &&
+                decision.Reason.Contains("does not exist", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsRecoverableDotnetNewForceDenial(
+        string toolName,
+        ToolInvocationPolicyDecision decision)
+    {
+        return string.Equals(toolName, ToolContractCatalog.WorkspaceDotNetNew, StringComparison.OrdinalIgnoreCase) &&
+               decision.Reason.Contains(GovernedDotnetNewForceDeniedMarker, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsRecoverableGovernedProcessStep(ToolInvocationPolicyContext context)
     {
         return string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
                !string.IsNullOrWhiteSpace(context.ProcessRunId) &&
                !string.IsNullOrWhiteSpace(context.ProcessStepId);
+    }
+
+    private static bool IsRecoverableWorkspaceBoundaryDenial(ToolInvocationPolicyDecision decision)
+    {
+        return decision.Reason.Contains("current-run", StringComparison.OrdinalIgnoreCase) ||
+               decision.Reason.Contains("workspace boundary", StringComparison.OrdinalIgnoreCase) ||
+               decision.Reason.Contains("outside the current run boundary", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsRecoverableGovernedBrowserProofBoundsDenial(
@@ -241,6 +361,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static readonly Regex WindowsNativeAbsolutePathRegex = new(
         "^[A-Za-z]:[\\\\/]",
         RegexOptions.CultureInvariant);
+    private static readonly Regex ManagedArtifactStatusLineRegex = new(
+        @"^\s{0,3}#*\s*Status\s*:\s*(?<status>[A-Za-z]+(?:[\s_-]+[A-Za-z]+)?)\b",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Multiline);
     private static readonly HashSet<string> ExternalTargetManagedWorkspaceIsolationTools = new(StringComparer.OrdinalIgnoreCase)
     {
         ToolContractCatalog.WorkspaceListFiles,
@@ -276,6 +399,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         ToolContractCatalog.WorkspaceStatPath,
         ToolContractCatalog.WorkspaceListFiles,
         ToolContractCatalog.WorkspaceSearch
+    };
+    private static readonly HashSet<string> CurrentStepOwnManagedOutputWriteTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile
     };
     private static readonly HashSet<string> ProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -331,6 +459,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static readonly string[] DeniedExternalRunManagedRoots =
     [
         "bin",
+        "managed-files",
         "obj",
         "scripts",
         "src",
@@ -374,6 +503,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private const string OperationRunValidation = ProcessOperationContractNames.RunValidation;
     private const string OperationLaunchRuntime = ProcessOperationContractNames.LaunchRuntime;
     private const string OperationCaptureRuntimeProof = ProcessOperationContractNames.CaptureRuntimeProof;
+    private const string OperationReadProjectStructure = ProcessOperationContractNames.ReadProjectStructure;
     private const string OperationExecuteExternalAction = ProcessOperationContractNames.ExecuteExternalAction;
     private const string OperationRecoverArtifactsOnly = ProcessOperationContractNames.RecoverArtifactsOnly;
     private const string OperationEscalateOrDecide = ProcessOperationContractNames.EscalateOrDecide;
@@ -416,6 +546,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (currentStepOwnOutputReadDecision is not null)
         {
             return ValueTask.FromResult(currentStepOwnOutputReadDecision);
+        }
+
+        var currentStepOwnOutputPlaceholderWriteDecision = EvaluateGovernedCurrentStepOwnOutputPlaceholderWrite(context, signature);
+        if (currentStepOwnOutputPlaceholderWriteDecision is not null)
+        {
+            return ValueTask.FromResult(currentStepOwnOutputPlaceholderWriteDecision);
         }
 
         var governedBrowserDecision = browserProofPolicy.EvaluateGovernedToolBounds(context, signature);
@@ -476,6 +612,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (scaffoldToolOnlyDecision is not null)
         {
             return ValueTask.FromResult(scaffoldToolOnlyDecision);
+        }
+
+        var dotnetNewForceDecision = EvaluateGovernedDotnetNewForce(context, signature);
+        if (dotnetNewForceDecision is not null)
+        {
+            return ValueTask.FromResult(dotnetNewForceDecision);
         }
 
         var dotnetNewTemplateConsistencyDecision = EvaluateDotnetNewTemplateConsistency(context, signature);
@@ -541,9 +683,172 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var primaryRef = BuildCurrentStepPrimaryManagedArtifactPath(context);
+        if (HasSuccessfulCurrentStepPrimaryManagedArtifactWrite(context, primaryRef))
+        {
+            return null;
+        }
+
         return ToolInvocationPolicyDecision.Deny(
             signature,
-            $"Governed process step '{context.SourceId}' cannot read, stat, list, or search its own primary managed output '{primaryRef}' before creating it. Use workspace_write_file or workspace_append_file to create that managed artifact, then return submit_process_step_outcome with evidenceRefs containing the same managed ref.");
+            $"Governed process step '{context.SourceId}' cannot read, stat, list, or search its own primary managed output '{primaryRef}' before creating it. Do not retry that read. Continue from launch variables, upstream artifacts, project-structure context, or product readback. When the step has evidence for its outcome, create or overwrite that managed artifact with workspace_write_file or workspace_append_file, then return submit_process_step_outcome with evidenceRefs containing the same managed ref.");
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedCurrentStepOwnOutputPlaceholderWrite(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            context.Classification != ToolInvocationClassification.Mutation ||
+            !CurrentStepOwnManagedOutputWriteTools.Contains(context.ToolName) ||
+            string.IsNullOrWhiteSpace(context.ProcessRunId) ||
+            string.IsNullOrWhiteSpace(context.SourceId))
+        {
+            return null;
+        }
+
+        var matchedPath = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+            .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
+            .FirstOrDefault(path => IsCurrentStepPrimaryManagedArtifactPath(context, path));
+        if (string.IsNullOrWhiteSpace(matchedPath) ||
+            !TryResolveManagedArtifactWriteContent(context.RedactedArguments, out var content) ||
+            !TryResolveManagedArtifactStatus(content, out var status))
+        {
+            return null;
+        }
+
+        var primaryRef = BuildCurrentStepPrimaryManagedArtifactPath(context);
+        if (string.Equals(status, "InProgress", StringComparison.OrdinalIgnoreCase))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Governed process step '{context.SourceId}' cannot write primary managed output '{primaryRef}' with status InProgress. Primary managed step artifacts are final evidence, not progress notes. Complete the required work and write Status: Completed, or submit a concrete Blocked/Failed/WaitingApproval outcome with actionable evidence.");
+        }
+
+        if (string.Equals(status, "Blocked", StringComparison.OrdinalIgnoreCase) &&
+            IsStatusOnlyManagedArtifactPlaceholder(content))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Governed process step '{context.SourceId}' cannot write a status-only Blocked placeholder to primary managed output '{primaryRef}'. Submit Blocked only with concrete denied tool, failed command, unavailable dependency, or other actionable boundary evidence.");
+        }
+
+        return null;
+    }
+
+    private static bool TryResolveManagedArtifactWriteContent(
+        IReadOnlyDictionary<string, string> arguments,
+        out string content)
+    {
+        foreach (var argument in arguments)
+        {
+            if (!argument.Key.Contains("content", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var values = EnumerateArgumentTextValues(argument.Value)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .ToArray();
+            if (values.Length == 0)
+            {
+                continue;
+            }
+
+            content = string.Join(Environment.NewLine, values);
+            return true;
+        }
+
+        content = string.Empty;
+        return false;
+    }
+
+    private static bool TryResolveManagedArtifactStatus(string content, out string status)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            status = string.Empty;
+            return false;
+        }
+
+        var match = ManagedArtifactStatusLineRegex.Match(content);
+        if (!match.Success)
+        {
+            status = string.Empty;
+            return false;
+        }
+
+        status = NormalizeManagedArtifactStatus(match.Groups["status"].Value);
+        return !string.IsNullOrWhiteSpace(status);
+    }
+
+    private static string NormalizeManagedArtifactStatus(string status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return string.Empty;
+        }
+
+        return string.Concat(status.Where(character => !char.IsWhiteSpace(character) && character != '-' && character != '_'));
+    }
+
+    private static bool IsStatusOnlyManagedArtifactPlaceholder(string content)
+    {
+        var normalized = content.Trim();
+        if (normalized.Length > 700)
+        {
+            return false;
+        }
+
+        return !ContainsConcreteBlockedEvidenceSignal(normalized);
+    }
+
+    private static bool ContainsConcreteBlockedEvidenceSignal(string content)
+    {
+        return content.Contains("PolicyDenied", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("denied", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("failure", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("exception", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("required tool", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("unavailable", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("evidence", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("receipt", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasSuccessfulCurrentStepPrimaryManagedArtifactWrite(
+        ToolInvocationPolicyContext context,
+        string primaryRef)
+    {
+        if (context.RecentToolInvocationTraces.Count == 0 ||
+            string.IsNullOrWhiteSpace(primaryRef))
+        {
+            return false;
+        }
+
+        return context.RecentToolInvocationTraces.Any(trace =>
+            trace.Succeeded &&
+            trace.CompletedAtUtc is not null &&
+            CurrentStepOwnManagedOutputWriteTools.Contains(trace.ToolName) &&
+            ToolSignatureTargetsManagedPath(trace.Signature, primaryRef));
+    }
+
+    private static bool ToolSignatureTargetsManagedPath(
+        string signature,
+        string managedPath)
+    {
+        if (string.IsNullOrWhiteSpace(signature) ||
+            string.IsNullOrWhiteSpace(managedPath))
+        {
+            return false;
+        }
+
+        var normalizedSignature = NormalizeManagedWorkspacePath(signature);
+        var normalizedManagedPath = NormalizeManagedWorkspacePath(managedPath);
+        return normalizedSignature.Contains("path=" + normalizedManagedPath, StringComparison.OrdinalIgnoreCase) ||
+               normalizedSignature.Contains("relativepath=" + normalizedManagedPath, StringComparison.OrdinalIgnoreCase) ||
+               normalizedSignature.Contains("filepath=" + normalizedManagedPath, StringComparison.OrdinalIgnoreCase) ||
+               normalizedSignature.Contains("targetpath=" + normalizedManagedPath, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class ToolOperationRequirementResolver
@@ -1697,6 +2002,20 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 continue;
             }
 
+            if (IsReadOnlyProjectMediaImageTool(context) &&
+                IsManagedProjectMediaImagePath(normalizedPath) &&
+                IsManagedProjectMediaPathForCurrentProject(normalizedPath, context))
+            {
+                continue;
+            }
+
+            if (IsReadOnlyProjectMediaFileTool(context) &&
+                IsManagedProjectMediaFilePath(normalizedPath) &&
+                IsManagedProjectMediaPathForCurrentProject(normalizedPath, context))
+            {
+                continue;
+            }
+
             if (IsBroadManagedWorkspacePath(normalizedPath) &&
                 BroadManagedWorkspaceDiscoveryTools.Contains(context.ToolName))
             {
@@ -1781,8 +2100,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"This governed run has a grounded external product target. Native absolute path '{rawPath}' is outside the workspace-tool boundary; use a grounded external-target alias or a relative current-run artifact path.");
         }
 
-        if (IsExplicitManagedWorkspaceFileRead(context, rawPath) ||
-            IsExplicitManagedProjectMediaRead(context, rawPath))
+        if (IsExplicitManagedWorkspaceFileRead(context, rawPath))
         {
             return null;
         }
@@ -1861,6 +2179,42 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return ToolInvocationPolicyDecision.Deny(
             signature,
             $"This governed .NET scaffold step is tool-only for product files. Use {ToolContractCatalog.WorkspaceDotNetNew} for new scaffolds or {ToolContractCatalog.WorkspacePowerShellRunScript} with a ProductMutation sideEffectManifest for surgical dotnet CLI operations or project-file repair. Do not retry {ToolContractCatalog.WorkspaceWriteFile} against external-target product paths; use it only for current-run artifacts.");
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedDotnetNewForce(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            !string.Equals(context.ToolName, ToolContractCatalog.WorkspaceDotNetNew, StringComparison.OrdinalIgnoreCase) ||
+            !TryResolveTruthyToolArgument(context.RedactedArguments, "force"))
+        {
+            return null;
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"Governed process steps cannot run {ToolContractCatalog.WorkspaceDotNetNew} with force=true because it can overwrite existing product scaffold files during retries. Use force=false for missing scaffolds, inspect existing files first, and repair drift with focused product-mutation tools or a reviewed ProductMutation helper script.");
+    }
+
+    private static bool TryResolveTruthyToolArgument(
+        IReadOnlyDictionary<string, string> arguments,
+        string key)
+    {
+        if (!arguments.TryGetValue(key, out var value) ||
+            string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Trim() switch
+        {
+            "1" => true,
+            var text when string.Equals(text, "yes", StringComparison.OrdinalIgnoreCase) => true,
+            var text when string.Equals(text, "y", StringComparison.OrdinalIgnoreCase) => true,
+            var text when bool.TryParse(text, out _) => bool.Parse(text),
+            _ => false
+        };
     }
 
     private static bool IsGovernedProcessRun(ToolInvocationPolicyContext context)
@@ -2165,36 +2519,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                path.StartsWith("//", StringComparison.Ordinal);
     }
 
-    private static bool IsExplicitManagedProjectMediaRead(
-        ToolInvocationPolicyContext context,
-        string path)
-    {
-        if (!string.Equals(context.ToolName, ToolContractCatalog.WorkspaceReadFile, StringComparison.OrdinalIgnoreCase) ||
-            context.Classification != ToolInvocationClassification.Read)
-        {
-            return false;
-        }
-
-        var normalizedPath = NormalizeManagedWorkspacePath(path);
-        if (string.IsNullOrWhiteSpace(normalizedPath))
-        {
-            return false;
-        }
-
-        const string relativePrefix = "managed-files/project-media/files/";
-        const string absoluteMarker = "/managed-files/project-media/files/";
-        var payload = normalizedPath.StartsWith(relativePrefix, StringComparison.OrdinalIgnoreCase)
-            ? normalizedPath[relativePrefix.Length..]
-            : ExtractAfterMarker(normalizedPath, absoluteMarker);
-        if (string.IsNullOrWhiteSpace(payload))
-        {
-            return false;
-        }
-
-        var segments = payload.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return segments.Length >= 2 && HasFileExtension(segments[^1]);
-    }
-
     private static bool IsExplicitManagedWorkspaceFileRead(
         ToolInvocationPolicyContext context,
         string path)
@@ -2240,6 +2564,131 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".log", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsReadOnlyProjectMediaImageTool(ToolInvocationPolicyContext context)
+    {
+        if (context.Classification != ToolInvocationClassification.Read ||
+            !HasScopedProjectMediaReadGrant(context))
+        {
+            return false;
+        }
+
+        return string.Equals(context.ToolName, ToolContractCatalog.WorkspaceReadFile, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(context.ToolName, ToolContractCatalog.WorkspaceStatPath, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(context.ToolName, ToolContractCatalog.WorkspaceInspectImage, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(context.ToolName, ToolContractCatalog.WorkspaceAnalyzeImage, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(context.ToolName, ToolContractCatalog.WorkspaceAnalyzeImages, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsReadOnlyProjectMediaFileTool(ToolInvocationPolicyContext context)
+    {
+        if (context.Classification != ToolInvocationClassification.Read ||
+            !HasScopedProjectMediaReadGrant(context))
+        {
+            return false;
+        }
+
+        return string.Equals(context.ToolName, ToolContractCatalog.WorkspaceReadFile, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(context.ToolName, ToolContractCatalog.WorkspaceStatPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasScopedProjectMediaReadGrant(ToolInvocationPolicyContext context)
+    {
+        return string.Equals(context.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
+               ProcessOperationContractNames.IsTargetScopeName(context.ProcessStepTargetScope) &&
+               (ProcessStepAllows(context, OperationReadProjectStructure) ||
+                ProcessStepAllows(context, OperationCaptureRuntimeProof));
+    }
+
+    private static bool IsManagedProjectMediaImagePath(string normalizedPath)
+    {
+        if (!normalizedPath.StartsWith("managed-files/project-media/images/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var fileName = Path.GetFileName(normalizedPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return false;
+        }
+
+        var extension = Path.GetExtension(fileName);
+        return extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".webp", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".gif", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".bmp", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".svg", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".avif", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsManagedProjectMediaFilePath(string normalizedPath)
+    {
+        if (!normalizedPath.StartsWith("managed-files/project-media/files/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var fileName = Path.GetFileName(normalizedPath);
+        return !string.IsNullOrWhiteSpace(fileName) && HasFileExtension(fileName);
+    }
+
+    private static bool IsManagedProjectMediaPathForCurrentProject(
+        string normalizedPath,
+        ToolInvocationPolicyContext context)
+    {
+        if (!string.Equals(context.ContextWorkspaceScopeKind, WorkspaceScopeKind.Project.ToString(), StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(context.ContextWorkspaceScopeKey))
+        {
+            return false;
+        }
+
+        var projectSegment = ResolveManagedProjectMediaProjectSegment(normalizedPath);
+        if (string.IsNullOrWhiteSpace(projectSegment))
+        {
+            return false;
+        }
+
+        return ResolveCurrentProjectMediaSegments(context.ContextWorkspaceScopeKey)
+            .Contains(NormalizeProjectMediaSegment(projectSegment), StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveManagedProjectMediaProjectSegment(string normalizedPath)
+    {
+        var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length >= 4 &&
+               string.Equals(segments[0], "managed-files", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[1], "project-media", StringComparison.OrdinalIgnoreCase) &&
+               (string.Equals(segments[2], "images", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segments[2], "files", StringComparison.OrdinalIgnoreCase))
+            ? segments[3]
+            : string.Empty;
+    }
+
+    private static IReadOnlyList<string> ResolveCurrentProjectMediaSegments(string contextWorkspaceScopeKey)
+    {
+        var segments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var normalizedKey = NormalizeProjectMediaSegment(contextWorkspaceScopeKey);
+        if (!string.IsNullOrWhiteSpace(normalizedKey))
+        {
+            segments.Add(normalizedKey);
+        }
+
+        if (Guid.TryParse(contextWorkspaceScopeKey, out var projectId))
+        {
+            segments.Add(projectId.ToString("N"));
+            segments.Add(projectId.ToString("D"));
+        }
+
+        return segments.ToArray();
+    }
+
+    private static string NormalizeProjectMediaSegment(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().Trim('/').Replace("-", string.Empty, StringComparison.Ordinal);
 
     private static string ExtractAfterMarker(string value, string marker)
     {

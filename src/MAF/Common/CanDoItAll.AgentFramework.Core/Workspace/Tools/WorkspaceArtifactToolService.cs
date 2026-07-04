@@ -51,9 +51,24 @@ public sealed class WorkspaceArtifactToolService(
         string? outputPath = null,
         int previewCharacters = 4000)
     {
+        var startedAtUtc = DateTimeOffset.UtcNow;
         var resolvedOutputPath = string.IsNullOrWhiteSpace(outputPath)
             ? BuildDefaultMarkdownOutputPath(path)
             : WorkspacePathPolicy.NormalizeRelativePath(outputPath);
+        if (LooksLikeImagePath(path))
+        {
+            var message = $"'{path}' is an image asset. Use workspace_inspect_image or workspace_analyze_image for visual evidence instead of workspace_convert_document.";
+            return CreateDocumentConversionResult(
+                succeeded: false,
+                outcome: "Failed",
+                message,
+                path,
+                resolvedOutputPath,
+                diagnostics: message,
+                startedAtUtc,
+                targetPaths: [path]);
+        }
+
         var result = await commandExecutionService
             .ConvertDocumentWithMarkItDown(path, resolvedOutputPath)
             .ConfigureAwait(false);
@@ -343,6 +358,48 @@ public sealed class WorkspaceArtifactToolService(
         var slug = Slugify(sourceName);
         var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}-{slug}.md";
         return workspaceScope.CombineArtifactPath("converted-documents", fileName);
+    }
+
+    private WorkspaceDocumentConversionResult CreateDocumentConversionResult(
+        bool succeeded,
+        string outcome,
+        string message,
+        string sourcePath,
+        string outputPath,
+        string diagnostics,
+        DateTimeOffset startedAtUtc,
+        IReadOnlyList<string> targetPaths)
+    {
+        var receipt = receiptWriter.CreateReceipt(
+            "workspace_convert_document",
+            mutatesWorkspace: false,
+            outcome,
+            message,
+            receiptRelativePath: string.Empty,
+            targetPaths,
+            artifactReferences: [],
+            startedAtUtc);
+
+        return new WorkspaceDocumentConversionResult(
+            Succeeded: succeeded,
+            Message: message,
+            Receipt: receipt,
+            SourcePath: sourcePath,
+            OutputPath: outputPath,
+            MarkdownPreview: string.Empty,
+            PreviewTruncated: false,
+            Diagnostics: diagnostics);
+    }
+
+    private static bool LooksLikeImagePath(string path)
+    {
+        var extension = Path.GetExtension(path);
+        return extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".gif", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".webp", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".bmp", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string BuildDiagnostics(WorkspaceCommandExecutionResult result)

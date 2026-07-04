@@ -6,6 +6,8 @@ Write the managed plan artifact to `artifacts/process-runs/<current-process-run-
 
 Identify canonical state ownership, UI/application/domain/infrastructure boundaries, the intended file set, and whether the feature needs an architecture decision record. Name any assumptions separately from blockers.
 
+Do not copy `SourceDocName`, `SourceDocLink`, native absolute source-document paths, scoped storage paths under `artifacts/scopes/...`, `managed-files` paths, or project-media file paths into the artifact body, reason, summary, next actions, or `evidenceRefs`. Cite stable current-run process artifact refs, project-structure node ids, ImageAsset ids, and grounded external-target aliases instead.
+
 When visual target ImageAsset ids or media paths are in scope, inspect or analyze the target image before selecting the UI file set. The implementation approach must name how the visible layout will map to the source image, not just to text requirements.
 
 For repair runs, plan against the inherited repair target instead of broadening scope. Name the failing proof, the product surfaces likely responsible, and the focused verification that must pass before handoff.

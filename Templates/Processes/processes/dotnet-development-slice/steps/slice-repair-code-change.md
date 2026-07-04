@@ -2,6 +2,8 @@
 
 Launch a feature/function implementation subprocess for the concrete validation findings from `slice-repair-required`.
 
+First call `project_structure_process_subprocess_launch` with `definitionKey` set to `dotnet-feature-function-implementation`. Do not wait silently or return `Blocked` before attempting that child launch unless mandatory repair-launch inputs are missing. If the launch response includes `ParentDeferredOutcomeJson`, submit that parent outcome exactly: active child runs defer the parent, completed child runs complete the parent from child evidence, and stopped child runs propagate their concrete blocker.
+
 Carry forward:
 
 - The chosen slice behavior and exclusions.

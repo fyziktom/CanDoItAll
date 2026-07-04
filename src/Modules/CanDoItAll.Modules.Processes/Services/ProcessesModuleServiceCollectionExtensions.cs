@@ -49,6 +49,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessHistoricalRunCostReader, EfProcessHistoricalRunCostReader>();
         services.TryAddScoped<IProcessRuntimeProjector, ProcessRuntimeProjectionProjector>();
         services.TryAddScoped<ProcessRuntimeProjectionCatchupService>();
+        services.TryAddScoped<ProcessRuntimeBranchSignalApplicationService>();
         services.TryAddScoped<IProcessStepBriefBuilder, AgentFrameworkProcessStepBriefBuilder>();
         services.TryAddScoped<IProcessExecutionAdapter, AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
