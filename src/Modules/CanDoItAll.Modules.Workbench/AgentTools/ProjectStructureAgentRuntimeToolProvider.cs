@@ -303,7 +303,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetContentGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_content_get",
-                    "Returns readonly metadata and bounded base64 content for an existing managed asset node. Binary media and large assets omit Base64Data; use the returned mediaRelativePath with workspace_inspect_image or workspace_analyze_image for visual evidence instead of inlining bytes."),
+                    "Returns readonly metadata and bounded base64 content for an existing managed asset node. Binary media and large assets omit Base64Data. For PDF or document assets, use the exact returned mediaRelativePath with workspace_convert_document. Use workspace_inspect_image or workspace_analyze_image only for image media."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureAssetRevisionRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_asset_create_revision",
@@ -2507,9 +2507,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
         var reason = IsBinaryMediaContentType(content.Asset.MediaContentType)
             ? $"Base64Data is omitted because '{content.Asset.MediaContentType}' is binary media."
             : $"Base64Data is omitted because the asset is {content.ContentLength:N0} byte(s), exceeding the {MaxInlineAgentAssetContentBytes:N0}-byte runtime inline limit.";
-        var nextAction = IsImageContentType(content.Asset.MediaContentType)
-            ? $"Use workspace_inspect_image or workspace_analyze_image with '{mediaPath}' when visual evidence is required."
-            : $"Use a bounded workspace tool against '{mediaPath}' only when the step contract requires inspecting the asset bytes.";
+        var nextAction = ResolveOmittedContentNextAction(content.Asset.MediaContentType, mediaPath);
 
         return content with
         {
@@ -2533,8 +2531,39 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
                contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string ResolveOmittedContentNextAction(string contentType, string mediaPath)
+    {
+        if (IsImageContentType(contentType))
+        {
+            return $"Use workspace_inspect_image or workspace_analyze_image with '{mediaPath}' when visual evidence is required.";
+        }
+
+        if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Contains("wordprocessingml.document", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("application/msword", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("text/markdown", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Use workspace_convert_document with '{mediaPath}' and analyze the returned markdown preview or output path.";
+        }
+
+        if (IsSpreadsheetContentType(contentType))
+        {
+            return $"Use workspace_inspect_spreadsheet with '{mediaPath}' when tabular content is required.";
+        }
+
+        return $"Use a bounded workspace tool against '{mediaPath}' only when the step contract requires inspecting the asset bytes.";
+    }
+
     private static bool IsImageContentType(string contentType)
         => contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSpreadsheetContentType(string contentType)
+    {
+        return contentType.Contains("spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Contains("ms-excel", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Equals("text/csv", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Equals("text/tab-separated-values", StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public sealed record OperationAck(bool Ok);

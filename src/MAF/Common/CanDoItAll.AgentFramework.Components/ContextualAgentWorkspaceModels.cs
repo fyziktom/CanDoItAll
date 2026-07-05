@@ -91,9 +91,13 @@ Context:
 - Selected project id: {projectId:D}.
 {selectionLine}
 - Treat "this project" and "selected project" as that project structure.
-- Treat "selected nodes" as exactly the selected node ids listed above; if none are listed, ask for a selection or exact node ids.
+- Treat "selected nodes" as exactly the selected node ids listed above. If none are listed, work at selected project scope unless the request specifically requires a node selection.
 - Use project-structure operations for structure reads or mutations.
 - Use the project-structure node catalog before creating or reclassifying unfamiliar node kinds.
+- Start asset work with project_structure_read for the selected project or selected node ids; do not search the workspace root to discover project assets.
+- For File, ImageAsset, and VideoAsset nodes, call project_structure_asset_get or project_structure_asset_content_get by node id. Use the exact returned mediaRelativePath if a workspace artifact tool is needed.
+- For PDF or document File assets, call workspace_convert_document with the exact mediaRelativePath and analyze the returned markdown preview or output path.
+- workspace_list_files searchPattern uses glob syntax, not regex; examples: *quotation*.pdf and **/*.pdf. Avoid broad workspace_search or root list calls unless project-structure reads do not identify the asset.
 - When task ordering matters, create DependsOn dependency links so Gantt and readiness views stay correct.
 
 User request:
@@ -119,6 +123,37 @@ public static class ContextualAgentAccessResolver
             .Cast<ContextualAgentAccessSummary>()
             .OrderBy(summary => summary.Agent.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    public static bool ShouldAutoApproveContextualRun(
+        IEnumerable<ContextualAgentAccessSummary> accessibleAgents,
+        ContextualAgentWorkspaceKind workspaceKind,
+        Guid? selectedAgentId,
+        Guid? projectId = null,
+        Guid? processDefinitionId = null)
+    {
+        ArgumentNullException.ThrowIfNull(accessibleAgents);
+
+        if (!selectedAgentId.HasValue ||
+            !HasScopedContextForAutoApproval(workspaceKind, projectId, processDefinitionId))
+        {
+            return false;
+        }
+
+        return accessibleAgents.FirstOrDefault(item => item.Agent.Id == selectedAgentId.Value)?.CanWrite == true;
+    }
+
+    private static bool HasScopedContextForAutoApproval(
+        ContextualAgentWorkspaceKind workspaceKind,
+        Guid? projectId,
+        Guid? processDefinitionId)
+    {
+        return workspaceKind switch
+        {
+            ContextualAgentWorkspaceKind.ProjectStructure => projectId.HasValue,
+            ContextualAgentWorkspaceKind.Processes => processDefinitionId.HasValue,
+            _ => false
+        };
     }
 
     private static ContextualAgentAccessSummary? Resolve(

@@ -2734,6 +2734,9 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages));
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceAnalyzeImages));
         Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceAnalyzeImages));
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceConvertDocument));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceConvertDocument));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceConvertDocument));
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetStop));
         Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary));
     }
@@ -2833,6 +2836,12 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolCapabilityOperationRequirementKind.Static, analyzeImages.OperationRequirementKind);
         Assert.Contains(analyzeImages.OperationRequirements, requirement =>
             requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceConvertDocument, out var convertDocument));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, convertDocument.OperationRequirementKind);
+        Assert.Contains(convertDocument.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("ReadProjectStructure", StringComparer.Ordinal) &&
+            requirement.AnyOf.Contains("WriteManagedProcessArtifacts", StringComparer.Ordinal));
 
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceDotNetStop, out var dotnetStop));
         Assert.Equal(ToolCapabilityOperationRequirementKind.Static, dotnetStop.OperationRequirementKind);

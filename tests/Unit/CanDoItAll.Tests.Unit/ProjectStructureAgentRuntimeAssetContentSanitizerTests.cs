@@ -42,6 +42,24 @@ public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
         Assert.Contains("small non-media asset", bounded.ContentSummary, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void BoundForAgentRuntime_omits_pdf_base64_and_points_to_document_conversion()
+    {
+        var content = new ProjectStructureAssetContentDescriptor(
+            CreateAsset(ProjectObjectType.File, "application/pdf", "managed-files/project-media/files/calculator/quote.pdf"),
+            ContentLength: 420_000,
+            Base64Data: Convert.ToBase64String(new byte[512]));
+
+        var bounded = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(content);
+
+        Assert.True(bounded.Base64DataOmitted);
+        Assert.Empty(bounded.Base64Data);
+        Assert.Contains("application/pdf", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.Contains("workspace_convert_document", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_analyze_image", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.Contains("managed-files/project-media/files/calculator/quote.pdf", bounded.ContentSummary, StringComparison.Ordinal);
+    }
+
     private static ProjectStructureAssetDescriptor CreateAsset(
         ProjectObjectType objectType,
         string contentType,
