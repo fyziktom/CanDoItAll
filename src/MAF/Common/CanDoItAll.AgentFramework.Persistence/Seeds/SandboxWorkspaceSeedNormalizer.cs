@@ -220,13 +220,14 @@ internal static class SandboxWorkspaceSeedNormalizer
             }
 
             idMap[seededAgent.Id] = match.Id;
+            var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(match, seededAgent, providersById);
             var mergedAgent = match with
             {
                 RoleTitle = string.IsNullOrWhiteSpace(match.RoleTitle) ? seededAgent.RoleTitle : match.RoleTitle,
                 Summary = string.IsNullOrWhiteSpace(match.Summary) ? seededAgent.Summary : match.Summary,
                 Instructions = string.IsNullOrWhiteSpace(match.Instructions) ? seededAgent.Instructions : match.Instructions,
                 ProviderProfileId = match.ProviderProfileId ?? seededAgent.ProviderProfileId,
-                Model = string.IsNullOrWhiteSpace(match.Model) ? seededAgent.Model : match.Model,
+                Model = ResolveMergedAgentModel(match, seededAgent, preserveProviderAssignment),
                 RequirePerServiceCallChatHistoryPersistence = match.RequirePerServiceCallChatHistoryPersistence || seededAgent.RequirePerServiceCallChatHistoryPersistence,
                 EnableBackgroundResponses = match.EnableBackgroundResponses || seededAgent.EnableBackgroundResponses,
                 ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededAgent.ConfigurationJson : match.ConfigurationJson,
@@ -243,6 +244,21 @@ internal static class SandboxWorkspaceSeedNormalizer
         }
 
         return new MergeResult<AgentDefinition>(merged.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList(), idMap);
+    }
+
+    private static string ResolveMergedAgentModel(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent,
+        bool preserveProviderAssignment)
+    {
+        if (preserveProviderAssignment)
+        {
+            return string.IsNullOrWhiteSpace(existingAgent.Model)
+                ? string.Empty
+                : existingAgent.Model;
+        }
+
+        return string.IsNullOrWhiteSpace(existingAgent.Model) ? seededAgent.Model : existingAgent.Model;
     }
 
     private static AgentDefinition RemapSeedAgent(

@@ -53,16 +53,17 @@ internal static class MafModelParametersBuilder
         {
             options.MaxOutputTokens = maxOutputTokens.Value;
         }
+        else if (provider.Kind == ProviderKind.Ollama)
+        {
+            options.MaxOutputTokens = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens;
+        }
 
         if (provider.Kind == ProviderKind.Ollama)
         {
-            var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(
+            var think = AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(
                 provider.ConfigurationJson,
                 agentConfigurationJson ?? string.Empty);
-            if (think is not null)
-            {
-                options.AddOllamaOption(OllamaOption.Think, think.Value);
-            }
+            options.AddOllamaOption(OllamaOption.Think, think);
         }
 
         return options;

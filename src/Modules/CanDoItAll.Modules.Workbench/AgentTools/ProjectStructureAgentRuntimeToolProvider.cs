@@ -14,6 +14,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
     private const int ProviderOrder = 900;
     private const int GovernedProcessDefaultStructureReadTake = 80;
     private const int GovernedProcessMaxExplicitLeaseMinutes = 5;
+    private const string ProjectStructureSourceKind = "project-structure";
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
 
@@ -75,7 +76,32 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (!ShouldAttachForContext(context.ContextIntent))
+        {
+            return ValueTask.FromResult<IReadOnlyList<AITool>>([]);
+        }
+
         return ValueTask.FromResult(toolBuilder.CreateTools(context));
+    }
+
+    internal static bool ShouldAttachForContext(AgentRuntimeContextIntent contextIntent)
+    {
+        ArgumentNullException.ThrowIfNull(contextIntent);
+
+        if (string.Equals(contextIntent.SourceKind, ProjectStructureSourceKind, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return contextIntent.IsGovernedProcessStep &&
+               contextIntent.AllowedOperations.Any(IsProjectStructureProcessOperation);
+    }
+
+    private static bool IsProjectStructureProcessOperation(string operation)
+    {
+        return string.Equals(operation, ProcessOperationContractNames.ReadProjectStructure, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(operation, ProcessOperationContractNames.StartProjectNodeProcess, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(operation, ProcessOperationContractNames.ExecuteExternalAction, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class ProjectStructureToolBuilder(

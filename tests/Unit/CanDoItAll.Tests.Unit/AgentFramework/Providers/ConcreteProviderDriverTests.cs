@@ -210,6 +210,37 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
+    public async Task OllamaProviderDriver_SerializesDefaultFastGenerationOptions()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"fast response"},"prompt_eval_count":13,"eval_count":14}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            "http://ollama.test",
+            "qwen3.5:2b",
+            "{}");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "qwen3.5:2b",
+            "system",
+            [],
+            "Reply with OK."));
+
+        Assert.Equal("fast response", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.Equal(
+            AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens,
+            body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32());
+        Assert.Equal(
+            AgentProviderModelParameterPolicy.DefaultOllamaThinkEnabled,
+            body.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
     public async Task OllamaProviderDriver_PrefersRequestModelParametersOverProviderDefaults()
     {
         var handler = new CapturingHandler((request, body) =>

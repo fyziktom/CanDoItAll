@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OllamaSharp;
+using OllamaSharp.Models;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Responses;
@@ -380,7 +381,52 @@ public sealed partial class MafAgentRuntime
             Timeout = ResolveProviderNetworkTimeout(provider)
         };
         IChatClient chatClient = new OllamaApiClient(httpClient, model, jsonSerializerContext: null);
+        chatClient = new DefaultOllamaOptionsChatClient(
+            chatClient,
+            AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(provider.ConfigurationJson, string.Empty),
+            AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(provider.ConfigurationJson, string.Empty));
         return chatClient.AsAIAgent(options: options);
+    }
+
+    private sealed class DefaultOllamaOptionsChatClient(
+        IChatClient innerClient,
+        int defaultMaxOutputTokens,
+        bool defaultThink) : DelegatingChatClient(innerClient)
+    {
+        public override Task<ChatResponse> GetResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return base.GetResponseAsync(messages, NormalizeOptions(options), cancellationToken);
+        }
+
+        public override IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return base.GetStreamingResponseAsync(messages, NormalizeOptions(options), cancellationToken);
+        }
+
+        private ChatOptions NormalizeOptions(ChatOptions? options)
+        {
+            var normalizedOptions = options?.Clone() ?? new ChatOptions();
+            normalizedOptions.MaxOutputTokens ??= defaultMaxOutputTokens;
+            normalizedOptions.AdditionalProperties ??= [];
+
+            if (!normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.NumPredict.Name))
+            {
+                normalizedOptions.AddOllamaOption(OllamaOption.NumPredict, normalizedOptions.MaxOutputTokens.Value);
+            }
+
+            if (!normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.Think.Name))
+            {
+                normalizedOptions.AddOllamaOption(OllamaOption.Think, defaultThink);
+            }
+
+            return normalizedOptions;
+        }
     }
 
     private static OpenAIClientOptions CreateOpenAiClientOptions(ProviderProfile provider)

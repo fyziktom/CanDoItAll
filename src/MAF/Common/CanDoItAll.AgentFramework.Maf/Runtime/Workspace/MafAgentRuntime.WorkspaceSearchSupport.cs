@@ -5,8 +5,68 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed partial class MafAgentRuntime
 {
-    private static class WorkspaceSearchSupport
+    internal static class WorkspaceSearchSupport
     {
+        private static readonly HashSet<string> RagStopWords = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "about",
+            "above",
+            "after",
+            "again",
+            "against",
+            "also",
+            "and",
+            "answer",
+            "are",
+            "before",
+            "being",
+            "below",
+            "between",
+            "call",
+            "can",
+            "could",
+            "exactly",
+            "else",
+            "for",
+            "from",
+            "give",
+            "have",
+            "into",
+            "just",
+            "more",
+            "not",
+            "nothing",
+            "only",
+            "please",
+            "reply",
+            "same",
+            "should",
+            "show",
+            "some",
+            "than",
+            "that",
+            "the",
+            "their",
+            "them",
+            "then",
+            "there",
+            "these",
+            "thing",
+            "this",
+            "those",
+            "tool",
+            "tools",
+            "what",
+            "when",
+            "where",
+            "which",
+            "will",
+            "with",
+            "would",
+            "you",
+            "your"
+        };
+
         public static IReadOnlyList<string> TokenizeQuery(string query)
         {
             return query
@@ -14,6 +74,32 @@ public sealed partial class MafAgentRuntime
                 .Where(item => item.Length >= 3)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
+
+        public static IReadOnlyList<string> TokenizeRagQuery(string query)
+        {
+            return TokenizeQuery(ExtractUserRequestForRag(query))
+                .Where(IsRagSignalTerm)
+                .ToList();
+        }
+
+        public static string ExtractUserRequestForRag(string query)
+        {
+            const string marker = "User request:";
+
+            var markerIndex = query.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return query;
+            }
+
+            var userRequest = query[(markerIndex + marker.Length)..].Trim();
+            return string.IsNullOrWhiteSpace(userRequest) ? query : userRequest;
+        }
+
+        public static bool HasEnoughRagSignal(IReadOnlyCollection<string> terms, int minimumTermCount)
+        {
+            return terms.Count >= Math.Max(1, minimumTermCount);
         }
 
         public static IEnumerable<string> EnumerateSearchFiles(string rootPath, HashSet<string>? extensions, HashSet<string>? excludedPaths)
@@ -64,6 +150,11 @@ public sealed partial class MafAgentRuntime
             return WorkspaceRetrievalNoisePolicy.NormalizeRelativePath(path);
         }
 
+        private static bool IsRagSignalTerm(string term)
+        {
+            return !RagStopWords.Contains(term);
+        }
+
         public static int CountOccurrences(string text, string term)
         {
             var count = 0;
@@ -75,6 +166,31 @@ public sealed partial class MafAgentRuntime
             }
 
             return count;
+        }
+
+        public static int CountWholeTermOccurrences(string text, string term)
+        {
+            var count = 0;
+            var index = 0;
+            while ((index = text.IndexOf(term, index, StringComparison.OrdinalIgnoreCase)) >= 0)
+            {
+                if (IsTermBoundary(text, index - 1) &&
+                    IsTermBoundary(text, index + term.Length))
+                {
+                    count++;
+                }
+
+                index += term.Length;
+            }
+
+            return count;
+        }
+
+        private static bool IsTermBoundary(string text, int index)
+        {
+            return index < 0 ||
+                   index >= text.Length ||
+                   !char.IsLetterOrDigit(text[index]);
         }
 
         public static string BuildSearchSnippet(string text, IReadOnlyList<string> terms)

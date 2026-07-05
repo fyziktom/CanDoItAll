@@ -46,6 +46,31 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
     }
 
     [Fact]
+    public void ListFiles_normalizes_embedded_trailing_globstar_path()
+    {
+        var projectMediaRoot = CreateDirectory("managed-files", "project-media", "files", "f28c07cd982c4d2dbcf23e60a32eca72");
+        WriteFile(projectMediaRoot, "x-ray-machine-agent-quotation-list2018.pdf", "%PDF");
+        WriteFile(projectMediaRoot, "converted", "x-ray-machine-agent-quotation-list2018.md", "# Quote");
+        var service = CreateService();
+
+        var result = service.ListFiles(
+            "managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72**",
+            maxResults: 20);
+
+        Assert.True(result.Succeeded, result.Message);
+        Assert.Equal("managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72", result.RootPath);
+        Assert.Equal("**/*", result.SearchPattern);
+        Assert.Contains(result.Entries, item => string.Equals(
+            item.RelativePath,
+            "managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/x-ray-machine-agent-quotation-list2018.pdf",
+            StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Entries, item => string.Equals(
+            item.RelativePath,
+            "managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/converted/x-ray-machine-agent-quotation-list2018.md",
+            StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void ListFiles_supports_external_target_globstar_pattern()
     {
         if (!OperatingSystem.IsWindows())

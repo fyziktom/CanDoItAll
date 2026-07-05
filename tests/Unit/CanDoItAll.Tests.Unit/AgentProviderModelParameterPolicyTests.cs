@@ -139,6 +139,20 @@ public sealed class AgentProviderModelParameterPolicyTests
     }
 
     [Fact]
+    public void Ollama_defaults_bound_generation_and_disable_thinking()
+    {
+        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
+            "{}",
+            string.Empty);
+        var think = AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(
+            "{}",
+            string.Empty);
+
+        Assert.Equal(AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens, maxOutputTokens);
+        Assert.Equal(AgentProviderModelParameterPolicy.DefaultOllamaThinkEnabled, think);
+    }
+
+    [Fact]
     public void Invalid_max_output_tokens_fails_explicitly()
     {
         var exception = Assert.Throws<InvalidOperationException>(() =>

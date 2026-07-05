@@ -1069,6 +1069,14 @@ public sealed partial class MafAgentRuntime
         public int? RecentMessageMemoryLimit { get; set; }
 
         public int? MaxResults { get; set; }
+
+        public int? MaxFilesToScan { get; set; }
+
+        public int? MinQueryTerms { get; set; }
+
+        public int? MinMatchedTerms { get; set; }
+
+        public int? MinScore { get; set; }
     }
 
     private sealed class AiContextCapabilityConfiguration

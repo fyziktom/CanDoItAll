@@ -146,7 +146,17 @@ internal static class SandboxWorkspaceSeedBuilder
                 true,
                 true,
                 false,
-                SerializeConfiguration(new { history = "framework-managed", local = true, timeoutSeconds = 45 }),
+                SerializeConfiguration(new
+                {
+                    history = "framework-managed",
+                    local = true,
+                    timeoutSeconds = 45,
+                    modelParameters = new
+                    {
+                        numPredict = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens,
+                        think = AgentProviderModelParameterPolicy.DefaultOllamaThinkEnabled
+                    }
+                }),
                 "Local Ollama provider for developer workstations running the standard Ollama API endpoint.",
                 "Not checked",
                 null,
@@ -167,7 +177,15 @@ internal static class SandboxWorkspaceSeedBuilder
                 true,
                 true,
                 false,
-                SerializeConfiguration(new { history = "framework-managed" }),
+                SerializeConfiguration(new
+                {
+                    history = "framework-managed",
+                    modelParameters = new
+                    {
+                        numPredict = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens,
+                        think = AgentProviderModelParameterPolicy.DefaultOllamaThinkEnabled
+                    }
+                }),
                 "Targets the remote host validated during the latest Ollama repair and networking checks.",
                 "Not checked",
                 null,

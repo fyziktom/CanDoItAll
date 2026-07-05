@@ -805,7 +805,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             toolName: "workspace_convert_document",
             recipeId: "convert_document",
             riskClass: "LocalExecution:DocumentConversion",
-            approvalRequired: true,
+            approvalRequired: false,
             networkAllowed: false,
             mutatesWorkspace: true,
             targetPaths: [sourceResolution.RelativePath, outputRelativePath],

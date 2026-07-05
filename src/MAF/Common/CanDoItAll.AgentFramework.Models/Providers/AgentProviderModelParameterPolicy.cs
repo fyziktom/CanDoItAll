@@ -11,6 +11,8 @@ public static class AgentProviderModelParameterPolicy
     public const string OllamaNumPredictConfigurationPropertyName = "numPredict";
     public const string OllamaNumPredictSnakeConfigurationPropertyName = "num_predict";
     public const string OllamaThinkConfigurationPropertyName = "think";
+    public const int DefaultOllamaMaxOutputTokens = 2048;
+    public const bool DefaultOllamaThinkEnabled = false;
 
     private const int MinMaxOutputTokens = 1;
     private const int MaxMaxOutputTokens = 8192;
@@ -97,6 +99,25 @@ public static class AgentProviderModelParameterPolicy
     {
         return TryReadOllamaThink(agentConfigurationJson, "agent") ??
                TryReadOllamaThink(providerConfigurationJson, "provider");
+    }
+
+    public static int ResolveOllamaMaxOutputTokensOrDefault(
+        string providerConfigurationJson,
+        string agentConfigurationJson)
+    {
+        return ResolveMaxOutputTokens(
+                   ProviderKind.Ollama,
+                   providerConfigurationJson,
+                   agentConfigurationJson) ??
+               DefaultOllamaMaxOutputTokens;
+    }
+
+    public static bool ResolveOllamaThinkOrDefault(
+        string providerConfigurationJson,
+        string agentConfigurationJson)
+    {
+        return ResolveOllamaThink(providerConfigurationJson, agentConfigurationJson) ??
+               DefaultOllamaThinkEnabled;
     }
 
     public static bool IsOpenAiLikeProvider(ProviderKind providerKind)

@@ -29,7 +29,11 @@
         ],
         "excludePaths": [],
         "searchTime": "BeforeAIInvoke",
-        "maxResults": 5
+        "maxResults": 5,
+        "maxFilesToScan": 256,
+        "minQueryTerms": 2,
+        "minMatchedTerms": 2,
+        "minScore": 2
       }
     },
     {
@@ -64,7 +68,11 @@
           "src/CanDoItAll.AgentFramework.Sandbox/Components/Pages"
         ],
         "searchTime": "BeforeAIInvoke",
-        "maxResults": 4
+        "maxResults": 4,
+        "maxFilesToScan": 256,
+        "minQueryTerms": 2,
+        "minMatchedTerms": 2,
+        "minScore": 2
       }
     },
     {

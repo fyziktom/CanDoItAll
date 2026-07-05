@@ -129,4 +129,39 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
         Assert.Equal(remoteOllamaProvider.DefaultModel, qaAgentAfterRepair.Model);
         Assert.False(qaAgentAfterRepair.EnableBackgroundResponses);
     }
+
+    [Fact]
+    public async Task Agent_editor_preserves_provider_default_model_selection_for_local_provider()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var repairService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkOrganizationCatalogRepairService>();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var providers = await workspaceService.ListProvidersAsync();
+        var localOllamaProvider = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Local Ollama", StringComparison.Ordinal));
+        var financialStrategist = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+        var editor = await workspaceService.GetAgentEditorAsync(financialStrategist.Id);
+        editor.ProviderProfileId = localOllamaProvider.Id;
+        editor.Model = string.Empty;
+
+        await workspaceService.SaveAgentAsync(editor);
+        await repairService.EnsureCurrentOrganizationCatalogAsync();
+
+        var savedEditor = await workspaceService.GetAgentEditorAsync(financialStrategist.Id);
+        var savedAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Id == financialStrategist.Id);
+
+        Assert.Equal(localOllamaProvider.Id, savedEditor.ProviderProfileId);
+        Assert.Empty(savedEditor.Model);
+        Assert.Equal(localOllamaProvider.Id, savedAgent.ProviderProfileId);
+        Assert.Empty(savedAgent.Model);
+        Assert.Equal(localOllamaProvider.DefaultModel, ManagedSeedProviderFallbacks.ResolveModel(savedAgent, localOllamaProvider));
+    }
 }

@@ -94,6 +94,39 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public void Seed_catalog_normalization_preserves_empty_model_for_explicit_local_provider_assignment()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var localOllama = Assert.Single(
+            seed.Providers,
+            item => item.Kind == ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Local Ollama", StringComparison.Ordinal));
+        var financialStrategist = Assert.Single(
+            seed.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+        var catalog = seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == financialStrategist.Id
+                    ? agent with
+                    {
+                        ProviderProfileId = localOllama.Id,
+                        Model = string.Empty
+                    }
+                    : agent)
+                .ToList()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        var normalizedFinancialStrategist = Assert.Single(
+            normalized.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+
+        Assert.Equal(localOllama.Id, normalizedFinancialStrategist.ProviderProfileId);
+        Assert.Empty(normalizedFinancialStrategist.Model);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_playwright_mcp_for_ui_delivery_agents()
     {
         await using var application = await TestApplication.CreateAsync();
