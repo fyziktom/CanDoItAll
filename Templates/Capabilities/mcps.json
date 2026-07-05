@@ -59,6 +59,7 @@
         ],
         "workingDirectory": ".",
         "messageFraming": "newlineDelimitedJson",
+        "timeoutSeconds": 120,
         "allowedTools": [
           "browser_navigate",
           "browser_snapshot",

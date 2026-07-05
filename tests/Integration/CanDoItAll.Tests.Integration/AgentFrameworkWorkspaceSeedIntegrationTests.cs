@@ -115,6 +115,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Equal("npx", root.GetProperty("command").GetString());
         Assert.Equal(".", root.GetProperty("workingDirectory").GetString());
         Assert.Equal("newlineDelimitedJson", root.GetProperty("messageFraming").GetString());
+        Assert.Equal(120, root.GetProperty("timeoutSeconds").GetInt32());
         Assert.Equal("NeverRequire", root.GetProperty("approvalMode").GetString());
         var arguments = root.GetProperty("arguments")
             .EnumerateArray()

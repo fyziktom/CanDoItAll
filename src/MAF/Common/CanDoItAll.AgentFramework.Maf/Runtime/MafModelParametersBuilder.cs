@@ -93,9 +93,7 @@ internal static class MafModelParametersBuilder
 
     public static string ResolveRuntimeModel(AgentDefinition agent, ProviderProfile provider)
     {
-        return string.IsNullOrWhiteSpace(agent.Model)
-            ? provider.DefaultModel
-            : agent.Model;
+        return ManagedSeedProviderFallbacks.ResolveModel(agent, provider);
     }
 
     public static string BuildTemperatureRetryMessage(string model)

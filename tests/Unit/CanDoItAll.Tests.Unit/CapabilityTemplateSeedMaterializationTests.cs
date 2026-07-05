@@ -47,6 +47,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal("stdio", playwrightJson.RootElement.GetProperty("transport").GetString());
         Assert.Equal("npx", playwrightJson.RootElement.GetProperty("command").GetString());
         Assert.Equal("newlineDelimitedJson", playwrightJson.RootElement.GetProperty("messageFraming").GetString());
+        Assert.Equal(120, playwrightJson.RootElement.GetProperty("timeoutSeconds").GetInt32());
         var playwrightArguments = playwrightJson.RootElement.GetProperty("arguments")
             .EnumerateArray()
             .Select(item => item.GetString())

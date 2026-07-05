@@ -1052,6 +1052,8 @@ public sealed partial class MafAgentRuntime
         public List<string>? AllowedTools { get; set; }
 
         public string? ApprovalMode { get; set; }
+
+        public int? TimeoutSeconds { get; set; }
     }
 
     private sealed class RagCapabilityConfiguration

@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Mcp.Abstractions;
 
@@ -148,7 +149,8 @@ public sealed record McpToolDescriptor(
 
 public sealed record DiscoveredMcpTool(
     McpToolName Name,
-    string Description);
+    string Description,
+    JsonElement? InputSchema = null);
 
 public sealed record McpSetupTestResult(
     bool IsSuccess,

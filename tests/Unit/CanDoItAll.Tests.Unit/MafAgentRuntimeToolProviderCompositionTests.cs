@@ -6,12 +6,16 @@ using AccessCapabilityOperationClassification = CanDoItAll.AgentFramework.Capabi
 using EffectiveCapabilitySet = CanDoItAll.AgentFramework.Capabilities.Abstractions.EffectiveCapabilitySet;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Mcp;
+using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
+using McpToolName = CanDoItAll.AgentFramework.Capabilities.Abstractions.McpToolName;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -504,6 +508,84 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task Local_mcp_capability_uses_runtime_client_factory_and_exposes_invocable_schema_tools()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-local-mcp-runtime-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var toolName = McpToolName.Create("browser_snapshot");
+            using var schemaDocument = JsonDocument.Parse("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ]
+                }
+                """);
+            var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+                Tools:
+                [
+                    new DiscoveredMcpTool(
+                        toolName,
+                        "Snapshot page state.",
+                        schemaDocument.RootElement.Clone())
+                ],
+                ToolResults: new Dictionary<McpToolName, string>
+                {
+                    [toolName] = """{"content":[{"type":"text","text":"snapshot ok"}]}"""
+                }));
+            var services = new ServiceCollection();
+            services.AddSingleton<IMcpClientFactory>(fakeFactory);
+            var runtime = new MafAgentRuntime(workspaceRoot, services.BuildServiceProvider());
+            var progressMessages = new List<string>();
+
+            var state = await InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability()],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                progressMessages);
+
+            var tool = Assert.IsAssignableFrom<AIFunction>(Assert.Single(ReadTools(state), tool => tool.Name == "browser_snapshot"));
+            var result = await tool.InvokeAsync(
+                new AIFunctionArguments
+                {
+                    ["url"] = "https://example.test"
+                },
+                CancellationToken.None);
+
+            Assert.Equal(1, fakeFactory.CreatedClients);
+            Assert.NotNull(fakeFactory.LastClient);
+            Assert.Equal(1, fakeFactory.LastClient.StartCount);
+            Assert.Equal(1, fakeFactory.LastClient.ListToolsCount);
+            Assert.Equal(1, fakeFactory.LastClient.CallCount);
+            Assert.Equal("object", tool.JsonSchema.GetProperty("type").GetString());
+            Assert.Contains("url", tool.JsonSchema.GetRawText(), StringComparison.Ordinal);
+            Assert.Contains("snapshot ok", result?.ToString(), StringComparison.Ordinal);
+            Assert.Contains(progressMessages, message =>
+                message.Contains("Attached 1 MCP tool(s) from 'Playwright Local MCP'", StringComparison.Ordinal));
+
+            foreach (var disposable in ReadAsyncDisposables(state))
+            {
+                await disposable.DisposeAsync();
+            }
+
+            Assert.Equal(1, fakeFactory.LastClient.StopCount);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeProcessContext_read_only_step_does_not_attach_broad_workspace_tools()
     {
         var runtime = new MafAgentRuntime(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -890,6 +972,11 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 state.GetType().GetProperty("FrameworkToolNames", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
             .ToList();
 
+    private static IReadOnlyList<IAsyncDisposable> ReadAsyncDisposables(object state)
+        => Assert.IsAssignableFrom<IEnumerable<IAsyncDisposable>>(
+                state.GetType().GetProperty("AsyncDisposables", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
+            .ToList();
+
     private static AgentRuntimeToolProviderDescriptor CreateDescriptor(string providerKey)
         => new(
             providerKey,
@@ -1074,6 +1161,35 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             Description: key + " test capability.",
             EndpointOrPath: string.Empty,
             ConfigurationJson: "{\"tool\":\"" + toolName + "\"}",
+            ProofStatus: CapabilityProofStatus.Verified,
+            ProofNotes: string.Empty,
+            LastVerifiedAtUtc: DateTimeOffset.UtcNow,
+            IsBuiltIn: false);
+
+    private static CapabilityCatalogItem CreateLocalMcpCapability()
+        => new(
+            Id: Guid.NewGuid(),
+            Kind: CapabilityKind.McpServer,
+            Key: "playwright-local-mcp",
+            Name: "Playwright Local MCP",
+            Description: "Local browser automation MCP.",
+            EndpointOrPath: string.Empty,
+            ConfigurationJson: """
+                {
+                  "serverName": "playwright-local",
+                  "command": "node",
+                  "arguments": [
+                    "server.js"
+                  ],
+                  "workingDirectory": ".",
+                  "messageFraming": "newlineDelimitedJson",
+                  "allowedTools": [
+                    "browser_snapshot"
+                  ],
+                  "approvalMode": "NeverRequire",
+                  "timeoutSeconds": 5
+                }
+                """,
             ProofStatus: CapabilityProofStatus.Verified,
             ProofNotes: string.Empty,
             LastVerifiedAtUtc: DateTimeOffset.UtcNow,
