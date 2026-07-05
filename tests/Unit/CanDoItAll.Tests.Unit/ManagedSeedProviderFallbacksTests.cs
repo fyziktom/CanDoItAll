@@ -149,6 +149,42 @@ public sealed class ManagedSeedProviderFallbacksTests
     }
 
     [Fact]
+    public void Local_ollama_provider_uses_default_model_when_seed_agent_keeps_openai_model()
+    {
+        var agent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        var provider = CreateLocalOllamaProvider(defaultModel: "gemma4-12b-256k");
+
+        var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, provider, openAiApiKeyOverride: "present");
+
+        Assert.Equal("gemma4-12b-256k", effectiveModel);
+    }
+
+    [Fact]
+    public void Local_ollama_provider_preserves_supported_openai_named_model()
+    {
+        var agent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        var provider = CreateLocalOllamaProvider(defaultModel: "gemma4-12b-256k") with
+        {
+            SuggestedModels = [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gemma4-12b-256k"]
+        };
+
+        var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, provider, openAiApiKeyOverride: "present");
+
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, effectiveModel);
+    }
+
+    [Fact]
+    public void Local_ollama_provider_preserves_explicit_custom_model()
+    {
+        var agent = CreateManagedSeedAgent(model: "gptoss20b64k");
+        var provider = CreateLocalOllamaProvider(defaultModel: "gemma4-12b-256k");
+
+        var effectiveModel = ManagedSeedProviderFallbacks.ResolveModel(agent, provider, openAiApiKeyOverride: "present");
+
+        Assert.Equal("gptoss20b64k", effectiveModel);
+    }
+
+    [Fact]
     public void Provider_repair_override_preserves_remote_ollama_for_managed_seed_agent()
     {
         var originalAgent = CreateManagedSeedAgent(model: ManagedSeedProviderFallbacks.FallbackModel);
@@ -344,5 +380,27 @@ public sealed class ManagedSeedProviderFallbacksTests
             HealthStatus: "Fallback active",
             LastCheckedAtUtc: null,
             SuggestedModels: [ManagedSeedProviderFallbacks.FallbackModel]);
+    }
+
+    private static ProviderProfile CreateLocalOllamaProvider(string defaultModel)
+    {
+        return new ProviderProfile(
+            Id: Guid.NewGuid(),
+            Name: "Local Ollama",
+            Kind: ProviderKind.Ollama,
+            BaseUrl: "http://127.0.0.1:11434",
+            ApiKeyEnvironmentVariable: string.Empty,
+            DefaultModel: defaultModel,
+            Transport: ProviderTransportKind.ChatCompletions,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: true,
+            SupportsBackgroundResponses: false,
+            ConfigurationJson: "{\"history\":\"framework-managed\"}",
+            Notes: "Local test provider.",
+            HealthStatus: "Healthy",
+            LastCheckedAtUtc: null,
+            SuggestedModels: [defaultModel]);
     }
 }

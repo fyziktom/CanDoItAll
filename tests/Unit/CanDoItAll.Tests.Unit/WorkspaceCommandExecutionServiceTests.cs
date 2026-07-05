@@ -228,6 +228,53 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task PowerShellRunScript_rewrites_external_target_alias_arguments_to_native_paths()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}", "calculator-output");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var appProjectDirectory = Path.Combine(productRoot, "src", "Calculator");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(appProjectDirectory);
+        var solutionPath = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectPath = Path.Combine(appProjectDirectory, "Calculator.csproj");
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Add-SolutionMember.ps1"), "Write-Output 'ok'");
+        await File.WriteAllTextAsync(solutionPath, string.Empty);
+        await File.WriteAllTextAsync(appProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var productAlias = ToExternalTargetAlias(productRoot);
+
+        try
+        {
+            var result = await service.PowerShellRunScript(
+                "scripts/Add-SolutionMember.ps1",
+                arguments:
+                [
+                    $"{productAlias}/Calculator.slnx",
+                    $"{productAlias}/src/Calculator/Calculator.csproj"
+                ],
+                workingDirectory: productAlias);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Contains(solutionPath, processHost.LastRequest!.Arguments, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains(appProjectPath, processHost.LastRequest.Arguments, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain(processHost.LastRequest.Arguments, argument => argument.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
+    [Fact]
     public async Task PowerShellRunScript_denies_foreground_static_server_script()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
@@ -721,6 +768,43 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task Process_scoped_command_receipts_use_current_run_artifact_namespace()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceScope = WorkspaceScopeDescriptor.Organization("org-001");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Fail.ps1"), "Write-Error 'failed'");
+        var processHost = new FakeWorkspaceProcessHost(exitCode: 1, stdout: "command stdout", stderr: "command stderr");
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost, workspaceScope);
+        var processRunId = Guid.NewGuid().ToString("D");
+        var run = CreateProcessStepExecutionRun("{}", processRunId);
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript("scripts/Fail.ps1");
+
+                Assert.False(result.Succeeded);
+                var stdoutRef = Assert.Single(
+                    result.ArtifactReferences,
+                    item => item.DisplayName.Contains("stdout", StringComparison.OrdinalIgnoreCase)).RelativePath;
+                var normalizedStdoutRef = stdoutRef.Replace('\\', '/');
+                Assert.Contains($"/process-runs/{processRunId}/tool-runs/", normalizedStdoutRef, StringComparison.OrdinalIgnoreCase);
+                Assert.True(WorkspaceProcessRunArtifactPath.TryResolveRunId(stdoutRef, out var referencedRunId, out var artifactSuffix));
+                Assert.Equal(processRunId, referencedRunId, ignoreCase: true);
+                Assert.EndsWith("stdout.txt", artifactSuffix, StringComparison.OrdinalIgnoreCase);
+                Assert.True(File.Exists(Path.Combine(workspaceRoot, stdoutRef.Replace('/', Path.DirectorySeparatorChar))));
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetRun_accepts_project_directory_when_target_is_unambiguous()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
@@ -994,6 +1078,32 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
     }
 
+    [Fact]
+    public async Task DotnetNew_solution_template_allows_product_root_with_existing_solution_file()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(workspaceRoot, "calculator-output");
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(Path.Combine(productRoot, "Calculator.slnx"), string.Empty);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("sln", "Calculator", "calculator-output");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
+            Assert.Equal(["new", "sln", "-n", "Calculator"], processHost.LastRequest.Arguments);
+            Assert.Equal(productRoot, processHost.LastRequest.WorkingDirectory);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
     private static string CreateDeepWorkspaceRoot()
     {
         var root = Path.Combine(Path.GetTempPath(), "CanDoItAll.WorkspaceCommandExecutionServiceTests", Guid.NewGuid().ToString("N"), "workspace");
@@ -1029,7 +1139,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             : $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
     }
 
-    private static ExecutionRunRecord CreateProcessStepExecutionRun(string metadataJson)
+    private static ExecutionRunRecord CreateProcessStepExecutionRun(string metadataJson, string? processRunId = null)
     {
         var now = DateTimeOffset.UtcNow;
         return new ExecutionRunRecord(
@@ -1057,7 +1167,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             RuntimeSessionKey: string.Empty,
             SerializedSessionStateJson: null,
             PendingApprovals: [],
-            ProcessRunId: "process-run-001",
+            ProcessRunId: processRunId ?? "process-run-001",
             ProcessStepId: "step-001");
     }
 

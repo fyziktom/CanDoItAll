@@ -135,7 +135,7 @@ public sealed partial class MafAgentRuntime
         var key = CapabilityKey.Create(capability.Key);
         var serverKey = ResolveMcpServerKey(capability, configuration);
         var approvalMode = ResolveMcpApprovalMode(configuration);
-        var timeout = TimeSpan.FromSeconds(30);
+        var timeout = ResolveMcpTimeout(configuration);
         var allowedTools = ResolveMcpAllowedTools(configuration);
 
         McpServerDescriptor descriptor;
@@ -272,6 +272,16 @@ public sealed partial class MafAgentRuntime
         => string.Equals(configuration.ApprovalMode, "AlwaysRequire", StringComparison.OrdinalIgnoreCase)
             ? McpApprovalMode.AlwaysRequire
             : McpApprovalMode.NeverRequire;
+
+    private static TimeSpan ResolveMcpTimeout(McpCapabilityConfiguration configuration)
+    {
+        const int defaultTimeoutSeconds = 30;
+        const int minimumTimeoutSeconds = 1;
+        const int maximumTimeoutSeconds = 600;
+
+        var timeoutSeconds = configuration.TimeoutSeconds.GetValueOrDefault(defaultTimeoutSeconds);
+        return TimeSpan.FromSeconds(Math.Clamp(timeoutSeconds, minimumTimeoutSeconds, maximumTimeoutSeconds));
+    }
 
     private static McpStdioMessageFraming ResolveMcpMessageFraming(
         string? value,

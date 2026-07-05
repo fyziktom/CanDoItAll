@@ -178,20 +178,28 @@ public static class ToolCapabilityRegistry
             Read(
                 ToolContractCatalog.WorkspaceInspectImage,
                 ToolCapabilitySideEffectKind.RuntimeProofCapture,
-                StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+                StaticRequirement(
+                    ProcessOperationContractNames.CaptureRuntimeProof,
+                    ProcessOperationContractNames.ReadProjectStructure)),
             Read(
                 ToolContractCatalog.WorkspaceAnalyzeImage,
                 ToolCapabilitySideEffectKind.RuntimeProofCapture,
-                StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+                StaticRequirement(
+                    ProcessOperationContractNames.CaptureRuntimeProof,
+                    ProcessOperationContractNames.ReadProjectStructure)),
             Read(
                 ToolContractCatalog.WorkspaceAnalyzeImages,
                 ToolCapabilitySideEffectKind.RuntimeProofCapture,
-                StaticRequirement(ProcessOperationContractNames.CaptureRuntimeProof)),
+                StaticRequirement(
+                    ProcessOperationContractNames.CaptureRuntimeProof,
+                    ProcessOperationContractNames.ReadProjectStructure)),
             Read(ToolContractCatalog.WorkspaceInspectSpreadsheet, ToolCapabilitySideEffectKind.WorkspaceRead),
-            Mutation(
+            Validation(
                 ToolContractCatalog.WorkspaceConvertDocument,
                 ToolCapabilitySideEffectKind.DocumentConversion,
-                StaticRequirement(ProcessOperationContractNames.WriteManagedProcessArtifacts)),
+                StaticRequirement(
+                    ProcessOperationContractNames.ReadProjectStructure,
+                    ProcessOperationContractNames.WriteManagedProcessArtifacts)),
             Mutation(
                 ToolContractCatalog.WorkspaceCommandRun,
                 ToolCapabilitySideEffectKind.LocalProcessExecution,

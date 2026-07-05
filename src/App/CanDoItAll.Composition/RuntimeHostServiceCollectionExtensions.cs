@@ -199,7 +199,9 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly Guid ManagedProductOwnerProfileId = Guid.Parse("61C29FAE-C560-4C2D-993E-BE842FD635FB");
     private static readonly Guid ManagedDeliveryManagerProfileId = Guid.Parse("E0EBEC09-C37B-4F42-9FA4-1B2DDAC20572");
     private static readonly Guid RuntimeBootstrapOpenAiProviderId = Guid.Parse("C1C103DB-707E-3F52-8809-8D804FC171D1");
+    private static readonly Guid RuntimeBootstrapOpenAiChatCompletionsProviderId = Guid.Parse("036B360A-E3F4-8350-97CA-F88DE60BA2BB");
     private const string RuntimeBootstrapOpenAiProviderName = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName;
+    private const string RuntimeBootstrapOpenAiChatCompletionsProviderName = ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName;
     private const string RuntimeBootstrapOpenAiBaseUrl = "https://api.openai.com/v1";
     private const string RuntimeBootstrapOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
     private const string RuntimeBootstrapOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
@@ -617,6 +619,50 @@ public sealed class AppDatabaseBootstrapper(
 
         changed |= UpdateRuntimeBootstrapOpenAiProviderConfigurationJson(openAiProvider);
 
+        var openAiChatCompletionsProvider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+            .SingleOrDefaultAsync(item => item.Id == RuntimeBootstrapOpenAiChatCompletionsProviderId, cancellationToken)
+            ?? await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+                .Where(item => item.Name == RuntimeBootstrapOpenAiChatCompletionsProviderName)
+                .OrderBy(item => item.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        if (openAiChatCompletionsProvider is null)
+        {
+            openAiChatCompletionsProvider = new CanDoItAll.Modules.Workspace.ProviderProfile
+            {
+                Id = RuntimeBootstrapOpenAiChatCompletionsProviderId,
+                Name = RuntimeBootstrapOpenAiChatCompletionsProviderName,
+                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
+                ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+                ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
+                BaseUrl = RuntimeBootstrapOpenAiBaseUrl,
+                ApiKeySecretId = openAiSecretId,
+                DefaultModel = RuntimeBootstrapOpenAiModel,
+                TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds,
+                IsEnabled = true,
+                SupportsStreaming = true,
+                SupportsToolCalling = true,
+                SupportsStructuredOutput = true,
+                SupportsVision = false,
+                LastHealthStatus = "OpenAI active",
+                LastHealthCheckAtUtc = null,
+                ExtraSettingsJson = BuildRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(openAiSecretId)
+            };
+            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(openAiChatCompletionsProvider);
+            changed = true;
+        }
+        else
+        {
+            changed |= UpdateRuntimeBootstrapOpenAiChatCompletionsProvider(openAiChatCompletionsProvider);
+        }
+
+        if (openAiSecretId.HasValue && openAiChatCompletionsProvider.ApiKeySecretId != openAiSecretId.Value)
+        {
+            openAiChatCompletionsProvider.ApiKeySecretId = openAiSecretId.Value;
+            changed = true;
+        }
+
+        changed |= UpdateRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(openAiChatCompletionsProvider);
+
         var settings = await dbContext.Set<WorkspaceSettings>()
             .FirstOrDefaultAsync(cancellationToken);
         if (settings is null)
@@ -846,6 +892,114 @@ public sealed class AppDatabaseBootstrapper(
         provider.ExtraSettingsJson = expectedExtraSettingsJson;
         return true;
     }
+
+    private static bool UpdateRuntimeBootstrapOpenAiChatCompletionsProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    {
+        var changed = false;
+        if (!string.Equals(provider.Name, RuntimeBootstrapOpenAiChatCompletionsProviderName, StringComparison.Ordinal))
+        {
+            provider.Name = RuntimeBootstrapOpenAiChatCompletionsProviderName;
+            changed = true;
+        }
+
+        if (provider.ProviderKind != CanDoItAll.Modules.Workspace.ProviderKind.OpenAi)
+        {
+            provider.ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi;
+            changed = true;
+        }
+
+        if (!string.Equals(provider.ConnectorPluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.Ordinal))
+        {
+            provider.ConnectorPluginKey = OpenAiProviderAdapter.PluginKey;
+            changed = true;
+        }
+
+        if (!string.Equals(provider.ConfigSchemaVersion, RuntimeBootstrapProviderSchemaVersion, StringComparison.Ordinal))
+        {
+            provider.ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion;
+            changed = true;
+        }
+
+        if (!string.Equals(provider.BaseUrl, RuntimeBootstrapOpenAiBaseUrl, StringComparison.Ordinal))
+        {
+            provider.BaseUrl = RuntimeBootstrapOpenAiBaseUrl;
+            changed = true;
+        }
+
+        if (!string.Equals(provider.DefaultModel, RuntimeBootstrapOpenAiModel, StringComparison.Ordinal))
+        {
+            provider.DefaultModel = RuntimeBootstrapOpenAiModel;
+            changed = true;
+        }
+
+        if (provider.TimeoutSeconds != RuntimeBootstrapOpenAiTimeoutSeconds)
+        {
+            provider.TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds;
+            changed = true;
+        }
+
+        if (!provider.IsEnabled)
+        {
+            provider.IsEnabled = true;
+            changed = true;
+        }
+
+        if (!provider.SupportsStreaming)
+        {
+            provider.SupportsStreaming = true;
+            changed = true;
+        }
+
+        if (!provider.SupportsToolCalling)
+        {
+            provider.SupportsToolCalling = true;
+            changed = true;
+        }
+
+        if (!provider.SupportsStructuredOutput)
+        {
+            provider.SupportsStructuredOutput = true;
+            changed = true;
+        }
+
+        if (provider.SupportsVision)
+        {
+            provider.SupportsVision = false;
+            changed = true;
+        }
+
+        if (!string.Equals(provider.LastHealthStatus, "OpenAI active", StringComparison.Ordinal))
+        {
+            provider.LastHealthStatus = "OpenAI active";
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static bool UpdateRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    {
+        var expectedExtraSettingsJson = BuildRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(provider.ApiKeySecretId);
+        if (string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        provider.ExtraSettingsJson = expectedExtraSettingsJson;
+        return true;
+    }
+
+    private static string BuildRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(Guid? secretRecordId)
+        => JsonSerializer.Serialize(new
+        {
+            history = "framework-managed",
+            apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
+            connectorPluginKey = OpenAiProviderAdapter.PluginKey,
+            configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
+            secretRecordId = secretRecordId?.ToString("D"),
+            providerTransport = nameof(ProviderTransportKind.ChatCompletions),
+            timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
+        });
 
 }
 

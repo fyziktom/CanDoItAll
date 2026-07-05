@@ -1,0 +1,774 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Core;
+using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Drivers.Standard;
+using CanDoItAll.Processes.Persistence;
+using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
+using CanDoItAll.Processes.Templates;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CanDoItAll.Modules.Processes;
+
+
+internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
+    IAgentReferenceDataProvider agentReferenceDataProvider,
+    ProcessMockAgentCatalogService processMockAgentCatalogService,
+    IProviderProfileService providerProfileService) : IProcessLaunchExecutorResolver
+{
+    public async ValueTask<ProcessLaunchExecutorResolution> ResolveAsync(
+        ProcessLaunchExecutorResolutionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        await processMockAgentCatalogService.EnsureCatalogAsync(cancellationToken).ConfigureAwait(false);
+
+        var referenceData = await agentReferenceDataProvider
+            .GetAsync(AgentReferenceDataRequest.AgentsAndProviders(), cancellationToken)
+            .ConfigureAwait(false);
+        var agents = referenceData.Agents;
+        var providerById = referenceData.ProviderById;
+        var templateStepByKey = request.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
+        var roleByKey = request.Definition.RoleUsages.ToDictionary(role => role.Key, StringComparer.OrdinalIgnoreCase);
+        var profileAssignmentByStep = request.LiveRunProfile?.Assignments
+            .ToDictionary(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase) ??
+            new Dictionary<string, ProcessTemplateLiveRunAssignmentDocument>(StringComparer.OrdinalIgnoreCase);
+        var overrideByStepKey = request.ExecutorOverrides
+            .Where(item => !string.IsNullOrWhiteSpace(item.StepKey))
+            .GroupBy(item => item.StepKey.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Last(),
+                StringComparer.OrdinalIgnoreCase);
+        var bindings = new List<ProcessLaunchExecutorBinding>();
+        var findings = new List<ProcessLaunchReadinessFinding>();
+
+        foreach (var planStep in request.Plan.Steps.Where(step => step.IsExecutable))
+        {
+            if (!templateStepByKey.TryGetValue(planStep.StepKey, out var templateStep))
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.step_template_missing",
+                    $"Step '{planStep.StepKey}' has no source template step.",
+                    planStep.StepKey));
+                continue;
+            }
+
+            profileAssignmentByStep.TryGetValue(planStep.StepKey, out var profileAssignment);
+            overrideByStepKey.TryGetValue(planStep.StepKey, out var executorOverride);
+            var roleKey = ResolveRoleKey(templateStep, profileAssignment);
+            var role = roleByKey.GetValueOrDefault(roleKey);
+            var roleQuery = ResolveRoleQuery(roleKey, role);
+            var requestedExecutorKind = ResolveExecutorKind(profileAssignment, role, executorOverride);
+            if (!ProcessLaunchExecutorKinds.CanResolveAsAgent(requestedExecutorKind))
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.executor_kind_unsupported",
+                    $"Step '{planStep.StepKey}' role '{roleKey}' requested unsupported executor kind '{requestedExecutorKind}'.",
+                    planStep.StepKey,
+                    roleKey));
+                continue;
+            }
+
+            var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role, request.Variables);
+            if (!ValidateStepOperationContract(templateStep, roleKey, role, findings, planStep.StepKey))
+            {
+                continue;
+            }
+
+            var candidate = executorOverride is null
+                ? SelectAgent(readinessRequest, agents, providerById, providerProfileService)
+                : ResolveOverrideAgent(executorOverride, agents, providerById, providerProfileService, findings, planStep.StepKey, roleKey);
+            if (candidate is null)
+            {
+                if (executorOverride is null)
+                {
+                    var addedReadinessFailure = AddBestRoleFitReadinessFailure(
+                        findings,
+                        readinessRequest,
+                        agents,
+                        providerById,
+                        providerProfileService,
+                        planStep.StepKey,
+                        roleKey);
+
+                    if (!addedReadinessFailure)
+                    {
+                        findings.Add(new ProcessLaunchReadinessFinding(
+                            ProcessLaunchReadinessSeverity.Error,
+                            "process.launch.agent_missing",
+                            FormatMissingAgentMessage(roleQuery, planStep.StepKey),
+                            planStep.StepKey,
+                            roleKey));
+                    }
+                }
+
+                continue;
+            }
+
+            var readiness = AgentProcessReadinessEvaluator.Evaluate(candidate.Agent, readinessRequest);
+            if (!readiness.IsExecutionReady)
+            {
+                AddReadinessFindings(findings, readiness, planStep.StepKey, roleKey);
+                continue;
+            }
+
+            bindings.Add(new ProcessLaunchExecutorBinding(
+                planStep.StepKey,
+                roleKey,
+                ProcessLaunchExecutorKinds.Agent,
+                candidate.Agent.Id.ToString("D"),
+                candidate.Agent.Name,
+                readiness.ReadinessHash,
+                ResolveAssignmentReason(profileAssignment, executorOverride, candidate, roleQuery, requestedExecutorKind)));
+        }
+
+        if (findings.Count == 0)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Info,
+                "process.launch.readiness_ok",
+                "All executable steps have active agent bindings with enabled governed-output-capable providers."));
+        }
+
+        return new ProcessLaunchExecutorResolution(bindings, findings);
+    }
+
+    private static string ResolveRoleKey(
+        ProcessTemplateDefinitionStepDocument step,
+        ProcessTemplateLiveRunAssignmentDocument? assignment)
+    {
+        if (!string.IsNullOrWhiteSpace(assignment?.RoleKey))
+        {
+            return assignment.RoleKey.Trim();
+        }
+
+        return step.RoleAssignments
+            .OrderBy(role => role.FallbackOrder)
+            .Select(role => role.RoleKey)
+            .FirstOrDefault(roleKey => !string.IsNullOrWhiteSpace(roleKey)) ?? string.Empty;
+    }
+
+    private static string ResolveExecutorKind(
+        ProcessTemplateLiveRunAssignmentDocument? assignment,
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        ProcessLaunchExecutorOverride? executorOverride)
+    {
+        if (!string.IsNullOrWhiteSpace(executorOverride?.ExecutorKind))
+        {
+            return executorOverride.ExecutorKind.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(assignment?.ExecutorKind))
+        {
+            return assignment.ExecutorKind.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(role?.PreferredExecutorKind))
+        {
+            return role.PreferredExecutorKind.Trim();
+        }
+
+        return ProcessLaunchExecutorKinds.Agent;
+    }
+
+    private static ProcessRoleQuery ResolveRoleQuery(
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        var matchKeys = new[]
+            {
+                roleKey,
+                role?.RoleResourceKey
+            }
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new ProcessRoleQuery(roleKey, matchKeys.Length == 0 ? [roleKey] : matchKeys);
+    }
+
+    private static string FormatMissingAgentMessage(
+        ProcessRoleQuery roleQuery,
+        string stepKey)
+    {
+        var aliases = roleQuery.MatchKeys
+            .Where(key => !string.Equals(key, roleQuery.BindingRoleKey, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var aliasSummary = aliases.Length == 0
+            ? string.Empty
+            : $" Shared role aliases checked: {string.Join(", ", aliases)}.";
+
+        return $"No active agent with an enabled governed-output-capable provider is available for role '{roleQuery.BindingRoleKey}' on step '{stepKey}'.{aliasSummary}";
+    }
+
+    private static string ResolveAssignmentReason(
+        ProcessTemplateLiveRunAssignmentDocument? profileAssignment,
+        ProcessLaunchExecutorOverride? executorOverride,
+        AgentProviderCandidate candidate,
+        ProcessRoleQuery roleQuery,
+        string requestedExecutorKind)
+    {
+        if (!string.IsNullOrWhiteSpace(executorOverride?.AssignmentReason))
+        {
+            return $"{executorOverride.AssignmentReason.Trim()} {candidate.ReadinessSummary}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(profileAssignment?.BindingReason))
+        {
+            return $"{profileAssignment.BindingReason.Trim()} {candidate.ReadinessSummary}";
+        }
+
+        if (string.Equals(requestedExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Resolved active agent '{candidate.Agent.Name}' by role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}. {candidate.ReadinessSummary}";
+        }
+
+        return $"Resolved active agent '{candidate.Agent.Name}' by hybrid executor intent '{requestedExecutorKind}' for role '{roleQuery.BindingRoleKey}' using {candidate.MatchSummary}. {candidate.ReadinessSummary}";
+    }
+
+    private static AgentProviderCandidate? SelectAgent(
+        AgentProcessRoleReadinessRequest readinessRequest,
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService)
+    {
+        var matches = new List<AgentRoleMatch>();
+
+        foreach (var agent in agents
+            .Where(agent => !agent.IsTemplate && agent.Status == AgentLifecycleStatus.Active)
+            .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (agent.ProviderProfileId is not { } providerId ||
+                !providerById.TryGetValue(providerId, out var provider) ||
+                !provider.IsEnabled ||
+                !ProcessProviderReadinessRules.CanExecuteGovernedProcessStep(provider, providerProfileService))
+            {
+                continue;
+            }
+
+            var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, readinessRequest);
+            if (readiness.IsExecutionReady && readiness.HasRoleFit)
+            {
+                matches.Add(new AgentRoleMatch(
+                    agent,
+                    provider,
+                    readiness.Score,
+                    readiness.MatchSummary,
+                    readiness.ReadinessHash,
+                    readiness.ReadinessSummary));
+            }
+        }
+
+        var bestMatch = matches
+            .OrderByDescending(match => match.Score)
+            .ThenBy(match => match.Agent.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        return bestMatch is null
+            ? null
+            : new AgentProviderCandidate(
+                bestMatch.Agent,
+                bestMatch.Provider,
+                bestMatch.Score,
+                bestMatch.Summary,
+                bestMatch.ReadinessHash,
+                bestMatch.ReadinessSummary);
+    }
+
+    private static bool AddBestRoleFitReadinessFailure(
+        List<ProcessLaunchReadinessFinding> findings,
+        AgentProcessRoleReadinessRequest readinessRequest,
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService,
+        string stepKey,
+        string roleKey)
+    {
+        var bestFailure = agents
+            .Where(agent => !agent.IsTemplate && agent.Status == AgentLifecycleStatus.Active)
+            .Select(agent => ResolveReadinessFailure(agent, readinessRequest, providerById, providerProfileService))
+            .OfType<AgentReadinessFailure>()
+            .OrderByDescending(failure => failure.Readiness.Score)
+            .ThenBy(failure => failure.Agent.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        if (bestFailure is null)
+        {
+            return false;
+        }
+
+        AddReadinessFindings(findings, bestFailure.Readiness, stepKey, roleKey);
+        return true;
+    }
+
+    private static AgentReadinessFailure? ResolveReadinessFailure(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest readinessRequest,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService)
+    {
+        if (agent.ProviderProfileId is not { } providerId ||
+            !providerById.TryGetValue(providerId, out var provider) ||
+            !provider.IsEnabled ||
+            !ProcessProviderReadinessRules.CanExecuteGovernedProcessStep(provider, providerProfileService))
+        {
+            return null;
+        }
+
+        var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, readinessRequest);
+        return readiness.HasRoleFit &&
+               !readiness.IsExecutionReady &&
+               readiness.Findings.Any(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error)
+            ? new AgentReadinessFailure(agent, readiness)
+            : null;
+    }
+
+    private static AgentProviderCandidate? ResolveOverrideAgent(
+        ProcessLaunchExecutorOverride executorOverride,
+        IReadOnlyList<AgentDefinition> agents,
+        IReadOnlyDictionary<Guid, ProviderProfile> providerById,
+        IProviderProfileService providerProfileService,
+        List<ProcessLaunchReadinessFinding> findings,
+        string stepKey,
+        string roleKey)
+    {
+        if (!Guid.TryParse(executorOverride.ExecutorId, out var agentId) || agentId == Guid.Empty)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.override_agent_invalid",
+                $"Step '{stepKey}' role '{roleKey}' selected invalid agent id '{executorOverride.ExecutorId}'.",
+                stepKey,
+                roleKey));
+            return null;
+        }
+
+        var agent = agents.FirstOrDefault(candidate => candidate.Id == agentId);
+        if (agent is null || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.override_agent_unavailable",
+                $"Step '{stepKey}' role '{roleKey}' selected unavailable agent '{executorOverride.ExecutorDisplayName}'.",
+                stepKey,
+                roleKey));
+            return null;
+        }
+
+        if (agent.ProviderProfileId is not { } providerId ||
+            !providerById.TryGetValue(providerId, out var provider) ||
+            !provider.IsEnabled ||
+            !ProcessProviderReadinessRules.CanExecuteGovernedProcessStep(provider, providerProfileService))
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.override_provider_unavailable",
+                $"Step '{stepKey}' role '{roleKey}' selected agent '{agent.Name}' without an enabled governed-output-capable provider.",
+                stepKey,
+                roleKey));
+            return null;
+        }
+
+        return new AgentProviderCandidate(
+            agent,
+            provider,
+            0,
+            "manual launch review selection",
+            string.Empty,
+            string.Empty);
+    }
+
+    private static AgentProcessRoleReadinessRequest CreateReadinessRequest(
+        string stepKey,
+        ProcessTemplateDefinitionStepDocument templateStep,
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        return new AgentProcessRoleReadinessRequest(
+            stepKey,
+            templateStep.Title,
+            roleKey,
+            role?.RoleResourceKey ?? string.Empty,
+            role?.DisplayName ?? roleKey,
+            NormalizeOperations(templateStep.AllowedOperations),
+            NormalizeOptional(templateStep.OperationTargetScope),
+            ResolveLaunchRequiredRuntimeToolNames(variables, stepKey));
+    }
+
+    private static IReadOnlyList<string> ResolveLaunchRequiredRuntimeToolNames(
+        IReadOnlyDictionary<string, string> variables,
+        string stepKey)
+    {
+        if (variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, out var direct) &&
+            !string.IsNullOrWhiteSpace(direct))
+        {
+            return ParseLaunchRequiredRuntimeToolNames(direct);
+        }
+
+        if (!variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep, out var byStep) ||
+            string.IsNullOrWhiteSpace(byStep) ||
+            string.IsNullOrWhiteSpace(stepKey))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(byStep);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ParseLaunchRequiredRuntimeToolNames(property.Value);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<string> ParseLaunchRequiredRuntimeToolNames(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return ParseLaunchRequiredRuntimeToolNames(element.GetString() ?? string.Empty);
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString()?.Trim() ?? string.Empty)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ParseLaunchRequiredRuntimeToolNames(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return ParseLaunchRequiredRuntimeToolNames(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return value
+                .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+    }
+
+    private static bool ValidateStepOperationContract(
+        ProcessTemplateDefinitionStepDocument templateStep,
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role,
+        List<ProcessLaunchReadinessFinding> findings,
+        string stepKey)
+    {
+        var operations = NormalizeOperations(templateStep.AllowedOperations);
+        var targetScope = NormalizeOptional(templateStep.OperationTargetScope);
+        var valid = true;
+
+        if (IsArchitectureRole(roleKey, role) && AllowsProductMutation(operations, targetScope))
+        {
+            AddSemanticContractFinding(
+                findings,
+                stepKey,
+                roleKey,
+                $"Step '{stepKey}' assigns architecture role '{roleKey}' but allows product mutation.");
+            valid = false;
+        }
+
+        if (IsArchitectureRole(roleKey, role) &&
+            HasRuntimeProofOperations(operations) &&
+            !IsRuntimeOrBrowserProofStep(templateStep))
+        {
+            AddSemanticContractFinding(
+                findings,
+                stepKey,
+                roleKey,
+                $"Step '{stepKey}' assigns architecture role '{roleKey}' but allows runtime/browser proof operations.");
+            valid = false;
+        }
+
+        if (IsSubprocessStep(templateStep))
+        {
+            if (!operations.Contains(ProcessOperationContractNames.ExecuteExternalAction, StringComparer.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Subprocess step '{stepKey}' must allow {ProcessOperationContractNames.ExecuteExternalAction} so the child process can be launched.");
+                valid = false;
+            }
+
+            if (!string.Equals(targetScope, ProcessOperationContractNames.ExternalActionControlled, StringComparison.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Subprocess step '{stepKey}' must use {ProcessOperationContractNames.ExternalActionControlled} target scope.");
+                valid = false;
+            }
+
+            if (HasRuntimeProofOperations(operations) && !IsRuntimeOrBrowserProofStep(templateStep))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Subprocess step '{stepKey}' must not allow runtime/browser proof operations unless the subprocess owns runtime or screenshot proof.");
+                valid = false;
+            }
+        }
+
+        if (IsEngineeringProductWorkStep(templateStep, roleKey, role))
+        {
+            if (!operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Implementation step '{stepKey}' must allow {ProcessOperationContractNames.MutateProductTarget}.");
+                valid = false;
+            }
+
+            if (!string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase))
+            {
+                AddSemanticContractFinding(
+                    findings,
+                    stepKey,
+                    roleKey,
+                    $"Implementation step '{stepKey}' must use a mutable product target scope.");
+                valid = false;
+            }
+        }
+
+        return valid;
+    }
+
+    private static void AddSemanticContractFinding(
+        List<ProcessLaunchReadinessFinding> findings,
+        string stepKey,
+        string roleKey,
+        string message)
+    {
+        findings.Add(new ProcessLaunchReadinessFinding(
+            ProcessLaunchReadinessSeverity.Error,
+            "process.launch.step_operation_contract_invalid",
+            message,
+            stepKey,
+            roleKey));
+    }
+
+    private static void AddReadinessFindings(
+        List<ProcessLaunchReadinessFinding> findings,
+        AgentProcessRoleReadinessResult readiness,
+        string stepKey,
+        string roleKey)
+    {
+        foreach (var finding in readiness.Findings.Where(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error))
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                finding.Code,
+                finding.Message,
+                stepKey,
+                roleKey));
+        }
+    }
+
+    private static IReadOnlyList<string> NormalizeOperations(IEnumerable<string> operations)
+    {
+        return operations
+            .Where(operation => !string.IsNullOrWhiteSpace(operation))
+            .Select(operation => operation.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(operation => operation, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static bool IsSubprocessStep(ProcessTemplateDefinitionStepDocument step)
+    {
+        return string.Equals(step.StepKind, ProcessTemplateStepKinds.Subprocess, StringComparison.OrdinalIgnoreCase) ||
+               !string.IsNullOrWhiteSpace(step.SubprocessProcessKey);
+    }
+
+    private static bool AllowsProductMutation(
+        IReadOnlyList<string> operations,
+        string targetScope)
+    {
+        return operations.Contains(ProcessOperationContractNames.MutateProductTarget, StringComparer.OrdinalIgnoreCase) ||
+               string.Equals(targetScope, ProcessOperationContractNames.ExternalProductTargetMutable, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(targetScope, ProcessOperationContractNames.ManagedOutputProduct, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasRuntimeProofOperations(IReadOnlyList<string> operations)
+    {
+        return operations.Contains(ProcessOperationContractNames.LaunchRuntime, StringComparer.OrdinalIgnoreCase) ||
+               operations.Contains(ProcessOperationContractNames.CaptureRuntimeProof, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsArchitectureRole(
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        return ContainsRoleToken(roleKey, "architect") ||
+               ContainsRoleToken(roleKey, "architecture") ||
+               ContainsRoleToken(role?.RoleResourceKey, "architect") ||
+               ContainsRoleToken(role?.RoleResourceKey, "architecture") ||
+               ContainsRoleToken(role?.DisplayName, "architect") ||
+               ContainsRoleToken(role?.DisplayName, "architecture");
+    }
+
+    private static bool IsEngineeringProductWorkStep(
+        ProcessTemplateDefinitionStepDocument step,
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        if (IsSubprocessStep(step) ||
+            IsProcessClosureStep(step) ||
+            IsManagementRole(roleKey, role) ||
+            !IsEngineeringRole(roleKey, role))
+        {
+            return false;
+        }
+
+        return ContainsRoleToken(step.Key, "code") ||
+               ContainsRoleToken(step.Key, "implement") ||
+               ContainsRoleToken(step.Key, "implementation") ||
+               ContainsRoleToken(step.Key, "repair") ||
+               ContainsRoleToken(step.Title, "code") ||
+               ContainsRoleToken(step.Title, "implement") ||
+               ContainsRoleToken(step.Title, "implementation") ||
+               ContainsRoleToken(step.Title, "repair");
+    }
+
+    private static bool IsProcessClosureStep(ProcessTemplateDefinitionStepDocument step)
+    {
+        return string.Equals(step.StepKind, ProcessTemplateStepKinds.End, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsManagementRole(
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        return ContainsRoleToken(roleKey, "manager") ||
+               ContainsRoleToken(role?.RoleResourceKey, "manager") ||
+               ContainsRoleToken(role?.DisplayName, "manager");
+    }
+
+    private static bool IsEngineeringRole(
+        string roleKey,
+        ProcessTemplateDefinitionRoleUsageDocument? role)
+    {
+        return ContainsRoleToken(roleKey, "engineer") ||
+               ContainsRoleToken(roleKey, "developer") ||
+               ContainsRoleToken(roleKey, "implementation") ||
+               ContainsRoleToken(role?.RoleResourceKey, "engineer") ||
+               ContainsRoleToken(role?.RoleResourceKey, "developer") ||
+               ContainsRoleToken(role?.RoleResourceKey, "implementation") ||
+               ContainsRoleToken(role?.DisplayName, "engineer") ||
+               ContainsRoleToken(role?.DisplayName, "developer") ||
+               ContainsRoleToken(role?.DisplayName, "implementation");
+    }
+
+    private static bool IsRuntimeOrBrowserProofStep(ProcessTemplateDefinitionStepDocument step)
+    {
+        return ContainsRoleToken(step.Key, "runtime") ||
+               ContainsRoleToken(step.Key, "browser") ||
+               ContainsRoleToken(step.Key, "screenshot") ||
+               ContainsRoleToken(step.Key, "screenshots") ||
+               ContainsRoleToken(step.Title, "runtime") ||
+               ContainsRoleToken(step.Title, "browser") ||
+               ContainsRoleToken(step.Title, "screenshot") ||
+               ContainsRoleToken(step.Title, "screenshots");
+    }
+
+    private static bool ContainsRoleToken(string? value, string token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value
+            .Split(['-', '_', ' ', '.', '/', '\\', ':', ';', ',', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeOptional(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
+    private sealed record AgentRoleMatch(
+        AgentDefinition Agent,
+        ProviderProfile Provider,
+        int Score,
+        string Summary,
+        string ReadinessHash,
+        string ReadinessSummary);
+
+    private sealed record ProcessRoleQuery(
+        string BindingRoleKey,
+        IReadOnlyList<string> MatchKeys);
+
+    private sealed record AgentReadinessFailure(
+        AgentDefinition Agent,
+        AgentProcessRoleReadinessResult Readiness);
+
+    private sealed record AgentProviderCandidate(
+        AgentDefinition Agent,
+        ProviderProfile Provider,
+        int MatchScore,
+        string MatchSummary,
+        string ReadinessHash,
+        string ReadinessSummary);
+}
+

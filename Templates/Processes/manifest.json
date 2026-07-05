@@ -1,7 +1,7 @@
 {
   "PackKey": "candoitall-process-template-pack",
   "Name": "CanDoItAll process template pack (current architecture aligned)",
-  "Version": "2.1.0-live-run-governance",
+  "Version": "2.1.1-live-run-visual-qa",
   "GeneratedAtUtc": "2026-05-28T00:00:00Z",
   "SourceFrameworkKeys": [
     "nist-ssdf",

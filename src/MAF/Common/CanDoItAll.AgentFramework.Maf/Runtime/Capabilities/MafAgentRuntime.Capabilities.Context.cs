@@ -33,6 +33,10 @@ public sealed partial class MafAgentRuntime
 
             var recentMessageMemoryLimit = configuration.RecentMessageMemoryLimit ?? 4;
             var maxResults = configuration.MaxResults ?? agentConfiguration.MaxLocalRagResults ?? 4;
+            var maxFilesToScan = Math.Clamp(configuration.MaxFilesToScan ?? 256, 1, 4096);
+            var minQueryTerms = Math.Clamp(configuration.MinQueryTerms ?? 2, 1, 12);
+            var minMatchedTerms = Math.Clamp(configuration.MinMatchedTerms ?? 2, 1, 12);
+            var minScore = Math.Clamp(configuration.MinScore ?? 2, 1, 100);
             var extensions = configuration.Extensions?.Where(item => !string.IsNullOrWhiteSpace(item)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var excludedPaths = configuration.ExcludePaths?
                 .Where(item => !string.IsNullOrWhiteSpace(item))
@@ -40,7 +44,17 @@ public sealed partial class MafAgentRuntime
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             state.ContextProviders.Add(new TextSearchProvider(
-                (query, cancellationToken) => SearchWorkspaceAsync(ragRoot, query, maxResults, extensions, excludedPaths, cancellationToken),
+                (query, cancellationToken) => SearchWorkspaceAsync(
+                    ragRoot,
+                    query,
+                    maxResults,
+                    maxFilesToScan,
+                    minQueryTerms,
+                    minMatchedTerms,
+                    minScore,
+                    extensions,
+                    excludedPaths,
+                    cancellationToken),
                 new TextSearchProviderOptions
                 {
                     SearchTime = searchTime,
@@ -147,18 +161,23 @@ public sealed partial class MafAgentRuntime
             string rootPath,
             string query,
             int maxResults,
+            int maxFilesToScan,
+            int minQueryTerms,
+            int minMatchedTerms,
+            int minScore,
             HashSet<string>? extensions,
             HashSet<string>? excludedPaths,
             CancellationToken cancellationToken)
         {
-            var terms = WorkspaceSearchSupport.TokenizeQuery(query);
-            if (terms.Count == 0)
+            var terms = WorkspaceSearchSupport.TokenizeRagQuery(query);
+            if (!WorkspaceSearchSupport.HasEnoughRagSignal(terms, minQueryTerms))
             {
                 return [];
             }
 
-            var files = WorkspaceSearchSupport.EnumerateSearchFiles(rootPath, extensions, excludedPaths).Take(256).ToList();
-            var scoredResults = new List<(int Score, string Path, string Snippet)>();
+            var effectiveMinMatchedTerms = Math.Min(minMatchedTerms, terms.Count);
+            var files = WorkspaceSearchSupport.EnumerateSearchFiles(rootPath, extensions, excludedPaths).Take(maxFilesToScan).ToList();
+            var scoredResults = new List<(int Score, int MatchedTerms, string Path, string Snippet)>();
 
             foreach (var file in files)
             {
@@ -180,21 +199,30 @@ public sealed partial class MafAgentRuntime
                 }
 
                 var score = 0;
+                var matchedTerms = 0;
                 foreach (var term in terms)
                 {
-                    score += WorkspaceSearchSupport.CountOccurrences(text, term);
+                    var occurrences = WorkspaceSearchSupport.CountWholeTermOccurrences(text, term);
+                    if (occurrences <= 0)
+                    {
+                        continue;
+                    }
+
+                    score += occurrences;
+                    matchedTerms++;
                 }
 
-                if (score <= 0)
+                if (matchedTerms < effectiveMinMatchedTerms || score < minScore)
                 {
                     continue;
                 }
 
-                scoredResults.Add((score, file, WorkspaceSearchSupport.BuildSearchSnippet(text, terms)));
+                scoredResults.Add((score, matchedTerms, file, WorkspaceSearchSupport.BuildSearchSnippet(text, terms)));
             }
 
             return scoredResults
                 .OrderByDescending(item => item.Score)
+                .ThenByDescending(item => item.MatchedTerms)
                 .ThenBy(item => item.Path, StringComparer.OrdinalIgnoreCase)
                 .Take(maxResults)
                 .Select(item => new TextSearchProvider.TextSearchResult

@@ -14,6 +14,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
     private const int ProviderOrder = 900;
     private const int GovernedProcessDefaultStructureReadTake = 80;
     private const int GovernedProcessMaxExplicitLeaseMinutes = 5;
+    private const string ProjectStructureSourceKind = "project-structure";
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
 
@@ -75,7 +76,32 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (!ShouldAttachForContext(context.ContextIntent))
+        {
+            return ValueTask.FromResult<IReadOnlyList<AITool>>([]);
+        }
+
         return ValueTask.FromResult(toolBuilder.CreateTools(context));
+    }
+
+    internal static bool ShouldAttachForContext(AgentRuntimeContextIntent contextIntent)
+    {
+        ArgumentNullException.ThrowIfNull(contextIntent);
+
+        if (string.Equals(contextIntent.SourceKind, ProjectStructureSourceKind, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return contextIntent.IsGovernedProcessStep &&
+               contextIntent.AllowedOperations.Any(IsProjectStructureProcessOperation);
+    }
+
+    private static bool IsProjectStructureProcessOperation(string operation)
+    {
+        return string.Equals(operation, ProcessOperationContractNames.ReadProjectStructure, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(operation, ProcessOperationContractNames.StartProjectNodeProcess, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(operation, ProcessOperationContractNames.ExecuteExternalAction, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class ProjectStructureToolBuilder(
@@ -277,7 +303,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetContentGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_content_get",
-                    "Returns readonly metadata and base64 content for an existing managed asset node when bytes are needed for proof or transfer."),
+                    "Returns readonly metadata and bounded base64 content for an existing managed asset node. Binary media and large assets omit Base64Data. For PDF or document assets, use the exact returned mediaRelativePath with workspace_convert_document. Use workspace_inspect_image or workspace_analyze_image only for image media."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureAssetRevisionRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_asset_create_revision",
@@ -699,6 +725,16 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
+                    if (await TryReuseGovernedProcessNodeCreateAsync(
+                            agent,
+                            accessState,
+                            projectId,
+                            effectiveRequest,
+                            cancellationToken) is { } existingNode)
+                    {
+                        return existingNode;
+                    }
+
                     return await agentService.CreateNodeAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1411,7 +1447,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectReadAllowed(accessState, projectId);
-                    return await agentService.GetAssetContentAsync(projectId, nodeId, cancellationToken);
+                    var content = await agentService.GetAssetContentAsync(projectId, nodeId, cancellationToken);
+                    return ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(content);
                 },
                 cancellationToken);
         }
@@ -1869,6 +1906,68 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             }
         }
 
+        private async Task<ProjectStructureNodeSummary?> TryReuseGovernedProcessNodeCreateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureNodeCreateInput request,
+            CancellationToken cancellationToken)
+        {
+            if (accessState.ScopedProcessAccess is null ||
+                string.IsNullOrWhiteSpace(request.ParentNodeKey))
+            {
+                return null;
+            }
+
+            var normalizedTitle = NormalizeNodeCreateNaturalKeyText(request.Title);
+            if (string.IsNullOrWhiteSpace(normalizedTitle))
+            {
+                return null;
+            }
+
+            var normalizedSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(
+                request.ObjectType,
+                request.ObjectSubtype) ?? string.Empty;
+            var structure = await agentService.GetStructureAsync(
+                projectId,
+                new ProjectStructureReadRequest(
+                    IncludeLinks: false,
+                    IncludeLayout: true,
+                    IncludeMetadata: true,
+                    IncludeNotes: true,
+                    IncludeAssets: true),
+                cancellationToken);
+            var existingNode = structure.Nodes
+                .Where(node =>
+                    string.Equals(node.ParentId, request.ParentNodeKey, StringComparison.Ordinal) &&
+                    node.ObjectType == request.ObjectType &&
+                    string.Equals(node.ObjectSubtype, normalizedSubtype, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(NormalizeNodeCreateNaturalKeyText(node.Title), normalizedTitle, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(node => node.Id, StringComparer.Ordinal)
+                .FirstOrDefault();
+            if (existingNode is null)
+            {
+                return null;
+            }
+
+            return await agentService.UpdateNodeAsync(
+                projectId,
+                existingNode.Id,
+                new ProjectStructureNodeEditInput(
+                    request.Title,
+                    request.Subtitle,
+                    request.Notes,
+                    request.ObjectType,
+                    normalizedSubtype,
+                    request.StartUtc,
+                    request.EndUtc,
+                    request.MetadataJson,
+                    request.LeaseToken,
+                    request.DurationSeconds),
+                BuildAgentContext(agent, accessState, projectId),
+                cancellationToken);
+        }
+
         private ProjectStructureAgentContext BuildAgentContext(
             AgentDefinition agent,
             string? branchName = null,
@@ -2225,6 +2324,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 accessState.ScopedProcessAccess?.ProcessNodeContext,
                 requestedParentNodeKey);
 
+        private static string NormalizeNodeCreateNaturalKeyText(string? value)
+            => string.Join(
+                " ",
+                (value ?? string.Empty)
+                    .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
         private static bool TryResolveScopedProcessProjectId(
             AgentRuntimeToolProviderContext context,
             WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState auditScope,
@@ -2376,6 +2481,89 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         Guid? ProjectId,
         string BranchName,
         string? RepositoryRoot);
+}
+
+internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
+{
+    private const long MaxInlineAgentAssetContentBytes = 32 * 1024;
+
+    public static ProjectStructureAssetContentDescriptor BoundForAgentRuntime(
+        ProjectStructureAssetContentDescriptor content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (ShouldInlineAssetContent(content))
+        {
+            return content with
+            {
+                Base64DataOmitted = false,
+                ContentSummary = $"Base64Data contains {content.ContentLength:N0} byte(s) from a small non-media asset."
+            };
+        }
+
+        var mediaPath = string.IsNullOrWhiteSpace(content.Asset.MediaRelativePath)
+            ? "the returned asset media path"
+            : content.Asset.MediaRelativePath;
+        var reason = IsBinaryMediaContentType(content.Asset.MediaContentType)
+            ? $"Base64Data is omitted because '{content.Asset.MediaContentType}' is binary media."
+            : $"Base64Data is omitted because the asset is {content.ContentLength:N0} byte(s), exceeding the {MaxInlineAgentAssetContentBytes:N0}-byte runtime inline limit.";
+        var nextAction = ResolveOmittedContentNextAction(content.Asset.MediaContentType, mediaPath);
+
+        return content with
+        {
+            Base64Data = string.Empty,
+            Base64DataOmitted = true,
+            ContentSummary = $"{reason} {nextAction}"
+        };
+    }
+
+    private static bool ShouldInlineAssetContent(ProjectStructureAssetContentDescriptor content)
+    {
+        return content.ContentLength <= MaxInlineAgentAssetContentBytes &&
+               !IsBinaryMediaContentType(content.Asset.MediaContentType);
+    }
+
+    private static bool IsBinaryMediaContentType(string contentType)
+    {
+        return IsImageContentType(contentType) ||
+               contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ||
+               contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveOmittedContentNextAction(string contentType, string mediaPath)
+    {
+        if (IsImageContentType(contentType))
+        {
+            return $"Use workspace_inspect_image or workspace_analyze_image with '{mediaPath}' when visual evidence is required.";
+        }
+
+        if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Contains("wordprocessingml.document", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("application/msword", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("text/markdown", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Use workspace_convert_document with '{mediaPath}' and analyze the returned markdown preview or output path.";
+        }
+
+        if (IsSpreadsheetContentType(contentType))
+        {
+            return $"Use workspace_inspect_spreadsheet with '{mediaPath}' when tabular content is required.";
+        }
+
+        return $"Use a bounded workspace tool against '{mediaPath}' only when the step contract requires inspecting the asset bytes.";
+    }
+
+    private static bool IsImageContentType(string contentType)
+        => contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSpreadsheetContentType(string contentType)
+    {
+        return contentType.Contains("spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Contains("ms-excel", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Equals("text/csv", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Equals("text/tab-separated-values", StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public sealed record OperationAck(bool Ok);

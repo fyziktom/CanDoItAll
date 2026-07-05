@@ -181,6 +181,7 @@ public sealed class ProjectStructureAgentService(
                     objectSubtype,
                     request.Notes,
                     request.MetadataJson);
+                ValidateRuntimeNodeMetadata(request.ObjectType, objectSubtype, metadataJson);
                 var createdNode = await projectWorkbenchService.CreateObjectAsync(
                     projectId,
                     new ProjectObjectCreateRequest(
@@ -232,6 +233,7 @@ public sealed class ProjectStructureAgentService(
                     targetObjectSubtype,
                     request.Notes,
                     metadataJson);
+                ValidateRuntimeNodeMetadata(targetObjectType, targetObjectSubtype, metadataJson);
 
                 ProjectStructureNode? updatedNode;
                 var requiresReclassification = targetObjectType != existingNode.ObjectType ||
@@ -294,6 +296,117 @@ public sealed class ProjectStructureAgentService(
                 return MapRequiredNode(updatedNode, nodeId);
             },
             cancellationToken);
+    }
+
+    private static void ValidateRuntimeNodeMetadata(
+        ProjectObjectType objectType,
+        string? objectSubtype,
+        string metadataJson)
+    {
+        if (objectType is not (ProjectObjectType.Script or ProjectObjectType.Environment))
+        {
+            return;
+        }
+
+        ProjectObjectMetadataEnvelope metadata;
+        try
+        {
+            metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "InvalidRuntimeMetadata",
+                $"Runnable node metadata is invalid JSON or does not match the project-structure metadata schema: {exception.Message}");
+        }
+
+        if (objectType == ProjectObjectType.Script)
+        {
+            ValidateScriptRuntimeMetadata(objectSubtype, metadata.Script);
+            return;
+        }
+
+        ValidateEnvironmentRuntimeMetadata(objectSubtype, metadata.Environment);
+    }
+
+    private static void ValidateScriptRuntimeMetadata(string? objectSubtype, ProjectScriptMetadata? script)
+    {
+        if (script is null)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "InvalidRuntimeMetadata",
+                "Script runtime nodes require metadata.script with command, arguments, and workingDirectory fields.");
+        }
+
+        var scriptKind = script.ScriptKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
+            ? ProjectNodeKindRegistry.ResolveScriptKind(objectSubtype)
+            : script.ScriptKind;
+        var hasCommand = !string.IsNullOrWhiteSpace(script.Command);
+        var hasPowerShellScript = scriptKind == ProjectScriptKind.PowerShell &&
+            !string.IsNullOrWhiteSpace(script.ScriptPath);
+
+        if (!hasCommand && !hasPowerShellScript)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "InvalidRuntimeMetadata",
+                "Script runtime nodes require metadata.script.command, or metadata.script.scriptPath when objectSubtype is powershell.");
+        }
+    }
+
+    private static void ValidateEnvironmentRuntimeMetadata(string? objectSubtype, ProjectEnvironmentMetadata? environment)
+    {
+        if (environment is null)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "InvalidRuntimeMetadata",
+                "Environment runtime nodes require metadata.environment with environmentKind, projectPath, and workingDirectory fields.");
+        }
+
+        var environmentKind = environment.EnvironmentKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
+            ? ProjectNodeKindRegistry.ResolveEnvironmentKind(objectSubtype)
+            : environment.EnvironmentKind;
+
+        if (environmentKind is ProjectEnvironmentKind.DotNetRuntime or ProjectEnvironmentKind.DotNetWatch or ProjectEnvironmentKind.DotNetRelease &&
+            string.IsNullOrWhiteSpace(environment.ProjectPath))
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "InvalidRuntimeMetadata",
+                "DotNet environment runtime nodes require metadata.environment.projectPath.");
+        }
+
+        if (environmentKind != ProjectEnvironmentKind.PythonEnvironment)
+        {
+            return;
+        }
+
+        var missingFields = new List<string>();
+        if (string.IsNullOrWhiteSpace(environment.ProjectPath))
+        {
+            missingFields.Add("metadata.environment.projectPath");
+        }
+
+        if (string.IsNullOrWhiteSpace(environment.EnvironmentName))
+        {
+            missingFields.Add("metadata.environment.environmentName");
+        }
+
+        if (!environment.PythonProvider.HasValue)
+        {
+            missingFields.Add("metadata.environment.pythonProvider");
+        }
+
+        if (missingFields.Count > 0)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "InvalidRuntimeMetadata",
+                $"Python environment runtime nodes require {string.Join(", ", missingFields)}.");
+        }
     }
 
     public async Task<ProjectStructureNodeSummary> UpdateNodeTypeAsync(

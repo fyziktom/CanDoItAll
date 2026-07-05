@@ -28,7 +28,7 @@ public sealed partial class MafAgentRuntime
         return (request.Messages ?? [])
             .OrderBy(item => item.CreatedAtUtc)
             .Where(message => !string.IsNullOrWhiteSpace(message.Content))
-            .Select(message => new ChatMessage(MapRole(message.Role), message.Content.Trim()))
+            .Select(message => new ChatMessage(MafRuntimeSessionBuilder.MapRole(message.Role), message.Content.Trim()))
             .ToList();
     }
 

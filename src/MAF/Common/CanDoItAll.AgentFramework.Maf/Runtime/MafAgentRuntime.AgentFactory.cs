@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OllamaSharp;
+using OllamaSharp.Models;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Responses;
@@ -93,9 +94,9 @@ public sealed partial class MafAgentRuntime
                 $"Using provider image-analysis model '{model}' for request-scoped image attachment(s) because runtime model '{requestedModel}' is not vision-capable.");
         }
 
-        if (IsReasoningEffortConfiguredButTransportUnsupported(effectiveProvider, model, agent.ConfigurationJson))
+        if (MafModelParametersBuilder.IsReasoningEffortConfiguredButTransportUnsupported(effectiveProvider, model, agent.ConfigurationJson))
         {
-            throw new InvalidOperationException(BuildReasoningEffortUnsupportedTransportMessage(effectiveProvider, model));
+            throw new InvalidOperationException(MafModelParametersBuilder.BuildReasoningEffortUnsupportedTransportMessage(effectiveProvider, model));
         }
 
         EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions);
@@ -125,8 +126,8 @@ public sealed partial class MafAgentRuntime
                 $"Attached {runtimeOptions.FinalizerMode} finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
         }
 
-        var frameworkManagedHistory = ShouldUseFrameworkManagedHistory(agent, effectiveProvider, runtimeOptions);
-        var chatOptions = CreateModelCompatibleChatOptions(
+        var frameworkManagedHistory = MafRuntimeSessionBuilder.ShouldUseFrameworkManagedHistory(agent, effectiveProvider, runtimeOptions);
+        var chatOptions = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
             effectiveProvider,
             model,
             (float)agent.Temperature,
@@ -136,7 +137,7 @@ public sealed partial class MafAgentRuntime
             agent.Instructions,
             finalizerCapture?.Policy,
             runtimeOptions.FinalizerMode,
-            ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
+            MafRuntimeSessionBuilder.ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
         chatOptions.AllowMultipleToolCalls = !capabilityState.HasApprovalTools;
 
         if (capabilityState.Tools.Count > 0)
@@ -171,7 +172,7 @@ public sealed partial class MafAgentRuntime
             capabilityState.AsyncDisposables,
             capabilityState.Disposables,
             capabilityState.HasApprovalTools,
-            ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
+            MafModelParametersBuilder.ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
             finalizerCapture,
             toolInvocationTraceRecorder,
             capabilityState.ContextContributionTraceCollector,
@@ -380,7 +381,52 @@ public sealed partial class MafAgentRuntime
             Timeout = ResolveProviderNetworkTimeout(provider)
         };
         IChatClient chatClient = new OllamaApiClient(httpClient, model, jsonSerializerContext: null);
+        chatClient = new DefaultOllamaOptionsChatClient(
+            chatClient,
+            AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(provider.ConfigurationJson, string.Empty),
+            AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(provider.ConfigurationJson, string.Empty));
         return chatClient.AsAIAgent(options: options);
+    }
+
+    private sealed class DefaultOllamaOptionsChatClient(
+        IChatClient innerClient,
+        int defaultMaxOutputTokens,
+        bool defaultThink) : DelegatingChatClient(innerClient)
+    {
+        public override Task<ChatResponse> GetResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return base.GetResponseAsync(messages, NormalizeOptions(options), cancellationToken);
+        }
+
+        public override IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return base.GetStreamingResponseAsync(messages, NormalizeOptions(options), cancellationToken);
+        }
+
+        private ChatOptions NormalizeOptions(ChatOptions? options)
+        {
+            var normalizedOptions = options?.Clone() ?? new ChatOptions();
+            normalizedOptions.MaxOutputTokens ??= defaultMaxOutputTokens;
+            normalizedOptions.AdditionalProperties ??= [];
+
+            if (!normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.NumPredict.Name))
+            {
+                normalizedOptions.AddOllamaOption(OllamaOption.NumPredict, normalizedOptions.MaxOutputTokens.Value);
+            }
+
+            if (!normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.Think.Name))
+            {
+                normalizedOptions.AddOllamaOption(OllamaOption.Think, defaultThink);
+            }
+
+            return normalizedOptions;
+        }
     }
 
     private static OpenAIClientOptions CreateOpenAiClientOptions(ProviderProfile provider)
@@ -515,9 +561,12 @@ public sealed partial class MafAgentRuntime
                 ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,
                 ProcessStepAllowedOperations: auditScope?.ProcessStepAllowedOperations ?? [],
                 ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
+                ContextWorkspaceScopeKind: auditScope?.ContextWorkspaceScope?.Kind.ToString() ?? string.Empty,
+                ContextWorkspaceScopeKey: auditScope?.ContextWorkspaceScope?.Key ?? string.Empty,
                 InspectedScriptContent: scriptInspection.Content,
                 ScriptInspectionFailure: scriptInspection.FailureMessage,
-                ScriptSideEffectManifestJson: scriptSideEffectManifestJson)
+                ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
+                ToolInvocationTraces: toolInvocationTraceRecorder.Snapshot())
             {
                 SourceId = auditScope?.SourceId ?? string.Empty
             };
@@ -553,7 +602,7 @@ public sealed partial class MafAgentRuntime
                 runtimeToolOwnership?.ProviderKey ?? string.Empty,
                 policyDecision.Signature);
 
-            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification, runtimeToolOwnership);
+            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification, policyDecision.Signature, runtimeToolOwnership);
             var succeeded = false;
             var failureMessage = string.Empty;
             using var runtimeToolOwnershipScope = AgentRuntimeToolOwnershipContext.BeginScope(runtimeToolOwnership);
@@ -1124,7 +1173,7 @@ public sealed partial class MafAgentRuntime
               $"- Call `{finalizerPolicy.ToolName}` exactly once after all other significant tool work is complete.{Environment.NewLine}" +
               "- A normal assistant response without that finalizer tool is invalid for this run and will fail the execution even if the work itself succeeded." + Environment.NewLine +
               $"- The finalizer arguments are the authoritative machine output for `{finalizerPolicy.OutputContract.ContractKey}`.{Environment.NewLine}" +
-              BuildRequiredFinalizerArgumentInstructions(finalizerPolicy) +
+              MafFinalizerDriver.BuildRequiredFinalizerArgumentInstructions(finalizerPolicy) +
               (hasStructuredResponseFormat
                   ? $"- After the tool call, return exactly one JSON object matching the same `{finalizerPolicy.OutputContract.ContractKey}` schema through the configured structured response format.{Environment.NewLine}" +
                     "- Do not use Markdown, prose, code fences, or any extra text around the JSON object."
@@ -1133,22 +1182,6 @@ public sealed partial class MafAgentRuntime
         return string.IsNullOrWhiteSpace(instructions)
             ? finalizerInstructions.Trim()
             : instructions.TrimEnd() + finalizerInstructions;
-    }
-
-    private static string BuildRequiredFinalizerArgumentInstructions(AgentFinalizerPolicy finalizerPolicy)
-    {
-        if (!string.Equals(
-                finalizerPolicy.OutputContract.ContractKey,
-                AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Empty;
-        }
-
-        return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
-               "- The `result` object must include `status`, `reason`, `branchOutcomeKey`, `branchOutcomeTitle`, `evidenceRefs`, `nextActions`, and `humanReadableSummaryMarkdown`. Use `Completed`, `Blocked`, `Failed`, `WaitingApproval`, or `Refused` for `status`." + Environment.NewLine +
-               "- Do not copy placeholder evidence values. Evidence refs must be exact current-run refs already created or observed during this turn." + Environment.NewLine +
-               "- If `status` is `Completed`, `evidenceRefs` must contain at least one concrete current-run evidence reference. If no such evidence exists, return `Blocked` or `Failed` with a concrete `nextActions` entry instead of claiming completion." + Environment.NewLine;
     }
 
     private ScriptContentInspection ResolveScriptContentInspectionForPolicy(
@@ -1773,6 +1806,7 @@ public sealed partial class MafAgentRuntime
         public int Start(
             string toolName,
             ToolInvocationClassification classification,
+            string signature,
             AgentRuntimeToolOwnership? runtimeToolOwnership)
         {
             lock (gate)
@@ -1788,7 +1822,8 @@ public sealed partial class MafAgentRuntime
                     FailureMessage: string.Empty)
                 {
                     RuntimeToolProviderKey = runtimeToolOwnership?.ProviderKey ?? string.Empty,
-                    RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty
+                    RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty,
+                    Signature = signature
                 });
                 return nextSequence;
             }
@@ -1877,12 +1912,10 @@ public sealed partial class MafAgentRuntime
 
         private string CaptureJsonElement<TOutput>(JsonElement result, string message)
         {
-            var rawJson = result.ValueKind == JsonValueKind.String &&
-                          TryUseRawJsonObjectOrArray(result.GetString(), out var parsedRawJson)
-                ? parsedRawJson
+            var rawJson = result.ValueKind == JsonValueKind.String
+                ? result.GetString()
                 : result.GetRawText();
-            if (!TryNormalizeKnownFinalizerOutput(Policy, rawJson, out var argumentsJson, out var failureMessage) &&
-                !TryDeserializeFinalizerOutput(Policy, rawJson, out argumentsJson, out failureMessage))
+            if (!MafFinalizerDriver.TryNormalizeFinalizerJsonRepairText(Policy, rawJson, out var argumentsJson, out var failureMessage))
             {
                 throw new InvalidOperationException($"Finalizer payload for '{Policy.ToolName}' is invalid: {failureMessage}");
             }

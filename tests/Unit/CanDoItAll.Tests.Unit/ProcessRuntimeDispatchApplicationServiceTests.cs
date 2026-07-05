@@ -11,6 +11,11 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessRuntimeDispatchApplicationServiceTests
 {
     private const int DispatchAttemptBudget = 20;
+    private const int TransientRetrySuppressionBudget = 5;
+    private const string AdapterContractRetryDiagnosticCode = "process.adapter.produced_artifact_evidence_missing";
+    private const string AdapterContractRetryDiagnosticSummary = "Expected one of the managed artifact refs listed in the process step brief.";
+    private const string AgentTransientExecutionRetryDiagnosticCode = "process.adapter.agent_transient_execution_retry";
+    private const string AgentTransientExecutionRetryDiagnosticSummary = "Agent execution failed with a transient provider/runtime error.";
     private static readonly DateTimeOffset Now = new(2026, 6, 17, 9, 0, 0, TimeSpan.Zero);
     private static readonly ProcessRunId RunId = new(new Guid("4a3d2a7b-2dd2-4f5b-b170-0e9c65a62a59"));
     private static readonly ProcessInstancePlanId PlanId = new(new Guid("e9d54367-40da-4240-b98c-9dfbe99ee566"));
@@ -169,6 +174,101 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessRuntimeStepStatus.Skipped, FindStep(stateStore.State, executeReleaseAfterRepairStepId).Status);
         Assert.Equal(ProcessRuntimeStepStatus.Skipped, FindStep(stateStore.State, postReleaseAfterRepairStepId).Status);
         Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunCompleted);
+    }
+
+    [Fact]
+    public async Task BranchSignalRouter_applies_branch_outcome_after_engine_result_submission()
+    {
+        var ownerId = new DispatcherOwnerId("agent-execution-reconciliation");
+        var claimToken = DispatchClaimToken.New();
+        var resultKey = StrategyResultIdempotencyKey.New();
+        var result = new StrategyResultEnvelope(
+            Binding.StrategyId,
+            Binding.StrategyVersion,
+            resultKey.Value,
+            StrategyOutcome.Succeeded,
+            [],
+            [],
+            [],
+            [
+                new ManagerSignal(
+                    ProcessBranchSignalCodes.Outcome("feature-accepted"),
+                    "sha256:feature-accepted",
+                    "Branch outcome selected: feature-accepted")
+            ],
+            "sha256:recovered-feature-accepted");
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                NewStep(ValidationStepId, ProcessRuntimeStepStatus.Running, activeClaimToken: claimToken),
+                NewStep(HandoffStepId, ProcessRuntimeStepStatus.Blocked, dependencies: [ValidationStepId]),
+                NewStep(HandoffAfterRepairStepId, ProcessRuntimeStepStatus.Blocked, dependencies: [ValidationStepId])
+            ],
+            [
+                new DispatchClaimState(
+                    claimToken,
+                    ValidationStepId,
+                    ownerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var submitted = await engine.SubmitStrategyResultAsync(
+            initialState,
+            new RuntimeCommandContext(
+                RuntimeCommandId.New(),
+                new ProcessEventActor(ProcessEventActorKind.System, new ProcessActorId("agent-execution-reconciliation")),
+                new ProcessCorrelationId("agent-execution-reconciliation-unit-test"),
+                Now),
+            new SubmitStrategyResultCommand(
+                ValidationStepId,
+                ownerId,
+                claimToken,
+                resultKey,
+                result));
+        var router = new ProcessRuntimeBranchSignalApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            unitOfWork,
+            new InMemoryAssignmentStore(
+            [
+                NewAssignment(ValidationStepId, "targeted-validation"),
+                NewAssignment(HandoffStepId, "feature-handoff", new ProcessRuntimeBranchGate("targeted-validation", "feature-accepted")),
+                NewAssignment(HandoffAfterRepairStepId, "feature-handoff-after-repair", new ProcessRuntimeBranchGate("targeted-validation", "feature-repair"))
+            ]),
+            NewNoOpCatchupService());
+
+        await router.ApplyForResultAsync(
+            submitted.State,
+            NewPlan(
+            [
+                (ValidationStepId, "targeted-validation"),
+                (HandoffStepId, "feature-handoff"),
+                (HandoffAfterRepairStepId, "feature-handoff-after-repair")
+            ]),
+            result,
+            "agent-execution-reconciliation");
+
+        Assert.Equal(ProcessRuntimeStatus.Active, stateStore.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, ValidationStepId).Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Pending, FindStep(stateStore.State, HandoffStepId).Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Skipped, FindStep(stateStore.State, HandoffAfterRepairStepId).Status);
+        Assert.Contains(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepSkipped);
     }
 
     [Theory]
@@ -694,6 +794,22 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             "Runtime automatic rework instruction",
             assignmentStore.Assignments.Single().Prompt,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "If a diagnostic names a missing required tool receipt and no successful prior receipt for this same process step exists",
+            assignmentStore.Assignments.Single().Prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "For structured workspace tool arguments such as path, workingDirectory, and outputPaths, use grounded workspace refs or external-target aliases",
+            assignmentStore.Assignments.Single().Prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "If a diagnostic names an ungrounded path-like ref, overwrite the managed artifact and remove every named ungrounded ref",
+            assignmentStore.Assignments.Single().Prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Do not satisfy a diagnostic by only rewriting the managed summary",
+            assignmentStore.Assignments.Single().Prompt,
+            StringComparison.Ordinal);
         Assert.DoesNotContain(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
@@ -837,6 +953,221 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
+    public async Task ExecuteReady_blocks_repeated_identical_automatic_adapter_retry_before_global_attempt_budget()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var plan = NewSingleStepPlan(stepId, "targeted-validation");
+        var retryHash = "sha256:retryable-provider-timeout";
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Ready, attemptNumber: 4)],
+            [],
+            NewSubmittedResults(stepId, 3, StrategyOutcome.NeedsManager, ProcessRuntimeStepStatus.Ready, retryHash),
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new RepeatedAutomaticRetryStrategyFactoryResolver(retryHash);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            new InMemoryAssignmentStore([NewAssignment(stepId, "targeted-validation")]),
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
+        Assert.Single(strategyResolver.ExecutionContexts);
+        Assert.Contains(
+            stateStore.State.AppliedResults,
+            receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
+                       !string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+        Assert.Contains(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Contains($"Last automatic retry reason: {AdapterContractRetryDiagnosticSummary}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteReady_blocks_repeated_automatic_adapter_retry_even_when_result_hash_changes()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var plan = NewSingleStepPlan(stepId, "targeted-validation");
+        var retryHash = "sha256:retryable-provider-timeout-new-hash";
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Ready, attemptNumber: 4)],
+            [],
+            NewSubmittedResults(
+                stepId,
+                3,
+                StrategyOutcome.NeedsManager,
+                ProcessRuntimeStepStatus.Ready,
+                resultHash: null),
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new RepeatedAutomaticRetryStrategyFactoryResolver(retryHash);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            new InMemoryAssignmentStore([NewAssignment(stepId, "targeted-validation")]),
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
+        Assert.Single(strategyResolver.ExecutionContexts);
+        Assert.Contains(
+            stateStore.State.AppliedResults,
+            receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
+                       !string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+        Assert.Contains(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Contains($"Last automatic retry reason: {AdapterContractRetryDiagnosticSummary}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteReady_allows_repeated_transient_execution_retry_to_recover_before_global_attempt_budget()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var plan = NewSingleStepPlan(stepId, "capture-runtime-proof");
+        var retryHash = "sha256:transient-execution-timeout";
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Ready, attemptNumber: 4)],
+            [],
+            NewSubmittedResults(stepId, 3, StrategyOutcome.NeedsManager, ProcessRuntimeStepStatus.Ready, retryHash),
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var assignmentStore = new InMemoryAssignmentStore([NewAssignment(stepId, "capture-runtime-proof")]);
+        var strategyResolver = new RetryableAdapterViolationThenSuccessStrategyFactoryResolver(
+            AgentTransientExecutionRetryDiagnosticCode,
+            AgentTransientExecutionRetryDiagnosticSummary,
+            retryHash);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            assignmentStore,
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, stepId).Status);
+        Assert.Equal(2, strategyResolver.ExecutionCount);
+        Assert.Contains(
+            stateStore.State.AppliedResults,
+            receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready &&
+                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+        Assert.Contains(
+            stateStore.State.AppliedResults,
+            receipt => receipt.Outcome == StrategyOutcome.Succeeded &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Completed);
+        Assert.DoesNotContain(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+    }
+
+    [Fact]
+    public async Task ExecuteReady_blocks_identical_transient_execution_retry_after_transient_budget()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var plan = NewSingleStepPlan(stepId, "capture-runtime-proof");
+        var retryHash = "sha256:transient-execution-loop";
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Ready, attemptNumber: 6)],
+            [],
+            NewSubmittedResults(
+                stepId,
+                TransientRetrySuppressionBudget,
+                StrategyOutcome.NeedsManager,
+                ProcessRuntimeStepStatus.Ready,
+                retryHash),
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var assignmentStore = new InMemoryAssignmentStore([NewAssignment(stepId, "capture-runtime-proof")]);
+        var strategyResolver = new RetryableAdapterViolationThenSuccessStrategyFactoryResolver(
+            AgentTransientExecutionRetryDiagnosticCode,
+            AgentTransientExecutionRetryDiagnosticSummary,
+            retryHash);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            assignmentStore,
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
+        Assert.Equal(1, strategyResolver.ExecutionCount);
+        Assert.Contains(
+            stateStore.State.AppliedResults,
+            receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
+                       !string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+        Assert.Contains(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Contains($"Last automatic retry reason: {AgentTransientExecutionRetryDiagnosticSummary}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExecuteReady_marks_active_run_blocked_when_no_runnable_path_remains()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
@@ -955,6 +1286,19 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     private static IReadOnlyList<StrategyResultReceipt> NewSubmittedResults(
         ProcessStepInstanceId stepId,
         int count)
+        => NewSubmittedResults(
+            stepId,
+            count,
+            StrategyOutcome.Failed,
+            ProcessRuntimeStepStatus.Failed,
+            null);
+
+    private static IReadOnlyList<StrategyResultReceipt> NewSubmittedResults(
+        ProcessStepInstanceId stepId,
+        int count,
+        StrategyOutcome outcome,
+        ProcessRuntimeStepStatus appliedStepStatus,
+        string? resultHash)
     {
         var receipts = new List<StrategyResultReceipt>(count);
         for (var index = 0; index < count; index++)
@@ -963,9 +1307,9 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 stepId,
                 Binding.StrategyId,
                 StrategyResultIdempotencyKey.New(),
-                StrategyOutcome.Failed,
-                ProcessRuntimeStepStatus.Failed,
-                $"sha256:previous-{index}"));
+                outcome,
+                appliedStepStatus,
+                resultHash ?? $"sha256:previous-{index}"));
         }
 
         return receipts;
@@ -1283,7 +1627,10 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
-    private sealed class RetryableAdapterViolationThenSuccessStrategyFactoryResolver : IProcessRuntimeStrategyFactoryResolver
+    private sealed class RetryableAdapterViolationThenSuccessStrategyFactoryResolver(
+        string diagnosticCode = AdapterContractRetryDiagnosticCode,
+        string diagnosticSummary = AdapterContractRetryDiagnosticSummary,
+        string resultHash = "sha256:retryable-missing-evidence") : IProcessRuntimeStrategyFactoryResolver
     {
         public int ExecutionCount { get; private set; }
 
@@ -1294,7 +1641,31 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult<IProcessStrategyFactory>(new RetryableAdapterViolationThenSuccessStrategyFactory(
                 binding,
-                () => ++ExecutionCount));
+                () => ++ExecutionCount,
+                diagnosticCode,
+                diagnosticSummary,
+                resultHash));
+        }
+    }
+
+    private sealed class RepeatedAutomaticRetryStrategyFactoryResolver(
+        string resultHash,
+        string diagnosticCode = AdapterContractRetryDiagnosticCode,
+        string diagnosticSummary = AdapterContractRetryDiagnosticSummary) : IProcessRuntimeStrategyFactoryResolver
+    {
+        public List<ProcessStrategyExecutionContext> ExecutionContexts { get; } = [];
+
+        public ValueTask<IProcessStrategyFactory> ResolveAsync(
+            ProcessStrategyBindingSnapshot binding,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IProcessStrategyFactory>(new RepeatedAutomaticRetryStrategyFactory(
+                binding,
+                resultHash,
+                diagnosticCode,
+                diagnosticSummary,
+                ExecutionContexts));
         }
     }
 
@@ -1377,7 +1748,10 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
     private sealed class RetryableAdapterViolationThenSuccessStrategyFactory(
         ProcessStrategyBindingSnapshot binding,
-        Func<int> nextExecutionNumber) : IProcessStrategyFactory
+        Func<int> nextExecutionNumber,
+        string diagnosticCode,
+        string diagnosticSummary,
+        string resultHash) : IProcessStrategyFactory
     {
         public ProcessStrategyDescriptor Descriptor { get; } = new(
             binding.StrategyId,
@@ -1390,7 +1764,37 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult<IProcessStrategy>(new RetryableAdapterViolationThenSuccessStrategy(nextExecutionNumber));
+            return ValueTask.FromResult<IProcessStrategy>(new RetryableAdapterViolationThenSuccessStrategy(
+                nextExecutionNumber,
+                diagnosticCode,
+                diagnosticSummary,
+                resultHash));
+        }
+    }
+
+    private sealed class RepeatedAutomaticRetryStrategyFactory(
+        ProcessStrategyBindingSnapshot binding,
+        string resultHash,
+        string diagnosticCode,
+        string diagnosticSummary,
+        List<ProcessStrategyExecutionContext> executionContexts) : IProcessStrategyFactory
+    {
+        public ProcessStrategyDescriptor Descriptor { get; } = new(
+            binding.StrategyId,
+            binding.StrategyVersion,
+            ProcessStrategyKind.StepExecution,
+            new HashSet<CapabilityTag>());
+
+        public ValueTask<IProcessStrategy> CreateAsync(
+            ProcessStrategyBindingSnapshot binding,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IProcessStrategy>(new RepeatedAutomaticRetryStrategy(
+                resultHash,
+                diagnosticCode,
+                diagnosticSummary,
+                executionContexts));
         }
     }
 
@@ -1467,7 +1871,11 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
-    private sealed class RetryableAdapterViolationThenSuccessStrategy(Func<int> nextExecutionNumber) : IProcessStrategy
+    private sealed class RetryableAdapterViolationThenSuccessStrategy(
+        Func<int> nextExecutionNumber,
+        string diagnosticCode,
+        string diagnosticSummary,
+        string retryResultHash) : IProcessStrategy
     {
         public ValueTask<StrategyResultEnvelope> ExecuteAsync(
             ProcessStrategyExecutionContext context,
@@ -1486,21 +1894,21 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                     [],
                     [
                         new StrategyDiagnosticRef(
-                            new StrategyDiagnosticCode("process.adapter.produced_artifact_evidence_missing"),
+                            new StrategyDiagnosticCode(diagnosticCode),
                             StrategyDiagnosticSensitivity.Normal,
-                            "sha256:missing-evidence",
-                            "Expected one of the managed artifact refs listed in the process step brief.",
+                            retryResultHash,
+                            diagnosticSummary,
                             RestrictedEvidenceReference: null,
                             ProcessDiagnosticRetrySafety.SafeToRetry,
                             ProcessDiagnosticIdempotencyClassification.Idempotent)
                     ],
                     [
                         new ManagerSignal(
-                            new ManagerSignalCode("process.adapter.produced_artifact_evidence_missing"),
-                            "sha256:missing-evidence",
-                            "Expected one of the managed artifact refs listed in the process step brief.")
+                            new ManagerSignalCode(diagnosticCode),
+                            retryResultHash,
+                            diagnosticSummary)
                     ],
-                    "sha256:retryable-missing-evidence"));
+                    retryResultHash));
             }
 
             return ValueTask.FromResult(new StrategyResultEnvelope(
@@ -1513,6 +1921,45 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [],
                 [],
                 "sha256:retryable-success"));
+        }
+    }
+
+    private sealed class RepeatedAutomaticRetryStrategy(
+        string resultHash,
+        string diagnosticCode,
+        string diagnosticSummary,
+        List<ProcessStrategyExecutionContext> executionContexts) : IProcessStrategy
+    {
+        public ValueTask<StrategyResultEnvelope> ExecuteAsync(
+            ProcessStrategyExecutionContext context,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            executionContexts.Add(context);
+            return ValueTask.FromResult(new StrategyResultEnvelope(
+                context.Binding.StrategyId,
+                context.Binding.StrategyVersion,
+                Guid.NewGuid(),
+                StrategyOutcome.NeedsManager,
+                [],
+                [],
+                [
+                    new StrategyDiagnosticRef(
+                        new StrategyDiagnosticCode(diagnosticCode),
+                        StrategyDiagnosticSensitivity.Normal,
+                        resultHash,
+                        diagnosticSummary,
+                        RestrictedEvidenceReference: null,
+                        ProcessDiagnosticRetrySafety.SafeToRetry,
+                        ProcessDiagnosticIdempotencyClassification.Idempotent)
+                ],
+                [
+                    new ManagerSignal(
+                        new ManagerSignalCode(diagnosticCode),
+                        resultHash,
+                        diagnosticSummary)
+                ],
+                resultHash));
         }
     }
 

@@ -1,10 +1,16 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Mcp;
+using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Security;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using CapabilityKey = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKey;
+using McpRuntimeDiscoveredTool = CanDoItAll.AgentFramework.Mcp.Abstractions.DiscoveredMcpTool;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -17,6 +23,10 @@ public sealed partial class MafAgentRuntime
         private const string PlaywrightVisionCapability = "vision";
         private const int MaxBrowserMcpToolResultCharacters = 12000;
         private const int MaxScreenshotResultCharacters = 2000;
+        private static readonly JsonElement DefaultMcpToolInputSchema = JsonDocument
+            .Parse("""{"type":"object","additionalProperties":true}""")
+            .RootElement
+            .Clone();
 
         public async Task AddMcpToolsAsync(
             RuntimeCapabilityState state,
@@ -60,6 +70,21 @@ public sealed partial class MafAgentRuntime
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(configuration.Command))
+            {
+                await AddLocalMcpToolsAsync(
+                    state,
+                    capability,
+                    configuration,
+                    agent,
+                    provider,
+                    allowedTools,
+                    wrappedToolApprovalRequired,
+                    progressCallback,
+                    cancellationToken);
+                return;
+            }
+
             var mcpClient = await CreateMcpClientAsync(capability, configuration, agent, provider, cancellationToken);
             state.AsyncDisposables.Add(mcpClient);
 
@@ -74,11 +99,92 @@ public sealed partial class MafAgentRuntime
             await progressCallback(ExecutionState.Preparing, "MCP", $"Attached {tools.Count} MCP tool(s) from '{capability.Name}'.");
         }
 
+        private async Task AddLocalMcpToolsAsync(
+            RuntimeCapabilityState state,
+            CapabilityCatalogItem capability,
+            McpCapabilityConfiguration configuration,
+            AgentDefinition agent,
+            ProviderProfile provider,
+            HashSet<string>? allowedTools,
+            bool wrappedToolApprovalRequired,
+            Func<ExecutionState, string, string, Task> progressCallback,
+            CancellationToken cancellationToken)
+        {
+            var mcpClient = await CreateLocalMcpRuntimeClientAsync(
+                    capability,
+                    configuration,
+                    agent,
+                    provider,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            state.AsyncDisposables.Add(new LocalMcpRuntimeClientLease(mcpClient));
+
+            var tools = await mcpClient.ListToolsAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var tool in tools.Where(tool => allowedTools is null || allowedTools.Contains(tool.Name.Value)))
+            {
+                var boundedTool = CreateModelContextBoundedMcpTool(CreateLocalMcpRuntimeTool(mcpClient, tool));
+                state.Tools.Add(wrappedToolApprovalRequired ? new ApprovalRequiredAIFunction(boundedTool) : boundedTool);
+            }
+
+            state.HasApprovalTools |= wrappedToolApprovalRequired;
+            await progressCallback(ExecutionState.Preparing, "MCP", $"Attached {tools.Count} MCP tool(s) from '{capability.Name}'.");
+        }
+
         private AIFunction CreateModelContextBoundedMcpTool(AIFunction tool)
         {
             return IsBrowserMcpToolName(tool.Name)
                 ? new BrowserMcpModelContextBoundedAIFunction(tool, owner.workspaceRoot, owner.workspaceScope)
                 : tool;
+        }
+
+        private static AIFunction CreateLocalMcpRuntimeTool(
+            IMcpRuntimeClient mcpClient,
+            McpRuntimeDiscoveredTool tool)
+        {
+            var innerFunction = AIFunctionFactory.Create(
+                InvokeToolAsync,
+                new AIFunctionFactoryOptions
+                {
+                    Name = tool.Name.Value,
+                    Description = string.IsNullOrWhiteSpace(tool.Description)
+                        ? tool.Name.Value
+                        : tool.Description
+                });
+
+            return new LocalMcpRuntimeAIFunction(innerFunction, ResolveMcpToolInputSchema(tool));
+
+            async Task<string> InvokeToolAsync(
+                AIFunctionArguments arguments,
+                CancellationToken cancellationToken)
+            {
+                var jsonArguments = SerializeMcpToolArguments(arguments);
+                return await mcpClient.CallToolAsync(
+                        tool.Name,
+                        jsonArguments,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        private static JsonElement ResolveMcpToolInputSchema(McpRuntimeDiscoveredTool tool)
+            => tool.InputSchema?.Clone() ?? DefaultMcpToolInputSchema.Clone();
+
+        private static string SerializeMcpToolArguments(AIFunctionArguments arguments)
+        {
+            var payload = new JsonObject();
+            foreach (var (key, value) in arguments)
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    continue;
+                }
+
+                payload[key] = value is null
+                    ? null
+                    : JsonSerializer.SerializeToNode(value, SerializerOptions);
+            }
+
+            return payload.ToJsonString(SerializerOptions);
         }
 
         private static bool IsBrowserMcpToolName(string? toolName)
@@ -407,6 +513,86 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException($"Capability '{capability.Name}' is missing a valid MCP endpoint.");
         }
 
+        private async Task<IMcpRuntimeClient> CreateLocalMcpRuntimeClientAsync(
+            CapabilityCatalogItem capability,
+            McpCapabilityConfiguration configuration,
+            AgentDefinition agent,
+            ProviderProfile provider,
+            CancellationToken cancellationToken)
+        {
+            ValidateLocalMcpConfiguration(capability, configuration);
+            ThrowIfPersistedSecretsConfigured(capability, configuration);
+            var workingDirectory = string.IsNullOrWhiteSpace(configuration.WorkingDirectory)
+                ? null
+                : owner.ResolvePathFromWorkspace(
+                    configuration.WorkingDirectory,
+                    allowExternal: (configuration.AllowedWorkingDirectories?.Count ?? 0) > 0,
+                    allowedExternalRoots: configuration.AllowedWorkingDirectories);
+            var commandExecutionService = owner.services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
+                ?? new WorkspaceCommandExecutionService(owner.workspaceRoot, new LocalWorkspaceProcessHost(), owner.workspaceScope);
+            var environmentVariables = (await ResolveSecretBindingsAsync(
+                    configuration.EnvironmentVariableBindings,
+                    agent,
+                    capability.Name,
+                    "environment variable",
+                    SecretRuntimePurposes.AgentMcpEnvironmentVariable,
+                    cancellationToken))
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair => (string?)pair.Value,
+                    StringComparer.OrdinalIgnoreCase);
+            AttachProviderCredentialForLocalMcp(capability, configuration, provider, environmentVariables);
+            var launchDescriptor = commandExecutionService.PrepareLocalMcpServerLaunch(
+                capability.Name,
+                configuration.Command!,
+                configuration.Arguments?.ToArray(),
+                workingDirectory,
+                environmentVariables,
+                approvalRequired: string.Equals(configuration.ApprovalMode, "AlwaysRequire", StringComparison.OrdinalIgnoreCase));
+            launchDescriptor = await TryUseCachedPlaywrightMcpLaunchAsync(
+                    launchDescriptor,
+                    configuration,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            var classifications = owner.ResolveCatalogOperationClassifications(capability, runtimeToolName: null);
+            var descriptor = McpDescriptorFactory.LocalStdio(
+                key: CapabilityKey.Create(capability.Key),
+                serverKey: ResolveMcpServerKey(capability, configuration),
+                displayName: ResolveCapabilityDisplayName(capability),
+                description: ResolveCapabilityDescription(capability),
+                command: launchDescriptor.Command,
+                arguments: launchDescriptor.Arguments,
+                workingDirectory: string.IsNullOrWhiteSpace(launchDescriptor.WorkingDirectory) ? "." : launchDescriptor.WorkingDirectory,
+                allowedWorkingDirectories: configuration.AllowedWorkingDirectories ?? [],
+                allowedTools: ResolveMcpAllowedTools(configuration),
+                environmentVariableBindings: new Dictionary<string, string>(),
+                rawEnvironmentVariables: ToRawEnvironmentVariables(launchDescriptor.EnvironmentVariables),
+                approvalMode: ResolveMcpApprovalMode(configuration),
+                timeout: ResolveMcpTimeout(configuration),
+                tags: ResolveCatalogTags(capability, runtimeToolName: null, classifications),
+                operationClassifications: classifications,
+                messageFraming: ResolveMcpMessageFraming(configuration.MessageFraming, capability));
+            var clientFactory = owner.services.GetService(typeof(IMcpClientFactory)) as IMcpClientFactory
+                ?? new LocalStdioMcpClientFactory();
+            var client = await clientFactory.CreateAsync(
+                    descriptor,
+                    $"agent-{agent.Id:D}-{capability.Key}",
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            try
+            {
+                await client.StartAsync(cancellationToken).ConfigureAwait(false);
+                return client;
+            }
+            catch
+            {
+                await client.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                throw;
+            }
+        }
+
         private async Task<McpClient> CreateMcpClientAsync(
             CapabilityCatalogItem capability,
             McpCapabilityConfiguration configuration,
@@ -414,52 +600,6 @@ public sealed partial class MafAgentRuntime
             ProviderProfile provider,
             CancellationToken cancellationToken)
         {
-            if (!string.IsNullOrWhiteSpace(configuration.Command))
-            {
-                ValidateLocalMcpConfiguration(capability, configuration);
-                ThrowIfPersistedSecretsConfigured(capability, configuration);
-                var workingDirectory = string.IsNullOrWhiteSpace(configuration.WorkingDirectory)
-                    ? null
-                    : owner.ResolvePathFromWorkspace(
-                        configuration.WorkingDirectory,
-                        allowExternal: (configuration.AllowedWorkingDirectories?.Count ?? 0) > 0,
-                        allowedExternalRoots: configuration.AllowedWorkingDirectories);
-                var commandExecutionService = owner.services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
-                    ?? new WorkspaceCommandExecutionService(owner.workspaceRoot, new LocalWorkspaceProcessHost(), owner.workspaceScope);
-                var environmentVariables = (await ResolveSecretBindingsAsync(
-                        configuration.EnvironmentVariableBindings,
-                        agent,
-                        capability.Name,
-                        "environment variable",
-                        SecretRuntimePurposes.AgentMcpEnvironmentVariable,
-                        cancellationToken))
-                    .ToDictionary(
-                        pair => pair.Key,
-                        pair => (string?)pair.Value,
-                        StringComparer.OrdinalIgnoreCase);
-                AttachProviderCredentialForLocalMcp(capability, configuration, provider, environmentVariables);
-                var launchDescriptor = commandExecutionService.PrepareLocalMcpServerLaunch(
-                    capability.Name,
-                    configuration.Command,
-                    configuration.Arguments?.ToArray(),
-                    workingDirectory,
-                    environmentVariables,
-                    approvalRequired: string.Equals(configuration.ApprovalMode, "AlwaysRequire", StringComparison.OrdinalIgnoreCase));
-                var transport = new StdioClientTransport(new StdioClientTransportOptions
-                {
-                    Name = configuration.ServerName ?? capability.Name,
-                    Command = launchDescriptor.Command,
-                    Arguments = launchDescriptor.Arguments.ToList(),
-                    WorkingDirectory = launchDescriptor.WorkingDirectory,
-                    EnvironmentVariables = launchDescriptor.EnvironmentVariables.ToDictionary(
-                        pair => pair.Key,
-                        pair => pair.Value,
-                        StringComparer.OrdinalIgnoreCase)
-                });
-
-                return await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
-            }
-
             var endpoint = ResolveConfiguredEndpoint(capability, configuration);
             var httpTransportOptions = new HttpClientTransportOptions
             {
@@ -504,6 +644,39 @@ public sealed partial class MafAgentRuntime
             {
                 throw new InvalidOperationException($"Local MCP capability '{capability.Name}' must declare ApprovalMode before it can launch a stdio server.");
             }
+        }
+
+        private static IReadOnlyDictionary<string, string> ToRawEnvironmentVariables(IReadOnlyDictionary<string, string?> environmentVariables)
+        {
+            return environmentVariables
+                .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))
+                .ToDictionary(
+                    pair => pair.Key.Trim(),
+                    pair => pair.Value!,
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        private async Task<WorkspaceLocalMcpLaunchDescriptor> TryUseCachedPlaywrightMcpLaunchAsync(
+            WorkspaceLocalMcpLaunchDescriptor launchDescriptor,
+            McpCapabilityConfiguration configuration,
+            CancellationToken cancellationToken)
+        {
+            var resolution = await PlaywrightMcpLaunchResolver.TryResolveAsync(
+                    owner.workspaceRoot,
+                    launchDescriptor.Command,
+                    configuration.Arguments ?? [],
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (resolution is null)
+            {
+                return launchDescriptor;
+            }
+
+            return launchDescriptor with
+            {
+                Command = resolution.Command,
+                Arguments = resolution.Arguments
+            };
         }
 
         private static void ThrowIfPersistedSecretsConfigured(
@@ -722,6 +895,21 @@ public sealed partial class MafAgentRuntime
                     arguments,
                     result,
                     importResult.ImportedRelativePaths);
+            }
+        }
+
+        private sealed class LocalMcpRuntimeAIFunction(
+            AIFunction innerFunction,
+            JsonElement jsonSchema) : DelegatingAIFunction(innerFunction)
+        {
+            public override JsonElement JsonSchema { get; } = jsonSchema;
+        }
+
+        private sealed class LocalMcpRuntimeClientLease(IMcpRuntimeClient client) : IAsyncDisposable
+        {
+            public async ValueTask DisposeAsync()
+            {
+                await client.StopAsync(CancellationToken.None).ConfigureAwait(false);
             }
         }
 

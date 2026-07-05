@@ -149,7 +149,10 @@ public static class ManagedSeedProviderFallbacks
         }
 
         if (string.IsNullOrWhiteSpace(agent.Model) ||
-            IsOpenAiProvider(provider) && IsKnownOllamaFallbackModel(agent.Model))
+            IsOpenAiProvider(provider) && IsKnownOllamaFallbackModel(agent.Model) ||
+            provider.Kind == ProviderKind.Ollama &&
+            IsKnownManagedSeedOpenAiModel(agent.Model) &&
+            !IsProviderSupportedModel(agent.Model, provider))
         {
             return provider.DefaultModel;
         }
@@ -254,6 +257,11 @@ public static class ManagedSeedProviderFallbacks
     private static bool IsKnownOllamaFallbackModel(string model)
     {
         return ManagedSeedFallbackSuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsKnownManagedSeedOpenAiModel(string model)
+    {
+        return ManagedSeedOpenAiSuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase);
     }
 
     private static bool IsProviderSupportedModel(

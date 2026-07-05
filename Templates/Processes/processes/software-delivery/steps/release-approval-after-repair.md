@@ -8,7 +8,7 @@ Before returning Completed, write the repaired release approval record to `artif
 
 When UI screenshots are applicable, accept current-run screenshot evidence from the screenshot writeback child run referenced by the parent `capture-ui-screenshots-after-repair` step. The durable screenshot evidence may live under the child run, for example `artifacts/process-runs/<child-run-id>/steps/screenshot-handoff.md`, `artifacts/process-runs/<child-run-id>/steps/capture-ui-screenshots.md`, `artifacts/process-runs/<child-run-id>/browser/*.png`, and the Screenshots parent or image asset node ids. Do not block solely because accepted screenshot files are stored under the child process-run artifact root instead of copied into the parent run root.
 
-When repaired release approval depends on visual UI claims, require current-run `workspace_analyze_image` or `workspace_analyze_images` receipts from repaired QA or screenshot writeback evidence. Do not approve from screenshot file paths, dimensions, project-structure image asset ids, or chat summaries alone.
+When repaired release approval depends on visual UI claims, require current-run `workspace_analyze_image` or `workspace_analyze_images` receipts from repaired screenshot writeback evidence. Do not approve from screenshot file paths, dimensions, project-structure image asset ids, or chat summaries alone.
 
 Block only when the current evidence is missing a boundary-critical proof input, the release boundary is unclear, the shipped entrypoint/runtime cannot be tied to repaired QA proof, security review rejected the boundary, rollback/removal cannot be described, or no accountable support/rollback owner can be identified from either upstream evidence or the current release decision context.
 

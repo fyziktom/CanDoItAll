@@ -131,7 +131,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
     }
 
     [Fact]
-    public void Process_execution_metadata_allows_browser_tools_for_persisted_screenshot_steps()
+    public void Process_execution_metadata_does_not_infer_browser_tools_from_screenshot_step_key()
     {
         var assignment = CreateAssignment(
             Guid.NewGuid(),
@@ -148,9 +148,9 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         var run = CreateTrustedProcessRun(metadataJson);
         var allowedOperations = ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run);
 
-        Assert.True(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
-        Assert.Contains(ProcessOperationContractNames.LaunchRuntime, allowedOperations);
-        Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, allowedOperations);
+        Assert.False(ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run));
+        Assert.DoesNotContain(ProcessOperationContractNames.LaunchRuntime, allowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.CaptureRuntimeProof, allowedOperations);
     }
 
     [Fact]

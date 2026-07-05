@@ -141,7 +141,7 @@ public sealed class ContextualAgentAccessResolverTests
 
         Assert.Contains($"Selected project id: {projectId:D}", prompt);
         Assert.Contains("Selected project-structure node ids: node:alpha, node:beta.", prompt);
-        Assert.Contains("Treat \"selected nodes\" as exactly the selected node ids listed above", prompt);
+        Assert.Contains("If none are listed, work at selected project scope", prompt);
         Assert.Contains("When task ordering matters, create DependsOn dependency links", prompt);
     }
 

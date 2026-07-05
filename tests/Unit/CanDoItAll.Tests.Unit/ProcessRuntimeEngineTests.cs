@@ -417,6 +417,50 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Non_completed_strategy_result_does_not_set_completed_result_key()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                NeedsManagerResult()));
+
+        Assert.True(result.Succeeded);
+        var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, step.Status);
+        Assert.Null(step.CompletedResultKey);
+        Assert.Contains(
+            result.State.AppliedResults,
+            receipt => receipt.StepInstanceId == ActivityStepId &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked);
+    }
+
+    [Fact]
     public async Task Rework_request_reactivates_failed_run_and_requeues_failed_step()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -649,6 +693,29 @@ public sealed class ProcessRuntimeEngineTests
             [],
             [],
             "sha256:failed-result");
+    }
+
+    private static StrategyResultEnvelope NeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.runtime.test_needs_manager"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:needs-manager-diagnostic",
+                    "Unit test needs manager.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [],
+            "sha256:needs-manager-result");
     }
 
     private sealed class RecordingUnitOfWork : IProcessRuntimeUnitOfWork

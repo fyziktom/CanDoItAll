@@ -6,23 +6,62 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkspaceArtifactToolServiceTests
 {
     [Fact]
+    public async Task ConvertDocumentToMarkdown_rejects_image_assets_with_bounded_guidance()
+    {
+        var root = CreateWorkspaceRoot();
+        try
+        {
+            var imagePath = Path.Combine(root, "managed-files", "project-media", "images", "proposal.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(imagePath)!);
+            await File.WriteAllBytesAsync(imagePath, MinimalPngBytes());
+
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()));
+
+            var result = await service.ConvertDocumentToMarkdown(
+                "managed-files/project-media/images/proposal.png",
+                previewCharacters: 1200);
+
+            Assert.False(result.Succeeded);
+            Assert.Empty(result.MarkdownPreview);
+            Assert.False(result.PreviewTruncated);
+            Assert.Equal("workspace_convert_document", result.Receipt.Operation);
+            Assert.Contains("image asset", result.Message, StringComparison.Ordinal);
+            Assert.Contains("workspace_inspect_image", result.Message, StringComparison.Ordinal);
+            Assert.Contains("workspace_analyze_image", result.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task ReadImageFile_uses_supplied_operation_name_for_receipt()
     {
         var root = CreateWorkspaceRoot();
-        var imagePath = Path.Combine(root, "artifacts", "images", "frame.png");
-        Directory.CreateDirectory(Path.GetDirectoryName(imagePath)!);
-        await File.WriteAllBytesAsync(imagePath, MinimalPngBytes());
+        try
+        {
+            var imagePath = Path.Combine(root, "artifacts", "images", "frame.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(imagePath)!);
+            await File.WriteAllBytesAsync(imagePath, MinimalPngBytes());
 
-        var service = new WorkspaceArtifactToolService(
-            root,
-            new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()));
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()));
 
-        var result = await service.ReadImageFile(
-            "artifacts/images/frame.png",
-            operationName: "workspace_analyze_images");
+            var result = await service.ReadImageFile(
+                "artifacts/images/frame.png",
+                operationName: "workspace_analyze_images");
 
-        Assert.True(result.Succeeded, result.Diagnostics);
-        Assert.Equal("workspace_analyze_images", result.Receipt.Operation);
+            Assert.True(result.Succeeded, result.Diagnostics);
+            Assert.Equal("workspace_analyze_images", result.Receipt.Operation);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
     }
 
     private static string CreateWorkspaceRoot()
@@ -33,6 +72,14 @@ public sealed class WorkspaceArtifactToolServiceTests
             Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         return root;
+    }
+
+    private static void DeleteDirectory(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
     }
 
     private static byte[] MinimalPngBytes()

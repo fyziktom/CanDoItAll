@@ -94,6 +94,39 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public void Seed_catalog_normalization_preserves_empty_model_for_explicit_local_provider_assignment()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var localOllama = Assert.Single(
+            seed.Providers,
+            item => item.Kind == ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Local Ollama", StringComparison.Ordinal));
+        var financialStrategist = Assert.Single(
+            seed.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+        var catalog = seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == financialStrategist.Id
+                    ? agent with
+                    {
+                        ProviderProfileId = localOllama.Id,
+                        Model = string.Empty
+                    }
+                    : agent)
+                .ToList()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        var normalizedFinancialStrategist = Assert.Single(
+            normalized.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+
+        Assert.Equal(localOllama.Id, normalizedFinancialStrategist.ProviderProfileId);
+        Assert.Empty(normalizedFinancialStrategist.Model);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_playwright_mcp_for_ui_delivery_agents()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -115,10 +148,14 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Equal("npx", root.GetProperty("command").GetString());
         Assert.Equal(".", root.GetProperty("workingDirectory").GetString());
         Assert.Equal("newlineDelimitedJson", root.GetProperty("messageFraming").GetString());
+        Assert.Equal(120, root.GetProperty("timeoutSeconds").GetInt32());
         Assert.Equal("NeverRequire", root.GetProperty("approvalMode").GetString());
-        Assert.Contains(
-            root.GetProperty("arguments").EnumerateArray().Select(item => item.GetString()),
-            item => string.Equals(item, "@playwright/mcp@latest", StringComparison.Ordinal));
+        var arguments = root.GetProperty("arguments")
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToList();
+        Assert.Contains(arguments, item => string.Equals(item, "--yes", StringComparison.Ordinal));
+        Assert.Contains(arguments, item => string.Equals(item, "@playwright/mcp@latest", StringComparison.Ordinal));
         var allowedTools = root.GetProperty("allowedTools")
             .EnumerateArray()
             .Select(item => item.GetString())
@@ -322,6 +359,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.False(captureEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
         Assert.Contains("Start the application once", captureEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Use Playwright MCP", captureEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("DotNetAppProjectFileAlias", captureEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not pass `.sln`, `.slnx`", captureEditor.Instructions, StringComparison.Ordinal);
 
         Assert.True(reviewTemplate.IsTemplate);
         Assert.Equal("screenshot-review-storage-agent", reviewTemplate.TemplateKey);
@@ -332,6 +371,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             capabilityIdsByKey["frontend-skill"],
             capabilityIdsByKey["workspace-create-directory"],
             capabilityIdsByKey["workspace-write-file"],
+            capabilityIdsByKey["workspace-inspect-image"],
+            capabilityIdsByKey["workspace-analyze-image"],
+            capabilityIdsByKey["workspace-analyze-images"],
             capabilityIdsByKey["workspace-source-rag"]);
 
         var reviewEditor = await workspaceService.GetAgentEditorAsync(reviewTemplate.Id);
@@ -349,6 +391,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.True(reviewEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
         Assert.Contains("project_structure_asset_create", reviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("objectType` `ImageAsset", reviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("source visual target ImageAsset", reviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Visual target comparison", reviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_images", reviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("sourceWorkspacePath", reviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("invalid base64", reviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
 
         Assert.True(layoutTemplate.IsTemplate);
         Assert.Equal("layout-image-generation-agent", layoutTemplate.TemplateKey);
@@ -464,10 +511,21 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.True(deliveryManagerEditor.ProcessAccess.AllowAllDefinitions);
         Assert.Equal(AgentWorkspaceToolProfileKind.BusinessAnalysis, deliveryManagerEditor.WorkspaceToolAccess.Profile);
 
+        var qaObserver = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
+        var qaObserverEditor = await workspaceService.GetAgentEditorAsync(qaObserver.Id);
+        Assert.True(qaObserverEditor.ProjectStructureAccess.CanRead);
+        Assert.True(qaObserverEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(qaObserverEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(qaObserverEditor.ProcessAccess.CanRead);
+        Assert.False(qaObserverEditor.ProcessAccess.CanWrite);
+        Assert.True(qaObserverEditor.ProcessAccess.AllowAllDefinitions);
+        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, qaObserverEditor.WorkspaceToolAccess.Profile);
+
         foreach (var agentName in new[]
                  {
                      "Programming Workspace Analyst",
-                     "Delivery QA Observer",
                      "Code Review Lead",
                      "UI Review Lead",
                      "Security Reviewer",
@@ -662,6 +720,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("domain-specific classes but only stock template CSS", instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_stop", instructions, StringComparison.Ordinal);
         Assert.Contains("cleanup.json", instructions, StringComparison.Ordinal);
+        Assert.Contains("DotNetAppProjectFileAlias", instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_run", instructions, StringComparison.Ordinal);
+        Assert.Contains("targetPath must be a runnable project file", instructions, StringComparison.Ordinal);
         Assert.Contains("one run-app proof node, one run-tests proof node, and one manager summary node", instructions, StringComparison.Ordinal);
     }
 
@@ -763,6 +824,19 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertHasCapabilities(businessStrategistAgent, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(marketingSpecialistAgent, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+
+        var qaEditor = await workspaceService.GetAgentEditorAsync(qaAgent.Id);
+        var dotnetDeveloperEditor = await workspaceService.GetAgentEditorAsync(dotnetDeveloperAgent.Id);
+        var blazorDeveloperEditor = await workspaceService.GetAgentEditorAsync(blazorDeveloperAgent.Id);
+        var dotnetQaEditor = await workspaceService.GetAgentEditorAsync(dotnetQaAgent.Id);
+        Assert.Contains("DotNetAppProjectFileAlias", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_run", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("DotNetAppProjectFileAlias", dotnetDeveloperEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("run target must be the runnable project file", dotnetDeveloperEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("DotNetAppProjectFileAlias", blazorDeveloperEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("run target must be the runnable project file", blazorDeveloperEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("DotNetAppProjectFileAlias", dotnetQaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Never pass a `.sln`, `.slnx`", dotnetQaEditor.Instructions, StringComparison.Ordinal);
         Assert.DoesNotContain(architectAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(programmingAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(qaAgent.Capabilities, item => string.Equals(item.CapabilityKey, "project-structure-central", StringComparison.OrdinalIgnoreCase));
@@ -934,6 +1008,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("component-library", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-theme", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-skill", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("If the process step includes `LaunchRuntime` and `CaptureRuntimeProof`", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("When Playwright or screenshot review exposes a defect", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not assume legacy route names from earlier sample runs", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("stale evidence", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -947,6 +1022,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("If a .NET app is not already running", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_image", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_images", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("source visual target ImageAsset", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("downstream screenshot proof requirements", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("normal repair branch", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("provider/model is not vision-capable", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("A single static screenshot is insufficient", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a non-.NET app is not already running and only PowerShell execution is available", qaEditor.Instructions, StringComparison.Ordinal);
@@ -1024,6 +1102,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Workspace command timeout arguments are seconds", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("host and tests as siblings", dotnetDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("source visual target ImageAsset", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("stock visible scaffold chrome", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("BaseLib", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("component-library", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Before scaffolding, check the mapped product root", blazorDeveloper.Instructions, StringComparison.Ordinal);
@@ -1031,6 +1111,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Workspace command timeout arguments are seconds", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("small JavaScript interop", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as current-run evidence", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("source visual target ImageAsset", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("stock visible scaffold chrome", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package.json", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package manager", javascriptDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloper.Instructions, StringComparison.Ordinal);
@@ -1284,6 +1366,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Before any scaffold call", refreshedInstructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", refreshedInstructions, StringComparison.Ordinal);
         Assert.Contains("When writing xUnit tests, include a visible `using Xunit;`", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("DotNetAppProjectFileAlias", refreshedInstructions, StringComparison.Ordinal);
+        Assert.Contains("run target must be the runnable project file", refreshedInstructions, StringComparison.Ordinal);
         Assert.Contains("custom route backed only by scaffold-default `app.css` and layout CSS", refreshedInstructions, StringComparison.Ordinal);
         Assert.Contains("custom class names without matching loaded styles", refreshedInstructions, StringComparison.Ordinal);
     }

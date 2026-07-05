@@ -220,13 +220,14 @@ internal static class SandboxWorkspaceSeedNormalizer
             }
 
             idMap[seededAgent.Id] = match.Id;
+            var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(match, seededAgent, providersById);
             var mergedAgent = match with
             {
                 RoleTitle = string.IsNullOrWhiteSpace(match.RoleTitle) ? seededAgent.RoleTitle : match.RoleTitle,
                 Summary = string.IsNullOrWhiteSpace(match.Summary) ? seededAgent.Summary : match.Summary,
                 Instructions = string.IsNullOrWhiteSpace(match.Instructions) ? seededAgent.Instructions : match.Instructions,
                 ProviderProfileId = match.ProviderProfileId ?? seededAgent.ProviderProfileId,
-                Model = string.IsNullOrWhiteSpace(match.Model) ? seededAgent.Model : match.Model,
+                Model = ResolveMergedAgentModel(match, seededAgent, preserveProviderAssignment),
                 RequirePerServiceCallChatHistoryPersistence = match.RequirePerServiceCallChatHistoryPersistence || seededAgent.RequirePerServiceCallChatHistoryPersistence,
                 EnableBackgroundResponses = match.EnableBackgroundResponses || seededAgent.EnableBackgroundResponses,
                 ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededAgent.ConfigurationJson : match.ConfigurationJson,
@@ -243,6 +244,21 @@ internal static class SandboxWorkspaceSeedNormalizer
         }
 
         return new MergeResult<AgentDefinition>(merged.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList(), idMap);
+    }
+
+    private static string ResolveMergedAgentModel(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent,
+        bool preserveProviderAssignment)
+    {
+        if (preserveProviderAssignment)
+        {
+            return string.IsNullOrWhiteSpace(existingAgent.Model)
+                ? string.Empty
+                : existingAgent.Model;
+        }
+
+        return string.IsNullOrWhiteSpace(existingAgent.Model) ? seededAgent.Model : existingAgent.Model;
     }
 
     private static AgentDefinition RemapSeedAgent(
@@ -287,10 +303,67 @@ internal static class SandboxWorkspaceSeedNormalizer
         if (TryGetManagedSeedVersion(existingAgent, out var currentSeedVersion) &&
             string.Equals(currentSeedVersion, managedSeedVersion, StringComparison.OrdinalIgnoreCase))
         {
-            return false;
+            return HasManagedAccessPolicyDrift(existingAgent, seededAgent);
         }
 
         return !string.IsNullOrWhiteSpace(seededAgent.TemplateKey);
+    }
+
+    private static bool HasManagedAccessPolicyDrift(AgentDefinition existingAgent, AgentDefinition seededAgent)
+    {
+        return !ProjectStructureAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
+               !ProcessAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
+               !WorkspaceToolAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
+               !ImageGenerationAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson);
+    }
+
+    private static bool ProjectStructureAccessEquals(string existingConfigurationJson, string seededConfigurationJson)
+    {
+        var existing = AgentProjectStructureAccessMetadata.Read(existingConfigurationJson);
+        var seeded = AgentProjectStructureAccessMetadata.Read(seededConfigurationJson);
+        return existing.CanRead == seeded.CanRead &&
+               existing.CanWrite == seeded.CanWrite &&
+               existing.AllowAllProjects == seeded.AllowAllProjects &&
+               existing.AllowedProjectIds.SequenceEqual(seeded.AllowedProjectIds);
+    }
+
+    private static bool ProcessAccessEquals(string existingConfigurationJson, string seededConfigurationJson)
+    {
+        var existing = AgentProcessAccessMetadata.Read(existingConfigurationJson);
+        var seeded = AgentProcessAccessMetadata.Read(seededConfigurationJson);
+        return existing.CanRead == seeded.CanRead &&
+               existing.CanWrite == seeded.CanWrite &&
+               existing.AllowAllDefinitions == seeded.AllowAllDefinitions &&
+               existing.AllowedDefinitionIds.SequenceEqual(seeded.AllowedDefinitionIds);
+    }
+
+    private static bool WorkspaceToolAccessEquals(string existingConfigurationJson, string seededConfigurationJson)
+    {
+        var existing = AgentWorkspaceToolAccessMetadata.Read(existingConfigurationJson);
+        var seeded = AgentWorkspaceToolAccessMetadata.Read(seededConfigurationJson);
+        return existing.Profile == seeded.Profile &&
+               existing.CanReadFiles == seeded.CanReadFiles &&
+               existing.CanWriteFiles == seeded.CanWriteFiles &&
+               existing.CanRunValidationCommands == seeded.CanRunValidationCommands &&
+               existing.CanRunLocalScripts == seeded.CanRunLocalScripts &&
+               existing.CanScaffoldProjects == seeded.CanScaffoldProjects &&
+               existing.CanManageWorkspacePaths == seeded.CanManageWorkspacePaths &&
+               existing.CanTransformArtifacts == seeded.CanTransformArtifacts &&
+               existing.CanReadStorage == seeded.CanReadStorage &&
+               existing.CanWriteStorage == seeded.CanWriteStorage &&
+               existing.AllowAllStorageCatalogs == seeded.AllowAllStorageCatalogs &&
+               existing.AllowedExternalTargetAliases.SequenceEqual(seeded.AllowedExternalTargetAliases, StringComparer.OrdinalIgnoreCase) &&
+               existing.AllowedStorageCatalogIds.SequenceEqual(seeded.AllowedStorageCatalogIds);
+    }
+
+    private static bool ImageGenerationAccessEquals(string existingConfigurationJson, string seededConfigurationJson)
+    {
+        var existing = AgentImageGenerationAccessMetadata.Read(existingConfigurationJson);
+        var seeded = AgentImageGenerationAccessMetadata.Read(seededConfigurationJson);
+        return existing.CanGenerateImages == seeded.CanGenerateImages &&
+               existing.PreferredProviderProfileId == seeded.PreferredProviderProfileId &&
+               string.Equals(existing.DefaultModel, seeded.DefaultModel, StringComparison.Ordinal) &&
+               existing.CanStoreImagesAsProjectAssets == seeded.CanStoreImagesAsProjectAssets;
     }
 
     private static AgentDefinition RefreshManagedAgentFromSeed(

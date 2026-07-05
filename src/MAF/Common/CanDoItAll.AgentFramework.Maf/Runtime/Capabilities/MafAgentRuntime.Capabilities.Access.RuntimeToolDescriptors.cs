@@ -164,6 +164,11 @@ public sealed partial class MafAgentRuntime
             return ToClassificationSet(CapabilityOperationClassification.Write);
         }
 
+        if (IsImageInspectionRuntimeTool(runtimeToolName))
+        {
+            return ToClassificationSet(CapabilityOperationClassification.Read);
+        }
+
         var operationClassifications = metadata.OperationRequirements
             .SelectMany(requirement => requirement.AnyOf)
             .SelectMany(ProcessAllowedOperationsCapabilityPolicyCompiler.ResolveClassifications)
@@ -182,6 +187,13 @@ public sealed partial class MafAgentRuntime
             ToolInvocationClassification.LocalMcp or ToolInvocationClassification.HostedMcp => ToClassificationSet(CapabilityOperationClassification.McpTool),
             _ => ToClassificationSet(CapabilityOperationClassification.Read)
         };
+    }
+
+    private static bool IsImageInspectionRuntimeTool(string runtimeToolName)
+    {
+        return string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceInspectImage, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceAnalyzeImage, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceAnalyzeImages, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryCreateRuntimeToolName(string toolName, out RuntimeToolName runtimeToolName)

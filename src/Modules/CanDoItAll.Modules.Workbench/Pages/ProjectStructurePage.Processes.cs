@@ -41,6 +41,9 @@ public partial class ProjectStructurePage
     [Inject]
     private IProcessHistoricalRunCostReader ProcessHistoricalRunCostReader { get; set; } = default!;
 
+    [Inject]
+    private IEnumerable<IProjectStructureProcessLaunchVariableContributor> ProcessLaunchVariableContributors { get; set; } = default!;
+
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
     private CancellationTokenSource? processStartHistoricalEstimateRefreshCts;
@@ -204,9 +207,11 @@ public partial class ProjectStructurePage
     {
         CloseQuickActionDialog();
         ResetProcessStartEstimateState();
+        var definitionKey = ResolveProcessDefinitionKey(processDefinitionId);
         processStartDialog = new ProjectStructureProcessStartDialogState(
             ProjectId,
             processDefinitionId,
+            definitionKey,
             processNodeId,
             processNodeTitle,
             targetNode?.Id,
@@ -527,7 +532,7 @@ public partial class ProjectStructurePage
         var targetNode = ResolveNode(dialog.TargetNodeId) ?? processNode;
         var variables = CreateProcessLaunchVariables(dialog, processNode, targetNode);
         return new ProcessLaunchRequest(
-            DefinitionKey: null,
+            DefinitionKey: string.IsNullOrWhiteSpace(dialog.DefinitionKey) ? null : dialog.DefinitionKey,
             new ProcessDefinitionId(dialog.ProcessDefinitionId),
             LiveRunProfileKey: null,
             ProjectId,
@@ -585,7 +590,47 @@ public partial class ProjectStructurePage
             ApplyProductRootLaunchVariables(variables, outputRoot);
         }
 
+        ApplyProcessLaunchVariableContributors(
+            variables,
+            dialog,
+            targetNode);
+
         return variables;
+    }
+
+    private void ApplyProcessLaunchVariableContributors(
+        IDictionary<string, string> variables,
+        ProjectStructureProcessStartDialogState dialog,
+        ProjectStructureNode? targetNode)
+    {
+        if (surface is null ||
+            targetNode is null ||
+            string.IsNullOrWhiteSpace(dialog.DefinitionKey))
+        {
+            return;
+        }
+
+        var context = new ProjectStructureProcessLaunchVariableContext(
+            ProjectId,
+            surface,
+            targetNode,
+            dialog.DefinitionKey,
+            dialog.ProcessDefinitionId,
+            ParentRunId: null,
+            ParentStepId: null,
+            ParentAssignment: null,
+            IsSubprocess: false);
+        foreach (var contributor in ProcessLaunchVariableContributors)
+        {
+            contributor.Enrich(context, variables);
+        }
+    }
+
+    private string ResolveProcessDefinitionKey(Guid processDefinitionId)
+    {
+        return processDefinitionId == Guid.Empty
+            ? string.Empty
+            : ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId));
     }
 
     private static string BuildProjectStructureContextSummary(
@@ -702,6 +747,11 @@ public partial class ProjectStructurePage
 
     private static bool IsVisualTargetAsset(ProjectStructureNode node)
     {
+        if (!ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(node))
+        {
+            return false;
+        }
+
         if (node.ObjectType != ProjectObjectType.ImageAsset)
         {
             return false;
@@ -739,7 +789,12 @@ public partial class ProjectStructurePage
         ProjectStructureNode focusNode)
     {
         var projectRootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(currentSurface.ProjectId);
-        var childrenByParent = currentSurface.Nodes
+        var contextNodes = currentSurface.Nodes
+            .Where(node =>
+                string.Equals(node.Id, focusNode.Id, StringComparison.Ordinal) ||
+                ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(node))
+            .ToArray();
+        var childrenByParent = contextNodes
             .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
             .GroupBy(node => node.ParentId!, StringComparer.Ordinal)
             .ToDictionary(
@@ -776,7 +831,7 @@ public partial class ProjectStructurePage
             }
         }
 
-        foreach (var node in currentSurface.Nodes.OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase))
+        foreach (var node in contextNodes.OrderBy(node => node.Title, StringComparer.OrdinalIgnoreCase))
         {
             Visit(node, 0);
         }
@@ -878,6 +933,7 @@ public partial class ProjectStructurePage
             : statusMessage;
         return dialog with
         {
+            DefinitionKey = string.IsNullOrWhiteSpace(dialog.DefinitionKey) ? launchPlan.DefinitionKey : dialog.DefinitionKey,
             LaunchPlanId = launchPlan.PlanId.Value,
             Stage = ProjectStructureProcessStartStage.Staffing,
             IsBusy = false,
@@ -1626,10 +1682,23 @@ public partial class ProjectStructurePage
             return string.Empty;
         }
 
-        var normalized = Regex.Replace(value, @"\s+", " ").Trim();
+        var normalized = RedactNonCitableProcessContextPaths(Regex.Replace(value, @"\s+", " ").Trim());
         return normalized.Length <= maxLength
             ? normalized
             : normalized[..maxLength].TrimEnd() + "...";
+    }
+
+    private static string RedactNonCitableProcessContextPaths(string value)
+    {
+        var withoutNativePaths = Regex.Replace(
+            value,
+            @"(?:file://[^\s""'<>]+|[A-Za-z]:\\[^\s""'<>|]+|\\\\[^\s""'<>|]+)",
+            "[storage-path]");
+        return Regex.Replace(
+            withoutNativePaths,
+            @"\b(?:artifacts/scopes|project-media|managed-files|tool-runs)[^\s""'<>]*",
+            "[storage-path]",
+            RegexOptions.IgnoreCase);
     }
 
     private static string ResolveStepDisplayName(ProcessLaunchStepView step)

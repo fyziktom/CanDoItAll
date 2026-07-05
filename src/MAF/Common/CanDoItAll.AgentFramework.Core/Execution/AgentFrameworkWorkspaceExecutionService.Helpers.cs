@@ -18,7 +18,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ChatSessionRecord? Session = null,
         IReadOnlyList<ExecutionApprovalRecord>? RunApprovals = null,
         AgentRunMetric? Metric = null,
-        IReadOnlyList<ProviderUsageObservation>? UsageObservations = null);
+        IReadOnlyList<ProviderUsageObservation>? UsageObservations = null,
+        IReadOnlyList<ToolExecutionReceiptRecord>? ToolReceipts = null);
 
     private Task<SandboxWorkspaceExecutionState> UpdateExecutionStateAsync(
         Func<SandboxWorkspaceExecutionState, SandboxWorkspaceExecutionState> update,
@@ -121,7 +122,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     mutation.RunApprovals ?? currentDetail?.Approvals ?? [],
                     currentDetail?.Artifacts ?? [],
                     currentDetail?.Checkpoints ?? [],
-                    currentDetail?.ToolReceipts ?? []),
+                    mutation.ToolReceipts is null
+                        ? currentDetail?.ToolReceipts ?? []
+                        : InsertToolReceipts(currentDetail?.ToolReceipts ?? [], mutation.ToolReceipts)),
                 cancellationToken);
             return;
         }
@@ -145,7 +148,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 : InsertMetric(executionState.Metrics, mutation.Metric),
             ProviderUsageObservations = mutation.UsageObservations is null
                 ? executionState.ProviderUsageObservations
-                : InsertUsageObservations(executionState.ProviderUsageObservations, mutation.UsageObservations)
+                : InsertUsageObservations(executionState.ProviderUsageObservations, mutation.UsageObservations),
+            ToolExecutionReceipts = mutation.ToolReceipts is null
+                ? executionState.ToolExecutionReceipts
+                : InsertToolReceipts(executionState.ToolExecutionReceipts, mutation.ToolReceipts)
         }, cancellationToken);
     }
 
@@ -744,6 +750,28 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 observation,
                 item => item.Id == observation.Id,
                 item => item.CreatedAtUtc);
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<ToolExecutionReceiptRecord> InsertToolReceipts(
+        IReadOnlyList<ToolExecutionReceiptRecord> receipts,
+        IReadOnlyList<ToolExecutionReceiptRecord> newReceipts)
+    {
+        if (newReceipts.Count == 0)
+        {
+            return receipts;
+        }
+
+        var result = receipts;
+        foreach (var receipt in newReceipts)
+        {
+            result = InsertOrReplaceDescending(
+                result,
+                receipt,
+                item => item.Id == receipt.Id,
+                item => item.CompletedAtUtc);
         }
 
         return result;

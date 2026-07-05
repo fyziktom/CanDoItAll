@@ -306,7 +306,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                         RiskClass: "LocalExecution:Mcp",
                         ApprovalMode: "NotRequired",
                         IsolationGuarantee: "PolicyOnlyLocal",
-                        RequestSummary: "@playwright/mcp@latest, --headless, --caps, vision",
+                        RequestSummary: "--yes, @playwright/mcp@latest, --headless, --caps, vision",
                             WorkingDirectory: application.ActiveProfile.WorkspaceRootPath,
                             ExitSummary: "Prepared",
                             StartedAtUtc: now,
@@ -364,7 +364,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
     }
 
     [Fact]
-    public async Task GetExecutionRunDetailAsync_projects_playwright_browser_calls_from_execution_logs_when_chat_history_is_empty()
+    public async Task GetExecutionRunDetailAsync_projects_playwright_browser_calls_from_execution_logs_when_session_state_is_absent()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -404,7 +404,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                     StartedAtUtc: now,
                     CompletedAtUtc: now.AddSeconds(5),
                     RuntimeSessionKey: string.Empty,
-                    SerializedSessionStateJson: BuildEmptySerializedSessionState(),
+                    SerializedSessionStateJson: null,
                     PendingApprovals: []),
                 null,
                 [
@@ -425,7 +425,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                     RiskClass: "LocalExecution:Mcp",
                     ApprovalMode: "NotRequired",
                     IsolationGuarantee: "PolicyOnlyLocal",
-                    RequestSummary: "@playwright/mcp@latest, --headless, --caps, vision",
+                    RequestSummary: "--yes, @playwright/mcp@latest, --headless, --caps, vision",
                     WorkingDirectory: application.ActiveProfile.WorkspaceRootPath,
                     ExitSummary: "Prepared",
                     StartedAtUtc: now,
@@ -581,21 +581,6 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                                 contents = resultContents
                             }
                         }
-                    }
-                }
-            });
-    }
-
-    private static string BuildEmptySerializedSessionState()
-    {
-        return JsonSerializer.Serialize(
-            new
-            {
-                stateBag = new
-                {
-                    InMemoryChatHistoryProvider = new
-                    {
-                        messages = Array.Empty<object>()
                     }
                 }
             });

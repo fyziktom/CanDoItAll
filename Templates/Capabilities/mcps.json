@@ -18,6 +18,7 @@
         "transport": "local-stdio",
         "command": "npx",
         "arguments": [
+          "--yes",
           "@playwright/mcp@latest",
           "--headless",
           "--caps",
@@ -48,6 +49,7 @@
         "serverName": "playwright-local",
         "command": "npx",
         "arguments": [
+          "--yes",
           "@playwright/mcp@latest",
           "--headless",
           "--caps",
@@ -57,6 +59,7 @@
         ],
         "workingDirectory": ".",
         "messageFraming": "newlineDelimitedJson",
+        "timeoutSeconds": 120,
         "allowedTools": [
           "browser_navigate",
           "browser_snapshot",

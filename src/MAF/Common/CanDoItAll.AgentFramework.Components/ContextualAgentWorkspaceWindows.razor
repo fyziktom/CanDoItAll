@@ -636,7 +636,7 @@
                     Prompt: BuildContextualPrompt(prompt),
                     ChatSessionId: selectedSessionId,
                     Context: BuildInvocationContext(),
-                    AutoApprovePendingToolCalls: false,
+                    AutoApprovePendingToolCalls: ShouldAutoApproveContextualRun(),
                     InputAttachmentPaths: draftAttachmentPaths));
             draftAttachmentPaths = [];
             await LoadWorkspaceAsync(selectedAgentId.Value, result.ChatSessionId ?? selectedSessionId);
@@ -1243,6 +1243,16 @@ Use these workspace artifacts as input:
             RequestedBy: ContextualWindowRequester,
             RequestedByKind: "interactive",
             MetadataJson: BuildInvocationMetadataJson());
+    }
+
+    private bool ShouldAutoApproveContextualRun()
+    {
+        return ContextualAgentAccessResolver.ShouldAutoApproveContextualRun(
+            AccessibleAgents,
+            WorkspaceKind,
+            selectedAgentId,
+            ProjectId,
+            ProcessDefinitionId);
     }
 
     private string BuildInvocationMetadataJson()

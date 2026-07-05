@@ -11,7 +11,8 @@ public sealed class ProcessExecutionAdapterBoundaryTests
     [Fact]
     public async Task Adapter_strategy_normalizes_restricted_diagnostics_into_result_envelope()
     {
-        var adapter = new RecordingExecutionAdapter(
+        var driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
             StandardProcessAdapterDescriptors.WorkflowAdapter,
             new ProcessExecutionAdapterResult(
                 StrategyOutcome.NeedsManager,
@@ -30,7 +31,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
                 [new ManagerSignal(new ManagerSignalCode("manager.review"), "sha256:signal", "Manager review required.")],
                 "Workflow adapter completed with a restricted diagnostic.",
                 "sha256:result"));
-        var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(adapter, ProcessDriverLayer.Platform);
+        var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(driver, ProcessDriverLayer.Platform);
         var factory = Assert.Single(package.StrategyFactories);
         var binding = NewBinding(package.Descriptor.DriverId, factory.Descriptor);
 
@@ -41,7 +42,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
             binding,
             binding.Inputs));
 
-        var request = Assert.Single(adapter.Requests);
+        var request = Assert.Single(driver.Requests);
         Assert.Equal(ProcessExecutionAdapterKind.Workflow, request.Kind);
         Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -53,12 +54,40 @@ public sealed class ProcessExecutionAdapterBoundaryTests
     }
 
     [Fact]
+    public async Task Step_execution_driver_contract_dispatches_through_typed_adapter_request()
+    {
+        var expectedResult = ProcessExecutionAdapterResult.Succeeded("workflow completed", "sha256:workflow");
+        IProcessStepExecutionDriver driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
+            StandardProcessAdapterDescriptors.WorkflowAdapter,
+            expectedResult);
+        var binding = NewBinding(
+            driver.Descriptor.DriverId,
+            driver.Descriptor.Strategy);
+        var request = new ProcessExecutionAdapterRequest(
+            ProcessRunId.New(),
+            ProcessStepInstanceId.New(),
+            driver.Descriptor.Adapter.Kind,
+            new ProcessExecutionAdapterOperationKey("adapter.workflow.standard.execute"),
+            binding,
+            binding.Inputs,
+            []);
+
+        var result = await driver.ExecuteStepAsync(request);
+
+        Assert.Equal(expectedResult, result);
+        Assert.Equal(StandardProcessAdapterDriverIds.Workflow, driver.Descriptor.DriverId);
+        Assert.Equal(StandardProcessAdapterDescriptors.WorkflowAdapter, driver.Descriptor.Adapter);
+    }
+
+    [Fact]
     public void Layered_driver_slice_orders_foundation_before_adapter_driver()
     {
-        var adapter = new RecordingExecutionAdapter(
+        var driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
             StandardProcessAdapterDescriptors.WorkflowAdapter,
             ProcessExecutionAdapterResult.Succeeded("workflow completed", "sha256:workflow"));
-        var packages = StandardProcessAdapterDriverPackageFactory.CreateLayeredPackages(adapter);
+        var packages = StandardProcessAdapterDriverPackageFactory.CreateLayeredPackages(driver);
         var catalog = new ProcessDriverCatalog(packages);
 
         var result = catalog.Match(new ProcessCapabilityRequest(
@@ -97,7 +126,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
         Assert.Equal(ProcessAdapterMutationAuditOutcome.UnauthorizedPathMutation, report.Outcome);
         Assert.Contains(report.Findings, finding => finding.RepositoryRelativePath == "secrets.txt");
         Assert.StartsWith("sha256:", report.RestrictedDiffReference, StringComparison.Ordinal);
-        Assert.Equal(["git status --short", "git diff --"], executor.SanitizedCommands);
+        Assert.Equal(["git status --short", "git diff"], executor.SanitizedCommands);
     }
 
     [Fact]
@@ -181,6 +210,27 @@ public sealed class ProcessExecutionAdapterBoundaryTests
         public List<ProcessExecutionAdapterRequest> Requests { get; } = [];
 
         public ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
+            ProcessExecutionAdapterRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class RecordingStepExecutionDriver(
+        DriverId driverId,
+        ProcessExecutionAdapterDescriptor adapterDescriptor,
+        ProcessExecutionAdapterResult result) : IProcessStepExecutionDriver
+    {
+        public ProcessStepExecutionDriverDescriptor Descriptor { get; } = new(
+            driverId,
+            adapterDescriptor,
+            adapterDescriptor.Strategy);
+
+        public List<ProcessExecutionAdapterRequest> Requests { get; } = [];
+
+        public ValueTask<ProcessExecutionAdapterResult> ExecuteStepAsync(
             ProcessExecutionAdapterRequest request,
             CancellationToken cancellationToken = default)
         {

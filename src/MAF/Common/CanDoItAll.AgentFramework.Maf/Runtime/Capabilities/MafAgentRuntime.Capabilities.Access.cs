@@ -64,8 +64,26 @@ public sealed partial class MafAgentRuntime
         IEnumerable<CapabilityExposureDescriptor> descriptors)
         => descriptors
             .GroupBy(CreateCapabilityDescriptorKey, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
+            .Select(MergeCapabilityDescriptors)
             .ToList();
+
+    private static CapabilityExposureDescriptor MergeCapabilityDescriptors(
+        IGrouping<string, CapabilityExposureDescriptor> descriptors)
+    {
+        var first = descriptors.First();
+        var tags = descriptors
+            .SelectMany(descriptor => descriptor.Tags)
+            .ToHashSet();
+        var operationClassifications = descriptors
+            .SelectMany(descriptor => descriptor.OperationClassifications)
+            .ToHashSet();
+
+        return first with
+        {
+            Tags = tags,
+            OperationClassifications = operationClassifications
+        };
+    }
 
     private static string CreateCapabilityDescriptorKey(CapabilityExposureDescriptor descriptor)
     {
