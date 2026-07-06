@@ -33,13 +33,16 @@ public sealed class CapabilityMigrationCleanupGuardTests
     public void SB12_INV_CLEANUP_003_runtime_suppression_uses_shared_evaluator()
     {
         var accessSource = ReadRepositoryFiles("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities");
+        var runtimeProviderComposerSource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeToolProviderComposer.cs");
         var policySource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Access.Policies.cs");
 
         Assert.Contains("ICapabilityAccessPolicyEvaluator", accessSource, StringComparison.Ordinal);
-        Assert.Contains("EvaluateRuntimeToolAccess", accessSource, StringComparison.Ordinal);
-        Assert.Contains("AppendRuntimeToolAccessResult", accessSource, StringComparison.Ordinal);
+        Assert.Contains("RuntimeToolProviderAccessFilter", runtimeProviderComposerSource, StringComparison.Ordinal);
+        Assert.Contains("request.AccessPlan.Evaluator.Evaluate", runtimeProviderComposerSource, StringComparison.Ordinal);
         Assert.Contains("result.ToEffectiveSet()", accessSource, StringComparison.Ordinal);
         Assert.Contains("CapabilitySelector.ByTag(CapabilityTag.Create(\"configured\"))", policySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("EvaluateRuntimeToolAccess", accessSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppendRuntimeToolAccessResult", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ShouldExcludeSkillsForProcessStep", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ResolveProcessScopedWorkspaceToolAccess", accessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("FilterCapabilitiesForProcess", accessSource, StringComparison.Ordinal);

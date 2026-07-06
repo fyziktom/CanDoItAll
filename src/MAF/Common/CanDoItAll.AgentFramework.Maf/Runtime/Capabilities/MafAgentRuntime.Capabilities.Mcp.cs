@@ -528,8 +528,9 @@ public sealed partial class MafAgentRuntime
                     configuration.WorkingDirectory,
                     allowExternal: (configuration.AllowedWorkingDirectories?.Count ?? 0) > 0,
                     allowedExternalRoots: configuration.AllowedWorkingDirectories);
-            var commandExecutionService = owner.services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
-                ?? new WorkspaceCommandExecutionService(owner.workspaceRoot, new LocalWorkspaceProcessHost(), owner.workspaceScope);
+            var commandExecutionService = owner.dependencyResolver
+                .ResolveWorkspaceServices(owner.services, owner.workspaceRoot, owner.workspaceScope)
+                .CommandExecutionService;
             var environmentVariables = (await ResolveSecretBindingsAsync(
                     configuration.EnvironmentVariableBindings,
                     agent,

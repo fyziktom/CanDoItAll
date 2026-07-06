@@ -38,6 +38,7 @@ public static class MafProviderRuntimeServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddMafRuntimeArchitectureServices();
         services.TryAddSingleton<IProviderRuntimeDescriptorStore, ProviderProfileRuntimeDescriptorStore>();
         services.TryAddSingleton<IProviderRuntimeDescriptorSource>(
             serviceProvider => serviceProvider.GetRequiredService<IProviderRuntimeDescriptorStore>());

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -53,61 +54,130 @@ public sealed partial class MafAgentRuntime
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent)
     {
-        var agentConfiguration = DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
-        var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent);
-        var storageToolsAvailable = HasStorageRuntimePluginServices();
-        var capabilityAccessPlan = CreateRuntimeCapabilityAccessPlan(
-            agent,
-            capabilities,
-            workspaceToolAccess,
-            contextIntent,
-            storageToolsAvailable);
-        var effectiveCapabilities = capabilityAccessPlan.AllowedCatalogCapabilities;
-        var composition = CreateCapabilityComposition(
-            agent,
-            provider,
-            model,
-            effectiveCapabilities,
-            contextIntent,
-            agentConfiguration,
-            workspaceToolAccess,
-            capabilityAccessPlan);
+        var totalStopwatch = Stopwatch.StartNew();
+        try
+        {
+            var agentConfiguration = DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
+            var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent);
+            var storageToolsAvailable = HasStorageRuntimePluginServices();
+            var capabilityAccessPlan = TrackResult(
+                "capability.access-plan",
+                () => CreateRuntimeCapabilityAccessPlan(
+                    agent,
+                    capabilities,
+                    workspaceToolAccess,
+                    contextIntent,
+                    storageToolsAvailable));
+            var effectiveCapabilities = capabilityAccessPlan.AllowedCatalogCapabilities;
+            var composition = TrackResult(
+                "capability.composition",
+                () => CreateCapabilityComposition(
+                    agent,
+                    provider,
+                    model,
+                    effectiveCapabilities,
+                    contextIntent,
+                    agentConfiguration,
+                    workspaceToolAccess,
+                    capabilityAccessPlan));
 
-        AttachInitialCapabilityAccessState(composition.State, capabilityAccessPlan);
+            TrackAction(
+                "capability.initial-access-state",
+                () => AttachInitialCapabilityAccessState(composition.State, capabilityAccessPlan));
 
-        await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
-        await AttachContextContributorsAsync(
-            composition,
-            agent,
-            provider,
-            progressCallback,
-            suppressApprovalRequirements,
-            contextWorkspaceScope);
-        await AttachSkillsAsync(composition, effectiveCapabilities, progressCallback, suppressApprovalRequirements);
-        await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
-        await AttachRegisteredRuntimeToolProvidersAsync(
-            composition,
-            agent,
-            provider,
-            effectiveCapabilities,
-            progressCallback,
-            cancellationToken,
-            suppressApprovalRequirements,
-            contextWorkspaceScope,
-            contextIntent);
-        await AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements);
-        await AttachCatalogCapabilitiesAsync(
-            composition,
-            agent,
-            provider,
-            effectiveCapabilities,
-            progressCallback,
-            cancellationToken,
-            suppressApprovalRequirements);
-        await AttachCompactionAsync(composition, agent, progressCallback, suppressApprovalRequirements);
+            await TrackAsync(
+                "capability.workspace-memory",
+                () => AttachWorkspaceMemoryAsync(composition, memory, progressCallback));
+            await TrackAsync(
+                "capability.context-contributors",
+                () => AttachContextContributorsAsync(
+                    composition,
+                    agent,
+                    provider,
+                    progressCallback,
+                    suppressApprovalRequirements,
+                    contextWorkspaceScope));
+            await TrackAsync(
+                "capability.skills",
+                () => AttachSkillsAsync(composition, effectiveCapabilities, progressCallback, suppressApprovalRequirements));
+            await TrackAsync(
+                "capability.configured-workspace-tools",
+                () => AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements));
+            await TrackAsync(
+                "capability.runtime-tool-providers",
+                () => AttachRegisteredRuntimeToolProvidersAsync(
+                    composition,
+                    agent,
+                    provider,
+                    effectiveCapabilities,
+                    progressCallback,
+                    cancellationToken,
+                    suppressApprovalRequirements,
+                    contextWorkspaceScope,
+                    contextIntent));
+            await TrackAsync(
+                "capability.a2a-tools",
+                () => AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements));
+            await TrackAsync(
+                "capability.catalog-capabilities",
+                () => AttachCatalogCapabilitiesAsync(
+                    composition,
+                    agent,
+                    provider,
+                    effectiveCapabilities,
+                    progressCallback,
+                    cancellationToken,
+                    suppressApprovalRequirements));
+            await TrackAsync(
+                "capability.compaction",
+                () => AttachCompactionAsync(composition, agent, progressCallback, suppressApprovalRequirements));
 
-        DeduplicateTools(composition.State.Tools);
-        return composition.State;
+            TrackAction("capability.deduplicate-tools", () => DeduplicateTools(composition.State.Tools));
+            return composition.State;
+        }
+        finally
+        {
+            RecordCompositionMetric("capability.total", totalStopwatch.Elapsed);
+        }
+
+        async Task TrackAsync(string stage, Func<Task> action)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                await action();
+            }
+            finally
+            {
+                RecordCompositionMetric(stage, stopwatch.Elapsed);
+            }
+        }
+
+        void TrackAction(string stage, Action action)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                action();
+            }
+            finally
+            {
+                RecordCompositionMetric(stage, stopwatch.Elapsed);
+            }
+        }
+
+        TResult TrackResult<TResult>(string stage, Func<TResult> action)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                return action();
+            }
+            finally
+            {
+                RecordCompositionMetric(stage, stopwatch.Elapsed);
+            }
+        }
     }
 
     private RuntimeCapabilityComposition CreateCapabilityComposition(
@@ -120,31 +190,21 @@ public sealed partial class MafAgentRuntime
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         RuntimeCapabilityAccessPlan capabilityAccessPlan)
     {
-        var workspaceFileService = services.GetService(typeof(IWorkspaceFileService)) as IWorkspaceFileService
-            ?? new WorkspaceFileService(workspaceRoot, workspaceScope);
-        var workspaceCommandExecutionService = services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
-            ?? new WorkspaceCommandExecutionService(workspaceRoot, new LocalWorkspaceProcessHost(), workspaceScope);
-        var workspaceArtifactToolService = services.GetService(typeof(IWorkspaceArtifactToolService)) as IWorkspaceArtifactToolService
-            ?? new WorkspaceArtifactToolService(workspaceRoot, workspaceCommandExecutionService, workspaceScope);
-        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceFileService, workspaceCommandExecutionService, workspaceArtifactToolService, workspaceRoot, contextIntent.WorkspaceScope ?? workspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
+        var workspaceServices = dependencyResolver.ResolveWorkspaceServices(services, workspaceRoot, workspaceScope);
+        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceServices.FileService, workspaceServices.CommandExecutionService, workspaceServices.ArtifactToolService, workspaceRoot, contextIntent.WorkspaceScope ?? workspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(this);
         var contextBuilder = new ContextCapabilityBuilder(this);
         var contextContributors = services.GetServices<IAgentContextContributor>().ToList();
-        var runtimeToolProviders = services.GetServices<IAgentRuntimeToolProvider>()
-            .Select(CreateRuntimeToolProviderRegistration)
-            .OrderBy(registration => registration.Provider.Order)
-            .ThenBy(registration => registration.Descriptor.ProviderKey, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(registration => registration.Provider.GetType().FullName, StringComparer.Ordinal)
-            .ToList();
-        EnsureRuntimeToolProviderKeysAreUnique(runtimeToolProviders);
+        var runtimeToolProviders = runtimeToolProviderComposer.ComposeRegistrations(
+            services.GetServices<IAgentRuntimeToolProvider>());
         var mcpBuilder = new McpCapabilityBuilder(this);
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
         var toolBuilder = new ToolCapabilityBuilder(
             this,
             workspacePlugin,
             storagePlugin,
-            workspaceCommandExecutionService,
+            workspaceServices.CommandExecutionService,
             workspaceToolAccess,
             fileSkillExecutionPolicies,
             capabilityAccessPlan);
@@ -165,6 +225,14 @@ public sealed partial class MafAgentRuntime
     {
         return services.GetService(typeof(IStorageCatalogService)) is not null &&
                services.GetService(typeof(IStorageDriverRegistry)) is not null;
+    }
+
+    private void RecordCompositionMetric(string stage, TimeSpan elapsed)
+    {
+        compositionMetrics.Record(new MafRuntimeCompositionMeasurement(
+            stage,
+            elapsed,
+            nameof(MafAgentRuntime)));
     }
 
     private static AgentWorkspaceToolAccessSettings ResolveWorkspaceToolAccessForRuntime(AgentDefinition agent)
@@ -972,10 +1040,6 @@ public sealed partial class MafAgentRuntime
         McpCapabilityBuilder McpBuilder,
         ToolCapabilityBuilder ToolBuilder,
         RuntimeCapabilityAccessPlan CapabilityAccessPlan);
-
-    private sealed record RuntimeToolProviderRegistration(
-        IAgentRuntimeToolProvider Provider,
-        AgentRuntimeToolProviderDescriptor Descriptor);
 
     private sealed class SkillCapabilityConfiguration
     {

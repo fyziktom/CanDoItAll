@@ -1,0 +1,1 @@
+Parent node includes two child tasks: design payload shape and validate browser/API proof. Summarize the subtree dependencies.

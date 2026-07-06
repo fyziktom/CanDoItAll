@@ -181,33 +181,4 @@ public sealed partial class MafAgentRuntime
            runtimeToolName.StartsWith("storage_", StringComparison.OrdinalIgnoreCase) ||
            ToolContractCatalog.WorkspaceToolNames.Contains(runtimeToolName, StringComparer.OrdinalIgnoreCase);
 
-    private static CapabilityAccessEvaluationResult EvaluateRuntimeToolAccess(
-        RuntimeCapabilityAccessPlan accessPlan,
-        IReadOnlyList<CapabilityExposureDescriptor> candidates)
-    {
-        return accessPlan.Evaluator.Evaluate(new CapabilityAccessEvaluationContext(
-            candidates,
-            RequiredCapabilities: [],
-            accessPlan.Policies,
-            accessPlan.CorrelationId));
-    }
-
-    private static void AppendRuntimeToolAccessResult(
-        RuntimeCapabilityState state,
-        CapabilityAccessEvaluationResult result)
-    {
-        state.EffectiveCapabilityDescriptors.AddRange(result.AllowedCapabilities);
-        state.CapabilityAccessDiagnostics.AddRange(result.Diagnostics);
-    }
-
-    private sealed record RuntimeCapabilityAccessPlan(
-        EffectiveCapabilitySet EffectiveCapabilities,
-        IReadOnlyList<CapabilityCatalogItem> AllowedCatalogCapabilities,
-        IReadOnlyList<CapabilityAccessPolicy> Policies,
-        ICapabilityAccessPolicyEvaluator Evaluator,
-        IReadOnlyList<CapabilityExposureDescriptor> InitialAllowedCapabilities,
-        IReadOnlyList<SuppressedCapabilityDiagnostic> InitialDiagnostics,
-        IReadOnlyDictionary<CapabilityIdentity, CapabilityCatalogItem> CatalogCapabilitiesByIdentity,
-        IReadOnlyDictionary<string, CapabilityExposureDescriptor> DescriptorsByKey,
-        string CorrelationId);
 }

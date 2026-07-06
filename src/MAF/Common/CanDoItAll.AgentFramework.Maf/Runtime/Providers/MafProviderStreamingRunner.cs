@@ -6,9 +6,22 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal interface IMafProviderStreamingRunner
 {
-    private async IAsyncEnumerable<AgentResponseUpdate> RunProviderStreamingAsync(
+    IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(
+        ProviderProfile provider,
+        string model,
+        AIAgent runtimeAgent,
+        AgentSession runtimeSession,
+        IEnumerable<ChatMessage> inputMessages,
+        ChatClientAgentRunOptions runOptions,
+        CancellationToken cancellationToken);
+}
+
+internal sealed class MafProviderStreamingRunner(
+    IMafProviderStreamingDispatchGate providerStreamingDispatchGate) : IMafProviderStreamingRunner
+{
+    public async IAsyncEnumerable<AgentResponseUpdate> RunStreamingAsync(
         ProviderProfile provider,
         string model,
         AIAgent runtimeAgent,
@@ -17,7 +30,7 @@ public sealed partial class MafAgentRuntime
         ChatClientAgentRunOptions runOptions,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        using var timeoutCancellation = new CancellationTokenSource(ResolveProviderNetworkTimeout(provider));
+        using var timeoutCancellation = new CancellationTokenSource(MafProviderRuntimeSettings.ResolveNetworkTimeout(provider));
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             timeoutCancellation.Token);
@@ -69,7 +82,7 @@ public sealed partial class MafAgentRuntime
         string model,
         Exception innerException)
     {
-        var timeoutSeconds = Math.Round(ResolveProviderNetworkTimeout(provider).TotalSeconds);
+        var timeoutSeconds = Math.Round(MafProviderRuntimeSettings.ResolveNetworkTimeout(provider).TotalSeconds);
         return new TimeoutException(
             $"Provider '{provider.Name}' streaming chat for model '{model}' exceeded the configured timeout of {timeoutSeconds:N0} second(s).",
             innerException);
@@ -90,8 +103,11 @@ public sealed partial class MafAgentRuntime
             _ => runtimeAgent.RunStreamingAsync(materializedMessages, runtimeSession, runOptions, cancellationToken)
         };
     }
+}
 
-    private static AgentResponseUpdate SnapshotUpdate(
+internal static class MafAgentResponseSnapshotter
+{
+    public static AgentResponseUpdate SnapshotUpdate(
         AgentResponseUpdate update)
     {
         return new AgentResponseUpdate(update.Role, update.Contents.Select(SnapshotContent).ToList())

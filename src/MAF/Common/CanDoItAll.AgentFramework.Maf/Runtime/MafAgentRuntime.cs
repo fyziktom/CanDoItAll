@@ -11,10 +11,7 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime(
-    string workspaceRoot,
-    IServiceProvider services,
-    WorkspaceScopeDescriptor? workspaceScope = null) : IAgentRuntime
+public sealed partial class MafAgentRuntime : IAgentRuntime
 {
     private const int MaxRepeatedToolInvocationCount = 3;
     private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
@@ -28,30 +25,53 @@ public sealed partial class MafAgentRuntime(
     };
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
-    private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
-    private readonly IServiceProvider services = services;
-    private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
-    private readonly IMafProviderRuntimeGateway providerRuntimeGateway =
-        services.GetService(typeof(IMafProviderRuntimeGateway)) is IMafProviderRuntimeGateway gateway
-            ? gateway
-            : MafProviderRuntimeGateway.CreateFallback(services);
-    private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate =
-        services.GetService(typeof(IMafProviderStreamingDispatchGate)) is IMafProviderStreamingDispatchGate streamingDispatchGate
-            ? streamingDispatchGate
-            : CreateFallbackProviderStreamingDispatchGate(services);
+    private readonly string workspaceRoot;
+    private readonly IServiceProvider services;
+    private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IMafRuntimeDependencyResolver dependencyResolver;
+    private readonly IMafProviderCredentialService providerCredentialService;
+    private readonly IMafProviderAgentFactory providerAgentFactory;
+    private readonly IMafProviderRuntimeGateway providerRuntimeGateway;
+    private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate;
+    private readonly IMafProviderStreamingRunner providerStreamingRunner;
+    private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
+    private readonly IMafRuntimeCompositionMetrics compositionMetrics;
     private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
 
-    private static IMafProviderStreamingDispatchGate CreateFallbackProviderStreamingDispatchGate(IServiceProvider services)
+    public MafAgentRuntime(
+        string workspaceRoot,
+        IServiceProvider services,
+        WorkspaceScopeDescriptor? workspaceScope = null)
     {
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
+        }
+
         ArgumentNullException.ThrowIfNull(services);
 
-        var providerFactory = services.GetService(typeof(IAgentProviderFactory)) is IAgentProviderFactory resolvedFactory
-            ? resolvedFactory
-            : MafProviderRuntimeServiceCollectionExtensions.CreateDefaultProviderFactory(services);
-        var dispatchLaneGate = services.GetService(typeof(IProviderDispatchLaneGate)) is IProviderDispatchLaneGate resolvedGate
-            ? resolvedGate
-            : new ProviderDispatchLaneGate(providerFactory);
-        return new MafProviderStreamingDispatchGate(dispatchLaneGate);
+        this.workspaceRoot = Path.GetFullPath(workspaceRoot);
+        this.services = services;
+        this.workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
+        dependencyResolver = MafRuntimeDependencyResolver.Resolve(services);
+        providerCredentialService = services.GetService(typeof(IMafProviderCredentialService)) is IMafProviderCredentialService resolvedCredentialService
+            ? resolvedCredentialService
+            : new MafProviderCredentialService(services);
+        providerAgentFactory = services.GetService(typeof(IMafProviderAgentFactory)) is IMafProviderAgentFactory resolvedAgentFactory
+            ? resolvedAgentFactory
+            : new MafProviderAgentFactory(providerCredentialService);
+        var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
+        providerRuntimeGateway = providerDependencies.ProviderRuntimeGateway;
+        providerStreamingDispatchGate = providerDependencies.ProviderStreamingDispatchGate;
+        providerStreamingRunner = services.GetService(typeof(IMafProviderStreamingRunner)) is IMafProviderStreamingRunner resolvedStreamingRunner
+            ? resolvedStreamingRunner
+            : new MafProviderStreamingRunner(providerStreamingDispatchGate);
+        runtimeToolProviderComposer = services.GetService(typeof(IRuntimeToolProviderComposer)) is IRuntimeToolProviderComposer resolvedComposer
+            ? resolvedComposer
+            : RuntimeToolProviderComposer.Default;
+        compositionMetrics = services.GetService(typeof(IMafRuntimeCompositionMetrics)) is IMafRuntimeCompositionMetrics resolvedMetrics
+            ? resolvedMetrics
+            : NoOpMafRuntimeCompositionMetrics.Instance;
     }
 
     public async Task<AgentRuntimeResponse> RunAsync(
@@ -412,7 +432,7 @@ public sealed partial class MafAgentRuntime(
             AgentResponseUpdate update,
             string usageSourcePhase)
         {
-            var snapshot = SnapshotUpdate(update);
+            var snapshot = MafAgentResponseSnapshotter.SnapshotUpdate(update);
             updates.Add(snapshot);
 
             if (!announcedStreaming && !string.IsNullOrWhiteSpace(snapshot.Text))
@@ -513,7 +533,7 @@ public sealed partial class MafAgentRuntime(
 
             try
             {
-                await foreach (var repairUpdate in RunProviderStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, repairMessages, repairRunOptions, cancellationToken))
+                await foreach (var repairUpdate in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, repairMessages, repairRunOptions, cancellationToken))
                 {
                     var finalizerResponse = await RecordStreamingUpdateAsync(
                         repairUpdate,
@@ -650,9 +670,9 @@ public sealed partial class MafAgentRuntime(
 
             try
             {
-                await foreach (var jsonRepairUpdate in RunProviderStreamingAsync(provider, resolvedModel, jsonRepairAgent, jsonRepairSession, jsonRepairMessages, jsonRepairRunOptions, cancellationToken))
+                await foreach (var jsonRepairUpdate in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, jsonRepairAgent, jsonRepairSession, jsonRepairMessages, jsonRepairRunOptions, cancellationToken))
                 {
-                    jsonRepairUpdates.Add(SnapshotUpdate(jsonRepairUpdate));
+                    jsonRepairUpdates.Add(MafAgentResponseSnapshotter.SnapshotUpdate(jsonRepairUpdate));
                     var streamedFinalizerResponse = await RecordStreamingUpdateAsync(
                         jsonRepairUpdate,
                         ProviderUsageSourcePhases.FinalizerRecovery);
@@ -727,7 +747,7 @@ public sealed partial class MafAgentRuntime(
 
                 try
                 {
-                    await foreach (var update in RunProviderStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
+                    await foreach (var update in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
                     {
                         var finalizerResponse = await RecordStreamingUpdateAsync(
                             update,
@@ -927,7 +947,7 @@ public sealed partial class MafAgentRuntime(
         var repairCapabilityState = new RuntimeCapabilityState();
         repairCapabilityState.Tools.Add(finalizerTool);
         return CreateInstrumentedAgent(
-            CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false),
+            providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services),
             provider,
             agent,
             repairCapabilityState,
@@ -975,7 +995,7 @@ public sealed partial class MafAgentRuntime(
             ChatHistoryProvider = null,
             RequirePerServiceCallChatHistoryPersistence = false
         };
-        return CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false);
+        return providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services);
     }
 
     private static async ValueTask DisposeAgentAsync(AIAgent agent)

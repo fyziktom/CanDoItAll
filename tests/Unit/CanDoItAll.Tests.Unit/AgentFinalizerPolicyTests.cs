@@ -770,21 +770,16 @@ public sealed class AgentFinalizerPolicyTests
     {
         var policy = CreatePolicy();
         var capture = CreateFinalizerCapture(policy);
-        var submitMethod = capture.GetType().GetMethod("SubmitProcessStepOutcome")
-            ?? throw new InvalidOperationException("SubmitProcessStepOutcome method was not found.");
-        var snapshotMethod = capture.GetType().GetMethod("Snapshot")
-            ?? throw new InvalidOperationException("Snapshot method was not found.");
         var outcomeJson = SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Provider sent result as a JSON string.");
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
 
-        var response = submitMethod.Invoke(capture, [document.RootElement]);
-        var snapshot = snapshotMethod.Invoke(capture, []);
+        var response = capture.SubmitProcessStepOutcome(document.RootElement);
+        var snapshot = capture.Snapshot();
 
         Assert.Equal("Process step outcome finalizer captured.", response);
-        var invocations = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(snapshot);
-        var invocation = Assert.Single(invocations);
+        var invocation = Assert.Single(snapshot);
         Assert.Equal(policy.ToolName, invocation.ToolName);
-        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, snapshot);
         Assert.True(validation.Succeeded);
         var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
         Assert.Equal(ProcessStepOutcomeStatus.Completed, output.Status);
@@ -796,10 +791,6 @@ public sealed class AgentFinalizerPolicyTests
     {
         var policy = CreatePolicy();
         var capture = CreateFinalizerCapture(policy);
-        var submitMethod = capture.GetType().GetMethod("SubmitProcessStepOutcome")
-            ?? throw new InvalidOperationException("SubmitProcessStepOutcome method was not found.");
-        var snapshotMethod = capture.GetType().GetMethod("Snapshot")
-            ?? throw new InvalidOperationException("Snapshot method was not found.");
         const string outcomeJson = """
         {
           "status": "Completed",
@@ -814,11 +805,10 @@ public sealed class AgentFinalizerPolicyTests
         """;
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
 
-        submitMethod.Invoke(capture, [document.RootElement]);
-        var snapshot = snapshotMethod.Invoke(capture, []);
+        capture.SubmitProcessStepOutcome(document.RootElement);
+        var snapshot = capture.Snapshot();
 
-        var invocations = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(snapshot);
-        var validation = new DefaultAgentFinalizerValidator().Validate(policy, invocations);
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, snapshot);
         Assert.True(validation.Succeeded);
         var output = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
         Assert.Equal("Feature intake completed with current-run evidence.", output.Reason);
@@ -1131,18 +1121,8 @@ public sealed class AgentFinalizerPolicyTests
             "Final process-step outcome.");
     }
 
-    private static object CreateFinalizerCapture(AgentFinalizerPolicy policy)
-    {
-        var captureType = typeof(MafAgentRuntime).GetNestedType("FinalizerCapture", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("FinalizerCapture nested type was not found.");
-        return Activator.CreateInstance(
-                captureType,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                binder: null,
-                args: [policy],
-                culture: null)
-            ?? throw new InvalidOperationException("FinalizerCapture instance was not created.");
-    }
+    private static FinalizerCapture CreateFinalizerCapture(AgentFinalizerPolicy policy)
+        => new(policy);
 
     private static string SerializeOutcome(
         ProcessStepOutcomeStatus status,
