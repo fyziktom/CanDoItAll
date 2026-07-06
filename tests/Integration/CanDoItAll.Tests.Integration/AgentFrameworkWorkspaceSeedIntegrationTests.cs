@@ -127,6 +127,77 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public void Managed_agent_normalization_refreshes_permission_policy_drift_for_current_seed_version()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var financialStrategist = Assert.Single(
+            seed.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+        Assert.True(financialStrategist.Permissions.AutoApproveExternalCallsByDefault);
+
+        var catalog = seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == financialStrategist.Id
+                    ? agent with
+                    {
+                        Permissions = agent.Permissions with
+                        {
+                            AutoApproveExternalCallsByDefault = false
+                        }
+                    }
+                    : agent)
+                .ToList()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        var normalizedFinancialStrategist = Assert.Single(
+            normalized.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+
+        Assert.True(normalizedFinancialStrategist.Permissions.AutoApproveExternalCallsByDefault);
+        Assert.Equal(financialStrategist.ConfigurationJson, normalizedFinancialStrategist.ConfigurationJson);
+    }
+
+    [Fact]
+    public void Managed_agent_normalization_refreshes_capability_policy_drift_for_current_seed_version()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var financialStrategist = Assert.Single(
+            seed.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+        Assert.Contains(
+            financialStrategist.Capabilities,
+            item => string.Equals(item.CapabilityKey, "workspace-convert-document", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            financialStrategist.Capabilities,
+            item => string.Equals(item.CapabilityKey, "provider-native-code-interpreter", StringComparison.OrdinalIgnoreCase));
+
+        var catalog = seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == financialStrategist.Id
+                    ? agent with
+                    {
+                        Capabilities = agent.Capabilities
+                            .Where(capability => !string.Equals(capability.CapabilityKey, "workspace-convert-document", StringComparison.OrdinalIgnoreCase))
+                            .ToList()
+                    }
+                    : agent)
+                .ToList()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        var normalizedFinancialStrategist = Assert.Single(
+            normalized.Agents,
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+
+        Assert.Equal(
+            financialStrategist.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
+            normalizedFinancialStrategist.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_playwright_mcp_for_ui_delivery_agents()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -511,6 +582,28 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.True(deliveryManagerEditor.ProcessAccess.AllowAllDefinitions);
         Assert.Equal(AgentWorkspaceToolProfileKind.BusinessAnalysis, deliveryManagerEditor.WorkspaceToolAccess.Profile);
 
+        var financialStrategist = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
+        var financialStrategistEditor = await workspaceService.GetAgentEditorAsync(financialStrategist.Id);
+        Assert.True(financialStrategistEditor.ProjectStructureAccess.CanRead);
+        Assert.True(financialStrategistEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(financialStrategistEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(financialStrategistEditor.ProcessAccess.CanRead);
+        Assert.False(financialStrategistEditor.ProcessAccess.CanWrite);
+        Assert.True(financialStrategistEditor.ProcessAccess.AllowAllDefinitions);
+        Assert.Equal(AgentWorkspaceToolProfileKind.BusinessAnalysis, financialStrategistEditor.WorkspaceToolAccess.Profile);
+        Assert.True(financialStrategistEditor.WorkspaceToolAccess.CanTransformArtifacts);
+        Assert.True(financialStrategistEditor.ImageGenerationAccess.CanGenerateImages);
+        Assert.True(financialStrategistEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
+        Assert.Equal("gpt-image-1-mini", financialStrategistEditor.ImageGenerationAccess.DefaultModel);
+        Assert.True(financialStrategistEditor.Permissions.AutoApproveExternalCallsByDefault);
+        Assert.Contains("project_structure_node_catalog", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_convert_document", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("image_generation_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+
         var qaObserver = Assert.Single(
             await workspaceService.ListAgentsAsync(includeTemplates: false),
             item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
@@ -539,7 +632,6 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                      "JavaScript Application Developer",
                      "JavaScript QA Review Lead",
                      "Business Strategist",
-                     "Financial Strategist",
                      "Marketing Specialist",
                      "Mail Triage Analyst",
                      "Spreadsheet Analyst"
@@ -778,6 +870,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var uiReviewAgent = Assert.Single(agents, item => string.Equals(item.Name, "UI Review Lead", StringComparison.Ordinal));
         var securityReviewerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal));
         var releaseManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Release Readiness Manager", StringComparison.Ordinal));
+        var deliveryManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Delivery Manager", StringComparison.Ordinal));
         var dotnetArchitectAgent = Assert.Single(agents, item => string.Equals(item.Name, ".NET Solution Architect", StringComparison.Ordinal));
         var dotnetDeveloperAgent = Assert.Single(agents, item => string.Equals(item.Name, ".NET Application Developer", StringComparison.Ordinal));
         var blazorDeveloperAgent = Assert.Single(agents, item => string.Equals(item.Name, "Blazor Application Developer", StringComparison.Ordinal));
@@ -786,6 +879,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var javascriptDeveloperAgent = Assert.Single(agents, item => string.Equals(item.Name, "JavaScript Application Developer", StringComparison.Ordinal));
         var javascriptQaAgent = Assert.Single(agents, item => string.Equals(item.Name, "JavaScript QA Review Lead", StringComparison.Ordinal));
         var businessStrategistAgent = Assert.Single(agents, item => string.Equals(item.Name, "Business Strategist", StringComparison.Ordinal));
+        var researchAgent = Assert.Single(agents, item => string.Equals(item.Name, "Research Deep Dive Analyst", StringComparison.Ordinal));
         var financialStrategistAgent = Assert.Single(agents, item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
         var marketingSpecialistAgent = Assert.Single(agents, item => string.Equals(item.Name, "Marketing Specialist", StringComparison.Ordinal));
 
@@ -822,7 +916,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertHasCapabilities(javascriptDeveloperAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(javascriptQaAgent, playwrightCapabilityId, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId, pwshRunScriptCapabilityId);
         AssertHasCapabilities(businessStrategistAgent, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
-        AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
+        AssertHasCapabilities(deliveryManagerAgent, convertDocumentCapabilityId);
+        AssertHasCapabilities(researchAgent, convertDocumentCapabilityId);
+        AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId);
+        Assert.DoesNotContain(financialStrategistAgent.Capabilities, item => string.Equals(item.CapabilityKey, "provider-native-code-interpreter", StringComparison.OrdinalIgnoreCase));
         AssertHasCapabilities(marketingSpecialistAgent, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
 
         var qaEditor = await workspaceService.GetAgentEditorAsync(qaAgent.Id);
@@ -909,8 +1006,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.Equal(AgentWorkspaceToolProfileKind.ReadOnly, research.WorkspaceToolAccess.Profile);
         Assert.True(research.WorkspaceToolAccess.CanReadFiles);
-        Assert.False(research.WorkspaceToolAccess.CanWriteFiles);
+        Assert.True(research.WorkspaceToolAccess.CanWriteFiles);
+        Assert.True(research.WorkspaceToolAccess.CanTransformArtifacts);
         Assert.False(research.WorkspaceToolAccess.CanRunValidationCommands);
+        Assert.False(research.WorkspaceToolAccess.CanScaffoldProjects);
+        Assert.False(research.WorkspaceToolAccess.CanManageWorkspacePaths);
     }
 
     [Fact]
@@ -1013,7 +1113,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("Do not assume legacy route names from earlier sample runs", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("stale evidence", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Treat untouched scaffold styling, flat stacked forms, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Treat untouched scaffold styling, flat stacked forms, stock navigation such as default sample routes, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("loaded CSS or scoped CSS applies to the primary route classes with computed styles", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("rendered as unstyled DOM is a QA failure", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("meaningful filled, selected, or changed state", qaEditor.Instructions, StringComparison.Ordinal);
@@ -1091,6 +1191,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Assert.Single(agents, item => string.Equals(item.Name, ".NET QA Review Lead", StringComparison.Ordinal)).Id);
         var businessStrategist = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "Business Strategist", StringComparison.Ordinal)).Id);
+        var deliveryManager = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Delivery Manager", StringComparison.Ordinal)).Id);
+        var research = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Research Deep Dive Analyst", StringComparison.Ordinal)).Id);
         var financialStrategist = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal)).Id);
         var marketingSpecialist = await workspaceService.GetAgentEditorAsync(
@@ -1135,8 +1239,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("do not put `$listener`, `$context`, `$request`, or `$file` variables inside a double-quoted `-Command` string", javascriptQa.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("artifacts/business/<project-slug>/", businessStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("business-plan.md", businessStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_convert_document", deliveryManager.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_convert_document", research.Instructions, StringComparison.Ordinal);
         Assert.Contains("unit economics", financialStrategist.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("assumptions.csv", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_catalog", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_create", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_convert_document", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_analyze_image", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("image_generation_create", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("go-to-market", marketingSpecialist.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("campaign-brief.md", marketingSpecialist.Instructions, StringComparison.Ordinal);
     }

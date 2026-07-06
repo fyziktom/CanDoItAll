@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v30";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-07-agent-template-teams-v31";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -376,6 +376,7 @@ internal static class SandboxWorkspaceSeedBuilder
         {
             var profile = ParseEnumOrDefault(workspaceTools.Profile, AgentWorkspaceToolProfileKind.Custom);
             var access = AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
+            ApplyWorkspaceToolTemplateOverrides(access, workspaceTools);
             access.CanReadStorage = workspaceTools.CanReadStorage;
             access.CanWriteStorage = workspaceTools.CanWriteStorage;
             access.AllowAllStorageCatalogs = workspaceTools.AllowAllStorageCatalogs;
@@ -402,6 +403,19 @@ internal static class SandboxWorkspaceSeedBuilder
         return settings.ApplyDefaultReasoningEffort
             ? WithDefaultReasoningEffort(configurationJson)
             : configurationJson;
+    }
+
+    private static void ApplyWorkspaceToolTemplateOverrides(
+        AgentWorkspaceToolAccessSettings access,
+        AgentTemplateWorkspaceToolAccess workspaceTools)
+    {
+        access.CanReadFiles = workspaceTools.CanReadFiles ?? access.CanReadFiles;
+        access.CanWriteFiles = workspaceTools.CanWriteFiles ?? access.CanWriteFiles;
+        access.CanManageWorkspacePaths = workspaceTools.CanManageWorkspacePaths ?? access.CanManageWorkspacePaths;
+        access.CanRunValidationCommands = workspaceTools.CanRunValidationCommands ?? access.CanRunValidationCommands;
+        access.CanScaffoldProjects = workspaceTools.CanScaffoldProjects ?? access.CanScaffoldProjects;
+        access.CanRunLocalScripts = workspaceTools.CanRunLocalScripts ?? access.CanRunLocalScripts;
+        access.CanTransformArtifacts = workspaceTools.CanTransformArtifacts ?? access.CanTransformArtifacts;
     }
 
     private static string ResolveSeedTeamIcon(string? teamKey)

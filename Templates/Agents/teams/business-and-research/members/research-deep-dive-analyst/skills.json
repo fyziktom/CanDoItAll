@@ -6,6 +6,7 @@
     "workspace-search",
     "workspace-read-file",
     "workspace-stat-path",
+    "workspace-convert-document",
     "workspace-diff-text",
     "workspace-execution-boundary",
     "workspace-git-status",

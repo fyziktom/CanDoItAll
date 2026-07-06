@@ -303,18 +303,49 @@ internal static class SandboxWorkspaceSeedNormalizer
         if (TryGetManagedSeedVersion(existingAgent, out var currentSeedVersion) &&
             string.Equals(currentSeedVersion, managedSeedVersion, StringComparison.OrdinalIgnoreCase))
         {
-            return HasManagedAccessPolicyDrift(existingAgent, seededAgent);
+            return HasManagedAgentPolicyDrift(existingAgent, seededAgent);
         }
 
         return !string.IsNullOrWhiteSpace(seededAgent.TemplateKey);
     }
 
-    private static bool HasManagedAccessPolicyDrift(AgentDefinition existingAgent, AgentDefinition seededAgent)
+    private static bool HasManagedAgentPolicyDrift(AgentDefinition existingAgent, AgentDefinition seededAgent)
     {
         return !ProjectStructureAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !ProcessAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !WorkspaceToolAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
-               !ImageGenerationAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson);
+               !ImageGenerationAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
+               !PermissionsPolicyEquals(existingAgent.Permissions, seededAgent.Permissions) ||
+               !CapabilityPolicyEquals(existingAgent.Capabilities, seededAgent.Capabilities);
+    }
+
+    private static bool CapabilityPolicyEquals(
+        IReadOnlyList<AgentCapabilityAssignment> existingCapabilities,
+        IReadOnlyList<AgentCapabilityAssignment> seededCapabilities)
+    {
+        var existingKeys = existingCapabilities
+            .Select(item => item.CapabilityKey)
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
+        var seededKeys = seededCapabilities
+            .Select(item => item.CapabilityKey)
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
+
+        return existingKeys.SequenceEqual(seededKeys, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool PermissionsPolicyEquals(AgentPermissionsPolicy existing, AgentPermissionsPolicy seeded)
+    {
+        return existing.CanUseTools == seeded.CanUseTools &&
+               existing.CanAskOtherAgents == seeded.CanAskOtherAgents &&
+               existing.CanEscalateToHuman == seeded.CanEscalateToHuman &&
+               existing.CanObserveOtherAgents == seeded.CanObserveOtherAgents &&
+               existing.CanScheduleWork == seeded.CanScheduleWork &&
+               existing.RequiresApprovalForExternalCalls == seeded.RequiresApprovalForExternalCalls &&
+               existing.AutoApproveExternalCallsByDefault == seeded.AutoApproveExternalCallsByDefault;
     }
 
     private static bool ProjectStructureAccessEquals(string existingConfigurationJson, string seededConfigurationJson)
@@ -532,6 +563,7 @@ internal static class SandboxWorkspaceSeedNormalizer
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "leave `keepAlive` false unless this same step immediately needs browser tools")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "Workspace command timeout arguments are seconds")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "When writing xUnit tests, include a visible `using Xunit;`")
+                    || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "run target must be the runnable project file")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "custom route backed only by scaffold-default `app.css` and layout CSS")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "custom class names without matching loaded styles")
                     || !InlineSkillInstructionsContain(existingCapability.ConfigurationJson, "one run-app proof node, one run-tests proof node, and one manager summary node");

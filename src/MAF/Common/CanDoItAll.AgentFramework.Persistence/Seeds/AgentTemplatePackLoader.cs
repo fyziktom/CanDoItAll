@@ -305,6 +305,20 @@ internal sealed class AgentTemplateWorkspaceToolAccess
 {
     public string Profile { get; set; } = string.Empty;
 
+    public bool? CanReadFiles { get; set; }
+
+    public bool? CanWriteFiles { get; set; }
+
+    public bool? CanManageWorkspacePaths { get; set; }
+
+    public bool? CanRunValidationCommands { get; set; }
+
+    public bool? CanScaffoldProjects { get; set; }
+
+    public bool? CanRunLocalScripts { get; set; }
+
+    public bool? CanTransformArtifacts { get; set; }
+
     public bool CanReadStorage { get; set; }
 
     public bool CanWriteStorage { get; set; }
