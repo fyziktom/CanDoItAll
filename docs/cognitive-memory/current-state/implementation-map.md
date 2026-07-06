@@ -2,125 +2,100 @@
 
 ## Project Shape
 
-The implementation lives primarily in `src/Modules/CanDoItAll.Modules.CognitiveMemory`. It is registered from `src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs` and exposed by grouped Minimal API files under `src/App/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
+The post-extraction implementation is split across generic memory projects, the generic memory UI module, MAF integration files, an optional native service repository, and retained legacy-native code.
 
-| Folder | Source files | Responsibility |
-| --- | ---: | --- |
-| `Advanced` | 15 | Probe sessions, feedback, self-model, calibration, self-regulation, professor review, answer gate, Epistemic Drive, cross-project promotion, distributed workers, MAF context contribution, and agent-facing context packaging. |
-| `Common` | 4 | JSON context, provider contracts, EF guardrails, shared typed values. |
-| `Consolidation` | 6 | Consolidation runs, candidates, deterministic fact extraction, candidate application into canonical records. |
-| `Foundation` | 4 | Core records, source manifests/items/links, memory records, relations, runs, review items, projection states. |
-| `Ingestion` | 4 | Source snapshot ingestion, layouts, graph links, context hints, tombstones, scan failures. |
-| `Neuro` | 4 | Evidence anchors, claims, belief state, entity/context binding, mutation authority. |
-| `Operations` | 4 | Explicit projection rebuild, scheduled automation runner, and retention cleanup contracts/services. |
-| `Pages` | 17 | Blazor operator UI, page-specific CSS/code-behind, extracted rendering helpers, and ten tab child components. |
-| `Procedural` | 4 | Procedure skills, steps, failure modes, simulation, validation evidence, automation bindings. |
-| `Projection` | 2 | SemanticCompletion and RAG/Qdrant adapter contracts and implementations. |
-| `Recall` | 15 | Recall orchestration, vector/workspace/signal/graph channels, candidate loading, scoring, evaluation, context packs, trace persistence, source references, internal types, and mapping helpers. |
-| `ReviewUi` | 7 | Snapshot DTOs, summary queries, candidate previews, advanced query projections, trace/health queries, operator audit queries, and review decision workflow. |
-| `Scoring` | 6 | Typed score spaces, dimensions, geometry driver, evaluation traces, persisted score components. |
-| `Settings` | 8 | Automation settings, model access policy, model execution profiles, external file/web ingestion, staged manifests, external-source limits, and sensitive-content policy. |
-| `Signals` | 4 | Prediction expectations, prediction errors, salience/signals, consumer policies. |
-| `Taxonomy` | 4 | Record/relation validation, projection lifecycle, projection records. |
-| `TemporalReplay` | 4 | Temporal episodes, replay jobs, causal links, worker results. |
-| `Workspace` | 4 | Workspace frames, goals, slots, open questions, attention routing, inhibited candidates. |
+| Area | Location | Responsibility |
+| --- | --- | --- |
+| Generic protocol | `src/Memory/CanDoItAll.Memory.Abstractions` | Provider profiles, capability ids, request/response envelopes, context packs, ledgers, feedback, events, source ids, and typed selection results. |
+| Generic runtime | `src/Memory/CanDoItAll.Memory.Application` | Provider registry, shared operation handler, runtime dispatch, Source Gateway, async operation worker, feedback worker, event inbox/outbox workers, retention services, and driver contracts. |
+| Generic persistence | `src/Memory/CanDoItAll.Memory.Persistence` | EF-backed stores for provider profiles, operations, feedback, events, source requests, and deterministic mock driver registration when explicitly enabled. |
+| HTTP/native drivers | `src/Memory/CanDoItAll.Memory.Http` | Generic HTTP driver and native-remote driver adapter. |
+| MCP driver | `src/Memory/CanDoItAll.Memory.Mcp` | MCP descriptor/tool mapping, MCP memory driver, and manifest factory. |
+| Generic UI | `src/Modules/CanDoItAll.Modules.Memory` | `/memory` provider management, query, feedback, event, operations, manual ingestion, and provider-specific surface host. |
+| MAF integration | `src/Modules/CanDoItAll.Modules.AgentFramework` | Runtime tool provider, workflow executor, context contributor, policy/result helper services, and source gateway adapters. |
+| Source adapters | Workbench, Processes, Resources, CRM/HR, AgentFramework modules | Module-owned Source Gateway adapters that return MAF `MemorySourceSnapshot` records. |
+| Optional native service | `C:\repositories\CanDoItAll.CognitiveMemory` | Native Cognitive Memory DB, engine, protocol API, workers, native MAF services, and native UI package. |
+| Retained legacy module | `src/Modules/CanDoItAll.Modules.CognitiveMemory` | Legacy/native regression code retained until native-suite migration deletes or moves it. Not part of base startup. |
 
 ## Runtime Registration
 
 ```mermaid
 flowchart LR
     Program["CanDoItAll.Web Program.cs"] --> Infrastructure["AddCanDoItAllInfrastructure"]
-    Infrastructure --> ModelRegistry["AppDbContextModelRegistry.ConfigureAssemblies"]
     Program --> Composition["AddCanDoItAllRuntimeModules"]
-    Composition --> Qdrant["AddConfiguredQdrantRagDriver when enabled"]
-    Composition --> LocalEmbedding["Local hashing embedding generator when Qdrant enabled"]
-    Composition --> ProjectionDefaults["CognitiveMemoryProjectionOptions defaults"]
-    Composition --> Module["AddCognitiveMemoryModule"]
-    Module --> Services["Cognitive Memory services"]
-    Module --> Operations["Projection rebuild, automation runner, and retention cleanup"]
-    Program --> Api["MapCanDoItAllApi"]
-    Api --> CognitiveApi["MapCognitiveMemoryApi"]
-    Program --> Razor["MapRazorComponents + module assemblies"]
-    Razor --> Page["/cognitive-memory and /memory"]
+    Composition --> GenericMemory["AddGenericMemoryModule"]
+    Composition --> ProviderDrivers["Configured HTTP/native/mock drivers"]
+    Composition --> MemoryUi["AddMemoryUiModule"]
+    Composition --> MAF["AddAgentFrameworkModule"]
+    MAF --> MemoryTools["Generic memory tools/executor/context contributor"]
+    GenericMemory --> SourceGateway["Source Gateway adapters"]
+    ProviderDrivers --> Profiles["Explicit provider profiles"]
+    Profiles --> Runtime["Shared operation handler and ledgers"]
+    Runtime --> OptionalNative["Native remote provider service"]
 ```
 
-## Core Services
+The base composition root does not register the old native Cognitive Memory module, Qdrant RAG driver, or SemanticCompletion driver as memory dependencies.
 
-| Service | Interface | Current role |
+## Provider Driver Registration
+
+| Driver kind | Base app registration | Provider profile extensions |
 | --- | --- | --- |
-| `CognitiveMemorySourceIngestionService` | `ICognitiveMemorySourceIngestionService` | Reads source snapshots and persists source records, evidence, layout, graph, context, tombstone, and failure state. |
-| `CognitiveMemoryExternalSourceIngestionService` | `ICognitiveMemoryExternalSourceIngestionService` | Ingests uploaded files and web links into source manifests/items/evidence. |
-| `CognitiveMemoryConsolidationEngine` | `ICognitiveMemoryConsolidationEngine` | Processes source items into candidates, mutation commands, review rows, canonical memory records, and projection invalidations. |
-| `CognitiveMemoryConsolidationCandidateApplicator` | `ICognitiveMemoryConsolidationCandidateApplicator` | Materializes approved or machine-generated candidates into context frames, entities, memory records, claims, source links, and evidence links. |
-| `CognitiveMemoryRecallOrchestrator` | `ICognitiveMemoryRecallOrchestrator` | Builds recall candidates from lexical, optional vector, workspace, signal, graph, and source-detail channels. The orchestration is split across partial files by channel, loading, scoring, context-pack building, persistence, internal types, and mapping. |
-| `CognitiveMemoryReviewUiService` | `ICognitiveMemoryReviewUiService` | Builds operator snapshots and applies review decisions through split summary, preview, advanced, trace, and health query files. |
-| `CognitiveMemoryAgentContextContributor` | `IAgentContextContributor` | Adds agent-facing Cognitive Memory context packages to AgentFramework requests when provider policy and project scope allow it, and fails process-critical modes when required memory is unavailable. |
-| `CognitiveMemorySignalLedger` | `ICognitiveMemorySignalLedger`, `ICognitiveMemoryPredictionErrorEngine` | Records prediction expectations, prediction errors, salience signals, scores, and consumer policies. |
-| `CognitiveMemoryTemporalReplayService` | `ICognitiveMemoryTemporalEpisodeService`, `ICognitiveMemoryReplayScheduler` | Records temporal episodes and replay jobs. |
-| `CognitiveMemoryProcedureSkillService` | `ICognitiveMemoryProcedureSkillMemoryService`, `ICognitiveMemorySimulationSandboxService` | Stores procedure skills and simulations. |
-| `CognitiveMemoryAdvancedServices` classes | Several advanced interfaces | Own probing, self-model, calibration, self-regulation, answer gate, professor review, learning proposals, cross-project, and distributed coordination. |
-| `CognitiveMemoryProjectionRebuildService` | `ICognitiveMemoryProjectionRebuildService` | Rebuilds stale/failed projection records and projects missing durable records from memory, source links, evidence anchors, claims, context frames, entity ids, and context-boundary policies through projection lifecycle. |
-| `CognitiveMemoryScheduledAutomationRunner` | `ICognitiveMemoryScheduledAutomationRunner` | Honors automation schedule mode for explicit UI/API runs, triggers configured ingestion, and runs consolidation after successful ingestion when enabled. |
-| `CognitiveMemoryRetentionCleanupService` | `ICognitiveMemoryRetentionCleanupService` | Deletes old operational rows through an explicit dry-run-first request while preserving canonical memory, source, evidence, and projection truth. |
+| `Mock` | Explicit `Memory:Providers:DeterministicMock:Enabled=true` only. | Test/development profiles only. |
+| `Http` | Explicit `Memory:Providers:Http:Enabled=true`. | `host.candoitall.memory.http.*` keys. |
+| `NativeRemote` | Explicit `Memory:Providers:NativeRemote:Enabled=true`. | `native.cognitiveMemory.remote.*` keys. |
+| `Mcp` | Package-level `AddMcpMemoryProviderDriver`; not enabled by default appsettings. | `host.candoitall.memory.mcp.*` keys. |
 
-## Operator UI Components
+See [provider setup](../operations/provider-setup.md).
 
-The `/cognitive-memory` route still uses `CognitiveMemoryPage` as the orchestration owner, but the tab bodies are separated under `src/Modules/CanDoItAll.Modules.CognitiveMemory/Pages/Components`:
+## Core Runtime Services
 
-| Component | Role |
+| Service | Role |
 | --- | --- |
-| `CognitiveMemoryDashboardTab.razor` | Summary dashboard and review/health overview. |
-| `CognitiveMemoryProbeWorkbenchTab.razor` | Probe session, voice-assisted question/correction flow, feedback, and source-backed answer context. |
-| `CognitiveMemorySettingsTab.razor` | Automation settings, model policy, manual ingestion, explicit automation run, and projection rebuild controls. |
-| `CognitiveMemorySourcesTab.razor` | External file and web-link ingestion. |
-| `CognitiveMemoryMemoryTab.razor` | Memory explorer and source evidence detail. |
-| `CognitiveMemoryReviewQueueTab.razor` | Review queue and decision panel. |
-| `CognitiveMemoryRecallTracesTab.razor` | Recall trace, candidate, source, and context-pack detail. |
-| `CognitiveMemoryHealthTab.razor` | Projection, consolidation, replay, procedure health, and operator audit. |
-| `CognitiveMemorySelfRegulationTab.razor` | Self-regulation, answer-gate, professor-review, and learning surfaces. |
-| `CognitiveMemoryScaleTab.razor` | Cross-project promotion and distributed worker/job surfaces. |
+| `IMemoryRuntimeService` | Provider-selected context query dispatch. |
+| `IMemoryOperationHandler` | Shared operation path for tools, workflow executors, context contributors, UI/API-like callers, feedback handles, and source ingestion. |
+| `IMemorySourceGateway` | Policy-gated source snapshot capture. |
+| `ManualMemorySourceIngestionService` | Manual text/file/link source capture and ingestion operation enqueue. |
+| `IMemoryAsyncOperationWorker` | Polls accepted async operations and updates operation ledgers. |
+| `IMemoryFeedbackWorker` | Delivers delayed feedback and updates feedback ledgers. |
+| `IMemoryProviderEventWorker` | Polls provider events, dedupes inbox rows, and delivers outbox acknowledgements. |
+| `IMemoryProviderHealthDriver` implementations | Return provider health without dispatching unrelated work. |
 
-## Source Providers
+## Generic UI
 
-| Source provider | Owner | Current source kind |
-| --- | --- | --- |
-| `WorkbenchProjectStructureSourceSnapshotProvider` | `CanDoItAll.Modules.Workbench` | `WorkbenchProjectStructure` |
-| `ProcessRuntimeEvidenceSourceProvider` | `CanDoItAll.Modules.Processes` | `ProcessRuntime` |
-| `WorkflowRuntimeEvidenceSourceProvider` | `CanDoItAll.Modules.AgentFramework` | `WorkflowRuntime` |
-| `CognitiveMemoryExternalSourceIngestionService` | `CanDoItAll.Modules.CognitiveMemory` | Uploaded files and website links |
+The generic provider UI is `/memory`. It supports:
 
-## HTTP Surface
+- zero-provider empty state;
+- provider profile list/detail;
+- context query and context-pack display;
+- feedback ledger and delayed stage selection;
+- manual ingestion;
+- operations/status ledger;
+- provider event inbox;
+- provider-specific RCL/iframe/external surface projection with safe fallback.
 
-The API currently maps 35 routes per surface under legacy `/api/cognitive-memory` and additive `/api/cognitive-memory/v1` route groups across these files:
+## Native Service
 
-| File | Responsibility |
-| --- | --- |
-| `CognitiveMemoryApi.cs` | Legacy/v1 route-group mapping, shared helpers, result/error normalization. |
-| `CognitiveMemoryApi.ContractEndpoints.cs` | Contract version, route metadata, compatibility notes, and common-flow examples. |
-| `CognitiveMemoryApi.DatabaseEndpoints.cs` | Status and database profile operations. |
-| `CognitiveMemoryApi.SettingsEndpoints.cs` | Settings and model access policy. |
-| `CognitiveMemoryApi.IngestionEndpoints.cs` | Project/process/external-source ingestion. |
-| `CognitiveMemoryApi.RecallReviewEndpoints.cs` | Snapshot, generic source ingest, consolidation, recall, review decisions. |
-| `CognitiveMemoryApi.OperationsEndpoints.cs` | Projection rebuild, explicit automation run, and retention cleanup operations. |
-| `CognitiveMemoryApi.AdvancedEndpoints.cs` | Probe, self-regulation, answer gate, professor review, Epistemic Drive, cross-project operations. |
-| `CognitiveMemoryApi.DistributedEndpoints.cs` | Distributed workers and jobs. |
-| `CognitiveMemoryApiDtos.cs` | Request DTOs used by the endpoint groups. |
+The native service is validated in `C:\repositories\CanDoItAll.CognitiveMemory`:
 
-## Persistence Surface
+- `CanDoItAll.CognitiveMemory.Domain`
+- `CanDoItAll.CognitiveMemory.Application`
+- `CanDoItAll.CognitiveMemory.Persistence`
+- `CanDoItAll.CognitiveMemory.Service`
+- `CanDoItAll.CognitiveMemory.Workers`
+- `CanDoItAll.CognitiveMemory.Maf`
+- `CanDoItAll.CognitiveMemory.UI`
 
-The module currently has 109 entity record classes. PostgreSQL migrations are the main runtime schema path:
-
-- PostgreSQL migrations: 15 Cognitive Memory migrations.
-
-This confirms the implementation is durable on the PostgreSQL runtime path. The schema is beta-covered for the core source/consolidation/projection/recall path, while advanced control surfaces still need P2/P3 stabilization before being treated as a public external contract.
+The main app talks to it only through generic provider protocol/driver contracts.
 
 ## Test Surface
 
-| Test project | Cognitive Memory files |
-| --- | ---: |
-| `CanDoItAll.Tests.Unit` | 17 |
-| `CanDoItAll.Tests.Integration` | 12 |
-| `CanDoItAll.Tests.Components` | 1 |
-| `CanDoItAll.Tests.Playwright` | 1 |
-| `CanDoItAll.Tests.Support` | 2 |
+| Test area | Project/filter |
+| --- | --- |
+| Generic memory | `tests/Memory/CanDoItAll.Memory.Tests` |
+| MAF memory | Unit tests filtered by `MemoryAgentRuntimeToolProviderTests`, `MemoryWorkflowExecutorTests`, `MemoryAgentContextContributorTests`, and `MemoryMafIntegrationCheckpointTests` |
+| Generic UI components | Component tests filtered by `MemoryProvider` and `MemoryUiRefactoringCheckpoint` |
+| Generic browser UI | Playwright tests filtered by `MemoryProviderManagementPlaywrightTests` |
+| Database runtime switching | Integration tests filtered by `DatabaseSwitchIntegrationTests` |
+| Native service | `C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests` |
 
+Legacy `CognitiveMemory*` tests remain retained native coverage until the follow-up native-suite migration.

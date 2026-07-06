@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Memory.Application;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Drivers.Abstractions;
@@ -67,6 +68,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessRuntimeStepAssignmentRepairService, AgentFrameworkProcessRuntimeStepAssignmentRepairService>();
         services.TryAddScoped<IProcessLaunchArtifactInitializer, WorkspaceProcessLaunchArtifactInitializer>();
         services.TryAddScoped<IProcessRuntimeStrategyFactoryResolver, StandardProcessRuntimeStrategyFactoryResolver>();
+        services.TryAddScoped<IProcessRuntimeEvidenceSourceProvider, ProcessRuntimeEvidenceSourceProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, ProcessRuntimeMemorySourceGatewayAdapter>());
         services.Configure<ProcessRuntimeDispatchQueueOptions>(
             configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
         services.TryAddSingleton<ProcessRuntimeDispatchQueue>();

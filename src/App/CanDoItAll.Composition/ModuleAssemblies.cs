@@ -1,9 +1,10 @@
 using System.Reflection;
+using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
+using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -23,14 +24,15 @@ public static class ModuleAssemblies
     public static readonly Assembly[] All =
     [
         typeof(AgentFrameworkModuleAssemblyMarker).Assembly,
-        typeof(CognitiveMemoryModuleAssemblyMarker).Assembly,
         typeof(CollaborationModuleAssemblyMarker).Assembly,
         typeof(CrmHrModuleAssemblyMarker).Assembly,
         typeof(FactoryModuleAssemblyMarker).Assembly,
+        typeof(MemoryModuleAssemblyMarker).Assembly,
         typeof(PluginsModuleAssemblyMarker).Assembly,
         typeof(ProjectsModuleAssemblyMarker).Assembly,
         typeof(ProcessesModuleAssemblyMarker).Assembly,
         typeof(ProcessPersistenceAssemblyMarker).Assembly,
+        typeof(MemoryPersistenceAssemblyMarker).Assembly,
         typeof(PromptsModuleAssemblyMarker).Assembly,
         typeof(ResourcesModuleAssemblyMarker).Assembly,
         typeof(SchedulerPlannerModuleAssemblyMarker).Assembly,

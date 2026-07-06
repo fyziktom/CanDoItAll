@@ -1,0 +1,73 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="memory-ui-provider-list-card">
+    <Cluster Gap="LayoutGap.Small"
+             Wrap="FlexWrap.Wrap"
+             AlignItems="AlignItems.Center"
+             JustifyContent="JustifyContent.SpaceBetween">
+        <div>
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Providers" />
+            <h2 class="memory-ui-card-title">Configured providers</h2>
+        </div>
+        <Button Text="Add demo providers"
+                Icon="add"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Click="AddDemoProvidersAsync"
+                Disabled="@IsBusy"
+                data-testid="memory-ui-add-demo-providers" />
+    </Cluster>
+
+    @if (Providers.Count == 0)
+    {
+        <div data-testid="memory-ui-zero-provider">
+            <EmptyState Eyebrow="Zero providers"
+                        Title="No memory providers are configured"
+                        Description="Provider management remains available. Provider-backed actions stay disabled until a profile is added." />
+        </div>
+    }
+    else
+    {
+        <div class="memory-ui-provider-list" data-testid="memory-ui-provider-list">
+            @foreach (var provider in Providers)
+            {
+                <button type="button"
+                        class="@ProviderListItemClass(provider)"
+                        data-testid="@($"memory-provider-{MemoryUiFormatting.ToTestIdSegment(provider.InstanceId.Value)}")"
+                        @onclick="@(() => SelectProviderAsync(provider.InstanceId.Value))">
+                    <span class="memory-ui-provider-main">
+                        <strong>@provider.DisplayName</strong>
+                        <small>@provider.DriverKind / @provider.ProviderKind.Value</small>
+                    </span>
+                    <span class="memory-ui-provider-meta">@provider.HealthState</span>
+                </button>
+            }
+        </div>
+    }
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<MemoryProviderManagementProfile> Providers { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedProviderId { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnAddDemoProviders { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSelectProvider { get; set; }
+
+    private Task AddDemoProvidersAsync() => OnAddDemoProviders.InvokeAsync();
+
+    private Task SelectProviderAsync(string providerId) => OnSelectProvider.InvokeAsync(providerId);
+
+    private string ProviderListItemClass(MemoryProviderManagementProfile provider) =>
+        string.Equals(provider.InstanceId.Value, SelectedProviderId, StringComparison.Ordinal)
+            ? "memory-ui-provider-option memory-ui-provider-option--selected"
+            : "memory-ui-provider-option";
+}

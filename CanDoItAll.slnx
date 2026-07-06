@@ -9,6 +9,13 @@
     <Project Path="src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj" />
   </Folder>
+  <Folder Name="/src/Memory/">
+    <Project Path="src/Memory/CanDoItAll.Memory.Abstractions/CanDoItAll.Memory.Abstractions.csproj" />
+    <Project Path="src/Memory/CanDoItAll.Memory.Application/CanDoItAll.Memory.Application.csproj" />
+    <Project Path="src/Memory/CanDoItAll.Memory.Http/CanDoItAll.Memory.Http.csproj" />
+    <Project Path="src/Memory/CanDoItAll.Memory.Mcp/CanDoItAll.Memory.Mcp.csproj" />
+    <Project Path="src/Memory/CanDoItAll.Memory.Persistence/CanDoItAll.Memory.Persistence.csproj" />
+  </Folder>
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
     <Project Path="src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj" />
@@ -69,9 +76,9 @@
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj" />
-    <Project Path="src/Modules/CanDoItAll.Modules.CognitiveMemory/CanDoItAll.Modules.CognitiveMemory.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
@@ -112,6 +119,9 @@
   </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
+  </Folder>
+  <Folder Name="/tests/Memory/">
+    <Project Path="tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Integration/">
     <Project Path="tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />

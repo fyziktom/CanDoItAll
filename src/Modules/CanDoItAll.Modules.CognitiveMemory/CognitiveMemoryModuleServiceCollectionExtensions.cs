@@ -97,11 +97,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddSingleton<ICognitiveMemoryRecallBriefComposer, CognitiveMemoryRecallBriefComposer>();
         services.TryAddScoped<ICognitiveMemoryRecallSynthesisService, CognitiveMemoryRecallSynthesisService>();
         services.TryAddScoped<ICognitiveMemoryReferenceResolver, CognitiveMemoryReferenceResolver>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentContextContributor, CognitiveMemoryAgentContextContributor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IDatabaseTransferHandler, CognitiveMemorySourceTruthDatabaseTransferHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryRecallWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryProbeWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryLearningProposalWorkflowExecutor>());
         services.TryAddScoped<ICognitiveMemoryProbeService, CognitiveMemoryProbeService>();
         services.TryAddSingleton<ICognitiveMemoryProfessorTeachingExtractor>(CognitiveMemoryProfessorTeachingExtractor.Instance);
         services.TryAddScoped<ICognitiveMemoryProfessorAssimilationEvaluator, CognitiveMemoryProfessorAssimilationEvaluator>();

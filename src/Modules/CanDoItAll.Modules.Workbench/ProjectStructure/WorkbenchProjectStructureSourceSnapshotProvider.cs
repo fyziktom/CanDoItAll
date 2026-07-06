@@ -22,7 +22,13 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
             throw new ArgumentException("Project id is required.", nameof(request));
         }
 
-        var surface = await projectWorkbenchService.GetStructureAsync(request.ProjectId, cancellationToken);
+        var loadResult = await projectWorkbenchService.TryGetStructureAsync(request.ProjectId, cancellationToken);
+        if (loadResult.Surface is null)
+        {
+            return CreateEmptySnapshot(request.ProjectId);
+        }
+
+        var surface = loadResult.Surface;
         var nodeTimestamps = await LoadNodeTimestampsAsync(request.ProjectId, cancellationToken);
         var nodeItems = surface.Nodes
             .Select(node => MapNode(request.ProjectId, node, surface.Links, nodeTimestamps.GetValueOrDefault(node.Id)))
@@ -58,6 +64,28 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 MemorySourceSnapshotHashScope.FullSnapshot,
                 MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure),
             pageItems);
+    }
+
+    private static MemorySourceSnapshot CreateEmptySnapshot(Guid projectId)
+    {
+        var snapshotHash = MemorySourceSnapshotHasher.Compute(
+            "missing-project",
+            projectId.ToString("N"),
+            MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure);
+
+        return new MemorySourceSnapshot(
+            new MemorySourceSnapshotManifest(
+                MemorySourceSnapshotId.Create(MemorySourceKind.WorkbenchProjectStructure, projectId, snapshotHash),
+                MemorySourceKind.WorkbenchProjectStructure,
+                projectId,
+                DateTimeOffset.UtcNow,
+                TotalItemCount: 0,
+                NextCursor: null,
+                HasMore: false,
+                MemorySourceSnapshotPageStatus.EndOfSource,
+                MemorySourceSnapshotHashScope.FullSnapshot,
+                MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure),
+            []);
     }
 
     private async Task<IReadOnlyDictionary<string, NodeTimestamp>> LoadNodeTimestampsAsync(
@@ -162,9 +190,7 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 MemorySourceEntityKind.ProjectNode,
                 node.Id,
                 node.Route),
-            new MemorySourcePermissionContext(
-                containsSensitivePayload ? MemorySourceAccessMode.Redacted : MemorySourceAccessMode.ReadOnly,
-                containsSensitivePayload ? MemorySourceSensitivity.Sensitive : MemorySourceSensitivity.Internal,
+            MemorySourceSnapshotSecurity.CreatePermission(
                 containsSensitivePayload,
                 containsSensitivePayload
                     ? "Workbench snapshots redact known secrets from notes, metadata, and storage locators; arbitrary note text remains sensitivity-marked for downstream projection policy."
@@ -193,10 +219,9 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 ["projectRole"] = node.ProjectRole.ToString()
             })
         {
-            HashPolicy = containsSensitivePayload
-                ? MemorySourceHashPolicy.RestrictedRawPayloadIntegrity(
-                    "Workbench node hash may include raw notes, metadata JSON, or storage locator values. Use only for non-exportable source integrity checks.")
-                : MemorySourceHashPolicy.InternalIntegrity
+            HashPolicy = MemorySourceSnapshotSecurity.CreateIntegrityHashPolicy(
+                containsSensitivePayload,
+                "Workbench node hash may include raw notes, metadata JSON, or storage locator values. Use only for non-exportable source integrity checks.")
         };
     }
 
@@ -226,12 +251,10 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 MemorySourceEntityKind.ProjectLink,
                 sourceEntityId,
                 $"/projects/{projectId:D}/structure"),
-            new MemorySourcePermissionContext(
-                MemorySourceAccessMode.ReadOnly,
-                MemorySourceSensitivity.Internal,
-                ContainsSensitivePayload: false,
-                RedactionPolicy: "Workbench link snapshots contain relationship metadata only.",
-                AllowedFutureUsageSummary: "Source-grounded project relationship evidence."),
+            MemorySourceSnapshotSecurity.CreatePermission(
+                containsSensitivePayload: false,
+                redactionPolicy: "Workbench link snapshots contain relationship metadata only.",
+                allowedFutureUsageSummary: "Source-grounded project relationship evidence."),
             Layout: null,
             [
                 new MemorySourceLink(

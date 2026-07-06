@@ -89,6 +89,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IDatabaseDriver, InMemoryDatabaseDriver>();
         services.AddSingleton<IDatabaseDriver, PostgreSqlDatabaseDriver>();
         services.AddSingleton<IDatabaseDriverRegistry, DatabaseDriverRegistry>();
+        services.AddSingleton<ILegacyCognitiveMemoryExportServiceFactory, LegacyCognitiveMemoryExportServiceFactory>();
         services.AddPooledDbContextFactory<AppDbContext>((serviceProvider, optionsBuilder) =>
         {
             var canonicalRuntimeDatabase = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();

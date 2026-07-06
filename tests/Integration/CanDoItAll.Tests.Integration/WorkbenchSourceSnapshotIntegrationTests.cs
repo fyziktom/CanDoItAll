@@ -1,15 +1,104 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using GenericMemorySourceScope = CanDoItAll.Memory.Abstractions.MemorySourceScope;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class WorkbenchSourceSnapshotIntegrationTests
 {
+    [Fact]
+    public async Task Workbench_gateway_adapter_exposes_project_snapshots_through_generic_source_gateway()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects);
+        var customNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Gateway task",
+                "Generic source adapter item",
+                "Adapter note token=gateway-secret",
+                ParentNodeKey: null,
+                X: 16,
+                Y: 32,
+                ObjectSubtype: "task"));
+        var gateway = CreateWorkbenchGateway(scope.ServiceProvider);
+
+        var result = await gateway.ReadSnapshotAsync(CreateGatewayRequest(
+            projectId,
+            GenericMemorySourceScope.Project,
+            MemorySourceGatewayPolicy.AllowScopes(
+                [MemorySourceKind.WorkbenchProjectStructure],
+                [GenericMemorySourceScope.Project])));
+
+        Assert.Equal(MemorySourceGatewayStatus.Succeeded, result.Status);
+        Assert.True(result.DispatchAllowed);
+        Assert.NotNull(result.Snapshot);
+        Assert.Equal(MemorySourceKind.WorkbenchProjectStructure, result.Snapshot.Manifest.SourceKind);
+        Assert.Equal(projectId, result.Snapshot.Manifest.ScopeId);
+        var node = Assert.Single(
+            result.Snapshot.Items,
+            item => item.EntityKind == MemorySourceEntityKind.ProjectNode &&
+                    string.Equals(item.Provenance.SourceEntityId, customNode.Id, StringComparison.Ordinal));
+        Assert.Equal("Gateway task", node.Title);
+        Assert.Contains("[REDACTED]", node.Content, StringComparison.Ordinal);
+        Assert.DoesNotContain("gateway-secret", node.Content, StringComparison.Ordinal);
+        Assert.Equal(MemorySourceAccessMode.Redacted, node.Permission.AccessMode);
+    }
+
+    [Fact]
+    public async Task Workbench_gateway_adapter_rejects_denied_project_scope_before_snapshot_dispatch()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var gateway = CreateWorkbenchGateway(scope.ServiceProvider);
+
+        var result = await gateway.ReadSnapshotAsync(CreateGatewayRequest(
+            Guid.Parse("2bc6fdd8-803f-45c1-a415-015116b0ac93"),
+            GenericMemorySourceScope.Process,
+            MemorySourceGatewayPolicy.AllowScopes(
+                [MemorySourceKind.WorkbenchProjectStructure],
+                [GenericMemorySourceScope.Project])));
+
+        Assert.Equal(MemorySourceGatewayStatus.DeniedSourceScope, result.Status);
+        Assert.False(result.DispatchAllowed);
+        Assert.Null(result.Snapshot);
+    }
+
+    [Fact]
+    public async Task Workbench_gateway_adapter_returns_empty_snapshot_for_missing_project()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var gateway = CreateWorkbenchGateway(scope.ServiceProvider);
+        var missingProjectId = Guid.Parse("25b956a5-07a0-43fa-9875-66b7c5726c6a");
+
+        var result = await gateway.ReadSnapshotAsync(CreateGatewayRequest(
+            missingProjectId,
+            GenericMemorySourceScope.Project,
+            MemorySourceGatewayPolicy.AllowScopes(
+                [MemorySourceKind.WorkbenchProjectStructure],
+                [GenericMemorySourceScope.Project])));
+
+        Assert.Equal(MemorySourceGatewayStatus.Succeeded, result.Status);
+        Assert.True(result.DispatchAllowed);
+        Assert.NotNull(result.Snapshot);
+        Assert.Equal(missingProjectId, result.Snapshot.Manifest.ScopeId);
+        Assert.Equal(MemorySourceKind.WorkbenchProjectStructure, result.Snapshot.Manifest.SourceKind);
+        Assert.Equal(MemorySourceSnapshotPageStatus.EndOfSource, result.Snapshot.Manifest.PageStatus);
+        Assert.Equal(0, result.Snapshot.Manifest.TotalItemCount);
+        Assert.Empty(result.Snapshot.Items);
+    }
+
     [Fact]
     public async Task Workbench_snapshot_provider_exposes_stable_source_grounded_items()
     {
@@ -136,5 +225,28 @@ public sealed class WorkbenchSourceSnapshotIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static IMemorySourceGateway CreateWorkbenchGateway(IServiceProvider serviceProvider)
+    {
+        var adapter = serviceProvider
+            .GetServices<IMemorySourceGatewayAdapter>()
+            .Single(item => item.Descriptor.SourceKind == MemorySourceKind.WorkbenchProjectStructure);
+        return new MemorySourceGateway([adapter], [MemorySourceKind.WorkbenchProjectStructure]);
+    }
+
+    private static MemorySourceGatewayRequest CreateGatewayRequest(
+        Guid projectId,
+        GenericMemorySourceScope requestedScope,
+        MemorySourceGatewayPolicy policy)
+    {
+        return new MemorySourceGatewayRequest(
+            MemorySourceKind.WorkbenchProjectStructure,
+            projectId,
+            requestedScope,
+            Cursor: null,
+            Take: 100,
+            policy,
+            RequesterId: "integration-test");
     }
 }

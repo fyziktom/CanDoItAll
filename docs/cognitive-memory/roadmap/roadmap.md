@@ -1,5 +1,7 @@
 # Cognitive Memory Roadmap
 
+> Status: historical native Cognitive Memory roadmap. The current release boundary is the generic Memory Provider extraction documented in [release notes](../operations/release-notes-memory-provider-extraction.md). Native Cognitive Memory is now an optional provider/service path, not a base host dependency.
+
 ## Already Done
 
 | Area | True status | Notes |

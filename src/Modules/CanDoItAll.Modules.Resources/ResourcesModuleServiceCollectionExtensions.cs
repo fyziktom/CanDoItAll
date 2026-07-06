@@ -1,4 +1,6 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Memory.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -13,6 +15,8 @@ public static class ResourcesModuleServiceCollectionExtensions
         services.AddScoped<ResourceConnectorPluginRegistry>();
         services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ResourceConnectorPluginRegistry>());
         services.AddScoped<ResourcesService>();
+        services.AddScoped<IResourceSourceSnapshotProvider, ResourceSourceSnapshotProvider>();
+        services.AddMemorySourceGatewayAdapter<ResourceMemorySourceGatewayAdapter>();
         return services;
     }
 }

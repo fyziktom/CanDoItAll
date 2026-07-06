@@ -1,5 +1,7 @@
 # Cognitive Memory API
 
+> Status: historical native Cognitive Memory API documentation. The current base-host memory surface is the generic Memory Provider runtime and `/memory` UI documented in [provider setup](provider-setup.md). Use this page for retained native-provider history only unless a future native service API document explicitly supersedes it.
+
 The Cognitive Memory HTTP API is hosted by `CanDoItAll.Web` under two route surfaces:
 
 - legacy compatibility: `/api/cognitive-memory`

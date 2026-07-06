@@ -18,6 +18,7 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
 using CanDoItAll.AgentFramework.Workflows.Templates;
+using CanDoItAll.Memory.Application;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -79,6 +80,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IAgentReferenceDataCacheInvalidator>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentReferenceDataCache>());
         services.TryAddScoped<IAgentReferenceDataProvider, WorkspaceBackedAgentReferenceDataProvider>();
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ICanDoItAllAgentWorkspaceFactory, CanDoItAllAgentWorkspaceFactory>();
         services.AddScoped<CanDoItAllAgentWorkspaceFactory>(serviceProvider =>
             (CanDoItAllAgentWorkspaceFactory)serviceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>());
@@ -87,11 +89,15 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, MemoryAgentRuntimeToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutorDescriptorSource, MemoryWorkflowExecutorDescriptorSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, MemoryWorkflowExecutor>());
         services.AddWorkflowTemplateServices();
         services.AddScoped<WorkflowExampleCatalogSeedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
         services.AddScoped<ScenarioHarnessService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentContextContributor, MemoryAgentContextContributor>());
         services.AddScoped<IDatabaseTransferHandler, AiAgentsDatabaseTransferHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, AgentFrameworkShellNavigationContributor>());
         services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
@@ -112,6 +118,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddFileWorkflowArtifactContentStore(ResolveCurrentWorkspaceScope);
         services.TryAddScoped<IWorkflowRuntimeEvidenceSourceProvider, WorkflowRuntimeEvidenceSourceProvider>();
         services.TryAddScoped<IProcessRuntimeEvidenceSourceProvider, UnavailableProcessRuntimeEvidenceSourceProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, WorkflowRuntimeMemorySourceGatewayAdapter>());
 
         if (backgroundWorkersEnabled)
         {

@@ -4,14 +4,13 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
-using CanDoItAll.AgentFramework.Rag.Driver.Models;
-using CanDoItAll.AgentFramework.Rag.Qdrant.DependencyInjection;
-using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
+using CanDoItAll.Memory.Http;
+using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
+using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -26,7 +25,6 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Data;
@@ -40,7 +38,13 @@ namespace CanDoItAll.Composition;
 public static class RuntimeHostServiceCollectionExtensions
 {
     private const string OpenAiApiKeyConfigurationKey = "OPENAI_API_KEY";
-    private const string QdrantRagConfigurationSection = "Rag:Qdrant";
+    private const string DeterministicMockMemoryProviderConfigurationSection = "Memory:Providers:DeterministicMock";
+    private const string HttpMemoryProviderConfigurationSection = "Memory:Providers:Http";
+    private const string NativeRemoteMemoryProviderConfigurationSection = "Memory:Providers:NativeRemote";
+    private const string ProviderDriverEnabledConfigurationKey = "Enabled";
+    private const string ProviderDriverClientNameConfigurationKey = "ClientName";
+    private const string ProviderDriverDefaultTimeoutConfigurationKey = "DefaultTimeout";
+    private const string ProviderDriverMaxRetryAttemptsConfigurationKey = "MaxRetryAttempts";
 
     public static IServiceCollection AddCanDoItAllRuntimeModules(
         this IServiceCollection services,
@@ -54,6 +58,14 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddSecurityModule(configuration);
         services.AddWorkspaceModule();
         services.AddProjectsModule();
+        services.AddGenericMemoryModule(options =>
+        {
+            options.EnableDeterministicMockProvider = IsProviderDriverEnabled(
+                configuration,
+                DeterministicMockMemoryProviderConfigurationSection);
+        });
+        services.AddConfiguredMemoryProviderDrivers(configuration);
+        services.AddMemoryUiModule();
         services.AddWorkbenchModule();
         services.AddResourcesModule();
         services.AddPromptsModule();
@@ -64,8 +76,6 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddProcessesModule(configuration);
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
-        services.AddConfiguredQdrantRagDriver(configuration);
-        services.AddCognitiveMemoryModule();
         services.AddSchedulerPlannerModule(configuration);
         services.AddCollaborationModule();
         services.AddCrmHrModule();
@@ -73,93 +83,84 @@ public static class RuntimeHostServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddConfiguredQdrantRagDriver(
+    private static IServiceCollection AddConfiguredMemoryProviderDrivers(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var section = configuration.GetSection(QdrantRagConfigurationSection);
-        if (!section.Exists() || !(section.GetValue<bool?>("Enabled") ?? false))
+        var httpSection = configuration.GetSection(HttpMemoryProviderConfigurationSection);
+        if (IsProviderDriverEnabled(configuration, HttpMemoryProviderConfigurationSection))
         {
-            return services;
+            services.AddHttpMemoryProviderDriver(options =>
+            {
+                ConfigureHttpMemoryProviderOptions(options, httpSection);
+            });
         }
 
-        var collectionName = section["CollectionName"];
-        var vectorSize = section.GetValue<int?>("VectorSize") ?? 384;
-        var effectiveCollectionName = string.IsNullOrWhiteSpace(collectionName)
-            ? "candoitall-knowledge"
-            : collectionName.Trim();
-        var embeddingProfileId = string.IsNullOrWhiteSpace(section["EmbeddingProfileId"])
-            ? $"local-hashing-v1:dimension={vectorSize}"
-            : section["EmbeddingProfileId"]!.Trim();
-        var projectionProfileId = string.IsNullOrWhiteSpace(section["ProjectionProfileId"])
-            ? "qdrant-default-v1"
-            : section["ProjectionProfileId"]!.Trim();
-        var grpcPort = section.GetValue<int?>("GrpcPort") ??
-                       section.GetValue<int?>("Port") ??
-                       6334;
-        var distance = ReadQdrantDistance(section["Distance"]);
-
-        services.TryAddSingleton<IAgentTextEmbeddingGenerator>(_ =>
-            new LocalHashingAgentTextEmbeddingGenerator(new LocalHashingAgentTextEmbeddingOptions
-            {
-                Dimension = vectorSize,
-                ProfileId = embeddingProfileId
-            }));
-        services.Configure<CognitiveMemoryProjectionOptions>(options =>
+        var nativeSection = configuration.GetSection(NativeRemoteMemoryProviderConfigurationSection);
+        if (IsProviderDriverEnabled(configuration, NativeRemoteMemoryProviderConfigurationSection))
         {
-            options.Enabled = true;
-            options.CollectionName = effectiveCollectionName;
-            options.ProjectionProfileId = projectionProfileId;
-            options.EmbeddingProfileId = embeddingProfileId;
-            options.TargetProviderName = RagDriverProviderNames.Qdrant;
-            options.ProjectionStoreKind = CognitiveMemoryProjectionStoreKind.Qdrant;
-            options.VectorDimensions = vectorSize;
-        });
-
-        services.AddQdrantRagDriver(
-            configureQdrant: options =>
+            services.AddNativeRemoteMemoryProviderDriver(options =>
             {
-                options.Host = string.IsNullOrWhiteSpace(section["Host"]) ? "localhost" : section["Host"]!.Trim();
-                options.Port = grpcPort;
-                options.Https = section.GetValue<bool?>("Https") ?? false;
-                options.ApiKey = string.IsNullOrWhiteSpace(section["ApiKey"]) ? null : section["ApiKey"]!.Trim();
-                options.CreateCollectionIfMissing = section.GetValue<bool?>("CreateCollectionIfMissing") ?? true;
-                options.WaitForWrites = section.GetValue<bool?>("WaitForWrites") ?? true;
-
-                var grpcTimeout = section.GetValue<TimeSpan?>("GrpcTimeout");
-                if (grpcTimeout.HasValue)
-                {
-                    options.GrpcTimeout = grpcTimeout.Value;
-                }
-            },
-            configureFactory: options =>
-            {
-                options.DefaultCollection = new RagCollectionOptions
-                {
-                    CollectionName = effectiveCollectionName,
-                    VectorSize = vectorSize,
-                    Distance = distance
-                };
-            },
-            configureEmbedding: options => options.Dimension = vectorSize);
+                ConfigureNativeRemoteMemoryProviderOptions(options, nativeSection);
+            });
+        }
 
         return services;
     }
 
-    private static RagDistanceMetric ReadQdrantDistance(string? value)
+    private static bool IsProviderDriverEnabled(
+        IConfiguration configuration,
+        string sectionName)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        var section = configuration.GetSection(sectionName);
+        return section.Exists() &&
+               (section.GetValue<bool?>(ProviderDriverEnabledConfigurationKey) ?? false);
+    }
+
+    private static void ConfigureHttpMemoryProviderOptions(
+        HttpMemoryProviderOptions options,
+        IConfigurationSection section)
+    {
+        var clientName = section[ProviderDriverClientNameConfigurationKey];
+        if (!string.IsNullOrWhiteSpace(clientName))
         {
-            return RagDistanceMetric.Cosine;
+            options.ClientName = clientName.Trim();
         }
 
-        if (Enum.TryParse<RagDistanceMetric>(value.Trim(), ignoreCase: true, out var distance))
+        var defaultTimeout = section.GetValue<TimeSpan?>(ProviderDriverDefaultTimeoutConfigurationKey);
+        if (defaultTimeout.HasValue)
         {
-            return distance;
+            options.DefaultTimeout = defaultTimeout.Value;
         }
 
-        throw new InvalidOperationException(
-            $"Unsupported {QdrantRagConfigurationSection}:Distance value '{value}'.");
+        var maxRetryAttempts = section.GetValue<int?>(ProviderDriverMaxRetryAttemptsConfigurationKey);
+        if (maxRetryAttempts.HasValue)
+        {
+            options.MaxRetryAttempts = maxRetryAttempts.Value;
+        }
+    }
+
+    private static void ConfigureNativeRemoteMemoryProviderOptions(
+        NativeRemoteMemoryProviderOptions options,
+        IConfigurationSection section)
+    {
+        var clientName = section[ProviderDriverClientNameConfigurationKey];
+        if (!string.IsNullOrWhiteSpace(clientName))
+        {
+            options.ClientName = clientName.Trim();
+        }
+
+        var defaultTimeout = section.GetValue<TimeSpan?>(ProviderDriverDefaultTimeoutConfigurationKey);
+        if (defaultTimeout.HasValue)
+        {
+            options.DefaultTimeout = defaultTimeout.Value;
+        }
+
+        var maxRetryAttempts = section.GetValue<int?>(ProviderDriverMaxRetryAttemptsConfigurationKey);
+        if (maxRetryAttempts.HasValue)
+        {
+            options.MaxRetryAttempts = maxRetryAttempts.Value;
+        }
     }
 
     private static void PromoteConfiguredOpenAiCredential(

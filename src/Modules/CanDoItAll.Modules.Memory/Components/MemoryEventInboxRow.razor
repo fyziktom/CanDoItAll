@@ -1,0 +1,27 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<article class="memory-ui-ledger-row">
+    <strong>Provider event</strong>
+    <StatusBadge Tone="@MemoryUiFormatting.LedgerTone(Event.Status)" Text="@Event.Status.ToString()" />
+    <p class="memory-ui-muted">@Event.EventKind / @Event.Priority</p>
+    <Button Text="Acknowledge"
+            Icon="done"
+            ButtonStyle="ButtonStyle.Light"
+            Size="ButtonSize.Small"
+            Click="AcknowledgeAsync"
+            Disabled="@IsBusy"
+            data-testid="memory-ui-event-acknowledge" />
+</article>
+
+@code {
+    [Parameter]
+    public MemoryProviderEventUiRecord Event { get; set; } = default!;
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<MemoryProviderEventId> OnAcknowledge { get; set; }
+
+    private Task AcknowledgeAsync() => OnAcknowledge.InvokeAsync(Event.ProviderEventId);
+}

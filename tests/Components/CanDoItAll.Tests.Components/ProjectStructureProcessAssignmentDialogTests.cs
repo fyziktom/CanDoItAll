@@ -320,22 +320,23 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         IReadOnlyList<ProjectStructureProcessStartRoleState> roles)
     {
         return new ProjectStructureProcessStartDialogState(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            "process-node",
-            "Release readiness process",
-            "project-root",
-            "Delivery project",
-            Guid.NewGuid(),
-            ProjectStructureProcessStartStage.Staffing,
-            false,
-            false,
-            "Assign the required roles before the process can start.",
-            roles,
-            "HR Staffing Manager",
-            DateTimeOffset.UtcNow,
-            false,
-            string.Empty);
+            ProjectId: Guid.NewGuid(),
+            ProcessDefinitionId: Guid.NewGuid(),
+            DefinitionKey: "release-readiness",
+            NodeId: "process-node",
+            NodeTitle: "Release readiness process",
+            ParentNodeId: "project-root",
+            ParentNodeTitle: "Delivery project",
+            LaunchPlanId: Guid.NewGuid(),
+            Stage: ProjectStructureProcessStartStage.Staffing,
+            IsBusy: false,
+            ConfirmHrManagerMatch: false,
+            StatusMessage: "Assign the required roles before the process can start.",
+            Roles: roles,
+            HrManagerName: "HR Staffing Manager",
+            StageActivatedAtUtc: DateTimeOffset.UtcNow,
+            AssignmentsReviewed: false,
+            Error: string.Empty);
     }
 
     private static ProjectStructureProcessStartRoleState CreateRole(

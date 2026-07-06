@@ -23,6 +23,8 @@ public readonly record struct WorkflowExecutorId
 
 public static class WorkflowExecutorIds
 {
+    public static WorkflowExecutorId Memory { get; } = new("memory.operation");
+
     public static WorkflowExecutorId StorageFile { get; } = new("storage.file");
 
     public static WorkflowExecutorId SourceIngestion { get; } = new("source.ingest");
