@@ -4,9 +4,9 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed partial class RuntimeCapabilityComposer
+internal static class RuntimeCapabilityAccessPolicyBuilder
 {
-    private IReadOnlyList<CapabilityAccessPolicy> BuildRuntimeCapabilityAccessPolicies(
+    public static IReadOnlyList<CapabilityAccessPolicy> BuildRuntimeCapabilityAccessPolicies(
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         AgentRuntimeContextIntent contextIntent)
     {
@@ -75,7 +75,7 @@ internal sealed partial class RuntimeCapabilityComposer
         }
 
         return !contextIntent.ScaffoldToolOnly &&
-               !HasAnyOperation(
+               !RuntimeToolProcessIntentPolicy.HasAnyOperation(
                    contextIntent,
                    ProcessOperationContractNames.MutateProductTarget,
                    ProcessOperationContractNames.WriteExternalArtifactDestination,
@@ -119,14 +119,14 @@ internal sealed partial class RuntimeCapabilityComposer
     {
         if (!normalized.CanReadStorage)
         {
-            AddStorageRule(rules, StorageRuntimeToolNames[0], "read storage");
-            AddStorageRule(rules, StorageRuntimeToolNames[1], "read storage");
+            AddStorageRule(rules, RuntimeStorageToolNames.CatalogList, "read storage");
+            AddStorageRule(rules, RuntimeStorageToolNames.ReadTextFile, "read storage");
         }
 
         if (!normalized.CanWriteStorage)
         {
-            AddStorageRule(rules, StorageRuntimeToolNames[2], "write storage");
-            AddStorageRule(rules, StorageRuntimeToolNames[3], "write storage");
+            AddStorageRule(rules, RuntimeStorageToolNames.WriteTextFile, "write storage");
+            AddStorageRule(rules, RuntimeStorageToolNames.DeleteObject, "write storage");
         }
     }
 
@@ -147,7 +147,7 @@ internal sealed partial class RuntimeCapabilityComposer
     {
         var rules = ToolContractCatalog.WorkspaceToolNames
             .Select(name => RuntimeToolName.TryCreate(name, out var runtimeToolName) ? runtimeToolName : (RuntimeToolName?)null)
-            .Concat(StorageRuntimeToolNames.Select(name => (RuntimeToolName?)name))
+            .Concat(RuntimeStorageToolNames.All.Select(name => (RuntimeToolName?)name))
             .Where(name => name.HasValue)
             .Select(name => new CapabilityAccessRule(
                 CapabilityRuleId.Create($"deny-runtime-tool-{name!.Value.Value.Replace('_', '-')}"),
@@ -168,7 +168,7 @@ internal sealed partial class RuntimeCapabilityComposer
         foreach (var capability in ToolCapabilityRegistry.Capabilities)
         {
             if (!RuntimeToolName.TryCreate(capability.Name, out var runtimeToolName) ||
-                IsToolCapabilityAllowedForProcessIntent(capability, contextIntent))
+                RuntimeToolProcessIntentPolicy.IsToolCapabilityAllowedForProcessIntent(capability, contextIntent))
             {
                 continue;
             }
@@ -182,5 +182,15 @@ internal sealed partial class RuntimeCapabilityComposer
         }
 
         return new CapabilityAccessPolicy(rules);
+    }
+
+    private static string NormalizeTemplatePathSegment(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? "unknown"
+            : string.Concat(value.Trim().Select(character =>
+                char.IsLetterOrDigit(character) || character is '-' or '_'
+                    ? char.ToLowerInvariant(character)
+                    : '-'));
     }
 }

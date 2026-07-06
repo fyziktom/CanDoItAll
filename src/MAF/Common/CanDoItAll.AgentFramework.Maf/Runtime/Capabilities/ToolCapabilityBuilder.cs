@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed partial class ToolCapabilityBuilder(
+internal sealed class ToolCapabilityBuilder(
     IServiceProvider services,
     string workspaceRoot,
     WorkspaceScopeDescriptor workspaceScope,
@@ -20,6 +20,11 @@ internal sealed partial class ToolCapabilityBuilder(
 {
     private static readonly ProviderProfileService ProviderFeatureService = new();
     private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
+    private readonly ConfiguredWorkspaceToolSet configuredWorkspaceToolSet = new(
+        workspaceToolAccess,
+        workspacePlugin,
+        storagePlugin,
+        capabilityAccessPlan);
 
         public IReadOnlyList<AITool> CreateTools(
             CapabilityCatalogItem capability,
@@ -42,7 +47,7 @@ internal sealed partial class ToolCapabilityBuilder(
 
             var tools = toolKey switch
             {
-                "workspace-plugin" => CreateWorkspacePluginTools(suppressApprovalRequirements),
+                "workspace-plugin" => configuredWorkspaceToolSet.CreateWorkspacePluginTools(suppressApprovalRequirements),
                 "provider-native-code-interpreter" or ProviderNativeToolKeys.CodeInterpreter => [CreateHostedCodeInterpreterTool(capability, provider, configuration)],
                 "provider-native-file-search" or ProviderNativeToolKeys.FileSearch => [CreateHostedFileSearchTool(capability, provider, configuration)],
                 "provider-native-web-search" or ProviderNativeToolKeys.WebSearch => [CreateHostedWebSearchTool(capability, provider, configuration)],
@@ -107,6 +112,11 @@ internal sealed partial class ToolCapabilityBuilder(
             return SupportsFrameworkApprovalWrapper(toolKey) && configuration.ApprovalRequired == true
                 || string.Equals(toolKey, "workspace-plugin", StringComparison.OrdinalIgnoreCase);
         }
+
+        public IReadOnlyList<AITool> CreateConfiguredWorkspaceTools(
+            AgentDefinition agent,
+            bool suppressApprovalRequirements = false)
+            => configuredWorkspaceToolSet.CreateTools(agent, suppressApprovalRequirements);
 
         public IReadOnlyList<AITool> CreatePluginTools(
             CapabilityCatalogItem capability,

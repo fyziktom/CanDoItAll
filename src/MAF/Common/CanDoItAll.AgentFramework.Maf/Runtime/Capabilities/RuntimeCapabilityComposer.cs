@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using CapabilityAccessPolicyEvaluatorContract = CanDoItAll.AgentFramework.Capabilities.Abstractions.ICapabilityAccessPolicyEvaluator;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -38,7 +40,7 @@ internal interface IRuntimeCapabilityComposer
         AgentRuntimeContextIntent contextIntent);
 }
 
-internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
+internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 {
     private const int DefaultCompactionSlidingWindowTurns = 32;
     private const int DefaultCompactionTruncationTokenLimit = 64000;
@@ -55,6 +57,9 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
     private readonly IMafProviderRuntimeGateway providerRuntimeGateway;
     private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
     private readonly IMafRuntimeCompositionMetrics compositionMetrics;
+    private readonly RuntimeCapabilityDescriptorCatalog descriptorCatalog;
+    private readonly RuntimeCapabilityAccessPlanner capabilityAccessPlanner;
+    private readonly RuntimeRegisteredToolProviderAttacher registeredToolProviderAttacher;
 
     public RuntimeCapabilityComposer(
         string workspaceRoot,
@@ -79,6 +84,13 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
         this.providerRuntimeGateway = providerRuntimeGateway ?? throw new ArgumentNullException(nameof(providerRuntimeGateway));
         this.runtimeToolProviderComposer = runtimeToolProviderComposer ?? throw new ArgumentNullException(nameof(runtimeToolProviderComposer));
         this.compositionMetrics = compositionMetrics ?? throw new ArgumentNullException(nameof(compositionMetrics));
+        var capabilityAccessPolicyEvaluator = services.GetService(typeof(CapabilityAccessPolicyEvaluatorContract)) as CapabilityAccessPolicyEvaluatorContract
+            ?? new CapabilityAccessPolicyEvaluator();
+        descriptorCatalog = new RuntimeCapabilityDescriptorCatalog();
+        capabilityAccessPlanner = new RuntimeCapabilityAccessPlanner(
+            descriptorCatalog,
+            capabilityAccessPolicyEvaluator);
+        registeredToolProviderAttacher = new RuntimeRegisteredToolProviderAttacher(runtimeToolProviderComposer);
     }
 
     public static RuntimeCapabilityComposer CreateDefault(
@@ -135,6 +147,19 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
             AgentRuntimeContextIntent.Empty);
     }
 
+    internal RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
+        AgentDefinition agent,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        AgentWorkspaceToolAccessSettings workspaceToolAccess,
+        AgentRuntimeContextIntent contextIntent,
+        bool storageToolsAvailable)
+        => capabilityAccessPlanner.CreateRuntimeCapabilityAccessPlan(
+            agent,
+            capabilities,
+            workspaceToolAccess,
+            contextIntent,
+            storageToolsAvailable);
+
     public async Task<RuntimeCapabilityState> CreateCapabilityStateCoreAsync(
         AgentDefinition agent,
         ProviderProfile provider,
@@ -155,7 +180,7 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
             var storageToolsAvailable = HasStorageRuntimePluginServices();
             var capabilityAccessPlan = TrackResult(
                 "capability.access-plan",
-                () => CreateRuntimeCapabilityAccessPlan(
+                () => capabilityAccessPlanner.CreateRuntimeCapabilityAccessPlan(
                     agent,
                     capabilities,
                     workspaceToolAccess,
@@ -176,7 +201,7 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
 
             TrackAction(
                 "capability.initial-access-state",
-                () => AttachInitialCapabilityAccessState(composition.State, capabilityAccessPlan));
+                () => RuntimeCapabilityAccessPlanner.AttachInitialCapabilityAccessState(composition.State, capabilityAccessPlan));
 
             await TrackAsync(
                 "capability.workspace-memory",
@@ -198,7 +223,7 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
                 () => AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements));
             await TrackAsync(
                 "capability.runtime-tool-providers",
-                () => AttachRegisteredRuntimeToolProvidersAsync(
+                () => registeredToolProviderAttacher.AttachAsync(
                     composition,
                     agent,
                     provider,
@@ -206,6 +231,7 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
                     progressCallback,
                     cancellationToken,
                     suppressApprovalRequirements,
+                    ResolveContextPolicyKind(agent, suppressApprovalRequirements),
                     contextWorkspaceScope,
                     contextIntent));
             await TrackAsync(
@@ -297,15 +323,15 @@ internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComp
             workspaceScope,
             dependencyResolver,
             providerCredentialService,
-            ResolveCatalogOperationClassifications,
-            ResolveMcpServerKey,
-            ResolveCapabilityDisplayName,
-            ResolveCapabilityDescription,
-            ResolveMcpAllowedTools,
-            ResolveMcpApprovalMode,
-            ResolveMcpTimeout,
-            ResolveCatalogTags,
-            ResolveMcpMessageFraming);
+            descriptorCatalog.ResolveCatalogOperationClassifications,
+            RuntimeCapabilityDescriptorCatalog.ResolveMcpServerKey,
+            RuntimeCapabilityDescriptorCatalog.ResolveCapabilityDisplayName,
+            RuntimeCapabilityDescriptorCatalog.ResolveCapabilityDescription,
+            RuntimeCapabilityDescriptorCatalog.ResolveMcpAllowedTools,
+            RuntimeCapabilityDescriptorCatalog.ResolveMcpApprovalMode,
+            RuntimeCapabilityDescriptorCatalog.ResolveMcpTimeout,
+            RuntimeCapabilityDescriptorCatalog.ResolveCatalogTags,
+            RuntimeCapabilityDescriptorCatalog.ResolveMcpMessageFraming);
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
         var toolBuilder = new ToolCapabilityBuilder(
             services,

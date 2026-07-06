@@ -6,9 +6,15 @@ using AccessCapabilityTag = CanDoItAll.AgentFramework.Capabilities.Abstractions.
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed partial class ToolCapabilityBuilder
+internal sealed class ConfiguredWorkspaceToolSet(
+    AgentWorkspaceToolAccessSettings workspaceToolAccess,
+    WorkspaceRuntimePlugin workspacePlugin,
+    StorageRuntimePlugin? storagePlugin,
+    RuntimeCapabilityAccessPlan capabilityAccessPlan)
 {
-        public IReadOnlyList<AITool> CreateConfiguredWorkspaceTools(
+        private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
+
+        public IReadOnlyList<AITool> CreateTools(
             AgentDefinition agent,
             bool suppressApprovalRequirements = false)
         {
@@ -127,7 +133,7 @@ internal sealed partial class ToolCapabilityBuilder
             }
         }
 
-        private IReadOnlyList<AITool> CreateWorkspacePluginTools(bool suppressApprovalRequirements)
+        public IReadOnlyList<AITool> CreateWorkspacePluginTools(bool suppressApprovalRequirements)
         {
             var tools = new List<AITool>();
             AddWorkspacePluginTool(tools, "workspace_execution_boundary", () => AIFunctionFactory.Create(workspacePlugin.GetWorkspaceExecutionBoundary, "workspace_execution_boundary", "Describes the effective tool-execution boundary and whether the host provides real sandboxing."));
@@ -176,5 +182,12 @@ internal sealed partial class ToolCapabilityBuilder
             {
                 tools.Add(createTool());
             }
+        }
+
+        private static AITool WrapWithApproval(AITool tool, bool suppressApprovalRequirements = false)
+        {
+            return !suppressApprovalRequirements && tool is AIFunction function
+                ? new ApprovalRequiredAIFunction(function)
+                : tool;
         }
 }

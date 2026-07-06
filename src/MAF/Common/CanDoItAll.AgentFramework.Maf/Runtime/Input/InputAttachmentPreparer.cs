@@ -40,7 +40,7 @@ internal sealed class InputAttachmentPreparer(
             return new PreparedInputAttachments(prompt, runtimeOptions);
         }
 
-        var imageModel = WorkspaceRuntimePlugin.ResolveProviderImageAnalysisModel(effectiveProvider, selectedModel);
+        var imageModel = WorkspaceImageAnalysisModelResolver.ResolveProviderImageAnalysisModel(effectiveProvider, selectedModel);
         if (!ProviderFeatureService.ResolveFeatureMatrixForModel(effectiveProvider, imageModel).SupportsVision)
         {
             return new PreparedInputAttachments(prompt, runtimeOptions);

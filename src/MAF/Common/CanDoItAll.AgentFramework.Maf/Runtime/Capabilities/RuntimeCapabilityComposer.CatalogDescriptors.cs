@@ -14,9 +14,9 @@ using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed partial class RuntimeCapabilityComposer
+internal sealed class RuntimeCapabilityDescriptorCatalog
 {
-    private CapabilityExposureDescriptor CreateCatalogCapabilityDescriptor(CapabilityCatalogItem capability)
+    public CapabilityExposureDescriptor CreateCatalogCapabilityDescriptor(CapabilityCatalogItem capability)
         => capability.Kind switch
         {
             ModelCapabilityKind.Skill => CreateSkillCatalogCapabilityDescriptor(capability),
@@ -244,7 +244,7 @@ internal sealed partial class RuntimeCapabilityComposer
             ? trustLevel
             : SkillScriptTrustLevel.WorkspaceSkillRoot;
 
-    private static McpServerKey ResolveMcpServerKey(
+    public static McpServerKey ResolveMcpServerKey(
         CapabilityCatalogItem capability,
         McpCapabilityConfiguration configuration)
     {
@@ -261,19 +261,19 @@ internal sealed partial class RuntimeCapabilityComposer
         return McpServerKey.Create(ToKebab(capability.Name));
     }
 
-    private static IReadOnlySet<McpToolName> ResolveMcpAllowedTools(McpCapabilityConfiguration configuration)
+    public static IReadOnlySet<McpToolName> ResolveMcpAllowedTools(McpCapabilityConfiguration configuration)
         => (configuration.AllowedTools ?? [])
             .Select(tool => McpToolName.TryCreate(tool, out var parsed) ? parsed : (McpToolName?)null)
             .Where(tool => tool.HasValue)
             .Select(tool => tool!.Value)
             .ToHashSet();
 
-    private static McpApprovalMode ResolveMcpApprovalMode(McpCapabilityConfiguration configuration)
+    public static McpApprovalMode ResolveMcpApprovalMode(McpCapabilityConfiguration configuration)
         => string.Equals(configuration.ApprovalMode, "AlwaysRequire", StringComparison.OrdinalIgnoreCase)
             ? McpApprovalMode.AlwaysRequire
             : McpApprovalMode.NeverRequire;
 
-    private static TimeSpan ResolveMcpTimeout(McpCapabilityConfiguration configuration)
+    public static TimeSpan ResolveMcpTimeout(McpCapabilityConfiguration configuration)
     {
         const int defaultTimeoutSeconds = 30;
         const int minimumTimeoutSeconds = 1;
@@ -283,7 +283,7 @@ internal sealed partial class RuntimeCapabilityComposer
         return TimeSpan.FromSeconds(Math.Clamp(timeoutSeconds, minimumTimeoutSeconds, maximumTimeoutSeconds));
     }
 
-    private static McpStdioMessageFraming ResolveMcpMessageFraming(
+    public static McpStdioMessageFraming ResolveMcpMessageFraming(
         string? value,
         CapabilityCatalogItem capability)
     {
@@ -323,12 +323,12 @@ internal sealed partial class RuntimeCapabilityComposer
         string capabilityKey)
         => ImplementationKey.Create($"maf.{adapterKind}.{capabilityKey}");
 
-    private static string ResolveCapabilityDisplayName(CapabilityCatalogItem capability)
+    public static string ResolveCapabilityDisplayName(CapabilityCatalogItem capability)
         => string.IsNullOrWhiteSpace(capability.Name)
             ? capability.Key
             : capability.Name;
 
-    private static string ResolveCapabilityDescription(CapabilityCatalogItem capability)
+    public static string ResolveCapabilityDescription(CapabilityCatalogItem capability)
     {
         if (!string.IsNullOrWhiteSpace(capability.Description))
         {
@@ -340,7 +340,7 @@ internal sealed partial class RuntimeCapabilityComposer
             : capability.Name;
     }
 
-    private static CapabilityIdentity CreateCatalogCapabilityIdentity(CapabilityCatalogItem capability)
+    public static CapabilityIdentity CreateCatalogCapabilityIdentity(CapabilityCatalogItem capability)
         => new(
             MapCapabilityKind(capability.Kind),
             CapabilityKey.Create(capability.Key));
@@ -373,7 +373,7 @@ internal sealed partial class RuntimeCapabilityComposer
             : null;
     }
 
-    private IReadOnlySet<CapabilityOperationClassification> ResolveCatalogOperationClassifications(
+    public IReadOnlySet<CapabilityOperationClassification> ResolveCatalogOperationClassifications(
         CapabilityCatalogItem capability,
         RuntimeToolName? runtimeToolName)
     {
@@ -429,7 +429,7 @@ internal sealed partial class RuntimeCapabilityComposer
         return CapabilityAvailabilityState.Available;
     }
 
-    private static IReadOnlySet<CapabilityTag> ResolveCatalogTags(
+    public static IReadOnlySet<CapabilityTag> ResolveCatalogTags(
         CapabilityCatalogItem capability,
         RuntimeToolName? runtimeToolName,
         IReadOnlySet<CapabilityOperationClassification> classifications)
@@ -478,4 +478,30 @@ internal sealed partial class RuntimeCapabilityComposer
                (configuration?.Arguments?.Any(argument =>
                    argument.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase)) ?? false);
     }
+
+    private static IReadOnlySet<CapabilityOperationClassification> ResolveRuntimeToolOperationClassifications(string runtimeToolName)
+        => RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolOperationClassifications(runtimeToolName);
+
+    private static CapabilitySideEffectProfile ResolveRuntimeToolSideEffectProfile(string runtimeToolName)
+        => RuntimeToolCapabilityDescriptorFactory.ResolveRuntimeToolSideEffectProfile(runtimeToolName);
+
+    private static CapabilitySideEffectKind MapSideEffectKind(ToolCapabilitySideEffectKind sideEffectKind)
+        => RuntimeToolCapabilityDescriptorFactory.MapSideEffectKind(sideEffectKind);
+
+    private static bool TryCreateRuntimeToolName(string toolName, out RuntimeToolName runtimeToolName)
+        => RuntimeToolCapabilityDescriptorFactory.TryCreateRuntimeToolName(toolName, out runtimeToolName);
+
+    private static IReadOnlySet<CapabilityOperationClassification> ToClassificationSet(
+        params CapabilityOperationClassification[] classifications)
+        => RuntimeToolCapabilityDescriptorFactory.ToClassificationSet(classifications);
+
+    private static string ToKebab(string value)
+        => string.Concat(value.Select((character, index) =>
+            index > 0 && char.IsUpper(character)
+                ? "-" + char.ToLowerInvariant(character)
+                : char.ToLowerInvariant(character).ToString()));
+
+    private static TConfiguration? DeserializeConfiguration<TConfiguration>(string? json)
+        where TConfiguration : class
+        => MafRuntimeJson.DeserializeConfiguration<TConfiguration>(json);
 }

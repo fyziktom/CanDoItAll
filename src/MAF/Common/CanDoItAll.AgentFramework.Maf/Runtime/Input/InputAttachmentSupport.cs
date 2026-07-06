@@ -52,7 +52,7 @@ internal static class InputAttachmentSupport
             return selectedModel;
         }
 
-        var imageAnalysisModel = WorkspaceRuntimePlugin.ResolveProviderImageAnalysisModel(provider, selectedModel);
+        var imageAnalysisModel = WorkspaceImageAnalysisModelResolver.ResolveProviderImageAnalysisModel(provider, selectedModel);
         return ProviderFeatureService.ResolveFeatureMatrixForModel(provider, imageAnalysisModel).SupportsVision
             ? imageAnalysisModel
             : selectedModel;

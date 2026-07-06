@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -12,8 +10,6 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed class MafAgentRuntime : IAgentRuntime
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-    private static readonly TimeSpan FinalizerSessionSerializationTimeout = TimeSpan.FromSeconds(5);
     private static readonly HttpClient HttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(20)
@@ -34,7 +30,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
     private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
     private readonly MafRuntimeAgentFactory runtimeAgentFactory;
     private readonly InputAttachmentPreparer inputAttachmentPreparer;
-    private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
+    private readonly IMafApprovalContinuationDriver approvalContinuationDriver;
+    private readonly IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver;
 
     public MafAgentRuntime(
         string workspaceRoot,
@@ -87,6 +84,12 @@ public sealed class MafAgentRuntime : IAgentRuntime
             providerCredentialService,
             providerAgentFactory,
             runtimeCapabilityComposer);
+        approvalContinuationDriver = services.GetService(typeof(IMafApprovalContinuationDriver)) is IMafApprovalContinuationDriver resolvedApprovalContinuationDriver
+            ? resolvedApprovalContinuationDriver
+            : new MafApprovalContinuationDriver();
+        sessionPersistenceDriver = services.GetService(typeof(IMafRuntimeSessionPersistenceDriver)) is IMafRuntimeSessionPersistenceDriver resolvedSessionPersistenceDriver
+            ? resolvedSessionPersistenceDriver
+            : new MafRuntimeSessionPersistenceDriver();
     }
 
     public Task<AIAgent> CreateHostedAgentAsync(
@@ -426,7 +429,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
             runtimeOptions);
-        var inputMessages = CreateApprovalInputMessages(session, approved).ToList();
+        var inputMessages = approvalContinuationDriver.CreateApprovalInputMessages(session, approved).ToList();
         var capabilityState = runtimeBuild.CapabilityState;
         var contextManifest = MafContextManifestBuilder.Create(
             agent,
@@ -686,7 +689,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 throw new AgentRuntimeUsageException(
                     $"Required finalizer repair captured '{exception.ToolName}' but the governed result could not be validated.",
                     exception,
-                    CreateProviderUsageObservations(
+                    MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                         provider,
                         resolvedModel,
                         runtimeSession,
@@ -720,14 +723,14 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 throw new AgentRuntimeUsageException(
                     "Provider runtime failed during the bounded required-finalizer repair turn. Usage was captured when available.",
                     exception,
-                    CreateProviderUsageObservations(
+                    MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                         provider,
                         resolvedModel,
                         runtimeSession,
                         runtimeSessionKey,
                         updates,
                     ProviderUsageSourcePhases.FinalizerRecovery,
-                    BuildProviderFailureDiagnostic(exception)));
+                    MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)));
             }
         }
 
@@ -918,14 +921,14 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     throw new AgentRuntimeUsageException(
                         "Provider runtime failed after provider activity. Usage was captured when available.",
                         exception,
-                        CreateProviderUsageObservations(
+                        MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                             provider,
                             resolvedModel,
                             runtimeSession,
                             runtimeSessionKey,
                             updates,
                             ProviderUsageSourcePhases.AgentRuntime,
-                            BuildProviderFailureDiagnostic(exception)));
+                            MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)));
                 }
             }
 
@@ -937,14 +940,14 @@ public sealed class MafAgentRuntime : IAgentRuntime
 
             if (approvalRequests.Count > 0)
             {
-                pendingApprovalCache[session.Id] = approvalRequests;
+                approvalContinuationDriver.StorePendingApprovals(session.Id, approvalRequests);
             }
             else
             {
-                pendingApprovalCache.TryRemove(session.Id, out _);
+                approvalContinuationDriver.ClearPendingApprovals(session.Id);
             }
 
-            if (!ShouldContinueBackgroundRun(agent, provider, response, approvalRequests))
+            if (!MafRuntimeResponseAssembler.ShouldContinueBackgroundRun(agent, provider, response, approvalRequests))
             {
                 var repairedFinalizerResponse = await TryRunMissingRequiredFinalizerRepairAsync(response, approvalRequests);
                 if (repairedFinalizerResponse is not null)
@@ -952,8 +955,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     return AttachContextDiagnostics(repairedFinalizerResponse);
                 }
 
-                var pendingApprovals = approvalRequests.Select(MapPendingApproval).ToList();
-                var serializedSessionJson = await TrySerializePersistableRuntimeSessionAsync(
+                var pendingApprovals = approvalRequests.Select(approvalContinuationDriver.MapPendingApproval).ToList();
+                var serializedSessionJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
                     runtimeAgent,
                     runtimeSession,
                     runtimeOptions,
@@ -966,21 +969,21 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     await progressCallback(ExecutionState.WaitingOnTool, "Approval", "The run is waiting for a tool approval response before it can continue.");
                 }
 
-                ThrowIfEmptyProviderCompletion(provider, resolvedModel, response, pendingApprovals);
+                MafRuntimeResponseAssembler.ThrowIfEmptyProviderCompletion(provider, resolvedModel, response, pendingApprovals);
 
                 return AttachContextDiagnostics(new AgentRuntimeResponse(
-                    ResponseText: ResolveResponseText(response, pendingApprovals),
-                    InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
-                    OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
-                    ToolCalls: CountToolCalls(response),
-                    RuntimeSessionKey: ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey),
+                    ResponseText: approvalContinuationDriver.ResolveResponseText(response, pendingApprovals),
+                    InputTokens: MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.InputTokenCount),
+                    OutputTokens: MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.OutputTokenCount),
+                    ToolCalls: MafRuntimeResponseAssembler.CountToolCalls(response),
+                    RuntimeSessionKey: MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey),
                     SerializedSessionStateJson: serializedSessionJson,
                     PendingApprovals: pendingApprovals)
                 {
-                    CachedInputTokens = ClampTokenCount(response.Usage?.CachedInputTokenCount),
+                    CachedInputTokens = MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.CachedInputTokenCount),
                     FinalizerInvocations = snapshotEffectiveFinalizerInvocations(),
                     ToolInvocationTraces = snapshotEffectiveToolInvocationTraces(),
-                    UsageObservations = CreateProviderUsageObservations(
+                    UsageObservations = MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                         provider,
                         resolvedModel,
                         runtimeSession,
@@ -1134,7 +1137,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
         return true;
     }
 
-    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+    private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
         ProviderProfile provider,
         string model,
         AgentStructuredOutputContract? structuredOutput,
@@ -1152,14 +1155,14 @@ public sealed class MafAgentRuntime : IAgentRuntime
     {
         var finalizerInvocations = snapshotFinalizerInvocations();
         var toolInvocationTraces = snapshotToolInvocationTraces();
-        var serializedResponse = TryBuildRequiredFinalizerRuntimeResponse(
+        var serializedResponse = MafRuntimeResponseAssembler.TryBuildRequiredFinalizerRuntimeResponse(
             structuredOutput,
             finalizerMode,
-            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             finalizerInvocations,
             toolInvocationTraces,
-            CreateProviderUsageObservations(
+            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1177,7 +1180,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             "Finalizer short-circuit",
             "Required finalizer tool produced a valid governed result. Persisting the typed result immediately without waiting for redundant post-finalizer assistant prose.");
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1255,7 +1258,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             "Finalizer recovery",
             $"Provider streaming failed after required finalizer '{policy.ToolName}' was captured. Persisting the governed finalizer outcome and preserving the provider error for diagnostics: {exception.Message}");
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1271,13 +1274,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 .Select(trace => $"{trace.ToolName}|{trace.Sequence}")
                 .Distinct(StringComparer.Ordinal)
                 .Count(),
-            RuntimeSessionKey: ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            RuntimeSessionKey: MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             SerializedSessionStateJson: serializedSessionStateJson,
             PendingApprovals: [])
         {
             FinalizerInvocations = finalizerInvocations,
             ToolInvocationTraces = toolInvocationTraces,
-            UsageObservations = CreateProviderUsageObservations(
+            UsageObservations = MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1357,14 +1360,14 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 FailureMessage: string.Empty))
             .ToArray();
 
-        var recoveredResponse = TryBuildRequiredFinalizerRuntimeResponse(
+        var recoveredResponse = MafRuntimeResponseAssembler.TryBuildRequiredFinalizerRuntimeResponse(
             policy.OutputContract,
             AgentFinalizerMode.Required,
-            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             [finalizerInvocation],
             toolInvocationTraces,
-            CreateProviderUsageObservations(
+            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1382,7 +1385,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             "Finalizer recovery",
             $"{recoveryReason} Persisting a validated required-finalizer result synthesized from current process step artifact '{primaryArtifactRef}' with status '{outcome.Status}'.").ConfigureAwait(false);
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1408,7 +1411,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
         return false;
     }
 
-    private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+    private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
         ProviderProfile provider,
         string model,
         AgentStructuredOutputContract? structuredOutput,
@@ -1426,14 +1429,14 @@ public sealed class MafAgentRuntime : IAgentRuntime
     {
         var finalizerInvocations = snapshotFinalizerInvocations();
         var toolInvocationTraces = snapshotToolInvocationTraces();
-        var serializedResponse = TryBuildRequiredFinalizerRuntimeResponse(
+        var serializedResponse = MafRuntimeResponseAssembler.TryBuildRequiredFinalizerRuntimeResponse(
             structuredOutput,
             finalizerMode,
-            ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+            MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             finalizerInvocations,
             toolInvocationTraces,
-            CreateProviderUsageObservations(
+            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                 provider,
                 model,
                 runtimeSession,
@@ -1451,7 +1454,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             "Finalizer short-circuit",
             "Required finalizer tool produced a valid governed result. Persisting the typed result without waiting for redundant post-finalizer assistant prose.");
 
-        var serializedSessionStateJson = await TrySerializePersistableRuntimeSessionAsync(
+        var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
             runtimeSession,
             runtimeOptions,
@@ -1462,461 +1465,6 @@ public sealed class MafAgentRuntime : IAgentRuntime
         {
             SerializedSessionStateJson = serializedSessionStateJson
         };
-    }
-
-    private static AgentRuntimeResponse? TryBuildRequiredFinalizerRuntimeResponse(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentFinalizerMode finalizerMode,
-        string runtimeSessionKey,
-        string? serializedSessionStateJson,
-        IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations,
-        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces,
-        IReadOnlyList<ProviderUsageObservation> usageObservations)
-    {
-        if (finalizerMode != AgentFinalizerMode.Required ||
-            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
-        {
-            return null;
-        }
-
-        var finalizerValidation = new DefaultAgentFinalizerValidator().Validate(policy, finalizerInvocations);
-        if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
-        {
-            return null;
-        }
-
-        var sequenceValidation = AgentFinalizerSequenceValidator.Validate(policy, toolInvocationTraces);
-        if (!sequenceValidation.Succeeded)
-        {
-            return null;
-        }
-
-        return new AgentRuntimeResponse(
-            JsonSerializer.Serialize(finalizerValidation.Output, policy.OutputType, AgentOutputJson.SerializerOptions),
-            InputTokens: 0,
-            OutputTokens: 0,
-            ToolCalls: toolInvocationTraces
-                .Where(trace => !string.IsNullOrWhiteSpace(trace.ToolName))
-                .Select(trace => $"{trace.ToolName}|{trace.Sequence}")
-                .Distinct(StringComparer.Ordinal)
-                .Count(),
-            RuntimeSessionKey: runtimeSessionKey,
-            SerializedSessionStateJson: serializedSessionStateJson,
-            PendingApprovals: [])
-        {
-            FinalizerInvocations = finalizerInvocations,
-            ToolInvocationTraces = toolInvocationTraces,
-            UsageObservations = usageObservations
-        };
-    }
-
-    private static IReadOnlyList<ProviderUsageObservation> CreateProviderUsageObservations(
-        ProviderProfile provider,
-        string model,
-        AgentSession runtimeSession,
-        string? runtimeSessionKey,
-        IReadOnlyList<AgentResponseUpdate> updates,
-        string sourcePhase,
-        string diagnostic)
-    {
-        if (updates.Count == 0)
-        {
-            return
-            [
-                CreateMissingProviderUsageObservation(
-                    provider,
-                    model,
-                    ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
-                    sourcePhase,
-                    diagnostic)
-            ];
-        }
-
-        var response = updates.ToAgentResponse();
-        var runtimeKey = ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey);
-        var rawUsageJson = response.Usage is null
-            ? string.Empty
-            : JsonSerializer.Serialize(response.Usage, SerializerOptions);
-
-        return
-        [
-            DefaultProviderUsageNormalizer.Instance.Normalize(new ProviderUsageNormalizationRequest(
-                Provider: provider,
-                Model: model,
-                SourcePhase: sourcePhase,
-                UsageStatus: response.Usage is null
-                    ? ProviderUsageObservationStatus.UsageUnavailable
-                    : ProviderUsageObservationStatus.Observed,
-                InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
-                CachedInputTokens: ClampTokenCount(response.Usage?.CachedInputTokenCount),
-                OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
-                ReasoningTokens: 0,
-                TotalTokens: ClampTokenCount(response.Usage?.TotalTokenCount),
-                ToolCallCount: CountToolCalls(response),
-                ProviderResponseId: response.ResponseId ?? response.ContinuationToken?.ToString() ?? string.Empty,
-                ProviderRequestId: string.Empty,
-                RuntimeSessionKey: runtimeKey,
-                RawUsageJson: rawUsageJson,
-                DiagnosticsJson: JsonSerializer.Serialize(
-                    new Dictionary<string, string>
-                    {
-                        ["diagnostic"] = diagnostic
-                    },
-                    SerializerOptions)))
-        ];
-    }
-
-    private static string BuildProviderFailureDiagnostic(Exception exception)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        var builder = new StringBuilder("Provider streaming failed before a successful runtime response.");
-        var current = exception;
-        var depth = 0;
-        while (current is not null && depth < 4)
-        {
-            builder
-                .Append(" Exception")
-                .Append(depth)
-                .Append('=')
-                .Append(current.GetType().FullName ?? current.GetType().Name)
-                .Append(": ")
-                .Append(WorkflowExecutorRedaction.RedactText(current.Message))
-                .Append('.');
-
-            current = current.InnerException;
-            depth++;
-        }
-
-        return builder.ToString();
-    }
-
-    private static ProviderUsageObservation CreateMissingProviderUsageObservation(
-        ProviderProfile provider,
-        string model,
-        string runtimeSessionKey,
-        string sourcePhase,
-        string diagnostic)
-    {
-        return new ProviderUsageObservation(
-            Id: Guid.NewGuid(),
-            CreatedAtUtc: DateTimeOffset.UtcNow,
-            ProviderName: provider.Name,
-            ProviderKind: provider.Kind,
-            Model: model,
-            TransportKind: provider.Transport,
-            SourcePhase: sourcePhase,
-            UsageStatus: ProviderUsageObservationStatus.MissingAfterProviderActivity,
-            InputTokens: 0,
-            CachedInputTokens: 0,
-            OutputTokens: 0,
-            ReasoningTokens: 0,
-            TotalTokens: 0,
-            ToolCallCount: 0)
-        {
-            RuntimeSessionKey = runtimeSessionKey,
-            DiagnosticsJson = JsonSerializer.Serialize(
-                new Dictionary<string, string>
-                {
-                    ["diagnostic"] = diagnostic
-                },
-                SerializerOptions)
-        };
-    }
-
-    private static int ClampTokenCount(long? tokenCount)
-    {
-        if (!tokenCount.HasValue || tokenCount.Value <= 0)
-        {
-            return 0;
-        }
-
-        return tokenCount.Value > int.MaxValue
-            ? int.MaxValue
-            : (int)tokenCount.Value;
-    }
-
-    private static bool ShouldSkipRuntimeSessionSerialization(
-        AgentRuntimeExecutionOptions runtimeOptions,
-        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals)
-    {
-        return pendingApprovals.Count == 0 &&
-               (runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
-                InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions));
-    }
-
-    private static string ResolveRuntimeSessionSerializationSkipMessage(AgentRuntimeExecutionOptions runtimeOptions)
-    {
-        return InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions)
-            ? "Skipped Microsoft Agent Framework session serialization because request-scoped input attachments are not persisted into session state. The sandbox transcript keeps the text turn for future replay."
-            : "Skipped Microsoft Agent Framework session serialization for a governed process step with no pending approvals. Process state is persisted through the typed outcome and artifacts.";
-    }
-
-    private static async Task<string?> TrySerializePersistableRuntimeSessionAsync(
-        AIAgent runtimeAgent,
-        AgentSession runtimeSession,
-        AgentRuntimeExecutionOptions runtimeOptions,
-        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
-        Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken)
-    {
-        if (ShouldSkipRuntimeSessionSerialization(runtimeOptions, pendingApprovals))
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                ResolveRuntimeSessionSerializationSkipMessage(runtimeOptions));
-            return null;
-        }
-
-        await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
-        var serializedSessionJson = await TrySerializeRuntimeSessionAsync(
-            runtimeAgent,
-            runtimeSession,
-            cancellationToken);
-        if (serializedSessionJson is null)
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Microsoft Agent Framework session serialization did not complete within the bounded timeout. Continuing without serialized session state.");
-            return null;
-        }
-
-        if (!InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions))
-        {
-            return serializedSessionJson;
-        }
-
-        var scrubbedSessionJson = RequestScopedSessionContentScrubber.RemoveRequestScopedDataContent(serializedSessionJson);
-        if (scrubbedSessionJson is null)
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Dropped serialized Microsoft Agent Framework session state because request-scoped attachment payload scrubbing failed.");
-            return null;
-        }
-
-        if (!string.Equals(serializedSessionJson, scrubbedSessionJson, StringComparison.Ordinal))
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Removed request-scoped attachment payloads from serialized Microsoft Agent Framework session state.");
-        }
-
-        return scrubbedSessionJson;
-    }
-
-    private static async Task<string?> TrySerializeRuntimeSessionAsync(
-        AIAgent runtimeAgent,
-        AgentSession runtimeSession,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var serializedSession = await Task.Run(
-                async () => await runtimeAgent.SerializeSessionAsync(
-                    runtimeSession,
-                    cancellationToken: cancellationToken),
-                cancellationToken).WaitAsync(
-                FinalizerSessionSerializationTimeout,
-                cancellationToken);
-            return JsonSerializer.Serialize(serializedSession, SerializerOptions);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (TimeoutException)
-        {
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private IEnumerable<ChatMessage> CreateApprovalInputMessages(ChatSessionRecord session, bool approved)
-    {
-        var approvals = GetCachedOrRehydratedApprovals(session);
-        return approvals
-            .Select(item => new ChatMessage(ChatRole.User, [item.CreateResponse(approved)]))
-            .ToList();
-    }
-
-    private IReadOnlyList<ToolApprovalRequestContent> GetCachedOrRehydratedApprovals(ChatSessionRecord session)
-    {
-        if (pendingApprovalCache.TryGetValue(session.Id, out var cached))
-        {
-            return cached;
-        }
-
-        var compatibility = session.Compatibility;
-        if (compatibility is null || compatibility.PendingApprovals.Count == 0)
-        {
-            throw new InvalidOperationException("This session does not have any cached approval requests to continue.");
-        }
-
-        var rehydrated = compatibility.PendingApprovals
-            .Select(RehydratePendingApproval)
-            .ToList();
-
-        pendingApprovalCache[session.Id] = rehydrated;
-        return rehydrated;
-    }
-
-    private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)
-    {
-        var arguments = MafToolInvocationArgumentFormatter.DeserializeArguments(record.ArgumentsJson);
-        ToolCallContent toolCall = record.ToolKind switch
-        {
-            "mcp" or "hosted-mcp" => new McpServerToolCallContent(record.CallId, record.ToolName, record.Details)
-            {
-                Arguments = arguments
-            },
-            _ => new FunctionCallContent(record.CallId, record.ToolName, arguments)
-        };
-
-        return new ToolApprovalRequestContent(record.ApprovalId, toolCall);
-    }
-
-    private static PendingToolApprovalRecord MapPendingApproval(ToolApprovalRequestContent request)
-    {
-        var toolCall = request.ToolCall;
-        var toolKind = toolCall switch
-        {
-            McpServerToolCallContent => "mcp",
-            FunctionCallContent => "function",
-            _ => "tool"
-        };
-
-        var details = toolCall switch
-        {
-            McpServerToolCallContent mcp => mcp.ServerName,
-            _ => string.Empty
-        };
-
-        var argumentsJson = toolCall switch
-        {
-            McpServerToolCallContent mcp when mcp.Arguments is not null => JsonSerializer.Serialize(mcp.Arguments, SerializerOptions),
-            FunctionCallContent function when function.Arguments is not null => JsonSerializer.Serialize(function.Arguments, SerializerOptions),
-            _ => "{}"
-        };
-
-        return new PendingToolApprovalRecord(
-            ApprovalId: request.RequestId ?? toolCall.CallId ?? Guid.NewGuid().ToString("N"),
-            CallId: toolCall.CallId ?? string.Empty,
-            ToolName: MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),
-            ToolKind: toolKind,
-            Details: details ?? string.Empty,
-            ArgumentsJson: argumentsJson);
-    }
-
-    private static string ResolveResponseText(
-        AgentResponse response,
-        IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
-    {
-        if (!string.IsNullOrWhiteSpace(response.Text))
-        {
-            return response.Text.Trim();
-        }
-
-        if (pendingApprovals.Count == 0)
-        {
-            return "The provider completed without returning text.";
-        }
-
-        var summary = string.Join(
-            Environment.NewLine,
-            pendingApprovals.Select(item =>
-            {
-                var argumentSummary = MafToolInvocationArgumentFormatter.DescribeArguments(item.ArgumentsJson);
-                return item.ToolKind == "mcp"
-                    ? $"- Approval required for MCP tool '{item.ToolName}' on server '{item.Details}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}."
-                    : $"- Approval required for tool '{item.ToolName}'{MafToolInvocationArgumentFormatter.FormatInlineArgumentSummary(argumentSummary)}.";
-            }));
-
-        return $"Approval is required before the run can continue.{Environment.NewLine}{summary}";
-    }
-
-    private static void ThrowIfEmptyProviderCompletion(
-        ProviderProfile provider,
-        string model,
-        AgentResponse response,
-        IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
-    {
-        if (!string.IsNullOrWhiteSpace(response.Text) ||
-            pendingApprovals.Count > 0 ||
-            CountToolCalls(response) > 0 ||
-            ClampTokenCount(response.Usage?.OutputTokenCount) > 0)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"Provider '{provider.Name}' model '{model}' completed without returning text, tool calls, approvals, or output tokens.");
-    }
-
-    private static bool ShouldContinueBackgroundRun(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        AgentResponse response,
-        IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests)
-    {
-        if (approvalRequests.Count > 0)
-        {
-            return false;
-        }
-
-        return agent.EnableBackgroundResponses
-            && MafRuntimeSessionBuilder.SupportsBackgroundResponses(provider)
-            && response.ContinuationToken is not null;
-    }
-
-    private static int CountToolCalls(AgentResponse response)
-    {
-        return response.Messages
-            .SelectMany(message => message.Contents)
-            .Select(content => content switch
-            {
-                ToolApprovalRequestContent approval => approval.ToolCall?.CallId ?? approval.ToolCall?.ToString(),
-                ToolCallContent toolCall => toolCall.CallId ?? MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),
-                _ => null
-            })
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Count();
-    }
-
-    private static string ResolveRuntimeSessionKey(
-        AgentSession runtimeSession,
-        AgentResponse response,
-        string? fallbackValue)
-    {
-        if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
-        {
-            return chatSession.ConversationId;
-        }
-
-        return response.ResponseId
-            ?? response.ContinuationToken?.ToString()
-            ?? fallbackValue
-            ?? string.Empty;
-    }
-
-    private static string ResolveRuntimeSessionKey(
-        AgentSession runtimeSession,
-        string? fallbackValue)
-    {
-        if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
-        {
-            return chatSession.ConversationId;
-        }
-
-        return fallbackValue ?? string.Empty;
     }
 
 }

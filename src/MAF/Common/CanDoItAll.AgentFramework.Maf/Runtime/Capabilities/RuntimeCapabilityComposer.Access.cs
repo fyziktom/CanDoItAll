@@ -6,17 +6,20 @@ using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed partial class RuntimeCapabilityComposer
+internal sealed class RuntimeCapabilityAccessPlanner
 {
-    private static readonly RuntimeToolName[] StorageRuntimeToolNames =
-    [
-        RuntimeToolName.Create("storage_catalog_list"),
-        RuntimeToolName.Create("storage_read_text_file"),
-        RuntimeToolName.Create("storage_write_text_file"),
-        RuntimeToolName.Create("storage_delete_object")
-    ];
+    private readonly RuntimeCapabilityDescriptorCatalog descriptorCatalog;
+    private readonly ICapabilityAccessPolicyEvaluator evaluator;
 
-    internal RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
+    public RuntimeCapabilityAccessPlanner(
+        RuntimeCapabilityDescriptorCatalog descriptorCatalog,
+        ICapabilityAccessPolicyEvaluator evaluator)
+    {
+        this.descriptorCatalog = descriptorCatalog ?? throw new ArgumentNullException(nameof(descriptorCatalog));
+        this.evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
+    }
+
+    public RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
         AgentDefinition agent,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
@@ -24,17 +27,17 @@ internal sealed partial class RuntimeCapabilityComposer
         bool storageToolsAvailable)
     {
         var catalogDescriptors = capabilities
-            .Select(CreateCatalogCapabilityDescriptor)
+            .Select(descriptorCatalog.CreateCatalogCapabilityDescriptor)
             .ToList();
         var catalogByIdentity = catalogDescriptors
             .Zip(capabilities)
             .ToDictionary(pair => pair.First.Identity, pair => pair.Second);
-        var configuredWorkspaceDescriptors = CreateConfiguredWorkspaceToolDescriptors(workspaceToolAccess, storageToolsAvailable);
+        var configuredWorkspaceDescriptors = RuntimeConfiguredWorkspaceToolDescriptorCatalog.CreateConfiguredWorkspaceToolDescriptors(
+            workspaceToolAccess,
+            storageToolsAvailable);
         var candidates = DistinctCapabilityDescriptors(
             catalogDescriptors.Concat(configuredWorkspaceDescriptors));
-        var policies = BuildRuntimeCapabilityAccessPolicies(workspaceToolAccess, contextIntent);
-        var evaluator = services.GetService(typeof(ICapabilityAccessPolicyEvaluator)) as ICapabilityAccessPolicyEvaluator
-            ?? new CapabilityAccessPolicyEvaluator();
+        var policies = RuntimeCapabilityAccessPolicyBuilder.BuildRuntimeCapabilityAccessPolicies(workspaceToolAccess, contextIntent);
         var correlationId = ResolveCapabilityAccessCorrelationId(contextIntent);
         var result = evaluator.Evaluate(new CapabilityAccessEvaluationContext(
             candidates,
@@ -49,7 +52,7 @@ internal sealed partial class RuntimeCapabilityComposer
         return new RuntimeCapabilityAccessPlan(
             result.ToEffectiveSet(),
             capabilities
-                .Where(capability => allowedCatalogIdentities.Contains(CreateCatalogCapabilityIdentity(capability)))
+                .Where(capability => allowedCatalogIdentities.Contains(RuntimeCapabilityDescriptorCatalog.CreateCatalogCapabilityIdentity(capability)))
                 .ToList(),
             policies,
             evaluator,
@@ -110,23 +113,7 @@ internal sealed partial class RuntimeCapabilityComposer
         return "maf-runtime-composition";
     }
 
-    private static string NormalizeTemplatePathSegment(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? "unknown"
-            : string.Concat(value.Trim().Select(character =>
-                char.IsLetterOrDigit(character) || character is '-' or '_'
-                    ? char.ToLowerInvariant(character)
-                    : '-'));
-    }
-
-    private static string ToKebab(string value)
-        => string.Concat(value.Select((character, index) =>
-            index > 0 && char.IsUpper(character)
-                ? "-" + char.ToLowerInvariant(character)
-                : char.ToLowerInvariant(character).ToString()));
-
-    private static void AttachInitialCapabilityAccessState(
+    public static void AttachInitialCapabilityAccessState(
         RuntimeCapabilityState state,
         RuntimeCapabilityAccessPlan accessPlan)
     {

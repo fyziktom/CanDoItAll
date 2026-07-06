@@ -5,9 +5,9 @@ using CanDoItAll.AgentFramework.Tools;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed partial class RuntimeCapabilityComposer
+internal static class RuntimeConfiguredWorkspaceToolDescriptorCatalog
 {
-    private static IReadOnlyList<CapabilityExposureDescriptor> CreateConfiguredWorkspaceToolDescriptors(
+    public static IReadOnlyList<CapabilityExposureDescriptor> CreateConfiguredWorkspaceToolDescriptors(
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         bool storageToolsAvailable)
     {
@@ -23,18 +23,18 @@ internal sealed partial class RuntimeCapabilityComposer
 
         if (storageToolsAvailable && normalized.CanReadStorage)
         {
-            descriptors.Add(CreateStorageToolDescriptor(StorageRuntimeToolNames[0], CapabilityOperationClassification.Read));
-            descriptors.Add(CreateStorageToolDescriptor(StorageRuntimeToolNames[1], CapabilityOperationClassification.Read));
+            descriptors.Add(CreateStorageToolDescriptor(RuntimeStorageToolNames.CatalogList, CapabilityOperationClassification.Read));
+            descriptors.Add(CreateStorageToolDescriptor(RuntimeStorageToolNames.ReadTextFile, CapabilityOperationClassification.Read));
         }
 
         if (storageToolsAvailable && normalized.CanWriteStorage)
         {
             descriptors.Add(CreateStorageToolDescriptor(
-                StorageRuntimeToolNames[2],
+                RuntimeStorageToolNames.WriteTextFile,
                 CapabilityOperationClassification.Write,
                 CapabilityOperationClassification.Mutation));
             descriptors.Add(CreateStorageToolDescriptor(
-                StorageRuntimeToolNames[3],
+                RuntimeStorageToolNames.DeleteObject,
                 CapabilityOperationClassification.Write,
                 CapabilityOperationClassification.Mutation));
         }

@@ -9,6 +9,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -29,6 +30,8 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.IsType<RuntimeToolProviderComposer>(provider.GetRequiredService<IRuntimeToolProviderComposer>());
         Assert.IsType<RuntimeToolProviderAccessFilter>(provider.GetRequiredService<IRuntimeToolProviderAccessFilter>());
         Assert.IsType<NoOpMafRuntimeCompositionMetrics>(provider.GetRequiredService<IMafRuntimeCompositionMetrics>());
+        Assert.IsType<MafApprovalContinuationDriver>(provider.GetRequiredService<IMafApprovalContinuationDriver>());
+        Assert.IsType<MafRuntimeSessionPersistenceDriver>(provider.GetRequiredService<IMafRuntimeSessionPersistenceDriver>());
     }
 
     [Fact]
@@ -45,6 +48,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(McpCapabilityBuilder),
             typeof(ToolCapabilityBuilder),
             typeof(WorkspaceRuntimePlugin),
+            typeof(WorkspaceImageAnalysisModelResolver),
             typeof(StorageRuntimePlugin),
             typeof(WorkspaceSearchSupport),
             typeof(InputAttachmentPreparer),
@@ -122,6 +126,181 @@ public sealed class MafRuntimeArchitectureServicesTests
             .ToList();
 
         Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void MafAgentRuntime_no_longer_owns_approval_and_session_persistence_algorithms()
+    {
+        var root = FindRepoRoot();
+        var runtimeSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.cs"));
+
+        Assert.DoesNotContain("ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>>", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static PendingToolApprovalRecord MapPendingApproval", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static async Task<string?> TrySerializePersistableRuntimeSessionAsync", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private IEnumerable<ChatMessage> CreateApprovalInputMessages", runtimeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeCapabilityComposer_is_not_a_split_partial_namespace()
+    {
+        var root = FindRepoRoot();
+        var capabilityRoot = Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "Capabilities");
+        var partialComposerDeclarations = Directory
+            .EnumerateFiles(capabilityRoot, "RuntimeCapabilityComposer*.cs", SearchOption.TopDirectoryOnly)
+            .SelectMany(path => File.ReadLines(path)
+                .Select((line, index) => new
+                {
+                    Path = Path.GetRelativePath(root, path),
+                    Line = index + 1,
+                    Text = line
+                }))
+            .Where(item => item.Text.Contains("partial class RuntimeCapabilityComposer", StringComparison.Ordinal))
+            .Select(item => $"{item.Path}:{item.Line}:{item.Text.Trim()}")
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Empty(partialComposerDeclarations);
+    }
+
+    [Fact]
+    public void WorkspaceRuntimePlugin_no_longer_owns_image_model_resolution()
+    {
+        var root = FindRepoRoot();
+        var pluginSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "Workspace",
+            "WorkspaceRuntimePlugin.cs"));
+
+        Assert.DoesNotContain("internal static string ResolveProviderImageAnalysisModel", pluginSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static bool IsVisionCapableProviderModel", pluginSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ImageAnalysisModelConfigurationKeys", pluginSource, StringComparison.Ordinal);
+        Assert.Contains(
+            "WorkspaceImageAnalysisModelResolver.ResolveProviderImageAnalysisModel",
+            File.ReadAllText(Path.Combine(
+                root,
+                "src",
+                "MAF",
+                "Common",
+                "CanDoItAll.AgentFramework.Maf",
+                "Runtime",
+                "Input",
+                "InputAttachmentPreparer.cs")),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeCapabilityDescriptorCatalog_creates_tool_descriptor_without_composer()
+    {
+        var catalog = new RuntimeCapabilityDescriptorCatalog();
+        var capability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            ModelCapabilityKind.Tool,
+            "workspace-read-file",
+            "Read workspace file",
+            "Read a workspace text file.",
+            string.Empty,
+            """{"tool":"workspace_read_file"}""",
+            CapabilityProofStatus.Verified,
+            string.Empty,
+            DateTimeOffset.UtcNow,
+            IsBuiltIn: true);
+
+        var descriptor = catalog.CreateCatalogCapabilityDescriptor(capability);
+
+        Assert.Equal("workspace_read_file", descriptor.RuntimeToolName?.Value);
+        Assert.Contains(CapabilityOperationClassification.Read, descriptor.OperationClassifications);
+    }
+
+    [Fact]
+    public void MafApprovalContinuationDriver_maps_and_replays_pending_function_approval()
+    {
+        var driver = new MafApprovalContinuationDriver();
+        var toolCall = new FunctionCallContent(
+            "call-001",
+            "workspace_write_file",
+            new Dictionary<string, object?>
+            {
+                ["path"] = "artifacts/result.md"
+            });
+        var request = new ToolApprovalRequestContent("approval-001", toolCall);
+
+        var pending = driver.MapPendingApproval(request);
+
+        Assert.Equal("approval-001", pending.ApprovalId);
+        Assert.Equal("call-001", pending.CallId);
+        Assert.Equal("workspace_write_file", pending.ToolName);
+        Assert.Equal("function", pending.ToolKind);
+        Assert.Contains("artifacts/result.md", pending.ArgumentsJson, StringComparison.Ordinal);
+
+        var session = CreateSession();
+        driver.StorePendingApprovals(session.Id, [request]);
+
+        var messages = driver.CreateApprovalInputMessages(session, approved: true).ToList();
+
+        var message = Assert.Single(messages);
+        Assert.Equal(ChatRole.User, message.Role);
+        Assert.Single(message.Contents);
+    }
+
+    [Fact]
+    public void MafApprovalContinuationDriver_rehydrates_legacy_pending_approval_records()
+    {
+        var driver = new MafApprovalContinuationDriver();
+        var session = CreateSession(
+            new ChatSessionRuntimeCompatibilityRecord(
+                runtimeSessionKey: "conversation-001",
+                serializedSessionStateJson: null,
+                pendingApprovals:
+                [
+                    new PendingToolApprovalRecord(
+                        "approval-001",
+                        "call-001",
+                        "workspace_write_file",
+                        "function",
+                        string.Empty,
+                        """{"path":"artifacts/result.md"}""")
+                ]));
+
+        var messages = driver.CreateApprovalInputMessages(session, approved: false).ToList();
+
+        var message = Assert.Single(messages);
+        Assert.Equal(ChatRole.User, message.Role);
+        Assert.Single(message.Contents);
+    }
+
+    [Fact]
+    public void MafRuntimeSessionPersistenceDriver_skips_governed_process_steps_without_pending_approvals()
+    {
+        var driver = new MafRuntimeSessionPersistenceDriver();
+        var options = CreateExecutionOptions(contextIntent: AgentRuntimeContextIntent.Empty with
+        {
+            IsGovernedProcessStep = true
+        });
+
+        Assert.True(driver.ShouldSkipRuntimeSessionSerialization(options, []));
+        Assert.Contains(
+            "governed process step",
+            driver.ResolveRuntimeSessionSerializationSkipMessage(options),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -310,6 +489,31 @@ public sealed class MafRuntimeArchitectureServicesTests
             RuntimeSessionKey: string.Empty,
             AgentRuntimeContextIntent.Empty,
             Tags: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+
+    private static ChatSessionRecord CreateSession(
+        ChatSessionRuntimeCompatibilityRecord? compatibility = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ChatSessionRecord(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Architecture test session",
+            now,
+            now,
+            [],
+            Compatibility: compatibility);
+    }
+
+    private static AgentRuntimeExecutionOptions CreateExecutionOptions(
+        AgentRuntimeContextIntent? contextIntent = null,
+        IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments = null)
+        => new(
+            StructuredOutput: null,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0,
+            ContextIntent: contextIntent,
+            InputAttachments: inputAttachments);
 
     private static AgentRuntimeToolProviderDescriptor CreateDescriptor(string providerKey)
         => new(

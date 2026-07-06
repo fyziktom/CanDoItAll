@@ -24,6 +24,8 @@ public static class MafRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IRuntimeToolProviderAccessFilter, RuntimeToolProviderAccessFilter>();
         services.TryAddSingleton<IRuntimeToolProviderComposer, RuntimeToolProviderComposer>();
         services.TryAddSingleton<IMafRuntimeCompositionMetrics, NoOpMafRuntimeCompositionMetrics>();
+        services.TryAddTransient<IMafApprovalContinuationDriver, MafApprovalContinuationDriver>();
+        services.TryAddSingleton<IMafRuntimeSessionPersistenceDriver, MafRuntimeSessionPersistenceDriver>();
 
         return services;
     }
