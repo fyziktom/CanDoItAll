@@ -32,9 +32,11 @@ public static class AgentFrameworkServiceCollectionExtensions
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
             resolvedScope));
+        services.TryAddSingleton<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddSingleton<IWorkspaceArtifactToolService>(serviceProvider => new WorkspaceArtifactToolService(
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>(),
+            serviceProvider.GetRequiredService<IWorkspaceDocumentMarkdownConverter>(),
             resolvedScope));
         services.TryAddSingleton<IAgentProviderCredentialResolver, EnvironmentVariableAgentProviderCredentialResolver>();
         services.AddMafProviderRuntimeServices();

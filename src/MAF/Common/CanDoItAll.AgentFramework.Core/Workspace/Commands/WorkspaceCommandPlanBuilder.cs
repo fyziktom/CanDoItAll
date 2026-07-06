@@ -791,33 +791,6 @@ internal sealed class WorkspaceCommandPlanBuilder
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    public WorkspaceCommandPlan BuildConvertDocumentWithMarkItDown(string sourcePath, string outputPath, int timeoutSeconds = 300)
-    {
-        var sourceResolution = ResolveExistingWorkspacePath(sourcePath, allowFiles: true, allowDirectories: false);
-        var outputRelativePath = ResolveOutputWorkspacePath(outputPath, out var outputFullPath);
-        var outputDirectory = Path.GetDirectoryName(outputFullPath);
-        if (!string.IsNullOrWhiteSpace(outputDirectory))
-        {
-            Directory.CreateDirectory(outputDirectory);
-        }
-
-        return CreatePlan(
-            toolName: "workspace_convert_document",
-            recipeId: "convert_document",
-            riskClass: "LocalExecution:DocumentConversion",
-            approvalRequired: false,
-            networkAllowed: false,
-            mutatesWorkspace: true,
-            targetPaths: [sourceResolution.RelativePath, outputRelativePath],
-            workingDirectory: ".",
-            workingDirectoryPath: pathPolicy.WorkspaceRoot,
-            executableCandidates: ["python"],
-            arguments: ["-m", "markitdown", sourceResolution.FullPath, "-o", outputFullPath],
-            timeoutSeconds: timeoutSeconds,
-            stdoutLimitCharacters: 64 * 1024,
-            stderrLimitCharacters: 64 * 1024);
-    }
-
     public WorkspaceCommandPlan BuildInspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300)
     {
         var sourceResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);

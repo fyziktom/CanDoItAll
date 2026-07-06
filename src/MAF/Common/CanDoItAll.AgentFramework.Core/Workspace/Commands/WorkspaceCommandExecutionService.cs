@@ -165,14 +165,6 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: true);
 
-    public Task<WorkspaceCommandExecutionResult> ConvertDocumentWithMarkItDown(string sourcePath, string outputPath, int timeoutSeconds = 300)
-        => ExecutePlanAsync(
-            () => planBuilder.BuildConvertDocumentWithMarkItDown(sourcePath, outputPath, timeoutSeconds),
-            "workspace_convert_document",
-            "convert_document",
-            "LocalExecution:DocumentConversion",
-            approvalRequired: false);
-
     public Task<WorkspaceCommandExecutionResult> InspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300)
         => ExecutePlanAsync(
             () => planBuilder.BuildInspectSpreadsheetPreview(path, maxRows, maxColumns, timeoutSeconds),

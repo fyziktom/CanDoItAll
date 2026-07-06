@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.Tools.Documents;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -57,8 +58,14 @@ internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolv
             ?? new WorkspaceFileService(workspaceRoot, workspaceScope);
         var workspaceCommandExecutionService = services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
             ?? new WorkspaceCommandExecutionService(workspaceRoot, new LocalWorkspaceProcessHost(), workspaceScope);
+        var documentMarkdownConverter = services.GetService(typeof(IWorkspaceDocumentMarkdownConverter)) as IWorkspaceDocumentMarkdownConverter
+            ?? new ManagedCodeMarkItDownDocumentMarkdownConverter();
         var workspaceArtifactToolService = services.GetService(typeof(IWorkspaceArtifactToolService)) as IWorkspaceArtifactToolService
-            ?? new WorkspaceArtifactToolService(workspaceRoot, workspaceCommandExecutionService, workspaceScope);
+            ?? new WorkspaceArtifactToolService(
+                workspaceRoot,
+                workspaceCommandExecutionService,
+                documentMarkdownConverter,
+                workspaceScope);
 
         return new MafWorkspaceRuntimeServices(
             workspaceFileService,

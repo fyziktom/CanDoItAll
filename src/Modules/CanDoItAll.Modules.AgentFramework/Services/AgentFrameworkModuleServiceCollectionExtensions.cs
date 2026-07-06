@@ -66,6 +66,25 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new WorkspacePathResolutionService(workspaceRoot, scope);
         });
+        services.TryAddScoped<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
+        services.TryAddScoped<IWorkspaceCommandExecutionService>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspaceCommandExecutionService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
+                scope);
+        });
+        services.TryAddScoped<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
+        services.TryAddScoped<IWorkspaceArtifactToolService>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspaceArtifactToolService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>(),
+                serviceProvider.GetRequiredService<IWorkspaceDocumentMarkdownConverter>(),
+                scope);
+        });
         services.TryAddScoped<MafAgentRuntime>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);

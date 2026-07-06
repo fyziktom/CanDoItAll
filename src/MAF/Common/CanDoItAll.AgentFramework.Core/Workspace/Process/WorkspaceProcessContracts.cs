@@ -49,8 +49,6 @@ public interface IWorkspaceCommandExecutionService
 
     Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null);
 
-    Task<WorkspaceCommandExecutionResult> ConvertDocumentWithMarkItDown(string sourcePath, string outputPath, int timeoutSeconds = 300);
-
     Task<WorkspaceCommandExecutionResult> InspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300);
 
     Task<WorkspaceCommandExecutionResult> RunSkillScript(string skillName, string scriptPath, string[]? arguments = null, string? workingDirectory = null, bool approvalRequired = true, string trustLevel = "FileSkill", IReadOnlyList<string>? allowedExternalRoots = null);

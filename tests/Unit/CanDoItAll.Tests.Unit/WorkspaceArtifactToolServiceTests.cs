@@ -17,7 +17,8 @@ public sealed class WorkspaceArtifactToolServiceTests
 
             var service = new WorkspaceArtifactToolService(
                 root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()));
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                new FakeDocumentMarkdownConverter());
 
             var result = await service.ConvertDocumentToMarkdown(
                 "managed-files/project-media/images/proposal.png",
@@ -49,7 +50,8 @@ public sealed class WorkspaceArtifactToolServiceTests
 
             var service = new WorkspaceArtifactToolService(
                 root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()));
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                new FakeDocumentMarkdownConverter());
 
             var result = await service.ReadImageFile(
                 "artifacts/images/frame.png",
@@ -57,6 +59,121 @@ public sealed class WorkspaceArtifactToolServiceTests
 
             Assert.True(result.Succeeded, result.Diagnostics);
             Assert.Equal("workspace_analyze_images", result.Receipt.Operation);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertDocumentToMarkdown_uses_document_converter_and_returns_preview()
+    {
+        var root = CreateWorkspaceRoot();
+        try
+        {
+            var documentPath = Path.Combine(root, "source", "quote.html");
+            Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+            await File.WriteAllTextAsync(documentPath, "<h1>Quote</h1>");
+            var converter = new FakeDocumentMarkdownConverter
+            {
+                Markdown = "## Quote Summary\n\nModel XR-1 costs 12500 USD."
+            };
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                converter);
+
+            var result = await service.ConvertDocumentToMarkdown(
+                "source/quote.html",
+                "artifacts/converted-documents/quote.md",
+                previewCharacters: 16);
+
+            Assert.True(result.Succeeded, result.Diagnostics);
+            Assert.Equal("source/quote.html", result.SourcePath);
+            Assert.Equal("artifacts/converted-documents/quote.md", result.OutputPath);
+            Assert.Equal("## Quote Summary", result.MarkdownPreview);
+            Assert.True(result.PreviewTruncated);
+            Assert.True(result.Receipt.MutatesWorkspace);
+            Assert.Equal("workspace_convert_document", result.Receipt.Operation);
+            Assert.Contains(result.Receipt.ArtifactReferences, item => item.RelativePath == result.OutputPath);
+            Assert.Equal(Path.GetFullPath(documentPath), converter.ObservedSourcePath);
+            Assert.Equal(Path.Combine(root, "artifacts", "converted-documents", "quote.md"), converter.ObservedOutputPath);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertDocumentToMarkdown_uses_bounded_receipt_file_name_for_long_media_paths()
+    {
+        var root = CreateWorkspaceRoot();
+        try
+        {
+            var longFileName = $"{new string('x', 96)}.pdf";
+            var relativeSourcePath = $"managed-files/project-media/files/f28c07cd982c4d2dbcf23e60a32eca72/{longFileName}";
+            var documentPath = Path.Combine(root, relativeSourcePath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+            await File.WriteAllTextAsync(documentPath, "%PDF");
+            var converter = new FakeDocumentMarkdownConverter
+            {
+                Markdown = "Model ZM-x5600 costs 35000 USD."
+            };
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                converter,
+                WorkspaceScopeDescriptor.Organization("e5df9ad633dbc6974a0678a74976013c"));
+
+            var result = await service.ConvertDocumentToMarkdown(relativeSourcePath);
+
+            Assert.True(result.Succeeded, result.Diagnostics);
+            Assert.True(result.Receipt.MutatesWorkspace);
+            Assert.NotEmpty(result.Receipt.ReceiptRelativePath);
+            Assert.True(Path.GetFileName(result.Receipt.ReceiptRelativePath).Length <= 120);
+            var receiptFullPath = Path.Combine(root, result.Receipt.ReceiptRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            Assert.True(File.Exists(receiptFullPath), result.Receipt.ReceiptRelativePath);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertDocumentToMarkdown_returns_converter_failure_without_preview()
+    {
+        var root = CreateWorkspaceRoot();
+        try
+        {
+            var documentPath = Path.Combine(root, "source", "quote.pdf");
+            Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+            await File.WriteAllTextAsync(documentPath, "%PDF");
+            var converter = new FakeDocumentMarkdownConverter
+            {
+                Succeeded = false,
+                Message = "conversion failed",
+                Diagnostics = "unsupported fixture"
+            };
+            var service = new WorkspaceArtifactToolService(
+                root,
+                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+                converter);
+
+            var result = await service.ConvertDocumentToMarkdown(
+                "source/quote.pdf",
+                "artifacts/converted-documents/quote.md");
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("conversion failed", result.Message);
+            Assert.Equal("unsupported fixture", result.Diagnostics);
+            Assert.Empty(result.MarkdownPreview);
+            Assert.False(result.PreviewTruncated);
+            Assert.False(result.Receipt.MutatesWorkspace);
+            Assert.Equal("Failed", result.Receipt.Outcome);
+            Assert.False(File.Exists(Path.Combine(root, "artifacts", "converted-documents", "quote.md")));
         }
         finally
         {
@@ -100,4 +217,40 @@ public sealed class WorkspaceArtifactToolServiceTests
             0x49, 0x45, 0x4E, 0x44,
             0xAE, 0x42, 0x60, 0x82
         ];
+
+    private sealed class FakeDocumentMarkdownConverter : IWorkspaceDocumentMarkdownConverter
+    {
+        public bool Succeeded { get; init; } = true;
+
+        public string Message { get; init; } = "converted";
+
+        public string Markdown { get; init; } = "# Converted";
+
+        public string Diagnostics { get; init; } = string.Empty;
+
+        public string? ObservedSourcePath { get; private set; }
+
+        public string? ObservedOutputPath { get; private set; }
+
+        public async Task<WorkspaceDocumentMarkdownConversionResult> ConvertToMarkdownAsync(
+            WorkspaceDocumentMarkdownConversionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ObservedSourcePath = request.SourcePath;
+            ObservedOutputPath = request.OutputPath;
+            if (Succeeded)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(request.OutputPath)!);
+                await File.WriteAllTextAsync(request.OutputPath, Markdown, cancellationToken);
+            }
+
+            return new WorkspaceDocumentMarkdownConversionResult(
+                Succeeded,
+                Message,
+                request.SourcePath,
+                request.OutputPath,
+                Succeeded ? Markdown.Length : 0,
+                Diagnostics);
+        }
+    }
 }

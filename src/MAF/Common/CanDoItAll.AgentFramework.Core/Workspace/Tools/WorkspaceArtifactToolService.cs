@@ -40,6 +40,7 @@ public sealed record WorkspaceImageContentResult(
 public sealed class WorkspaceArtifactToolService(
     string workspaceRoot,
     IWorkspaceCommandExecutionService commandExecutionService,
+    IWorkspaceDocumentMarkdownConverter documentMarkdownConverter,
     WorkspaceScopeDescriptor? workspaceScope = null) : IWorkspaceArtifactToolService
 {
     private readonly WorkspacePathPolicy pathPolicy = new(workspaceRoot, workspaceScope);
@@ -69,20 +70,70 @@ public sealed class WorkspaceArtifactToolService(
                 targetPaths: [path]);
         }
 
-        var result = await commandExecutionService
-            .ConvertDocumentWithMarkItDown(path, resolvedOutputPath)
+        if (!pathPolicy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out var sourceResolution, out var sourceValidationMessage))
+        {
+            return CreateDocumentConversionResult(
+                succeeded: false,
+                outcome: "Denied",
+                sourceValidationMessage,
+                path,
+                resolvedOutputPath,
+                diagnostics: sourceValidationMessage,
+                startedAtUtc,
+                targetPaths: [path]);
+        }
+
+        if (!File.Exists(sourceResolution.FullPath))
+        {
+            var missingMessage = $"Document file '{sourceResolution.DisplayPath}' was not found.";
+            return CreateDocumentConversionResult(
+                succeeded: false,
+                outcome: "Failed",
+                missingMessage,
+                sourceResolution.RelativePath,
+                resolvedOutputPath,
+                diagnostics: missingMessage,
+                startedAtUtc,
+                targetPaths: [sourceResolution.RelativePath]);
+        }
+
+        if (!pathPolicy.TryResolveWorkspacePath(resolvedOutputPath, allowWorkspaceRoot: false, out var outputResolution, out var outputValidationMessage))
+        {
+            return CreateDocumentConversionResult(
+                succeeded: false,
+                outcome: "Denied",
+                outputValidationMessage,
+                sourceResolution.RelativePath,
+                resolvedOutputPath,
+                diagnostics: outputValidationMessage,
+                startedAtUtc,
+                targetPaths: [sourceResolution.RelativePath, resolvedOutputPath]);
+        }
+
+        var conversion = await documentMarkdownConverter
+            .ConvertToMarkdownAsync(new WorkspaceDocumentMarkdownConversionRequest(
+                sourceResolution.FullPath,
+                outputResolution.FullPath))
             .ConfigureAwait(false);
-        var preview = ReadPreview(resolvedOutputPath, previewCharacters);
+        var preview = conversion.Succeeded
+            ? ReadPreview(outputResolution.RelativePath, previewCharacters)
+            : (Content: string.Empty, Truncated: false);
+        var receipt = CreateDocumentConversionReceipt(
+            conversion.Succeeded,
+            conversion.Succeeded ? "Succeeded" : "Failed",
+            conversion.Message,
+            startedAtUtc,
+            [sourceResolution.RelativePath, outputResolution.RelativePath]);
 
         return new WorkspaceDocumentConversionResult(
-            Succeeded: result.Succeeded,
-            Message: result.Message,
-            Receipt: result.Receipt,
-            SourcePath: path,
-            OutputPath: resolvedOutputPath,
+            Succeeded: conversion.Succeeded,
+            Message: conversion.Message,
+            Receipt: receipt,
+            SourcePath: sourceResolution.RelativePath,
+            OutputPath: outputResolution.RelativePath,
             MarkdownPreview: preview.Content,
             PreviewTruncated: preview.Truncated,
-            Diagnostics: BuildDiagnostics(result));
+            Diagnostics: conversion.Diagnostics);
     }
 
     public async Task<WorkspaceSpreadsheetInspectionResult> InspectSpreadsheetFile(
@@ -389,6 +440,37 @@ public sealed class WorkspaceArtifactToolService(
             MarkdownPreview: string.Empty,
             PreviewTruncated: false,
             Diagnostics: diagnostics);
+    }
+
+    private WorkspaceToolReceipt CreateDocumentConversionReceipt(
+        bool succeeded,
+        string outcome,
+        string message,
+        DateTimeOffset startedAtUtc,
+        IReadOnlyList<string> targetPaths)
+    {
+        if (succeeded)
+        {
+            var artifacts = receiptWriter.BuildTargetArtifactReferences(
+                targetPaths.Skip(1),
+                "workspace_convert_document");
+            return receiptWriter.WriteMutationReceipt(
+                "workspace_convert_document",
+                message,
+                targetPaths,
+                artifacts,
+                startedAtUtc);
+        }
+
+        return receiptWriter.CreateReceipt(
+            "workspace_convert_document",
+            mutatesWorkspace: false,
+            outcome,
+            message,
+            receiptRelativePath: string.Empty,
+            targetPaths,
+            artifactReferences: [],
+            startedAtUtc);
     }
 
     private static bool LooksLikeImagePath(string path)

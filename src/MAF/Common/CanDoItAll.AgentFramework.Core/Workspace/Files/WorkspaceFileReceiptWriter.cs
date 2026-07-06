@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
@@ -6,6 +8,8 @@ namespace CanDoItAll.AgentFramework.Core;
 internal sealed class WorkspaceFileReceiptWriter
 {
     private const string BoundaryDescription = "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.";
+    private const int MaxReceiptTargetSegmentLength = 48;
+    private const int ReceiptHashHexLength = 12;
 
     private static readonly JsonSerializerOptions ReceiptSerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -121,9 +125,35 @@ internal sealed class WorkspaceFileReceiptWriter
         var dateSegment = DateTime.UtcNow.ToString("yyyyMMdd");
         var targetSegment = targetPaths.Count == 0
             ? "workspace"
-            : string.Join("-", targetPaths.Take(2).Select(Slugify));
-        var fileName = $"{DateTime.UtcNow:HHmmssfff}-{Slugify(operation)}-{targetSegment}.json";
+            : string.Join("-", targetPaths.Take(2).Select(BuildReadableTargetSegment));
+        var boundedTargetSegment = BoundSegment(targetSegment, MaxReceiptTargetSegmentLength);
+        var targetHash = BuildReceiptHash(targetPaths);
+        var fileName = $"{DateTime.UtcNow:HHmmssfff}-{Slugify(operation)}-{boundedTargetSegment}-{targetHash}.json";
         return workspaceScope.CombineArtifactPath("tool-receipts", dateSegment, fileName);
+    }
+
+    private static string BuildReadableTargetSegment(string path)
+    {
+        var fileName = Path.GetFileName(path);
+        return Slugify(string.IsNullOrWhiteSpace(fileName) ? path : fileName);
+    }
+
+    private static string BoundSegment(string value, int maxLength)
+    {
+        var segment = Slugify(value);
+        return segment.Length <= maxLength
+            ? segment
+            : segment[..maxLength].Trim('-');
+    }
+
+    private static string BuildReceiptHash(IReadOnlyList<string> targetPaths)
+    {
+        var hashInput = targetPaths.Count == 0
+            ? "workspace"
+            : string.Join("|", targetPaths.Where(path => !string.IsNullOrWhiteSpace(path)));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(hashInput));
+        return Convert.ToHexString(bytes)
+            .ToLowerInvariant()[..ReceiptHashHexLength];
     }
 
     private static string Slugify(string value)

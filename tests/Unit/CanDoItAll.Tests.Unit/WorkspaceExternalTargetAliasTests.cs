@@ -283,25 +283,6 @@ app.Run();
         Assert.Contains("--force", plan.Arguments, StringComparer.Ordinal);
     }
 
-    [Fact]
-    public void BuildConvertDocumentWithMarkItDown_does_not_require_approval_for_bounded_document_conversion()
-    {
-        var workspaceRoot = CreateDirectory("workspace");
-        var sourcePath = Path.Combine(workspaceRoot, "quote.pdf");
-        File.WriteAllText(sourcePath, "%PDF");
-        var builder = new WorkspaceCommandPlanBuilder(new WorkspacePathPolicy(workspaceRoot));
-
-        var plan = builder.BuildConvertDocumentWithMarkItDown(
-            "quote.pdf",
-            "artifacts/converted/quote.md");
-
-        Assert.False(plan.Decision.ApprovalRequired);
-        Assert.False(plan.Decision.NetworkAllowed);
-        Assert.True(plan.MutatesWorkspace);
-        Assert.Contains("quote.pdf", plan.TargetPaths, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("artifacts/converted/quote.md", plan.TargetPaths, StringComparer.OrdinalIgnoreCase);
-    }
-
     public void Dispose()
     {
         try
