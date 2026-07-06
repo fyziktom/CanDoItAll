@@ -7,17 +7,17 @@ public sealed class MafWorkspaceSearchSupportTests
     [Fact]
     public void TokenizeRagQuery_RemovesLowSignalExactResponseTerms()
     {
-        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(
+        var terms = WorkspaceSearchSupport.TokenizeRagQuery(
             "AGENT-THINK-FALSE-OK. Reply exactly with AGENT-THINK-FALSE-OK and do not call tools.");
 
         Assert.Equal(["AGENT-THINK-FALSE-OK"], terms);
-        Assert.False(MafAgentRuntime.WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
+        Assert.False(WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
     }
 
     [Fact]
     public void TokenizeRagQuery_KeepsDomainTermsForSourceRetrieval()
     {
-        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(
+        var terms = WorkspaceSearchSupport.TokenizeRagQuery(
             "Summarize the x-ray machine quotation and financial workbook assumptions.");
 
         Assert.Contains("x-ray", terms);
@@ -25,7 +25,7 @@ public sealed class MafWorkspaceSearchSupportTests
         Assert.Contains("quotation", terms);
         Assert.Contains("financial", terms);
         Assert.Contains("workbook", terms);
-        Assert.True(MafAgentRuntime.WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
+        Assert.True(WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
     }
 
     [Fact]
@@ -33,8 +33,8 @@ public sealed class MafWorkspaceSearchSupportTests
     {
         const string text = "The Tetris game stores the best score locally and should not use a backend.";
 
-        Assert.Equal(0, MafAgentRuntime.WorkspaceSearchSupport.CountWholeTermOccurrences(text, "call"));
-        Assert.Equal(1, MafAgentRuntime.WorkspaceSearchSupport.CountWholeTermOccurrences(text, "backend"));
+        Assert.Equal(0, WorkspaceSearchSupport.CountWholeTermOccurrences(text, "call"));
+        Assert.Equal(1, WorkspaceSearchSupport.CountWholeTermOccurrences(text, "backend"));
     }
 
     [Fact]
@@ -51,12 +51,12 @@ public sealed class MafWorkspaceSearchSupportTests
             UI-RAG-GATE-OK. Reply exactly with UI-RAG-GATE-OK and do not call tools.
             """;
 
-        var extracted = MafAgentRuntime.WorkspaceSearchSupport.ExtractUserRequestForRag(query);
-        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(query);
+        var extracted = WorkspaceSearchSupport.ExtractUserRequestForRag(query);
+        var terms = WorkspaceSearchSupport.TokenizeRagQuery(query);
 
         Assert.StartsWith("UI-RAG-GATE-OK.", extracted);
         Assert.Equal(["UI-RAG-GATE-OK"], terms);
-        Assert.False(MafAgentRuntime.WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
+        Assert.False(WorkspaceSearchSupport.HasEnoughRagSignal(terms, minimumTermCount: 2));
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class MafWorkspaceSearchSupportTests
             Summarize the x-ray machine quotation and financial workbook assumptions.
             """;
 
-        var terms = MafAgentRuntime.WorkspaceSearchSupport.TokenizeRagQuery(query);
+        var terms = WorkspaceSearchSupport.TokenizeRagQuery(query);
 
         Assert.Contains("x-ray", terms);
         Assert.Contains("quotation", terms);

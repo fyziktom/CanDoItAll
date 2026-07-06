@@ -6,10 +6,8 @@ using AccessCapabilityTag = CanDoItAll.AgentFramework.Capabilities.Abstractions.
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed partial class ToolCapabilityBuilder
 {
-    private sealed partial class ToolCapabilityBuilder
-    {
         public IReadOnlyList<AITool> CreateConfiguredWorkspaceTools(
             AgentDefinition agent,
             bool suppressApprovalRequirements = false)
@@ -107,7 +105,7 @@ public sealed partial class MafAgentRuntime
 
         private bool IsConfiguredRuntimeToolAllowed(string toolKey)
         {
-            if (!TryCreateRuntimeToolName(toolKey, out var runtimeToolName))
+            if (!RuntimeToolCapabilityDescriptorFactory.TryCreateRuntimeToolName(toolKey, out var runtimeToolName))
             {
                 return false;
             }
@@ -179,5 +177,4 @@ public sealed partial class MafAgentRuntime
                 tools.Add(createTool());
             }
         }
-    }
 }

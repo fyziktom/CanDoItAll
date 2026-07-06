@@ -32,6 +32,123 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public void Maf_runtime_collaborators_are_top_level_types()
+    {
+        var collaboratorTypes = new[]
+        {
+            typeof(RuntimeCapabilityComposer),
+            typeof(MafRuntimeAgentFactory),
+            typeof(MafRuntimeExecutionOptionsResolver),
+            typeof(MafRuntimeToolInvocationResultClassifier),
+            typeof(ContextCapabilityBuilder),
+            typeof(SkillCapabilityBuilder),
+            typeof(McpCapabilityBuilder),
+            typeof(ToolCapabilityBuilder),
+            typeof(WorkspaceRuntimePlugin),
+            typeof(StorageRuntimePlugin),
+            typeof(WorkspaceSearchSupport),
+            typeof(InputAttachmentPreparer),
+            typeof(InputAttachmentSupport),
+            typeof(RequestScopedSessionContentScrubber),
+            typeof(ProcessArtifactRecoveryService),
+            typeof(ProviderRuntimeDiagnostics),
+            typeof(RepeatedToolInvocationGuard),
+            typeof(RequiredFinalizerCapturedException)
+        };
+
+        Assert.All(collaboratorTypes, type => Assert.False(type.IsNested, $"{type.FullName} must not be nested under MafAgentRuntime."));
+    }
+
+    [Fact]
+    public void MafAgentRuntime_is_not_a_split_partial_namespace()
+    {
+        var root = FindRepoRoot();
+        var runtimeRoot = Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime");
+        var runtimeFiles = Directory
+            .EnumerateFiles(runtimeRoot, "MafAgentRuntime*.cs", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(runtimeRoot, path))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Equal(["MafAgentRuntime.cs"], runtimeFiles);
+        Assert.DoesNotContain(
+            "partial class MafAgentRuntime",
+            File.ReadAllText(Path.Combine(runtimeRoot, "MafAgentRuntime.cs")),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafAgentRuntime_partials_do_not_hide_private_nested_runtime_types()
+    {
+        var root = FindRepoRoot();
+        var runtimeRoot = Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime");
+        var violations = Directory
+            .EnumerateFiles(runtimeRoot, "MafAgentRuntime*.cs", SearchOption.AllDirectories)
+            .SelectMany(path => FindPrivateNestedTypeDeclarations(path, runtimeRoot))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void MafAgentRuntime_does_not_own_capability_composition_partials()
+    {
+        var root = FindRepoRoot();
+        var capabilityRoot = Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "Capabilities");
+        var violations = Directory
+            .EnumerateFiles(capabilityRoot, "MafAgentRuntime.Capabilities*.cs", SearchOption.TopDirectoryOnly)
+            .Select(path => Path.GetRelativePath(root, path))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Runtime_tests_do_not_reflect_private_capability_composition_methods()
+    {
+        var root = FindRepoRoot();
+        var unitTestRoot = Path.Combine(root, "tests", "Unit", "CanDoItAll.Tests.Unit");
+        var forbiddenPatterns = new[]
+        {
+            "CreateCapabilityStateAsync",
+            "CreateCapabilityStateCoreAsync",
+            "CreateRuntimeCapabilityAccessPlan"
+        };
+        var violations = Directory
+            .EnumerateFiles(unitTestRoot, "*.cs", SearchOption.TopDirectoryOnly)
+            .Where(path => !string.Equals(
+                Path.GetFileName(path),
+                nameof(MafRuntimeArchitectureServicesTests) + ".cs",
+                StringComparison.Ordinal))
+            .SelectMany(path => FindForbiddenPrivateRuntimeReflection(path, unitTestRoot, forbiddenPatterns))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
     public void MafRuntimeDependencyResolver_prefers_registered_provider_dependencies()
     {
         var gateway = new TestMafProviderRuntimeGateway();
@@ -251,6 +368,61 @@ public sealed class MafRuntimeArchitectureServicesTests
             "Not checked",
             null,
             []);
+
+    private static IEnumerable<string> FindPrivateNestedTypeDeclarations(
+        string path,
+        string runtimeRoot)
+    {
+        var lineNumber = 0;
+        foreach (var line in File.ReadLines(path))
+        {
+            lineNumber++;
+            var trimmed = line.TrimStart();
+            if (trimmed.StartsWith("private sealed class ", StringComparison.Ordinal) ||
+                trimmed.StartsWith("private sealed partial class ", StringComparison.Ordinal) ||
+                trimmed.StartsWith("private sealed record ", StringComparison.Ordinal) ||
+                trimmed.StartsWith("private enum ", StringComparison.Ordinal))
+            {
+                yield return $"{Path.GetRelativePath(runtimeRoot, path)}:{lineNumber}:{trimmed}";
+            }
+        }
+    }
+
+    private static IEnumerable<string> FindForbiddenPrivateRuntimeReflection(
+        string path,
+        string unitTestRoot,
+        IReadOnlyList<string> forbiddenPatterns)
+    {
+        var source = File.ReadAllText(path);
+        if (!source.Contains("typeof(MafAgentRuntime).GetMethod(", StringComparison.Ordinal))
+        {
+            yield break;
+        }
+
+        foreach (var pattern in forbiddenPatterns)
+        {
+            if (source.Contains($"\"{pattern}\"", StringComparison.Ordinal))
+            {
+                yield return $"{Path.GetRelativePath(unitTestRoot, path)} reflects private runtime method '{pattern}'.";
+            }
+        }
+    }
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Unable to locate repository root.");
+    }
 
     private sealed class TestRuntimeToolProvider : IAgentRuntimeToolProvider
     {

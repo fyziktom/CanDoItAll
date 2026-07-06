@@ -16,11 +16,11 @@ public sealed class AgentFinalizerPolicyTests
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "code-change");
 
-        var pathResolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+        var pathResolved = ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
             context,
             out var primaryArtifactRef,
             out var pathFailure);
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -50,7 +50,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -80,7 +80,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -112,7 +112,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -139,7 +139,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -166,7 +166,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "code-change");
         var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/code-change.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -188,7 +188,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
         var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -210,7 +210,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
         var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -237,7 +237,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "scaffold-contract");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/scaffold-contract.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -267,7 +267,7 @@ public sealed class AgentFinalizerPolicyTests
         var context = CreateGovernedProcessContext(runId, "external-check");
         var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/external-check.md";
 
-        var recovered = MafAgentRuntime.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
             context,
             primaryArtifactRef,
             """
@@ -291,7 +291,7 @@ public sealed class AgentFinalizerPolicyTests
     {
         var context = CreateGovernedProcessContext(Guid.NewGuid(), "../code-change");
 
-        var resolved = MafAgentRuntime.TryBuildCurrentStepPrimaryManagedArtifactPath(
+        var resolved = ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
             context,
             out _,
             out var failure);

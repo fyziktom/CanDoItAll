@@ -34,7 +34,7 @@ public sealed class CapabilityMigrationCleanupGuardTests
     {
         var accessSource = ReadRepositoryFiles("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities");
         var runtimeProviderComposerSource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeToolProviderComposer.cs");
-        var policySource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Access.Policies.cs");
+        var policySource = ReadRepositoryFile("src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeCapabilityComposer.Access.Policies.cs");
 
         Assert.Contains("ICapabilityAccessPolicyEvaluator", accessSource, StringComparison.Ordinal);
         Assert.Contains("RuntimeToolProviderAccessFilter", runtimeProviderComposerSource, StringComparison.Ordinal);

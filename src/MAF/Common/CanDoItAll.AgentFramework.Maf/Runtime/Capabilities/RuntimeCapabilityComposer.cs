@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Agents.AI;
@@ -13,13 +14,105 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal interface IRuntimeCapabilityComposer
+{
+    Task<RuntimeCapabilityState> CreateCapabilityStateAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<AgentMemoryRecord> memory,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        bool suppressApprovalRequirements = false);
+
+    Task<RuntimeCapabilityState> CreateCapabilityStateCoreAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string model,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<AgentMemoryRecord> memory,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        bool suppressApprovalRequirements,
+        WorkspaceScopeDescriptor contextWorkspaceScope,
+        AgentRuntimeContextIntent contextIntent);
+}
+
+internal sealed partial class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 {
     private const int DefaultCompactionSlidingWindowTurns = 32;
     private const int DefaultCompactionTruncationTokenLimit = 64000;
     private const int DefaultToolCompactionMessageThreshold = 40;
+    private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
 
-    private async Task<RuntimeCapabilityState> CreateCapabilityStateAsync(
+    private static readonly ProviderProfileService ProviderFeatureService = new();
+
+    private readonly string workspaceRoot;
+    private readonly IServiceProvider services;
+    private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IMafRuntimeDependencyResolver dependencyResolver;
+    private readonly IMafProviderCredentialService providerCredentialService;
+    private readonly IMafProviderRuntimeGateway providerRuntimeGateway;
+    private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
+    private readonly IMafRuntimeCompositionMetrics compositionMetrics;
+
+    public RuntimeCapabilityComposer(
+        string workspaceRoot,
+        IServiceProvider services,
+        WorkspaceScopeDescriptor workspaceScope,
+        IMafRuntimeDependencyResolver dependencyResolver,
+        IMafProviderCredentialService providerCredentialService,
+        IMafProviderRuntimeGateway providerRuntimeGateway,
+        IRuntimeToolProviderComposer runtimeToolProviderComposer,
+        IMafRuntimeCompositionMetrics compositionMetrics)
+    {
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
+        }
+
+        this.workspaceRoot = Path.GetFullPath(workspaceRoot);
+        this.services = services ?? throw new ArgumentNullException(nameof(services));
+        this.workspaceScope = workspaceScope;
+        this.dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
+        this.providerCredentialService = providerCredentialService ?? throw new ArgumentNullException(nameof(providerCredentialService));
+        this.providerRuntimeGateway = providerRuntimeGateway ?? throw new ArgumentNullException(nameof(providerRuntimeGateway));
+        this.runtimeToolProviderComposer = runtimeToolProviderComposer ?? throw new ArgumentNullException(nameof(runtimeToolProviderComposer));
+        this.compositionMetrics = compositionMetrics ?? throw new ArgumentNullException(nameof(compositionMetrics));
+    }
+
+    public static RuntimeCapabilityComposer CreateDefault(
+        string workspaceRoot,
+        IServiceProvider services,
+        WorkspaceScopeDescriptor? workspaceScope = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var effectiveWorkspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
+        var dependencyResolver = MafRuntimeDependencyResolver.Resolve(services);
+        var providerCredentialService = services.GetService(typeof(IMafProviderCredentialService)) is IMafProviderCredentialService resolvedCredentialService
+            ? resolvedCredentialService
+            : new MafProviderCredentialService(services);
+        var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
+        var runtimeToolProviderComposer = services.GetService(typeof(IRuntimeToolProviderComposer)) is IRuntimeToolProviderComposer resolvedComposer
+            ? resolvedComposer
+            : RuntimeToolProviderComposer.Default;
+        var compositionMetrics = services.GetService(typeof(IMafRuntimeCompositionMetrics)) is IMafRuntimeCompositionMetrics resolvedMetrics
+            ? resolvedMetrics
+            : NoOpMafRuntimeCompositionMetrics.Instance;
+
+        return new RuntimeCapabilityComposer(
+            workspaceRoot,
+            services,
+            effectiveWorkspaceScope,
+            dependencyResolver,
+            providerCredentialService,
+            providerDependencies.ProviderRuntimeGateway,
+            runtimeToolProviderComposer,
+            compositionMetrics);
+    }
+
+    public async Task<RuntimeCapabilityState> CreateCapabilityStateAsync(
         AgentDefinition agent,
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
@@ -42,7 +135,7 @@ public sealed partial class MafAgentRuntime
             AgentRuntimeContextIntent.Empty);
     }
 
-    private async Task<RuntimeCapabilityState> CreateCapabilityStateCoreAsync(
+    public async Task<RuntimeCapabilityState> CreateCapabilityStateCoreAsync(
         AgentDefinition agent,
         ProviderProfile provider,
         string model,
@@ -57,7 +150,7 @@ public sealed partial class MafAgentRuntime
         var totalStopwatch = Stopwatch.StartNew();
         try
         {
-            var agentConfiguration = DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
+            var agentConfiguration = MafRuntimeJson.DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
             var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent);
             var storageToolsAvailable = HasStorageRuntimePluginServices();
             var capabilityAccessPlan = TrackResult(
@@ -193,15 +286,32 @@ public sealed partial class MafAgentRuntime
         var workspaceServices = dependencyResolver.ResolveWorkspaceServices(services, workspaceRoot, workspaceScope);
         var workspacePlugin = new WorkspaceRuntimePlugin(workspaceServices.FileService, workspaceServices.CommandExecutionService, workspaceServices.ArtifactToolService, workspaceRoot, contextIntent.WorkspaceScope ?? workspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
-        var skillBuilder = new SkillCapabilityBuilder(this);
-        var contextBuilder = new ContextCapabilityBuilder(this);
+        var skillBuilder = new SkillCapabilityBuilder(workspaceRoot, services);
+        var contextBuilder = new ContextCapabilityBuilder(workspaceRoot);
         var contextContributors = services.GetServices<IAgentContextContributor>().ToList();
         var runtimeToolProviders = runtimeToolProviderComposer.ComposeRegistrations(
             services.GetServices<IAgentRuntimeToolProvider>());
-        var mcpBuilder = new McpCapabilityBuilder(this);
+        var mcpBuilder = new McpCapabilityBuilder(
+            services,
+            workspaceRoot,
+            workspaceScope,
+            dependencyResolver,
+            providerCredentialService,
+            ResolveCatalogOperationClassifications,
+            ResolveMcpServerKey,
+            ResolveCapabilityDisplayName,
+            ResolveCapabilityDescription,
+            ResolveMcpAllowedTools,
+            ResolveMcpApprovalMode,
+            ResolveMcpTimeout,
+            ResolveCatalogTags,
+            ResolveMcpMessageFraming);
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
         var toolBuilder = new ToolCapabilityBuilder(
-            this,
+            services,
+            workspaceRoot,
+            workspaceScope,
+            providerCredentialService,
             workspacePlugin,
             storagePlugin,
             workspaceServices.CommandExecutionService,
@@ -232,7 +342,7 @@ public sealed partial class MafAgentRuntime
         compositionMetrics.Record(new MafRuntimeCompositionMeasurement(
             stage,
             elapsed,
-            nameof(MafAgentRuntime)));
+            nameof(RuntimeCapabilityComposer)));
     }
 
     private static AgentWorkspaceToolAccessSettings ResolveWorkspaceToolAccessForRuntime(AgentDefinition agent)
@@ -804,7 +914,7 @@ public sealed partial class MafAgentRuntime
             _ => AgentContextExecutionMode.InteractiveChat
         };
 
-    private static bool IsGovernedProcessAutomationRun()
+    internal static bool IsGovernedProcessAutomationRun()
     {
         var auditScope = WorkspaceExecutionAuditContext.Current;
         return auditScope is not null &&
@@ -964,232 +1074,5 @@ public sealed partial class MafAgentRuntime
 
     private static TConfiguration? DeserializeConfiguration<TConfiguration>(string? json)
         where TConfiguration : class
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<TConfiguration>(json, SerializerOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    private sealed class AgentRuntimeConfiguration
-    {
-        public bool? EnableCompaction { get; set; }
-
-        public int? SlidingWindowTurns { get; set; }
-
-        public int? TruncationTokenLimit { get; set; }
-
-        public int? ToolCompactionMessageThreshold { get; set; }
-
-        public int? MaxInjectedMemoryItems { get; set; }
-
-        public int? MaxLocalRagResults { get; set; }
-
-        public List<string>? PreferredSkillRoots { get; set; }
-    }
-
-    private sealed record FileSkillExecutionPolicy(
-        string RootPath,
-        bool ApprovalRequired,
-        string TrustLevel);
-
-    private enum AgentRuntimeContextPolicyKind
-    {
-        InteractiveChat = 0,
-        GovernedProcessAutomation = 1,
-        AutoApprovedNonInteractive = 2,
-        A2AEndpoint = 3
-    }
-
-    private sealed record RuntimeCompactionDecision(
-        AgentRuntimeContextPolicyKind PolicyKind,
-        bool ShouldAttachCompaction,
-        string Message)
-    {
-        public static RuntimeCompactionDecision Attach(
-            AgentRuntimeContextPolicyKind policyKind,
-            string message)
-        {
-            return new RuntimeCompactionDecision(policyKind, true, message);
-        }
-
-        public static RuntimeCompactionDecision Skip(
-            AgentRuntimeContextPolicyKind policyKind,
-            string message)
-        {
-            return new RuntimeCompactionDecision(policyKind, false, message);
-        }
-    }
-
-    private sealed record RuntimeCapabilityComposition(
-        RuntimeCapabilityState State,
-        AgentRuntimeConfiguration AgentConfiguration,
-        SkillCapabilityBuilder SkillBuilder,
-        ContextCapabilityBuilder ContextBuilder,
-        IReadOnlyList<IAgentContextContributor> ContextContributors,
-        IReadOnlyList<RuntimeToolProviderRegistration> RuntimeToolProviders,
-        McpCapabilityBuilder McpBuilder,
-        ToolCapabilityBuilder ToolBuilder,
-        RuntimeCapabilityAccessPlan CapabilityAccessPlan);
-
-    private sealed class SkillCapabilityConfiguration
-    {
-        public string? SkillSource { get; set; }
-
-        public string? SkillRoot { get; set; }
-
-        public List<string>? AllowedExternalRoots { get; set; }
-
-        public string? RegisteredSkillServiceType { get; set; }
-
-        public InlineSkillDefinition? InlineSkill { get; set; }
-
-        public bool? ScriptApproval { get; set; }
-
-        public FileSkillScriptExecutionConfiguration? ScriptExecution { get; set; }
-    }
-
-    private sealed class FileSkillScriptExecutionConfiguration
-    {
-        public bool? ApprovalRequired { get; set; }
-
-        public string? TrustLevel { get; set; }
-    }
-
-    private sealed class InlineSkillDefinition
-    {
-        public string? Name { get; set; }
-
-        public string? Description { get; set; }
-
-        public string? Instructions { get; set; }
-
-        public List<InlineSkillResourceDefinition>? Resources { get; set; }
-    }
-
-    private sealed class InlineSkillResourceDefinition
-    {
-        public string? Name { get; set; }
-
-        public string? Content { get; set; }
-
-        public string? Description { get; set; }
-    }
-
-    private sealed class McpCapabilityConfiguration
-    {
-        public string? Transport { get; set; }
-
-        public bool? Hosted { get; set; }
-
-        public string? ServerName { get; set; }
-
-        public string? Endpoint { get; set; }
-
-        public string? Command { get; set; }
-
-        public List<string>? Arguments { get; set; }
-
-        public string? WorkingDirectory { get; set; }
-
-        public string? MessageFraming { get; set; }
-
-        public List<string>? AllowedWorkingDirectories { get; set; }
-
-        public Dictionary<string, string>? EnvironmentVariables { get; set; }
-
-        public Dictionary<string, string>? EnvironmentVariableBindings { get; set; }
-
-        public Dictionary<string, string>? Headers { get; set; }
-
-        public Dictionary<string, string>? HeaderBindings { get; set; }
-
-        public List<string>? AllowedTools { get; set; }
-
-        public string? ApprovalMode { get; set; }
-
-        public int? TimeoutSeconds { get; set; }
-    }
-
-    private sealed class RagCapabilityConfiguration
-    {
-        public string? RagRoot { get; set; }
-
-        public List<string>? Extensions { get; set; }
-
-        public List<string>? ExcludePaths { get; set; }
-
-        public string? SearchTime { get; set; }
-
-        public int? RecentMessageMemoryLimit { get; set; }
-
-        public int? MaxResults { get; set; }
-
-        public int? MaxFilesToScan { get; set; }
-
-        public int? MinQueryTerms { get; set; }
-
-        public int? MinMatchedTerms { get; set; }
-
-        public int? MinScore { get; set; }
-    }
-
-    private sealed class AiContextCapabilityConfiguration
-    {
-        public string? Message { get; set; }
-
-        public string? Role { get; set; }
-    }
-
-    private sealed class MemoryCapabilityConfiguration
-    {
-        public string? Provider { get; set; }
-
-        public string? Endpoint { get; set; }
-
-        public string? ApiKeyEnvironmentVariable { get; set; }
-
-        public string? ApplicationId { get; set; }
-
-        public string? AgentId { get; set; }
-
-        public string? ThreadId { get; set; }
-
-        public string? UserId { get; set; }
-
-        public string? ContextPrompt { get; set; }
-
-        public string? StateKey { get; set; }
-
-        public bool? EnableSensitiveTelemetryData { get; set; }
-    }
-
-    private sealed class PluginCapabilityConfiguration
-    {
-        public string? RegisteredPluginServiceType { get; set; }
-
-        public bool? ApprovalRequired { get; set; }
-    }
-
-    private sealed class BuiltInToolConfiguration
-    {
-        public string? Tool { get; set; }
-
-        public bool? ApprovalRequired { get; set; }
-
-        public bool? Enabled { get; set; }
-
-        public int? MaximumResultCount { get; set; }
-
-        public Dictionary<string, JsonElement>? AdditionalProperties { get; set; }
-    }
+        => MafRuntimeJson.DeserializeConfiguration<TConfiguration>(json);
 }

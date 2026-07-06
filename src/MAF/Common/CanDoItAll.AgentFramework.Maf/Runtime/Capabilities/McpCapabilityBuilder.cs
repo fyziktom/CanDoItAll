@@ -9,15 +9,33 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CapabilityOperationClassification = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityOperationClassification;
 using CapabilityKey = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKey;
+using McpServerKey = CanDoItAll.AgentFramework.Capabilities.Abstractions.McpServerKey;
+using McpToolName = CanDoItAll.AgentFramework.Capabilities.Abstractions.McpToolName;
+using CapabilityTag = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityTag;
 using McpRuntimeDiscoveredTool = CanDoItAll.AgentFramework.Mcp.Abstractions.DiscoveredMcpTool;
+using RuntimeToolName = CanDoItAll.AgentFramework.Capabilities.Abstractions.RuntimeToolName;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed class McpCapabilityBuilder(
+    IServiceProvider services,
+    string workspaceRoot,
+    WorkspaceScopeDescriptor workspaceScope,
+    IMafRuntimeDependencyResolver dependencyResolver,
+    IMafProviderCredentialService providerCredentialService,
+    Func<CapabilityCatalogItem, RuntimeToolName?, IReadOnlySet<CapabilityOperationClassification>> resolveCatalogOperationClassifications,
+    Func<CapabilityCatalogItem, McpCapabilityConfiguration, McpServerKey> resolveMcpServerKey,
+    Func<CapabilityCatalogItem, string> resolveCapabilityDisplayName,
+    Func<CapabilityCatalogItem, string> resolveCapabilityDescription,
+    Func<McpCapabilityConfiguration, IReadOnlySet<McpToolName>> resolveMcpAllowedTools,
+    Func<McpCapabilityConfiguration, McpApprovalMode> resolveMcpApprovalMode,
+    Func<McpCapabilityConfiguration, TimeSpan> resolveMcpTimeout,
+    Func<CapabilityCatalogItem, RuntimeToolName?, IReadOnlySet<CapabilityOperationClassification>, IReadOnlySet<CapabilityTag>> resolveCatalogTags,
+    Func<string?, CapabilityCatalogItem, McpStdioMessageFraming> resolveMcpMessageFraming)
 {
-    private sealed class McpCapabilityBuilder(MafAgentRuntime owner)
-    {
+        private static readonly ProviderProfileService ProviderFeatureService = new();
         private const string PlaywrightMcpPackagePrefix = "@playwright/mcp";
         private const string PlaywrightCapsArgument = "--caps";
         private const string PlaywrightVisionCapability = "vision";
@@ -37,7 +55,7 @@ public sealed partial class MafAgentRuntime
             CancellationToken cancellationToken,
             bool suppressApprovalRequirements = false)
         {
-            var configuration = DeserializeConfiguration<McpCapabilityConfiguration>(capability.ConfigurationJson) ?? new McpCapabilityConfiguration();
+            var configuration = MafRuntimeJson.DeserializeConfiguration<McpCapabilityConfiguration>(capability.ConfigurationJson) ?? new McpCapabilityConfiguration();
             var approvalRequired = agent.Permissions.RequiresApprovalForExternalCalls;
             var hostedApprovalRequired = !suppressApprovalRequirements
                 && (approvalRequired || string.Equals(configuration.ApprovalMode, "AlwaysRequire", StringComparison.OrdinalIgnoreCase));
@@ -133,7 +151,7 @@ public sealed partial class MafAgentRuntime
         private AIFunction CreateModelContextBoundedMcpTool(AIFunction tool)
         {
             return IsBrowserMcpToolName(tool.Name)
-                ? new BrowserMcpModelContextBoundedAIFunction(tool, owner.workspaceRoot, owner.workspaceScope)
+                ? new BrowserMcpModelContextBoundedAIFunction(tool, workspaceRoot, workspaceScope)
                 : tool;
         }
 
@@ -181,10 +199,10 @@ public sealed partial class MafAgentRuntime
 
                 payload[key] = value is null
                     ? null
-                    : JsonSerializer.SerializeToNode(value, SerializerOptions);
+                    : JsonSerializer.SerializeToNode(value, MafRuntimeJson.SerializerOptions);
             }
 
-            return payload.ToJsonString(SerializerOptions);
+            return payload.ToJsonString(MafRuntimeJson.SerializerOptions);
         }
 
         private static bool IsBrowserMcpToolName(string? toolName)
@@ -524,12 +542,13 @@ public sealed partial class MafAgentRuntime
             ThrowIfPersistedSecretsConfigured(capability, configuration);
             var workingDirectory = string.IsNullOrWhiteSpace(configuration.WorkingDirectory)
                 ? null
-                : owner.ResolvePathFromWorkspace(
+                : MafRuntimePathResolver.ResolvePathFromWorkspace(
+                    workspaceRoot,
                     configuration.WorkingDirectory,
                     allowExternal: (configuration.AllowedWorkingDirectories?.Count ?? 0) > 0,
                     allowedExternalRoots: configuration.AllowedWorkingDirectories);
-            var commandExecutionService = owner.dependencyResolver
-                .ResolveWorkspaceServices(owner.services, owner.workspaceRoot, owner.workspaceScope)
+            var commandExecutionService = dependencyResolver
+                .ResolveWorkspaceServices(services, workspaceRoot, workspaceScope)
                 .CommandExecutionService;
             var environmentVariables = (await ResolveSecretBindingsAsync(
                     configuration.EnvironmentVariableBindings,
@@ -556,25 +575,25 @@ public sealed partial class MafAgentRuntime
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            var classifications = owner.ResolveCatalogOperationClassifications(capability, runtimeToolName: null);
+            var classifications = resolveCatalogOperationClassifications(capability, null);
             var descriptor = McpDescriptorFactory.LocalStdio(
                 key: CapabilityKey.Create(capability.Key),
-                serverKey: ResolveMcpServerKey(capability, configuration),
-                displayName: ResolveCapabilityDisplayName(capability),
-                description: ResolveCapabilityDescription(capability),
+                serverKey: resolveMcpServerKey(capability, configuration),
+                displayName: resolveCapabilityDisplayName(capability),
+                description: resolveCapabilityDescription(capability),
                 command: launchDescriptor.Command,
                 arguments: launchDescriptor.Arguments,
                 workingDirectory: string.IsNullOrWhiteSpace(launchDescriptor.WorkingDirectory) ? "." : launchDescriptor.WorkingDirectory,
                 allowedWorkingDirectories: configuration.AllowedWorkingDirectories ?? [],
-                allowedTools: ResolveMcpAllowedTools(configuration),
+                allowedTools: resolveMcpAllowedTools(configuration),
                 environmentVariableBindings: new Dictionary<string, string>(),
                 rawEnvironmentVariables: ToRawEnvironmentVariables(launchDescriptor.EnvironmentVariables),
-                approvalMode: ResolveMcpApprovalMode(configuration),
-                timeout: ResolveMcpTimeout(configuration),
-                tags: ResolveCatalogTags(capability, runtimeToolName: null, classifications),
+                approvalMode: resolveMcpApprovalMode(configuration),
+                timeout: resolveMcpTimeout(configuration),
+                tags: resolveCatalogTags(capability, null, classifications),
                 operationClassifications: classifications,
-                messageFraming: ResolveMcpMessageFraming(configuration.MessageFraming, capability));
-            var clientFactory = owner.services.GetService(typeof(IMcpClientFactory)) as IMcpClientFactory
+                messageFraming: resolveMcpMessageFraming(configuration.MessageFraming, capability));
+            var clientFactory = services.GetService(typeof(IMcpClientFactory)) as IMcpClientFactory
                 ?? new LocalStdioMcpClientFactory();
             var client = await clientFactory.CreateAsync(
                     descriptor,
@@ -663,7 +682,7 @@ public sealed partial class MafAgentRuntime
             CancellationToken cancellationToken)
         {
             var resolution = await PlaywrightMcpLaunchResolver.TryResolveAsync(
-                    owner.workspaceRoot,
+                    workspaceRoot,
                     launchDescriptor.Command,
                     configuration.Arguments ?? [],
                     cancellationToken)
@@ -764,7 +783,7 @@ public sealed partial class MafAgentRuntime
             string bindingName,
             CancellationToken cancellationToken)
         {
-            var resolver = owner.services.GetService(typeof(ISecretRuntimeResolver)) as ISecretRuntimeResolver;
+            var resolver = services.GetService(typeof(ISecretRuntimeResolver)) as ISecretRuntimeResolver;
             if (resolver is null)
             {
                 throw new InvalidOperationException(
@@ -811,7 +830,7 @@ public sealed partial class MafAgentRuntime
                 return;
             }
 
-            var credential = owner.ResolveProviderCredential(provider);
+            var credential = providerCredentialService.Resolve(provider);
             if (!credential.IsResolved)
             {
                 throw new InvalidOperationException(
@@ -819,7 +838,7 @@ public sealed partial class MafAgentRuntime
             }
 
             AddCredentialEnvironmentVariable(environmentVariables, provider.ApiKeyEnvironmentVariable, credential.ApiKey);
-            AddCredentialEnvironmentVariable(environmentVariables, OpenAiApiKeyEnvironmentVariable, credential.ApiKey);
+            AddCredentialEnvironmentVariable(environmentVariables, MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, credential.ApiKey);
         }
 
         private static void AddCredentialEnvironmentVariable(
@@ -925,5 +944,4 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException(
                 $"Capability '{capability.Name}' cannot attach provider-native hosted MCP to provider '{provider.Name}'. {support.Summary} {support.Remediation}");
         }
-    }
 }

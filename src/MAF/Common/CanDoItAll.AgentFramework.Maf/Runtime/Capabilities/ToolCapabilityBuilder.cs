@@ -6,18 +6,20 @@ using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed partial class ToolCapabilityBuilder(
+    IServiceProvider services,
+    string workspaceRoot,
+    WorkspaceScopeDescriptor workspaceScope,
+    IMafProviderCredentialService providerCredentialService,
+    WorkspaceRuntimePlugin workspacePlugin,
+    StorageRuntimePlugin? storagePlugin,
+    IWorkspaceCommandExecutionService workspaceCommandExecutionService,
+    AgentWorkspaceToolAccessSettings workspaceToolAccess,
+    IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies,
+    RuntimeCapabilityAccessPlan capabilityAccessPlan)
 {
-    private sealed partial class ToolCapabilityBuilder(
-        MafAgentRuntime owner,
-        WorkspaceRuntimePlugin workspacePlugin,
-        StorageRuntimePlugin? storagePlugin,
-        IWorkspaceCommandExecutionService workspaceCommandExecutionService,
-        AgentWorkspaceToolAccessSettings workspaceToolAccess,
-        IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies,
-        RuntimeCapabilityAccessPlan capabilityAccessPlan)
-    {
-        private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
+    private static readonly ProviderProfileService ProviderFeatureService = new();
+    private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
 
         public IReadOnlyList<AITool> CreateTools(
             CapabilityCatalogItem capability,
@@ -31,7 +33,7 @@ public sealed partial class MafAgentRuntime
             AgentDefinition? agent,
             bool suppressApprovalRequirements = false)
         {
-            var configuration = DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
+            var configuration = MafRuntimeJson.DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
             var toolKey = configuration.Tool ?? capability.Key;
             if (!IsBuiltInToolEnabled(toolKey, configuration))
             {
@@ -95,7 +97,7 @@ public sealed partial class MafAgentRuntime
                 return false;
             }
 
-            var configuration = DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
+            var configuration = MafRuntimeJson.DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
             var toolKey = configuration.Tool ?? capability.Key;
             if (!IsBuiltInToolEnabled(toolKey, configuration))
             {
@@ -112,14 +114,14 @@ public sealed partial class MafAgentRuntime
             AgentDefinition? agent,
             bool suppressApprovalRequirements = false)
         {
-            var configuration = DeserializeConfiguration<PluginCapabilityConfiguration>(capability.ConfigurationJson) ?? new PluginCapabilityConfiguration();
+            var configuration = MafRuntimeJson.DeserializeConfiguration<PluginCapabilityConfiguration>(capability.ConfigurationJson) ?? new PluginCapabilityConfiguration();
             var tools = ResolveRegisteredPluginTools(capability, configuration);
             if (tools.Count == 0)
             {
                 tools = CreateTools(capability, provider, agent, suppressApprovalRequirements);
             }
 
-            return MafAgentRuntime.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
+            return MafRuntimeToolApproval.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
         }
 
         public async Task<object?> RunSkillScriptAsync(
@@ -277,7 +279,7 @@ public sealed partial class MafAgentRuntime
                 throw new InvalidOperationException($"Registered plugin type '{configuration.RegisteredPluginServiceType}' for capability '{capability.Name}' could not be resolved.");
             }
 
-            var service = owner.services.GetService(serviceType);
+            var service = services.GetService(serviceType);
             if (service is null)
             {
                 throw new InvalidOperationException($"Registered plugin type '{configuration.RegisteredPluginServiceType}' for capability '{capability.Name}' is not available in DI.");
@@ -318,7 +320,7 @@ public sealed partial class MafAgentRuntime
                     $"Capability '{capability.Name}' requests approvalRequired for '{toolKey}', but provider-native hosted tools do not project approval wrappers through the current MAF bridge. Keep approvalRequired disabled for this capability until the approval-alignment phase is complete.");
             }
 
-            return MafAgentRuntime.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
+            return MafRuntimeToolApproval.ApplyApprovalRequirement(tools, configuration.ApprovalRequired == true, suppressApprovalRequirements).ToList();
         }
 
         private static AITool WrapWithApproval(AITool tool, bool suppressApprovalRequirements = false)
@@ -409,21 +411,21 @@ public sealed partial class MafAgentRuntime
             var fullPath = Path.GetFullPath(scriptPath);
             foreach (var policy in fileSkillExecutionPolicies.OrderByDescending(item => item.RootPath.Length))
             {
-                if (IsPathWithinRoot(fullPath, policy.RootPath))
+                if (MafRuntimePathResolver.IsPathWithinRoot(fullPath, policy.RootPath))
                 {
                     return policy;
                 }
             }
 
             return new FileSkillExecutionPolicy(
-                RootPath: Path.GetDirectoryName(fullPath) ?? owner.workspaceRoot,
+                RootPath: Path.GetDirectoryName(fullPath) ?? workspaceRoot,
                 ApprovalRequired: true,
                 TrustLevel: "UncataloguedFileSkill");
         }
 
         private string DescribeProviderHealth(ProviderProfile provider)
         {
-            var credential = owner.ResolveProviderCredential(provider);
+            var credential = providerCredentialService.Resolve(provider);
             var keyPresent = string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable)
                 ? "not configured"
                 : credential.IsResolved ? "present" : "missing";
@@ -435,7 +437,7 @@ public sealed partial class MafAgentRuntime
 
         private string ListExportPackages()
         {
-            var exportRoot = Path.Combine(owner.workspaceScope.ResolveDataRoot(owner.workspaceRoot), "exports");
+            var exportRoot = Path.Combine(workspaceScope.ResolveDataRoot(workspaceRoot), "exports");
             if (!Directory.Exists(exportRoot))
             {
                 return "The workspace export folder does not exist yet.";
@@ -456,5 +458,4 @@ public sealed partial class MafAgentRuntime
         {
             return "--" + key.TrimStart('-');
         }
-    }
 }

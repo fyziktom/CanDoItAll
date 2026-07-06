@@ -6,11 +6,14 @@ using CanDoItAll.AgentFramework.Providers;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed class InputAttachmentPreparer(
+    IMafProviderCredentialService providerCredentialService,
+    IMafProviderRuntimeGateway providerRuntimeGateway)
 {
     private const string InputAttachmentAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":384,"think":false}}""";
+    private static readonly ProviderProfileService ProviderFeatureService = new();
 
-    private async Task<PreparedInputAttachments> PrepareInputAttachmentsAsync(
+    public async Task<PreparedInputAttachments> PrepareAsync(
         AgentDefinition agent,
         ProviderProfile provider,
         string prompt,
@@ -24,7 +27,7 @@ public sealed partial class MafAgentRuntime
             return new PreparedInputAttachments(prompt, runtimeOptions);
         }
 
-        var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
+        var openAiCredentialOverride = providerCredentialService.ResolveOpenAiCredentialOverride(provider);
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiCredentialOverride);
         var selectedModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
         if (string.IsNullOrWhiteSpace(selectedModel))
@@ -37,7 +40,7 @@ public sealed partial class MafAgentRuntime
             return new PreparedInputAttachments(prompt, runtimeOptions);
         }
 
-        var imageModel = ResolveProviderImageAnalysisModel(effectiveProvider, selectedModel);
+        var imageModel = WorkspaceRuntimePlugin.ResolveProviderImageAnalysisModel(effectiveProvider, selectedModel);
         if (!ProviderFeatureService.ResolveFeatureMatrixForModel(effectiveProvider, imageModel).SupportsVision)
         {
             return new PreparedInputAttachments(prompt, runtimeOptions);
@@ -88,6 +91,23 @@ public sealed partial class MafAgentRuntime
             analyses.Select(analysis => CreateInputAttachmentUsageObservation(effectiveProvider, analysis)).ToList());
     }
 
+    public static AgentRuntimeResponse AttachUsageObservations(
+        AgentRuntimeResponse response,
+        IReadOnlyList<ProviderUsageObservation>? usageObservations)
+    {
+        if (usageObservations is null || usageObservations.Count == 0)
+        {
+            return response;
+        }
+
+        return response with
+        {
+            UsageObservations = usageObservations
+                .Concat(response.UsageObservations)
+                .ToList()
+        };
+    }
+
     private static string BuildInputAttachmentAnalysisPrompt(
         string userPrompt,
         AgentRuntimeInputAttachment attachment)
@@ -103,7 +123,7 @@ public sealed partial class MafAgentRuntime
             """;
     }
 
-    private static string AppendInputAttachmentAnalysis(
+    internal static string AppendInputAttachmentAnalysis(
         string prompt,
         IReadOnlyList<InputAttachmentAnalysis> analyses)
     {
@@ -157,24 +177,7 @@ public sealed partial class MafAgentRuntime
                     ["source"] = "request-scoped image attachment analysis",
                     ["attachment"] = analysis.SourcePath
                 },
-                SerializerOptions)
-        };
-    }
-
-    private static AgentRuntimeResponse AttachPreparedInputUsageObservations(
-        AgentRuntimeResponse response,
-        IReadOnlyList<ProviderUsageObservation>? usageObservations)
-    {
-        if (usageObservations is null || usageObservations.Count == 0)
-        {
-            return response;
-        }
-
-        return response with
-        {
-            UsageObservations = usageObservations
-                .Concat(response.UsageObservations)
-                .ToList()
+                MafRuntimeJson.SerializerOptions)
         };
     }
 
@@ -189,17 +192,4 @@ public sealed partial class MafAgentRuntime
                 .Split(["\r\n", "\n"], StringSplitOptions.None)
                 .Select(line => $"    {line}"));
     }
-
-    private sealed record PreparedInputAttachments(
-        string Prompt,
-        AgentRuntimeExecutionOptions RuntimeOptions,
-        IReadOnlyList<ProviderUsageObservation>? UsageObservations = null);
-
-    private sealed record InputAttachmentAnalysis(
-        string Name,
-        string SourcePath,
-        string Model,
-        string Analysis,
-        int InputTokens,
-        int OutputTokens);
 }

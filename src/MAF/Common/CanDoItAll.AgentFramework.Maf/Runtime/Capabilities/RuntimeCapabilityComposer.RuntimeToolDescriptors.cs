@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Tools;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed partial class RuntimeCapabilityComposer
 {
     private static IReadOnlyList<CapabilityExposureDescriptor> CreateConfiguredWorkspaceToolDescriptors(
         AgentWorkspaceToolAccessSettings workspaceToolAccess,

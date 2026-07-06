@@ -14,7 +14,7 @@ using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed partial class RuntimeCapabilityComposer
 {
     private CapabilityExposureDescriptor CreateCatalogCapabilityDescriptor(CapabilityCatalogItem capability)
         => capability.Kind switch
@@ -420,7 +420,7 @@ public sealed partial class MafAgentRuntime
         if (capability.Kind == ModelCapabilityKind.Skill)
         {
             var configuration = DeserializeConfiguration<SkillCapabilityConfiguration>(capability.ConfigurationJson);
-            if (IsRetiredRegisteredSkillCapability(capability, configuration?.RegisteredSkillServiceType))
+            if (RetiredRegisteredSkillPolicy.IsRetiredRegisteredSkillCapability(capability, configuration?.RegisteredSkillServiceType))
             {
                 return CapabilityAvailabilityState.Retired;
             }

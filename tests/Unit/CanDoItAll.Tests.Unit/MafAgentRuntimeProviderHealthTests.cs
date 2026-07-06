@@ -19,7 +19,7 @@ public sealed class MafAgentRuntimeProviderHealthTests
             Messages: null!,
             Prompt: "Reply with OK only.");
 
-        var messages = MafAgentRuntime.BuildProviderTestInputMessages(request);
+        var messages = ProviderRuntimeDiagnostics.BuildProviderTestInputMessages(request);
 
         Assert.Empty(messages);
     }
@@ -39,7 +39,7 @@ public sealed class MafAgentRuntimeProviderHealthTests
             ],
             Prompt: string.Empty);
 
-        var messages = MafAgentRuntime.BuildProviderTestInputMessages(request);
+        var messages = ProviderRuntimeDiagnostics.BuildProviderTestInputMessages(request);
 
         Assert.Collection(
             messages,

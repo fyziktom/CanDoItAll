@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed partial class RuntimeCapabilityComposer
 {
     private IReadOnlyList<CapabilityAccessPolicy> BuildRuntimeCapabilityAccessPolicies(
         AgentWorkspaceToolAccessSettings workspaceToolAccess,

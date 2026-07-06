@@ -3,20 +3,25 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal static class ProviderRuntimeDiagnostics
 {
-    public Task<ProviderHealthResult> TestProviderAsync(
+    public static Task<ProviderHealthResult> TestProviderAsync(
+        IMafProviderRuntimeGateway providerRuntimeGateway,
         ProviderProfile provider,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(providerRuntimeGateway);
         return providerRuntimeGateway.TestProviderAsync(provider, cancellationToken);
     }
 
-    public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+    public static Task<ProviderTestChatResult> RunProviderTestChatAsync(
+        IMafProviderRuntimeGateway providerRuntimeGateway,
         ProviderProfile provider,
         ProviderTestChatRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(providerRuntimeGateway);
+
         var model = ResolveProviderTestModel(provider, request.Model);
         return providerRuntimeGateway.RunProviderTestChatAsync(provider, request, model, cancellationToken);
     }
@@ -32,11 +37,13 @@ public sealed partial class MafAgentRuntime
             .ToList();
     }
 
-    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
+    public static Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
+        IMafProviderRuntimeGateway providerRuntimeGateway,
         ProviderProfile provider,
         ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(providerRuntimeGateway);
         return providerRuntimeGateway.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
     }
 
@@ -54,5 +61,19 @@ public sealed partial class MafAgentRuntime
             ProviderKind.Ollama => ResolveHealthCheckModel(provider, provider.SuggestedModels, "qwen3.5:9b"),
             _ => ResolveHealthCheckModel(provider, provider.SuggestedModels, ManagedSeedProviderFallbacks.OpenAiDefaultModel)
         };
+    }
+
+    private static string ResolveHealthCheckModel(
+        ProviderProfile provider,
+        IEnumerable<string> candidateModels,
+        string fallbackModel)
+    {
+        if (!string.IsNullOrWhiteSpace(provider.DefaultModel))
+        {
+            return provider.DefaultModel;
+        }
+
+        var discoveredModel = candidateModels.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item));
+        return string.IsNullOrWhiteSpace(discoveredModel) ? fallbackModel : discoveredModel;
     }
 }

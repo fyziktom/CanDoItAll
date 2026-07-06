@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
@@ -11,12 +10,8 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime : IAgentRuntime
+public sealed class MafAgentRuntime : IAgentRuntime
 {
-    private const int MaxRepeatedToolInvocationCount = 3;
-    private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
-    private const string ProcessArtifactBranchOutcomeKeyLineKey = "Branch outcome key";
-
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly TimeSpan FinalizerSessionSerializationTimeout = TimeSpan.FromSeconds(5);
     private static readonly HttpClient HttpClient = new()
@@ -36,6 +31,9 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
     private readonly IMafProviderStreamingRunner providerStreamingRunner;
     private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
     private readonly IMafRuntimeCompositionMetrics compositionMetrics;
+    private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
+    private readonly MafRuntimeAgentFactory runtimeAgentFactory;
+    private readonly InputAttachmentPreparer inputAttachmentPreparer;
     private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
 
     public MafAgentRuntime(
@@ -62,6 +60,7 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
             : new MafProviderAgentFactory(providerCredentialService);
         var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
         providerRuntimeGateway = providerDependencies.ProviderRuntimeGateway;
+        inputAttachmentPreparer = new InputAttachmentPreparer(providerCredentialService, providerRuntimeGateway);
         providerStreamingDispatchGate = providerDependencies.ProviderStreamingDispatchGate;
         providerStreamingRunner = services.GetService(typeof(IMafProviderStreamingRunner)) is IMafProviderStreamingRunner resolvedStreamingRunner
             ? resolvedStreamingRunner
@@ -72,6 +71,95 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
         compositionMetrics = services.GetService(typeof(IMafRuntimeCompositionMetrics)) is IMafRuntimeCompositionMetrics resolvedMetrics
             ? resolvedMetrics
             : NoOpMafRuntimeCompositionMetrics.Instance;
+        runtimeCapabilityComposer = new RuntimeCapabilityComposer(
+            this.workspaceRoot,
+            services,
+            this.workspaceScope,
+            dependencyResolver,
+            providerCredentialService,
+            providerRuntimeGateway,
+            runtimeToolProviderComposer,
+            compositionMetrics);
+        runtimeAgentFactory = new MafRuntimeAgentFactory(
+            this.workspaceRoot,
+            services,
+            this.workspaceScope,
+            providerCredentialService,
+            providerAgentFactory,
+            runtimeCapabilityComposer);
+    }
+
+    public Task<AIAgent> CreateHostedAgentAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<AgentMemoryRecord> memory,
+        CancellationToken cancellationToken = default,
+        bool suppressApprovalRequirements = false,
+        bool forceOmitTemperature = false,
+        AgentRuntimeExecutionOptions? executionOptions = null)
+    {
+        return runtimeAgentFactory.CreateHostedAgentAsync(
+            agent,
+            provider,
+            capabilities,
+            memory,
+            cancellationToken,
+            suppressApprovalRequirements,
+            forceOmitTemperature,
+            executionOptions);
+    }
+
+    public Task<ProviderHealthResult> TestProviderAsync(
+        ProviderProfile provider,
+        CancellationToken cancellationToken = default)
+        => ProviderRuntimeDiagnostics.TestProviderAsync(
+            providerRuntimeGateway,
+            provider,
+            cancellationToken);
+
+    public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+        ProviderProfile provider,
+        ProviderTestChatRequest request,
+        CancellationToken cancellationToken = default)
+        => ProviderRuntimeDiagnostics.RunProviderTestChatAsync(
+            providerRuntimeGateway,
+            provider,
+            request,
+            cancellationToken);
+
+    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
+        ProviderProfile provider,
+        ProviderModelMaintenanceEditorRequest request,
+        CancellationToken cancellationToken = default)
+        => ProviderRuntimeDiagnostics.CreateOrUpdateProviderModelAsync(
+            providerRuntimeGateway,
+            provider,
+            request,
+            cancellationToken);
+
+    private Task<PreparedInputAttachments> PrepareInputAttachmentsAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string prompt,
+        AgentRuntimeExecutionOptions runtimeOptions,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken)
+    {
+        return inputAttachmentPreparer.PrepareAsync(
+            agent,
+            provider,
+            prompt,
+            runtimeOptions,
+            progressCallback,
+            cancellationToken);
+    }
+
+    private static AgentRuntimeResponse AttachPreparedInputUsageObservations(
+        AgentRuntimeResponse response,
+        IReadOnlyList<ProviderUsageObservation>? usageObservations)
+    {
+        return InputAttachmentPreparer.AttachUsageObservations(response, usageObservations);
     }
 
     public async Task<AgentRuntimeResponse> RunAsync(
@@ -141,7 +229,7 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
         AgentRuntimeExecutionOptions? executionOptions,
         bool forceOmitTemperature)
     {
-        var runtimeOptions = NormalizeRuntimeExecutionOptions(structuredOutput, executionOptions);
+        var runtimeOptions = MafRuntimeExecutionOptionsResolver.Normalize(structuredOutput, executionOptions);
         var preparedInput = await PrepareInputAttachmentsAsync(
             agent,
             provider,
@@ -157,7 +245,7 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
             await progressCallback(ExecutionState.Preparing, "Approval policy", "Auto-approve is active for this run, so future tool approval gates will be suppressed.");
         }
 
-        await using var runtimeBuild = await CreateRuntimeBuildAsync(
+        await using var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
             agent,
             provider,
             capabilities,
@@ -167,7 +255,7 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
             suppressApprovalRequirements,
             forceOmitTemperature,
             runtimeOptions);
-        EnsureInputAttachmentsSupported(runtimeBuild.Provider, runtimeBuild.Model, runtimeOptions);
+        InputAttachmentSupport.EnsureSupported(runtimeBuild.Provider, runtimeBuild.Model, runtimeOptions);
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
@@ -298,14 +386,14 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
         AgentRuntimeExecutionOptions? executionOptions,
         bool forceOmitTemperature)
     {
-        var runtimeOptions = NormalizeRuntimeExecutionOptions(structuredOutput, executionOptions);
+        var runtimeOptions = MafRuntimeExecutionOptionsResolver.Normalize(structuredOutput, executionOptions);
         await progressCallback(ExecutionState.Preparing, "Framework", "Rehydrating the Microsoft Agent Framework runtime to continue from a pending approval.");
         if (suppressApprovalRequirements)
         {
             await progressCallback(ExecutionState.Preparing, "Approval policy", "Auto-approve remains active, so future tool approval gates will be suppressed after this decision is replayed.");
         }
 
-        await using var runtimeBuild = await CreateRuntimeBuildAsync(
+        await using var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
             agent,
             provider,
             capabilities,
@@ -946,7 +1034,7 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
         };
         var repairCapabilityState = new RuntimeCapabilityState();
         repairCapabilityState.Tools.Add(finalizerTool);
-        return CreateInstrumentedAgent(
+        return runtimeAgentFactory.CreateInstrumentedAgent(
             providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services),
             provider,
             agent,
@@ -1221,7 +1309,7 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
         }
 
         var contextIntent = runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty;
-        if (!TryBuildCurrentStepPrimaryManagedArtifactPath(contextIntent, out var primaryArtifactRef, out _))
+        if (!ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(contextIntent, out var primaryArtifactRef, out _))
         {
             return null;
         }
@@ -1238,7 +1326,7 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
             return null;
         }
 
-        if (!TryCreateProcessStepOutcomeFromPrimaryArtifact(
+        if (!ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
                 contextIntent,
                 primaryArtifactRef,
                 artifactMarkdown,
@@ -1305,389 +1393,6 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
         {
             SerializedSessionStateJson = serializedSessionStateJson
         };
-    }
-
-    internal static bool TryCreateProcessStepOutcomeFromPrimaryArtifact(
-        AgentRuntimeContextIntent contextIntent,
-        string primaryArtifactRef,
-        string artifactMarkdown,
-        out ProcessStepOutcomeResult outcome,
-        out string failureMessage)
-    {
-        outcome = default!;
-        failureMessage = string.Empty;
-
-        if (!contextIntent.IsGovernedProcessStep ||
-            !string.Equals(contextIntent.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(contextIntent.ProcessRunId) ||
-            string.IsNullOrWhiteSpace(contextIntent.SourceId))
-        {
-            failureMessage = "The runtime context is not a governed process step.";
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(primaryArtifactRef))
-        {
-            failureMessage = "The primary artifact reference is required.";
-            return false;
-        }
-
-        var statusWasDeclared = TryReadProcessArtifactStatus(artifactMarkdown, out var status, out var hasStatusLine);
-        if (!statusWasDeclared &&
-            hasStatusLine)
-        {
-            failureMessage = "The primary process artifact does not contain a recoverable Status line.";
-            return false;
-        }
-
-        if (!statusWasDeclared &&
-            !TryInferProcessArtifactStatus(artifactMarkdown, out status))
-        {
-            failureMessage = "The primary process artifact is empty or does not contain recoverable process outcome evidence.";
-            return false;
-        }
-
-        if (statusWasDeclared &&
-            status == ProcessStepOutcomeStatus.Blocked &&
-            IsStatusOnlyRecoveredBlockedArtifact(artifactMarkdown))
-        {
-            failureMessage = "The primary process artifact declares Blocked without concrete blocker evidence.";
-            return false;
-        }
-
-        if (!TryReadProcessArtifactBranchOutcomeKey(
-            artifactMarkdown,
-            out var branchOutcomeKey,
-            out var branchOutcomeFailure))
-        {
-            failureMessage = branchOutcomeFailure;
-            return false;
-        }
-
-        var reason =
-            statusWasDeclared
-                ? $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact declares status '{status}'."
-                : $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' after provider timeout. The artifact did not declare a Status line, so the runtime inferred status '{status}' from the artifact text.";
-        outcome = new ProcessStepOutcomeResult
-        {
-            Status = status,
-            Reason = reason,
-            BranchOutcomeKey = branchOutcomeKey,
-            EvidenceRefs = [primaryArtifactRef],
-            NextActions = CreateRecoveredProcessArtifactNextActions(status, primaryArtifactRef),
-            HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(primaryArtifactRef, artifactMarkdown)
-        };
-        return true;
-    }
-
-    internal static bool TryBuildCurrentStepPrimaryManagedArtifactPath(
-        AgentRuntimeContextIntent contextIntent,
-        out string primaryArtifactRef,
-        out string failureMessage)
-    {
-        primaryArtifactRef = string.Empty;
-        failureMessage = string.Empty;
-
-        if (!Guid.TryParse(contextIntent.ProcessRunId, out var processRunId))
-        {
-            failureMessage = "The process run id is not a GUID.";
-            return false;
-        }
-
-        var sourceId = contextIntent.SourceId?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(sourceId) ||
-            sourceId.Contains('/') ||
-            sourceId.Contains('\\') ||
-            sourceId.Contains("..", StringComparison.Ordinal))
-        {
-            failureMessage = "The process step source id is not a safe artifact file name.";
-            return false;
-        }
-
-        primaryArtifactRef = WorkspaceScopeDescriptor.NormalizeRelativePath(
-            $"artifacts/process-runs/{processRunId:D}/steps/{sourceId}.md");
-        return true;
-    }
-
-    private static bool TryReadProcessArtifactStatus(
-        string artifactMarkdown,
-        out ProcessStepOutcomeStatus status,
-        out bool hasStatusLine)
-    {
-        status = default;
-        hasStatusLine = false;
-        foreach (var rawLine in artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var line = rawLine.Trim().TrimStart('#', '-', '*', ' ');
-            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex <= 0)
-            {
-                continue;
-            }
-
-            var key = line[..separatorIndex].Trim(' ', '*', '`');
-            if (!string.Equals(key, "Status", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            hasStatusLine = true;
-            return TryMapProcessArtifactStatus(line[(separatorIndex + 1)..], out status);
-        }
-
-        return false;
-    }
-
-    private static bool TryReadProcessArtifactBranchOutcomeKey(
-        string artifactMarkdown,
-        out string branchOutcomeKey,
-        out string failureMessage)
-    {
-        branchOutcomeKey = string.Empty;
-        failureMessage = string.Empty;
-        var declaredKeys = new HashSet<string>(StringComparer.Ordinal);
-        var lines = artifactMarkdown.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-
-        for (var index = 0; index < lines.Length; index++)
-        {
-            var line = NormalizeProcessArtifactMetadataLine(lines[index]);
-            var separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex <= 0)
-            {
-                if (!string.Equals(line, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (index + 1 >= lines.Length ||
-                    !TryAddProcessArtifactBranchOutcomeKey(
-                        NormalizeProcessArtifactBranchOutcomeKeyValue(NormalizeProcessArtifactMetadataLine(lines[index + 1])),
-                        declaredKeys,
-                        out failureMessage))
-                {
-                    failureMessage = string.IsNullOrWhiteSpace(failureMessage)
-                        ? "The primary process artifact contains an invalid Branch outcome key section."
-                        : failureMessage;
-                    return false;
-                }
-
-                continue;
-            }
-
-            var key = line[..separatorIndex].Trim(' ', '*', '`');
-            if (!string.Equals(key, ProcessArtifactBranchOutcomeKeyLineKey, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var value = NormalizeProcessArtifactBranchOutcomeKeyValue(line[(separatorIndex + 1)..]);
-            if (!TryAddProcessArtifactBranchOutcomeKey(value, declaredKeys, out failureMessage))
-            {
-                return false;
-            }
-        }
-
-        branchOutcomeKey = declaredKeys.SingleOrDefault() ?? string.Empty;
-        return true;
-    }
-
-    private static string NormalizeProcessArtifactMetadataLine(string value)
-        => value.Trim().TrimStart('#', '-', '*', ' ');
-
-    private static bool TryAddProcessArtifactBranchOutcomeKey(
-        string value,
-        ISet<string> declaredKeys,
-        out string failureMessage)
-    {
-        failureMessage = string.Empty;
-        if (!IsSafeProcessArtifactBranchOutcomeKey(value))
-        {
-            failureMessage = "The primary process artifact contains an invalid Branch outcome key line.";
-            return false;
-        }
-
-        declaredKeys.Add(value);
-        if (declaredKeys.Count <= 1)
-        {
-            return true;
-        }
-
-        failureMessage = "The primary process artifact contains multiple different Branch outcome key lines.";
-        return false;
-    }
-
-    private static string NormalizeProcessArtifactBranchOutcomeKeyValue(string value)
-    {
-        var trimmed = value.Trim().Trim('*', '`', '.', ';');
-        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
-        if (commentIndex >= 0)
-        {
-            trimmed = trimmed[..commentIndex].Trim();
-        }
-
-        return trimmed.Trim('*', '`', '.', ';');
-    }
-
-    private static bool IsSafeProcessArtifactBranchOutcomeKey(string value)
-        => !string.IsNullOrWhiteSpace(value) &&
-           char.IsLetterOrDigit(value[0]) &&
-           value.All(character => char.IsLetterOrDigit(character) || character is '-' or '_' or '.');
-
-    private static bool TryInferProcessArtifactStatus(
-        string artifactMarkdown,
-        out ProcessStepOutcomeStatus status)
-    {
-        status = default;
-        var text = artifactMarkdown.ReplaceLineEndings(" ").Trim();
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        if (ContainsAny(
-            text,
-            "waiting approval",
-            "approval required",
-            "pending approval",
-            "human approval"))
-        {
-            status = ProcessStepOutcomeStatus.WaitingApproval;
-            return true;
-        }
-
-        if (ContainsAny(
-            text,
-            "blocked",
-            "cannot proceed",
-            "unable to proceed",
-            "missing required",
-            "requires manager",
-            "manager action required",
-            "policydenied",
-            "permission denied",
-            "access denied",
-            "not authorized"))
-        {
-            status = ProcessStepOutcomeStatus.Blocked;
-            return true;
-        }
-
-        if (ContainsAny(
-            text,
-            "unrecoverable failure",
-            "unrecoverable error",
-            "execution failed",
-            "validation failed",
-            "failed to complete"))
-        {
-            status = ProcessStepOutcomeStatus.Failed;
-            return true;
-        }
-
-        status = ProcessStepOutcomeStatus.Completed;
-        return true;
-    }
-
-    private static bool ContainsAny(string text, params string[] values)
-        => values.Any(value => text.Contains(value, StringComparison.OrdinalIgnoreCase));
-
-    private static bool IsStatusOnlyRecoveredBlockedArtifact(string artifactMarkdown)
-    {
-        var normalized = artifactMarkdown.Trim();
-        if (normalized.Length > 700)
-        {
-            return false;
-        }
-
-        return !ContainsAny(
-            normalized,
-            "PolicyDenied",
-            "denied",
-            "failed",
-            "failure",
-            "exception",
-            "error",
-            "cannot proceed",
-            "unable to proceed",
-            "missing",
-            "required tool",
-            "unavailable",
-            "approval",
-            "dependency",
-            "environment",
-            "boundary",
-            "evidence",
-            "receipt");
-    }
-
-    private static bool TryMapProcessArtifactStatus(
-        string value,
-        out ProcessStepOutcomeStatus status)
-    {
-        status = default;
-        var normalized = NormalizeProcessArtifactStatusValue(value);
-        status = normalized switch
-        {
-            "completed" or "complete" or "succeeded" or "success" => ProcessStepOutcomeStatus.Completed,
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" => ProcessStepOutcomeStatus.Blocked,
-            "failed" or "failure" => ProcessStepOutcomeStatus.Failed,
-            "waitingapproval" or "pendingapproval" => ProcessStepOutcomeStatus.WaitingApproval,
-            "refused" or "rejected" => ProcessStepOutcomeStatus.Refused,
-            _ => default
-        };
-        return normalized is "completed" or "complete" or "succeeded" or "success" or
-            "blocked" or "waiting" or "waitingonchild" or "waitingforchild" or
-            "failed" or "failure" or
-            "waitingapproval" or "pendingapproval" or
-            "refused" or "rejected";
-    }
-
-    private static string NormalizeProcessArtifactStatusValue(string value)
-    {
-        var trimmed = value.Trim().Trim('*', '`', '.', ';');
-        var commentIndex = trimmed.IndexOf('#', StringComparison.Ordinal);
-        if (commentIndex >= 0)
-        {
-            trimmed = trimmed[..commentIndex].Trim();
-        }
-
-        return new string(
-            trimmed
-                .Where(character => char.IsLetterOrDigit(character))
-                .Select(char.ToLowerInvariant)
-                .ToArray());
-    }
-
-    private static IReadOnlyList<string> CreateRecoveredProcessArtifactNextActions(
-        ProcessStepOutcomeStatus status,
-        string primaryArtifactRef)
-    {
-        if (status == ProcessStepOutcomeStatus.Completed)
-        {
-            return [];
-        }
-
-        return
-        [
-            $"Review '{primaryArtifactRef}' and re-dispatch or rework the governed process step with the recorded evidence."
-        ];
-    }
-
-    private static string BuildRecoveredProcessArtifactSummary(
-        string primaryArtifactRef,
-        string artifactMarkdown)
-    {
-        var trimmed = string.IsNullOrWhiteSpace(artifactMarkdown)
-            ? string.Empty
-            : artifactMarkdown.Trim();
-        if (trimmed.Length > MaxRecoveredProcessArtifactSummaryCharacters)
-        {
-            trimmed = trimmed[..MaxRecoveredProcessArtifactSummaryCharacters] + Environment.NewLine + "[... artifact summary truncated during provider-timeout recovery ...]";
-        }
-
-        return string.IsNullOrWhiteSpace(trimmed)
-            ? $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout."
-            : $"Recovered outcome from primary process artifact `{primaryArtifactRef}` after provider timeout.{Environment.NewLine}{Environment.NewLine}{trimmed}";
     }
 
     private static bool IsProviderStreamingTimeout(Exception exception)
@@ -1937,66 +1642,12 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
     {
         return pendingApprovals.Count == 0 &&
                (runtimeOptions.ContextIntent?.IsGovernedProcessStep == true ||
-                HasRequestScopedInputAttachments(runtimeOptions));
-    }
-
-    private static bool HasRequestScopedInputAttachments(AgentRuntimeExecutionOptions runtimeOptions)
-        => runtimeOptions.InputAttachments?.Count > 0;
-
-    internal static void EnsureInputAttachmentsSupported(
-        ProviderProfile provider,
-        string model,
-        AgentRuntimeExecutionOptions runtimeOptions)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(runtimeOptions);
-
-        var attachments = runtimeOptions.InputAttachments ?? [];
-        if (attachments.Count == 0)
-        {
-            return;
-        }
-
-        var selectedModel = string.IsNullOrWhiteSpace(model) ? provider.DefaultModel : model.Trim();
-        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel);
-        if (featureMatrix.SupportsVision)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"Provider '{provider.Name}' model '{selectedModel}' does not support vision/image input, but the request includes {attachments.Count:N0} image attachment(s). Choose a vision-capable provider/model or remove the attachment(s).");
-    }
-
-    internal static string ResolveRuntimeModelForInputAttachments(
-        ProviderProfile provider,
-        string model,
-        AgentRuntimeExecutionOptions runtimeOptions)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(runtimeOptions);
-
-        var selectedModel = string.IsNullOrWhiteSpace(model) ? provider.DefaultModel : model.Trim();
-        var attachments = runtimeOptions.InputAttachments ?? [];
-        if (attachments.Count == 0)
-        {
-            return selectedModel;
-        }
-
-        if (ProviderFeatureService.ResolveFeatureMatrixForModel(provider, selectedModel).SupportsVision)
-        {
-            return selectedModel;
-        }
-
-        var imageAnalysisModel = ResolveProviderImageAnalysisModel(provider, selectedModel);
-        return ProviderFeatureService.ResolveFeatureMatrixForModel(provider, imageAnalysisModel).SupportsVision
-            ? imageAnalysisModel
-            : selectedModel;
+                InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions));
     }
 
     private static string ResolveRuntimeSessionSerializationSkipMessage(AgentRuntimeExecutionOptions runtimeOptions)
     {
-        return HasRequestScopedInputAttachments(runtimeOptions)
+        return InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions)
             ? "Skipped Microsoft Agent Framework session serialization because request-scoped input attachments are not persisted into session state. The sandbox transcript keeps the text turn for future replay."
             : "Skipped Microsoft Agent Framework session serialization for a governed process step with no pending approvals. Process state is persisted through the typed outcome and artifacts.";
     }
@@ -2032,12 +1683,12 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
             return null;
         }
 
-        if (!HasRequestScopedInputAttachments(runtimeOptions))
+        if (!InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions))
         {
             return serializedSessionJson;
         }
 
-        var scrubbedSessionJson = RemoveRequestScopedDataContentFromSerializedSession(serializedSessionJson);
+        var scrubbedSessionJson = RequestScopedSessionContentScrubber.RemoveRequestScopedDataContent(serializedSessionJson);
         if (scrubbedSessionJson is null)
         {
             await progressCallback(
@@ -2056,99 +1707,6 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
         }
 
         return scrubbedSessionJson;
-    }
-
-    internal static string? RemoveRequestScopedDataContentFromSerializedSession(string? serializedSessionJson)
-    {
-        if (string.IsNullOrWhiteSpace(serializedSessionJson))
-        {
-            return serializedSessionJson;
-        }
-
-        try
-        {
-            var root = JsonNode.Parse(serializedSessionJson);
-            if (root is null)
-            {
-                return serializedSessionJson;
-            }
-
-            return RemoveRequestScopedDataContentNodes(root)
-                ? root.ToJsonString(SerializerOptions)
-                : serializedSessionJson;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    private static bool RemoveRequestScopedDataContentNodes(JsonNode node)
-    {
-        return node switch
-        {
-            JsonObject jsonObject => RemoveRequestScopedDataContentNodes(jsonObject),
-            JsonArray jsonArray => RemoveRequestScopedDataContentNodes(jsonArray),
-            _ => false
-        };
-    }
-
-    private static bool RemoveRequestScopedDataContentNodes(JsonObject jsonObject)
-    {
-        var removedAny = false;
-        foreach (var property in jsonObject.ToList())
-        {
-            if (property.Value is not null)
-            {
-                removedAny |= RemoveRequestScopedDataContentNodes(property.Value);
-            }
-        }
-
-        return removedAny;
-    }
-
-    private static bool RemoveRequestScopedDataContentNodes(JsonArray jsonArray)
-    {
-        var removedAny = false;
-        var dataContentIndexes = new List<int>();
-        for (var index = 0; index < jsonArray.Count; index++)
-        {
-            var item = jsonArray[index];
-            if (IsRequestScopedDataContentNode(item))
-            {
-                dataContentIndexes.Add(index);
-                continue;
-            }
-
-            if (item is not null)
-            {
-                removedAny |= RemoveRequestScopedDataContentNodes(item);
-            }
-        }
-
-        for (var index = dataContentIndexes.Count - 1; index >= 0; index--)
-        {
-            jsonArray.RemoveAt(dataContentIndexes[index]);
-            removedAny = true;
-        }
-
-        if (dataContentIndexes.Count > 0 && jsonArray.Count == 0)
-        {
-            jsonArray.Add(new JsonObject
-            {
-                ["$type"] = "text",
-                ["text"] = "[Request-scoped attachment omitted from persisted session state.]"
-            });
-        }
-
-        return removedAny;
-    }
-
-    private static bool IsRequestScopedDataContentNode(JsonNode? node)
-    {
-        return node is JsonObject jsonObject &&
-               jsonObject.TryGetPropertyValue("$type", out var typeNode) &&
-               string.Equals(typeNode?.GetValue<string>(), "data", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<string?> TrySerializeRuntimeSessionAsync(
@@ -2360,58 +1918,5 @@ public sealed partial class MafAgentRuntime : IAgentRuntime
 
         return fallbackValue ?? string.Empty;
     }
-
-    private sealed class RequiredFinalizerCapturedException(string toolName) : Exception(
-        $"Required finalizer tool '{toolName}' was captured.")
-    {
-        public string ToolName { get; } = toolName;
-    }
-
-    private sealed class RepeatedToolInvocationGuard
-    {
-        private readonly Dictionary<string, int> repeatedToolInvocationCounts = new(StringComparer.OrdinalIgnoreCase);
-        private int mutationGeneration;
-
-        public void Guard(ToolCallContent toolCall)
-        {
-            var toolName = MafToolInvocationArgumentFormatter.ResolveToolName(toolCall);
-            if (!ShouldGuardRepeatedToolInvocation(toolName))
-            {
-                return;
-            }
-
-            var signature = MafToolInvocationArgumentFormatter.ResolveToolInvocationSignature(toolCall);
-            if (IsValidationToolInvocation(toolName))
-            {
-                signature = $"{signature}|mutationGeneration={mutationGeneration}";
-            }
-
-            var repeatedToolInvocationCount = repeatedToolInvocationCounts.TryGetValue(signature, out var currentCount)
-                ? currentCount + 1
-                : 1;
-            repeatedToolInvocationCounts[signature] = repeatedToolInvocationCount;
-            if (repeatedToolInvocationCount > MaxRepeatedToolInvocationCount)
-            {
-                throw new InvalidOperationException(
-                    $"Agent repeated identical tool invocation '{signature}' {repeatedToolInvocationCount} times in one run. Stop repeating the same tool call and either call the required next validation tool, inspect and change the underlying cause, or return a governed blocked/failed outcome.");
-            }
-
-            if (IsMutationToolInvocation(toolName))
-            {
-                mutationGeneration++;
-            }
-        }
-    }
-
-    private static bool ShouldGuardRepeatedToolInvocation(string toolName)
-    {
-        return IsValidationToolInvocation(toolName) || IsMutationToolInvocation(toolName);
-    }
-
-    private static bool IsValidationToolInvocation(string toolName)
-        => AgentToolInvocationPolicyMetadata.IsValidationTool(toolName);
-
-    private static bool IsMutationToolInvocation(string toolName)
-        => AgentToolInvocationPolicyMetadata.IsMutationTool(toolName);
 
 }

@@ -3,10 +3,8 @@ using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal static class WorkspaceSearchSupport
 {
-    internal static class WorkspaceSearchSupport
-    {
         private static readonly HashSet<string> RagStopWords = new(StringComparer.OrdinalIgnoreCase)
         {
             "about",
@@ -212,5 +210,4 @@ public sealed partial class MafAgentRuntime
                 ? text.ReplaceLineEndings(" ").Trim()
                 : text[..320].ReplaceLineEndings(" ").Trim();
         }
-    }
 }

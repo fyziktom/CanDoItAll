@@ -8,7 +8,7 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed partial class RuntimeCapabilityComposer
 {
     private async Task AttachRegisteredRuntimeToolProvidersAsync(
         RuntimeCapabilityComposition composition,

@@ -10,7 +10,7 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
     {
         var result = CreateWorkspaceCommandResult(succeeded: false, message: "Template 'webapp' is not approved.");
 
-        var succeeded = MafAgentRuntime.IsSuccessfulToolInvocationResult(result);
+        var succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(result);
 
         Assert.False(succeeded);
     }
@@ -23,7 +23,7 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
             Result = CreateWorkspaceCommandResult(succeeded: false, message: "Template 'webapp' is not approved.")
         };
 
-        var succeeded = MafAgentRuntime.IsSuccessfulToolInvocationResult(result);
+        var succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(result);
 
         Assert.False(succeeded);
     }
@@ -36,7 +36,7 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
             Result = CreateWorkspaceCommandResult(succeeded: false, message: "Template 'webapp' is not approved.")
         };
 
-        var message = MafAgentRuntime.ResolveToolInvocationFailureMessage(result);
+        var message = MafRuntimeToolInvocationResultClassifier.ResolveFailureMessage(result);
 
         Assert.Equal("Template 'webapp' is not approved.", message);
     }

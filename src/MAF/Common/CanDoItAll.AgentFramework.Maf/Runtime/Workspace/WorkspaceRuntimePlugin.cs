@@ -6,8 +6,18 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed class WorkspaceRuntimePlugin(
+    IWorkspaceFileService fileService,
+    IWorkspaceCommandExecutionService commandExecutionService,
+    IWorkspaceArtifactToolService artifactToolService,
+    string workspaceRoot,
+    WorkspaceScopeDescriptor workspaceScope,
+    AgentWorkspaceToolAccessSettings accessSettings,
+    ProviderProfile provider,
+    string runtimeModel,
+    IMafProviderRuntimeGateway providerRuntimeGateway)
 {
+    private static readonly ProviderProfileService ProviderFeatureService = new();
     private static readonly string[] ImageAnalysisModelConfigurationKeys =
     [
         "imageAnalysisModel",
@@ -15,17 +25,6 @@ public sealed partial class MafAgentRuntime
         "defaultVisionModel"
     ];
 
-    private sealed class WorkspaceRuntimePlugin(
-        IWorkspaceFileService fileService,
-        IWorkspaceCommandExecutionService commandExecutionService,
-        IWorkspaceArtifactToolService artifactToolService,
-        string workspaceRoot,
-        WorkspaceScopeDescriptor workspaceScope,
-        AgentWorkspaceToolAccessSettings accessSettings,
-        ProviderProfile provider,
-        string runtimeModel,
-        IMafProviderRuntimeGateway providerRuntimeGateway)
-    {
         private readonly IWorkspaceFileService fileService = fileService;
         private readonly IWorkspaceCommandExecutionService commandExecutionService = commandExecutionService;
         private readonly IWorkspaceArtifactToolService artifactToolService = artifactToolService;
@@ -968,8 +967,6 @@ public sealed partial class MafAgentRuntime
 
         private string FormatEffectiveWorkspaceProfile()
             => AgentWorkspaceToolAccessProfiles.GetProfileKey(accessSettings.Profile);
-    }
-
     internal static string ResolveProviderImageAnalysisModel(
         ProviderProfile provider,
         string? runtimeModel)

@@ -50,12 +50,12 @@ MAF runtime regression proof is tracked by named slices so process automation an
 
 | Slice | Primary source | Regression proof |
 | --- | --- | --- |
-| Tool loop | `Runtime/MafAgentRuntime.cs` and `Runtime/MafAgentRuntime.AgentFactory.cs` | Tool-call snapshots, repeated-tool guards, tool signature hashing, and tool invocation result parsing tests. |
-| Context provider | `Runtime/Capabilities/MafAgentRuntime.Capabilities.Context.cs` | Compaction/context provider attachment and suppression tests. |
-| Finalizer | `Runtime/MafAgentRuntime.cs` and `Runtime/MafAgentRuntime.AgentFactory.cs` | Required/shadow finalizer attachment, exact-once capture, post-streaming finalization, and JSON-only instruction tests. |
-| Errors | `Runtime/MafAgentRuntime.cs`, `Runtime/MafAgentRuntime.Session.cs`, and `Runtime/MafAgentRuntime.ModelParameters.cs` | Timeout clamping, bounded finalizer session serialization, incompatible approval continuation rejection, and nested tool failure parsing tests. |
-| Approvals | `Runtime/MafAgentRuntime.AgentFactory.cs` and capability policy code | Approval-required function wrapping, unusable approval-tool filtering, and policy-block static tests. |
-| MCP | `Runtime/Capabilities/MafAgentRuntime.Capabilities.Mcp.cs` | Browser MCP result bounding tests that remove image payloads and cap snapshot text. |
+| Tool loop | `Runtime/MafAgentRuntime.cs`, `Runtime/MafRuntimeAgentFactory.cs`, and `Runtime/MafRuntimeToolInvocationResultClassifier.cs` | Tool-call snapshots, repeated-tool guards, tool signature hashing, and tool invocation result parsing tests. |
+| Context provider | `Runtime/Capabilities/ContextCapabilityBuilder.cs` and `Runtime/Capabilities/RuntimeCapabilityComposer.cs` | Compaction/context provider attachment and suppression tests. |
+| Finalizer | `Runtime/MafAgentRuntime.cs`, `Runtime/MafRuntimeAgentFactory.cs`, and `Runtime/MafFinalizerDriver.cs` | Required/shadow finalizer attachment, exact-once capture, post-streaming finalization, and JSON-only instruction tests. |
+| Errors | `Runtime/MafAgentRuntime.cs`, `Runtime/MafRuntimeSessionBuilder.cs`, `Runtime/MafModelParametersBuilder.cs`, and `Runtime/MafRuntimeToolInvocationResultClassifier.cs` | Timeout clamping, bounded finalizer session serialization, incompatible approval continuation rejection, and nested tool failure parsing tests. |
+| Approvals | `Runtime/MafRuntimeAgentFactory.cs` and capability policy code | Approval-required function wrapping, unusable approval-tool filtering, and policy-block static tests. |
+| MCP | `Runtime/Capabilities/McpCapabilityBuilder.cs` | Browser MCP result bounding tests that remove image payloads and cap snapshot text. |
 | A2A | `Runtime/Capabilities/A2ARemoteAgentToolFactory.cs` | Disabled endpoint, missing bearer secret, and invalid endpoint tests. |
 | Workflow mapping | `Runtime/Workflows/MafWorkflowCompiler.cs` and `Runtime/MafHandoffWorkflowFactory.cs` | MAF 1.8 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
 | Trace correlation | `Runtime/Workflows/MafWorkflowCompiler.cs` and execution response models | Tool invocation traces, finalizer invocation traces, workflow audit scope, and OpenTelemetry package presence source assertions. |

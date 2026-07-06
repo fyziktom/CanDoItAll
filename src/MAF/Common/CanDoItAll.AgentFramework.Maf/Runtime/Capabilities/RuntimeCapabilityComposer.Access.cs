@@ -6,7 +6,7 @@ using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed partial class RuntimeCapabilityComposer
 {
     private static readonly RuntimeToolName[] StorageRuntimeToolNames =
     [
@@ -16,7 +16,7 @@ public sealed partial class MafAgentRuntime
         RuntimeToolName.Create("storage_delete_object")
     ];
 
-    private RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
+    internal RuntimeCapabilityAccessPlan CreateRuntimeCapabilityAccessPlan(
         AgentDefinition agent,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,

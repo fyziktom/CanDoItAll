@@ -12,11 +12,39 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed partial class MafAgentRuntime
+internal sealed class MafRuntimeAgentFactory
 {
-    private const string OpenAiApiKeyEnvironmentVariable = MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable;
-
     private const long MaxPolicyInspectedScriptBytes = 128 * 1024;
+
+    private static readonly ProviderProfileService ProviderFeatureService = new();
+
+    private readonly string workspaceRoot;
+    private readonly IServiceProvider services;
+    private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IMafProviderCredentialService providerCredentialService;
+    private readonly IMafProviderAgentFactory providerAgentFactory;
+    private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
+
+    public MafRuntimeAgentFactory(
+        string workspaceRoot,
+        IServiceProvider services,
+        WorkspaceScopeDescriptor workspaceScope,
+        IMafProviderCredentialService providerCredentialService,
+        IMafProviderAgentFactory providerAgentFactory,
+        IRuntimeCapabilityComposer runtimeCapabilityComposer)
+    {
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
+        }
+
+        this.workspaceRoot = workspaceRoot;
+        this.services = services ?? throw new ArgumentNullException(nameof(services));
+        this.workspaceScope = workspaceScope;
+        this.providerCredentialService = providerCredentialService ?? throw new ArgumentNullException(nameof(providerCredentialService));
+        this.providerAgentFactory = providerAgentFactory ?? throw new ArgumentNullException(nameof(providerAgentFactory));
+        this.runtimeCapabilityComposer = runtimeCapabilityComposer ?? throw new ArgumentNullException(nameof(runtimeCapabilityComposer));
+    }
 
     public async Task<AIAgent> CreateHostedAgentAsync(
         AgentDefinition agent,
@@ -42,7 +70,7 @@ public sealed partial class MafAgentRuntime
         return new HostedRuntimeAgent(runtimeBuild);
     }
 
-    private async Task<RuntimeBuildResult> CreateRuntimeBuildAsync(
+    public async Task<RuntimeBuildResult> CreateRuntimeBuildAsync(
         AgentDefinition agent,
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
@@ -53,7 +81,7 @@ public sealed partial class MafAgentRuntime
         bool forceOmitTemperature = false,
         AgentRuntimeExecutionOptions? executionOptions = null)
     {
-        var runtimeOptions = executionOptions ?? CreateDisabledRuntimeExecutionOptions(null);
+        var runtimeOptions = executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null);
         if (runtimeOptions.Handoff is not null)
         {
             return await CreateHandoffRuntimeBuildAsync(
@@ -71,7 +99,7 @@ public sealed partial class MafAgentRuntime
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiCredentialOverride);
         PromoteResolvedProviderCredentialEnvironment(effectiveProvider);
         var requestedModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
-        var model = ResolveRuntimeModelForInputAttachments(effectiveProvider, requestedModel, runtimeOptions);
+        var model = InputAttachmentSupport.ResolveRuntimeModel(effectiveProvider, requestedModel, runtimeOptions);
         if (string.IsNullOrWhiteSpace(model))
         {
             throw new InvalidOperationException($"Provider '{effectiveProvider.Name}' does not have a default model and the agent '{agent.Name}' does not override one.");
@@ -90,9 +118,9 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException(MafModelParametersBuilder.BuildReasoningEffortUnsupportedTransportMessage(effectiveProvider, model));
         }
 
-        EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions);
+        MafRuntimeExecutionOptionsResolver.EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions);
         var finalizerCapture = CreateFinalizerCapture(runtimeOptions.StructuredOutput, runtimeOptions.FinalizerMode);
-        var capabilityState = await CreateCapabilityStateCoreAsync(
+        var capabilityState = await runtimeCapabilityComposer.CreateCapabilityStateCoreAsync(
             agent,
             effectiveProvider,
             model,
@@ -271,7 +299,7 @@ public sealed partial class MafAgentRuntime
         }
     }
 
-    private AIAgent CreateInstrumentedAgent(
+    public AIAgent CreateInstrumentedAgent(
         AIAgent agent,
         ProviderProfile provider,
         AgentDefinition agentDefinition,
@@ -413,7 +441,7 @@ public sealed partial class MafAgentRuntime
                     policyContext.HasEffectiveApprovalPath);
 
                 var result = await next(context, cancellationToken);
-                succeeded = IsSuccessfulToolInvocationResult(result);
+                succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(result);
                 if (succeeded)
                 {
                     toolPolicy.RecordSuccessfulInvocation(policyContext);
@@ -428,7 +456,7 @@ public sealed partial class MafAgentRuntime
                 }
                 else
                 {
-                    failureMessage = ResolveToolInvocationFailureMessage(result);
+                    failureMessage = MafRuntimeToolInvocationResultClassifier.ResolveFailureMessage(result);
                     activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
                 }
 
@@ -490,337 +518,6 @@ public sealed partial class MafAgentRuntime
                string.Equals(functionName, finalizerPolicy.ToolName, StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool IsSuccessfulToolInvocationResult(object? result)
-    {
-        return TryResolveToolInvocationSuccess(result, [], out var succeeded)
-            ? succeeded
-            : true;
-    }
-
-    internal static string ResolveToolInvocationFailureMessage(object? result)
-    {
-        return TryResolveToolInvocationFailureMessage(result, [], out var message)
-            ? message
-            : "Tool invocation returned an unsuccessful result.";
-    }
-
-    private static bool TryResolveToolInvocationSuccess(
-        object? result,
-        HashSet<object> visited,
-        out bool succeeded)
-    {
-        succeeded = true;
-        if (result is null)
-        {
-            return false;
-        }
-
-        if (result is string text)
-        {
-            if (TextIndicatesToolFailure(text))
-            {
-                succeeded = false;
-                return true;
-            }
-
-            return false;
-        }
-
-        var type = result.GetType();
-        if (!type.IsValueType && !visited.Add(result))
-        {
-            return false;
-        }
-
-        if (TryReadBooleanProperty(result, "Succeeded", out succeeded) ||
-            TryReadBooleanProperty(result, "Success", out succeeded) ||
-            TryReadBooleanProperty(result, "IsSuccess", out succeeded))
-        {
-            return true;
-        }
-
-        if (TryReadFailureExitSummary(result, out succeeded))
-        {
-            return true;
-        }
-
-        foreach (var propertyName in ResultEnvelopePropertyNames)
-        {
-            if (TryReadObjectProperty(result, propertyName, out var propertyValue) &&
-                TryResolveToolInvocationSuccess(propertyValue, visited, out succeeded))
-            {
-                return true;
-            }
-        }
-
-        if (result is System.Collections.IEnumerable enumerable)
-        {
-            var sawResolvedResult = false;
-            foreach (var item in enumerable)
-            {
-                if (!TryResolveToolInvocationSuccess(item, visited, out var itemSucceeded))
-                {
-                    continue;
-                }
-
-                sawResolvedResult = true;
-                if (!itemSucceeded)
-                {
-                    succeeded = false;
-                    return true;
-                }
-            }
-
-            if (sawResolvedResult)
-            {
-                succeeded = true;
-                return true;
-            }
-        }
-
-        var resultText = result.ToString();
-        if (TextIndicatesToolFailure(resultText))
-        {
-            succeeded = false;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryResolveToolInvocationFailureMessage(
-        object? result,
-        HashSet<object> visited,
-        out string message)
-    {
-        message = string.Empty;
-        if (result is null)
-        {
-            return false;
-        }
-
-        if (result is string text)
-        {
-            message = text;
-            return !string.IsNullOrWhiteSpace(message);
-        }
-
-        var type = result.GetType();
-        if (!type.IsValueType && !visited.Add(result))
-        {
-            return false;
-        }
-
-        if (TryReadStringProperty(result, "Message", out message) ||
-            TryReadStringProperty(result, "ErrorMessage", out message) ||
-            TryReadStringProperty(result, "FailureMessage", out message))
-        {
-            return true;
-        }
-
-        if (TryReadStringProperty(result, "StderrPreview", out message))
-        {
-            return true;
-        }
-
-        foreach (var propertyName in ResultEnvelopePropertyNames)
-        {
-            if (TryReadObjectProperty(result, propertyName, out var propertyValue) &&
-                TryResolveToolInvocationFailureMessage(propertyValue, visited, out message))
-            {
-                return true;
-            }
-        }
-
-        if (result is System.Collections.IEnumerable enumerable)
-        {
-            foreach (var item in enumerable)
-            {
-                if (TryResolveToolInvocationFailureMessage(item, visited, out message))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static readonly string[] ResultEnvelopePropertyNames =
-    [
-        "Result",
-        "Value",
-        "Content",
-        "Contents",
-        "Data"
-    ];
-
-    private static bool TryReadBooleanProperty(object instance, string propertyName, out bool value)
-    {
-        value = false;
-        var property = instance.GetType().GetProperty(propertyName);
-        if (property?.PropertyType == typeof(bool) &&
-            property.GetIndexParameters().Length == 0 &&
-            property.GetValue(instance) is bool propertyValue)
-        {
-            value = propertyValue;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryReadStringProperty(object instance, string propertyName, out string value)
-    {
-        value = string.Empty;
-        var property = instance.GetType().GetProperty(propertyName);
-        if (property?.PropertyType == typeof(string) &&
-            property.GetIndexParameters().Length == 0 &&
-            property.GetValue(instance) is string propertyValue &&
-            !string.IsNullOrWhiteSpace(propertyValue))
-        {
-            value = propertyValue;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryReadObjectProperty(object instance, string propertyName, out object? value)
-    {
-        value = null;
-        var property = instance.GetType().GetProperty(propertyName);
-        if (property is null ||
-            property.GetIndexParameters().Length != 0)
-        {
-            return false;
-        }
-
-        value = property.GetValue(instance);
-        return value is not null;
-    }
-
-    private static bool TryReadFailureExitSummary(object instance, out bool succeeded)
-    {
-        succeeded = true;
-        if (!TryReadStringProperty(instance, "ExitSummary", out var exitSummary))
-        {
-            return false;
-        }
-
-        if (exitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) ||
-            exitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase))
-        {
-            succeeded = false;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TextIndicatesToolFailure(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        return text.Contains("Succeeded = False", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("Succeeded=False", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("\"succeeded\":false", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("succeeded: false", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("ExitSummary = Denied", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("ExitSummary: Denied", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("ExitSummary = Failed", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("ExitSummary: Failed", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void EnsureStructuredOutputCapability(
-        ProviderProfile provider,
-        AgentStructuredOutputContract? structuredOutput)
-    {
-        if (structuredOutput is null)
-        {
-            return;
-        }
-
-        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
-        if (featureMatrix.SupportsStructuredOutput)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce structured output contract '{structuredOutput.ContractKey}'. Choose a structured-output capable OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.");
-    }
-
-    private static void EnsureStructuredOutputCapability(
-        ProviderProfile provider,
-        AgentRuntimeExecutionOptions runtimeOptions)
-    {
-        ArgumentNullException.ThrowIfNull(runtimeOptions);
-        if (runtimeOptions.StructuredOutput is not null)
-        {
-            if (runtimeOptions.FinalizerMode == AgentFinalizerMode.Required &&
-                AgentFinalizerPolicies.TryResolveForStructuredOutput(runtimeOptions.StructuredOutput, out _))
-            {
-                return;
-            }
-
-            EnsureStructuredOutputCapability(provider, runtimeOptions.StructuredOutput);
-            return;
-        }
-
-        if (!runtimeOptions.RequireJsonResponseFormat)
-        {
-            return;
-        }
-
-        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
-        if (featureMatrix.SupportsStructuredOutput)
-        {
-            return;
-        }
-
-        var schemaName = string.IsNullOrWhiteSpace(runtimeOptions.ResponseFormatSchemaName)
-            ? "JSON"
-            : runtimeOptions.ResponseFormatSchemaName;
-        throw new InvalidOperationException(
-            $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce workflow JSON response format '{schemaName}'. Choose a structured-output capable OpenAI/Azure OpenAI provider or use a non-JSON workflow component.");
-    }
-
-    private static AgentRuntimeExecutionOptions NormalizeRuntimeExecutionOptions(
-        AgentStructuredOutputContract? structuredOutput,
-        AgentRuntimeExecutionOptions? executionOptions)
-    {
-        if (executionOptions is null)
-        {
-            return CreateDisabledRuntimeExecutionOptions(structuredOutput);
-        }
-
-        if (structuredOutput is not null &&
-            executionOptions.StructuredOutput is not null &&
-            !string.Equals(executionOptions.StructuredOutput.ContractKey, structuredOutput.ContractKey, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"Runtime execution options contract '{executionOptions.StructuredOutput.ContractKey}' does not match the requested structured output contract '{structuredOutput.ContractKey}'.");
-        }
-
-        return executionOptions.StructuredOutput is null && structuredOutput is not null
-            ? executionOptions with { StructuredOutput = structuredOutput }
-            : executionOptions;
-    }
-
-    private static AgentRuntimeExecutionOptions CreateDisabledRuntimeExecutionOptions(
-        AgentStructuredOutputContract? structuredOutput)
-    {
-        return new AgentRuntimeExecutionOptions(
-            StructuredOutput: structuredOutput,
-            FinalizerMode: AgentFinalizerMode.Disabled,
-            RequireStructuredOutputValidation: true,
-            MaxStructuredOutputRepairAttempts: 0);
-    }
-
     private async Task FilterUnusableApprovalToolsAsync(
         RuntimeCapabilityState capabilityState,
         ProviderProfile provider,
@@ -855,7 +552,7 @@ public sealed partial class MafAgentRuntime
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var toolList = string.Join(", ", toolNames);
-        if (IsGovernedProcessAutomationRun())
+        if (RuntimeCapabilityComposer.IsGovernedProcessAutomationRun())
         {
             throw new InvalidOperationException(
                 $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot expose mutation tools that require MAF approval because no effective approval path is available. Unusable tools: {toolList}.");
@@ -1115,7 +812,7 @@ public sealed partial class MafAgentRuntime
         if (Path.IsPathRooted(expandedPath))
         {
             fullPath = Path.GetFullPath(expandedPath);
-            if (!IsPathWithinRoot(fullPath, workspaceRoot))
+            if (!MafRuntimePathResolver.IsPathWithinRoot(fullPath, workspaceRoot))
             {
                 failureMessage = $"absolute script path '{scriptPath}' is outside the workspace root.";
                 fullPath = string.Empty;
@@ -1135,7 +832,7 @@ public sealed partial class MafAgentRuntime
         fullPath = Path.GetFullPath(Path.Combine(
             workspaceRoot,
             scopedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-        if (IsPathWithinRoot(fullPath, workspaceRoot))
+        if (MafRuntimePathResolver.IsPathWithinRoot(fullPath, workspaceRoot))
         {
             return true;
         }
@@ -1264,28 +961,11 @@ public sealed partial class MafAgentRuntime
         });
     }
 
-    private ProviderCredentialResolution ResolveProviderCredential(ProviderProfile provider)
-        => providerCredentialService.Resolve(provider);
-
     private string ResolveOpenAiCredentialOverride(ProviderProfile provider)
         => providerCredentialService.ResolveOpenAiCredentialOverride(provider);
 
     private void PromoteResolvedProviderCredentialEnvironment(
         ProviderProfile provider)
         => providerCredentialService.PromoteResolvedProviderCredentialEnvironment(provider);
-
-    private static string ResolveHealthCheckModel(
-        ProviderProfile provider,
-        IEnumerable<string> candidateModels,
-        string fallbackModel)
-    {
-        if (!string.IsNullOrWhiteSpace(provider.DefaultModel))
-        {
-            return provider.DefaultModel;
-        }
-
-        var discoveredModel = candidateModels.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item));
-        return string.IsNullOrWhiteSpace(discoveredModel) ? fallbackModel : discoveredModel;
-    }
 
 }
