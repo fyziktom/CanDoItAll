@@ -134,6 +134,7 @@ When later subbundles depend on earlier ones:
 When the feedback source includes screenshots, layout complaints, or desktop actions:
 
 - plan Playwright MCP and the `playwright` skill as the default browser-proof path for UI work
+- for CanDoItAll Blazor, BaseLib, or CanvasLib UI work, plan `candoitall-components-mcp` before custom page structure or page-local CSS
 - plan the first browser validation pass in a maximized headed browser window or an equivalent large-screen desktop viewport that fills the available work area
 - plan a large-screen screenshot capture for real visual review, not just as an artifact to attach
 - add the visual validation question set to the QA prompt and subbundle proof requirements
@@ -155,6 +156,33 @@ When the likely implementation loop includes repeated test churn:
 - detect whether the relevant test projects use Microsoft Testing Platform
 - if they do, mention `mtp-hot-reload` in the implementation or QA prompts as an optional acceleration path
 - still require a clean non-hot-reload confirmation run in the planned proof
+
+## C# Architecture Gate Addendum
+
+When the bundle touches C# architecture, large-class refactoring, partial classes, tools, providers, memory protocols, process drivers, workflow executors, runtime composition, factories, builders, adapters, catalogs, or project references:
+
+- Load `candoitall-csharp-architecture-bundle-guard` and `csharp-architecture-governor` before finalizing the bundle split.
+- Use `candoitall-codeanalytics-mcp` for source orientation: build the narrowest useful snapshot, check dashboard health, inspect solution/project inventory, run `code_analytics_dependencies_get` for dependency direction and cycles, and use `code_analytics_findings_get` for hotspots before deciding subbundle boundaries.
+- Add the required C# architecture files:
+  - `architecture/00-csharp-current-state-inventory.md`
+  - `architecture/01-csharp-boundary-map.md`
+  - `architecture/02-csharp-dependency-direction.md`
+  - `architecture/03-csharp-pattern-selection-records.md`
+  - `architecture/04-csharp-testability-plan.md`
+  - `plan/architecture-checkpoints.md`
+  - `reviews/csharp-architecture-gate.md`
+- Every architecture-relevant subbundle must include:
+  - `## C# Architecture Impact`
+  - `## Boundary Ownership`
+  - `## Dependency Direction`
+  - `## Pattern Decision`
+  - `## Testability Contract`
+  - `## Partial Class Policy`
+  - `## Architecture Proof Required`
+- Critical foundation subbundles must close before dependent feature work starts.
+- Do not accept partial-class expansion as the planned final architecture unless it passes the partial-class policy and has a removal plan when temporary.
+- Require proof that extracted behavior can be unit-tested without constructing the original large class.
+- Require source assertions that moved behavior no longer lives in the old runtime or partial-class cluster.
 
 ## Quality Bar
 
@@ -183,6 +211,8 @@ When the likely implementation loop includes repeated test churn:
 - Use `scripts/validate_bundle.py --stage prepared` before declaring the bundle implementation-ready.
 - Use `candoitall-bundle-validator` for the readiness gate.
 - Use `candoitall-subbundle-validator` when defining progression gates or dependency-heavy validation requirements.
+- Use `candoitall-csharp-architecture-bundle-guard`, `csharp-architecture-governor`, and `candoitall-codeanalytics-mcp` when C# architecture, project references, large classes, providers, tools, memory protocols, process drivers, or runtime composition are in scope.
+- Use `candoitall-components-mcp` when CanDoItAll Blazor, BaseLib, CanvasLib, or shared component usage is in scope.
 - Use `playwright`, `screenshot`, `imagegen`, and `frontend-skill` when the planned proof needs them.
 
 ## Output Rule
@@ -202,6 +232,8 @@ The validator is not just a folder-shape check.
 - critical subbundle READMEs must require Semantic Adequacy Gate proof with shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
 - critical subbundle READMEs must require `proof/SBxx/manifest.md` with changed-file hashes, validation transcripts, source assertions, anti-stub audit output, and red-team or verifier artifacts when the subbundle closes final quality
 - critical proof for new production signals, states, records, or events must include a production behavior artifact matrix in both the manifest and semantic invariant contract
+- C# architecture-heavy bundles must include the C# architecture files, architecture-relevant subbundle sections, dependency-direction proof, partial-class policy, testability plan, and a seeded `reviews/csharp-architecture-gate.md`
+- architecture-heavy preparation must record the CodeAnalytics snapshot id or explicitly state why CodeAnalytics MCP evidence was unavailable
 - feedback-profile execution reports must already include `## Status`, `## Subbundle Gate Results`, `## Browser Validation Analytics`, `## Analytics Review`, and `## Raw Note Closure`
 - if validation fails, repair the bundle before calling it ready
 
