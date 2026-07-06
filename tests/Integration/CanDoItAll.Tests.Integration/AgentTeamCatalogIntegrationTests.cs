@@ -157,7 +157,14 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains("workspace-inspect-image", financial.Skills.CapabilityKeys);
         Assert.Contains("workspace-analyze-image", financial.Skills.CapabilityKeys);
         Assert.Contains("workspace-analyze-images", financial.Skills.CapabilityKeys);
+        Assert.Contains("workspace-write-spreadsheet", financial.Skills.CapabilityKeys);
+        Assert.Contains("workspace-spreadsheet-function-catalog", financial.Skills.CapabilityKeys);
         Assert.DoesNotContain("provider-native-code-interpreter", financial.Skills.CapabilityKeys);
+
+        var spreadsheetAnalyst = members["spreadsheet-analyst"];
+        Assert.Contains("workspace-write-spreadsheet", spreadsheetAnalyst.Skills.CapabilityKeys);
+        Assert.Contains("workspace-read-spreadsheet-range", spreadsheetAnalyst.Skills.CapabilityKeys);
+        Assert.Contains("workspace-spreadsheet-function-catalog", spreadsheetAnalyst.Skills.CapabilityKeys);
 
         var research = members["research-deep-dive-analyst"];
         Assert.Equal("ReadOnly", research.Settings.Access.WorkspaceTools?.Profile);

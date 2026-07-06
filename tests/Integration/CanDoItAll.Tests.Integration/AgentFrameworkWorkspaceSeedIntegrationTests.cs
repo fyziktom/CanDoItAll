@@ -601,6 +601,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("project_structure_node_catalog", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_node_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_convert_document", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_spreadsheet", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
 
@@ -859,6 +861,11 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var pwshRunScriptCapabilityId = capabilityIdsByKey["workspace-pwsh-run-script"];
         var convertDocumentCapabilityId = capabilityIdsByKey["workspace-convert-document"];
         var inspectSpreadsheetCapabilityId = capabilityIdsByKey["workspace-inspect-spreadsheet"];
+        var spreadsheetSummaryCapabilityId = capabilityIdsByKey["workspace-spreadsheet-summary"];
+        var readSpreadsheetCellCapabilityId = capabilityIdsByKey["workspace-read-spreadsheet-cell"];
+        var readSpreadsheetRangeCapabilityId = capabilityIdsByKey["workspace-read-spreadsheet-range"];
+        var writeSpreadsheetCapabilityId = capabilityIdsByKey["workspace-write-spreadsheet"];
+        var spreadsheetFunctionCatalogCapabilityId = capabilityIdsByKey["workspace-spreadsheet-function-catalog"];
         var inspectImageCapabilityId = capabilityIdsByKey["workspace-inspect-image"];
         var analyzeImageCapabilityId = capabilityIdsByKey["workspace-analyze-image"];
         var analyzeImagesCapabilityId = capabilityIdsByKey["workspace-analyze-images"];
@@ -918,7 +925,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertHasCapabilities(businessStrategistAgent, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(deliveryManagerAgent, convertDocumentCapabilityId);
         AssertHasCapabilities(researchAgent, convertDocumentCapabilityId);
-        AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId);
+        AssertHasCapabilities(financialStrategistAgent, spreadsheetCapabilityId, concreteDeliverableDeliveryCapabilityId, convertDocumentCapabilityId, inspectSpreadsheetCapabilityId, spreadsheetSummaryCapabilityId, readSpreadsheetCellCapabilityId, readSpreadsheetRangeCapabilityId, writeSpreadsheetCapabilityId, spreadsheetFunctionCatalogCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, inspectImageCapabilityId, analyzeImageCapabilityId, analyzeImagesCapabilityId);
         Assert.DoesNotContain(financialStrategistAgent.Capabilities, item => string.Equals(item.CapabilityKey, "provider-native-code-interpreter", StringComparison.OrdinalIgnoreCase));
         AssertHasCapabilities(marketingSpecialistAgent, concreteDeliverableDeliveryCapabilityId, frontendSkillCapabilityId, convertDocumentCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
 
@@ -1246,6 +1253,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("project_structure_node_catalog", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_node_create", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_convert_document", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_spreadsheet", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_image", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);

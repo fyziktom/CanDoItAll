@@ -373,10 +373,15 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "workspace-pwsh-run-script",
         "workspace-python-run-file",
         "workspace-read-file",
+        "workspace-read-spreadsheet-cell",
+        "workspace-read-spreadsheet-range",
         "workspace-search",
         "workspace-source-rag",
+        "workspace-spreadsheet-function-catalog",
+        "workspace-spreadsheet-summary",
         "workspace-stat-path",
         "workspace-write-file",
+        "workspace-write-spreadsheet",
         "writing-mstest-tests"
     ];
 

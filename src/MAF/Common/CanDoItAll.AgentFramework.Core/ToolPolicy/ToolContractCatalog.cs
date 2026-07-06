@@ -25,6 +25,11 @@ public static class ToolContractCatalog
     public const string WorkspaceAnalyzeImage = "workspace_analyze_image";
     public const string WorkspaceAnalyzeImages = "workspace_analyze_images";
     public const string WorkspaceInspectSpreadsheet = "workspace_inspect_spreadsheet";
+    public const string WorkspaceSpreadsheetSummary = "workspace_spreadsheet_summary";
+    public const string WorkspaceReadSpreadsheetCell = "workspace_read_spreadsheet_cell";
+    public const string WorkspaceReadSpreadsheetRange = "workspace_read_spreadsheet_range";
+    public const string WorkspaceWriteSpreadsheet = "workspace_write_spreadsheet";
+    public const string WorkspaceSpreadsheetFunctionCatalog = "workspace_spreadsheet_function_catalog";
     public const string WorkspaceConvertDocument = "workspace_convert_document";
     public const string WorkspaceCommandRun = "workspace_command_run";
     public const string WorkspaceExecutionBoundary = "workspace_execution_boundary";
@@ -79,6 +84,11 @@ public static class ToolContractCatalog
         WorkspaceAnalyzeImage,
         WorkspaceAnalyzeImages,
         WorkspaceInspectSpreadsheet,
+        WorkspaceSpreadsheetSummary,
+        WorkspaceReadSpreadsheetCell,
+        WorkspaceReadSpreadsheetRange,
+        WorkspaceWriteSpreadsheet,
+        WorkspaceSpreadsheetFunctionCatalog,
         WorkspaceConvertDocument,
         WorkspaceCommandRun,
         WorkspaceExecutionBoundary,

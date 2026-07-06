@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Compaction;
 using Microsoft.Extensions.AI;
@@ -311,6 +312,11 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     {
         var workspaceServices = dependencyResolver.ResolveWorkspaceServices(services, workspaceRoot, workspaceScope);
         var workspacePlugin = new WorkspaceRuntimePlugin(workspaceServices.FileService, workspaceServices.CommandExecutionService, workspaceServices.ArtifactToolService, workspaceRoot, contextIntent.WorkspaceScope ?? workspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
+        var spreadsheetPlugin = new WorkspaceSpreadsheetRuntimePlugin(
+            ResolveSpreadsheetDocumentService(),
+            workspaceRoot,
+            contextIntent.WorkspaceScope ?? workspaceScope,
+            workspaceToolAccess);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(workspaceRoot, services);
         var contextBuilder = new ContextCapabilityBuilder(workspaceRoot);
@@ -339,6 +345,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             workspaceScope,
             providerCredentialService,
             workspacePlugin,
+            spreadsheetPlugin,
             storagePlugin,
             workspaceServices.CommandExecutionService,
             workspaceToolAccess,
@@ -362,6 +369,11 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         return services.GetService(typeof(IStorageCatalogService)) is not null &&
                services.GetService(typeof(IStorageDriverRegistry)) is not null;
     }
+
+    private ISpreadsheetDocumentService ResolveSpreadsheetDocumentService()
+        => services.GetService(typeof(ISpreadsheetDocumentService)) is ISpreadsheetDocumentService resolved
+            ? resolved
+            : new ClosedXmlSpreadsheetDocumentService();
 
     private void RecordCompositionMetric(string stage, TimeSpan elapsed)
     {

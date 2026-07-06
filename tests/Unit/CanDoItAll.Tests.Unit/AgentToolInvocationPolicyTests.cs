@@ -2676,6 +2676,9 @@ public sealed class AgentToolInvocationPolicyTests
 
     [Theory]
     [InlineData("workspace_write_file", ToolInvocationClassification.Mutation)]
+    [InlineData("workspace_write_spreadsheet", ToolInvocationClassification.Mutation)]
+    [InlineData("workspace_read_spreadsheet_range", ToolInvocationClassification.Read)]
+    [InlineData("workspace_spreadsheet_function_catalog", ToolInvocationClassification.Read)]
     [InlineData("workspace_dotnet_test", ToolInvocationClassification.Validation)]
     [InlineData("provider-native-web-search", ToolInvocationClassification.HostedProviderNative)]
     [InlineData("mcp_project_query", ToolInvocationClassification.LocalMcp)]
@@ -2737,6 +2740,11 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceConvertDocument));
         Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceConvertDocument));
         Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceConvertDocument));
+        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceWriteSpreadsheet));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceWriteSpreadsheet));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceWriteSpreadsheet));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog));
         Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetStop));
         Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary));
     }
@@ -2848,6 +2856,9 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Contains(dotnetStop.OperationRequirements, requirement =>
             requirement.AnyOf.Contains("LaunchRuntime", StringComparer.Ordinal) &&
             requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceWriteSpreadsheet, out var writeSpreadsheet));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.WorkspaceFileMutation, writeSpreadsheet.OperationRequirementKind);
     }
 
     [Fact]
@@ -2864,6 +2875,11 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.True(writeFile.CanWriteManagedArtifact);
         Assert.Contains(ProcessOperationContractNames.ManagedProcessArtifactsOnly, writeFile.TargetScopeRequirements);
         Assert.Contains(ProcessOperationContractNames.ExternalProductTargetMutable, writeFile.TargetScopeRequirements);
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceWriteSpreadsheet, out var writeSpreadsheet));
+        Assert.True(writeSpreadsheet.CanMutateProduct);
+        Assert.True(writeSpreadsheet.CanWriteManagedArtifact);
+        Assert.Contains(ProcessOperationContractNames.ManagedProcessArtifactsOnly, writeSpreadsheet.TargetScopeRequirements);
 
         Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserClick, out var browserClick));
         Assert.Equal(ToolCapabilityBrowserProofRole.Interaction, browserClick.BrowserProofRole);

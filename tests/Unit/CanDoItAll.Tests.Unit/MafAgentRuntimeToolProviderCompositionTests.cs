@@ -656,7 +656,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
-    public async Task MafAgentRuntimeProcessContext_managed_artifact_write_step_attaches_text_writes_without_product_mutation_tools()
+    public async Task MafAgentRuntimeProcessContext_managed_artifact_write_step_attaches_workspace_writes_without_product_mutation_tools()
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
@@ -675,6 +675,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         Assert.Contains("workspace_write_file", toolNames);
         Assert.Contains("workspace_append_file", toolNames);
+        Assert.Contains("workspace_write_spreadsheet", toolNames);
         Assert.Contains("workspace_read_file", toolNames);
         Assert.DoesNotContain("workspace_dotnet_new", toolNames);
         Assert.DoesNotContain("workspace_create_directory", toolNames);
@@ -685,6 +686,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         var effectiveCapabilities = ReadEffectiveCapabilities(state);
         Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
             capability.RuntimeToolName?.Value == "workspace_write_file");
+        Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
+            capability.RuntimeToolName?.Value == "workspace_write_spreadsheet");
         Assert.Contains(effectiveCapabilities.Diagnostics, diagnostic =>
             diagnostic.Identity.Key.Value == "workspace-dotnet-new" &&
             diagnostic.Category == AccessCapabilityDiagnosticCategory.AccessPolicy);

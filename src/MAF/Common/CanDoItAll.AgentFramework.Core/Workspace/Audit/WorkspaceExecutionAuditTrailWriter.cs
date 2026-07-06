@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-internal static class WorkspaceExecutionAuditTrailWriter
+public static class WorkspaceExecutionAuditTrailWriter
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {

@@ -516,6 +516,78 @@
     },
     {
       "kind": "tool",
+      "key": "workspace-spreadsheet-summary",
+      "displayName": "Workspace Spreadsheet Summary",
+      "description": "Returns worksheet names, positions, used ranges, and used dimensions for a workspace .xlsx workbook.",
+      "stableId": "tool:workspace-spreadsheet-summary:v1",
+      "stableGuidKey": "capabilities/workspace-spreadsheet-summary",
+      "endpointOrPath": "sandbox://workspace-spreadsheet-summary",
+      "runtimeToolName": "workspace_spreadsheet_summary",
+      "operationClassifications": [
+        "read",
+        "document-processing"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-read-spreadsheet-cell",
+      "displayName": "Workspace Read Spreadsheet Cell",
+      "description": "Reads one cell from a workspace .xlsx workbook. Formula cells return the A1 formula string with a leading equals sign.",
+      "stableId": "tool:workspace-read-spreadsheet-cell:v1",
+      "stableGuidKey": "capabilities/workspace-read-spreadsheet-cell",
+      "endpointOrPath": "sandbox://workspace-read-spreadsheet-cell",
+      "runtimeToolName": "workspace_read_spreadsheet_cell",
+      "operationClassifications": [
+        "read",
+        "document-processing"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-read-spreadsheet-range",
+      "displayName": "Workspace Read Spreadsheet Range",
+      "description": "Reads a bounded cell range from a workspace .xlsx workbook and returns values plus a markdown table. Formula cells return A1 formula strings with leading equals signs.",
+      "stableId": "tool:workspace-read-spreadsheet-range:v1",
+      "stableGuidKey": "capabilities/workspace-read-spreadsheet-range",
+      "endpointOrPath": "sandbox://workspace-read-spreadsheet-range",
+      "runtimeToolName": "workspace_read_spreadsheet_range",
+      "operationClassifications": [
+        "read",
+        "document-processing"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-write-spreadsheet",
+      "displayName": "Workspace Write Spreadsheet",
+      "description": "Creates or updates a workspace .xlsx workbook and worksheet using typed cell and range writes. Values beginning with = are stored as Excel-compatible formulas.",
+      "stableId": "tool:workspace-write-spreadsheet:v1",
+      "stableGuidKey": "capabilities/workspace-write-spreadsheet",
+      "endpointOrPath": "sandbox://workspace-write-spreadsheet",
+      "runtimeToolName": "workspace_write_spreadsheet",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation",
+        "document-processing"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-spreadsheet-function-catalog",
+      "displayName": "Workspace Spreadsheet Function Catalog",
+      "description": "Lists common Excel-compatible formula functions with syntax, examples, and usage notes for assembling spreadsheet cell formulas.",
+      "stableId": "tool:workspace-spreadsheet-function-catalog:v1",
+      "stableGuidKey": "capabilities/workspace-spreadsheet-function-catalog",
+      "endpointOrPath": "sandbox://workspace-spreadsheet-function-catalog",
+      "runtimeToolName": "workspace_spreadsheet_function_catalog",
+      "operationClassifications": [
+        "read",
+        "document-processing"
+      ]
+    },
+    {
+      "kind": "tool",
       "key": "workspace-inspect-image",
       "displayName": "Workspace Inspect Image",
       "description": "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before project asset storage.",

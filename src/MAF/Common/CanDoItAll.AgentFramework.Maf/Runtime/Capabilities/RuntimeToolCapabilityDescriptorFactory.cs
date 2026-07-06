@@ -67,7 +67,7 @@ internal static class RuntimeToolCapabilityDescriptorFactory
 
         if (metadata.OperationRequirementKind == ToolCapabilityOperationRequirementKind.WorkspaceFileMutation)
         {
-            return IsWorkspaceTextWriteTool(runtimeToolName)
+            return IsWorkspaceManagedArtifactWriteTool(runtimeToolName)
                 ? ToClassificationSet(CapabilityOperationClassification.Write)
                 : ToClassificationSet(CapabilityOperationClassification.Mutation, CapabilityOperationClassification.Write);
         }
@@ -115,6 +115,10 @@ internal static class RuntimeToolCapabilityDescriptorFactory
     public static bool IsWorkspaceTextWriteTool(string runtimeToolName)
         => string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceWriteFile, StringComparison.OrdinalIgnoreCase) ||
            string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceAppendFile, StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsWorkspaceManagedArtifactWriteTool(string runtimeToolName)
+        => IsWorkspaceTextWriteTool(runtimeToolName) ||
+           string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceWriteSpreadsheet, StringComparison.OrdinalIgnoreCase);
 
     public static IReadOnlySet<CapabilityOperationClassification> ToClassificationSet(
         params CapabilityOperationClassification[] classifications)

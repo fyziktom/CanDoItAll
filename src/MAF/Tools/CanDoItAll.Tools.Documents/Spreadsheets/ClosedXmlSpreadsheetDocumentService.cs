@@ -103,7 +103,7 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
         foreach (var cellWrite in request.CellWrites)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(cellWrite.CellAddress);
-            worksheet.Cell(cellWrite.CellAddress).Value = cellWrite.Value;
+            WriteCellValue(worksheet.Cell(cellWrite.CellAddress), cellWrite.Value);
         }
 
         foreach (var rangeWrite in request.RangeWrites)
@@ -156,9 +156,21 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
 
             for (var columnIndex = 0; columnIndex < row.Count; columnIndex++)
             {
-                range.Cell(rowIndex + 1, columnIndex + 1).Value = row[columnIndex];
+                WriteCellValue(range.Cell(rowIndex + 1, columnIndex + 1), row[columnIndex]);
             }
         }
+    }
+
+    private static void WriteCellValue(IXLCell cell, string value)
+    {
+        var normalized = value ?? string.Empty;
+        if (normalized.Length > 1 && normalized.StartsWith('='))
+        {
+            cell.FormulaA1 = normalized[1..];
+            return;
+        }
+
+        cell.Value = normalized;
     }
 
     private static string BuildMarkdownTable(IReadOnlyList<IReadOnlyList<string>> rows)
@@ -211,6 +223,11 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
 
     private static string CellToString(IXLCell cell)
     {
+        if (cell.HasFormula)
+        {
+            return "=" + cell.FormulaA1;
+        }
+
         if (cell.IsEmpty())
         {
             return string.Empty;

@@ -30,6 +30,14 @@ public sealed record SpreadsheetRangeWrite(
     string RangeAddress,
     IReadOnlyList<IReadOnlyList<string>> Values);
 
+public sealed record SpreadsheetFunctionDescriptor(
+    string Name,
+    string Category,
+    string Syntax,
+    string Example,
+    string Description,
+    IReadOnlyList<string> Notes);
+
 public sealed record SpreadsheetWriteRequest(
     string WorkbookPath,
     string OutputWorkbookPath,

@@ -137,9 +137,13 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_build"));
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_stop"));
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_write_file"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_write_spreadsheet"));
         Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_dotnet_new"));
         Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(qaProfile, "workspace_delete_path"));
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_convert_document"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_spreadsheet_function_catalog"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_read_spreadsheet_range"));
+        Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_write_spreadsheet"));
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_analyze_image"));
         Assert.True(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_analyze_images"));
         Assert.False(AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(businessProfile, "workspace_dotnet_run"));

@@ -12,6 +12,7 @@ internal sealed class ToolCapabilityBuilder(
     WorkspaceScopeDescriptor workspaceScope,
     IMafProviderCredentialService providerCredentialService,
     WorkspaceRuntimePlugin workspacePlugin,
+    WorkspaceSpreadsheetRuntimePlugin spreadsheetPlugin,
     StorageRuntimePlugin? storagePlugin,
     IWorkspaceCommandExecutionService workspaceCommandExecutionService,
     AgentWorkspaceToolAccessSettings workspaceToolAccess,
@@ -23,6 +24,7 @@ internal sealed class ToolCapabilityBuilder(
     private readonly ConfiguredWorkspaceToolSet configuredWorkspaceToolSet = new(
         workspaceToolAccess,
         workspacePlugin,
+        spreadsheetPlugin,
         storagePlugin,
         capabilityAccessPlan);
 
@@ -82,6 +84,11 @@ internal sealed class ToolCapabilityBuilder(
                 "workspace-pwsh-run-script" or "workspace_pwsh_run_script" => [AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", capability.Description)],
                 "workspace-convert-document" or "workspace_convert_document" => [AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", capability.Description)],
                 "workspace-inspect-spreadsheet" or "workspace_inspect_spreadsheet" => [AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", capability.Description)],
+                "workspace-spreadsheet-summary" or "workspace_spreadsheet_summary" => [AIFunctionFactory.Create(spreadsheetPlugin.InspectWorkbook, "workspace_spreadsheet_summary", capability.Description)],
+                "workspace-read-spreadsheet-cell" or "workspace_read_spreadsheet_cell" => [AIFunctionFactory.Create(spreadsheetPlugin.ReadSpreadsheetCell, "workspace_read_spreadsheet_cell", capability.Description)],
+                "workspace-read-spreadsheet-range" or "workspace_read_spreadsheet_range" => [AIFunctionFactory.Create(spreadsheetPlugin.ReadSpreadsheetRange, "workspace_read_spreadsheet_range", capability.Description)],
+                "workspace-write-spreadsheet" or "workspace_write_spreadsheet" => [AIFunctionFactory.Create(spreadsheetPlugin.WriteSpreadsheetWorkbook, "workspace_write_spreadsheet", capability.Description)],
+                "workspace-spreadsheet-function-catalog" or "workspace_spreadsheet_function_catalog" => [AIFunctionFactory.Create(spreadsheetPlugin.ListSpreadsheetFunctions, "workspace_spreadsheet_function_catalog", capability.Description)],
                 "workspace-inspect-image" or "workspace_inspect_image" => [AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", capability.Description)],
                 "workspace-analyze-image" or "workspace_analyze_image" => [AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFile, "workspace_analyze_image", capability.Description)],
                 "workspace-analyze-images" or "workspace_analyze_images" => [AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", capability.Description)],

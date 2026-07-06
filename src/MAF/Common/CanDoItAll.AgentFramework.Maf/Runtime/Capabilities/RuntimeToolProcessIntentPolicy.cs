@@ -76,7 +76,7 @@ internal static class RuntimeToolProcessIntentPolicy
             return true;
         }
 
-        return RuntimeToolCapabilityDescriptorFactory.IsWorkspaceTextWriteTool(capability.Name) &&
+        return RuntimeToolCapabilityDescriptorFactory.IsWorkspaceManagedArtifactWriteTool(capability.Name) &&
                HasAnyOperation(
                    contextIntent,
                    ProcessOperationContractNames.WriteManagedProcessArtifacts,

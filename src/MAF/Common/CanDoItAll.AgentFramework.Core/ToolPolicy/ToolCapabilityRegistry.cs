@@ -194,6 +194,11 @@ public static class ToolCapabilityRegistry
                     ProcessOperationContractNames.CaptureRuntimeProof,
                     ProcessOperationContractNames.ReadProjectStructure)),
             Read(ToolContractCatalog.WorkspaceInspectSpreadsheet, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceSpreadsheetSummary, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceReadSpreadsheetCell, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceReadSpreadsheetRange, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Mutation(ToolContractCatalog.WorkspaceWriteSpreadsheet, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Read(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog, ToolCapabilitySideEffectKind.WorkspaceRead),
             Validation(
                 ToolContractCatalog.WorkspaceConvertDocument,
                 ToolCapabilitySideEffectKind.DocumentConversion,

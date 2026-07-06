@@ -2548,7 +2548,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
 
         if (IsSpreadsheetContentType(contentType))
         {
-            return $"Use workspace_inspect_spreadsheet with '{mediaPath}' when tabular content is required.";
+            return $"Use workspace_inspect_spreadsheet or workspace_spreadsheet_summary with '{mediaPath}', then use workspace_read_spreadsheet_range when tabular content is required.";
         }
 
         return $"Use a bounded workspace tool against '{mediaPath}' only when the step contract requires inspecting the asset bytes.";

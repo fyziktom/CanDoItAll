@@ -1282,16 +1282,88 @@ public sealed class WorkflowExecutorTests
             workbookPath,
             workbookPath,
             "Data",
-            [new SpreadsheetCellWrite("A1", "Name"), new SpreadsheetCellWrite("B1", "Value")],
+            [new SpreadsheetCellWrite("A1", "Name"), new SpreadsheetCellWrite("B1", "Value"), new SpreadsheetCellWrite("C1", "Formula")],
             [new SpreadsheetRangeWrite("A2:B3", [["Alpha", "10"], ["Beta", "20"]])],
             CreateWorkbookIfMissing: true,
             Overwrite: true));
+        service.Write(new SpreadsheetWriteRequest(
+            workbookPath,
+            workbookPath,
+            "Data",
+            [new SpreadsheetCellWrite("C2", "=SUM(B2:B3)")],
+            [],
+            CreateWorkbookIfMissing: false,
+            Overwrite: true));
 
         var cell = service.ReadCell(workbookPath, "Data", "A2");
-        var range = service.ReadRange(workbookPath, "Data", "A1:B3", maxRows: 10, maxColumns: 10);
+        var formula = service.ReadCell(workbookPath, "Data", "C2");
+        var range = service.ReadRange(workbookPath, "Data", "A1:C3", maxRows: 10, maxColumns: 10);
+        var functions = SpreadsheetFunctionCatalog.List(query: "sum", category: null, maxResults: 10);
 
         Assert.Equal("Alpha", cell.Value);
-        Assert.Contains("| Name | Value |", range.MarkdownTable, StringComparison.Ordinal);
+        Assert.Equal("=SUM(B2:B3)", formula.Value);
+        Assert.Contains("| Name | Value | Formula |", range.MarkdownTable, StringComparison.Ordinal);
+        Assert.Contains(functions, function => string.Equals(function.Name, "SUMIFS", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void WorkspaceSpreadsheetRuntimePluginPersistsToolReceipts()
+    {
+        using var temp = new TempDirectory();
+        var run = CreateExecutionRunRecord();
+        var plugin = new WorkspaceSpreadsheetRuntimePlugin(
+            new ClosedXmlSpreadsheetDocumentService(),
+            temp.Path,
+            WorkspaceScopeDescriptor.Sandbox,
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true,
+                CanTransformArtifacts = true
+            });
+
+        using (WorkspaceExecutionAuditContext.BeginScope(run))
+        {
+            plugin.WriteSpreadsheetWorkbook(
+                "margin.xlsx",
+                "Summary",
+                cellWrites:
+                [
+                    new SpreadsheetCellWrite("A1", "Metric"),
+                    new SpreadsheetCellWrite("B1", "Value"),
+                    new SpreadsheetCellWrite("A2", "Total"),
+                    new SpreadsheetCellWrite("B2", "=SUM(1,2)")
+                ],
+                createWorkbookIfMissing: true,
+                overwrite: true);
+            plugin.InspectWorkbook("margin.xlsx");
+            plugin.ReadSpreadsheetCell("margin.xlsx", "Summary", "B2");
+            plugin.ReadSpreadsheetRange("margin.xlsx", "Summary", "A1:B2");
+            plugin.ListSpreadsheetFunctions("sum", maxResults: 5);
+        }
+
+        var receiptRoot = Path.Combine(
+            temp.Path,
+            "data",
+            "execution",
+            "runs",
+            run.Id.ToString("N"),
+            "audit",
+            "receipts");
+        var receipts = Directory.EnumerateFiles(receiptRoot, "*.json")
+            .Select(path => System.Text.Json.JsonSerializer.Deserialize<ToolExecutionReceiptRecord>(
+                File.ReadAllText(path),
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)))
+            .OfType<ToolExecutionReceiptRecord>()
+            .ToArray();
+
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_write_spreadsheet" &&
+                                             receipt.RiskClass == "MutatingWorkspace");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_spreadsheet_summary" &&
+                                             receipt.RiskClass == "ReadOnlyWorkspace");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_read_spreadsheet_cell");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_read_spreadsheet_range");
+        Assert.Contains(receipts, receipt => receipt.ToolName == "workspace_spreadsheet_function_catalog");
     }
 
     [Fact]
@@ -2161,6 +2233,36 @@ public sealed class WorkflowExecutorTests
                 request.Format,
                 [new AgentGeneratedImage("image/png", imageBytes, revisedPrompt)]));
         }
+    }
+
+    private static ExecutionRunRecord CreateExecutionRunRecord()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "Spreadsheet receipt test",
+            SourceKind: "unit-test",
+            SourceId: "spreadsheet-receipt",
+            CorrelationId: "spreadsheet-receipt",
+            CausationId: string.Empty,
+            RequestedBy: "unit-test",
+            RequestedByKind: "system",
+            MetadataJson: "{}",
+            InputSummary: "Input",
+            ResultSummary: string.Empty,
+            ProviderName: "Provider",
+            Model: "model",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: []);
     }
 
     private sealed class TempDirectory : IDisposable

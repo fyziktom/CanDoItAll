@@ -420,12 +420,17 @@ public static class AgentWorkspaceToolAccessMetadata
             case "workspace_git_log":
             case "workspace_git_show":
             case "workspace_inspect_spreadsheet":
+            case "workspace_spreadsheet_summary":
+            case "workspace_read_spreadsheet_cell":
+            case "workspace_read_spreadsheet_range":
+            case "workspace_spreadsheet_function_catalog":
             case "workspace_inspect_image":
                 permission = AgentWorkspaceToolPermissionKind.ReadFiles;
                 return true;
             case "workspace_create_directory":
             case "workspace_write_file":
             case "workspace_append_file":
+            case "workspace_write_spreadsheet":
                 permission = AgentWorkspaceToolPermissionKind.WriteFiles;
                 return true;
             case "workspace_copy_path":

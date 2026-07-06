@@ -41,6 +41,11 @@ public sealed partial class CapabilityProofService : ICapabilityProofService
         "workspace-pwsh-run-script",
         "workspace-convert-document",
         "workspace-inspect-spreadsheet",
+        "workspace-spreadsheet-summary",
+        "workspace-read-spreadsheet-cell",
+        "workspace-read-spreadsheet-range",
+        "workspace-write-spreadsheet",
+        "workspace-spreadsheet-function-catalog",
         "workspace-plugin"
     };
 
