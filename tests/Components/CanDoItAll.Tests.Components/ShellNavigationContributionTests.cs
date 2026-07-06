@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Web.Composition;
 
@@ -40,12 +41,33 @@ public sealed class ShellNavigationContributionTests
             ]);
         var processesIndex = items.ToList().FindIndex(item => item.Route == "/processes");
         var liveProcessesIndex = items.ToList().FindIndex(item => item.Route == "/processes/live");
-        var cognitiveMemoryIndex = items.ToList().FindIndex(item => item.Route == "/cognitive-memory");
+        var resourcesIndex = items.ToList().FindIndex(item => item.Route == "/resources");
 
         Assert.True(processesIndex >= 0);
         Assert.Equal("Processes", items[processesIndex].Title);
         Assert.Equal(processesIndex + 1, liveProcessesIndex);
-        Assert.True(cognitiveMemoryIndex > liveProcessesIndex);
+        Assert.True(resourcesIndex > liveProcessesIndex);
+        Assert.DoesNotContain(items, item => item.Route == "/cognitive-memory");
+    }
+
+    [Fact]
+    public void Memory_contribution_reuses_cognitive_memory_slot_after_live_processes()
+    {
+        var items = ShellNavigation.GetItems(
+            0,
+            [
+                new AgentFrameworkShellNavigationContributor(),
+                new ProcessesShellNavigationContributor(),
+                new MemoryShellNavigationContributor()
+            ]);
+        var liveProcessesIndex = items.ToList().FindIndex(item => item.Route == "/processes/live");
+        var memoryIndex = items.ToList().FindIndex(item => item.Route == "/memory");
+
+        Assert.True(liveProcessesIndex > 0);
+        Assert.Equal(liveProcessesIndex + 1, memoryIndex);
+        Assert.Equal("Memory Providers", items[memoryIndex].Title);
+        Assert.Equal("psychology", items[memoryIndex].Icon);
+        Assert.DoesNotContain(items, item => item.Route == "/cognitive-memory");
     }
 
     [Fact]

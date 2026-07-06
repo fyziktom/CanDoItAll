@@ -6,16 +6,16 @@ public sealed class MemoryShellNavigationContributor : IShellNavigationContribut
 {
     private static readonly ShellNavigationContribution MemoryContribution = new(
         ModuleId: "memory",
-        ParentRoute: "/",
+        ParentRoute: "/agents",
         Item: new ShellNavigationItem(
-            "Memory",
+            "Memory Providers",
             "/memory",
-            "memory",
+            "psychology",
             "Provider profiles, health, capabilities, and generic memory operations.",
             PinnedByDefault: false),
         IsSubItem: false,
-        Order: 15,
-        DesignNote: "Generic memory is contributed as an independent module entry before provider-specific memory pages.");
+        Order: 30,
+        DesignNote: "Generic memory providers are shown after live processes in the former Cognitive Memory navigation slot.");
 
     public IEnumerable<ShellNavigationContribution> GetShellNavigationContributions()
         => [MemoryContribution];

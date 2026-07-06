@@ -4,8 +4,10 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Persistence;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Memory.Pages;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Web.Composition;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,20 +93,28 @@ public sealed class MemoryProvidersPageTests
     }
 
     [Fact]
-    public void MemoryShellNavigationContributor_AddsGenericMemoryRouteBeforeNativeCognitiveMemory()
+    public void MemoryShellNavigationContributor_AddsMemoryProvidersRouteAfterLiveProcesses()
     {
-        var items = ShellNavigation.GetItems(0, [new MemoryShellNavigationContributor()]);
+        var items = ShellNavigation.GetItems(
+            0,
+            [
+                new AgentFrameworkShellNavigationContributor(),
+                new ProcessesShellNavigationContributor(),
+                new MemoryShellNavigationContributor()
+            ]);
         var memoryIndex = items.ToList().FindIndex(item => item.Route == "/memory");
-        var cognitiveMemoryIndex = items.ToList().FindIndex(item => item.Route == "/cognitive-memory");
+        var liveProcessesIndex = items.ToList().FindIndex(item => item.Route == "/processes/live");
 
-        Assert.True(memoryIndex > 0);
-        Assert.Equal("Memory", items[memoryIndex].Title);
-        Assert.True(cognitiveMemoryIndex > memoryIndex);
+        Assert.True(liveProcessesIndex > 0);
+        Assert.Equal(liveProcessesIndex + 1, memoryIndex);
+        Assert.Equal("Memory Providers", items[memoryIndex].Title);
+        Assert.Equal("psychology", items[memoryIndex].Icon);
+        Assert.DoesNotContain(items, item => item.Route == "/cognitive-memory");
 
         var matched = ShellNavigation.MatchRoute("memory", [new MemoryShellNavigationContributor()]);
 
         Assert.Equal("/memory", matched.Route);
-        Assert.Equal("Memory", matched.Title);
+        Assert.Equal("Memory Providers", matched.Title);
     }
 
     [Fact]
