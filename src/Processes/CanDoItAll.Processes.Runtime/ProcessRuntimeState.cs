@@ -62,7 +62,10 @@ public sealed record ProcessRuntimeStateSnapshot(
     IReadOnlyList<DispatchClaimState> Claims,
     IReadOnlyList<StrategyResultReceipt> AppliedResults,
     IReadOnlySet<ArtifactSlotId> AvailableArtifactSlots,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public IReadOnlyList<ProcessRuntimeInputArtifactReceipt> ConnectedInputArtifacts { get; init; } = [];
+}
 
 public sealed record ProcessRuntimeStepState(
     ProcessStepInstanceId StepInstanceId,
@@ -73,7 +76,21 @@ public sealed record ProcessRuntimeStepState(
     IReadOnlySet<ProcessStepInstanceId> DependencyStepIds,
     IReadOnlySet<ArtifactSlotId> RequiredArtifactSlots,
     DispatchClaimToken? ActiveClaimToken,
-    StrategyResultIdempotencyKey? CompletedResultKey);
+    StrategyResultIdempotencyKey? CompletedResultKey)
+{
+    public IReadOnlySet<ArtifactSlotId> ProducedArtifactSlots { get; init; } = new HashSet<ArtifactSlotId>();
+
+    public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
+}
+
+public sealed record ProcessRuntimeInputArtifactReceipt(
+    ProcessStepInstanceId ConsumerStepInstanceId,
+    ArtifactSlotId RequiredSlotId,
+    ProcessArtifactInputAvailability Availability,
+    ProcessStepInstanceId? ProducerStepInstanceId,
+    ArtifactInstanceId? ArtifactId,
+    string ContentHash,
+    string ConnectionHash);
 
 public sealed record DispatchClaimState(
     DispatchClaimToken ClaimToken,
@@ -148,7 +165,12 @@ public sealed record ProcessRecoveryDecisionReceipt(
     ProcessRecoveryDecisionKind DecisionKind,
     string SourceDiagnosticCode,
     string Policy,
-    string SafeReason);
+    string SafeReason)
+{
+    public ProcessRecoveryRouteKind RouteKind { get; init; } = ProcessRecoveryRouteKind.ManagerAction;
+
+    public ProcessStepInstanceId? ResponsibleStepInstanceId { get; init; }
+}
 
 public enum ProcessFailureCategory
 {
@@ -173,12 +195,47 @@ public enum ProcessRecoveryDecisionKind
     TerminalBlocked
 }
 
-public sealed record DispatchWorkItem(
-    ProcessRunId RunId,
-    ProcessStepInstanceId StepInstanceId,
-    ProcessStepDefinitionId StepDefinitionId,
-    ProcessStrategyBindingSnapshot StrategyBinding,
-    int AttemptNumber);
+public enum ProcessRecoveryRouteKind
+{
+    None,
+    CurrentStepRetry,
+    UpstreamStepRework,
+    ManagerAction,
+    TerminalBlock,
+    ChildRunPropagation,
+    TemplateRepair
+}
+
+public sealed record DispatchWorkItem
+{
+    public DispatchWorkItem(
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId,
+        ProcessStepDefinitionId stepDefinitionId,
+        ProcessStrategyBindingSnapshot strategyBinding,
+        int attemptNumber,
+        ProcessStepExecutionContract? stepContract = null)
+    {
+        RunId = runId;
+        StepInstanceId = stepInstanceId;
+        StepDefinitionId = stepDefinitionId;
+        StrategyBinding = strategyBinding;
+        AttemptNumber = attemptNumber;
+        StepContract = stepContract ?? ProcessStepExecutionContract.Empty;
+    }
+
+    public ProcessRunId RunId { get; init; }
+
+    public ProcessStepInstanceId StepInstanceId { get; init; }
+
+    public ProcessStepDefinitionId StepDefinitionId { get; init; }
+
+    public ProcessStrategyBindingSnapshot StrategyBinding { get; init; }
+
+    public int AttemptNumber { get; init; }
+
+    public ProcessStepExecutionContract StepContract { get; init; }
+}
 
 public sealed record ProcessRuntimeMutation(
     ProcessRuntimeTransitionOutcome Outcome,

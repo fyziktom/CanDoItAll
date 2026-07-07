@@ -22,7 +22,8 @@ public sealed class ProcessRuntimeScheduler
                 continue;
             }
 
-            if (DependenciesSatisfied(state, step) && RequiredArtifactsAvailable(state, step))
+            if (ProcessRuntimeArtifactContracts.DependenciesSatisfied(state, step) &&
+                ProcessRuntimeArtifactContracts.RequiredArtifactsAvailable(state, step))
             {
                 readySteps.Add(step.StepInstanceId);
             }
@@ -64,39 +65,11 @@ public sealed class ProcessRuntimeScheduler
                 step.StepInstanceId,
                 step.StepDefinitionId,
                 planStep.ExecutionStrategyBinding,
-                step.AttemptNumber + 1));
+                step.AttemptNumber + 1,
+                ProcessRuntimeArtifactContracts.BuildStepContract(state, step)));
         }
 
         return readyWork;
-    }
-
-    private static bool DependenciesSatisfied(ProcessRuntimeStateSnapshot state, ProcessRuntimeStepState step)
-    {
-        foreach (var dependencyId in step.DependencyStepIds)
-        {
-            var dependency = FindStep(state, dependencyId);
-            if (dependency is null ||
-                !ProcessRuntimeTerminalStates.IsStepTerminal(dependency.Status) ||
-                dependency.Status is ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool RequiredArtifactsAvailable(ProcessRuntimeStateSnapshot state, ProcessRuntimeStepState step)
-    {
-        foreach (var slotId in step.RequiredArtifactSlots)
-        {
-            if (!state.AvailableArtifactSlots.Contains(slotId))
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private static bool HasActiveClaim(
@@ -120,21 +93,6 @@ public sealed class ProcessRuntimeScheduler
         }
 
         return false;
-    }
-
-    private static ProcessRuntimeStepState? FindStep(
-        ProcessRuntimeStateSnapshot state,
-        ProcessStepInstanceId stepId)
-    {
-        foreach (var step in state.Steps)
-        {
-            if (step.StepInstanceId == stepId)
-            {
-                return step;
-            }
-        }
-
-        return null;
     }
 
     private static StepInstancePlan? FindPlanStep(ProcessInstancePlan plan, ProcessStepInstanceId stepId)

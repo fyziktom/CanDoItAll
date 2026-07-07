@@ -41,22 +41,23 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessRuntimeMutation.Rejected(state, "Runtime.StepNotRunning", "Strategy result requires a running step.");
         }
 
-        var nextStepStatus = ToStepStatus(command.Result);
+        var appliedResult = EnforceStepFinalizationContract(state, step, command.Result);
+        var nextStepStatus = ToStepStatus(appliedResult);
         var receipt = new StrategyResultReceipt(
             step.StepInstanceId,
-            command.Result.StrategyId,
+            appliedResult.StrategyId,
             command.IdempotencyKey,
-            command.Result.Outcome,
+            appliedResult.Outcome,
             nextStepStatus,
-            command.Result.ResultHash,
-            BuildDiagnosticReceipts(command.Result, nextStepStatus),
-            BuildProducedArtifactReceipts(command.Result),
-            BuildRecoveryDecision(command.Result, nextStepStatus));
+            appliedResult.ResultHash,
+            BuildDiagnosticReceipts(appliedResult, nextStepStatus),
+            BuildProducedArtifactReceipts(appliedResult),
+            BuildRecoveryDecision(appliedResult, nextStepStatus, state, step));
         var nextClaims = ReplaceClaim(
             state,
             claim with
             {
-                Status = command.Result.Outcome == StrategyOutcome.Canceled
+                Status = appliedResult.Outcome == StrategyOutcome.Canceled
                     ? DispatchClaimStatus.Cancelled
                     : DispatchClaimStatus.Completed,
                 ResultIdempotencyKey = command.IdempotencyKey
@@ -76,12 +77,13 @@ public sealed partial class ProcessRuntimeEngine
             Steps = nextSteps,
             Claims = nextClaims,
             AppliedResults = Append(state.AppliedResults, receipt),
-            AvailableArtifactSlots = AddProducedSlots(state.AvailableArtifactSlots, command.Result),
+            AvailableArtifactSlots = AddProducedSlots(state.AvailableArtifactSlots, appliedResult),
+            ConnectedInputArtifacts = ProcessRuntimeArtifactContracts.ApplyProducedArtifacts(state, step.StepInstanceId, appliedResult),
             UpdatedAtUtc = context.OccurredAtUtc
         };
         next = CompleteRunIfTerminal(next, context.OccurredAtUtc);
 
-        var events = BuildResultEvents(next, context, command, nextStepStatus);
+        var events = BuildResultEvents(next, context, command, appliedResult, nextStepStatus);
         var resultEventId = events[1].EventId;
 
         return Applied(

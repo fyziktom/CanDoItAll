@@ -438,7 +438,10 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             "sha256:plan",
             ProcessRuntimeStatus.Active,
             [
-                NewStep(producerStepId, ProcessRuntimeStepStatus.Pending),
+                NewStep(
+                    producerStepId,
+                    ProcessRuntimeStepStatus.Pending,
+                    producedArtifacts: [producedArtifactSlotId]),
                 NewStep(
                     consumerStepId,
                     ProcessRuntimeStepStatus.Pending,
@@ -448,7 +451,20 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             [],
             [],
             new HashSet<ArtifactSlotId>(),
-            observedAtUtc);
+            observedAtUtc)
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    consumerStepId,
+                    producedArtifactSlotId,
+                    ProcessArtifactInputAvailability.Expected,
+                    producerStepId,
+                    ArtifactId: null,
+                    ContentHash: string.Empty,
+                    ConnectionHash: "sha256:producer-consumer-artifact")
+            ]
+        };
         var stateStore = new InMemoryRuntimeStateStore(initialState);
         var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
         var strategyResolver = new RecordingStrategyFactoryResolver(
@@ -476,6 +492,14 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(
             [producerStepId, consumerStepId],
             strategyResolver.ExecutionContexts.Select(context => context.StepId!.Value).ToArray());
+        Assert.Contains(
+            strategyResolver.ExecutionContexts[0].StepContract.ExpectedProducedArtifacts,
+            artifact => artifact.SlotId == producedArtifactSlotId);
+        Assert.Contains(
+            strategyResolver.ExecutionContexts[1].StepContract.RequiredArtifacts,
+            artifact => artifact.SlotId == producedArtifactSlotId &&
+                        artifact.Availability == ProcessArtifactInputAvailability.Available &&
+                        artifact.ArtifactId == producedArtifact.ArtifactId);
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
@@ -747,7 +771,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_retries_retryable_adapter_contract_violation_without_manager_block()
+    public async Task ExecuteReady_blocks_retryable_adapter_contract_violation_for_manager_review()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -778,39 +802,32 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
-        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
-        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(2, strategyResolver.ExecutionCount);
+        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
+        Assert.Equal(1, strategyResolver.ExecutionCount);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
-                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready);
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
+                       receipt.RecoveryDecision is
+                       {
+                           DecisionKind: ProcessRecoveryDecisionKind.ManagerRequired,
+                           RouteKind: ProcessRecoveryRouteKind.ManagerAction
+                       });
         Assert.Contains(
-            stateStore.State.AppliedResults,
-            receipt => receipt.Outcome == StrategyOutcome.Succeeded &&
-                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Completed);
-        Assert.Contains(
-            "Runtime automatic rework instruction",
+            "Runtime manager recovery instruction",
             assignmentStore.Assignments.Single().Prompt,
             StringComparison.Ordinal);
         Assert.Contains(
-            "If a diagnostic names a missing required tool receipt and no successful prior receipt for this same process step exists",
+            "must be reviewed by the process manager",
             assignmentStore.Assignments.Single().Prompt,
             StringComparison.Ordinal);
         Assert.Contains(
-            "For structured workspace tool arguments such as path, workingDirectory, and outputPaths, use grounded workspace refs or external-target aliases",
+            AdapterContractRetryDiagnosticSummary,
             assignmentStore.Assignments.Single().Prompt,
             StringComparison.Ordinal);
         Assert.Contains(
-            "If a diagnostic names an ungrounded path-like ref, overwrite the managed artifact and remove every named ungrounded ref",
-            assignmentStore.Assignments.Single().Prompt,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Do not satisfy a diagnostic by only rewriting the managed summary",
-            assignmentStore.Assignments.Single().Prompt,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
     }
@@ -953,7 +970,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_blocks_repeated_identical_automatic_adapter_retry_before_global_attempt_budget()
+    public async Task ExecuteReady_blocks_adapter_manager_result_even_with_prior_retry_receipts()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -992,17 +1009,17 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
                        receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
-                       !string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Contains($"Last automatic retry reason: {AdapterContractRetryDiagnosticSummary}", StringComparison.Ordinal));
+            diagnostic => diagnostic.Contains(AdapterContractRetryDiagnosticSummary, StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task ExecuteReady_blocks_repeated_automatic_adapter_retry_even_when_result_hash_changes()
+    public async Task ExecuteReady_blocks_adapter_manager_result_when_result_hash_changes()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1046,17 +1063,17 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
                        receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
-                       !string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Contains($"Last automatic retry reason: {AdapterContractRetryDiagnosticSummary}", StringComparison.Ordinal));
+            diagnostic => diagnostic.Contains(AdapterContractRetryDiagnosticSummary, StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task ExecuteReady_allows_repeated_transient_execution_retry_to_recover_before_global_attempt_budget()
+    public async Task ExecuteReady_blocks_transient_execution_manager_result_before_global_attempt_budget()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1091,20 +1108,16 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
-        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
-        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(2, strategyResolver.ExecutionCount);
+        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
+        Assert.Equal(1, strategyResolver.ExecutionCount);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
-                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
                        string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
         Assert.Contains(
-            stateStore.State.AppliedResults,
-            receipt => receipt.Outcome == StrategyOutcome.Succeeded &&
-                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Completed);
-        Assert.DoesNotContain(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
     }
@@ -1158,13 +1171,13 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
                        receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
-                       !string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Contains($"Last automatic retry reason: {AgentTransientExecutionRetryDiagnosticSummary}", StringComparison.Ordinal));
+            diagnostic => diagnostic.Contains(AgentTransientExecutionRetryDiagnosticSummary, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -1269,6 +1282,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         int attemptNumber = 0,
         IReadOnlyList<ProcessStepInstanceId>? dependencies = null,
         IReadOnlyList<ArtifactSlotId>? requiredArtifacts = null,
+        IReadOnlyList<ArtifactSlotId>? producedArtifacts = null,
+        IReadOnlyList<string>? requiredRuntimeToolNames = null,
         DispatchClaimToken? activeClaimToken = null)
     {
         return new ProcessRuntimeStepState(
@@ -1280,7 +1295,11 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             dependencies?.ToHashSet() ?? new HashSet<ProcessStepInstanceId>(),
             requiredArtifacts?.ToHashSet() ?? new HashSet<ArtifactSlotId>(),
             activeClaimToken,
-            null);
+            null)
+        {
+            ProducedArtifactSlots = producedArtifacts?.ToHashSet() ?? new HashSet<ArtifactSlotId>(),
+            RequiredRuntimeToolNames = requiredRuntimeToolNames ?? []
+        };
     }
 
     private static IReadOnlyList<StrategyResultReceipt> NewSubmittedResults(

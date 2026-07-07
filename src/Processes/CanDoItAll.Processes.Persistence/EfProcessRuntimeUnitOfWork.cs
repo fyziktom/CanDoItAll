@@ -164,6 +164,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             .Include(state => state.Claims)
             .Include(state => state.ResultReceipts)
             .Include(state => state.AvailableArtifactSlots)
+            .Include(state => state.ConnectedInputArtifacts)
             .SingleOrDefaultAsync(state => state.RunId == runId, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -210,6 +211,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         dbContext.DispatchClaims.RemoveRange(existing.Claims);
         dbContext.StrategyResultReceipts.RemoveRange(existing.ResultReceipts);
         dbContext.AvailableArtifactSlots.RemoveRange(existing.AvailableArtifactSlots);
+        dbContext.RuntimeInputArtifacts.RemoveRange(existing.ConnectedInputArtifacts);
 
         existing.RootRunId = state.RootRunId.Value;
         existing.PlanId = state.PlanId.Value;
@@ -222,12 +224,14 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         existing.Claims.Clear();
         existing.ResultReceipts.Clear();
         existing.AvailableArtifactSlots.Clear();
+        existing.ConnectedInputArtifacts.Clear();
 
         var replacement = ProcessPersistenceMappers.ToEntity(state);
         existing.Steps.AddRange(replacement.Steps);
         existing.Claims.AddRange(replacement.Claims);
         existing.ResultReceipts.AddRange(replacement.ResultReceipts);
         existing.AvailableArtifactSlots.AddRange(replacement.AvailableArtifactSlots);
+        existing.ConnectedInputArtifacts.AddRange(replacement.ConnectedInputArtifacts);
     }
 
     private static void EnsureCurrentStateMatchesOriginal(
@@ -243,7 +247,8 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             existing.Steps.Count != originalState.Steps.Count ||
             existing.Claims.Count != originalState.Claims.Count ||
             existing.ResultReceipts.Count != originalState.AppliedResults.Count ||
-            existing.AvailableArtifactSlots.Count != originalState.AvailableArtifactSlots.Count)
+            existing.AvailableArtifactSlots.Count != originalState.AvailableArtifactSlots.Count ||
+            existing.ConnectedInputArtifacts.Count != originalState.ConnectedInputArtifacts.Count)
         {
             throw new ProcessRuntimeOptimisticConcurrencyException(
                 originalState.RunId,

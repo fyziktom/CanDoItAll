@@ -148,7 +148,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                 .ExecuteRunAsync(
                     new ExecutionRunRequest(
                         agentId,
-                        assignment.Prompt,
+                        ProcessStepContractPromptBuilder.Build(assignment.Prompt, request.StepContract),
                         Context: new ExecutionInvocationContext(
                             SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
                             SourceId: assignment.StepKey,

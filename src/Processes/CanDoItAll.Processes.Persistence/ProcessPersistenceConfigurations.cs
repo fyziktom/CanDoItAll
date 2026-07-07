@@ -50,6 +50,11 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
             .WithOne(slot => slot.RuntimeState)
             .HasForeignKey(slot => slot.RunId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(state => state.ConnectedInputArtifacts)
+            .WithOne(artifact => artifact.RuntimeState)
+            .HasForeignKey(artifact => artifact.RunId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -92,6 +97,8 @@ internal sealed class ProcessRuntimeStepEntityConfiguration : IEntityTypeConfigu
         builder.Property(step => step.Status).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(step => step.DependencyStepIds).IsRequired();
         builder.Property(step => step.RequiredArtifactSlotIds).IsRequired();
+        builder.Property(step => step.ProducedArtifactSlotIds).IsRequired();
+        builder.Property(step => step.RequiredRuntimeToolNamesJson).IsRequired();
         builder.HasIndex(step => new { step.RunId, step.Status });
         builder.HasIndex(step => new { step.RunId, step.ActiveClaimToken });
     }
@@ -133,6 +140,27 @@ internal sealed class ProcessRuntimeAvailableArtifactSlotEntityConfiguration : I
     {
         builder.ToTable("process_runtime_available_artifact_slots");
         builder.HasKey(slot => new { slot.RunId, slot.SlotId });
+    }
+}
+
+internal sealed class ProcessRuntimeInputArtifactEntityConfiguration : IEntityTypeConfiguration<ProcessRuntimeInputArtifactEntity>
+{
+    public void Configure(EntityTypeBuilder<ProcessRuntimeInputArtifactEntity> builder)
+    {
+        builder.ToTable("process_runtime_input_artifacts");
+        builder.HasKey(artifact => new
+        {
+            artifact.RunId,
+            artifact.ConsumerStepInstanceId,
+            artifact.RequiredSlotId,
+            artifact.ConnectionHash
+        });
+        builder.Property(artifact => artifact.Availability).HasConversion<string>().HasMaxLength(64).IsRequired();
+        builder.Property(artifact => artifact.ContentHash).HasMaxLength(128).IsRequired();
+        builder.Property(artifact => artifact.ConnectionHash).HasMaxLength(128).IsRequired();
+        builder.HasIndex(artifact => new { artifact.RunId, artifact.ConsumerStepInstanceId, artifact.Availability });
+        builder.HasIndex(artifact => new { artifact.RunId, artifact.RequiredSlotId });
+        builder.HasIndex(artifact => new { artifact.RunId, artifact.ProducerStepInstanceId });
     }
 }
 

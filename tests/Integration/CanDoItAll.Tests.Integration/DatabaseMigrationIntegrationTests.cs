@@ -22,6 +22,12 @@ public sealed class MigrationBootstrapIntegrationTests
     private const string ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId = "20260617131500_ProcessRuntimeEventGlobalSequenceIdentityRepair";
     private const string ProcessRuntimeAssignmentRoleIdentityMigrationId = "20260618103000_ProcessRuntimeAssignmentRoleIdentity";
     private const string RemoveUnusedValidationActivityAutomationModulesMigrationId = "20260621212712_RemoveUnusedValidationActivityAutomationModules";
+    private const string GenericMemoryProviderRuntimeMigrationId = "20260705163628_GenericMemoryProviderRuntime";
+    private const string RetireLegacyCognitiveMemoryMainDbModelMigrationId = "20260706015654_RetireLegacyCognitiveMemoryMainDbModel";
+    private const string IncludeCognitiveMemoryModuleModelMigrationId = "20260707110549_IncludeCognitiveMemoryModuleModel";
+    private const string ProcessRuntimeAssignmentCapabilityScopeMigrationId = "20260707134848_ProcessRuntimeAssignmentCapabilityScope";
+    private const string ProcessStrategyResultReceiptLineageMigrationId = "20260707195705_ProcessStrategyResultReceiptLineage";
+    private const string ProcessRuntimeInputArtifactContractsMigrationId = "20260707222506_ProcessRuntimeInputArtifactContracts";
     private static readonly string[] ExpectedPostgreSqlMigrations =
     [
         InitialPostgreSqlBaselineMigrationId,
@@ -37,7 +43,13 @@ public sealed class MigrationBootstrapIntegrationTests
         ProcessRuntimeAssignmentLaunchVariablesMigrationId,
         ProcessRuntimeEventGlobalSequenceIdentityRepairMigrationId,
         ProcessRuntimeAssignmentRoleIdentityMigrationId,
-        RemoveUnusedValidationActivityAutomationModulesMigrationId
+        RemoveUnusedValidationActivityAutomationModulesMigrationId,
+        GenericMemoryProviderRuntimeMigrationId,
+        RetireLegacyCognitiveMemoryMainDbModelMigrationId,
+        IncludeCognitiveMemoryModuleModelMigrationId,
+        ProcessRuntimeAssignmentCapabilityScopeMigrationId,
+        ProcessStrategyResultReceiptLineageMigrationId,
+        ProcessRuntimeInputArtifactContractsMigrationId
     ];
 
     [Fact]

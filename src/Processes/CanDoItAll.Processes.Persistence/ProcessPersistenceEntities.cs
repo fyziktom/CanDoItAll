@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Persistence;
@@ -50,6 +51,8 @@ public sealed class ProcessRuntimeStateEntity
     public List<ProcessStrategyResultReceiptEntity> ResultReceipts { get; } = [];
 
     public List<ProcessRuntimeAvailableArtifactSlotEntity> AvailableArtifactSlots { get; } = [];
+
+    public List<ProcessRuntimeInputArtifactEntity> ConnectedInputArtifacts { get; } = [];
 }
 
 public sealed class ProcessRuntimeStepAssignmentEntity
@@ -117,6 +120,10 @@ public sealed class ProcessRuntimeStepEntity
 
     public string RequiredArtifactSlotIds { get; set; } = string.Empty;
 
+    public string ProducedArtifactSlotIds { get; set; } = string.Empty;
+
+    public string RequiredRuntimeToolNamesJson { get; set; } = "[]";
+
     public Guid? ActiveClaimToken { get; set; }
 
     public Guid? CompletedResultKey { get; set; }
@@ -179,6 +186,27 @@ public sealed class ProcessRuntimeAvailableArtifactSlotEntity
     public Guid RunId { get; set; }
 
     public Guid SlotId { get; set; }
+
+    public ProcessRuntimeStateEntity? RuntimeState { get; set; }
+}
+
+public sealed class ProcessRuntimeInputArtifactEntity
+{
+    public Guid RunId { get; set; }
+
+    public Guid ConsumerStepInstanceId { get; set; }
+
+    public Guid RequiredSlotId { get; set; }
+
+    public ProcessArtifactInputAvailability Availability { get; set; }
+
+    public Guid? ProducerStepInstanceId { get; set; }
+
+    public Guid? ArtifactId { get; set; }
+
+    public string ContentHash { get; set; } = string.Empty;
+
+    public string ConnectionHash { get; set; } = string.Empty;
 
     public ProcessRuntimeStateEntity? RuntimeState { get; set; }
 }

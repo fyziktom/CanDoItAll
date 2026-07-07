@@ -227,6 +227,9 @@ public sealed class AppDatabaseBootstrapper(
     private const string GenericMemoryProviderRuntimeMigrationId = "20260705163628_GenericMemoryProviderRuntime";
     private const string RetireLegacyCognitiveMemoryMainDbModelMigrationId = "20260706015654_RetireLegacyCognitiveMemoryMainDbModel";
     private const string IncludeCognitiveMemoryModuleModelMigrationId = "20260707110549_IncludeCognitiveMemoryModuleModel";
+    private const string ProcessRuntimeAssignmentCapabilityScopeMigrationId = "20260707134848_ProcessRuntimeAssignmentCapabilityScope";
+    private const string ProcessStrategyResultReceiptLineageMigrationId = "20260707195705_ProcessStrategyResultReceiptLineage";
+    private const string ProcessRuntimeInputArtifactContractsMigrationId = "20260707222506_ProcessRuntimeInputArtifactContracts";
     private static readonly string[] CurrentPostgreSqlMigrationIds =
     [
         InitialPostgreSqlBaselineMigrationId,
@@ -245,7 +248,10 @@ public sealed class AppDatabaseBootstrapper(
         RemoveUnusedValidationActivityAutomationModulesMigrationId,
         GenericMemoryProviderRuntimeMigrationId,
         RetireLegacyCognitiveMemoryMainDbModelMigrationId,
-        IncludeCognitiveMemoryModuleModelMigrationId
+        IncludeCognitiveMemoryModuleModelMigrationId,
+        ProcessRuntimeAssignmentCapabilityScopeMigrationId,
+        ProcessStrategyResultReceiptLineageMigrationId,
+        ProcessRuntimeInputArtifactContractsMigrationId
     ];
     private static readonly string[] BaselineSentinelTables =
     [
@@ -254,8 +260,26 @@ public sealed class AppDatabaseBootstrapper(
     ];
     private static readonly PostgreSqlColumnRequirement[] MergedBaselineColumnRequirements =
     [
+        new("process_runtime_step_assignments", ["CapabilityScopeJson"]),
+        new("process_strategy_result_receipts", ["DiagnosticsJson", "ProducedArtifactsJson", "RecoveryDecisionJson"]),
+        new("process_runtime_steps", ["ProducedArtifactSlotIds", "RequiredRuntimeToolNamesJson"]),
+        new("process_runtime_input_artifacts", [
+            "RunId",
+            "ConsumerStepInstanceId",
+            "RequiredSlotId",
+            "ConnectionHash",
+            "Availability",
+            "ProducerStepInstanceId",
+            "ArtifactId",
+            "ContentHash"
+        ])
     ];
-    private static readonly string[] MergedBaselineIndexRequirements = [];
+    private static readonly string[] MergedBaselineIndexRequirements =
+    [
+        "IX_process_runtime_input_artifacts_RunId_ConsumerStepInstanceI~",
+        "IX_process_runtime_input_artifacts_RunId_ProducerStepInstanceId",
+        "IX_process_runtime_input_artifacts_RunId_RequiredSlotId"
+    ];
 
     private readonly record struct PostgreSqlColumnRequirement(string TableName, string[] ColumnNames);
 

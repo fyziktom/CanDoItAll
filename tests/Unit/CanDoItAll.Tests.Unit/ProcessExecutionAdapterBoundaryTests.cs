@@ -34,16 +34,37 @@ public sealed class ProcessExecutionAdapterBoundaryTests
         var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(driver, ProcessDriverLayer.Platform);
         var factory = Assert.Single(package.StrategyFactories);
         var binding = NewBinding(package.Descriptor.DriverId, factory.Descriptor);
+        var requiredSlotId = ArtifactSlotId.New();
+        var producedSlotId = ArtifactSlotId.New();
+        var stepContract = new ProcessStepExecutionContract(
+            [
+                new RequiredArtifactInputRef(
+                    requiredSlotId,
+                    ProcessArtifactInputAvailability.Available,
+                    ProcessStepInstanceId.New(),
+                    ArtifactInstanceId.New(),
+                    "sha256:artifact",
+                    "sha256:connected-input")
+            ],
+            [new ExpectedProducedArtifactRef(producedSlotId)],
+            ["workspace_pwsh_run_script"],
+            "sha256:contract");
 
         var strategy = await factory.CreateAsync(binding);
         var result = await strategy.ExecuteAsync(new ProcessStrategyExecutionContext(
             ProcessRunId.New(),
             ProcessStepInstanceId.New(),
             binding,
-            binding.Inputs));
+            binding.Inputs,
+            stepContract));
 
         var request = Assert.Single(driver.Requests);
         Assert.Equal(ProcessExecutionAdapterKind.Workflow, request.Kind);
+        Assert.Equal(stepContract, request.StepContract);
+        Assert.Contains(
+            request.ContextFacets,
+            facet => facet.Key == new ProcessExecutionContextFacetKey("process.step.contract") &&
+                     facet.ValueHash == stepContract.ContractHash);
         Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(StrategyDiagnosticSensitivity.Restricted, diagnostic.Sensitivity);

@@ -76,7 +76,20 @@ public sealed class ProcessRuntimeEngineTests
                 ProcessRuntimeStepStatus.Pending,
                 dependencies: new HashSet<ProcessStepInstanceId> { StartStepId },
                 requiredArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId }),
-            availableArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId });
+            availableArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId }) with
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    ActivityStepId,
+                    ArtifactSlotId,
+                    ProcessArtifactInputAvailability.Available,
+                    StartStepId,
+                    ArtifactInstanceId,
+                    "sha256:artifact",
+                    "sha256:start-to-activity-artifact")
+            ]
+        };
 
         var result = await engine.ScheduleReadyAsync(state, Context());
         var readyStep = result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId);
@@ -88,6 +101,31 @@ public sealed class ProcessRuntimeEngineTests
         var workItem = Assert.Single(readyWork);
         Assert.Equal(ActivityStepId, workItem.StepInstanceId);
         Assert.Equal(Binding.StrategyId, workItem.StrategyBinding.StrategyId);
+    }
+
+    [Fact]
+    public async Task Scheduler_keeps_pending_step_waiting_when_slot_exists_without_connected_input_receipt()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(
+                ProcessRuntimeStepStatus.Pending,
+                dependencies: new HashSet<ProcessStepInstanceId> { StartStepId },
+                requiredArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId }),
+            availableArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId });
+
+        var result = await engine.ScheduleReadyAsync(state, Context());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Pending,
+            result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
+        Assert.DoesNotContain(
+            result.Events,
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
     }
 
     [Fact]
@@ -551,6 +589,113 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Successful_result_missing_expected_output_blocks_with_finalization_diagnostic()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token) with
+            {
+                ProducedArtifactSlots = new HashSet<ArtifactSlotId> { ArtifactSlotId }
+            },
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                SucceededResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
+        Assert.Equal(StrategyOutcome.NeedsManager, receipt.Outcome);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, receipt.AppliedStepStatus);
+        Assert.Contains(receipt.Diagnostics, diagnostic => diagnostic.Code == "process.runtime.missing_expected_output_artifact");
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingArtifact, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal(ActivityStepId, receipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
+    public async Task Missing_required_input_routes_recovery_to_upstream_producer()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(
+                ProcessRuntimeStepStatus.Running,
+                requiredArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId },
+                activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]) with
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    ActivityStepId,
+                    ArtifactSlotId,
+                    ProcessArtifactInputAvailability.Expected,
+                    StartStepId,
+                    ArtifactId: null,
+                    ContentHash: string.Empty,
+                    ConnectionHash: "sha256:start-to-activity-expected")
+            ]
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                MissingInputNeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        Assert.True(result.Succeeded);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingArtifact, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal(StartStepId, receipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
     public async Task Rework_request_reactivates_failed_run_and_requeues_failed_step()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -820,6 +965,34 @@ public sealed class ProcessRuntimeEngineTests
             [],
             [],
             "sha256:needs-manager-result");
+    }
+
+    private static StrategyResultEnvelope MissingInputNeedsManagerResult()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [new RequestedArtifactRef(ArtifactSlotId, "sha256:requested-input")],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("process.runtime.required_artifact_missing"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:missing-input",
+                    "Required input artifact is missing.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new ManagerSignal(
+                    new ManagerSignalCode("process.runtime.required_artifact_missing"),
+                    "sha256:missing-input",
+                    "Required input artifact is missing.")
+            ],
+            "sha256:missing-input-result");
     }
 
     private sealed class RecordingUnitOfWork : IProcessRuntimeUnitOfWork

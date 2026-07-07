@@ -37,6 +37,12 @@ public sealed class ProcessPersistenceStoreTests
         Assert.NotNull(loaded);
         Assert.Equal(ProcessRuntimeStatus.Completed, loaded.Status);
         Assert.Contains(loaded.AvailableArtifactSlots, slot => slot == RequiredArtifactSlotId);
+        var loadedStep = Assert.Single(loaded.Steps);
+        Assert.Contains(loadedStep.ProducedArtifactSlots, slot => slot == RequiredArtifactSlotId);
+        Assert.Contains(loadedStep.RequiredRuntimeToolNames, toolName => toolName == "runtime-tool");
+        var loadedInputArtifact = Assert.Single(loaded.ConnectedInputArtifacts);
+        Assert.Equal(ProcessArtifactInputAvailability.Available, loadedInputArtifact.Availability);
+        Assert.Equal(RequiredArtifactSlotId, loadedInputArtifact.RequiredSlotId);
     }
 
     [Fact]
@@ -75,7 +81,11 @@ public sealed class ProcessPersistenceStoreTests
                 ProcessRecoveryDecisionKind.ManagerRequired,
                 "process.runtime.test_blocked",
                 "unit-test-policy",
-                "Unit test recovery decision."));
+                "Unit test recovery decision.")
+            {
+                RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
+                ResponsibleStepInstanceId = stepId
+            });
         var state = request.Mutation.State with
         {
             AppliedResults = [receipt]
@@ -94,6 +104,8 @@ public sealed class ProcessPersistenceStoreTests
         Assert.Equal(RequiredArtifactSlotId, Assert.Single(loadedReceipt.ProducedArtifacts).SlotId);
         Assert.NotNull(loadedReceipt.RecoveryDecision);
         Assert.Equal(ProcessFailureCategory.MissingArtifact, loadedReceipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, loadedReceipt.RecoveryDecision.RouteKind);
+        Assert.Equal(stepId, loadedReceipt.RecoveryDecision.ResponsibleStepInstanceId);
     }
 
     [Fact]
@@ -602,6 +614,10 @@ public sealed class ProcessPersistenceStoreTests
                     new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
                     null,
                     StrategyResultIdempotencyKey.New())
+                {
+                    ProducedArtifactSlots = new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
+                    RequiredRuntimeToolNames = ["runtime-tool"]
+                }
             ],
             [],
             [
@@ -614,7 +630,20 @@ public sealed class ProcessPersistenceStoreTests
                     "hash:result")
             ],
             new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
-            updatedAtUtc);
+            updatedAtUtc)
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    stepId,
+                    RequiredArtifactSlotId,
+                    ProcessArtifactInputAvailability.Available,
+                    ProducerStepInstanceId: null,
+                    ArtifactId: ArtifactInstanceId.New(),
+                    ContentHash: "hash:artifact",
+                    ConnectionHash: "hash:connected-input")
+            ]
+        };
     }
 
     private static ProcessRuntimeEventEnvelope NewEvent(

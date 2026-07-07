@@ -1327,18 +1327,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
         ProcessRuntimeStateSnapshot state,
         ProcessRuntimeStepState step)
     {
-        foreach (var dependencyId in step.DependencyStepIds)
-        {
-            var dependency = state.Steps.FirstOrDefault(candidate => candidate.StepInstanceId == dependencyId);
-            if (dependency is null ||
-                !ProcessRuntimeTerminalStates.IsStepTerminal(dependency.Status) ||
-                dependency.Status is ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled)
-            {
-                return false;
-            }
-        }
-
-        return step.RequiredArtifactSlots.All(state.AvailableArtifactSlots.Contains);
+        return ProcessRuntimeArtifactContracts.DependenciesSatisfied(state, step) &&
+               ProcessRuntimeArtifactContracts.RequiredArtifactsAvailable(state, step);
     }
 
     private static ProcessRuntimeOperatorActionProjection CreateOperatorActionProjection(

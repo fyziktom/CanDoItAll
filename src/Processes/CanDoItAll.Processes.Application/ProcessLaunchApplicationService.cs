@@ -593,7 +593,11 @@ public sealed class ProcessLaunchApplicationService(
                 dependencies,
                 assignment?.RequiredArtifactSlotIds.ToHashSet() ?? [],
                 ActiveClaimToken: null,
-                CompletedResultKey: null));
+                CompletedResultKey: null)
+            {
+                ProducedArtifactSlots = assignment?.ProducedArtifactSlotIds.ToHashSet() ?? [],
+                RequiredRuntimeToolNames = assignment is null ? [] : ResolveLaunchPlanRequiredRuntimeToolNames(assignment)
+            });
         }
 
         return new ProcessRuntimeStateSnapshot(
@@ -606,7 +610,12 @@ public sealed class ProcessLaunchApplicationService(
             Claims: [],
             AppliedResults: [],
             plan.ArtifactPlan.InitialLedgerEntries.Select(entry => entry.SlotId).ToHashSet(),
-            nowUtc);
+            nowUtc)
+        {
+            ConnectedInputArtifacts = ProcessRuntimeArtifactContracts.BuildInitialInputArtifacts(
+                assignments,
+                plan.ArtifactPlan.InitialLedgerEntries)
+        };
     }
 
     private static ProcessLaunchPlanView CreateLaunchPlanView(

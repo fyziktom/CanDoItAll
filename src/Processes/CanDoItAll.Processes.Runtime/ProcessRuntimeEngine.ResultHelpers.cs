@@ -14,11 +14,6 @@ public sealed partial class ProcessRuntimeEngine
 
     private static ProcessRuntimeStepStatus ToStepStatus(StrategyResultEnvelope result)
     {
-        if (IsAutomaticallyRetryableManagerResult(result))
-        {
-            return ProcessRuntimeStepStatus.Ready;
-        }
-
         return result.Outcome switch
         {
             StrategyOutcome.Succeeded => ProcessRuntimeStepStatus.Completed,
@@ -29,19 +24,121 @@ public sealed partial class ProcessRuntimeEngine
         };
     }
 
-    private static bool IsAutomaticallyRetryableManagerResult(StrategyResultEnvelope result)
+    private static StrategyResultEnvelope EnforceStepFinalizationContract(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step,
+        StrategyResultEnvelope result)
     {
-        return result.Outcome == StrategyOutcome.NeedsManager &&
-               result.Diagnostics.Count > 0 &&
-               result.Diagnostics.All(IsAutomaticallyRetryableDiagnostic) &&
-               result.ManagerSignals.Any(signal => signal.Code.Value.StartsWith("process.adapter.", StringComparison.Ordinal));
+        if (result.Outcome != StrategyOutcome.Succeeded)
+        {
+            return result;
+        }
+
+        var diagnostics = new List<StrategyDiagnosticRef>();
+        var requestedArtifacts = result.RequestedArtifacts.ToList();
+        var missingInputSlots = ResolveMissingInputSlots(state, step);
+        foreach (var slotId in missingInputSlots)
+        {
+            var evidenceHash = ComputePayloadHash($"missing-input:{state.RunId}:{step.StepInstanceId}:{slotId}:{result.ResultHash}");
+            AddRequestedArtifact(requestedArtifacts, slotId, evidenceHash);
+            diagnostics.Add(new StrategyDiagnosticRef(
+                new StrategyDiagnosticCode("process.runtime.missing_required_input_artifact"),
+                StrategyDiagnosticSensitivity.Normal,
+                evidenceHash,
+                $"Step '{step.StepInstanceId}' cannot complete because required input artifact slot '{slotId}' is not available as a connected input receipt.",
+                RestrictedEvidenceReference: null,
+                ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Idempotent));
+        }
+
+        var missingOutputSlots = ResolveMissingOutputSlots(step, result);
+        foreach (var slotId in missingOutputSlots)
+        {
+            var evidenceHash = ComputePayloadHash($"missing-output:{state.RunId}:{step.StepInstanceId}:{slotId}:{result.ResultHash}");
+            AddRequestedArtifact(requestedArtifacts, slotId, evidenceHash);
+            diagnostics.Add(new StrategyDiagnosticRef(
+                new StrategyDiagnosticCode("process.runtime.missing_expected_output_artifact"),
+                StrategyDiagnosticSensitivity.Normal,
+                evidenceHash,
+                $"Step '{step.StepInstanceId}' reported success without producing required artifact slot '{slotId}'.",
+                RestrictedEvidenceReference: null,
+                ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Idempotent));
+        }
+
+        if (diagnostics.Count == 0)
+        {
+            return result;
+        }
+
+        var resultHash = ComputePayloadHash(
+            $"finalization:{state.RunId}:{step.StepInstanceId}:{result.ResultHash}:{string.Join(';', diagnostics.Select(item => item.EvidenceHash))}");
+        return result with
+        {
+            Outcome = StrategyOutcome.NeedsManager,
+            RequestedArtifacts = requestedArtifacts,
+            Diagnostics = [.. result.Diagnostics, .. diagnostics],
+            ManagerSignals =
+            [
+                .. result.ManagerSignals,
+                new ManagerSignal(
+                    new ManagerSignalCode("process.runtime.step_finalization_incomplete"),
+                    resultHash,
+                    "The step result did not satisfy its required input/output artifact contract and requires manager review.")
+            ],
+            ResultHash = resultHash
+        };
     }
 
-    private static bool IsAutomaticallyRetryableDiagnostic(StrategyDiagnosticRef diagnostic)
+    private static IReadOnlyList<ArtifactSlotId> ResolveMissingInputSlots(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step)
     {
-        return diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.SafeToRetry &&
-               diagnostic.Idempotency == ProcessDiagnosticIdempotencyClassification.Idempotent &&
-               diagnostic.Code.Value.StartsWith("process.adapter.", StringComparison.Ordinal);
+        if (step.RequiredArtifactSlots.Count == 0)
+        {
+            return [];
+        }
+
+        var contract = ProcessRuntimeArtifactContracts.BuildStepContract(state, step);
+        return step.RequiredArtifactSlots
+            .Where(slotId => !contract.RequiredArtifacts.Any(artifact =>
+                artifact.SlotId == slotId &&
+                artifact.Availability == ProcessArtifactInputAvailability.Available &&
+                artifact.ArtifactId is not null &&
+                !string.IsNullOrWhiteSpace(artifact.ContentHash)))
+            .OrderBy(slotId => slotId.Value)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ArtifactSlotId> ResolveMissingOutputSlots(
+        ProcessRuntimeStepState step,
+        StrategyResultEnvelope result)
+    {
+        if (step.ProducedArtifactSlots.Count == 0)
+        {
+            return [];
+        }
+
+        var producedSlots = result.ProducedArtifacts
+            .Select(artifact => artifact.SlotId)
+            .ToHashSet();
+        return step.ProducedArtifactSlots
+            .Where(slotId => !producedSlots.Contains(slotId))
+            .OrderBy(slotId => slotId.Value)
+            .ToArray();
+    }
+
+    private static void AddRequestedArtifact(
+        IList<RequestedArtifactRef> requestedArtifacts,
+        ArtifactSlotId slotId,
+        string requestHash)
+    {
+        if (requestedArtifacts.Any(artifact => artifact.SlotId == slotId))
+        {
+            return;
+        }
+
+        requestedArtifacts.Add(new RequestedArtifactRef(slotId, requestHash));
     }
 
     private static IReadOnlyList<StrategyResultDiagnosticReceipt> BuildDiagnosticReceipts(
@@ -105,30 +202,29 @@ public sealed partial class ProcessRuntimeEngine
 
     private static ProcessRecoveryDecisionReceipt? BuildRecoveryDecision(
         StrategyResultEnvelope result,
-        ProcessRuntimeStepStatus appliedStepStatus)
+        ProcessRuntimeStepStatus appliedStepStatus,
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step)
     {
         var primaryDiagnosticCode = result.Diagnostics.FirstOrDefault()?.Code.Value ?? string.Empty;
-        if (IsAutomaticallyRetryableManagerResult(result))
-        {
-            return new ProcessRecoveryDecisionReceipt(
-                ClassifyFailureCategory(primaryDiagnosticCode),
-                ProcessRecoveryDecisionKind.SafeRetry,
-                primaryDiagnosticCode,
-                "process.adapter.safe-idempotent-retry",
-                "All strategy diagnostics were marked safe to retry, idempotent, and emitted by the process adapter.");
-        }
 
         if (appliedStepStatus is ProcessRuntimeStepStatus.Blocked)
         {
             var sourceCode = string.IsNullOrWhiteSpace(primaryDiagnosticCode)
                 ? MissingBlockedDiagnosticCode
                 : primaryDiagnosticCode;
+            var failureCategory = ClassifyFailureCategory(sourceCode);
+            var routeKind = ResolveRecoveryRouteKind(state, step, result, failureCategory, out var responsibleStepId);
             return new ProcessRecoveryDecisionReceipt(
-                ClassifyFailureCategory(sourceCode),
+                failureCategory,
                 ProcessRecoveryDecisionKind.ManagerRequired,
                 sourceCode,
-                "process.manager-review-required",
-                "The strategy result blocked the step and requires manager or operator decision before rework.");
+                ResolveRecoveryPolicy(routeKind),
+                ResolveRecoveryReason(routeKind))
+            {
+                RouteKind = routeKind,
+                ResponsibleStepInstanceId = responsibleStepId
+            };
         }
 
         if (appliedStepStatus is ProcessRuntimeStepStatus.Failed)
@@ -141,10 +237,70 @@ public sealed partial class ProcessRuntimeEngine
                 ProcessRecoveryDecisionKind.TerminalBlocked,
                 sourceCode,
                 "process.terminal-failure",
-                "The strategy result failed the step and no automatic recovery decision was applied.");
+                "The strategy result failed the step and no automatic recovery decision was applied.")
+            {
+                RouteKind = ProcessRecoveryRouteKind.TerminalBlock,
+                ResponsibleStepInstanceId = step.StepInstanceId
+            };
         }
 
         return null;
+    }
+
+    private static ProcessRecoveryRouteKind ResolveRecoveryRouteKind(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step,
+        StrategyResultEnvelope result,
+        ProcessFailureCategory failureCategory,
+        out ProcessStepInstanceId? responsibleStepId)
+    {
+        responsibleStepId = null;
+        if (failureCategory == ProcessFailureCategory.MissingArtifact)
+        {
+            responsibleStepId = ProcessRuntimeArtifactContracts.FindResponsibleStepForMissingArtifact(
+                state,
+                step.StepInstanceId,
+                result);
+            if (responsibleStepId is not null && responsibleStepId != step.StepInstanceId)
+            {
+                return ProcessRecoveryRouteKind.UpstreamStepRework;
+            }
+
+            responsibleStepId = step.StepInstanceId;
+            return ProcessRecoveryRouteKind.ManagerAction;
+        }
+
+        responsibleStepId = step.StepInstanceId;
+        return failureCategory switch
+        {
+            ProcessFailureCategory.ChildRunBlocked => ProcessRecoveryRouteKind.ChildRunPropagation,
+            ProcessFailureCategory.PolicyViolation => ProcessRecoveryRouteKind.TemplateRepair,
+            _ => ProcessRecoveryRouteKind.ManagerAction
+        };
+    }
+
+    private static string ResolveRecoveryPolicy(ProcessRecoveryRouteKind routeKind)
+    {
+        return routeKind switch
+        {
+            ProcessRecoveryRouteKind.UpstreamStepRework => "process.upstream-artifact-rework-required",
+            ProcessRecoveryRouteKind.ChildRunPropagation => "process.child-run-manager-review-required",
+            ProcessRecoveryRouteKind.TemplateRepair => "process.template-or-policy-repair-required",
+            ProcessRecoveryRouteKind.TerminalBlock => "process.terminal-failure",
+            _ => "process.manager-review-required"
+        };
+    }
+
+    private static string ResolveRecoveryReason(ProcessRecoveryRouteKind routeKind)
+    {
+        return routeKind switch
+        {
+            ProcessRecoveryRouteKind.UpstreamStepRework => "A required input artifact is still missing; the manager must rework the responsible upstream producer before this step is retried.",
+            ProcessRecoveryRouteKind.ChildRunPropagation => "The step is blocked by child-run state and requires manager review of the child process boundary.",
+            ProcessRecoveryRouteKind.TemplateRepair => "The blocker points to a process policy or template contract and requires manager repair before another execution.",
+            ProcessRecoveryRouteKind.TerminalBlock => "The strategy result failed the step and no automatic recovery decision was applied.",
+            _ => "The strategy result blocked the step and requires manager or operator decision before rework."
+        };
     }
 
     private static ProcessFailureCategory ClassifyFailureCategory(string code)
@@ -219,12 +375,13 @@ public sealed partial class ProcessRuntimeEngine
         ProcessRuntimeStateSnapshot state,
         RuntimeCommandContext context,
         SubmitStrategyResultCommand command,
+        StrategyResultEnvelope result,
         ProcessRuntimeStepStatus stepStatus)
     {
         var events = new List<ProcessRuntimeEventEnvelope>
         {
             CreateEvent(state, context, ProcessRuntimeEventTypes.DispatchClaimCompleted, command.ClaimToken.ToString()),
-            CreateEvent(state, context, ToStepEventType(stepStatus), command.Result.ResultHash)
+            CreateEvent(state, context, ToStepEventType(stepStatus), result.ResultHash)
         };
 
         if (state.Status == ProcessRuntimeStatus.Completed)
@@ -233,11 +390,11 @@ public sealed partial class ProcessRuntimeEngine
         }
         else if (state.Status == ProcessRuntimeStatus.Failed)
         {
-            events.Add(CreateEvent(state, context, ProcessRuntimeEventTypes.ProcessRunFailed, command.Result.ResultHash));
+            events.Add(CreateEvent(state, context, ProcessRuntimeEventTypes.ProcessRunFailed, result.ResultHash));
         }
         else if (state.Status == ProcessRuntimeStatus.Cancelled)
         {
-            events.Add(CreateEvent(state, context, ProcessRuntimeEventTypes.ProcessRunCancelled, command.Result.ResultHash));
+            events.Add(CreateEvent(state, context, ProcessRuntimeEventTypes.ProcessRunCancelled, result.ResultHash));
         }
 
         return events;

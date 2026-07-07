@@ -37,6 +37,8 @@ internal static class ProcessPersistenceMappers
                 AttemptNumber = step.AttemptNumber,
                 DependencyStepIds = JoinGuids(step.DependencyStepIds, id => id.Value),
                 RequiredArtifactSlotIds = JoinGuids(step.RequiredArtifactSlots, id => id.Value),
+                ProducedArtifactSlotIds = JoinGuids(step.ProducedArtifactSlots, id => id.Value),
+                RequiredRuntimeToolNamesJson = SerializeStringList(step.RequiredRuntimeToolNames),
                 ActiveClaimToken = step.ActiveClaimToken?.Value,
                 CompletedResultKey = step.CompletedResultKey?.Value
             });
@@ -85,6 +87,21 @@ internal static class ProcessPersistenceMappers
             });
         }
 
+        foreach (var receipt in state.ConnectedInputArtifacts)
+        {
+            entity.ConnectedInputArtifacts.Add(new ProcessRuntimeInputArtifactEntity
+            {
+                RunId = state.RunId.Value,
+                ConsumerStepInstanceId = receipt.ConsumerStepInstanceId.Value,
+                RequiredSlotId = receipt.RequiredSlotId.Value,
+                Availability = receipt.Availability,
+                ProducerStepInstanceId = receipt.ProducerStepInstanceId?.Value,
+                ArtifactId = receipt.ArtifactId?.Value,
+                ContentHash = receipt.ContentHash,
+                ConnectionHash = receipt.ConnectionHash
+            });
+        }
+
         return entity;
     }
 
@@ -102,7 +119,11 @@ internal static class ProcessPersistenceMappers
                 ParseStepIds(step.DependencyStepIds),
                 ParseArtifactSlotIds(step.RequiredArtifactSlotIds),
                 step.ActiveClaimToken is null ? null : new DispatchClaimToken(step.ActiveClaimToken.Value),
-                step.CompletedResultKey is null ? null : new StrategyResultIdempotencyKey(step.CompletedResultKey.Value)));
+                step.CompletedResultKey is null ? null : new StrategyResultIdempotencyKey(step.CompletedResultKey.Value))
+            {
+                ProducedArtifactSlots = ParseArtifactSlotIds(step.ProducedArtifactSlotIds),
+                RequiredRuntimeToolNames = DeserializeStringList(step.RequiredRuntimeToolNamesJson)
+            });
         }
 
         var claims = new List<DispatchClaimState>(entity.Claims.Count);
@@ -141,6 +162,19 @@ internal static class ProcessPersistenceMappers
             availableSlots.Add(new ArtifactSlotId(slot.SlotId));
         }
 
+        var connectedInputArtifacts = new List<ProcessRuntimeInputArtifactReceipt>(entity.ConnectedInputArtifacts.Count);
+        foreach (var artifact in entity.ConnectedInputArtifacts)
+        {
+            connectedInputArtifacts.Add(new ProcessRuntimeInputArtifactReceipt(
+                new ProcessStepInstanceId(artifact.ConsumerStepInstanceId),
+                new ArtifactSlotId(artifact.RequiredSlotId),
+                artifact.Availability,
+                artifact.ProducerStepInstanceId is null ? null : new ProcessStepInstanceId(artifact.ProducerStepInstanceId.Value),
+                artifact.ArtifactId is null ? null : new ArtifactInstanceId(artifact.ArtifactId.Value),
+                artifact.ContentHash,
+                artifact.ConnectionHash));
+        }
+
         return new ProcessRuntimeStateSnapshot(
             new ProcessRunId(entity.RootRunId),
             new ProcessRunId(entity.RunId),
@@ -151,7 +185,10 @@ internal static class ProcessPersistenceMappers
             claims,
             receipts,
             availableSlots,
-            entity.UpdatedAtUtc);
+            entity.UpdatedAtUtc)
+        {
+            ConnectedInputArtifacts = connectedInputArtifacts
+        };
     }
 
     public static ProcessRuntimeEventEntity ToEventEntity(
@@ -332,6 +369,31 @@ internal static class ProcessPersistenceMappers
         }
     }
 
+    private static string SerializeStringList(IReadOnlyList<string> values)
+        => JsonSerializer.Serialize(
+            values
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
+            ReceiptJsonOptions);
+
+    private static IReadOnlyList<string> DeserializeStringList(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        return JsonSerializer.Deserialize<string[]>(value, ReceiptJsonOptions)?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+    }
+
     private static string SerializeDiagnostics(IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
         => JsonSerializer.Serialize(
             diagnostics.Select(diagnostic => new PersistedStrategyResultDiagnostic(
@@ -402,7 +464,9 @@ internal static class ProcessPersistenceMappers
                     decision.DecisionKind,
                     decision.SourceDiagnosticCode,
                     decision.Policy,
-                    decision.SafeReason),
+                    decision.SafeReason,
+                    decision.RouteKind,
+                    decision.ResponsibleStepInstanceId?.Value),
                 ReceiptJsonOptions);
     }
 
@@ -421,7 +485,15 @@ internal static class ProcessPersistenceMappers
                 decision.DecisionKind,
                 decision.SourceDiagnosticCode.Trim(),
                 decision.Policy.Trim(),
-                decision.SafeReason.Trim());
+                decision.SafeReason.Trim())
+            {
+                RouteKind = decision.RouteKind == ProcessRecoveryRouteKind.None
+                    ? ProcessRecoveryRouteKind.ManagerAction
+                    : decision.RouteKind,
+                ResponsibleStepInstanceId = decision.ResponsibleStepInstanceId is null
+                    ? null
+                    : new ProcessStepInstanceId(decision.ResponsibleStepInstanceId.Value)
+            };
     }
 
     private static JsonSerializerOptions CreateReceiptJsonOptions()
@@ -454,5 +526,7 @@ internal static class ProcessPersistenceMappers
         ProcessRecoveryDecisionKind DecisionKind,
         string SourceDiagnosticCode,
         string Policy,
-        string SafeReason);
+        string SafeReason,
+        ProcessRecoveryRouteKind RouteKind,
+        Guid? ResponsibleStepInstanceId);
 }
