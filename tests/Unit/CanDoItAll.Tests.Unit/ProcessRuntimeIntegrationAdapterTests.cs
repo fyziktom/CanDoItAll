@@ -1057,6 +1057,60 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Validation_completion_rejects_recovered_artifact_that_defers_current_run_receipts()
+    {
+        var assignment = CreateManagedArtifactAssignment(
+            "add-tests-and-proof",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]) with
+        {
+            Prompt = """
+            Available branch outcomes:
+            - slice-accepted: Slice accepted - Validation passed.
+            - slice-repair-required: Slice repair required - Validation failed but repair is possible.
+            """
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Recovered governed process step outcome from primary managed artifact after provider timeout.",
+                EvidenceRefs = [primaryRef],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = """
+                Status: Completed
+                Branch outcome key: slice-accepted
+
+                ## Reason
+
+                No current-run validation receipts exist yet in this managed artifact; they will be added from the validation tools in this step before finalization.
+
+                ## Validation plan
+
+                1. Restore the solution from the grounded product root.
+                2. Build the solution without restore.
+                3. Run the xUnit test project without rebuild/restore after successful build.
+                """
+            },
+            [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file containing a draft validation plan.")]);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("process.adapter.completed_outcome_declares_unresolved_blocker", diagnostic.Code.Value);
+        Assert.Contains("current-run validation receipts", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.completed_outcome_declares_unresolved_blocker");
+        Assert.Empty(result.ProducedArtifacts);
+    }
+
+    [Fact]
     public void Product_mutation_completion_accepts_template_specific_dotnet_new_receipts()
     {
         var outputRoot = CreateTempProductRoot();

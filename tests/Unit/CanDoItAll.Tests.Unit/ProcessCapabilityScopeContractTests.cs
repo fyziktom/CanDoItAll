@@ -132,6 +132,19 @@ public sealed class ProcessCapabilityScopeContractTests
         AssertRequiredReceiptTools(qaRecheckStep.CapabilityScope.RequiredReceipts);
     }
 
+    [Fact]
+    public void Dotnet_development_slice_validation_steps_declare_current_run_validation_receipts()
+    {
+        var definition = new ProcessTemplatePackLoader().LoadDefinition("dotnet-development-slice");
+        var addTestsStep = definition.Steps.Single(step =>
+            string.Equals(step.Key, "add-tests-and-proof", StringComparison.Ordinal));
+        var recheckStep = definition.Steps.Single(step =>
+            string.Equals(step.Key, "add-tests-recheck", StringComparison.Ordinal));
+
+        AssertDotNetValidationReceiptTools(addTestsStep.CapabilityScope.RequiredReceipts);
+        AssertDotNetValidationReceiptTools(recheckStep.CapabilityScope.RequiredReceipts);
+    }
+
     private static void AssertRequiredReceiptTools(IReadOnlyList<ProcessRequiredToolReceipt> receipts)
     {
         var receiptTools = receipts
@@ -148,5 +161,21 @@ public sealed class ProcessCapabilityScopeContractTests
         Assert.Contains("workspace_analyze_images", receiptTools);
         Assert.All(receipts, receipt =>
             Assert.Equal(ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, receipt.Activation));
+    }
+
+    private static void AssertDotNetValidationReceiptTools(IReadOnlyList<ProcessRequiredToolReceipt> receipts)
+    {
+        var receiptTools = receipts
+            .Select(receipt => receipt.ToolName)
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Contains("workspace_dotnet_restore", receiptTools);
+        Assert.Contains("workspace_dotnet_build", receiptTools);
+        Assert.Contains("workspace_dotnet_test", receiptTools);
+        Assert.All(receipts, receipt =>
+        {
+            Assert.Equal(ProcessRequiredToolReceiptActivation.Always, receipt.Activation);
+            Assert.True(receipt.RequireCurrentRun);
+            Assert.False(receipt.RequireSuccessfulExit);
+        });
     }
 }

@@ -514,7 +514,35 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "slice-validation-restore",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_restore",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Slice validation must run restore in the current execution before choosing accepted or repair-required."
+          },
+          {
+            "Key": "slice-validation-build",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_build",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Slice validation must run build in the current execution before choosing accepted or repair-required."
+          },
+          {
+            "Key": "slice-validation-test",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_test",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Slice validation must run tests in the current execution when a test project exists or tests are expected."
+          }
+        ]
+      }
     },
     {
       "Order": 5,
@@ -784,7 +812,35 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "slice-recheck-restore",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_restore",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Repaired slice validation must run restore in the current execution before choosing accepted or escalation."
+          },
+          {
+            "Key": "slice-recheck-build",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_build",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Repaired slice validation must run build in the current execution before choosing accepted or escalation."
+          },
+          {
+            "Key": "slice-recheck-test",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_test",
+            "Activation": "Always",
+            "RequireSuccessfulExit": false,
+            "Reason": "Repaired slice validation must run tests in the current execution when a test project exists or tests are expected."
+          }
+        ]
+      }
     },
     {
       "Order": 8,

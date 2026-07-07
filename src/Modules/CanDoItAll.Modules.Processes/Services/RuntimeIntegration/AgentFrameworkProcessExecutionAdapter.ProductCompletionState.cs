@@ -99,7 +99,34 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 "not launcher-compatible",
                 "not launcher compatible",
                 "pending writeback receipt") ||
-            MissingRequiredReceiptRegex().IsMatch(line);
+            MissingRequiredReceiptRegex().IsMatch(line) ||
+            DeclaresDeferredValidationProof(line);
+    }
+
+    private static bool DeclaresDeferredValidationProof(string line)
+    {
+        if (!ContainsAny(line, "validation", "build", "test", "restore", "receipt", "proof", "evidence"))
+        {
+            return false;
+        }
+
+        return ContainsAny(
+                line,
+                "will be added",
+                "will be captured",
+                "will be recorded",
+                "will be executed",
+                "will run",
+                "to be added",
+                "to be captured",
+                "to be recorded",
+                "not yet captured",
+                "not yet recorded",
+                "not yet executed",
+                "still planned",
+                "planned rather than recorded") ||
+            ContainsAny(line, "no current-run", "no current run", "missing current-run", "missing current run") &&
+            ContainsAny(line, "receipt", "proof", "evidence", "command");
     }
 
     private static bool ContainsNegatedBlockerPhrase(string line)
