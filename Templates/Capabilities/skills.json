@@ -102,6 +102,30 @@
     },
     {
       "kind": "skill",
+      "key": "development-image-analysis-guidance-inline-skill",
+      "displayName": "Development Image Analysis Guidance Skill",
+      "description": "Software-delivery guidance for UI screenshot and visual target analysis using generic workspace image tools.",
+      "stableId": "skill:development-image-analysis-guidance:v1",
+      "stableGuidKey": "capabilities/development-image-analysis-guidance-inline-skill",
+      "endpointOrPath": "inline://development-image-analysis-guidance-inline-skill",
+      "skillSource": "inline",
+      "tags": [
+        "development",
+        "image-analysis"
+      ],
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Template-owned software-delivery image analysis guidance kept outside common workspace tools.",
+      "inlineSkill": {
+        "name": "development-image-analysis",
+        "description": "Software-delivery guidance for UI screenshot and visual target analysis using generic workspace image tools.",
+        "instructionsAssetKey": "skills/instructions/development-image-analysis.md"
+      }
+    },
+    {
+      "kind": "skill",
       "key": "candoitall-watch-playwright-loop",
       "displayName": "Watch And Playwright Loop Skill",
       "description": "Guidance for fast, real-browser validation with Playwright and the shared CanDoItAll watch workflow.",

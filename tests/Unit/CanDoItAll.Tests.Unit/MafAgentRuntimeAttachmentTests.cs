@@ -10,6 +10,23 @@ public sealed class MafAgentRuntimeAttachmentTests
         new("screen.png", "image/png", [1, 2, 3], "artifacts/screen.png");
 
     [Fact]
+    public void Input_attachment_analysis_prompt_is_domain_neutral_by_default()
+    {
+        var prompt = InputAttachmentPreparer.BuildInputAttachmentAnalysisPrompt(
+            "Describe the attached image.",
+            new AgentRuntimeInputAttachment(
+                "sample.png",
+                "image/png",
+                [],
+                "uploads/sample.png"));
+
+        Assert.Contains("Analyze one image attachment for the current agent request", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("software delivery", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UI state", prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("software behavior", prompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void CreateUserInputMessage_AddsImageAttachmentsAsDataContent()
     {
         var message = MafRuntimeSessionBuilder.CreateUserInputMessage(

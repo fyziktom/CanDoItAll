@@ -53,6 +53,9 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         var metadataJson = ApplyLaunchContextMetadata(
             JsonSerializer.Serialize(metadata, AgentOutputJson.SerializerOptions),
             assignment.LaunchVariables);
+        metadataJson = ExecutionInvocationMetadata.ApplyRuntimeCapabilityScopeOverride(
+            metadataJson,
+            AgentFrameworkProcessCapabilityScopeTranslator.Translate(assignment.CapabilityScope));
         return ExecutionInvocationMetadata.Build(
             metadataJson,
             new ExecutionInvocationPolicy(

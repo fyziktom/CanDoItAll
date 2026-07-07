@@ -37,7 +37,7 @@ internal static class WorkspaceImageSetEvidenceBuilder
         }
 
         var builder = new StringBuilder();
-        builder.AppendLine("Tool-computed pixel evidence from the screenshot files:");
+        builder.AppendLine("Tool-computed pixel evidence from the image files:");
         for (var index = 0; index < decodedFrames.Count - 1 && index < 3; index++)
         {
             AppendFramePairEvidence(builder, decodedFrames[index], decodedFrames[index + 1]);

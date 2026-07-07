@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using CanDoItAll.Processes.Contracts;
 
 namespace CanDoItAll.Processes.Templates;
 
@@ -434,6 +435,7 @@ public sealed record ProcessTemplateDefinitionStepAuthoringSummary(
     string ExceptionPolicySummary,
     IReadOnlyList<string> AllowedOperations,
     string OperationTargetScope,
+    ProcessCapabilityScope CapabilityScope,
     string SubprocessProcessKey,
     string SubprocessDefinitionSnapshotName,
     IReadOnlyList<ProcessTemplateDefinitionStepBranchOutcomeSummary> BranchOutcomes,
@@ -657,6 +659,8 @@ public sealed class ProcessTemplateDefinitionStepDocument
     public List<string> AllowedOperations { get; set; } = [];
 
     public string OperationTargetScope { get; set; } = string.Empty;
+
+    public ProcessCapabilityScope CapabilityScope { get; set; } = ProcessCapabilityScope.Empty;
 
     public string DependsOnStepKey { get; set; } = string.Empty;
 

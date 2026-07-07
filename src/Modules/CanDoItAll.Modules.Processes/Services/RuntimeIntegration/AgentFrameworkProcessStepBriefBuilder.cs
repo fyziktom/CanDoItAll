@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -52,6 +53,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         var ownOutputBootstrapGuidance = BuildOwnOutputBootstrapGuidance(request);
         var projectStructureContextGuidance = BuildProjectStructureContextGuidance(request);
         var productMutationGuidance = BuildProductMutationGuidance(request);
+        var scopedInstructionGuidance = BuildScopedInstructionGuidance(request.Step.CapabilityScope);
 
         return $"""
         {genericBrief}
@@ -79,6 +81,9 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         AgentFramework product mutation gate:
         {productMutationGuidance}
 
+        AgentFramework process-scoped instructions:
+        {scopedInstructionGuidance}
+
         AgentFramework evidence write rule:
         Write process step summaries, proof, screenshots, logs, and handoff notes under the managed artifact root or a child path. Managed artifact refs are workspace-managed relative paths; use them exactly as shown and never convert them to external-target paths. Include the written managed artifact paths from this brief in evidenceRefs; if a workspace tool echoes a longer scoped storage path for the same artifact, ignore that scoped echo in artifact prose and evidenceRefs. Do not write evidence under output/ unless this step is explicitly mutating a managed product output path.
         Every primary managed Markdown artifact must include exactly one Status line near the top before step-specific sections: `Status: Completed`, `Status: Blocked`, `Status: Failed`, `Status: WaitingApproval`, or `Status: Refused`. Use the same status in the final process_step_outcome_result. When a branch outcome is selected, the artifact status and finalizer status must be `Completed`, with the branch key carrying the disposition. Include an exact `Branch outcome key: <listed-key>` line in the artifact for every selected branch outcome. These lines are part of the runtime recovery contract if the provider stream fails after writing evidence.
@@ -100,6 +105,36 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         AgentFramework subprocess adapter guidance:
         {subprocessGuidance}
         """;
+    }
+
+    private static string BuildScopedInstructionGuidance(ProcessCapabilityScope capabilityScope)
+    {
+        var normalized = ProcessCapabilityScope.Normalize(capabilityScope);
+        if (normalized.InstructionFragments.Count == 0)
+        {
+            return "No additional process-scoped instructions.";
+        }
+
+        var lines = new List<string>
+        {
+            "These instructions are supplied by the current process step and apply only to this run:"
+        };
+        foreach (var fragment in normalized.InstructionFragments)
+        {
+            var title = string.IsNullOrWhiteSpace(fragment.Title)
+                ? NormalizeScopedInstructionTitle(fragment.Key)
+                : fragment.Title.Trim();
+            lines.Add($"- {title}: {fragment.Content.Trim()}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string NormalizeScopedInstructionTitle(string key)
+    {
+        return string.IsNullOrWhiteSpace(key)
+            ? "Scoped instruction"
+            : key.Trim();
     }
 
     private static string BuildProjectStructureContextGuidance(ProcessStepBriefBuildRequest request)

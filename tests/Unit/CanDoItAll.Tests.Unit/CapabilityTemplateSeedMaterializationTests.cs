@@ -77,6 +77,19 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal("aspnet-core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
         Assert.Contains("ASP.NET Core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(), StringComparison.Ordinal);
 
+        var developmentImageSkill = capabilities["development-image-analysis-guidance-inline-skill"];
+        Assert.Contains(developmentImageSkill.Tags, tag => string.Equals(tag, "development", StringComparison.Ordinal));
+        Assert.Contains(developmentImageSkill.Tags, tag => string.Equals(tag, "image-analysis", StringComparison.Ordinal));
+        using var developmentImageSkillJson = JsonDocument.Parse(developmentImageSkill.ConfigurationJson);
+        Assert.Equal("inline", developmentImageSkillJson.RootElement.GetProperty("skillSource").GetString());
+        Assert.Equal(
+            "development-image-analysis",
+            developmentImageSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
+        Assert.Contains(
+            "software-delivery process step asks for UI screenshot review",
+            developmentImageSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(),
+            StringComparison.Ordinal);
+
         using var ragJson = JsonDocument.Parse(capabilities["workspace-source-rag"].ConfigurationJson);
         Assert.Equal(".", ragJson.RootElement.GetProperty("ragRoot").GetString());
         Assert.Equal(5, ragJson.RootElement.GetProperty("maxResults").GetInt32());
@@ -324,6 +337,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "candoitall-frontend-theme",
         "candoitall-watch-playwright-loop",
         "concrete-deliverable-delivery-inline-skill",
+        "development-image-analysis-guidance-inline-skill",
         "document-spreadsheet-reconciliation-inline-skill",
         "dotnet-app-delivery-inline-skill",
         "frontend-skill",

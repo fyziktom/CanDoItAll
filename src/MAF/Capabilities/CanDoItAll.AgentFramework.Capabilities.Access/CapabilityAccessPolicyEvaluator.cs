@@ -4,6 +4,9 @@ namespace CanDoItAll.AgentFramework.Capabilities.Access;
 
 public sealed class CapabilityAccessPolicyEvaluator : ICapabilityAccessPolicyEvaluator
 {
+    private const string DefaultDenyReason = "Capability is outside this allow-only capability policy.";
+    private const string DefaultDenyRepairHint = "Add an allow or require rule for the capability, or remove the scoped allow-only policy.";
+
     public CapabilityAccessEvaluationResult Evaluate(CapabilityAccessEvaluationContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -43,6 +46,19 @@ public sealed class CapabilityAccessPolicyEvaluator : ICapabilityAccessPolicyEva
                     required.Contains(candidate.Identity)
                         ? "A required capability was denied by policy. Remove the deny rule or restaff the agent/process so the requirement is not declared."
                         : "Edit the capability access policy if this capability should remain available in this scope.",
+                    context.CorrelationId));
+                continue;
+            }
+
+            var defaultDenyPolicy = SelectDefaultDenyPolicy(candidate, context.Policies);
+            if (defaultDenyPolicy is not null)
+            {
+                diagnostics.Add(CreateDefaultDenyDiagnostic(
+                    candidate.Identity,
+                    defaultDenyPolicy,
+                    required.Contains(candidate.Identity)
+                        ? CapabilityDiagnosticCategory.RequiredCapabilityDenied
+                        : CapabilityDiagnosticCategory.AccessPolicy,
                     context.CorrelationId));
                 continue;
             }
@@ -90,12 +106,43 @@ public sealed class CapabilityAccessPolicyEvaluator : ICapabilityAccessPolicyEva
         return new CapabilityAccessEvaluationResult(allowed, diagnostics);
     }
 
+    private static CapabilityAccessPolicy? SelectDefaultDenyPolicy(
+        CapabilityExposureDescriptor candidate,
+        IReadOnlyList<CapabilityAccessPolicy> policies)
+    {
+        foreach (var policy in policies.Where(policy => policy.DefaultEffect == CapabilityAccessDefaultEffect.DenyAll))
+        {
+            var policyRules = policy.Rules
+                .Where(rule => rule.Effect != CapabilityAccessEffect.Inherit)
+                .ToArray();
+            var allowRule = SelectWinningAllowRule(candidate, policyRules);
+            if (allowRule is null)
+            {
+                return policy;
+            }
+        }
+
+        return null;
+    }
+
     private static CapabilityAccessRule? SelectWinningDenyRule(
         CapabilityExposureDescriptor candidate,
         IReadOnlyList<CapabilityAccessRule> rules)
     {
         return rules
             .Where(rule => rule.Effect == CapabilityAccessEffect.Deny && Matches(candidate, rule.Selector))
+            .OrderBy(rule => ResolveScopePriority(rule.Scope))
+            .FirstOrDefault();
+    }
+
+    private static CapabilityAccessRule? SelectWinningAllowRule(
+        CapabilityExposureDescriptor candidate,
+        IReadOnlyList<CapabilityAccessRule> rules)
+    {
+        return rules
+            .Where(rule => (rule.Effect == CapabilityAccessEffect.Allow ||
+                            rule.Effect == CapabilityAccessEffect.Require) &&
+                           Matches(candidate, rule.Selector))
             .OrderBy(rule => ResolveScopePriority(rule.Scope))
             .FirstOrDefault();
     }
@@ -114,6 +161,19 @@ public sealed class CapabilityAccessPolicyEvaluator : ICapabilityAccessPolicyEva
             CapabilityAccessScope.UiPreview => 7,
             _ => 100
         };
+    }
+
+    private static CapabilityAccessScope? ResolveDefaultPolicyScope(CapabilityAccessPolicy policy)
+    {
+        if (policy.DefaultScope is { } defaultScope)
+        {
+            return defaultScope;
+        }
+
+        return policy.Rules
+            .Select(rule => (CapabilityAccessScope?)rule.Scope)
+            .OrderBy(scope => scope.HasValue ? ResolveScopePriority(scope.Value) : 100)
+            .FirstOrDefault();
     }
 
     private static bool Matches(CapabilityExposureDescriptor candidate, CapabilitySelector selector)
@@ -156,6 +216,26 @@ public sealed class CapabilityAccessPolicyEvaluator : ICapabilityAccessPolicyEva
             category,
             reason,
             repairHint,
+            correlationId);
+    }
+
+    private static SuppressedCapabilityDiagnostic CreateDefaultDenyDiagnostic(
+        CapabilityIdentity identity,
+        CapabilityAccessPolicy policy,
+        CapabilityDiagnosticCategory category,
+        string correlationId)
+    {
+        var reason = string.IsNullOrWhiteSpace(policy.DefaultReason)
+            ? DefaultDenyReason
+            : policy.DefaultReason.Trim();
+        return new SuppressedCapabilityDiagnostic(
+            identity,
+            null,
+            ResolveDefaultPolicyScope(policy),
+            null,
+            category,
+            reason,
+            DefaultDenyRepairHint,
             correlationId);
     }
 }

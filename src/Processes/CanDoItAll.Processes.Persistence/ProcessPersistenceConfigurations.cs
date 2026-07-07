@@ -74,6 +74,7 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.Property(assignment => assignment.AllowedOperations).IsRequired();
         builder.Property(assignment => assignment.OperationTargetScope).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.LaunchVariablesJson).IsRequired();
+        builder.Property(assignment => assignment.CapabilityScopeJson).IsRequired();
         builder.Property(assignment => assignment.BranchGateSourceStepKey).HasMaxLength(256);
         builder.Property(assignment => assignment.BranchGateRequiredOutcomeKey).HasMaxLength(256);
         builder.HasIndex(assignment => assignment.PlanId);

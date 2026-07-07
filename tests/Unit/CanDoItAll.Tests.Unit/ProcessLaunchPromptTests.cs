@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Tests.Unit;
@@ -567,6 +568,30 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Blocked is valid only when you cannot create the primary managed artifact", prompt, StringComparison.Ordinal);
         Assert.Contains("write a managed Markdown artifact with assumptions and known gaps instead of blocking on optional context", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not finalize Completed with an empty evidenceRefs array", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentFramework_step_brief_appends_process_scoped_instruction_fragments()
+    {
+        var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
+        var step = CreatePromptStep("Coordinate management status.");
+        step.CapabilityScope = new ProcessCapabilityScope
+        {
+            InstructionFragments =
+            [
+                new ProcessScopedInstructionFragment
+                {
+                    Key = "management-only",
+                    Title = "Management-only scope",
+                    Content = "Coordinate staffing and status. Do not implement product code."
+                }
+            ]
+        };
+
+        var prompt = BuildStepPrompt(new AgentFrameworkProcessStepBriefBuilder(), runId, step);
+
+        Assert.Contains("AgentFramework process-scoped instructions:", prompt, StringComparison.Ordinal);
+        Assert.Contains("Management-only scope: Coordinate staffing and status. Do not implement product code.", prompt, StringComparison.Ordinal);
     }
 
     private static string BuildStepPrompt(

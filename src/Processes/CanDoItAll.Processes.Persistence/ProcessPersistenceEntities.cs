@@ -90,6 +90,8 @@ public sealed class ProcessRuntimeStepAssignmentEntity
 
     public string LaunchVariablesJson { get; set; } = string.Empty;
 
+    public string CapabilityScopeJson { get; set; } = string.Empty;
+
     public string? BranchGateSourceStepKey { get; set; }
 
     public string? BranchGateRequiredOutcomeKey { get; set; }

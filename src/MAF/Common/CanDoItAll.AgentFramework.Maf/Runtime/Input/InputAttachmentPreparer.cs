@@ -108,13 +108,13 @@ internal sealed class InputAttachmentPreparer(
         };
     }
 
-    private static string BuildInputAttachmentAnalysisPrompt(
+    internal static string BuildInputAttachmentAnalysisPrompt(
         string userPrompt,
         AgentRuntimeInputAttachment attachment)
     {
         return $"""
-            Analyze one image attachment for a software delivery agent. Use only visible evidence.
-            Report concise facts about UI state, visible text, object positions, colors, and any observable software behavior.
+            Analyze one image attachment for the current agent request. Use only visible evidence.
+            Report concise facts about visible text, objects, positions, colors, layout, and any observable state.
             Do not speculate beyond the image.
 
             Attachment name: {attachment.Name}

@@ -330,10 +330,11 @@ internal sealed class RuntimeToolProviderAccessFilter : IRuntimeToolProviderAcce
                     tool.Name,
                     $"Runtime provider tool {tool.Name}",
                     $"Tool exposed by runtime provider '{request.Registration.Descriptor.ProviderKey}'.",
-                    request.Registration.Descriptor.DomainTags.Count == 0
-                        ? ["runtime-provider"]
-                        : request.Registration.Descriptor.DomainTags.Prepend("runtime-provider").ToArray(),
-                    ResolveRuntimeToolOperationClassifications(toolMetadata));
+                    ResolveRuntimeToolProviderCapabilityTags(request.Registration.Descriptor),
+                    ResolveRuntimeToolOperationClassifications(toolMetadata),
+                    RuntimeToolProviderCapabilityTags.CreateToolImplementationKey(
+                        request.Registration.Descriptor.ProviderKey,
+                        RuntimeToolName.Create(tool.Name)));
             })
             .ToList();
         var accessResult = request.AccessPlan.Evaluator.Evaluate(new CapabilityAccessEvaluationContext(
@@ -390,6 +391,20 @@ internal sealed class RuntimeToolProviderAccessFilter : IRuntimeToolProviderAcce
             AgentRuntimeToolOperationKind.LocalMcp or AgentRuntimeToolOperationKind.HostedMcp => RuntimeToolCapabilityDescriptorFactory.ToClassificationSet(CapabilityOperationClassification.McpTool),
             _ => RuntimeToolCapabilityDescriptorFactory.ToClassificationSet(CapabilityOperationClassification.Read)
         };
+    }
+
+    private static IReadOnlyList<string> ResolveRuntimeToolProviderCapabilityTags(
+        AgentRuntimeToolProviderDescriptor descriptor)
+    {
+        var tags = new List<string>
+        {
+            RuntimeToolProviderCapabilityTags.RuntimeProviderTagValue,
+            RuntimeToolProviderCapabilityTags.CreateProviderKeyTagValue(descriptor.ProviderKey)
+        };
+        tags.AddRange(descriptor.DomainTags);
+        return tags
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static string DescribeRuntimeToolProvider(IAgentRuntimeToolProvider toolProvider)

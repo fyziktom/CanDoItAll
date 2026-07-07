@@ -25,6 +25,7 @@ public static class ExecutionInvocationMetadata
     public const string ProjectStructureProcessNodeContextMetadataKey = "agentProjectStructureProcessNodeContext";
     public const string RuntimeToolProvidersEnabledMetadataKey = "agentRuntimeToolProvidersEnabled";
     public const string WorkspaceToolsEnabledMetadataKey = "agentWorkspaceToolsEnabled";
+    public const string RuntimeCapabilityScopeOverrideMetadataKey = "agentRuntimeCapabilityScopeOverride";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
     private const string ContextWorkspaceScopeKindPropertyName = "kind";
@@ -110,6 +111,23 @@ public static class ExecutionInvocationMetadata
     {
         var metadata = ParseObject(metadataJson);
         metadata[WorkspaceToolsEnabledMetadataKey] = enabled;
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyRuntimeCapabilityScopeOverride(
+        string? metadataJson,
+        AgentRuntimeCapabilityScopeOverride? scopeOverride)
+    {
+        var metadata = ParseObject(metadataJson);
+        if (scopeOverride is null || scopeOverride.IsEmpty)
+        {
+            metadata.Remove(RuntimeCapabilityScopeOverrideMetadataKey);
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        metadata[RuntimeCapabilityScopeOverrideMetadataKey] = JsonSerializer.SerializeToNode(
+            scopeOverride,
+            AgentOutputJson.SerializerOptions);
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -392,6 +410,21 @@ public static class ExecutionInvocationMetadata
             : null;
     }
 
+    public static AgentRuntimeCapabilityScopeOverride? ResolveRuntimeCapabilityScopeOverride(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return null;
+        }
+
+        var scope = ReadTrustedRuntimeCapabilityScopeOverride(
+            run.MetadataJson,
+            RuntimeCapabilityScopeOverrideMetadataKey);
+        return scope is { IsEmpty: false } ? scope : null;
+    }
+
     private static JsonObject ParseObject(string? metadataJson)
     {
         if (string.IsNullOrWhiteSpace(metadataJson))
@@ -490,6 +523,39 @@ public static class ExecutionInvocationMetadata
         catch (JsonException)
         {
             return string.Empty;
+        }
+    }
+
+    private static AgentRuntimeCapabilityScopeOverride? ReadTrustedRuntimeCapabilityScopeOverride(
+        string? metadataJson,
+        string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidOperationException("Trusted governed process metadata must be a JSON object.");
+            }
+
+            if (!document.RootElement.TryGetProperty(propertyName, out var value))
+            {
+                return null;
+            }
+
+            return value.Deserialize<AgentRuntimeCapabilityScopeOverride>(AgentOutputJson.SerializerOptions)
+                ?? throw new InvalidOperationException("Trusted governed process capability scope metadata deserialized to null.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "Trusted governed process capability scope metadata is malformed.",
+                exception);
         }
     }
 

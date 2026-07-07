@@ -1,5 +1,7 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +9,8 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbContext dbContext) : IProcessRuntimeStepAssignmentStore
 {
+    private static readonly JsonSerializerOptions CapabilityScopeSerializerOptions = CreateCapabilityScopeSerializerOptions();
+
     public async ValueTask SaveAsync(
         IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
         CancellationToken cancellationToken = default)
@@ -112,6 +116,7 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             AllowedOperations = JoinStrings(assignment.AllowedOperations),
             OperationTargetScope = assignment.OperationTargetScope,
             LaunchVariablesJson = SerializeLaunchVariables(assignment.LaunchVariables),
+            CapabilityScopeJson = SerializeCapabilityScope(assignment.CapabilityScope),
             BranchGateSourceStepKey = assignment.BranchGate?.SourceStepKey,
             BranchGateRequiredOutcomeKey = assignment.BranchGate?.RequiredOutcomeKey,
             CreatedAtUtc = assignment.CreatedAtUtc
@@ -138,6 +143,7 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         entity.AllowedOperations = JoinStrings(assignment.AllowedOperations);
         entity.OperationTargetScope = assignment.OperationTargetScope;
         entity.LaunchVariablesJson = SerializeLaunchVariables(assignment.LaunchVariables);
+        entity.CapabilityScopeJson = SerializeCapabilityScope(assignment.CapabilityScope);
         entity.BranchGateSourceStepKey = assignment.BranchGate?.SourceStepKey;
         entity.BranchGateRequiredOutcomeKey = assignment.BranchGate?.RequiredOutcomeKey;
         entity.CreatedAtUtc = assignment.CreatedAtUtc;
@@ -170,7 +176,10 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             entity.OperationTargetScope,
             DeserializeLaunchVariables(entity.LaunchVariablesJson),
             branchGate,
-            entity.CreatedAtUtc);
+            entity.CreatedAtUtc)
+        {
+            CapabilityScope = DeserializeCapabilityScope(entity.CapabilityScopeJson)
+        };
     }
 
     private static string JoinGuids(IReadOnlyList<ArtifactSlotId> slotIds)
@@ -237,6 +246,36 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
                 item => item.Key.Trim(),
                 item => item.Value?.Trim() ?? string.Empty,
                 StringComparer.Ordinal);
+    }
+
+    private static string SerializeCapabilityScope(ProcessCapabilityScope capabilityScope)
+    {
+        var normalized = ProcessCapabilityScope.Normalize(capabilityScope);
+        return normalized.IsEmpty
+            ? "{}"
+            : JsonSerializer.Serialize(normalized, CapabilityScopeSerializerOptions);
+    }
+
+    private static ProcessCapabilityScope DeserializeCapabilityScope(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return ProcessCapabilityScope.Empty;
+        }
+
+        var scope = JsonSerializer.Deserialize<ProcessCapabilityScope>(value, CapabilityScopeSerializerOptions);
+        return ProcessCapabilityScope.Normalize(scope);
+    }
+
+    private static JsonSerializerOptions CreateCapabilityScopeSerializerOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNameCaseInsensitive = true
+        };
+        options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+        return options;
     }
 
     private static IReadOnlyDictionary<string, string> NormalizeRequiredVariables(

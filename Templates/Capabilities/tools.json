@@ -674,7 +674,7 @@
       "kind": "tool",
       "key": "workspace-analyze-images",
       "displayName": "Workspace Analyze Images",
-      "description": "Analyzes multiple workspace screenshots together through the current vision-capable provider/model and returns visible comparison evidence plus provider token counts.",
+      "description": "Analyzes multiple workspace images together through the current vision-capable provider/model and returns visible comparison evidence plus provider token counts.",
       "stableId": "tool:workspace-analyze-images:v1",
       "stableGuidKey": "capabilities/workspace-analyze-images",
       "endpointOrPath": "sandbox://workspace-analyze-images",

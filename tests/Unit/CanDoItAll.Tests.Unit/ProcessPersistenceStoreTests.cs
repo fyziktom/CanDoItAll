@@ -326,7 +326,34 @@ public sealed class ProcessPersistenceStoreTests
                 ["RepositoryRoot"] = @"C:\programovani\dotnet\output"
             },
             new ProcessRuntimeBranchGate("validate-blazor-runtime", "repair-required"),
-            Now);
+            Now)
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                Directives =
+                [
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.AllowOnly,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey,
+                            Value = "management.provider"
+                        },
+                        Reason = "Management-only step."
+                    }
+                ],
+                InstructionFragments =
+                [
+                    new ProcessScopedInstructionFragment
+                    {
+                        Key = "management-only",
+                        Title = "Management-only scope",
+                        Content = "Do not implement product changes."
+                    }
+                ]
+            }
+        };
 
         await store.SaveAsync([assignment]);
         var loaded = await store.LoadAsync(runId, stepId);
@@ -340,6 +367,11 @@ public sealed class ProcessPersistenceStoreTests
         Assert.True(loaded.LaunchVariables.TryGetValue("RepositoryRoot", out var repositoryRoot));
         Assert.Equal(@"C:\programovani\dotnet\output", repositoryRoot);
         Assert.Equal("repair-required", loaded.BranchGate?.RequiredOutcomeKey);
+        var directive = Assert.Single(loaded.CapabilityScope.Directives);
+        Assert.Equal(ProcessCapabilityScopeDirectiveKind.AllowOnly, directive.Kind);
+        Assert.Equal(ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey, directive.Target.Kind);
+        Assert.Equal("management.provider", directive.Target.Value);
+        Assert.Equal("Do not implement product changes.", Assert.Single(loaded.CapabilityScope.InstructionFragments).Content);
     }
 
     [Fact]

@@ -412,6 +412,54 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public async Task RuntimeToolProviderComposer_allow_only_provider_key_policy_prunes_other_provider_tools()
+    {
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter());
+        var allowedProvider = new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.allowed-provider"),
+            "allowed_runtime_tool");
+        var deniedProvider = new TestRuntimeToolProvider(
+            20,
+            CreateDescriptor("tests.denied-provider"),
+            "denied_runtime_tool");
+        var registrations = composer.ComposeRegistrations([allowedProvider, deniedProvider]);
+        var allowedProviderTag = RuntimeToolProviderCapabilityTags.CreateProviderKeyTag("tests.allowed-provider");
+        var allowOnlyPolicy = new CapabilityAccessPolicy(
+        [
+            new CapabilityAccessRule(
+                CapabilityRuleId.Create("allow-selected-runtime-provider"),
+                CapabilityAccessEffect.Allow,
+                CapabilityAccessScope.ProcessStep,
+                CapabilitySelector.ByTag(allowedProviderTag),
+                "Only the selected runtime provider is allowed.")
+        ],
+        CapabilityAccessDefaultEffect.DenyAll,
+        CapabilityAccessScope.ProcessStep,
+        "Runtime provider is outside the selected process-step scope.");
+        var state = new RuntimeCapabilityState();
+
+        var result = await composer.AttachAsync(
+            new RuntimeToolProviderAttachmentRequest(
+                state,
+                CreateAccessPlan([allowOnlyPolicy]),
+                registrations,
+                CreateContext(),
+                SuppressApprovalRequirements: false),
+            CancellationToken.None);
+
+        Assert.Equal(1, result.AttachedToolCount);
+        Assert.Equal(["allowed_runtime_tool"], state.Tools.Select(tool => tool.Name));
+        Assert.Equal("tests.allowed-provider", Assert.Single(state.RuntimeToolProviderDescriptors).ProviderKey);
+        Assert.Contains(state.EffectiveCapabilityDescriptors, descriptor =>
+            descriptor.RuntimeToolName?.Value == "allowed_runtime_tool" &&
+            descriptor.Tags.Contains(allowedProviderTag));
+        Assert.Contains(state.CapabilityAccessDiagnostics, diagnostic =>
+            diagnostic.Identity.Key.Value == "denied-runtime-tool" &&
+            diagnostic.Category == CapabilityDiagnosticCategory.AccessPolicy);
+    }
+
+    [Fact]
     public void MafProviderCredentialService_resolves_configuration_credentials()
     {
         var key = $"UNIT_TEST_OPENAI_KEY_{Guid.NewGuid():N}";
@@ -468,10 +516,13 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     private static RuntimeCapabilityAccessPlan CreateAllowAllAccessPlan()
+        => CreateAccessPlan([]);
+
+    private static RuntimeCapabilityAccessPlan CreateAccessPlan(IReadOnlyList<CapabilityAccessPolicy> policies)
         => new(
             new EffectiveCapabilitySet([], []),
             AllowedCatalogCapabilities: [],
-            Policies: [],
+            policies,
             new CapabilityAccessPolicyEvaluator(),
             InitialAllowedCapabilities: [],
             InitialDiagnostics: [],

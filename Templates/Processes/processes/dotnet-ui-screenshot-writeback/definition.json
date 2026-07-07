@@ -111,6 +111,28 @@
       "Title": "Resolve UI screenshot applicability",
       "Subtitle": "UI routes or no-UI evidence",
       "Notes": "Read the architecture handoff, runtime command nodes, QA evidence, and project structure to decide whether the .NET target has a visible UI. Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, MVC/Razor Pages, SPA-hosted .NET, and other browser surfaces require screenshot capture. Backend-only API/service, worker, console, and class library targets require explicit no-UI evidence. Prefer durable Run app and Run tests node references, but when they are absent and upstream QA/runtime evidence provides a concrete base URL, browser artifact paths, and UI state proving the app is running, continue with a degraded manifest that cites those paths and records missing references as warnings. If no Run app node and no concrete base URL exist but ProductRoot, ProductRootAlias, or DotNetAppProjectDirectory is present, record a launch-required manifest for the capture step instead of claiming degraded runtime evidence is available. Identify the process run node and Screenshots parent target when available; if no writable target is available, require a managed storage receipt instead of blocking during applicability resolution.",
+      "CapabilityScope": {
+        "Directives": [
+          {
+            "Kind": "Deny",
+            "Target": {
+              "Kind": "CapabilityIdentity",
+              "Value": "Skill",
+              "SecondaryValue": "development-image-analysis-guidance-inline-skill"
+            },
+            "Reason": "Applicability planning must not load software-delivery image-analysis guidance before screenshot evidence exists."
+          },
+          {
+            "Kind": "Deny",
+            "Target": {
+              "Kind": "CapabilityTag",
+              "Value": "development"
+            },
+            "Reason": "Applicability planning is management/review work and suppresses development-only capabilities."
+          }
+        ],
+        "InstructionFragments": []
+      },
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -263,6 +285,54 @@
       "Title": "Store screenshots under process run node",
       "Subtitle": "Screenshots project-structure parent",
       "Notes": "Create or reuse a Screenshots parent node under the current process run node. Prefer ProcessRunNodeId, ParentProcessRunNodeId, or TargetProcessRunNodeId from launch variables as the parent node id; do not fall back to ProjectNodeId or project root when one of those process-run nodes is present in project structure. For UI targets, inspect each screenshot, reject blank/error/wrong-route images, and create image asset nodes under Screenshots for accepted screenshots. workspace_inspect_image and workspace_analyze_image are declared required runtime tool receipts for this step; call both for every accepted or rejected screenshot and ground the visual reason in the provider-backed result instead of dimensions, filenames, or chat-only descriptions. When project structure, launch variables, the screenshot manifest, or upstream QA evidence list source visual target ImageAsset nodes such as proposals, mockups, reference screenshots, layout targets, or wireframes, resolve the target by node id and media path with project_structure_read, project_structure_asset_get, or project_structure_asset_content_get as needed, then call workspace_analyze_images with the ordered source-target image and delivered screenshot paths when the image files are accessible in the workspace. If the target asset content is not accessible to image-analysis tools, return Blocked with the missing node id, media path, and failed tool receipt instead of accepting screenshots in isolation. The review must include a Visual target comparison section naming the source ImageAsset node id, media path or file name, delivered screenshot ref, comparison method, and accepted or blocked disposition. When accepted UI screenshots exist, project-structure writeback is required and project_structure_node_create plus project_structure_asset_create are declared as required runtime tool receipts for this step: create the missing Screenshots parent with project_structure_node_create using objectType ProjectBlock, objectSubtype delivery, and parentNodeKey set to the process-run node, then call project_structure_asset_create once per accepted screenshot with objectType ImageAsset, objectSubtype screenshot, parentNodeKey set to the Screenshots node, sourceWorkspacePath set to the current-run PNG path, and explicit sourceFileName plus sourceContentType values. Do not infer these tools are unavailable from memory or prompt text; if project_structure_read works, attempt the required writeback tools before reporting a boundary. Do not read binary screenshots as text or base64 when sourceWorkspacePath can be used. If an upload attempt fails because an inline media payload is invalid base64, retry once with sourceWorkspacePath instead of the inline media payload. Do not write Status: Completed, do not say storage completed, and do not hand off with only a managed receipt until project_structure_asset_create has been attempted for every accepted UI screenshot. A managed-only storage receipt is allowed only after the exact project-structure tool call is unavailable, denied, or fails because the process-run/Screenshots parent cannot be read or written; include the failed tool, failed parent target, screenshot path, route, viewport, inspection result, and failure receipt. If project_structure_asset_create or project_structure_node_create is unavailable or denied for this governed step, return Blocked with the missing tool or operation allowance instead of completing silently. For no-UI targets, record a no-UI screenshot receipt under Screenshots or as managed evidence so the parent release step can see that screenshot capture was intentionally not applicable. Do not mutate product files.",
+      "CapabilityScope": {
+        "Directives": [
+          {
+            "Kind": "Require",
+            "Target": {
+              "Kind": "CapabilityIdentity",
+              "Value": "Skill",
+              "SecondaryValue": "development-image-analysis-guidance-inline-skill"
+            },
+            "Reason": "Screenshot storage reviews interpret generic image evidence through software-delivery acceptance criteria."
+          },
+          {
+            "Kind": "Require",
+            "Target": {
+              "Kind": "CapabilityIdentity",
+              "Value": "Tool",
+              "SecondaryValue": "workspace-inspect-image"
+            },
+            "Reason": "Screenshot storage must inspect image metadata before accepting or rejecting screenshots."
+          },
+          {
+            "Kind": "Require",
+            "Target": {
+              "Kind": "CapabilityIdentity",
+              "Value": "Tool",
+              "SecondaryValue": "workspace-analyze-image"
+            },
+            "Reason": "Screenshot storage must ground visual screenshot decisions in provider-backed image analysis."
+          },
+          {
+            "Kind": "Require",
+            "Target": {
+              "Kind": "CapabilityIdentity",
+              "Value": "Tool",
+              "SecondaryValue": "workspace-analyze-images"
+            },
+            "Reason": "Screenshot storage must compare delivered screenshots with source visual targets when target images exist."
+          }
+        ],
+        "InstructionFragments": [
+          {
+            "Key": "development-ui-screenshot-image-analysis",
+            "Title": "Development UI screenshot image analysis",
+            "Content": "Use generic workspace image tools only as software-delivery visual evidence for this step: inspect screenshot readability, route correctness, blank/error states, visible UI behavior, and ordered source-target comparisons against project visual target ImageAssets. Do not treat this as generic image interpretation.",
+            "Placement": "AppendToStepBrief"
+          }
+        ]
+      },
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,

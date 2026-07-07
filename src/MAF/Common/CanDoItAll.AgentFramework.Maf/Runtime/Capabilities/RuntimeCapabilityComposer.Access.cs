@@ -39,9 +39,10 @@ internal sealed class RuntimeCapabilityAccessPlanner
             catalogDescriptors.Concat(configuredWorkspaceDescriptors));
         var policies = RuntimeCapabilityAccessPolicyBuilder.BuildRuntimeCapabilityAccessPolicies(workspaceToolAccess, contextIntent);
         var correlationId = ResolveCapabilityAccessCorrelationId(contextIntent);
+        var requiredCapabilities = contextIntent.CapabilityScopeOverride?.RequiredCapabilities ?? [];
         var result = evaluator.Evaluate(new CapabilityAccessEvaluationContext(
             candidates,
-            RequiredCapabilities: [],
+            requiredCapabilities,
             policies,
             correlationId));
         var allowedCatalogIdentities = result.AllowedCapabilities

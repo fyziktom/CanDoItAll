@@ -546,7 +546,10 @@ public sealed class ProcessLaunchApplicationService(
                 NormalizeOperationTargetScope(templateStep.OperationTargetScope),
                 stepLaunchVariables,
                 ResolveBranchGate(templateStep),
-                nowUtc));
+                nowUtc)
+            {
+                CapabilityScope = ProcessCapabilityScope.Normalize(templateStep.CapabilityScope)
+            });
         }
 
         if (assignments.Count == 0)

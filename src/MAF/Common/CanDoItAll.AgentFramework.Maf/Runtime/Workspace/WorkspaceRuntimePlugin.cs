@@ -564,47 +564,13 @@ internal sealed class WorkspaceRuntimePlugin(
             => WorkspaceImageAnalysisModelResolver.ResolveProviderImageAnalysisModel(provider, runtimeModel);
 
         private static string NormalizeImageAnalysisPrompt(string prompt)
-        {
-            var userPrompt = string.IsNullOrWhiteSpace(prompt)
-                ? "Analyze the attached image. Describe the visible UI state and any defects that are directly observable."
-                : prompt.Trim();
-            return
-                "You receive one software-delivery screenshot image. Analyze only visible evidence in the image. " +
-                "For UI state claims, use visible text, object positions, landmarks, and controls. " +
-                "State uncertainty only when the requested evidence cannot be seen. " +
-                "Do not describe provider, model, token, or cost metadata; the tool wrapper returns that separately." +
-                Environment.NewLine +
-                Environment.NewLine +
-                $"User question: {userPrompt}";
-        }
+            => WorkspaceImageAnalysisPromptNormalizer.NormalizeSingleImagePrompt(prompt);
 
         private static string NormalizeImageSetAnalysisPrompt(
             string prompt,
             int imageCount,
             string deterministicEvidence)
-        {
-            var normalizedCount = Math.Max(2, imageCount);
-            var userPrompt = string.IsNullOrWhiteSpace(prompt)
-                ? "Describe visible differences and whether the evidence proves the requested UI state changed over time."
-                : prompt.Trim();
-            var evidenceSection = string.IsNullOrWhiteSpace(deterministicEvidence)
-                ? string.Empty
-                : Environment.NewLine +
-                  Environment.NewLine +
-                  deterministicEvidence.Trim();
-            return
-                $"You receive {normalizedCount:N0} ordered screenshots of the same software UI. " +
-                "The first attached image is frame 1, the second attached image is frame 2, and later images continue in attachment order. " +
-                "Compare only visible evidence across images. For position, motion, progress, or animation claims, compare the same visible target against fixed landmarks, grid lines, labels, or coordinates. " +
-                "In screen coordinates and grid rows, larger row/y positions are lower/downward. " +
-                "If visible labels or positions differ, report the difference directly; do not call it unchanged. " +
-                "Use uncertain only when the requested target or its position cannot be seen in at least one frame. " +
-                "Do not describe provider, model, token, or cost metadata; the tool wrapper returns that separately." +
-                evidenceSection +
-                Environment.NewLine +
-                Environment.NewLine +
-                $"User question: {userPrompt}";
-        }
+            => WorkspaceImageAnalysisPromptNormalizer.NormalizeImageSetPrompt(prompt, imageCount, deterministicEvidence);
 
         private static string ResolveImageAttachmentName(string path)
         {

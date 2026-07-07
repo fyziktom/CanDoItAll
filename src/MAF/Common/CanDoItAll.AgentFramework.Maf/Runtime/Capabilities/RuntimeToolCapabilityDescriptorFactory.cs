@@ -11,7 +11,8 @@ internal static class RuntimeToolCapabilityDescriptorFactory
         string displayName,
         string description,
         IReadOnlyList<string> sourceTags,
-        IReadOnlySet<CapabilityOperationClassification>? operationClassifications = null)
+        IReadOnlySet<CapabilityOperationClassification>? operationClassifications = null,
+        ImplementationKey? implementationKey = null)
     {
         if (!TryCreateRuntimeToolName(toolName, out var runtimeToolName))
         {
@@ -36,7 +37,7 @@ internal static class RuntimeToolCapabilityDescriptorFactory
         var descriptor = ToolDescriptorFactory.Internal(
             CreateRuntimeToolCapabilityKey(runtimeToolName),
             runtimeToolName,
-            ImplementationKey.Create($"maf.{runtimeToolName.Value}"),
+            implementationKey ?? ImplementationKey.Create($"maf.{runtimeToolName.Value}"),
             tags,
             classifications,
             ResolveRuntimeToolSideEffectProfile(runtimeToolName.Value));

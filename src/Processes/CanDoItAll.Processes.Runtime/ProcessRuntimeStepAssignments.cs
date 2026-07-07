@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 
 namespace CanDoItAll.Processes.Runtime;
 
@@ -22,7 +23,10 @@ public sealed record ProcessRuntimeStepAssignment(
     string OperationTargetScope,
     IReadOnlyDictionary<string, string> LaunchVariables,
     ProcessRuntimeBranchGate? BranchGate,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc)
+{
+    public ProcessCapabilityScope CapabilityScope { get; init; } = ProcessCapabilityScope.Empty;
+}
 
 public sealed record ProcessRuntimeBranchGate(
     string SourceStepKey,

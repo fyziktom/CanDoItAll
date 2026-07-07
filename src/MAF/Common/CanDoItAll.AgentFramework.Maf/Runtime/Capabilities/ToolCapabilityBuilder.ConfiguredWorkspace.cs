@@ -101,7 +101,7 @@ internal sealed class ConfiguredWorkspaceToolSet(
                 AddConfiguredToolIfAllowed(tools, "workspace_spreadsheet_function_catalog", () => AIFunctionFactory.Create(spreadsheetPlugin.ListSpreadsheetFunctions, "workspace_spreadsheet_function_catalog", "Lists common Excel-compatible formula functions with syntax and examples for building spreadsheet cells."));
                 AddConfiguredToolIfAllowed(tools, "workspace_inspect_image", () => AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
                 AddConfiguredToolIfAllowed(tools, "workspace_analyze_image", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFile, "workspace_analyze_image", "Analyzes a workspace PNG, JPEG, or GIF image through the provider's vision-capable analysis model and returns visible evidence plus provider token counts."));
-                AddConfiguredToolIfAllowed(tools, "workspace_analyze_images", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", "Analyzes two or more workspace screenshot images together through the provider's vision-capable analysis model and returns visible comparison evidence plus provider token counts."));
+                AddConfiguredToolIfAllowed(tools, "workspace_analyze_images", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", "Analyzes two or more workspace images together through the provider's vision-capable analysis model and returns visible comparison evidence plus provider token counts."));
             }
 
             if (attachFileTools && access.CanWriteFiles)
@@ -193,7 +193,7 @@ internal sealed class ConfiguredWorkspaceToolSet(
             AddWorkspacePluginTool(tools, "workspace_spreadsheet_function_catalog", () => AIFunctionFactory.Create(spreadsheetPlugin.ListSpreadsheetFunctions, "workspace_spreadsheet_function_catalog", "Lists common Excel-compatible formula functions with syntax and examples for building spreadsheet cells."));
             AddWorkspacePluginTool(tools, "workspace_inspect_image", () => AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
             AddWorkspacePluginTool(tools, "workspace_analyze_image", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFile, "workspace_analyze_image", "Analyzes a workspace PNG, JPEG, or GIF image through the provider's vision-capable analysis model and returns visible evidence plus provider token counts."));
-            AddWorkspacePluginTool(tools, "workspace_analyze_images", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", "Analyzes two or more workspace screenshot images together through the provider's vision-capable analysis model and returns visible comparison evidence plus provider token counts."));
+            AddWorkspacePluginTool(tools, "workspace_analyze_images", () => AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", "Analyzes two or more workspace images together through the provider's vision-capable analysis model and returns visible comparison evidence plus provider token counts."));
             return tools;
         }
 

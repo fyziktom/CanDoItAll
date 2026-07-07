@@ -64,6 +64,11 @@ internal static class RuntimeCapabilityAccessPolicyBuilder
             policies.Add(BuildRuntimeToolOperationRequirementPolicy(contextIntent, templatePath));
         }
 
+        if (contextIntent.CapabilityScopeOverride is { IsEmpty: false } scopeOverride)
+        {
+            policies.AddRange(scopeOverride.Policies);
+        }
+
         return policies;
     }
 

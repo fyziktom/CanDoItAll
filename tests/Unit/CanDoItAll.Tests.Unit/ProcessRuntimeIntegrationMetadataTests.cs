@@ -4,8 +4,10 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using Capabilities = CanDoItAll.AgentFramework.Capabilities.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -235,6 +237,105 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.NotNull(options.ContextIntent);
         Assert.False(options.ContextIntent!.RuntimeToolProvidersEnabled);
         Assert.False(options.ContextIntent.WorkspaceToolsEnabled);
+    }
+
+    [Fact]
+    public void Process_execution_metadata_carries_scoped_capability_policy_to_runtime_intent()
+    {
+        var assignment = CreateAssignment(Guid.NewGuid()) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                Directives =
+                [
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.AllowOnly,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey,
+                            Value = "management.provider"
+                        },
+                        Reason = "Management-only step."
+                    },
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.Deny,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.CapabilityTag,
+                            Value = "development"
+                        },
+                        Reason = "Development capabilities are suppressed for this step."
+                    },
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.Require,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.CapabilityIdentity,
+                            Value = nameof(Capabilities.CapabilityKind.Tool),
+                            SecondaryValue = "workspace-read-file"
+                        },
+                        Reason = "The management step still needs read-only workspace evidence."
+                    }
+                ]
+            }
+        };
+        var metadataJson = BuildProcessExecutionMetadata(assignment);
+        var run = CreateTrustedProcessRun(metadataJson) with
+        {
+            SourceId = assignment.StepKey,
+            ProcessRunId = assignment.RunId.Value.ToString("D"),
+            ProcessStepId = assignment.StepInstanceId.Value.ToString("D")
+        };
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "CreateRuntimeExecutionOptions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
+
+        var resolvedScope = ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run);
+        Assert.NotNull(resolvedScope);
+        Assert.NotNull(options.ContextIntent!.CapabilityScopeOverride);
+        Assert.Equal(resolvedScope!.Policies.Count, options.ContextIntent.CapabilityScopeOverride!.Policies.Count);
+        Assert.Equal(resolvedScope.RequiredCapabilities.Count, options.ContextIntent.CapabilityScopeOverride.RequiredCapabilities.Count);
+        var policy = Assert.Single(resolvedScope.Policies);
+        Assert.Equal(Capabilities.CapabilityAccessDefaultEffect.DenyAll, policy.DefaultEffect);
+        Assert.Contains(policy.Rules, rule =>
+            rule.Effect == Capabilities.CapabilityAccessEffect.Allow &&
+            rule.Selector.Kind == Capabilities.CapabilitySelectorKind.Tag &&
+            rule.Selector.Tag == Capabilities.RuntimeToolProviderCapabilityTags.CreateProviderKeyTag("management.provider"));
+        Assert.Contains(policy.Rules, rule =>
+            rule.Effect == Capabilities.CapabilityAccessEffect.Deny &&
+            rule.Selector.Kind == Capabilities.CapabilitySelectorKind.Tag &&
+            rule.Selector.Tag == Capabilities.CapabilityTag.Create("development"));
+        Assert.Contains(policy.Rules, rule =>
+            rule.Effect == Capabilities.CapabilityAccessEffect.Require &&
+            rule.Selector.Kind == Capabilities.CapabilitySelectorKind.CapabilityKey);
+        var required = Assert.Single(resolvedScope.RequiredCapabilities);
+        Assert.Equal(Capabilities.CapabilityKind.Tool, required.Kind);
+        Assert.Equal(Capabilities.CapabilityKey.Create("workspace-read-file"), required.Key);
+    }
+
+    [Fact]
+    public void Process_runtime_capability_scope_metadata_fails_closed_when_malformed()
+    {
+        var metadataJson = $$"""
+            {
+              "{{ExecutionInvocationMetadata.RuntimeCapabilityScopeOverrideMetadataKey}}": {
+                "policies": "invalid-policy-list",
+                "requiredCapabilities": []
+              }
+            }
+            """;
+        var run = CreateTrustedProcessRun(metadataJson);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run));
+
+        Assert.Contains("capability scope metadata is malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
