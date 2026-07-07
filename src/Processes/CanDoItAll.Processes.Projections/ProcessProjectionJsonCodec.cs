@@ -188,6 +188,10 @@ internal sealed class LegacyProcessRunIdJsonConverter : JsonConverter<LegacyProc
 
 [JsonSerializable(typeof(ProcessLiveProcessSnapshot))]
 [JsonSerializable(typeof(ProcessRuntimeCurrentStepProjection))]
+[JsonSerializable(typeof(ProcessRuntimeDiagnosticProjection))]
+[JsonSerializable(typeof(ProcessRuntimeArtifactLineageProjection))]
+[JsonSerializable(typeof(ProcessRuntimeRecoveryDecisionProjection))]
+[JsonSerializable(typeof(ProcessRuntimeResultLineageProjection))]
 [JsonSerializable(typeof(ProcessRuntimeOperatorActionProjection))]
 [JsonSerializable(typeof(ProcessRuntimeChildRunWaitProjection))]
 [JsonSerializable(typeof(ProcessRunDetailProjection))]

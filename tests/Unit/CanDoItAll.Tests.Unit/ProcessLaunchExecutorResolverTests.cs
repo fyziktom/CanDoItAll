@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Templates;
@@ -60,6 +61,115 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Equal(ProcessLaunchExecutorKinds.Agent, binding.ExecutorKind);
         Assert.Equal(agent.Id.ToString("D"), binding.ExecutorId);
         Assert.Contains("delivery-manager", binding.AssignmentReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_surfaces_management_only_skill_suppression_without_changing_agent_settings()
+    {
+        var providerId = Guid.Parse("632a32cd-bcc7-4467-96c3-4f5292f5db42");
+        var agent = CreateAgent(
+            providerId,
+            Guid.Parse("a70383fc-68d7-4032-b052-c63ed53b6d36"),
+            "Technical Delivery Manager",
+            "Delivery manager with engineering background",
+            "Coordinates delivery governance and can also support engineering work when a process step allows it.",
+            AgentWorkloadKind.Management,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["delivery-manager", "dotnet", "programming"]);
+        var workspace = new ResolverWorkspaceService([agent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateDefinition();
+        definition.Steps[0].CapabilityScope = new ProcessCapabilityScope
+        {
+            Directives =
+            [
+                new ProcessCapabilityScopeDirective
+                {
+                    Kind = ProcessCapabilityScopeDirectiveKind.Deny,
+                    Target = new ProcessCapabilityScopeTarget
+                    {
+                        Kind = ProcessCapabilityScopeTargetKind.CapabilityKind,
+                        Value = CapabilityKind.Skill.ToString()
+                    },
+                    Reason = "Management-only step."
+                }
+            ]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(agent.Id.ToString("D"), binding.ExecutorId);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Info &&
+            finding.Code == "process.launch.capability_suppressed" &&
+            finding.Message.Contains("CapabilityKind:Skill", StringComparison.Ordinal) &&
+            finding.Message.Contains("Management-only", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_binds_required_scoped_workspace_tool_when_profile_exposes_it()
+    {
+        var providerId = Guid.Parse("91caa057-c4e7-44d6-9796-100adcf2dd93");
+        var agent = CreateAgent(providerId);
+        var workspace = new ResolverWorkspaceService([agent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateDefinition();
+        definition.Steps[0].CapabilityScope = CreateRequiredWorkspaceToolScope("workspace-analyze-image");
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(agent.Id.ToString("D"), binding.ExecutorId);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Info &&
+            finding.Code == "process.launch.capability_required" &&
+            finding.Message.Contains("CapabilityIdentity:Tool/workspace-analyze-image", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_required_scoped_workspace_tool_when_profile_cannot_expose_it()
+    {
+        var providerId = Guid.Parse("ba3bc84f-7e95-4e5a-a93d-af2fe164ebf1");
+        var agent = CreateAgent(
+            providerId,
+            Guid.Parse("5de5fb45-aa57-4ea0-ae9f-472a963f1cd8"),
+            "Read-only Delivery Manager",
+            "Delivery Manager",
+            "Coordinates delivery governance with read-only workspace access.",
+            AgentWorkloadKind.Management,
+            AgentWorkspaceToolProfileKind.ReadOnly,
+            ["delivery-manager"]);
+        var workspace = new ResolverWorkspaceService([agent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = CreateDefinition();
+        definition.Steps[0].CapabilityScope = CreateRequiredWorkspaceToolScope("workspace-analyze-image");
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "agent.readiness.required-capability-missing" &&
+            finding.Message.Contains("workspace-analyze-image", StringComparison.Ordinal) &&
+            finding.Message.Contains(agent.Name, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -779,6 +889,27 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Contains(step.RoleAssignments, assignment =>
             string.Equals(assignment.RoleKey, expectedRoleKey, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(assignment.ResponsibilityKind, "Reviewer", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static ProcessCapabilityScope CreateRequiredWorkspaceToolScope(string capabilityKey)
+    {
+        return new ProcessCapabilityScope
+        {
+            Directives =
+            [
+                new ProcessCapabilityScopeDirective
+                {
+                    Kind = ProcessCapabilityScopeDirectiveKind.Require,
+                    Target = new ProcessCapabilityScopeTarget
+                    {
+                        Kind = ProcessCapabilityScopeTargetKind.CapabilityIdentity,
+                        Value = CapabilityKind.Tool.ToString(),
+                        SecondaryValue = capabilityKey
+                    },
+                    Reason = "Scoped process step requires this workspace tool."
+                }
+            ]
+        };
     }
 
     private static ProcessTemplateDefinitionDocument CreateDefinition()

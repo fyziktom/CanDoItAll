@@ -165,6 +165,12 @@ public sealed class ProcessStrategyResultReceiptEntity
 
     public string ResultHash { get; set; } = string.Empty;
 
+    public string DiagnosticsJson { get; set; } = "[]";
+
+    public string ProducedArtifactsJson { get; set; } = "[]";
+
+    public string? RecoveryDecisionJson { get; set; }
+
     public ProcessRuntimeStateEntity? RuntimeState { get; set; }
 }
 

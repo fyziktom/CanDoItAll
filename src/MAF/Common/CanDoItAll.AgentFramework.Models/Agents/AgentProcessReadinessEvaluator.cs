@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using AccessCapabilityIdentity = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityIdentity;
+using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -11,7 +13,8 @@ public sealed record AgentProcessRoleReadinessRequest(
     string RoleDisplayName,
     IReadOnlyList<string> AllowedOperations,
     string OperationTargetScope,
-    IReadOnlyList<string>? RequiredRuntimeToolNames = null);
+    IReadOnlyList<string>? RequiredRuntimeToolNames = null,
+    IReadOnlyList<AccessCapabilityIdentity>? RequiredCapabilities = null);
 
 public sealed record AgentProcessRoleReadinessResult(
     bool HasRoleFit,
@@ -95,6 +98,7 @@ public static class AgentProcessReadinessEvaluator
         }
 
         AddToolReadinessFindings(agent, request, roleTokens, findings);
+        AddRequiredCapabilityReadinessFindings(agent, request, findings);
 
         var hasErrors = findings.Any(finding => finding.Severity == AgentProcessReadinessFindingSeverity.Error);
         var matchSummary = exactMatch.Score > 0
@@ -116,6 +120,7 @@ public static class AgentProcessReadinessEvaluator
             request.OperationTargetScope,
             string.Join(",", request.AllowedOperations.OrderBy(item => item, StringComparer.Ordinal)),
             string.Join(",", NormalizeRequiredRuntimeToolNames(request.RequiredRuntimeToolNames)),
+            string.Join(",", NormalizeRequiredCapabilities(request.RequiredCapabilities).Select(FormatCapabilityIdentity)),
             readinessSummary));
 
         return new AgentProcessRoleReadinessResult(
@@ -238,6 +243,95 @@ public static class AgentProcessReadinessEvaluator
                 $"agent.readiness.required-tool-{summary.Code}-missing",
                 $"{summary.Description} for required runtime tool '{requiredToolName}'"));
         }
+    }
+
+    private static void AddRequiredCapabilityReadinessFindings(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest request,
+        List<AgentProcessReadinessFinding> findings)
+    {
+        var workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(
+            AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+        foreach (var requiredCapability in NormalizeRequiredCapabilities(request.RequiredCapabilities))
+        {
+            if (HasRequiredCapability(agent, workspaceToolAccess, requiredCapability))
+            {
+                continue;
+            }
+
+            findings.Add(new AgentProcessReadinessFinding(
+                AgentProcessReadinessFindingSeverity.Error,
+                "agent.readiness.required-capability-missing",
+                $"Step '{request.StepKey}' requires {FormatCapabilityKind(requiredCapability.Kind)} capability '{requiredCapability.Key.Value}', but agent '{agent.Name}' does not expose it in the process step capability scope."));
+        }
+    }
+
+    private static bool HasRequiredCapability(
+        AgentDefinition agent,
+        AgentWorkspaceToolAccessSettings workspaceToolAccess,
+        AccessCapabilityIdentity requiredCapability)
+    {
+        if (requiredCapability.Kind == AccessCapabilityKind.Tool &&
+            TryResolveRuntimeToolNameFromCapabilityKey(requiredCapability.Key.Value, out var runtimeToolName) &&
+            AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(runtimeToolName, out var permission))
+        {
+            return HasWorkspacePermission(workspaceToolAccess, permission);
+        }
+
+        return TryMapCapabilityKind(requiredCapability.Kind, out var modelKind) &&
+               agent.Capabilities.Any(capability =>
+                   capability.Kind == modelKind &&
+                   CapabilityKeyMatches(capability.CapabilityKey, requiredCapability.Key.Value));
+    }
+
+    private static bool TryResolveRuntimeToolNameFromCapabilityKey(
+        string capabilityKey,
+        out string runtimeToolName)
+    {
+        runtimeToolName = string.IsNullOrWhiteSpace(capabilityKey)
+            ? string.Empty
+            : capabilityKey.Trim().Replace('-', '_');
+        return !string.IsNullOrWhiteSpace(runtimeToolName);
+    }
+
+    private static bool TryMapCapabilityKind(
+        AccessCapabilityKind accessKind,
+        out CapabilityKind modelKind)
+    {
+        modelKind = default;
+        return accessKind switch
+        {
+            AccessCapabilityKind.Skill => SetMappedKind(CapabilityKind.Skill, out modelKind),
+            AccessCapabilityKind.Tool => SetMappedKind(CapabilityKind.Tool, out modelKind),
+            AccessCapabilityKind.McpServer => SetMappedKind(CapabilityKind.McpServer, out modelKind),
+            AccessCapabilityKind.Plugin => SetMappedKind(CapabilityKind.Plugin, out modelKind),
+            AccessCapabilityKind.Rag => SetMappedKind(CapabilityKind.Rag, out modelKind),
+            AccessCapabilityKind.AiContext => SetMappedKind(CapabilityKind.AiContext, out modelKind),
+            AccessCapabilityKind.Memory => SetMappedKind(CapabilityKind.Memory, out modelKind),
+            _ => false
+        };
+    }
+
+    private static bool SetMappedKind(
+        CapabilityKind value,
+        out CapabilityKind mapped)
+    {
+        mapped = value;
+        return true;
+    }
+
+    private static bool CapabilityKeyMatches(
+        string assignedKey,
+        string requiredKey)
+    {
+        if (string.IsNullOrWhiteSpace(assignedKey) ||
+            string.IsNullOrWhiteSpace(requiredKey))
+        {
+            return false;
+        }
+
+        return string.Equals(assignedKey.Trim(), requiredKey.Trim(), StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(assignedKey.Trim().Replace('_', '-'), requiredKey.Trim().Replace('_', '-'), StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AddRequiredBrowserToolReadinessFindings(
@@ -446,6 +540,23 @@ public static class AgentProcessReadinessEvaluator
             .ToArray()
             ?? [];
     }
+
+    private static IReadOnlyList<AccessCapabilityIdentity> NormalizeRequiredCapabilities(
+        IReadOnlyList<AccessCapabilityIdentity>? requiredCapabilities)
+    {
+        return requiredCapabilities?
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key.Value))
+            .Distinct()
+            .OrderBy(FormatCapabilityIdentity, StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? [];
+    }
+
+    private static string FormatCapabilityIdentity(AccessCapabilityIdentity identity)
+        => $"{FormatCapabilityKind(identity.Kind)}:{identity.Key.Value}";
+
+    private static string FormatCapabilityKind(AccessCapabilityKind kind)
+        => kind.ToString();
 
     private static bool IsTargetScope(AgentProcessRoleReadinessRequest request, string targetScope)
     {

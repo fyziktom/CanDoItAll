@@ -755,6 +755,104 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Runtime_projection_readback_includes_blocked_result_diagnostics_and_lineage()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var slotId = ArtifactSlotId.New();
+        var artifactId = ArtifactInstanceId.New();
+        await ProjectAsync(
+            store,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepBlocked, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: StrategyResultIdempotencyKey.New())
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    blockedStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    StrategyResultIdempotencyKey.New(),
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:blocked-result",
+                    [
+                        new StrategyResultDiagnosticReceipt(
+                            "process.runtime.missing_artifact",
+                            StrategyDiagnosticSensitivity.Normal,
+                            "sha256:diagnostic",
+                            "Required artifact was not produced.",
+                            RestrictedEvidenceReference: null,
+                            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    ],
+                    [
+                        new StrategyResultArtifactReceipt(
+                            slotId,
+                            artifactId,
+                            "sha256:artifact")
+                    ],
+                    new ProcessRecoveryDecisionReceipt(
+                        ProcessFailureCategory.MissingArtifact,
+                        ProcessRecoveryDecisionKind.ManagerRequired,
+                        "process.runtime.missing_artifact",
+                        "process.manager-review-required",
+                        "Manager review is required."))
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var query = new ProcessRuntimeProjectionQueryService(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            new InMemoryRuntimeStateStore(state),
+            new InMemoryAssignmentStore(
+            [
+                CreateAssignment(runId, planId, blockedStepId, "produce-evidence", "Process Worker")
+            ]));
+
+        var detail = await query.GetRunDetailAsync(new ProcessRunDetailQuery(runId));
+        var history = await query.GetRunHistoryAsync(new ProcessRunHistoryQuery(runId, Now.AddHours(-1), Now, Take: 10));
+        var live = await query.GetLiveProcessesAsync(new ProcessLiveProcessesQuery(Now, TimeSpan.FromHours(1), Take: 10));
+
+        Assert.NotNull(detail);
+        var detailDiagnostic = Assert.Single(detail.Diagnostics);
+        Assert.Equal("process.runtime.missing_artifact", detailDiagnostic.Code);
+        Assert.Equal("Runtime", detailDiagnostic.Category);
+        Assert.Equal("produce-evidence", detailDiagnostic.StepKey);
+        var lineage = Assert.Single(detail.ResultLineage);
+        Assert.Equal(blockedStepId.Value, lineage.StepInstanceId);
+        Assert.Equal(artifactId.Value, Assert.Single(lineage.ProducedArtifacts).ArtifactId);
+        Assert.NotNull(lineage.RecoveryDecision);
+        Assert.Equal("MissingArtifact", lineage.RecoveryDecision.FailureCategory);
+        Assert.Equal("ManagerRequired", lineage.RecoveryDecision.DecisionKind);
+        Assert.Contains("Required artifact was not produced", Assert.Single(history.Events).Summary, StringComparison.Ordinal);
+        var liveRun = Assert.Single(live.Runs);
+        Assert.Equal("process.runtime.missing_artifact", Assert.Single(liveRun.Diagnostics).Code);
+        Assert.Equal("process.runtime.missing_artifact", Assert.Single(liveRun.CurrentStep!.Diagnostics).Code);
+        Assert.Equal(slotId.Value, Assert.Single(liveRun.CurrentStep.ProducedArtifacts).SlotId);
+    }
+
+    [Fact]
     public async Task Runtime_workspace_operator_actions_include_failed_tool_receipts_for_blocked_step()
     {
         await using var dbContext = CreateDbContext();

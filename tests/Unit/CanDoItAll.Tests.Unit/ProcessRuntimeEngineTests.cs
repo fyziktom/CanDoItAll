@@ -461,6 +461,96 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Blocked_strategy_result_preserves_safe_diagnostics_on_receipt()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                NeedsManagerResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        Assert.Equal("process.runtime.test_needs_manager", diagnostic.Code);
+        Assert.Equal("sha256:needs-manager-diagnostic", diagnostic.EvidenceHash);
+        Assert.Equal("Unit test needs manager.", diagnostic.SafeSummary);
+        Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessFailureCategory.Unknown, receipt.RecoveryDecision.FailureCategory);
+    }
+
+    [Fact]
+    public async Task Blocked_strategy_result_without_diagnostics_records_missing_diagnostic()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                NeedsManagerResultWithoutDiagnostics()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        Assert.Equal("process.runtime.blocked_without_diagnostics", diagnostic.Code);
+        Assert.Equal(ProcessDiagnosticRetrySafety.Unknown, diagnostic.RetrySafety);
+        Assert.Contains("Step blocked without strategy diagnostics", diagnostic.SafeSummary, StringComparison.Ordinal);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingDiagnostics, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
+    }
+
+    [Fact]
     public async Task Rework_request_reactivates_failed_run_and_requeues_failed_step()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -714,6 +804,20 @@ public sealed class ProcessRuntimeEngineTests
                     ProcessDiagnosticRetrySafety.UnsafeToRetry,
                     ProcessDiagnosticIdempotencyClassification.Idempotent)
             ],
+            [],
+            "sha256:needs-manager-result");
+    }
+
+    private static StrategyResultEnvelope NeedsManagerResultWithoutDiagnostics()
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [],
             [],
             "sha256:needs-manager-result");
     }

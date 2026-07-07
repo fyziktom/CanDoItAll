@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
@@ -8,6 +10,8 @@ namespace CanDoItAll.Processes.Persistence;
 
 internal static class ProcessPersistenceMappers
 {
+    private static readonly JsonSerializerOptions ReceiptJsonOptions = CreateReceiptJsonOptions();
+
     public static ProcessRuntimeStateEntity ToEntity(ProcessRuntimeStateSnapshot state)
     {
         var entity = new ProcessRuntimeStateEntity
@@ -65,7 +69,10 @@ internal static class ProcessPersistenceMappers
                 IdempotencyKey = receipt.IdempotencyKey.Value,
                 Outcome = receipt.Outcome.ToString(),
                 AppliedStepStatus = receipt.AppliedStepStatus,
-                ResultHash = receipt.ResultHash
+                ResultHash = receipt.ResultHash,
+                DiagnosticsJson = SerializeDiagnostics(receipt.Diagnostics),
+                ProducedArtifactsJson = SerializeProducedArtifacts(receipt.ProducedArtifacts),
+                RecoveryDecisionJson = SerializeRecoveryDecision(receipt.RecoveryDecision)
             });
         }
 
@@ -122,7 +129,10 @@ internal static class ProcessPersistenceMappers
                 new StrategyResultIdempotencyKey(receipt.IdempotencyKey),
                 Enum.Parse<StrategyOutcome>(receipt.Outcome),
                 receipt.AppliedStepStatus,
-                receipt.ResultHash));
+                receipt.ResultHash,
+                DeserializeDiagnostics(receipt.DiagnosticsJson),
+                DeserializeProducedArtifacts(receipt.ProducedArtifactsJson),
+                DeserializeRecoveryDecision(receipt.RecoveryDecisionJson)));
         }
 
         var availableSlots = new HashSet<ArtifactSlotId>();
@@ -321,4 +331,128 @@ internal static class ProcessPersistenceMappers
             yield return Guid.Parse(part);
         }
     }
+
+    private static string SerializeDiagnostics(IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
+        => JsonSerializer.Serialize(
+            diagnostics.Select(diagnostic => new PersistedStrategyResultDiagnostic(
+                diagnostic.Code,
+                diagnostic.Sensitivity,
+                diagnostic.EvidenceHash,
+                diagnostic.SafeSummary,
+                diagnostic.RestrictedEvidenceReference,
+                diagnostic.RetrySafety,
+                diagnostic.Idempotency)).ToArray(),
+            ReceiptJsonOptions);
+
+    private static IReadOnlyList<StrategyResultDiagnosticReceipt> DeserializeDiagnostics(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        var diagnostics = JsonSerializer.Deserialize<PersistedStrategyResultDiagnostic[]>(value, ReceiptJsonOptions) ?? [];
+        return diagnostics
+            .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Code))
+            .Select(diagnostic => new StrategyResultDiagnosticReceipt(
+                diagnostic.Code.Trim(),
+                diagnostic.Sensitivity,
+                diagnostic.EvidenceHash.Trim(),
+                diagnostic.SafeSummary.Trim(),
+                string.IsNullOrWhiteSpace(diagnostic.RestrictedEvidenceReference)
+                    ? null
+                    : diagnostic.RestrictedEvidenceReference.Trim(),
+                diagnostic.RetrySafety,
+                diagnostic.Idempotency))
+            .ToArray();
+    }
+
+    private static string SerializeProducedArtifacts(IReadOnlyList<StrategyResultArtifactReceipt> artifacts)
+        => JsonSerializer.Serialize(
+            artifacts.Select(artifact => new PersistedStrategyResultArtifact(
+                artifact.SlotId.Value,
+                artifact.ArtifactId.Value,
+                artifact.ContentHash)).ToArray(),
+            ReceiptJsonOptions);
+
+    private static IReadOnlyList<StrategyResultArtifactReceipt> DeserializeProducedArtifacts(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        var artifacts = JsonSerializer.Deserialize<PersistedStrategyResultArtifact[]>(value, ReceiptJsonOptions) ?? [];
+        return artifacts
+            .Where(artifact => artifact.SlotId != Guid.Empty && artifact.ArtifactId != Guid.Empty)
+            .Select(artifact => new StrategyResultArtifactReceipt(
+                new ArtifactSlotId(artifact.SlotId),
+                new ArtifactInstanceId(artifact.ArtifactId),
+                artifact.ContentHash.Trim()))
+            .ToArray();
+    }
+
+    private static string? SerializeRecoveryDecision(ProcessRecoveryDecisionReceipt? decision)
+    {
+        return decision is null
+            ? null
+            : JsonSerializer.Serialize(
+                new PersistedProcessRecoveryDecision(
+                    decision.FailureCategory,
+                    decision.DecisionKind,
+                    decision.SourceDiagnosticCode,
+                    decision.Policy,
+                    decision.SafeReason),
+                ReceiptJsonOptions);
+    }
+
+    private static ProcessRecoveryDecisionReceipt? DeserializeRecoveryDecision(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var decision = JsonSerializer.Deserialize<PersistedProcessRecoveryDecision>(value, ReceiptJsonOptions);
+        return decision is null
+            ? null
+            : new ProcessRecoveryDecisionReceipt(
+                decision.FailureCategory,
+                decision.DecisionKind,
+                decision.SourceDiagnosticCode.Trim(),
+                decision.Policy.Trim(),
+                decision.SafeReason.Trim());
+    }
+
+    private static JsonSerializerOptions CreateReceiptJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNameCaseInsensitive = true
+        };
+        options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+        return options;
+    }
+
+    private sealed record PersistedStrategyResultDiagnostic(
+        string Code,
+        StrategyDiagnosticSensitivity Sensitivity,
+        string EvidenceHash,
+        string SafeSummary,
+        string? RestrictedEvidenceReference,
+        ProcessDiagnosticRetrySafety RetrySafety,
+        ProcessDiagnosticIdempotencyClassification Idempotency);
+
+    private sealed record PersistedStrategyResultArtifact(
+        Guid SlotId,
+        Guid ArtifactId,
+        string ContentHash);
+
+    private sealed record PersistedProcessRecoveryDecision(
+        ProcessFailureCategory FailureCategory,
+        ProcessRecoveryDecisionKind DecisionKind,
+        string SourceDiagnosticCode,
+        string Policy,
+        string SafeReason);
 }

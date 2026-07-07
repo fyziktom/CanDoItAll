@@ -86,13 +86,92 @@ public sealed record DispatchClaimState(
     DateTimeOffset? RenewedAtUtc,
     StrategyResultIdempotencyKey? ResultIdempotencyKey);
 
-public sealed record StrategyResultReceipt(
-    ProcessStepInstanceId StepInstanceId,
-    StrategyId StrategyId,
-    StrategyResultIdempotencyKey IdempotencyKey,
-    StrategyOutcome Outcome,
-    ProcessRuntimeStepStatus AppliedStepStatus,
-    string ResultHash);
+public sealed record StrategyResultReceipt
+{
+    public StrategyResultReceipt(
+        ProcessStepInstanceId stepInstanceId,
+        StrategyId strategyId,
+        StrategyResultIdempotencyKey idempotencyKey,
+        StrategyOutcome outcome,
+        ProcessRuntimeStepStatus appliedStepStatus,
+        string resultHash,
+        IReadOnlyList<StrategyResultDiagnosticReceipt>? diagnostics = null,
+        IReadOnlyList<StrategyResultArtifactReceipt>? producedArtifacts = null,
+        ProcessRecoveryDecisionReceipt? recoveryDecision = null)
+    {
+        StepInstanceId = stepInstanceId;
+        StrategyId = strategyId;
+        IdempotencyKey = idempotencyKey;
+        Outcome = outcome;
+        AppliedStepStatus = appliedStepStatus;
+        ResultHash = resultHash;
+        Diagnostics = diagnostics ?? [];
+        ProducedArtifacts = producedArtifacts ?? [];
+        RecoveryDecision = recoveryDecision;
+    }
+
+    public ProcessStepInstanceId StepInstanceId { get; init; }
+
+    public StrategyId StrategyId { get; init; }
+
+    public StrategyResultIdempotencyKey IdempotencyKey { get; init; }
+
+    public StrategyOutcome Outcome { get; init; }
+
+    public ProcessRuntimeStepStatus AppliedStepStatus { get; init; }
+
+    public string ResultHash { get; init; }
+
+    public IReadOnlyList<StrategyResultDiagnosticReceipt> Diagnostics { get; init; }
+
+    public IReadOnlyList<StrategyResultArtifactReceipt> ProducedArtifacts { get; init; }
+
+    public ProcessRecoveryDecisionReceipt? RecoveryDecision { get; init; }
+}
+
+public sealed record StrategyResultDiagnosticReceipt(
+    string Code,
+    StrategyDiagnosticSensitivity Sensitivity,
+    string EvidenceHash,
+    string SafeSummary,
+    string? RestrictedEvidenceReference,
+    ProcessDiagnosticRetrySafety RetrySafety,
+    ProcessDiagnosticIdempotencyClassification Idempotency);
+
+public sealed record StrategyResultArtifactReceipt(
+    ArtifactSlotId SlotId,
+    ArtifactInstanceId ArtifactId,
+    string ContentHash);
+
+public sealed record ProcessRecoveryDecisionReceipt(
+    ProcessFailureCategory FailureCategory,
+    ProcessRecoveryDecisionKind DecisionKind,
+    string SourceDiagnosticCode,
+    string Policy,
+    string SafeReason);
+
+public enum ProcessFailureCategory
+{
+    Unknown,
+    MissingDiagnostics,
+    MissingArtifact,
+    MissingCapability,
+    DeniedCapability,
+    PolicyViolation,
+    Timeout,
+    ProviderFailure,
+    ChildRunBlocked,
+    InstructionNonCompliance,
+    AdapterRetryable
+}
+
+public enum ProcessRecoveryDecisionKind
+{
+    None,
+    SafeRetry,
+    ManagerRequired,
+    TerminalBlocked
+}
 
 public sealed record DispatchWorkItem(
     ProcessRunId RunId,

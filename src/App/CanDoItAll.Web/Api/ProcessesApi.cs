@@ -363,9 +363,10 @@ internal static class ProcessesApi
             run.FirstEventAtUtc,
             run.LastEventAtUtc,
             MapFreshness(run.Freshness),
-            run.RecentEvents.Select(MapLiveEvent).ToArray(),
+            OrEmpty(run.RecentEvents).Select(MapLiveEvent).ToArray(),
             MapCurrentStep(run.CurrentStep),
-            NormalizeChildRunWaits(run).Select(MapChildRunWait).ToArray());
+            NormalizeChildRunWaits(run).Select(MapChildRunWait).ToArray(),
+            OrEmpty(run.Diagnostics).Select(MapDiagnostic).ToArray());
     }
 
     private static ProcessRunDetailApiView MapRunDetail(ProcessRunDetailProjection detail)
@@ -377,7 +378,9 @@ internal static class ProcessesApi
             detail.FirstEventAtUtc,
             detail.LastEventAtUtc,
             MapFreshness(detail.Freshness),
-            detail.RecentEvents.Select(MapLiveEvent).ToArray());
+            OrEmpty(detail.RecentEvents).Select(MapLiveEvent).ToArray(),
+            OrEmpty(detail.Diagnostics).Select(MapDiagnostic).ToArray(),
+            OrEmpty(detail.ResultLineage).Select(MapResultLineage).ToArray());
     }
 
     private static ProcessLiveEventApiView MapLiveEvent(ProcessLiveRunEventProjection runtimeEvent)
@@ -391,7 +394,8 @@ internal static class ProcessesApi
             runtimeEvent.OccurredAtUtc,
             runtimeEvent.Sensitivity.ToString(),
             runtimeEvent.Summary,
-            runtimeEvent.RestrictedDiagnosticReference);
+            runtimeEvent.RestrictedDiagnosticReference,
+            OrEmpty(runtimeEvent.Diagnostics).Select(MapDiagnostic).ToArray());
     }
 
     private static ProcessChildRunWaitApiView MapChildRunWait(ProcessRuntimeChildRunWaitProjection wait)
@@ -426,11 +430,13 @@ internal static class ProcessesApi
                 step.UpdatedAtUtc,
                 step.ClaimedAtUtc,
                 step.LeaseExpiresAtUtc,
-                step.Summary);
+                step.Summary,
+                OrEmpty(step.Diagnostics).Select(MapDiagnostic).ToArray(),
+                OrEmpty(step.ProducedArtifacts).Select(MapArtifactLineage).ToArray());
     }
 
     private static IReadOnlyList<ProcessRuntimeChildRunWaitProjection> NormalizeChildRunWaits(ProcessLiveProcessSnapshot run)
-        => run.WaitingOnChildRuns ?? [];
+        => OrEmpty(run.WaitingOnChildRuns);
 
     private static ProcessTimelineEventApiView MapTimelineEvent(ProcessTimelineEventProjection runtimeEvent)
     {
@@ -443,7 +449,56 @@ internal static class ProcessesApi
             runtimeEvent.OccurredAtUtc,
             runtimeEvent.Sensitivity.ToString(),
             runtimeEvent.Summary,
-            runtimeEvent.RestrictedDiagnosticReference);
+            runtimeEvent.RestrictedDiagnosticReference,
+            OrEmpty(runtimeEvent.Diagnostics).Select(MapDiagnostic).ToArray());
+    }
+
+    private static ProcessRuntimeDiagnosticApiView MapDiagnostic(ProcessRuntimeDiagnosticProjection diagnostic)
+    {
+        return new ProcessRuntimeDiagnosticApiView(
+            diagnostic.RunId,
+            diagnostic.StepInstanceId,
+            diagnostic.StepKey,
+            diagnostic.StrategyId,
+            diagnostic.ResultHash,
+            diagnostic.Code,
+            diagnostic.Category,
+            diagnostic.SafeSummary,
+            diagnostic.Sensitivity,
+            diagnostic.RetrySafety,
+            diagnostic.Idempotency,
+            diagnostic.RestrictedDiagnosticReference);
+    }
+
+    private static ProcessRuntimeArtifactLineageApiView MapArtifactLineage(ProcessRuntimeArtifactLineageProjection artifact)
+    {
+        return new ProcessRuntimeArtifactLineageApiView(
+            artifact.SlotId,
+            artifact.ArtifactId,
+            artifact.ContentHash);
+    }
+
+    private static ProcessRuntimeResultLineageApiView MapResultLineage(ProcessRuntimeResultLineageProjection result)
+    {
+        return new ProcessRuntimeResultLineageApiView(
+            result.RunId,
+            result.StepInstanceId,
+            result.StepKey,
+            result.StrategyId,
+            result.IdempotencyKey,
+            result.Outcome,
+            result.AppliedStepStatus,
+            result.ResultHash,
+            OrEmpty(result.Diagnostics).Select(MapDiagnostic).ToArray(),
+            OrEmpty(result.ProducedArtifacts).Select(MapArtifactLineage).ToArray(),
+            result.RecoveryDecision is null
+                ? null
+                : new ProcessRuntimeRecoveryDecisionApiView(
+                    result.RecoveryDecision.FailureCategory,
+                    result.RecoveryDecision.DecisionKind,
+                    result.RecoveryDecision.SourceDiagnosticCode,
+                    result.RecoveryDecision.Policy,
+                    result.RecoveryDecision.SafeReason));
     }
 
     private static ProcessProjectionFreshnessApiView? MapFreshness(ProcessProjectionFreshness? freshness)
@@ -460,6 +515,9 @@ internal static class ProcessesApi
 
     private static DateTimeOffset NormalizeUtc(DateTimeOffset value)
         => value.Offset == TimeSpan.Zero ? value : value.ToUniversalTime();
+
+    private static IReadOnlyList<T> OrEmpty<T>(IReadOnlyList<T>? items)
+        => items ?? [];
 }
 
 internal sealed record ProcessApiContractResponse(
@@ -566,7 +624,8 @@ internal sealed record ProcessLiveRunApiView(
     ProcessProjectionFreshnessApiView? Freshness,
     IReadOnlyList<ProcessLiveEventApiView> RecentEvents,
     ProcessCurrentStepApiView? CurrentStep,
-    IReadOnlyList<ProcessChildRunWaitApiView> WaitingOnChildRuns);
+    IReadOnlyList<ProcessChildRunWaitApiView> WaitingOnChildRuns,
+    IReadOnlyList<ProcessRuntimeDiagnosticApiView> Diagnostics);
 
 internal sealed record ProcessCurrentStepApiView(
     Guid RunId,
@@ -582,7 +641,9 @@ internal sealed record ProcessCurrentStepApiView(
     DateTimeOffset UpdatedAtUtc,
     DateTimeOffset? ClaimedAtUtc,
     DateTimeOffset? LeaseExpiresAtUtc,
-    string Summary);
+    string Summary,
+    IReadOnlyList<ProcessRuntimeDiagnosticApiView> Diagnostics,
+    IReadOnlyList<ProcessRuntimeArtifactLineageApiView> ProducedArtifacts);
 
 internal sealed record ProcessChildRunWaitApiView(
     Guid ParentRunId,
@@ -602,7 +663,9 @@ internal sealed record ProcessRunDetailApiView(
     DateTimeOffset FirstEventAtUtc,
     DateTimeOffset LastEventAtUtc,
     ProcessProjectionFreshnessApiView? Freshness,
-    IReadOnlyList<ProcessLiveEventApiView> RecentEvents);
+    IReadOnlyList<ProcessLiveEventApiView> RecentEvents,
+    IReadOnlyList<ProcessRuntimeDiagnosticApiView> Diagnostics,
+    IReadOnlyList<ProcessRuntimeResultLineageApiView> ResultLineage);
 
 internal sealed record ProcessHistoryApiResponse(
     IReadOnlyList<ProcessTimelineEventApiView> Events,
@@ -617,7 +680,8 @@ internal sealed record ProcessLiveEventApiView(
     DateTimeOffset OccurredAtUtc,
     string Sensitivity,
     string Summary,
-    string? RestrictedDiagnosticReference);
+    string? RestrictedDiagnosticReference,
+    IReadOnlyList<ProcessRuntimeDiagnosticApiView> Diagnostics);
 
 internal sealed record ProcessTimelineEventApiView(
     Guid EventId,
@@ -628,7 +692,47 @@ internal sealed record ProcessTimelineEventApiView(
     DateTimeOffset OccurredAtUtc,
     string Sensitivity,
     string Summary,
+    string? RestrictedDiagnosticReference,
+    IReadOnlyList<ProcessRuntimeDiagnosticApiView> Diagnostics);
+
+internal sealed record ProcessRuntimeDiagnosticApiView(
+    Guid RunId,
+    Guid StepInstanceId,
+    string StepKey,
+    string StrategyId,
+    string ResultHash,
+    string Code,
+    string Category,
+    string SafeSummary,
+    string Sensitivity,
+    string RetrySafety,
+    string Idempotency,
     string? RestrictedDiagnosticReference);
+
+internal sealed record ProcessRuntimeArtifactLineageApiView(
+    Guid SlotId,
+    Guid ArtifactId,
+    string ContentHash);
+
+internal sealed record ProcessRuntimeResultLineageApiView(
+    Guid RunId,
+    Guid StepInstanceId,
+    string StepKey,
+    string StrategyId,
+    Guid IdempotencyKey,
+    string Outcome,
+    string AppliedStepStatus,
+    string ResultHash,
+    IReadOnlyList<ProcessRuntimeDiagnosticApiView> Diagnostics,
+    IReadOnlyList<ProcessRuntimeArtifactLineageApiView> ProducedArtifacts,
+    ProcessRuntimeRecoveryDecisionApiView? RecoveryDecision);
+
+internal sealed record ProcessRuntimeRecoveryDecisionApiView(
+    string FailureCategory,
+    string DecisionKind,
+    string SourceDiagnosticCode,
+    string Policy,
+    string SafeReason);
 
 internal sealed record ProcessProjectionFreshnessApiView(
     DateTimeOffset ObservedAtUtc,

@@ -23,6 +23,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
+using CapabilityOperationClassification = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityOperationClassification;
+using RuntimeToolName = CanDoItAll.AgentFramework.Capabilities.Abstractions.RuntimeToolName;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -89,11 +92,17 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 continue;
             }
 
-            var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role, request.Variables);
+            if (!AddCapabilityScopeReadinessFindings(findings, planStep.StepKey, roleKey, templateStep.CapabilityScope))
+            {
+                continue;
+            }
+
             if (!ValidateStepOperationContract(templateStep, roleKey, role, findings, planStep.StepKey))
             {
                 continue;
             }
+
+            var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role, request.Variables);
 
             var candidate = executorOverride is null
                 ? SelectAgent(readinessRequest, agents, providerById, providerProfileService)
@@ -152,6 +161,169 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
         return new ProcessLaunchExecutorResolution(bindings, findings);
     }
+
+    private static bool AddCapabilityScopeReadinessFindings(
+        List<ProcessLaunchReadinessFinding> findings,
+        string stepKey,
+        string roleKey,
+        ProcessCapabilityScope? capabilityScope)
+    {
+        var normalized = ProcessCapabilityScope.Normalize(capabilityScope);
+        var hasErrors = false;
+        foreach (var directive in normalized.Directives)
+        {
+            if (!TryValidateCapabilityScopeTarget(directive.Target, out var targetSummary, out var error))
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.capability_scope_invalid",
+                    $"Step '{stepKey}' role '{roleKey}' has invalid capability-scope directive: {error}",
+                    stepKey,
+                    roleKey));
+                hasErrors = true;
+                continue;
+            }
+
+            var code = directive.Kind switch
+            {
+                ProcessCapabilityScopeDirectiveKind.Allow => "process.launch.capability_allowed",
+                ProcessCapabilityScopeDirectiveKind.AllowOnly => "process.launch.capability_allow_only_scope",
+                ProcessCapabilityScopeDirectiveKind.Deny => "process.launch.capability_suppressed",
+                ProcessCapabilityScopeDirectiveKind.Require => "process.launch.capability_required",
+                _ => "process.launch.capability_scope_directive"
+            };
+            var message = directive.Kind switch
+            {
+                ProcessCapabilityScopeDirectiveKind.AllowOnly =>
+                    $"Step '{stepKey}' limits agent context to capability scope '{targetSummary}'.",
+                ProcessCapabilityScopeDirectiveKind.Deny =>
+                    $"Step '{stepKey}' suppresses capability scope '{targetSummary}'.",
+                ProcessCapabilityScopeDirectiveKind.Require =>
+                    $"Step '{stepKey}' requires capability scope '{targetSummary}'.",
+                _ =>
+                    $"Step '{stepKey}' allows capability scope '{targetSummary}'."
+            };
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Info,
+                code,
+                AppendReason(message, directive.Reason),
+                stepKey,
+                roleKey));
+        }
+
+        foreach (var receipt in normalized.RequiredReceipts)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Info,
+                "process.launch.required_tool_receipt",
+                AppendReason(
+                    $"Step '{stepKey}' requires tool receipt '{receipt.Key}' for {FormatRequiredReceiptSelector(receipt)}.",
+                    receipt.Reason),
+                stepKey,
+                roleKey));
+        }
+
+        foreach (var fragment in normalized.InstructionFragments)
+        {
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Info,
+                "process.launch.scoped_instruction_fragment",
+                $"Step '{stepKey}' adds scoped instruction fragment '{fragment.Key}'.",
+                stepKey,
+                roleKey));
+        }
+
+        return !hasErrors;
+    }
+
+    private static bool TryValidateCapabilityScopeTarget(
+        ProcessCapabilityScopeTarget target,
+        out string summary,
+        out string error)
+    {
+        summary = string.Empty;
+        error = string.Empty;
+        if (target.Kind == ProcessCapabilityScopeTargetKind.Unspecified)
+        {
+            error = "target kind is required.";
+            return false;
+        }
+
+        if (target.Kind != ProcessCapabilityScopeTargetKind.All &&
+            string.IsNullOrWhiteSpace(target.Value))
+        {
+            error = $"target value is required for '{target.Kind}'.";
+            return false;
+        }
+
+        if (target.Kind == ProcessCapabilityScopeTargetKind.CapabilityKind &&
+            !Enum.TryParse<AccessCapabilityKind>(target.Value.Trim(), ignoreCase: true, out _))
+        {
+            error = $"target value '{target.Value}' is not a valid capability kind.";
+            return false;
+        }
+
+        if (target.Kind == ProcessCapabilityScopeTargetKind.CapabilityIdentity &&
+            !Enum.TryParse<AccessCapabilityKind>(target.Value.Trim(), ignoreCase: true, out _))
+        {
+            error = $"capability identity kind '{target.Value}' is not valid.";
+            return false;
+        }
+
+        if (target.Kind == ProcessCapabilityScopeTargetKind.CapabilityIdentity &&
+            string.IsNullOrWhiteSpace(target.SecondaryValue))
+        {
+            error = "capability identity target requires capability key in secondary value.";
+            return false;
+        }
+
+        if (target.Kind == ProcessCapabilityScopeTargetKind.RuntimeToolName &&
+            !RuntimeToolName.TryCreate(target.Value.Trim().Replace('-', '_'), out _))
+        {
+            error = $"target value '{target.Value}' is not a valid runtime tool name.";
+            return false;
+        }
+
+        if (target.Kind == ProcessCapabilityScopeTargetKind.McpToolName &&
+            string.IsNullOrWhiteSpace(target.SecondaryValue))
+        {
+            error = "MCP tool target requires server key and tool name.";
+            return false;
+        }
+
+        if (target.Kind == ProcessCapabilityScopeTargetKind.OperationClassification &&
+            !Enum.TryParse<CapabilityOperationClassification>(target.Value.Trim(), ignoreCase: true, out _))
+        {
+            error = $"target value '{target.Value}' is not a valid operation classification.";
+            return false;
+        }
+
+        summary = target.Kind == ProcessCapabilityScopeTargetKind.All
+            ? "All"
+            : string.IsNullOrWhiteSpace(target.SecondaryValue)
+                ? $"{target.Kind}:{target.Value.Trim()}"
+                : $"{target.Kind}:{target.Value.Trim()}/{target.SecondaryValue.Trim()}";
+        return true;
+    }
+
+    private static string FormatRequiredReceiptSelector(ProcessRequiredToolReceipt receipt)
+    {
+        return receipt.Kind switch
+        {
+            ProcessRequiredToolReceiptKind.RuntimeToolName => $"runtime tool '{receipt.ToolName}'",
+            ProcessRequiredToolReceiptKind.RuntimeToolProviderKey => $"runtime tool provider '{receipt.RuntimeToolProviderKey}'",
+            ProcessRequiredToolReceiptKind.RuntimeToolNameWithProvider => $"runtime tool '{receipt.ToolName}' from provider '{receipt.RuntimeToolProviderKey}'",
+            ProcessRequiredToolReceiptKind.McpToolName => string.IsNullOrWhiteSpace(receipt.McpServerKey)
+                ? $"MCP tool '{receipt.ToolName}'"
+                : $"MCP tool '{receipt.ToolName}' on server '{receipt.McpServerKey}'",
+            _ => "runtime tool receipt"
+        };
+    }
+
+    private static string AppendReason(string message, string reason)
+        => string.IsNullOrWhiteSpace(reason)
+            ? message
+            : $"{message} Reason: {reason.Trim()}";
 
     private static string ResolveRoleKey(
         ProcessTemplateDefinitionStepDocument step,
@@ -414,7 +586,8 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             role?.DisplayName ?? roleKey,
             NormalizeOperations(templateStep.AllowedOperations),
             NormalizeOptional(templateStep.OperationTargetScope),
-            ResolveLaunchReadinessRequiredRuntimeToolNames(variables, stepKey, templateStep.CapabilityScope));
+            ResolveLaunchReadinessRequiredRuntimeToolNames(variables, stepKey, templateStep.CapabilityScope),
+            AgentFrameworkProcessCapabilityScopeTranslator.Translate(templateStep.CapabilityScope).RequiredCapabilities);
     }
 
     private static IReadOnlyList<string> ResolveLaunchReadinessRequiredRuntimeToolNames(

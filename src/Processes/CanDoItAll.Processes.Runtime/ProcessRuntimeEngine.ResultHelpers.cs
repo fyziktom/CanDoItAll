@@ -7,6 +7,11 @@ namespace CanDoItAll.Processes.Runtime;
 
 public sealed partial class ProcessRuntimeEngine
 {
+    private const string MissingBlockedDiagnosticCode = "process.runtime.blocked_without_diagnostics";
+    private const string MissingBlockedDiagnosticEvidenceHash = "sha256:missing-strategy-diagnostics";
+    private const string MissingBlockedDiagnosticSummary =
+        "Step blocked without strategy diagnostics. Inspect the result receipt, assignment, and execution observation for the missing cause.";
+
     private static ProcessRuntimeStepStatus ToStepStatus(StrategyResultEnvelope result)
     {
         if (IsAutomaticallyRetryableManagerResult(result))
@@ -37,6 +42,177 @@ public sealed partial class ProcessRuntimeEngine
         return diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.SafeToRetry &&
                diagnostic.Idempotency == ProcessDiagnosticIdempotencyClassification.Idempotent &&
                diagnostic.Code.Value.StartsWith("process.adapter.", StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<StrategyResultDiagnosticReceipt> BuildDiagnosticReceipts(
+        StrategyResultEnvelope result,
+        ProcessRuntimeStepStatus appliedStepStatus)
+    {
+        if (result.Diagnostics.Count > 0)
+        {
+            var receipts = new List<StrategyResultDiagnosticReceipt>(result.Diagnostics.Count);
+            foreach (var diagnostic in result.Diagnostics)
+            {
+                receipts.Add(new StrategyResultDiagnosticReceipt(
+                    diagnostic.Code.Value.Trim(),
+                    diagnostic.Sensitivity,
+                    diagnostic.EvidenceHash.Trim(),
+                    diagnostic.SafeSummary.Trim(),
+                    string.IsNullOrWhiteSpace(diagnostic.RestrictedEvidenceReference)
+                        ? null
+                        : diagnostic.RestrictedEvidenceReference.Trim(),
+                    diagnostic.RetrySafety,
+                    diagnostic.Idempotency));
+            }
+
+            return receipts;
+        }
+
+        return appliedStepStatus == ProcessRuntimeStepStatus.Blocked
+            ?
+            [
+                new StrategyResultDiagnosticReceipt(
+                    MissingBlockedDiagnosticCode,
+                    StrategyDiagnosticSensitivity.Normal,
+                    MissingBlockedDiagnosticEvidenceHash,
+                    MissingBlockedDiagnosticSummary,
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.Unknown,
+                    ProcessDiagnosticIdempotencyClassification.Unknown)
+            ]
+            : [];
+    }
+
+    private static IReadOnlyList<StrategyResultArtifactReceipt> BuildProducedArtifactReceipts(
+        StrategyResultEnvelope result)
+    {
+        if (result.ProducedArtifacts.Count == 0)
+        {
+            return [];
+        }
+
+        var receipts = new List<StrategyResultArtifactReceipt>(result.ProducedArtifacts.Count);
+        foreach (var artifact in result.ProducedArtifacts)
+        {
+            receipts.Add(new StrategyResultArtifactReceipt(
+                artifact.SlotId,
+                artifact.ArtifactId,
+                artifact.ContentHash));
+        }
+
+        return receipts;
+    }
+
+    private static ProcessRecoveryDecisionReceipt? BuildRecoveryDecision(
+        StrategyResultEnvelope result,
+        ProcessRuntimeStepStatus appliedStepStatus)
+    {
+        var primaryDiagnosticCode = result.Diagnostics.FirstOrDefault()?.Code.Value ?? string.Empty;
+        if (IsAutomaticallyRetryableManagerResult(result))
+        {
+            return new ProcessRecoveryDecisionReceipt(
+                ClassifyFailureCategory(primaryDiagnosticCode),
+                ProcessRecoveryDecisionKind.SafeRetry,
+                primaryDiagnosticCode,
+                "process.adapter.safe-idempotent-retry",
+                "All strategy diagnostics were marked safe to retry, idempotent, and emitted by the process adapter.");
+        }
+
+        if (appliedStepStatus is ProcessRuntimeStepStatus.Blocked)
+        {
+            var sourceCode = string.IsNullOrWhiteSpace(primaryDiagnosticCode)
+                ? MissingBlockedDiagnosticCode
+                : primaryDiagnosticCode;
+            return new ProcessRecoveryDecisionReceipt(
+                ClassifyFailureCategory(sourceCode),
+                ProcessRecoveryDecisionKind.ManagerRequired,
+                sourceCode,
+                "process.manager-review-required",
+                "The strategy result blocked the step and requires manager or operator decision before rework.");
+        }
+
+        if (appliedStepStatus is ProcessRuntimeStepStatus.Failed)
+        {
+            var sourceCode = string.IsNullOrWhiteSpace(primaryDiagnosticCode)
+                ? "process.runtime.failed_without_diagnostics"
+                : primaryDiagnosticCode;
+            return new ProcessRecoveryDecisionReceipt(
+                ClassifyFailureCategory(sourceCode),
+                ProcessRecoveryDecisionKind.TerminalBlocked,
+                sourceCode,
+                "process.terminal-failure",
+                "The strategy result failed the step and no automatic recovery decision was applied.");
+        }
+
+        return null;
+    }
+
+    private static ProcessFailureCategory ClassifyFailureCategory(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return ProcessFailureCategory.Unknown;
+        }
+
+        if (string.Equals(code, MissingBlockedDiagnosticCode, StringComparison.OrdinalIgnoreCase) ||
+            code.Contains("without_diagnostics", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.MissingDiagnostics;
+        }
+
+        if (code.StartsWith("process.adapter.", StringComparison.OrdinalIgnoreCase) &&
+            code.Contains("retry", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.AdapterRetryable;
+        }
+
+        if (code.Contains("artifact", StringComparison.OrdinalIgnoreCase) ||
+            code.Contains("receipt", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.MissingArtifact;
+        }
+
+        if (code.Contains("denied", StringComparison.OrdinalIgnoreCase) ||
+            code.Contains("suppressed", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.DeniedCapability;
+        }
+
+        if (code.Contains("capability", StringComparison.OrdinalIgnoreCase) ||
+            code.Contains("tool", StringComparison.OrdinalIgnoreCase) ||
+            code.Contains("mcp", StringComparison.OrdinalIgnoreCase) ||
+            code.Contains("skill", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.MissingCapability;
+        }
+
+        if (code.Contains("policy", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.PolicyViolation;
+        }
+
+        if (code.Contains("timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.Timeout;
+        }
+
+        if (code.Contains("provider", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.ProviderFailure;
+        }
+
+        if (code.Contains("child", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.ChildRunBlocked;
+        }
+
+        if (code.Contains("instruction", StringComparison.OrdinalIgnoreCase) ||
+            code.Contains("non_compliance", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessFailureCategory.InstructionNonCompliance;
+        }
+
+        return ProcessFailureCategory.Unknown;
     }
 
     private static IReadOnlyList<ProcessRuntimeEventEnvelope> BuildResultEvents(

@@ -837,7 +837,10 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
             ("Idempotency key", receipt.IdempotencyKey.ToString("D")),
             ("Outcome", receipt.Outcome),
             ("Applied step status", receipt.AppliedStepStatus.ToString()),
-            ("Result hash", receipt.ResultHash));
+            ("Result hash", receipt.ResultHash),
+            ("Diagnostics", receipt.DiagnosticsJson),
+            ("Produced artifacts", receipt.ProducedArtifactsJson),
+            ("Recovery decision", receipt.RecoveryDecisionJson));
         var contentHash = MemorySourceSnapshotHasher.Compute(
             receipt.RunId.ToString("D"),
             receipt.StepInstanceId.ToString("D"),
@@ -845,7 +848,10 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
             receipt.IdempotencyKey.ToString("D"),
             receipt.Outcome,
             receipt.AppliedStepStatus.ToString(),
-            receipt.ResultHash);
+            receipt.ResultHash,
+            receipt.DiagnosticsJson,
+            receipt.ProducedArtifactsJson,
+            receipt.RecoveryDecisionJson);
 
         return new MemorySourceItem(
             itemId,
@@ -876,7 +882,10 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
             Metadata(
                 ("strategyId", receipt.StrategyId),
                 ("outcome", receipt.Outcome),
-                ("appliedStepStatus", receipt.AppliedStepStatus.ToString())));
+                ("appliedStepStatus", receipt.AppliedStepStatus.ToString()),
+                ("diagnosticsJson", receipt.DiagnosticsJson),
+                ("producedArtifactsJson", receipt.ProducedArtifactsJson),
+                ("recoveryDecisionJson", receipt.RecoveryDecisionJson ?? string.Empty)));
     }
 
     private static MemorySourceItem MapAvailableArtifactSlot(ProcessRuntimeAvailableArtifactSlotEntity slot)

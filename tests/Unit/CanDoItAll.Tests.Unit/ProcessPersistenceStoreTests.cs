@@ -40,6 +40,63 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
+    public async Task Commit_round_trips_strategy_result_diagnostics_and_artifact_lineage()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: true);
+        var stepId = request.Mutation.State.AppliedResults.Single().StepInstanceId;
+        var idempotencyKey = StrategyResultIdempotencyKey.New();
+        var receipt = new StrategyResultReceipt(
+            stepId,
+            new StrategyId("strategy.test"),
+            idempotencyKey,
+            StrategyOutcome.NeedsManager,
+            ProcessRuntimeStepStatus.Blocked,
+            "hash:blocked-result",
+            [
+                new StrategyResultDiagnosticReceipt(
+                    "process.runtime.test_blocked",
+                    StrategyDiagnosticSensitivity.Normal,
+                    "hash:diagnostic",
+                    "Unit test blocked.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            [
+                new StrategyResultArtifactReceipt(
+                    RequiredArtifactSlotId,
+                    new ArtifactInstanceId(new Guid("9facff93-8f8b-4736-921e-916de95df35f")),
+                    "hash:artifact")
+            ],
+            new ProcessRecoveryDecisionReceipt(
+                ProcessFailureCategory.MissingArtifact,
+                ProcessRecoveryDecisionKind.ManagerRequired,
+                "process.runtime.test_blocked",
+                "unit-test-policy",
+                "Unit test recovery decision."));
+        var state = request.Mutation.State with
+        {
+            AppliedResults = [receipt]
+        };
+        var mutation = request.Mutation with
+        {
+            State = state
+        };
+
+        await unitOfWork.CommitAsync(request with { Mutation = mutation });
+
+        var loaded = await unitOfWork.LoadAsync(state.RunId);
+        Assert.NotNull(loaded);
+        var loadedReceipt = Assert.Single(loaded.AppliedResults);
+        Assert.Equal("process.runtime.test_blocked", Assert.Single(loadedReceipt.Diagnostics).Code);
+        Assert.Equal(RequiredArtifactSlotId, Assert.Single(loadedReceipt.ProducedArtifacts).SlotId);
+        Assert.NotNull(loadedReceipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.MissingArtifact, loadedReceipt.RecoveryDecision.FailureCategory);
+    }
+
+    [Fact]
     public async Task Commit_rejects_broken_event_outbox_atomicity_before_writing_rows()
     {
         await using var dbContext = CreateDbContext();

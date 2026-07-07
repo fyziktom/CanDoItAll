@@ -120,6 +120,9 @@ internal sealed class ProcessStrategyResultReceiptEntityConfiguration : IEntityT
         builder.Property(receipt => receipt.Outcome).HasMaxLength(64).IsRequired();
         builder.Property(receipt => receipt.AppliedStepStatus).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(receipt => receipt.ResultHash).HasMaxLength(128).IsRequired();
+        builder.Property(receipt => receipt.DiagnosticsJson).IsRequired();
+        builder.Property(receipt => receipt.ProducedArtifactsJson).IsRequired();
+        builder.Property(receipt => receipt.RecoveryDecisionJson);
         builder.HasIndex(receipt => new { receipt.StepInstanceId, receipt.StrategyId, receipt.IdempotencyKey }).IsUnique();
     }
 }

@@ -48,7 +48,10 @@ public sealed partial class ProcessRuntimeEngine
             command.IdempotencyKey,
             command.Result.Outcome,
             nextStepStatus,
-            command.Result.ResultHash);
+            command.Result.ResultHash,
+            BuildDiagnosticReceipts(command.Result, nextStepStatus),
+            BuildProducedArtifactReceipts(command.Result),
+            BuildRecoveryDecision(command.Result, nextStepStatus));
         var nextClaims = ReplaceClaim(
             state,
             claim with
