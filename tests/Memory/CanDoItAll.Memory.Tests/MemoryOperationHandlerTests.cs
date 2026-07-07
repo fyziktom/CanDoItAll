@@ -12,7 +12,7 @@ public sealed class MemoryOperationHandlerTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-05T19:15:00Z");
 
     [Fact]
-    public async Task SB15_Tool_and_workflow_executor_routes_share_handler_and_record_equivalent_lifecycle()
+    public async Task Tool_and_workflow_executor_routes_share_handler_and_record_equivalent_lifecycle()
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: true);
         using var scope = rootProvider.CreateScope();
@@ -43,7 +43,7 @@ public sealed class MemoryOperationHandlerTests
 
     [Theory]
     [MemberData(nameof(CrossCallerRoutes))]
-    public async Task SB15_No_provider_denial_is_consistent_for_all_handler_callers(MemoryOperationCaller caller)
+    public async Task No_provider_denial_is_consistent_for_all_handler_callers(MemoryOperationCaller caller)
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: false);
         using var scope = rootProvider.CreateScope();
@@ -66,7 +66,7 @@ public sealed class MemoryOperationHandlerTests
 
     [Theory]
     [MemberData(nameof(CrossCallerRoutes))]
-    public async Task SB15_Capability_mismatch_denial_is_consistent_for_all_handler_callers(MemoryOperationCaller caller)
+    public async Task Capability_mismatch_denial_is_consistent_for_all_handler_callers(MemoryOperationCaller caller)
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: true);
         using var scope = rootProvider.CreateScope();
@@ -89,7 +89,7 @@ public sealed class MemoryOperationHandlerTests
     }
 
     [Fact]
-    public void SB15_Request_builders_cover_shared_operation_kinds()
+    public void Request_builders_cover_shared_operation_kinds()
     {
         var caller = MemoryOperationCaller.UiAction("memory.admin.query", CreateRequester());
 

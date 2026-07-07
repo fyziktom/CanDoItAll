@@ -11,7 +11,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CapabilityContractsTests
 {
     [Fact]
-    public void SB01_INV_NAMES_001_existing_runtime_tool_names_agent_capability_keys_and_process_operations_are_compatible()
+    public void INV_NAMES_001_existing_runtime_tool_names_agent_capability_keys_and_process_operations_are_compatible()
     {
         var invalidRuntimeToolNames = ToolContractCatalog.KnownToolNames
             .Where(name => !RuntimeToolName.TryCreate(name, out _))
@@ -36,7 +36,7 @@ public sealed class CapabilityContractsTests
     [InlineData("Workspace-Write-File")]
     [InlineData("workspace_write_file")]
     [InlineData("workspace.write-file")]
-    public void SB01_INV_NAMES_002_invalid_capability_keys_fail_before_materialization(string key)
+    public void INV_NAMES_002_invalid_capability_keys_fail_before_materialization(string key)
     {
         Assert.False(CapabilityKey.TryCreate(key, out _));
     }
@@ -46,13 +46,13 @@ public sealed class CapabilityContractsTests
     [InlineData("WorkspaceWriteFile")]
     [InlineData("workspace-write-file")]
     [InlineData("workspace.write.file")]
-    public void SB01_INV_NAMES_003_invalid_runtime_tool_names_fail_before_materialization(string name)
+    public void INV_NAMES_003_invalid_runtime_tool_names_fail_before_materialization(string name)
     {
         Assert.False(RuntimeToolName.TryCreate(name, out _));
     }
 
     [Fact]
-    public void SB01_INV_TEMPLATE_001_validator_rejects_raw_secret_surfaces_with_template_path_key_field_and_repair_hint()
+    public void INV_TEMPLATE_001_validator_rejects_raw_secret_surfaces_with_template_path_key_field_and_repair_hint()
     {
         var descriptor = new CapabilityTemplateDescriptorDto
         {
@@ -96,7 +96,7 @@ public sealed class CapabilityContractsTests
     }
 
     [Fact]
-    public void SB01_INV_ACCESS_001_deny_wins_over_allow_and_allow_does_not_grant_missing_candidates()
+    public void INV_ACCESS_001_deny_wins_over_allow_and_allow_does_not_grant_missing_candidates()
     {
         var validationTool = Tool(
             "workspace-dotnet-test",
@@ -139,7 +139,7 @@ public sealed class CapabilityContractsTests
             [validationTool, mutationTool],
             [],
             [policy],
-            "SB01_INV_ACCESS_001"));
+            "INV_ACCESS_001"));
 
         Assert.Contains(result.AllowedCapabilities, item => item.Identity == validationTool.Identity);
         Assert.DoesNotContain(result.AllowedCapabilities, item => item.Identity == mutationTool.Identity);
@@ -148,11 +148,11 @@ public sealed class CapabilityContractsTests
             diagnostic.Identity == mutationTool.Identity &&
             diagnostic.RuleId == CapabilityRuleId.Create("deny-mutation-tools") &&
             diagnostic.Category == CapabilityDiagnosticCategory.AccessPolicy &&
-            diagnostic.CorrelationId == "SB01_INV_ACCESS_001");
+            diagnostic.CorrelationId == "INV_ACCESS_001");
     }
 
     [Fact]
-    public void SB01_INV_ACCESS_002_required_capability_denied_by_policy_emits_typed_denied_required_diagnostic()
+    public void INV_ACCESS_002_required_capability_denied_by_policy_emits_typed_denied_required_diagnostic()
     {
         var skill = Skill("aspnet-core-skill", new HashSet<CapabilityTag> { CapabilityTag.Create("implementation") });
         var policy = new CapabilityAccessPolicy(
@@ -169,7 +169,7 @@ public sealed class CapabilityContractsTests
             [skill],
             [skill.Identity],
             [policy],
-            "SB01_INV_ACCESS_002"));
+            "INV_ACCESS_002"));
 
         Assert.DoesNotContain(result.AllowedCapabilities, item => item.Identity == skill.Identity);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -179,7 +179,7 @@ public sealed class CapabilityContractsTests
     }
 
     [Fact]
-    public void SB01_INV_ACCESS_003_new_descriptor_participates_in_tag_policy_without_evaluator_code_changes()
+    public void INV_ACCESS_003_new_descriptor_participates_in_tag_policy_without_evaluator_code_changes()
     {
         var externalMcp = new CapabilityExposureDescriptor(
             new CapabilityIdentity(CapabilityKind.McpServer, CapabilityKey.Create("playwright-local-mcp")),
@@ -208,7 +208,7 @@ public sealed class CapabilityContractsTests
             [externalMcp],
             [],
             [policy],
-            "SB01_INV_ACCESS_003"));
+            "INV_ACCESS_003"));
 
         Assert.Empty(result.AllowedCapabilities);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -217,7 +217,7 @@ public sealed class CapabilityContractsTests
     }
 
     [Fact]
-    public void SB11_INV_ACCESS_001_process_workflow_restrictions_deny_all_capability_families_with_required_diagnostics()
+    public void INV_ACCESS_001_process_workflow_restrictions_deny_all_capability_families_with_required_diagnostics()
     {
         var skill = Skill("architecture-review-skill", new HashSet<CapabilityTag> { CapabilityTag.Create("process") });
         var tool = Tool(
@@ -259,7 +259,7 @@ public sealed class CapabilityContractsTests
             [skill, tool, mcpServer, mcpTool],
             [skill.Identity, tool.Identity, mcpServer.Identity, mcpTool.Identity],
             [policy],
-            "SB11_INV_ACCESS_001"));
+            "INV_ACCESS_001"));
 
         Assert.Empty(result.AllowedCapabilities);
         AssertRequiredDenied(result, skill.Identity, CapabilitySelectorKind.Kind, "deny-process-skills");
@@ -269,7 +269,7 @@ public sealed class CapabilityContractsTests
     }
 
     [Fact]
-    public void SB01_INV_POLICY_001_policy_template_compiler_rejects_invalid_selectors_and_duplicate_rule_ids()
+    public void INV_POLICY_001_policy_template_compiler_rejects_invalid_selectors_and_duplicate_rule_ids()
     {
         var template = new CapabilityAccessPolicyTemplateDto
         {
@@ -404,7 +404,7 @@ public sealed class CapabilityContractsTests
             diagnostic.SelectorKind == selectorKind &&
             diagnostic.RuleId == CapabilityRuleId.Create(ruleId) &&
             diagnostic.RepairHint.Contains("required", StringComparison.OrdinalIgnoreCase) &&
-            diagnostic.CorrelationId == "SB11_INV_ACCESS_001");
+            diagnostic.CorrelationId == "INV_ACCESS_001");
     }
 
     private static IReadOnlyList<string> ReadAgentCapabilityKeys()

@@ -10,7 +10,7 @@ public sealed class MemoryLedgerLifecycleTests
     private static readonly MemoryCapabilityId SyncQuery = MemoryCapabilityId.Parse("context.query.sync");
 
     [Fact]
-    public void SB03_LG001_Operation_transition_rules_allow_valid_lifecycle_and_reject_regression()
+    public void LG001_Operation_transition_rules_allow_valid_lifecycle_and_reject_regression()
     {
         var pending = CreateOperation();
 
@@ -27,7 +27,7 @@ public sealed class MemoryLedgerLifecycleTests
     }
 
     [Fact]
-    public void SB03_LG002_Context_delivery_links_operation_requester_and_delayed_feedback()
+    public void LG002_Context_delivery_links_operation_requester_and_delayed_feedback()
     {
         var operation = CreateOperation();
         var delivery = MemoryContextDeliveryRecord.Create(
@@ -59,7 +59,7 @@ public sealed class MemoryLedgerLifecycleTests
     }
 
     [Fact]
-    public void SB03_LG003_Feedback_without_delivery_id_is_rejected_unless_marked_unmatched()
+    public void LG003_Feedback_without_delivery_id_is_rejected_unless_marked_unmatched()
     {
         var requester = CreateRequester();
 
@@ -93,7 +93,7 @@ public sealed class MemoryLedgerLifecycleTests
     }
 
     [Fact]
-    public void SB03_LG004_Event_admission_rejects_duplicates_and_memory_agent_memory_loops()
+    public void LG004_Event_admission_rejects_duplicates_and_memory_agent_memory_loops()
     {
         var providerEvent = CreateEventInboxRecord(MemoryEventLoopContext.ProviderOrigin(ProviderId));
 
@@ -123,7 +123,7 @@ public sealed class MemoryLedgerLifecycleTests
     }
 
     [Fact]
-    public void SB03_LG005_Retention_expiry_and_ipfs_unpin_metadata_are_explicit()
+    public void LG005_Retention_expiry_and_ipfs_unpin_metadata_are_explicit()
     {
         var retention = MemoryLedgerRetentionPolicy.Expiring(
             expiresAtUtc: Now.AddHours(1),

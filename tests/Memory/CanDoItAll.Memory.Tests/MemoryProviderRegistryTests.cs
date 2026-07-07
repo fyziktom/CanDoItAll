@@ -10,7 +10,7 @@ public sealed class MemoryProviderRegistryTests
     private static readonly MemoryCapabilityId SnapshotIngestion = MemoryCapabilityId.Parse("ingestion.snapshot");
 
     [Fact]
-    public void SB02_PR001_Zero_provider_selection_returns_typed_no_provider_without_dispatch()
+    public void PR001_Zero_provider_selection_returns_typed_no_provider_without_dispatch()
     {
         var registry = new InMemoryMemoryProviderRegistry([]);
 
@@ -23,7 +23,7 @@ public sealed class MemoryProviderRegistryTests
     }
 
     [Fact]
-    public void SB02_PR002_One_enabled_provider_is_selected_when_capability_matches()
+    public void PR002_One_enabled_provider_is_selected_when_capability_matches()
     {
         var provider = CreateProfile("programming-memory", [SyncQuery]);
         var registry = new InMemoryMemoryProviderRegistry([provider]);
@@ -37,7 +37,7 @@ public sealed class MemoryProviderRegistryTests
     }
 
     [Fact]
-    public void SB02_PR003_Two_role_specific_providers_do_not_cross_select()
+    public void PR003_Two_role_specific_providers_do_not_cross_select()
     {
         var programming = CreateProfile("programming-memory", [SyncQuery], tags: ["programming"]);
         var business = CreateProfile("business-memory", [SyncQuery], tags: ["business"]);
@@ -61,7 +61,7 @@ public sealed class MemoryProviderRegistryTests
     }
 
     [Fact]
-    public void SB02_PR004_Disabled_explicit_provider_does_not_fall_back_to_other_provider()
+    public void PR004_Disabled_explicit_provider_does_not_fall_back_to_other_provider()
     {
         var disabled = CreateProfile("disabled-memory", [SyncQuery], isEnabled: false);
         var enabled = CreateProfile("enabled-memory", [SyncQuery]);
@@ -80,7 +80,7 @@ public sealed class MemoryProviderRegistryTests
     }
 
     [Fact]
-    public void SB02_PR005_Unsupported_capability_fails_before_dispatch()
+    public void PR005_Unsupported_capability_fails_before_dispatch()
     {
         var provider = CreateProfile("programming-memory", [SyncQuery]);
         var registry = new InMemoryMemoryProviderRegistry([provider]);
@@ -93,7 +93,7 @@ public sealed class MemoryProviderRegistryTests
     }
 
     [Fact]
-    public void SB02_PR006_Denied_capability_policy_fails_before_provider_selection()
+    public void PR006_Denied_capability_policy_fails_before_provider_selection()
     {
         var provider = CreateProfile("programming-memory", [SyncQuery]);
         var registry = new InMemoryMemoryProviderRegistry([provider]);
@@ -111,7 +111,7 @@ public sealed class MemoryProviderRegistryTests
     }
 
     [Fact]
-    public void SB02_PR007_All_disabled_providers_return_no_enabled_provider_without_mock_fallback()
+    public void PR007_All_disabled_providers_return_no_enabled_provider_without_mock_fallback()
     {
         var registry = new InMemoryMemoryProviderRegistry(
         [

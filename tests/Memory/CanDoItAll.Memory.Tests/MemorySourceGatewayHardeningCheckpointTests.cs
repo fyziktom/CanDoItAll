@@ -6,7 +6,7 @@ namespace CanDoItAll.Memory.Tests;
 public sealed class MemorySourceGatewayHardeningCheckpointTests
 {
     [Fact]
-    public void SB14_CP001_Provider_driver_projects_do_not_reference_source_modules()
+    public void CP001_Provider_driver_projects_do_not_reference_source_modules()
     {
         var violations = EnumerateProjectFiles("src", "Memory")
             .Where(path => path.Contains("CanDoItAll.Memory.Http", StringComparison.Ordinal) ||
@@ -21,7 +21,7 @@ public sealed class MemorySourceGatewayHardeningCheckpointTests
     }
 
     [Fact]
-    public void SB14_CP002_Provider_driver_code_does_not_read_source_modules_or_app_db_context()
+    public void CP002_Provider_driver_code_does_not_read_source_modules_or_app_db_context()
     {
         var forbiddenPatterns = new[]
         {
@@ -61,7 +61,7 @@ public sealed class MemorySourceGatewayHardeningCheckpointTests
     }
 
     [Fact]
-    public void SB14_CP003_Source_snapshot_contract_family_is_not_duplicated_outside_maf_core()
+    public void CP003_Source_snapshot_contract_family_is_not_duplicated_outside_maf_core()
     {
         var canonicalPath = Path.Combine(
             RepoRoot,

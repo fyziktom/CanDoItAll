@@ -14,7 +14,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CapabilityTemplateSeedHardeningCheckpointTests
 {
     [Fact]
-    public void SB07_INV_PARITY_001_default_pack_preserves_behavior_critical_fields()
+    public void INV_PARITY_001_default_pack_preserves_behavior_critical_fields()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var materialized = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack)
@@ -76,7 +76,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
     }
 
     [Fact]
-    public void SB07_INV_TEMPLATE_001_invalid_pack_reports_structured_diagnostics_without_seed_fallback()
+    public void INV_TEMPLATE_001_invalid_pack_reports_structured_diagnostics_without_seed_fallback()
     {
         using var pack = TemporaryCapabilityTemplatePack.Create(
             new Dictionary<string, string>
@@ -200,7 +200,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
     }
 
     [Fact]
-    public void SB07_INV_POLICY_001_allowed_operations_compile_to_behavior_equivalent_denies()
+    public void INV_POLICY_001_allowed_operations_compile_to_behavior_equivalent_denies()
     {
         var candidates = new[]
         {
@@ -218,7 +218,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
             validationPolicy,
             candidates,
             ["workspace-dotnet-build"],
-            "SB07_INV_POLICY_001_validation");
+            "INV_POLICY_001_validation");
 
         var mutationPolicy = ProcessAllowedOperationsCapabilityPolicyCompiler.Compile(
             [ProcessOperationContractNames.MutateProductTarget],
@@ -228,7 +228,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
             mutationPolicy,
             candidates,
             ["workspace-write-file"],
-            "SB07_INV_POLICY_001_mutation");
+            "INV_POLICY_001_mutation");
 
         var proofPolicy = ProcessAllowedOperationsCapabilityPolicyCompiler.Compile(
             [ProcessOperationContractNames.CaptureRuntimeProof],
@@ -238,11 +238,11 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
             proofPolicy,
             candidates,
             ["playwright-local-mcp-browser-take-screenshot"],
-            "SB07_INV_POLICY_001_proof");
+            "INV_POLICY_001_proof");
     }
 
     [Fact]
-    public void SB07_INV_POLICY_002_workspace_tool_flags_compile_to_typed_runtime_tool_denies()
+    public void INV_POLICY_002_workspace_tool_flags_compile_to_typed_runtime_tool_denies()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var templates = pack.Capabilities
@@ -258,7 +258,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
         var candidates = templates
             .Select(template => Candidate(template.Key, template.RuntimeToolName, ParseClassifications(template.OperationClassifications)))
             .ToArray();
-        var allowed = Evaluate(result.Policy, candidates, "SB07_INV_POLICY_002")
+        var allowed = Evaluate(result.Policy, candidates, "INV_POLICY_002")
             .Select(item => item.RuntimeToolName?.Value)
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -271,7 +271,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
     }
 
     [Fact]
-    public void SB07_INV_POLICY_003_allow_rules_never_grant_missing_assignments()
+    public void INV_POLICY_003_allow_rules_never_grant_missing_assignments()
     {
         var missingIdentity = new CapabilityIdentity(AccessCapabilityKind.Tool, CapabilityKey.Create("workspace-write-file"));
         var policy = new CapabilityAccessPolicy(
@@ -288,16 +288,16 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
             [],
             [missingIdentity],
             [policy],
-            "SB07_INV_POLICY_003"));
+            "INV_POLICY_003"));
 
         Assert.Empty(result.AllowedCapabilities);
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(CapabilityDiagnosticCategory.RequiredCapabilityDenied, diagnostic.Category);
-        Assert.Equal("SB07_INV_POLICY_003", diagnostic.CorrelationId);
+        Assert.Equal("INV_POLICY_003", diagnostic.CorrelationId);
     }
 
     [Fact]
-    public void SB07_INV_SEED_001_managed_seed_dry_run_is_idempotent_without_duplicate_capability_identity()
+    public void INV_SEED_001_managed_seed_dry_run_is_idempotent_without_duplicate_capability_identity()
     {
         var seed = SandboxWorkspaceSeedBuilder.Build();
         var normalized = SandboxWorkspaceSeedNormalizer.Normalize(seed);

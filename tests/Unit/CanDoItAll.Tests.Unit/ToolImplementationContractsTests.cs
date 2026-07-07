@@ -12,7 +12,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ToolImplementationContractsTests
 {
     [Fact]
-    public async Task SB02_INV_INTERNAL_001_internal_tool_registry_resolves_mockable_tool_and_exposes_policy_descriptor()
+    public async Task INV_INTERNAL_001_internal_tool_registry_resolves_mockable_tool_and_exposes_policy_descriptor()
     {
         var descriptor = ToolDescriptorFactory.Internal(
             CapabilityKey.Create("workspace-read-file"),
@@ -27,7 +27,7 @@ public sealed class ToolImplementationContractsTests
             request => ToolInvocationResult.Success(request.CorrelationId, JsonDocument.Parse("""{"ok":true,"path":"README.md"}""").RootElement)));
 
         var tool = registry.Resolve(ImplementationKey.Create("workspace.read-file"));
-        var result = await tool.InvokeAsync(ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"path":"README.md"}""", "SB02_INV_INTERNAL_001"), CancellationToken.None);
+        var result = await tool.InvokeAsync(ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"path":"README.md"}""", "INV_INTERNAL_001"), CancellationToken.None);
         var exposure = ToolExposureDescriptorFactory.Create(descriptor);
 
         Assert.True(result.IsSuccess);
@@ -38,7 +38,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public async Task SB02_INV_EXTERNAL_001_process_invoker_returns_typed_nonzero_exit_diagnostic_with_bounded_masked_output()
+    public async Task INV_EXTERNAL_001_process_invoker_returns_typed_nonzero_exit_diagnostic_with_bounded_masked_output()
     {
         var descriptor = ToolDescriptorFactory.ExternalProcess(
             CapabilityKey.Create("external-audit-tool"),
@@ -60,14 +60,14 @@ public sealed class ToolImplementationContractsTests
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB02_INV_EXTERNAL_001"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_EXTERNAL_001"),
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(CapabilityDiagnosticCategory.ProcessExit, diagnostic.Category);
         Assert.Equal(7, diagnostic.ExitCode);
-        Assert.Equal("SB02_INV_EXTERNAL_001", diagnostic.CorrelationId);
+        Assert.Equal("INV_EXTERNAL_001", diagnostic.CorrelationId);
         Assert.Contains("fake-audit.exe", diagnostic.MaskedDetail, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret-value", diagnostic.MaskedDetail, StringComparison.Ordinal);
         Assert.True(diagnostic.MaskedDetail.Length < 220);
@@ -75,7 +75,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public async Task SB02_INV_EXTERNAL_002_http_invoker_returns_typed_http_status_and_masks_auth_headers()
+    public async Task INV_EXTERNAL_002_http_invoker_returns_typed_http_status_and_masks_auth_headers()
     {
         var descriptor = ToolDescriptorFactory.ExternalHttp(
             CapabilityKey.Create("external-http-audit"),
@@ -93,7 +93,7 @@ public sealed class ToolImplementationContractsTests
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB02_INV_EXTERNAL_002"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_EXTERNAL_002"),
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
@@ -105,7 +105,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public async Task SB02_INV_EXTERNAL_003_process_invoker_rejects_disallowed_command_before_start()
+    public async Task INV_EXTERNAL_003_process_invoker_rejects_disallowed_command_before_start()
     {
         var descriptor = ToolDescriptorFactory.ExternalProcess(
             CapabilityKey.Create("external-audit-tool"),
@@ -123,7 +123,7 @@ public sealed class ToolImplementationContractsTests
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB02_INV_EXTERNAL_003"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_EXTERNAL_003"),
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
@@ -134,7 +134,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public async Task SB02_INV_EXTERNAL_004_process_invoker_maps_timeout_to_typed_diagnostic()
+    public async Task INV_EXTERNAL_004_process_invoker_maps_timeout_to_typed_diagnostic()
     {
         var descriptor = ToolDescriptorFactory.ExternalProcess(
             CapabilityKey.Create("external-audit-tool"),
@@ -152,7 +152,7 @@ public sealed class ToolImplementationContractsTests
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB02_INV_EXTERNAL_004"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_EXTERNAL_004"),
             CancellationToken.None);
 
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -163,7 +163,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public async Task SB02_INV_EXTERNAL_005_setup_test_service_preserves_schema_validation_failure()
+    public async Task INV_EXTERNAL_005_setup_test_service_preserves_schema_validation_failure()
     {
         var descriptor = ToolDescriptorFactory.ExternalProcess(
             CapabilityKey.Create("external-audit-tool"),
@@ -184,7 +184,7 @@ public sealed class ToolImplementationContractsTests
             TimeSpan.FromMilliseconds(12))));
         var setup = new ToolSetupTestService(invoker, new ExternalHttpToolInvoker(new FakeHttpTransport(new ExternalHttpResponse(HttpStatusCode.OK, "{}"))));
 
-        var result = await setup.TestProcessToolAsync(descriptor, """{"input":true}""", "SB02_INV_EXTERNAL_005", CancellationToken.None);
+        var result = await setup.TestProcessToolAsync(descriptor, """{"input":true}""", "INV_EXTERNAL_005", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -193,7 +193,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public async Task SB02_INV_EXTERNAL_006_http_invoker_maps_timeout_to_typed_diagnostic()
+    public async Task INV_EXTERNAL_006_http_invoker_maps_timeout_to_typed_diagnostic()
     {
         var descriptor = ToolDescriptorFactory.ExternalHttp(
             CapabilityKey.Create("external-http-audit"),
@@ -210,7 +210,7 @@ public sealed class ToolImplementationContractsTests
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB02_INV_EXTERNAL_006"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_EXTERNAL_006"),
             CancellationToken.None);
 
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -221,7 +221,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public void SB02_INV_POLICY_001_internal_external_and_provider_native_descriptors_participate_in_access_policy()
+    public void INV_POLICY_001_internal_external_and_provider_native_descriptors_participate_in_access_policy()
     {
         var internalDescriptor = ToolExposureDescriptorFactory.Create(ToolDescriptorFactory.Internal(
             CapabilityKey.Create("workspace-write-file"),
@@ -275,7 +275,7 @@ public sealed class ToolImplementationContractsTests
             [internalDescriptor, externalDescriptor, providerNativeDescriptor],
             [],
             [policy],
-            "SB02_INV_POLICY_001"));
+            "INV_POLICY_001"));
 
         Assert.Empty(result.AllowedCapabilities);
         Assert.Contains(result.Diagnostics, item => item.Identity.Key == internalDescriptor.Identity.Key);
@@ -284,7 +284,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public void SB02_INV_PARITY_001_existing_tool_policy_metadata_maps_to_exposure_descriptors()
+    public void INV_PARITY_001_existing_tool_policy_metadata_maps_to_exposure_descriptors()
     {
         var failures = new List<string>();
         foreach (var metadata in ToolCapabilityRegistry.Capabilities)

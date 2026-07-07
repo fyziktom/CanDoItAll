@@ -146,7 +146,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("Do not create a separate ComponentBase class", codeChange.Notes, StringComparison.Ordinal);
         Assert.Contains("shared _Imports.razor repairs", featureRepair.Notes, StringComparison.Ordinal);
         Assert.Contains("Razor component symbol errors", featureRepair.Notes, StringComparison.Ordinal);
-        Assert.Contains("same canonical solution no longer reproduces the defect", featureRepair.Notes, StringComparison.Ordinal);
+        Assert.Contains("current-run build/test receipts prove the corrected validation target no longer reproduces the defect", featureRepair.Notes, StringComparison.Ordinal);
         Assert.Contains("do not write Status: Completed by relying on inspection", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("failing generated test", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Do not cite stale source document paths", featureRepair.Notes, StringComparison.Ordinal);
@@ -162,9 +162,9 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("missing build/test receipts are not a reason to escalate", targetedRecheck.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("required current-run focused proof was attempted", targetedRecheck.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("validation tool or product root is unavailable", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("sequential same-solution build/test blockers", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("sequential same-validation-target build/test blockers", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("do not treat a later compiler or test failure as outside scope", featureRepair.Notes, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("do not escalate same-solution compile or test failures", featureRepair.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not escalate same-validation-target compile or test failures", featureRepair.ExceptionPolicySummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Do not choose `feature-repair-escalation` only because runtime/browser proof", targetedRecheckDoc, StringComparison.Ordinal);
     }
 

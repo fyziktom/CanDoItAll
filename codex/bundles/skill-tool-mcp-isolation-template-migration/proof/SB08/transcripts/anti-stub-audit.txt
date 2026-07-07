@@ -1,4 +1,0 @@
-No implementation stub markers in SB08 changed runtime/test files.
-
-Placeholder text audit: one existing runtime prompt guard uses the phrase "placeholder evidence values" as a prohibition, not as stubbed implementation.
-1150:               "- Do not copy placeholder evidence values. Evidence refs must be exact current-run refs already created or observed during this turn." + Environment.NewLine +

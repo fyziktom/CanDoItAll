@@ -11,12 +11,12 @@ namespace CanDoItAll.Memory.Tests;
 public sealed class MemoryEndToEndObservabilityProofTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-06T03:45:00Z");
-    private static readonly MemoryProviderInstanceId ProgrammingProviderId = MemoryProviderInstanceId.Parse("provider.sb33.programming");
-    private static readonly MemoryProviderInstanceId BusinessProviderId = MemoryProviderInstanceId.Parse("provider.sb33.business");
-    private static readonly MemoryProviderInstanceId FailingProviderId = MemoryProviderInstanceId.Parse("provider.sb33.failing");
+    private static readonly MemoryProviderInstanceId ProgrammingProviderId = MemoryProviderInstanceId.Parse("provider.regression.programming");
+    private static readonly MemoryProviderInstanceId BusinessProviderId = MemoryProviderInstanceId.Parse("provider.regression.business");
+    private static readonly MemoryProviderInstanceId FailingProviderId = MemoryProviderInstanceId.Parse("provider.regression.failing");
 
     [Fact]
-    public async Task SB33_E2E_observability_proof_exercises_runtime_workers_ledgers_and_zero_provider_contracts()
+    public async Task E2E_observability_proof_exercises_runtime_workers_ledgers_and_zero_provider_contracts()
     {
         var driver = new EndToEndProofMemoryProviderDriver();
         using var rootProvider = CreateServiceProvider(driver);
@@ -31,7 +31,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
                 MemoryProviderSelectionContext.None),
             CreateQueryRequest("zero-provider check", MemoryCapabilityIds.ContextQuerySync));
         var zeroProviderTool = await handler.ExecuteQueryAsync(MemoryOperationRequestBuilder.Query(
-            MemoryOperationCaller.Tool("sb33.zero-provider.tool", CreateRequester()),
+            MemoryOperationCaller.Tool("regression.zero-provider.tool", CreateRequester()),
             MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.ContextQuerySync),
             CreateQueryRequest("zero-provider tool", MemoryCapabilityIds.ContextQuerySync),
             CreateRetentionPolicy()));
@@ -67,7 +67,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
         var completedBusinessOperation = await serviceProvider.GetRequiredService<IMemoryOperationLedgerStore>()
             .GetAsync(businessAccepted.OperationRecord!.OperationId);
         var statusResult = await handler.GetStatusAsync(MemoryOperationRequestBuilder.Status(
-            MemoryOperationCaller.ApiEndpoint("sb33.operation-status", CreateRequester()),
+            MemoryOperationCaller.ApiEndpoint("regression.operation-status", CreateRequester()),
             MemoryProviderSelectionPolicy.RequireCapability(MemoryCapabilityIds.OperationStatus),
             new MemoryOperationStatusRequest(businessAccepted.OperationRecord.OperationId),
             CreateRetentionPolicy()));
@@ -77,12 +77,12 @@ public sealed class MemoryEndToEndObservabilityProofTests
         Assert.Equal(MemoryOperationHandlerStatus.Completed, statusResult.Status);
 
         var feedbackResult = await handler.SubmitFeedbackAsync(MemoryOperationRequestBuilder.Feedback(
-            MemoryOperationCaller.UiAction("sb33.feedback", CreateRequester()),
+            MemoryOperationCaller.UiAction("regression.feedback", CreateRequester()),
             CreateExplicitPolicy(MemoryCapabilityIds.FeedbackDelayed, BusinessProviderId),
             new MemoryFeedbackRequest(
                 programmingResult.ContextPack!.ContextPackId,
                 MemoryFeedbackOutcome.Useful,
-                "SB33 delayed feedback proof",
+                "regression delayed feedback proof",
                 new MemoryEconomicImpact("USD", 25)),
             CreateRetentionPolicy()));
         var feedbackWorkerResult = await serviceProvider.GetRequiredService<IMemoryFeedbackWorker>()
@@ -96,11 +96,11 @@ public sealed class MemoryEndToEndObservabilityProofTests
             .EnqueueAsync(new ManualMemorySourceIngestionRequest(
                 BusinessProviderId,
                 ManualMemorySourcePayload.Text(
-                    "SB33 manual note",
+                    "regression manual note",
                     "Generic source snapshots stay outside provider EF boundaries.",
                     "proof",
-                    ["sb33", "manual"]),
-                RequestedBy: "user-sb33",
+                    ["regression", "manual"]),
+                RequestedBy: "user-regression",
                 CreateRequester(),
                 CreateRetentionPolicy()));
         var sourceRecords = await serviceProvider.GetRequiredService<IMemorySourceRequestLedgerStore>()
@@ -166,7 +166,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
         var services = new ServiceCollection();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
         services.AddDbContextFactory<AppDbContext>(options =>
-            options.UseInMemoryDatabase($"memory-sb33-e2e-{Guid.NewGuid():N}"));
+            options.UseInMemoryDatabase($"memory-regression-e2e-{Guid.NewGuid():N}"));
         services.AddSingleton(driver);
         services.AddSingleton<IMemoryProviderDriver>(provider =>
             provider.GetRequiredService<EndToEndProofMemoryProviderDriver>());
@@ -195,7 +195,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
         var store = serviceProvider.GetRequiredService<IMemoryProviderProfileStore>();
         await store.UpsertAsync(CreateProviderProfile(
             ProgrammingProviderId,
-            "SB33 programming memory",
+            "regression programming memory",
             MemoryProviderHealthState.Healthy,
             ["developer"],
             [
@@ -204,7 +204,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             ]), Now);
         await store.UpsertAsync(CreateProviderProfile(
             BusinessProviderId,
-            "SB33 business memory",
+            "regression business memory",
             MemoryProviderHealthState.Healthy,
             ["business-analyst"],
             [
@@ -217,7 +217,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             ]), Now);
         await store.UpsertAsync(CreateProviderProfile(
             FailingProviderId,
-            "SB33 failing memory",
+            "regression failing memory",
             MemoryProviderHealthState.Degraded,
             ["failing"],
             [MemoryCapabilityIds.ContextQuerySync]), Now);
@@ -240,7 +240,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             selectionTags,
             MemoryProviderProfilePolicy.Default,
             new MemoryProviderManifest(
-                MemoryProviderKind.Parse("memory.mock.sb33"),
+                MemoryProviderKind.Parse("memory.mock.regression"),
                 MemoryProtocolVersion.Current,
                 capabilities
                     .Select(capability => new MemoryCapabilityDescriptor(capability, Version: "1", Supported: true))
@@ -271,7 +271,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             CreateRequester(),
             MemoryCorrelationId.New(),
             MemoryCausationId.New(),
-            [MemorySourceSnapshotId.Parse("snapshot.sb33.manual")],
+            [MemorySourceSnapshotId.Parse("snapshot.regression.manual")],
             CreateRetentionPolicy());
     }
 
@@ -283,10 +283,10 @@ public sealed class MemoryEndToEndObservabilityProofTests
             query,
             [capability],
             new MemorySourceProvenance(
-                MemorySourceSnapshotId.Parse("snapshot.sb33.manual"),
+                MemorySourceSnapshotId.Parse("snapshot.regression.manual"),
                 SourceModule: nameof(MemorySourceKind.ManualPayload),
-                SourceRecordIds: ["manual-sb33"],
-                Citations: ["SB33 manual proof"]));
+                SourceRecordIds: ["manual-regression"],
+                Citations: ["regression manual proof"]));
     }
 
     private static MemoryProviderSelectionPolicy CreateAssignedPolicy(
@@ -323,22 +323,22 @@ public sealed class MemoryEndToEndObservabilityProofTests
         return new MemoryProviderSelectionContext(
             agentId,
             agentRole,
-            WorkflowId: "workflow-sb33",
-            WorkflowNodeId: "node-sb33",
-            ProcessId: "process-sb33");
+            WorkflowId: "workflow-regression",
+            WorkflowNodeId: "node-regression",
+            ProcessId: "process-regression");
     }
 
     private static MemoryLedgerRequester CreateRequester()
     {
         return new MemoryLedgerRequester(
-            RequesterId: "user-sb33",
-            AgentId: "agent-sb33",
+            RequesterId: "user-regression",
+            AgentId: "agent-regression",
             AgentRole: "developer",
-            SessionId: "session-sb33",
-            WorkflowId: "workflow-sb33",
-            WorkflowNodeId: "node-sb33",
-            ProcessId: "process-sb33",
-            ProcessStepId: "step-sb33");
+            SessionId: "session-regression",
+            WorkflowId: "workflow-regression",
+            WorkflowNodeId: "node-regression",
+            ProcessId: "process-regression",
+            ProcessStepId: "step-regression");
     }
 
     private static MemoryLedgerRetentionPolicy CreateRetentionPolicy()
@@ -353,7 +353,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             MemoryProviderEventKind.SourceRequest,
             MemoryCorrelationId.New(),
             MemoryCausationId.New(),
-            "SB33 provider requested a source refresh.",
+            "regression provider requested a source refresh.",
             MemoryPayload.FromText("source refresh requested"));
     }
 
@@ -377,7 +377,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             "bundles",
             "candoitall-memory-provider-extraction-bundle",
             "proof",
-            "SB33",
+            "regression",
             "artifacts");
         Directory.CreateDirectory(artifactDirectory);
 
@@ -408,7 +408,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
 
         var snapshot = new
         {
-            Scenario = "SB33 end-to-end regression and observability proof",
+            Scenario = "regression end-to-end regression and observability proof",
             GeneratedAtUtc = Now,
             ZeroProvider = new
             {
@@ -610,7 +610,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             {
                 return Task.FromResult(MemoryProviderDriverResult.Failed(
                     MemoryProviderDriverResultKind.ProviderError,
-                    "SB33 provider returned a deliberate error state."));
+                    "regression provider returned a deliberate error state."));
             }
 
             if (provider.InstanceId == BusinessProviderId)
@@ -622,24 +622,24 @@ public sealed class MemoryEndToEndObservabilityProofTests
                         operation.CreatedAtUtc.AddMinutes(5),
                         TimeSpan.FromMilliseconds(10),
                         CallbackAvailable: false),
-                    "SB33 business provider accepted async context query."));
+                    "regression business provider accepted async context query."));
             }
 
             return Task.FromResult(MemoryProviderDriverResult.ContextPackResult(
                 new MemoryContextPack(
                     MemoryContextPackId.New(),
-                    $"SB33 context from {provider.InstanceId.Value}: {request.Query}",
+                    $"regression context from {provider.InstanceId.Value}: {request.Query}",
                     [
                         new MemoryContextSection(
                             "Generic provider boundary",
                             "The query was handled through the generic memory runtime.",
-                            [new MemoryCitation("memory://sb33/manual", "SB33 manual source")],
+                            [new MemoryCitation("memory://regression/manual", "regression manual source")],
                             0.96m)
                     ],
                     Warnings: [],
                     ProviderConfidence: 0.96m,
                     FeedbackHandle: null),
-                "SB33 programming provider returned sync context."));
+                "regression programming provider returned sync context."));
         }
 
         public Task<MemoryProviderOperationPollResult> PollOperationAsync(
@@ -653,11 +653,11 @@ public sealed class MemoryEndToEndObservabilityProofTests
                 new MemoryOperationResult(
                     operation.OperationId,
                     MemoryOperationStatus.Succeeded,
-                    MemoryPayload.FromText("SB33 async business context completed."),
+                    MemoryPayload.FromText("regression async business context completed."),
                     Warnings: [],
                     FeedbackHandles: [],
-                    SourceRefs: ["memory://sb33/business"]),
-                "SB33 async operation completed through status polling."));
+                    SourceRefs: ["memory://regression/business"]),
+                "regression async operation completed through status polling."));
         }
 
         public Task<MemoryProviderQueueDispatchResult> DeliverFeedbackAsync(
@@ -668,7 +668,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             cancellationToken.ThrowIfCancellationRequested();
             FeedbackDeliveryCalls++;
             return Task.FromResult(MemoryProviderQueueDispatchResult.Succeeded(
-                "SB33 feedback delivered to provider."));
+                "regression feedback delivered to provider."));
         }
 
         public Task<MemoryProviderEventPollResult> PollEventsAsync(
@@ -679,7 +679,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             EventPollCalls++;
             return Task.FromResult(MemoryProviderEventPollResult.FromEvents(
                 ProviderEvents,
-                "SB33 provider event poll returned events."));
+                "regression provider event poll returned events."));
         }
 
         public Task<MemoryProviderQueueDispatchResult> DeliverOutboxAsync(
@@ -690,7 +690,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             cancellationToken.ThrowIfCancellationRequested();
             OutboxDeliveryCalls++;
             return Task.FromResult(MemoryProviderQueueDispatchResult.Succeeded(
-                "SB33 event acknowledgement delivered."));
+                "regression event acknowledgement delivered."));
         }
 
         public Task<MemoryProviderHealth> GetHealthAsync(
@@ -702,7 +702,7 @@ public sealed class MemoryEndToEndObservabilityProofTests
             return Task.FromResult(provider.InstanceId == FailingProviderId
                 ? new MemoryProviderHealth(
                     MemoryProviderHealthStatus.Degraded,
-                    "sb33-deliberate-provider-error",
+                    "regression-deliberate-provider-error",
                     provider.Manifest)
                 : new MemoryProviderHealth(
                     MemoryProviderHealthStatus.Reachable,

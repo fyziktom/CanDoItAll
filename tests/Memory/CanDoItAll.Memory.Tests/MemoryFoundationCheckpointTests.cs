@@ -9,7 +9,7 @@ public sealed class MemoryFoundationCheckpointTests
     private const int MaxFoundationFileLines = 220;
 
     [Fact]
-    public void SB05_CP001_Generic_memory_foundation_files_are_bounded_and_cohesive()
+    public void CP001_Generic_memory_foundation_files_are_bounded_and_cohesive()
     {
         var sourceFiles = EnumerateSourceFiles("src", "Memory")
             .Select(path => new
@@ -27,7 +27,7 @@ public sealed class MemoryFoundationCheckpointTests
     }
 
     [Fact]
-    public void SB05_CP002_Generic_memory_foundation_has_no_native_or_infrastructure_dependencies()
+    public void CP002_Generic_memory_foundation_has_no_native_or_infrastructure_dependencies()
     {
         var forbiddenPatterns = new[]
         {
@@ -59,7 +59,7 @@ public sealed class MemoryFoundationCheckpointTests
     }
 
     [Fact]
-    public void SB06_CP001_Generic_memory_persistence_has_no_native_provider_dependencies()
+    public void CP001_Generic_memory_persistence_has_no_native_provider_dependencies()
     {
         var forbiddenPatterns = new[]
         {
@@ -87,7 +87,7 @@ public sealed class MemoryFoundationCheckpointTests
     }
 
     [Fact]
-    public void SB05_CP003_Source_snapshot_contract_is_not_forked_inside_generic_memory()
+    public void CP003_Source_snapshot_contract_is_not_forked_inside_generic_memory()
     {
         var duplicateSnapshotPattern = new Regex(
             @"\b(?:record|record\s+class|class|interface)\s+(?:I)?MemorySourceSnapshot(?:Provider)?\b",
@@ -108,7 +108,7 @@ public sealed class MemoryFoundationCheckpointTests
     }
 
     [Fact]
-    public void SB05_CP004_Zero_provider_selection_is_typed_no_dispatch_not_fallback()
+    public void CP004_Zero_provider_selection_is_typed_no_dispatch_not_fallback()
     {
         var registry = new InMemoryMemoryProviderRegistry([]);
         var result = registry.SelectProvider(

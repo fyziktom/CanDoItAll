@@ -8,7 +8,7 @@ public sealed class MemoryProtocolContractsTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public void SB01_MP001_Query_envelope_round_trips_structured_context()
+    public void MP001_Query_envelope_round_trips_structured_context()
     {
         var envelope = MemoryOperationEnvelope.Create(
             MemoryProviderInstanceId.Parse("provider.programming"),
@@ -66,7 +66,7 @@ public sealed class MemoryProtocolContractsTests
     }
 
     [Fact]
-    public void SB01_MP002_All_required_envelopes_round_trip()
+    public void MP002_All_required_envelopes_round_trip()
     {
         var sourceRequest = CreateEnvelope(
             MemoryOperationKind.SourceRequest,
@@ -112,7 +112,7 @@ public sealed class MemoryProtocolContractsTests
     }
 
     [Fact]
-    public void SB01_MP003_Provider_response_models_round_trip()
+    public void MP003_Provider_response_models_round_trip()
     {
         var contextPack = new MemoryContextPack(
             MemoryContextPackId.New(),
@@ -201,7 +201,7 @@ public sealed class MemoryProtocolContractsTests
     }
 
     [Fact]
-    public void SB01_MP004_Invalid_identifiers_and_protocol_versions_fail_predictably()
+    public void MP004_Invalid_identifiers_and_protocol_versions_fail_predictably()
     {
         var missingCorrelation = Assert.Throws<ArgumentException>(() => new MemoryCorrelationId(Guid.Empty));
         Assert.Contains("must not be empty", missingCorrelation.Message);
@@ -214,7 +214,7 @@ public sealed class MemoryProtocolContractsTests
     }
 
     [Fact]
-    public void SB01_MP005_Native_extension_namespace_is_stored_without_generic_branching()
+    public void MP005_Native_extension_namespace_is_stored_without_generic_branching()
     {
         var extensionData = MemoryExtensionData.From(
             ("native.cognitiveMemory.probe", JsonDocument.Parse("""{"enabled":true}""").RootElement.Clone()),
@@ -238,7 +238,7 @@ public sealed class MemoryProtocolContractsTests
     }
 
     [Fact]
-    public void SB01_MP006_Unqualified_extension_namespaces_are_rejected()
+    public void MP006_Unqualified_extension_namespaces_are_rejected()
     {
         var exception = Assert.Throws<ArgumentException>(() =>
             MemoryExtensionData.From(("random.native.flag", JsonDocument.Parse("""{"value":true}""").RootElement.Clone())));

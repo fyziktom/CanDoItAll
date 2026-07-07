@@ -13,7 +13,7 @@ public sealed class MemoryAsyncWorkerTests
     private static readonly MemoryProviderInstanceId ProviderId = MemoryProviderInstanceId.Parse("provider.mock");
 
     [Fact]
-    public async Task SB09_OP001_Accepted_operation_polls_provider_and_completes()
+    public async Task OP001_Accepted_operation_polls_provider_and_completes()
     {
         var time = new ManualMemoryTimeProvider(Now);
         var statusDriver = ScriptedOperationStatusDriver.FromResult(MemoryOperationStatus.Succeeded);
@@ -36,7 +36,7 @@ public sealed class MemoryAsyncWorkerTests
     }
 
     [Fact]
-    public async Task SB09_OP002_Operation_worker_times_out_expired_async_operation_without_driver_call()
+    public async Task OP002_Operation_worker_times_out_expired_async_operation_without_driver_call()
     {
         var time = new ManualMemoryTimeProvider(Now);
         var statusDriver = ScriptedOperationStatusDriver.FromResult(MemoryOperationStatus.Succeeded);
@@ -55,7 +55,7 @@ public sealed class MemoryAsyncWorkerTests
     }
 
     [Fact]
-    public async Task SB09_OP003_Operation_worker_cancels_running_operation_explicitly()
+    public async Task OP003_Operation_worker_cancels_running_operation_explicitly()
     {
         var time = new ManualMemoryTimeProvider(Now);
         using var rootProvider = CreateServiceProvider(time);
@@ -73,7 +73,7 @@ public sealed class MemoryAsyncWorkerTests
     }
 
     [Fact]
-    public async Task SB09_OP004_Operation_worker_dead_letters_after_retry_budget()
+    public async Task OP004_Operation_worker_dead_letters_after_retry_budget()
     {
         var time = new ManualMemoryTimeProvider(Now);
         var statusDriver = ScriptedOperationStatusDriver.FromRetryableFailure("provider temporarily unavailable");
@@ -95,7 +95,7 @@ public sealed class MemoryAsyncWorkerTests
     }
 
     [Fact]
-    public async Task SB09_RT001_Retention_worker_forgets_feedback_and_requests_ipfs_unpin()
+    public async Task RT001_Retention_worker_forgets_feedback_and_requests_ipfs_unpin()
     {
         var time = new ManualMemoryTimeProvider(Now);
         using var rootProvider = CreateServiceProvider(time);
@@ -117,7 +117,7 @@ public sealed class MemoryAsyncWorkerTests
     }
 
     [Fact]
-    public async Task SB09_EV001_Event_worker_dedupes_polled_events_and_drains_inbox_outbox()
+    public async Task EV001_Event_worker_dedupes_polled_events_and_drains_inbox_outbox()
     {
         var time = new ManualMemoryTimeProvider(Now);
         var providerEvent = CreateProviderEvent();
@@ -145,7 +145,7 @@ public sealed class MemoryAsyncWorkerTests
     }
 
     [Fact]
-    public async Task SB09_OP005_Operation_worker_respects_bounded_batch_size()
+    public async Task OP005_Operation_worker_respects_bounded_batch_size()
     {
         var time = new ManualMemoryTimeProvider(Now);
         var statusDriver = ScriptedOperationStatusDriver.FromResult(MemoryOperationStatus.Succeeded);

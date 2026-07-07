@@ -14,7 +14,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CapabilityFoundationHardeningTests
 {
     [Fact]
-    public async Task SB05_INV_DIAGNOSTICS_001_external_http_status_masks_bearer_assignment_and_preserves_typed_shape()
+    public async Task INV_DIAGNOSTICS_001_external_http_status_masks_bearer_assignment_and_preserves_typed_shape()
     {
         var descriptor = ToolDescriptorFactory.ExternalHttp(
             CapabilityKey.Create("external-http-audit"),
@@ -32,7 +32,7 @@ public sealed class CapabilityFoundationHardeningTests
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_001"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_DIAGNOSTICS_001"),
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
@@ -42,7 +42,7 @@ public sealed class CapabilityFoundationHardeningTests
         Assert.Equal(descriptor.Identity.Key, diagnostic.CapabilityKey);
         Assert.Equal(CapabilityTransportKind.ExternalHttp, diagnostic.Transport);
         Assert.Equal((int)HttpStatusCode.BadGateway, diagnostic.HttpStatusCode);
-        Assert.Equal("SB05_INV_DIAGNOSTICS_001", diagnostic.CorrelationId);
+        Assert.Equal("INV_DIAGNOSTICS_001", diagnostic.CorrelationId);
         Assert.Equal("$.statusCode", diagnostic.FieldPath);
         Assert.DoesNotContain("raw-secret-value", diagnostic.MaskedDetail, StringComparison.Ordinal);
         Assert.True(diagnostic.MaskedDetail.Length <= 200);
@@ -50,14 +50,14 @@ public sealed class CapabilityFoundationHardeningTests
     }
 
     [Fact]
-    public async Task SB05_INV_DIAGNOSTICS_002_external_process_cancellation_returns_typed_diagnostic()
+    public async Task INV_DIAGNOSTICS_002_external_process_cancellation_returns_typed_diagnostic()
     {
         var descriptor = ProcessDescriptor();
         var invoker = new ExternalProcessToolInvoker(new FakeProcessRunner(new OperationCanceledException()));
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_002"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_DIAGNOSTICS_002"),
             CancellationToken.None);
 
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -67,20 +67,20 @@ public sealed class CapabilityFoundationHardeningTests
         Assert.Equal(descriptor.Identity.Key, diagnostic.CapabilityKey);
         Assert.Equal(CapabilityTransportKind.ExternalProcess, diagnostic.Transport);
         Assert.Equal(TimeSpan.FromSeconds(5), diagnostic.Timeout);
-        Assert.Equal("SB05_INV_DIAGNOSTICS_002", diagnostic.CorrelationId);
+        Assert.Equal("INV_DIAGNOSTICS_002", diagnostic.CorrelationId);
         Assert.Contains("cancelled", diagnostic.MaskedDetail, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Retry", diagnostic.RepairHint, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task SB05_INV_DIAGNOSTICS_003_external_http_cancellation_returns_typed_diagnostic()
+    public async Task INV_DIAGNOSTICS_003_external_http_cancellation_returns_typed_diagnostic()
     {
         var descriptor = HttpDescriptor();
         var invoker = new ExternalHttpToolInvoker(new FakeHttpTransport(new OperationCanceledException()));
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_003"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_DIAGNOSTICS_003"),
             CancellationToken.None);
 
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -90,11 +90,11 @@ public sealed class CapabilityFoundationHardeningTests
         Assert.Equal(descriptor.Identity.Key, diagnostic.CapabilityKey);
         Assert.Equal(CapabilityTransportKind.ExternalHttp, diagnostic.Transport);
         Assert.Equal(TimeSpan.FromSeconds(5), diagnostic.Timeout);
-        Assert.Equal("SB05_INV_DIAGNOSTICS_003", diagnostic.CorrelationId);
+        Assert.Equal("INV_DIAGNOSTICS_003", diagnostic.CorrelationId);
     }
 
     [Fact]
-    public async Task SB05_INV_DIAGNOSTICS_004_external_http_exception_masks_authorization_bearer_assignment()
+    public async Task INV_DIAGNOSTICS_004_external_http_exception_masks_authorization_bearer_assignment()
     {
         var descriptor = HttpDescriptor();
         var invoker = new ExternalHttpToolInvoker(new FakeHttpTransport(new InvalidOperationException(
@@ -102,7 +102,7 @@ public sealed class CapabilityFoundationHardeningTests
 
         var result = await invoker.InvokeAsync(
             descriptor,
-            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "SB05_INV_DIAGNOSTICS_004"),
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, """{"input":true}""", "INV_DIAGNOSTICS_004"),
             CancellationToken.None);
 
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -113,7 +113,7 @@ public sealed class CapabilityFoundationHardeningTests
     }
 
     [Fact]
-    public void SB05_INV_POLICY_001_deny_required_and_require_rule_failures_are_deterministic()
+    public void INV_POLICY_001_deny_required_and_require_rule_failures_are_deterministic()
     {
         var candidate = ToolExposureDescriptorFactory.Create(ToolDescriptorFactory.Internal(
             CapabilityKey.Create("workspace-write-file"),
@@ -148,7 +148,7 @@ public sealed class CapabilityFoundationHardeningTests
             [candidate],
             [candidate.Identity],
             [policy],
-            "SB05_INV_POLICY_001"));
+            "INV_POLICY_001"));
 
         Assert.Empty(result.AllowedCapabilities);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -162,7 +162,7 @@ public sealed class CapabilityFoundationHardeningTests
     }
 
     [Fact]
-    public void SB05_INV_POLICY_002_future_capability_kind_uses_tag_policy_without_evaluator_changes()
+    public void INV_POLICY_002_future_capability_kind_uses_tag_policy_without_evaluator_changes()
     {
         var futureCapability = new CapabilityExposureDescriptor(
             new CapabilityIdentity(CapabilityKind.Memory, CapabilityKey.Create("semantic-memory")),
@@ -191,7 +191,7 @@ public sealed class CapabilityFoundationHardeningTests
             [futureCapability],
             [],
             [policy],
-            "SB05_INV_POLICY_002"));
+            "INV_POLICY_002"));
 
         Assert.Empty(result.AllowedCapabilities);
         Assert.Contains(result.Diagnostics, diagnostic =>
@@ -200,7 +200,7 @@ public sealed class CapabilityFoundationHardeningTests
     }
 
     [Fact]
-    public void SB05_INV_EXPOSURE_001_tool_skill_mcp_server_and_mcp_tool_share_policy_metadata_shape()
+    public void INV_EXPOSURE_001_tool_skill_mcp_server_and_mcp_tool_share_policy_metadata_shape()
     {
         var tool = ToolExposureDescriptorFactory.Create(ProcessDescriptor());
         var skill = SkillExposureDescriptorFactory.Create(SkillDescriptorFactory.Inline(

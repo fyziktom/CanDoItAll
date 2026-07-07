@@ -12,7 +12,7 @@ public sealed class MemoryHttpDriverTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-05T12:00:00Z");
 
     [Fact]
-    public async Task SB07_HTTP001_Sync_context_pack_posts_plain_query_and_structured_envelope()
+    public async Task HTTP001_Sync_context_pack_posts_plain_query_and_structured_envelope()
     {
         using var handler = new CapturingHandler((request, _) =>
             JsonResponse(HttpMemoryProviderResponse.FromContextPack(CreateContextPack())));
@@ -37,7 +37,7 @@ public sealed class MemoryHttpDriverTests
     }
 
     [Fact]
-    public async Task SB07_HTTP002_Async_accepted_response_maps_to_running_operation()
+    public async Task HTTP002_Async_accepted_response_maps_to_running_operation()
     {
         using var handler = new CapturingHandler((_, _) =>
             JsonResponse(HttpMemoryProviderResponse.FromAccepted(new MemoryOperationAccepted(
@@ -57,7 +57,7 @@ public sealed class MemoryHttpDriverTests
     }
 
     [Fact]
-    public async Task SB07_HTTP003_Timeout_budget_maps_to_timed_out_result()
+    public async Task HTTP003_Timeout_budget_maps_to_timed_out_result()
     {
         using var handler = new CapturingHandler(async (_, cancellationToken) =>
         {
@@ -75,7 +75,7 @@ public sealed class MemoryHttpDriverTests
     }
 
     [Fact]
-    public async Task SB07_HTTP004_Caller_cancellation_is_propagated()
+    public async Task HTTP004_Caller_cancellation_is_propagated()
     {
         using var handler = new CapturingHandler(async (_, cancellationToken) =>
         {
@@ -93,7 +93,7 @@ public sealed class MemoryHttpDriverTests
     }
 
     [Fact]
-    public async Task SB07_HTTP005_Health_degraded_response_is_returned()
+    public async Task HTTP005_Health_degraded_response_is_returned()
     {
         var health = new MemoryProviderHealth(
             MemoryProviderHealthStatus.Degraded,
@@ -112,7 +112,7 @@ public sealed class MemoryHttpDriverTests
     }
 
     [Fact]
-    public async Task SB07_HTTP006_Malformed_response_maps_to_provider_error()
+    public async Task HTTP006_Malformed_response_maps_to_provider_error()
     {
         using var handler = new CapturingHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -128,7 +128,7 @@ public sealed class MemoryHttpDriverTests
     }
 
     [Fact]
-    public async Task SB07_HTTP007_Unsupported_capability_response_is_typed()
+    public async Task HTTP007_Unsupported_capability_response_is_typed()
     {
         using var handler = new CapturingHandler((_, _) =>
             JsonResponse(HttpMemoryProviderResponse.UnsupportedCapability("context.query.sync is disabled")));
@@ -142,7 +142,7 @@ public sealed class MemoryHttpDriverTests
     }
 
     [Fact]
-    public async Task SB07_HTTP008_Unavailable_response_is_typed_without_retry_by_default()
+    public async Task HTTP008_Unavailable_response_is_typed_without_retry_by_default()
     {
         using var handler = new CapturingHandler((_, _) => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
         {

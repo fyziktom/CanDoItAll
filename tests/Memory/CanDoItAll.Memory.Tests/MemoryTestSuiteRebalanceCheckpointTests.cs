@@ -12,7 +12,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-06T02:30:00Z");
 
     [Fact]
-    public void SB32_MP001_Generic_mock_profiles_are_explicit_and_cover_required_shapes()
+    public void MP001_Generic_mock_profiles_are_explicit_and_cover_required_shapes()
     {
         var profiles = new[]
         {
@@ -38,7 +38,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     }
 
     [Fact]
-    public void SB32_MP002_Two_explicit_mock_providers_select_by_role_without_fallback()
+    public void MP002_Two_explicit_mock_providers_select_by_role_without_fallback()
     {
         var developer = GenericMockMemoryProviderFixture.ImmediateContextProfile(
             "provider.mock.developer",
@@ -90,7 +90,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     }
 
     [Fact]
-    public async Task SB32_MP003_Immediate_mock_provider_dispatches_through_generic_runtime()
+    public async Task MP003_Immediate_mock_provider_dispatches_through_generic_runtime()
     {
         var fixture = new GenericMockMemoryProviderFixture();
         using var rootProvider = CreateServiceProvider(fixture);
@@ -112,7 +112,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     }
 
     [Fact]
-    public async Task SB32_MP004_Delayed_mock_provider_completes_status_poll_and_delivers_feedback()
+    public async Task MP004_Delayed_mock_provider_completes_status_poll_and_delivers_feedback()
     {
         var fixture = new GenericMockMemoryProviderFixture(GenericMockMemoryQueryMode.AcceptedOperation);
         fixture.CompleteNextOperationWithPayload("delayed context ready");
@@ -152,7 +152,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     }
 
     [Fact]
-    public async Task SB32_MP005_Eventful_mock_provider_dedupes_events_and_drains_ack_outbox()
+    public async Task MP005_Eventful_mock_provider_dedupes_events_and_drains_ack_outbox()
     {
         var fixture = new GenericMockMemoryProviderFixture();
         var providerEvent = GenericMockMemoryProviderFixture.CreateProviderEvent();
@@ -177,7 +177,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     }
 
     [Fact]
-    public void SB32_CP001_Generic_memory_tests_do_not_import_native_memory_or_qdrant_modules()
+    public void CP001_Generic_memory_tests_do_not_import_native_memory_or_qdrant_modules()
     {
         var forbiddenImports = new[]
         {
@@ -216,7 +216,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
     }
 
     [Fact]
-    public void SB32_CP002_Test_rebalance_inventory_classifies_legacy_native_tests_and_generic_fixtures()
+    public void CP002_Test_rebalance_inventory_classifies_legacy_native_tests_and_generic_fixtures()
     {
         var doc = File.ReadAllText(Path.Combine(
             RepoRoot,

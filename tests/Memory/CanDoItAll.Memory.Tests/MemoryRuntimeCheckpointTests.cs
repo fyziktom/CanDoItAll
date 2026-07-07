@@ -10,7 +10,7 @@ namespace CanDoItAll.Memory.Tests;
 public sealed class MemoryRuntimeCheckpointTests
 {
     [Fact]
-    public void SB10_CP001_Generic_runtime_projects_have_no_native_or_qdrant_dependencies()
+    public void CP001_Generic_runtime_projects_have_no_native_or_qdrant_dependencies()
     {
         var forbiddenPatterns = new[]
         {
@@ -38,7 +38,7 @@ public sealed class MemoryRuntimeCheckpointTests
     }
 
     [Fact]
-    public void SB10_CP002_Generic_runtime_has_no_blocking_async_misuse()
+    public void CP002_Generic_runtime_has_no_blocking_async_misuse()
     {
         var forbiddenPatterns = new[]
         {
@@ -65,7 +65,7 @@ public sealed class MemoryRuntimeCheckpointTests
     }
 
     [Fact]
-    public async Task SB10_CP003_Zero_provider_runtime_registration_has_no_implicit_driver_or_worker_dispatch()
+    public async Task CP003_Zero_provider_runtime_registration_has_no_implicit_driver_or_worker_dispatch()
     {
         using var rootProvider = CreateServiceProvider();
         using var scope = rootProvider.CreateScope();
@@ -86,7 +86,7 @@ public sealed class MemoryRuntimeCheckpointTests
     }
 
     [Fact]
-    public async Task SB10_CP004_Accepted_operation_metadata_is_persisted_with_ledger_transition()
+    public async Task CP004_Accepted_operation_metadata_is_persisted_with_ledger_transition()
     {
         var driver = new AcceptingMemoryProviderDriver();
         using var rootProvider = CreateServiceProvider(services =>

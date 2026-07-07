@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CognitiveMemoryConsolidationEngineTests
 {
     [Fact]

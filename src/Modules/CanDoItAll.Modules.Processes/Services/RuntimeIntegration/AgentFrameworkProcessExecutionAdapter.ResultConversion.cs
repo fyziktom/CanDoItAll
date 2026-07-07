@@ -269,6 +269,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             return true;
         }
 
+        if (TryReadBranchOutcomeDecisionSection(string.Join(Environment.NewLine, outputTextParts), declaredBranchOutcomes, out branchOutcomeKey))
+        {
+            return true;
+        }
+
         if (string.IsNullOrWhiteSpace(outputText) ||
             LooksLikeRightsOrToolBoundary(outputText) ||
             !LooksLikeBranchSelectionText(outputText))
@@ -339,6 +344,81 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         branchOutcomeKey = declaredMatches[0];
         return true;
     }
+
+    private static bool TryReadBranchOutcomeDecisionSection(
+        string text,
+        IReadOnlyCollection<BranchOutcomePromptDescriptor> declaredBranchOutcomes,
+        out string branchOutcomeKey)
+    {
+        branchOutcomeKey = string.Empty;
+        if (string.IsNullOrWhiteSpace(text) ||
+            declaredBranchOutcomes.Count == 0)
+        {
+            return false;
+        }
+
+        var candidates = new List<string>();
+        var lines = text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        for (var index = 0; index < lines.Length - 1; index++)
+        {
+            var heading = NormalizeOutcomeMarkdownMetadataLine(lines[index]);
+            if (!IsBranchOutcomeDecisionHeading(heading))
+            {
+                continue;
+            }
+
+            for (var candidateIndex = index + 1; candidateIndex < lines.Length; candidateIndex++)
+            {
+                var candidateLine = lines[candidateIndex];
+                if (LooksLikeMarkdownHeading(candidateLine))
+                {
+                    break;
+                }
+
+                var candidate = NormalizeOutcomeMarkdownMetadataLine(candidateLine);
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    candidates.Add(candidate);
+                }
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        var matches = declaredBranchOutcomes
+            .Where(outcome => candidates.Any(candidate =>
+                string.Equals(NormalizeBranchOutcomeKeyCandidate(candidate), outcome.Key, StringComparison.OrdinalIgnoreCase) ||
+                ContainsBranchOutcomeKey(candidate, outcome.Key) ||
+                ContainsBranchOutcomeTitle(candidate, outcome.Title)))
+            .Select(outcome => outcome.Key)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (matches.Length != 1)
+        {
+            return false;
+        }
+
+        branchOutcomeKey = matches[0];
+        return true;
+    }
+
+    private static bool IsBranchOutcomeDecisionHeading(string value)
+        => value switch
+        {
+            _ when string.Equals(value, "Branch outcome key", StringComparison.OrdinalIgnoreCase) => true,
+            _ when string.Equals(value, "Branch outcome", StringComparison.OrdinalIgnoreCase) => true,
+            _ when string.Equals(value, "Validation decision", StringComparison.OrdinalIgnoreCase) => true,
+            _ when string.Equals(value, "Repair decision", StringComparison.OrdinalIgnoreCase) => true,
+            _ when string.Equals(value, "Acceptance decision", StringComparison.OrdinalIgnoreCase) => true,
+            _ when string.Equals(value, "Outcome", StringComparison.OrdinalIgnoreCase) => true,
+            _ => false
+        };
+
+    private static bool LooksLikeMarkdownHeading(string value)
+        => value.TrimStart().StartsWith('#');
 
     private static IEnumerable<string> ReadExplicitBranchOutcomeKeys(string text)
     {
@@ -419,16 +499,46 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             yield break;
         }
 
-        foreach (Match match in BranchOutcomePromptLineRegex().Matches(prompt))
+        foreach (var line in prompt.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
         {
-            var key = match.Groups["key"].Value.Trim();
-            if (!string.IsNullOrWhiteSpace(key))
+            if (TryReadDeclaredBranchOutcomeLine(line, out var key, out var rest))
             {
                 yield return new BranchOutcomePromptDescriptor(
                     key,
-                    ExtractBranchOutcomeTitle(match.Groups["rest"].Value));
+                    ExtractBranchOutcomeTitle(rest));
             }
         }
+    }
+
+    private static bool TryReadDeclaredBranchOutcomeLine(
+        string line,
+        out string key,
+        out string rest)
+    {
+        key = string.Empty;
+        rest = string.Empty;
+
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0 || trimmed[0] != '-')
+        {
+            return false;
+        }
+
+        var body = trimmed[1..].TrimStart();
+        var separatorIndex = body.IndexOf(':', StringComparison.Ordinal);
+        if (separatorIndex <= 0)
+        {
+            return false;
+        }
+
+        key = NormalizeBranchOutcomeKeyCandidate(body[..separatorIndex]);
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        rest = body[(separatorIndex + 1)..].Trim();
+        return true;
     }
 
     private static string ExtractBranchOutcomeTitle(string value)

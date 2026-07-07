@@ -8,11 +8,13 @@ using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class DatabaseSwitchCoordinatorTests
 {
     [Fact]
     public async Task SwitchAsync_returns_failure_when_RuntimeOverride_is_active()
     {
+        using var modelRegistryScope = AppDbContextModelRegistry.UseIsolatedAssembliesForTesting();
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-override-switch");
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
             testEnvironment,
@@ -37,11 +39,13 @@ public sealed class DatabaseSwitchCoordinatorTests
     }
 }
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class AppDbContextRuntimeSwitchTests
 {
     [Fact]
     public async Task CreateDbContextAsync_keeps_canonical_profile_until_restart_after_activation()
     {
+        using var modelRegistryScope = AppDbContextModelRegistry.UseIsolatedAssembliesForTesting();
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-context-switch");
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
             testEnvironment,

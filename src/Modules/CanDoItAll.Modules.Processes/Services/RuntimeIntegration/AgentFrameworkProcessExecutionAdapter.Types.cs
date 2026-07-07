@@ -38,9 +38,6 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
     [GeneratedRegex(@"\bStatus\s*:\s*(?:in\s*progress|inprogress|progress|working|running|started)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex NonTerminalStatusDeclarationRegex();
 
-    [GeneratedRegex(@"^\s*-\s*(?<key>[A-Za-z0-9][A-Za-z0-9._-]*)\s*:\s*(?<rest>[^\r\n]*)$", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
-    private static partial Regex BranchOutcomePromptLineRegex();
-
     [GeneratedRegex(@"^\s*(?:\*\*)?Branch\s+outcome\s+key(?:\*\*)?\s*:\s*`?(?<key>[A-Za-z0-9][A-Za-z0-9._-]*)`?\s*\.?\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ExplicitBranchOutcomeKeyLineRegex();
 

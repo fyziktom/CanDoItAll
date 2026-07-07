@@ -8,6 +8,7 @@ using System.Text.Json;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CognitiveMemoryAdvancedServicesTests
 {
     [Fact]
@@ -3276,7 +3277,7 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     private static TestFixture CreateFixture()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(CognitiveMemoryModuleAssemblyMarker).Assembly]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"cognitive-memory-advanced-{Guid.NewGuid():N}")
             .Options;
         var factory = new TestDbContextFactory(options);

@@ -9,7 +9,7 @@ public sealed class MemorySourceGatewayTests
     private static readonly Guid ProjectId = Guid.Parse("4a7f8bf0-b2a5-4cc7-8229-322729fb9168");
 
     [Fact]
-    public async Task SB04_SG001_Source_gateway_returns_existing_snapshot_contract_with_redaction_and_provenance()
+    public async Task SG001_Source_gateway_returns_existing_snapshot_contract_with_redaction_and_provenance()
     {
         var snapshot = CreateWorkbenchSnapshot(redacted: true);
         var gateway = new MemorySourceGateway(
@@ -32,7 +32,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB04_SG002_Missing_adapter_fails_closed_without_snapshot()
+    public async Task SG002_Missing_adapter_fails_closed_without_snapshot()
     {
         var gateway = new MemorySourceGateway(
             adapters: [],
@@ -49,7 +49,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB04_SG003_Denied_source_scope_fails_before_adapter_call()
+    public async Task SG003_Denied_source_scope_fails_before_adapter_call()
     {
         var adapter = new FakeSourceGatewayAdapter(CreateWorkbenchSnapshot(redacted: true));
         var gateway = new MemorySourceGateway(
@@ -67,7 +67,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB04_SG004_Unsupported_source_kind_fails_closed_before_adapter_discovery()
+    public async Task SG004_Unsupported_source_kind_fails_closed_before_adapter_discovery()
     {
         var gateway = new MemorySourceGateway(
             adapters: [],
@@ -83,7 +83,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB11_SG001_Denied_requested_scope_fails_before_adapter_call()
+    public async Task SG001_Denied_requested_scope_fails_before_adapter_call()
     {
         var adapter = new FakeSourceGatewayAdapter(CreateWorkbenchSnapshot(redacted: true));
         var gateway = new MemorySourceGateway(
@@ -108,7 +108,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB04_SG005_Sensitive_payload_without_redaction_is_rejected()
+    public async Task SG005_Sensitive_payload_without_redaction_is_rejected()
     {
         var gateway = new MemorySourceGateway(
             [new FakeSourceGatewayAdapter(CreateWorkbenchSnapshot(redacted: false, containsSensitivePayload: true))],
@@ -125,7 +125,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB14_SG001_Adapter_required_scope_mismatch_fails_before_adapter_call()
+    public async Task SG001_Adapter_required_scope_mismatch_fails_before_adapter_call()
     {
         var adapter = new FakeSourceGatewayAdapter(CreateWorkbenchSnapshot(redacted: true));
         var gateway = new MemorySourceGateway(
@@ -150,7 +150,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB14_SG002_Snapshot_with_stale_scope_id_is_rejected()
+    public async Task SG002_Snapshot_with_stale_scope_id_is_rejected()
     {
         var staleScopeId = Guid.Parse("bf14aab7-8409-4266-9347-01fc0c9b542c");
         var snapshot = CreateWorkbenchSnapshot(redacted: true) with
@@ -176,7 +176,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB14_SG003_Item_with_stale_provenance_scope_is_rejected()
+    public async Task SG003_Item_with_stale_provenance_scope_is_rejected()
     {
         var staleScopeId = Guid.Parse("8a0aacd3-2790-47ac-b765-e82633453a91");
         var snapshot = CreateWorkbenchSnapshot(redacted: true);
@@ -203,7 +203,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public async Task SB14_SG004_Item_without_redaction_policy_is_rejected()
+    public async Task SG004_Item_without_redaction_policy_is_rejected()
     {
         var snapshot = CreateWorkbenchSnapshot(redacted: true);
         var item = snapshot.Items[0] with
@@ -229,7 +229,7 @@ public sealed class MemorySourceGatewayTests
     }
 
     [Fact]
-    public void SB04_SG006_Provider_source_requests_and_user_ingestion_jobs_share_gateway_request_shape()
+    public void SG006_Provider_source_requests_and_user_ingestion_jobs_share_gateway_request_shape()
     {
         var protocolSourceRequest = new MemorySourceRequest(
             MemorySourceRequestId.Parse("provider-source-request-1"),

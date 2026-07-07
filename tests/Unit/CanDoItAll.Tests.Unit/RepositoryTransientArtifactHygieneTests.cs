@@ -59,6 +59,7 @@ public sealed class RepositoryTransientArtifactHygieneTests
 
         paths = output
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(path => File.Exists(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))))
             .ToList();
         return true;
     }

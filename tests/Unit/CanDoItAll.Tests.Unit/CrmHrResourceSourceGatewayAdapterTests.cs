@@ -9,6 +9,7 @@ using GenericMemorySourceScope = CanDoItAll.Memory.Abstractions.MemorySourceScop
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CrmHrResourceSourceGatewayAdapterTests
 {
     private static readonly Guid PartyId = Guid.Parse("61ccf5fc-4b71-46f4-aa71-581cfd3d98e4");

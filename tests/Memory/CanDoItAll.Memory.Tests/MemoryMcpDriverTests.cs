@@ -12,7 +12,7 @@ public sealed class MemoryMcpDriverTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public async Task SB08_MCP001_Context_query_calls_configured_mcp_tool_with_structured_payload()
+    public async Task MCP001_Context_query_calls_configured_mcp_tool_with_structured_payload()
     {
         var operation = CreateOperation(MemoryCapabilityIds.ContextQuerySync);
         var contextPack = CreateContextPack();
@@ -62,7 +62,7 @@ public sealed class MemoryMcpDriverTests
     }
 
     [Fact]
-    public async Task SB08_MCP002_Unsupported_ingestion_is_structured_when_tool_not_configured()
+    public async Task MCP002_Unsupported_ingestion_is_structured_when_tool_not_configured()
     {
         var factory = new RecordingMcpClientFactory(new Dictionary<McpToolName, string>());
         var driver = new McpMemoryProviderDriver(factory, new McpMemoryProviderOptions());
@@ -87,7 +87,7 @@ public sealed class MemoryMcpDriverTests
     }
 
     [Fact]
-    public async Task SB08_MCP003_Async_status_tool_returns_operation_result()
+    public async Task MCP003_Async_status_tool_returns_operation_result()
     {
         var operation = CreateOperation(MemoryCapabilityIds.ContextQueryAsync);
         var operationResult = new MemoryOperationResult(
@@ -122,7 +122,7 @@ public sealed class MemoryMcpDriverTests
     }
 
     [Fact]
-    public async Task SB08_MCP004_Event_polling_returns_provider_events_when_tool_available()
+    public async Task MCP004_Event_polling_returns_provider_events_when_tool_available()
     {
         var providerEvent = new MemoryProviderEvent(
             MemoryProviderEventId.New(),
@@ -151,7 +151,7 @@ public sealed class MemoryMcpDriverTests
     }
 
     [Fact]
-    public async Task SB08_MCP005_Missing_query_tool_maps_unsupported_capability_without_mcp_call()
+    public async Task MCP005_Missing_query_tool_maps_unsupported_capability_without_mcp_call()
     {
         var factory = new RecordingMcpClientFactory(new Dictionary<McpToolName, string>());
         var driver = new McpMemoryProviderDriver(factory, new McpMemoryProviderOptions());
@@ -172,7 +172,7 @@ public sealed class MemoryMcpDriverTests
     }
 
     [Fact]
-    public void SB08_MCP006_Manifest_mapper_declares_effective_mcp_capability_versions()
+    public void MCP006_Manifest_mapper_declares_effective_mcp_capability_versions()
     {
         var toolMap = new McpMemoryProviderToolMap(
             ContextQueryTool: McpToolName.Create("memory_context_query"),

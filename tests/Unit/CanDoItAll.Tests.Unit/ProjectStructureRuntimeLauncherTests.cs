@@ -26,7 +26,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.Equal(@"C:\workspace\repos\CanDoItAll\src\App\CanDoItAll.Web", result.Plan!.WorkingDirectory);
         Assert.Equal("dotnet watch", result.Plan.DisplayName);
         Assert.Equal(
-            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --launch-profile 'https'",
+            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --launch-profile 'https'",
             result.Plan.DisplayCommand);
     }
 
@@ -48,7 +48,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.NotNull(result.Plan);
         Assert.Contains("$env:ASPNETCORE_URLS = 'https://localhost:7271'", result.Plan!.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
-            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --no-launch-profile",
+            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --no-launch-profile",
             result.Plan.DisplayCommand);
     }
 
@@ -223,7 +223,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.NotNull(result.Plan);
         Assert.Equal("dotnet watch", result.Plan!.DisplayName);
         Assert.Equal(
-            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run",
+            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run",
             result.Plan.DisplayCommand);
     }
 

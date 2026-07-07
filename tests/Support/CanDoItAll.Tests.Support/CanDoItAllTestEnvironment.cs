@@ -133,9 +133,14 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
     public string ConnectionString { get; }
 
     public DbContextOptions<AppDbContext> CreateAppDbContextOptions()
-        => new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(ConnectionString)
-            .Options;
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(optionsBuilder);
+        optionsBuilder.UseNpgsql(
+            ConnectionString,
+            builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.PostgreSql));
+        return optionsBuilder.Options;
+    }
 
     public static PostgresTestDatabaseLease Create(string profileKey)
     {

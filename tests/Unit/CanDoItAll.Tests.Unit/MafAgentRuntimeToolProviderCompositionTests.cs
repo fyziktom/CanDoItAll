@@ -342,7 +342,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
-    public async Task SB08_INV_MAF_ACCESS_002_runtime_provider_filter_uses_shared_policy_diagnostics()
+    public async Task INV_MAF_ACCESS_002_runtime_provider_filter_uses_shared_policy_diagnostics()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
@@ -369,9 +369,9 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
-    public async Task SB08_INV_MAF_ACCESS_003_catalog_descriptors_use_isolated_factory_source_paths()
+    public async Task INV_MAF_ACCESS_003_catalog_descriptors_use_isolated_factory_source_paths()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-sb08-descriptor-test-" + Guid.NewGuid().ToString("N"));
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-regression-descriptor-test-" + Guid.NewGuid().ToString("N"));
         var skillRoot = Path.Combine(workspaceRoot, "skills", "sample");
         Directory.CreateDirectory(skillRoot);
         await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
@@ -632,7 +632,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
-    public async Task SB08_INV_MAF_ACCESS_001_process_policy_records_effective_capability_diagnostics()
+    public async Task INV_MAF_ACCESS_001_process_policy_records_effective_capability_diagnostics()
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));

@@ -1,8 +1,0 @@
-67EC9DA740C56EBE19F18757C574DE1F82F56C100A0FC7AA0F83F0759B6B417B  src\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedBuilder.cs
-B68D5EC4163C8E1F08EBB045640D076C9FA4B8540D0DF5735C5A4007EA2D906A  tests\CanDoItAll.Tests.Unit\CapabilityMigrationCleanupGuardTests.cs
-10723AD775B21319246321F4241035FCEE3D404ECFA0DAA75EC3484547C48324  Templates\README.md
-998AD48E48E10A6785FB680C95B04406E7705F8CEE1E6BE0C40220790B139395  codex\bundles\skill-tool-mcp-isolation-template-migration\README.md
-DAFC20FA8E5604E7523CF8523FEFA23D21FA689D79203E08112E7A041532D9EF  codex\bundles\skill-tool-mcp-isolation-template-migration\reviews\01-execution-report.md
-9F5A53C6C85D7FEAC6613831387C1CD8AEB29E7F647955C4F081F7F192487EA1  codex\bundles\skill-tool-mcp-isolation-template-migration\subbundles\12-cleanup-hardening-and-docs\README.md
-E0E6D572B767FB3B4667C06715077597E021A2F3B8988C16372FEA4F7D21BC86  codex\bundles\skill-tool-mcp-isolation-template-migration\proof\SB12\manifest.md
-FC410CB6763D90EEBC4D9C15BE5223D0818D76927412A1289B8C3FD817942DD9  codex\bundles\skill-tool-mcp-isolation-template-migration\proof\SB12\semantic-invariants.md

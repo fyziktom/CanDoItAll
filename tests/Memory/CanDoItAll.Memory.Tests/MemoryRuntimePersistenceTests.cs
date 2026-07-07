@@ -13,7 +13,7 @@ public sealed class MemoryRuntimePersistenceTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-05T12:00:00Z");
 
     [Fact]
-    public async Task SB06_RT001_Zero_provider_registration_returns_typed_no_provider_and_no_driver_dispatch()
+    public async Task RT001_Zero_provider_registration_returns_typed_no_provider_and_no_driver_dispatch()
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: false);
         using var scope = rootProvider.CreateScope();
@@ -30,7 +30,7 @@ public sealed class MemoryRuntimePersistenceTests
     }
 
     [Fact]
-    public async Task SB06_RT002_Provider_profiles_persist_and_rehydrate_registry_contracts()
+    public async Task RT002_Provider_profiles_persist_and_rehydrate_registry_contracts()
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: false);
         using var scope = rootProvider.CreateScope();
@@ -48,7 +48,7 @@ public sealed class MemoryRuntimePersistenceTests
     }
 
     [Fact]
-    public async Task SB06_RT003_Operation_ledger_persists_and_updates_status()
+    public async Task RT003_Operation_ledger_persists_and_updates_status()
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: false);
         using var scope = rootProvider.CreateScope();
@@ -67,7 +67,7 @@ public sealed class MemoryRuntimePersistenceTests
     }
 
     [Fact]
-    public async Task SB06_RT004_Feedback_event_and_source_request_ledgers_persist_generic_metadata()
+    public async Task RT004_Feedback_event_and_source_request_ledgers_persist_generic_metadata()
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: false);
         using var scope = rootProvider.CreateScope();
@@ -88,7 +88,7 @@ public sealed class MemoryRuntimePersistenceTests
     }
 
     [Fact]
-    public async Task SB06_RT005_Explicit_mock_driver_profile_dispatches_deterministically_when_enabled()
+    public async Task RT005_Explicit_mock_driver_profile_dispatches_deterministically_when_enabled()
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: true);
         using var scope = rootProvider.CreateScope();
@@ -107,7 +107,7 @@ public sealed class MemoryRuntimePersistenceTests
     }
 
     [Fact]
-    public async Task SB06_RT006_Retention_projection_returns_due_generic_ledger_candidates()
+    public async Task RT006_Retention_projection_returns_due_generic_ledger_candidates()
     {
         using var rootProvider = CreateServiceProvider(enableMockDriver: false);
         using var scope = rootProvider.CreateScope();

@@ -12,7 +12,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CapabilityTemplateSeedMaterializationTests
 {
     [Fact]
-    public void SB06_INV_TEMPLATE_001_default_pack_materializes_known_catalog_without_duplicate_keys()
+    public void INV_TEMPLATE_001_default_pack_materializes_known_catalog_without_duplicate_keys()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack);
@@ -36,7 +36,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_TEMPLATE_002_materialization_preserves_representative_configuration_json()
+    public void INV_TEMPLATE_002_materialization_preserves_representative_configuration_json()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack)
@@ -157,7 +157,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_TEMPLATE_003_invalid_templates_block_materialization_without_fallback()
+    public void INV_TEMPLATE_003_invalid_templates_block_materialization_without_fallback()
     {
         using var packDirectory = new TemporaryCapabilityTemplatePack(
             "capabilities.json",
@@ -208,7 +208,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_TEMPLATE_004_agent_template_assignments_resolve_against_template_catalog()
+    public void INV_TEMPLATE_004_agent_template_assignments_resolve_against_template_catalog()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack);
@@ -220,7 +220,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_SEED_001_sandbox_seed_document_uses_template_backed_capability_catalog()
+    public void INV_SEED_001_sandbox_seed_document_uses_template_backed_capability_catalog()
     {
         var document = SandboxWorkspaceSeedBuilder.Build();
         var templateCapabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(new CapabilityTemplatePackLoader().Load());
@@ -242,7 +242,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_POLICY_001_access_policy_loader_compiles_typed_rules_and_rejects_unknown_grants()
+    public void INV_POLICY_001_access_policy_loader_compiles_typed_rules_and_rejects_unknown_grants()
     {
         var pack = new CapabilityTemplatePackLoader().Load();
         var policy = Assert.Single(pack.Policies, item => item.Key == "default-compatibility-policy").Policy;
@@ -284,7 +284,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
     }
 
     [Fact]
-    public void SB06_INV_POLICY_002_allowed_operations_compile_to_typed_compatibility_rules()
+    public void INV_POLICY_002_allowed_operations_compile_to_typed_compatibility_rules()
     {
         var result = ProcessAllowedOperationsCapabilityPolicyCompiler.Compile(
             [ProcessOperationContractNames.RunValidation, ProcessOperationContractNames.ReadProjectStructure],

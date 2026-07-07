@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CognitiveMemorySignalLedgerTests
 {
     [Fact]
@@ -281,7 +282,7 @@ public sealed class CognitiveMemorySignalLedgerTests
     private static TestFixture CreateFixture()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(CognitiveMemoryModuleAssemblyMarker).Assembly]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"cognitive-memory-signals-{Guid.NewGuid():N}")
             .Options;
         return new TestFixture(new TestDbContextFactory(options), new FixedClock());

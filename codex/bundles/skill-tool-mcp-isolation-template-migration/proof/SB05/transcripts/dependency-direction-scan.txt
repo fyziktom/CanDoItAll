@@ -1,2 +1,0 @@
-Command: rg -n 'CanDoItAll.AgentFramework.Maf|Microsoft.AspNetCore.Components|Microsoft.JSInterop|Radzen|Blazor|Microsoft\.Agents|ModelContextProtocol' capability implementation projects
-No MAF, Blazor/UI, Radzen, Microsoft.Agents, or ModelContextProtocol references found in isolated capability projects.

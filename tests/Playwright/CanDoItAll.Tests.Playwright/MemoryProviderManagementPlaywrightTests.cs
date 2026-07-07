@@ -33,7 +33,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
             "bundles",
             "candoitall-memory-provider-extraction-bundle",
             "proof",
-            "SB20",
+            "regression",
             "screenshots");
         Directory.CreateDirectory(screenshotRoot);
 
@@ -139,7 +139,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
             "bundles",
             "candoitall-memory-provider-extraction-bundle",
             "proof",
-            "SB21",
+            "regression",
             "screenshots");
         Directory.CreateDirectory(screenshotRoot);
 
@@ -150,15 +150,15 @@ public sealed class MemoryProviderManagementPlaywrightTests
             Assert.True(response?.Ok, $"Expected /memory to load. Logs:{Environment.NewLine}{host.GetLogSnapshot()}");
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-zero-provider");
-            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.sb21-browser");
-            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("SB21 browser memory");
+            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.regression-browser");
+            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("regression browser memory");
             await page.GetByTestId("memory-ui-editor-health").SelectOptionAsync("Healthy");
             await page.GetByTestId("memory-ui-editor-immediate-feedback").SetCheckedAsync(true);
             await page.GetByTestId("memory-ui-editor-snapshot-ingestion").SetCheckedAsync(true);
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
-            await ExpectTextAsync(page, "SB21 browser memory");
+            await ExpectTextAsync(page, "regression browser memory");
 
             await SelectTabAsync(page, "memory-ui-tab-query", "memory-ui-query");
             await page.GetByTestId("memory-ui-query-text").FillAsync("contract source references");
@@ -251,7 +251,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
             "bundles",
             "candoitall-memory-provider-extraction-bundle",
             "proof",
-            "SB22",
+            "regression",
             "screenshots");
         Directory.CreateDirectory(screenshotRoot);
 
@@ -262,8 +262,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
             Assert.True(response?.Ok, $"Expected /memory to load. Logs:{Environment.NewLine}{host.GetLogSnapshot()}");
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-zero-provider");
-            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.sb22-browser");
-            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("SB22 browser memory");
+            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.regression-browser");
+            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("regression browser memory");
             await page.GetByTestId("memory-ui-editor-health").SelectOptionAsync("Healthy");
             await page.GetByTestId("memory-ui-editor-rcl").SetCheckedAsync(true);
             await page.GetByTestId("memory-ui-editor-iframe").SetCheckedAsync(true);
@@ -271,7 +271,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
-            await ExpectTextAsync(page, "SB22 browser memory");
+            await ExpectTextAsync(page, "regression browser memory");
 
             await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
             await ExpectTextAsync(page, "Provider panel");
@@ -348,7 +348,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
             "bundles",
             "candoitall-memory-provider-extraction-bundle",
             "proof",
-            "SB23",
+            "regression",
             "screenshots");
         Directory.CreateDirectory(screenshotRoot);
 
@@ -376,8 +376,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
             });
 
             await SelectTabAsync(page, "memory-ui-tab-providers", "memory-ui-zero-provider");
-            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.sb23-browser");
-            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("SB23 checkpoint memory");
+            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.regression-browser");
+            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("regression checkpoint memory");
             await page.GetByTestId("memory-ui-editor-health").SelectOptionAsync("Healthy");
             await page.GetByTestId("memory-ui-editor-async-query").SetCheckedAsync(true);
             await page.GetByTestId("memory-ui-editor-immediate-feedback").SetCheckedAsync(true);
@@ -389,7 +389,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
-            await ExpectTextAsync(page, "SB23 checkpoint memory");
+            await ExpectTextAsync(page, "regression checkpoint memory");
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-checkpoint-provider-list-desktop.png"),
@@ -409,7 +409,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
                 FullPage = true
             });
 
-            await page.GetByTestId("memory-ui-feedback-comment").FillAsync("SB23 browser checkpoint feedback");
+            await page.GetByTestId("memory-ui-feedback-comment").FillAsync("regression browser checkpoint feedback");
             await page.GetByTestId("memory-ui-feedback-submit").ClickAsync();
             await ExpectTextAsync(page, "Memory feedback accepted for delivery.");
             await ExpectTextAsync(page, "ContextUsed");
@@ -420,8 +420,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
             });
 
             await SelectTabAsync(page, "memory-ui-tab-ingestion", "memory-ui-ingestion");
-            await page.GetByTestId("memory-ui-ingestion-title").FillAsync("SB23 browser manual note");
-            await page.GetByTestId("memory-ui-ingestion-content").FillAsync("Manual source snapshot captured by the SB23 browser checkpoint.");
+            await page.GetByTestId("memory-ui-ingestion-title").FillAsync("regression browser manual note");
+            await page.GetByTestId("memory-ui-ingestion-content").FillAsync("Manual source snapshot captured by the regression browser checkpoint.");
             await page.GetByTestId("memory-ui-ingestion-submit").ClickAsync();
             await ExpectTextAsync(page, "Source snapshot captured and queued for provider ingestion.");
             await ExpectTextAsync(page, "Snapshot");
@@ -463,13 +463,13 @@ public sealed class MemoryProviderManagementPlaywrightTests
 
             await page.SetViewportSizeAsync(1440, 1000);
             await SelectTabAsync(page, "memory-ui-tab-providers", "memory-ui-provider-detail");
-            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.sb23-fallback");
-            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("SB23 fallback provider");
+            await page.GetByTestId("memory-ui-editor-instance-id").FillAsync("provider.regression-fallback");
+            await page.GetByTestId("memory-ui-editor-display-name").FillAsync("regression fallback provider");
             await page.GetByTestId("memory-ui-editor-provider-kind").FillAsync("memory.unknown");
             await page.GetByTestId("memory-ui-editor-provider-ui-url").FillAsync("javascript:alert(1)");
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
-            await ExpectTextAsync(page, "SB23 fallback provider");
+            await ExpectTextAsync(page, "regression fallback provider");
 
             await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
             await ExpectTextAsync(page, "No RCL component is registered for 'memory.unknown.panel'.");
@@ -482,8 +482,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
             });
 
             await SelectTabAsync(page, "memory-ui-tab-providers", "memory-ui-provider-detail");
-            await page.GetByTestId("memory-provider-provider-sb23-browser").ClickAsync();
-            await ExpectTextAsync(page, "SB23 checkpoint memory");
+            await page.GetByTestId("memory-provider-provider-regression-browser").ClickAsync();
+            await ExpectTextAsync(page, "regression checkpoint memory");
             await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
             await ExpectTextAsync(page, "Mock provider panel");
         }
@@ -721,7 +721,7 @@ internal sealed class MemoryProviderManagementPlaywrightHost : IAsyncDisposable
         processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["Database__Provider"] = "InMemory";
-        processStartInfo.Environment["Database__ConnectionString"] = $"memory-ui-sb20-{Guid.NewGuid():N}";
+        processStartInfo.Environment["Database__ConnectionString"] = $"memory-ui-regression-{Guid.NewGuid():N}";
         processStartInfo.Environment["Storage__WorkspaceRoot"] = Path.Combine(runtimeRoot, "workspace");
         processStartInfo.Environment["ControlPlane__RootPath"] = Path.Combine(runtimeRoot, "control-plane");
         processStartInfo.Environment["DevelopmentManager__TuningModeEnabled"] = "false";

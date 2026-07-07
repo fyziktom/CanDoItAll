@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CognitiveMemoryWorkspaceAttentionTests
 {
     [Fact]
@@ -257,7 +258,7 @@ public sealed class CognitiveMemoryWorkspaceAttentionTests
     private static TestFixture CreateFixture()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(CognitiveMemoryModuleAssemblyMarker).Assembly]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"cognitive-memory-workspace-{Guid.NewGuid():N}")
             .Options;
         return new TestFixture(new TestDbContextFactory(options), new MutableClock(DateTimeOffset.UnixEpoch));

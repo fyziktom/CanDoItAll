@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class SkillLoaderContractsTests
 {
     [Fact]
-    public async Task SB03_INV_FILE_001_file_skill_loader_validates_skill_md_and_exposes_descriptor()
+    public async Task INV_FILE_001_file_skill_loader_validates_skill_md_and_exposes_descriptor()
     {
         using var workspace = TempWorkspace.Create();
         var skillRoot = workspace.CreateSkill(
@@ -31,7 +31,7 @@ public sealed class SkillLoaderContractsTests
             operationClassifications: [CapabilityOperationClassification.ScriptExecution]);
         var loader = new FileSkillLoader(workspace.RootPath);
 
-        var result = await loader.LoadAsync(descriptor, "SB03_INV_FILE_001", CancellationToken.None);
+        var result = await loader.LoadAsync(descriptor, "INV_FILE_001", CancellationToken.None);
         var exposure = SkillExposureDescriptorFactory.Create(descriptor);
 
         Assert.True(result.IsSuccess);
@@ -43,7 +43,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_FILE_002_file_loader_rejects_external_root_without_allowlist()
+    public async Task INV_FILE_002_file_loader_rejects_external_root_without_allowlist()
     {
         using var workspace = TempWorkspace.Create();
         using var external = TempWorkspace.Create();
@@ -65,7 +65,7 @@ public sealed class SkillLoaderContractsTests
             new SkillScriptExecutionPolicy(true, SkillScriptTrustLevel.ExternalSkillRoot));
         var loader = new FileSkillLoader(workspace.RootPath);
 
-        var result = await loader.LoadAsync(descriptor, "SB03_INV_FILE_002", CancellationToken.None);
+        var result = await loader.LoadAsync(descriptor, "INV_FILE_002", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -75,7 +75,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_FILE_003_file_loader_reports_missing_skill_md()
+    public async Task INV_FILE_003_file_loader_reports_missing_skill_md()
     {
         using var workspace = TempWorkspace.Create();
         var skillRoot = Path.Combine(workspace.RootPath, "skills", "missing-md");
@@ -89,7 +89,7 @@ public sealed class SkillLoaderContractsTests
             new SkillScriptExecutionPolicy(true, SkillScriptTrustLevel.WorkspaceSkillRoot));
         var loader = new FileSkillLoader(workspace.RootPath);
 
-        var result = await loader.LoadAsync(descriptor, "SB03_INV_FILE_003", CancellationToken.None);
+        var result = await loader.LoadAsync(descriptor, "INV_FILE_003", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -99,7 +99,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_INLINE_001_inline_loader_preserves_instructions_and_resources()
+    public async Task INV_INLINE_001_inline_loader_preserves_instructions_and_resources()
     {
         var descriptor = SkillDescriptorFactory.Inline(
             CapabilityKey.Create("mail-summary-inline-skill"),
@@ -117,7 +117,7 @@ public sealed class SkillLoaderContractsTests
             operationClassifications: [CapabilityOperationClassification.Validation]);
         var loader = new InlineSkillLoader();
 
-        var result = await loader.LoadAsync(descriptor, "SB03_INV_INLINE_001", CancellationToken.None);
+        var result = await loader.LoadAsync(descriptor, "INV_INLINE_001", CancellationToken.None);
         var exposure = SkillExposureDescriptorFactory.Create(descriptor);
 
         Assert.True(result.IsSuccess);
@@ -128,7 +128,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_INLINE_002_inline_loader_rejects_empty_resource_content()
+    public async Task INV_INLINE_002_inline_loader_rejects_empty_resource_content()
     {
         var descriptor = SkillDescriptorFactory.Inline(
             CapabilityKey.Create("broken-inline-skill"),
@@ -139,7 +139,7 @@ public sealed class SkillLoaderContractsTests
             [new InlineSkillResource("empty-resource", " ", "Invalid resource.")]);
         var loader = new InlineSkillLoader();
 
-        var result = await loader.LoadAsync(descriptor, "SB03_INV_INLINE_002", CancellationToken.None);
+        var result = await loader.LoadAsync(descriptor, "INV_INLINE_002", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -148,7 +148,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_REGISTERED_001_registered_resolver_uses_key_registry_without_reflection()
+    public async Task INV_REGISTERED_001_registered_resolver_uses_key_registry_without_reflection()
     {
         var descriptor = SkillDescriptorFactory.Registered(
             CapabilityKey.Create("delivery-review-skill"),
@@ -172,7 +172,7 @@ public sealed class SkillLoaderContractsTests
                 null), correlationId)));
         var resolver = new RegisteredSkillResolver(registry);
 
-        var result = await resolver.ResolveAsync(descriptor, "SB03_INV_REGISTERED_001", CancellationToken.None);
+        var result = await resolver.ResolveAsync(descriptor, "INV_REGISTERED_001", CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("delivery-review", result.Skill!.Name);
@@ -180,7 +180,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_REGISTERED_002_missing_registered_key_reports_implementation_missing()
+    public async Task INV_REGISTERED_002_missing_registered_key_reports_implementation_missing()
     {
         var descriptor = SkillDescriptorFactory.Registered(
             CapabilityKey.Create("missing-registered-skill"),
@@ -189,7 +189,7 @@ public sealed class SkillLoaderContractsTests
             ImplementationKey.Create("skills.missing"));
         var resolver = new RegisteredSkillResolver(new RegisteredSkillRegistry());
 
-        var result = await resolver.ResolveAsync(descriptor, "SB03_INV_REGISTERED_002", CancellationToken.None);
+        var result = await resolver.ResolveAsync(descriptor, "INV_REGISTERED_002", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -199,7 +199,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_REGISTERED_003_retired_registered_skill_fails_with_capability_unavailable()
+    public async Task INV_REGISTERED_003_retired_registered_skill_fails_with_capability_unavailable()
     {
         var descriptor = SkillDescriptorFactory.Registered(
             CapabilityKey.Create("workspace-delivery-skill"),
@@ -209,7 +209,7 @@ public sealed class SkillLoaderContractsTests
             availabilityState: CapabilityAvailabilityState.Retired);
         var resolver = new RegisteredSkillResolver(new RegisteredSkillRegistry());
 
-        var result = await resolver.ResolveAsync(descriptor, "SB03_INV_REGISTERED_003", CancellationToken.None);
+        var result = await resolver.ResolveAsync(descriptor, "INV_REGISTERED_003", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         var diagnostic = Assert.Single(result.Diagnostics);
@@ -218,7 +218,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public void SB03_INV_POLICY_001_file_inline_and_registered_descriptors_participate_in_access_policy()
+    public void INV_POLICY_001_file_inline_and_registered_descriptors_participate_in_access_policy()
     {
         var fileDescriptor = SkillExposureDescriptorFactory.Create(SkillDescriptorFactory.File(
             CapabilityKey.Create("repository-playbook"),
@@ -269,7 +269,7 @@ public sealed class SkillLoaderContractsTests
             [fileDescriptor, inlineDescriptor, registeredDescriptor],
             [],
             [policy],
-            "SB03_INV_POLICY_001"));
+            "INV_POLICY_001"));
 
         Assert.Empty(result.AllowedCapabilities);
         Assert.Contains(result.Diagnostics, item => item.Identity.Key == fileDescriptor.Identity.Key);
@@ -278,7 +278,7 @@ public sealed class SkillLoaderContractsTests
     }
 
     [Fact]
-    public async Task SB03_INV_SEED_001_existing_seeded_inline_skill_assets_load_through_inline_loader()
+    public async Task INV_SEED_001_existing_seeded_inline_skill_assets_load_through_inline_loader()
     {
         var seedSkillsRoot = Path.GetFullPath(Path.Combine(
             FindRepoRoot(),
@@ -307,7 +307,7 @@ public sealed class SkillLoaderContractsTests
                 name,
                 instructions,
                 []);
-            var result = await loader.LoadAsync(descriptor, "SB03_INV_SEED_001", CancellationToken.None);
+            var result = await loader.LoadAsync(descriptor, "INV_SEED_001", CancellationToken.None);
             if (!result.IsSuccess)
             {
                 failures.Add($"{name}: {string.Join(", ", result.Diagnostics.Select(item => item.MaskedDetail))}");
@@ -329,7 +329,7 @@ public sealed class SkillLoaderContractsTests
 
         public static TempWorkspace Create()
         {
-            var rootPath = Path.Combine(Path.GetTempPath(), "candoitall-sb03-" + Guid.NewGuid().ToString("N"));
+            var rootPath = Path.Combine(Path.GetTempPath(), "candoitall-regression-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(rootPath);
             return new TempWorkspace(rootPath);
         }

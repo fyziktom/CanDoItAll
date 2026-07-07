@@ -1,2 +1,0 @@
-tests/CanDoItAll.Tests.Unit/CapabilityTemplateSeedHardeningCheckpointTests.cs:78:    public void SB07_INV_TEMPLATE_001_invalid_pack_reports_structured_diagnostics_without_seed_fallback()
-src/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedBuilder.cs:176:                Tags = ["ollama", "remote", "fallback", "chat"]

@@ -1,2 +1,0 @@
-Command: rg -n '\.Result|\.Wait\(|async void|ReadToEnd\(|ReadAsStringAsync|ProcessStartInfo|Type\.GetType|GetService\(|Microsoft\.Agents|ModelContextProtocol|Maf|Blazor' src/CanDoItAll.AgentFramework.Mcp.Abstractions src/CanDoItAll.AgentFramework.Mcp --glob '!bin/**' --glob '!obj/**'
-No static performance or coupling findings found.

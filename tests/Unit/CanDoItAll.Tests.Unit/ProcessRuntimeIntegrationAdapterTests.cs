@@ -2327,26 +2327,27 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             """
         };
         var primaryRef = BuildStepArtifactRef(assignment);
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Recovered governed process step outcome from primary managed artifact after provider timeout.",
+            EvidenceRefs = [primaryRef],
+            HumanReadableSummaryMarkdown = """
+            Status: Completed
+
+            ## Branch outcome key
+            feature-accepted
+
+            ## Focused validation commands
+            - workspace_dotnet_restore succeeded for the current run.
+            - workspace_dotnet_build succeeded for the current run.
+            - workspace_dotnet_test succeeded for the current run.
+            """
+        };
 
         var result = ToAdapterResult(
             assignment,
-            new ProcessStepOutcomeResult
-            {
-                Status = ProcessStepOutcomeStatus.Completed,
-                Reason = "Recovered governed process step outcome from primary managed artifact after provider timeout.",
-                EvidenceRefs = [primaryRef],
-                HumanReadableSummaryMarkdown = """
-                Status: Completed
-
-                ## Branch outcome key
-                feature-accepted
-
-                ## Focused validation commands
-                - workspace_dotnet_restore succeeded for the current run.
-                - workspace_dotnet_build succeeded for the current run.
-                - workspace_dotnet_test succeeded for the current run.
-                """
-            },
+            output,
             [
                 CreateToolReceipt("workspace_dotnet_restore", "restore Calculator.slnx", "Succeeded (exit 0)"),
                 CreateToolReceipt("workspace_dotnet_build", "build Calculator.slnx", "Succeeded (exit 0)"),
@@ -2397,6 +2398,52 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
         Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == ProcessBranchSignalCodes.Outcome("feature-accepted").Value);
+    }
+
+    [Fact]
+    public void Completed_result_with_ambiguous_validation_decision_section_does_not_emit_branch_signal()
+    {
+        var baseAssignment = CreateManagedArtifactAssignment(
+            "targeted-validation",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            requiredArtifactSlotIds: [ArtifactSlotId.New()]);
+        var assignment = baseAssignment with
+        {
+            Prompt = """
+            Branch outcomes:
+            - feature-accepted: Feature accepted - Validation passed.
+            - feature-repair-required: Repair required - Validation failed but repair is possible.
+            """
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Recovered governed process step outcome from primary managed artifact after provider timeout.",
+                EvidenceRefs = [primaryRef],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = """
+                Status: Completed
+
+                ## Validation decision
+                feature-accepted
+                feature-repair-required
+                """
+            },
+            [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.")]);
+
+        Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+        Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.ManagerSignals);
     }
 
     [Fact]

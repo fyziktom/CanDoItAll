@@ -23,7 +23,7 @@ public sealed class HostCompositionDependencyRemovalTests
     ];
 
     [Fact]
-    public void SB30_CP001_Base_host_source_has_no_direct_native_memory_or_qdrant_references()
+    public void CP001_Base_host_source_has_no_direct_native_memory_or_qdrant_references()
     {
         var violations = EnumerateBaseHostGuardFiles()
             .SelectMany(path => File.ReadLines(path)
@@ -42,7 +42,7 @@ public sealed class HostCompositionDependencyRemovalTests
     }
 
     [Fact]
-    public void SB30_CP002_Base_module_assembly_discovery_excludes_native_cognitive_memory()
+    public void CP002_Base_module_assembly_discovery_excludes_native_cognitive_memory()
     {
         var assemblyNames = ModuleAssemblies.All
             .Select(assembly => assembly.GetName().Name)
@@ -53,7 +53,7 @@ public sealed class HostCompositionDependencyRemovalTests
     }
 
     [Fact]
-    public void SB30_CP003_Zero_provider_runtime_registration_has_no_implicit_provider_drivers()
+    public void CP003_Zero_provider_runtime_registration_has_no_implicit_provider_drivers()
     {
         var services = new ServiceCollection();
         services.AddCanDoItAllRuntimeModules(CreateConfiguration(new Dictionary<string, string?>()));
@@ -67,7 +67,7 @@ public sealed class HostCompositionDependencyRemovalTests
     }
 
     [Fact]
-    public void SB30_CP004_Explicit_provider_driver_configuration_registers_only_generic_drivers()
+    public void CP004_Explicit_provider_driver_configuration_registers_only_generic_drivers()
     {
         var services = new ServiceCollection();
         services.AddCanDoItAllRuntimeModules(CreateConfiguration(new Dictionary<string, string?>

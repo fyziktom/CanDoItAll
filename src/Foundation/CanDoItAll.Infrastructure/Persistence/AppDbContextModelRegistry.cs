@@ -58,6 +58,18 @@ public static class AppDbContextModelRegistry
         }
     }
 
+    internal static IDisposable UseIsolatedAssembliesForTesting()
+    {
+        lock (Gate)
+        {
+            var previousAssemblies = _assemblies;
+            var previousModelCacheKey = _modelCacheKey;
+            _assemblies = [];
+            _modelCacheKey = string.Empty;
+            return new TestIsolationScope(previousAssemblies, previousModelCacheKey);
+        }
+    }
+
     private static bool ContainsEntityTypeConfiguration(Assembly assembly)
         => GetLoadableTypes(assembly).Any(type =>
             type is { IsAbstract: false, IsInterface: false } &&
@@ -75,6 +87,27 @@ public static class AppDbContextModelRegistry
         catch (ReflectionTypeLoadException exception)
         {
             return exception.Types.OfType<Type>();
+        }
+    }
+
+    private sealed class TestIsolationScope(
+        IReadOnlyList<Assembly> previousAssemblies,
+        string previousModelCacheKey) : IDisposable
+    {
+        private int disposed;
+
+        public void Dispose()
+        {
+            if (System.Threading.Interlocked.Exchange(ref disposed, 1) == 1)
+            {
+                return;
+            }
+
+            lock (Gate)
+            {
+                _assemblies = previousAssemblies;
+                _modelCacheKey = previousModelCacheKey;
+            }
         }
     }
 }
