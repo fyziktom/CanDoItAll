@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -88,6 +89,33 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             "process.adapter.product_required_tool_receipt_missing",
             $"Step '{assignment.StepKey}' claimed completion but required current-run product tool receipt(s) are missing: {missingSummary}.{failedReceiptGuidance}{missingReceiptGuidance}",
             $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-tool-receipt-missing:{missingSummary}:{string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue? ValidateRequiredProcessToolReceipts(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        Guid? currentExecutionRunId)
+    {
+        var activeLaunchContextToolNames = ResolveActiveLaunchContextToolNameSet(assignment);
+        var gate = ProcessRequiredToolReceiptGate.Evaluate(
+            assignment,
+            toolReceipts,
+            activeLaunchContextToolNames,
+            currentExecutionRunId);
+        if (gate.IsSatisfied)
+        {
+            return null;
+        }
+
+        var observedToolReceipts = toolReceipts ?? [];
+        var missingSummary = ProcessRequiredToolReceiptGate.FormatMissingSummary(gate.MissingReceipts);
+        return new ProcessCompletionIssue(
+            "process.adapter.required_tool_receipt_missing",
+            $"Step '{assignment.StepKey}' claimed completion but required current-run process tool receipt(s) are missing: {missingSummary}. Retry the same step, invoke the missing required tool(s), cite the receipt refs in the managed artifact, and complete only after the typed process capability scope receipt contract is satisfied.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:required-tool-receipt-missing:{missingSummary}:{string.Join("|", observedToolReceipts.Select(receipt => $"{receipt.ToolName}:{receipt.RuntimeToolProviderKey}:{receipt.RequestSummary}:{receipt.ExitSummary}"))}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
@@ -414,6 +442,72 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         return true;
     }
 
+    private static bool TryCreateProcessRequiredToolReceiptBlockedRetryIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        Guid? currentExecutionRunId,
+        out ProcessCompletionIssue issue)
+    {
+        issue = null!;
+        if (output.Status != ProcessStepOutcomeStatus.Blocked)
+        {
+            return false;
+        }
+
+        var activeLaunchContextToolNames = ResolveActiveLaunchContextToolNameSet(assignment);
+        var gate = ProcessRequiredToolReceiptGate.Evaluate(
+            assignment,
+            toolReceipts,
+            activeLaunchContextToolNames,
+            currentExecutionRunId);
+        if (gate.RequiredReceipts.Count == 0)
+        {
+            return false;
+        }
+
+        var outputReportsMissingRequiredToolReceipts = OutputReportsMissingRequiredProcessToolReceipts(
+            output,
+            gate.RequiredReceipts);
+        if (gate.MissingReceipts.Count == 0 && !outputReportsMissingRequiredToolReceipts)
+        {
+            return false;
+        }
+
+        var observedToolReceipts = toolReceipts ?? [];
+        var text = string.Join(
+            " ",
+            EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (gate.MissingReceipts.Count > 0 &&
+            LooksLikeRightsOrToolBoundary(text) &&
+            HasConcreteToolBoundaryReceipt(observedToolReceipts))
+        {
+            return false;
+        }
+
+        var retryReceipts = gate.MissingReceipts.Count == 0
+            ? gate.RequiredReceipts
+            : gate.MissingReceipts;
+        var missingSummary = ProcessRequiredToolReceiptGate.FormatMissingSummary(retryReceipts);
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
+            ? "The step returned Blocked before all required process tool receipts were present."
+            : output.Reason.Trim();
+        var receiptGateGuidance = gate.MissingReceipts.Count == 0
+            ? "The step output itself reported missing required process receipt evidence even though matching receipt records are present in the current run. Retry the same step and reconcile the primary managed artifact, branch outcome, and evidence refs with those receipts before routing to a branch or manager."
+            : $"Step '{assignment.StepKey}' returned Blocked while required current-run process tool receipt(s) are still missing: {missingSummary}. Retry the same step, invoke the missing required tool receipt(s), update primary managed artifact '{primaryRef}', and return Blocked only for a concrete tool, permission, policy, environment, provider, or process-contract blocker.";
+        var receiptSummary = string.Join("|", observedToolReceipts.Select(receipt =>
+            $"{receipt.ToolName}:{receipt.RuntimeToolProviderKey}:{receipt.RequestSummary}:{receipt.ExitSummary}"));
+        issue = new ProcessCompletionIssue(
+            "process.adapter.required_tool_receipt_blocked_retry",
+            $"{receiptGateGuidance} Original reason: {originalReason}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:required-tool-receipt-blocked-retry:{missingSummary}:{ComputeHash(receiptSummary)}:{ComputeHash(originalReason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        return true;
+    }
+
     private static bool OutputReportsMissingRequiredToolReceipts(
         ProcessStepOutcomeResult output,
         IReadOnlyList<string> requiredToolReceipts)
@@ -465,6 +559,58 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             {
                 yield return verb;
                 yield return $"dotnet {verb}";
+            }
+        }
+    }
+
+    private static IReadOnlySet<string> ResolveActiveLaunchContextToolNameSet(ProcessRuntimeStepAssignment assignment)
+    {
+        return ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey)
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool OutputReportsMissingRequiredProcessToolReceipts(
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ProcessRequiredToolReceipt> requiredReceipts)
+    {
+        var normalizedText = NormalizeReceiptCommandText(string.Join(
+                " ",
+                EnumerateOutcomeText(output).Where(value => !string.IsNullOrWhiteSpace(value))))
+            .ToLowerInvariant();
+        if (normalizedText.Length == 0 ||
+            !LooksLikeMissingRequiredEvidence(normalizedText))
+        {
+            return false;
+        }
+
+        return requiredReceipts.Any(requiredReceipt =>
+            EnumerateRequiredProcessToolReceiptSearchTerms(requiredReceipt)
+                .Any(term => normalizedText.Contains(term, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static IEnumerable<string> EnumerateRequiredProcessToolReceiptSearchTerms(ProcessRequiredToolReceipt requiredReceipt)
+    {
+        foreach (var value in new[]
+                 {
+                     requiredReceipt.Key,
+                     requiredReceipt.ToolName,
+                     requiredReceipt.RuntimeToolProviderKey,
+                     requiredReceipt.McpServerKey
+                 })
+        {
+            var normalized = NormalizeReceiptCommandText(value).ToLowerInvariant();
+            if (!string.IsNullOrWhiteSpace(normalized))
+            {
+                yield return normalized;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(requiredReceipt.ToolName))
+        {
+            foreach (var term in EnumerateRequiredToolReceiptSearchTerms(requiredReceipt.ToolName))
+            {
+                yield return term;
             }
         }
     }

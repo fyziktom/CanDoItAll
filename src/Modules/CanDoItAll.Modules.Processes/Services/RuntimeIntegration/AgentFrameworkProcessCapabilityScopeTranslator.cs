@@ -1,6 +1,9 @@
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.Processes.Contracts;
 using AgentRuntimeCapabilityScopeOverride = CanDoItAll.AgentFramework.Models.AgentRuntimeCapabilityScopeOverride;
+using AgentRuntimeRequiredToolReceipt = CanDoItAll.AgentFramework.Models.AgentRuntimeRequiredToolReceipt;
+using AgentRuntimeRequiredToolReceiptActivation = CanDoItAll.AgentFramework.Models.AgentRuntimeRequiredToolReceiptActivation;
+using AgentRuntimeRequiredToolReceiptKind = CanDoItAll.AgentFramework.Models.AgentRuntimeRequiredToolReceiptKind;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -13,7 +16,7 @@ internal static class AgentFrameworkProcessCapabilityScopeTranslator
     public static AgentRuntimeCapabilityScopeOverride Translate(ProcessCapabilityScope? scope)
     {
         var normalized = ProcessCapabilityScope.Normalize(scope);
-        if (normalized.Directives.Count == 0)
+        if (normalized.Directives.Count == 0 && normalized.RequiredReceipts.Count == 0)
         {
             return AgentRuntimeCapabilityScopeOverride.Empty;
         }
@@ -22,6 +25,9 @@ internal static class AgentFrameworkProcessCapabilityScopeTranslator
             directive.Kind == ProcessCapabilityScopeDirectiveKind.AllowOnly);
         var rules = new List<CapabilityAccessRule>(normalized.Directives.Count);
         var requiredCapabilities = new List<CapabilityIdentity>();
+        var requiredReceipts = normalized.RequiredReceipts
+            .Select(CreateRequiredReceipt)
+            .ToArray();
 
         for (var index = 0; index < normalized.Directives.Count; index++)
         {
@@ -51,16 +57,49 @@ internal static class AgentFrameworkProcessCapabilityScopeTranslator
             }
         }
 
-        var policy = new CapabilityAccessPolicy(
-            rules,
-            hasAllowOnlyDirective ? CapabilityAccessDefaultEffect.DenyAll : CapabilityAccessDefaultEffect.Inherit,
-            CapabilityAccessScope.ProcessStep,
-            hasAllowOnlyDirective ? AllowOnlyDefaultReason : string.Empty);
+        IReadOnlyList<CapabilityAccessPolicy> policies = rules.Count == 0
+            ? []
+            :
+            [
+                new CapabilityAccessPolicy(
+                    rules,
+                    hasAllowOnlyDirective ? CapabilityAccessDefaultEffect.DenyAll : CapabilityAccessDefaultEffect.Inherit,
+                    CapabilityAccessScope.ProcessStep,
+                    hasAllowOnlyDirective ? AllowOnlyDefaultReason : string.Empty)
+            ];
         return new AgentRuntimeCapabilityScopeOverride(
-            [policy],
+            policies,
             requiredCapabilities
                 .Distinct()
-                .ToArray());
+                .ToArray(),
+            requiredReceipts);
+    }
+
+    private static AgentRuntimeRequiredToolReceipt CreateRequiredReceipt(ProcessRequiredToolReceipt receipt)
+    {
+        return new AgentRuntimeRequiredToolReceipt(
+            receipt.Key,
+            receipt.Kind switch
+            {
+                ProcessRequiredToolReceiptKind.RuntimeToolName => AgentRuntimeRequiredToolReceiptKind.RuntimeToolName,
+                ProcessRequiredToolReceiptKind.RuntimeToolProviderKey => AgentRuntimeRequiredToolReceiptKind.RuntimeToolProviderKey,
+                ProcessRequiredToolReceiptKind.RuntimeToolNameWithProvider => AgentRuntimeRequiredToolReceiptKind.RuntimeToolNameWithProvider,
+                ProcessRequiredToolReceiptKind.McpToolName => AgentRuntimeRequiredToolReceiptKind.McpToolName,
+                _ => throw new InvalidOperationException($"Unsupported required receipt kind '{receipt.Kind}'.")
+            },
+            receipt.ToolName,
+            receipt.RuntimeToolProviderKey,
+            receipt.McpServerKey,
+            receipt.MinimumCount,
+            receipt.RequireSuccessfulExit,
+            receipt.RequireCurrentRun,
+            receipt.Activation switch
+            {
+                ProcessRequiredToolReceiptActivation.Always => AgentRuntimeRequiredToolReceiptActivation.Always,
+                ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool => AgentRuntimeRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool,
+                _ => throw new InvalidOperationException($"Unsupported required receipt activation '{receipt.Activation}'.")
+            },
+            receipt.Reason);
     }
 
     private static CapabilitySelector CreateSelector(ProcessCapabilityScopeTarget target)

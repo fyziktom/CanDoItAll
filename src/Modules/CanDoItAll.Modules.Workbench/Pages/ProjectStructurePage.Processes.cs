@@ -1719,7 +1719,8 @@ public partial class ProjectStructurePage
                 step.RoleResourceKey,
                 ResolveStepRoleLabel(step),
                 step.AllowedOperations,
-                step.OperationTargetScope));
+                step.OperationTargetScope,
+                step.RequiredRuntimeToolNames));
     }
 
     private static string ResolveStepRoleLabel(ProcessLaunchStepView step)

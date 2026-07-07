@@ -197,6 +197,52 @@
       "Title": "Capture UI screenshots when required",
       "Subtitle": "Current-run browser proof",
       "Notes": "For UI targets, start or reuse the app using the recorded Run app node when available. When the app is not already reachable, call workspace_dotnet_run with targetPath set to DotNetAppProjectFileAlias when present, otherwise DotNetAppProjectFile, with workingDirectory set to ProductRootAlias, WorkspaceAlias, or the equivalent product-root alias, keepAlive enabled, and lifetimeScope set to the current process run. workspace_dotnet_run accepts project files only; never pass DotNetSolutionFile, DotNetSolutionFileAlias, ProductRoot, WorkspaceAlias, DotNetAppProjectDirectory, or any directory path as its targetPath. If a previous attempt used a .sln, .slnx, or directory target, retry once with the app .csproj target before returning Blocked. Missing base URL or missing Run app node is not a successful capture result for a UI target; when those references are missing and DotNetAppProjectFileAlias, DotNetAppProjectFile, ProductRoot, ProductRootAlias, or DotNetAppProjectDirectory is present, call workspace_dotnet_run against the app project file and use the returned current-run URL for browser capture before returning Blocked. workspace_dotnet_run, browser_navigate, browser_snapshot, browser_take_screenshot, browser_console_messages, and workspace_dotnet_stop are declared as required runtime tool receipts for UI targets. If command-node references are missing but the manifest cites verified upstream QA/runtime browser evidence, use the cited base URL as the launch target. Navigate to each concrete route with browser_navigate, capture browser state with browser_snapshot using a durable .yml filename, capture fresh screenshots with browser_take_screenshot using durable .png filenames, collect console messages with browser_console_messages using durable .log filenames, and write screenshot files as current-run managed artifacts. Stop any app process started by this step with workspace_dotnet_stop and include startup and cleanup receipt refs. Do not write Status: Completed, do not say screenshots were captured, and do not hand off to storage until current-run browser_take_screenshot and browser_snapshot receipts exist for each required route and viewport or an explicit no-UI receipt exists. If the capture itself proves the UI is only scaffold chrome, blank, wrong-route, unstyled, non-interactive, or materially inconsistent with a named source visual target, write the screenshot and browser evidence but return Blocked with the concrete visual defect instead of declaring capture complete. Do not return Blocked only because the base URL is absent when a product root or app project file is present; attempt workspace_dotnet_run against the app project file first and cite the receipt. Prior screenshots are source evidence only and must not be submitted as this step output. For no-UI targets, do not launch a browser; write an explicit no-UI screenshot receipt instead. Do not create project-structure nodes or image assets here; the storage step owns Screenshots writeback.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "capture-ui-runtime-start",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "UI screenshot capture must start or reuse the .NET app before browser proof."
+          },
+          {
+            "Key": "capture-ui-browser-navigate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "UI screenshot capture must navigate to the concrete route before accepting browser proof."
+          },
+          {
+            "Key": "capture-ui-browser-state",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_snapshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "UI screenshot capture must record durable browser state for the route."
+          },
+          {
+            "Key": "capture-ui-browser-screenshot",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_take_screenshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "UI screenshot capture must produce current-run screenshot evidence."
+          },
+          {
+            "Key": "capture-ui-browser-console",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_console_messages",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "UI screenshot capture must collect console diagnostics for the browser route."
+          },
+          {
+            "Key": "capture-ui-runtime-stop",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_stop",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "UI screenshot capture must clean up any app process it started."
+          }
+        ]
+      },
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -330,6 +376,43 @@
             "Title": "Development UI screenshot image analysis",
             "Content": "Use generic workspace image tools only as software-delivery visual evidence for this step: inspect screenshot readability, route correctness, blank/error states, visible UI behavior, and ordered source-target comparisons against project visual target ImageAssets. Do not treat this as generic image interpretation.",
             "Placement": "AppendToStepBrief"
+          }
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "store-ui-inspect-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_inspect_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "Screenshot storage must inspect image files before accepting or rejecting them."
+          },
+          {
+            "Key": "store-ui-analyze-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "Screenshot storage must ground visual decisions in provider-backed image analysis."
+          },
+          {
+            "Key": "store-ui-compare-images",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_images",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "Screenshot storage must compare delivered screenshots with source visual targets when target images exist."
+          },
+          {
+            "Key": "store-ui-screenshots-parent",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_node_create",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "Accepted UI screenshots must be stored under a Screenshots parent node when project-structure writeback is available."
+          },
+          {
+            "Key": "store-ui-screenshot-asset",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_asset_create",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "Accepted UI screenshots must be written as ImageAsset nodes when project-structure writeback is available."
           }
         ]
       },

@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -116,7 +117,20 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             assignment.RoleDisplayName,
             NormalizeOperations(assignment.AllowedOperations),
             assignment.OperationTargetScope,
-            ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey));
+            ResolveRuntimeReadinessRequiredToolNames(assignment));
+    }
+
+    private static IReadOnlyList<string> ResolveRuntimeReadinessRequiredToolNames(ProcessRuntimeStepAssignment assignment)
+    {
+        var launchContextToolNames = ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey)
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return launchContextToolNames
+            .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static string FormatValidationErrors(IReadOnlyList<AgentOutputValidationError> errors)

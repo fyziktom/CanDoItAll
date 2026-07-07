@@ -647,7 +647,9 @@ public sealed class ProcessLaunchApplicationService(
                     AllowedOperations = templateStep is null ? [] : NormalizeAllowedOperations(templateStep.AllowedOperations),
                     OperationTargetScope = templateStep is null ? string.Empty : NormalizeOperationTargetScope(templateStep.OperationTargetScope),
                     RoleResourceKey = FirstNonEmpty(assignment?.RoleResourceKey, role?.RoleResourceKey),
-                    RoleDisplayName = FirstNonEmpty(assignment?.RoleDisplayName, role?.DisplayName, assignment?.RoleKey)
+                    RoleDisplayName = FirstNonEmpty(assignment?.RoleDisplayName, role?.DisplayName, assignment?.RoleKey),
+                    CapabilityScope = ProcessCapabilityScope.Normalize(templateStep?.CapabilityScope),
+                    RequiredRuntimeToolNames = ResolveLaunchPlanRequiredRuntimeToolNames(assignment)
                 };
             })
             .ToArray();
@@ -663,6 +665,72 @@ public sealed class ProcessLaunchApplicationService(
             plan.PlanHash,
             stepViews,
             findings);
+    }
+
+    private static IReadOnlyList<string> ResolveLaunchPlanRequiredRuntimeToolNames(ProcessRuntimeStepAssignment? assignment)
+    {
+        if (assignment is null)
+        {
+            return [];
+        }
+
+        var launchContextToolNames = ResolveLaunchPlanRequiredRuntimeToolNameSet(assignment.LaunchVariables);
+        return launchContextToolNames
+            .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlySet<string> ResolveLaunchPlanRequiredRuntimeToolNameSet(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        if (!launchVariables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, out var value) ||
+            string.IsNullOrWhiteSpace(value))
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return ParseLaunchPlanRequiredRuntimeToolNames(value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<string> ParseLaunchPlanRequiredRuntimeToolNames(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            if (document.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                return document.RootElement
+                    .EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString()?.Trim() ?? string.Empty)
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+
+            if (document.RootElement.ValueKind == JsonValueKind.String)
+            {
+                return ParseLaunchPlanRequiredRuntimeToolNames(document.RootElement.GetString() ?? string.Empty);
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return value
+            .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static IReadOnlyList<ArtifactSlotId> ResolveRequiredSlots(

@@ -6,6 +6,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
@@ -612,6 +613,266 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.Contains("workspace_dotnet_run", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("browser_take_screenshot", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(result.ProducedArtifacts);
+    }
+
+    [Fact]
+    public void Completion_requires_process_capability_scope_tool_receipts()
+    {
+        var assignment = CreateManagedArtifactAssignment(
+            "capture-ui-screenshots",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "ui-screenshot-proof",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot",
+                        Reason = "Current-run UI proof must include a screenshot."
+                    }
+                ]
+            }
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Screenshot evidence was summarized.",
+                EvidenceRefs = [primaryRef],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = "Status: Completed"
+            },
+            [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.")]);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("process.adapter.required_tool_receipt_missing", diagnostic.Code.Value);
+        Assert.Contains("browser_take_screenshot", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(result.ProducedArtifacts);
+    }
+
+    [Fact]
+    public void Completion_accepts_process_capability_scope_current_run_tool_receipt()
+    {
+        var executionRunId = Guid.NewGuid();
+        var assignment = CreateManagedArtifactAssignment(
+            "capture-ui-screenshots",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "ui-screenshot-proof",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot",
+                        Reason = "Current-run UI proof must include a screenshot."
+                    }
+                ]
+            }
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Screenshot evidence was captured.",
+                EvidenceRefs = [primaryRef],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = "Status: Completed"
+            },
+            [
+                CreateToolReceipt("browser_take_screenshot", "capture UI screenshot", "Succeeded (exit 0)", executionRunId: executionRunId),
+                CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.", executionRunId: executionRunId)
+            ],
+            executionRunId);
+
+        Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+    }
+
+    [Fact]
+    public void Completion_rejects_stale_process_capability_scope_tool_receipt()
+    {
+        var currentExecutionRunId = Guid.NewGuid();
+        var previousExecutionRunId = Guid.NewGuid();
+        var assignment = CreateManagedArtifactAssignment(
+            "capture-ui-screenshots",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "ui-screenshot-proof",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot",
+                        Reason = "Current-run UI proof must include a screenshot."
+                    }
+                ]
+            }
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Screenshot evidence from an earlier attempt was reused.",
+                EvidenceRefs = [primaryRef],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = "Status: Completed"
+            },
+            [
+                CreateToolReceipt("browser_take_screenshot", "capture UI screenshot", "Succeeded (exit 0)", executionRunId: previousExecutionRunId),
+                CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.", executionRunId: currentExecutionRunId)
+            ],
+            currentExecutionRunId);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.required_tool_receipt_missing");
+    }
+
+    [Fact]
+    public void Blocked_step_with_missing_process_receipt_gets_manager_retry_diagnostic()
+    {
+        var executionRunId = Guid.NewGuid();
+        var assignment = CreateManagedArtifactAssignment(
+            "capture-ui-screenshots",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "ui-screenshot-proof",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot",
+                        Reason = "Current-run UI proof must include a screenshot."
+                    }
+                ]
+            }
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Blocked,
+                Reason = "Missing required screenshot receipt browser_take_screenshot.",
+                EvidenceRefs = [primaryRef],
+                NextActions = ["Retry with browser screenshot proof."],
+                HumanReadableSummaryMarkdown = "Status: Blocked"
+            },
+            [CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.", executionRunId: executionRunId)],
+            executionRunId);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.required_tool_receipt_blocked_retry");
+        Assert.Contains("browser_take_screenshot", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Conditional_process_capability_scope_receipts_activate_from_launch_context()
+    {
+        var baseAssignment = CreateManagedArtifactAssignment("conditional-receipt-check") with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "conditional-ui-screenshot-proof",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot",
+                        Activation = ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool,
+                        Reason = "Only UI targets require screenshot capture."
+                    }
+                ]
+            }
+        };
+        var inactivePrimaryRef = BuildStepArtifactRef(baseAssignment);
+
+        var inactiveResult = ToAdapterResult(
+            baseAssignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "No UI evidence was required.",
+                EvidenceRefs = [inactivePrimaryRef],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = "Status: Completed"
+            },
+            [CreateToolReceipt("workspace_write_file", inactivePrimaryRef, "Succeeded: Created file.")]);
+
+        Assert.Equal(StrategyOutcome.Succeeded, inactiveResult.Outcome);
+
+        var activeAssignment = baseAssignment with
+        {
+            LaunchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = "browser_take_screenshot"
+            }
+        };
+        var activePrimaryRef = BuildStepArtifactRef(activeAssignment);
+
+        var activeResult = ToAdapterResult(
+            activeAssignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Screenshot evidence was summarized.",
+                EvidenceRefs = [activePrimaryRef],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = "Status: Completed"
+            },
+            [CreateToolReceipt("workspace_write_file", activePrimaryRef, "Succeeded: Created file.")]);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, activeResult.Outcome);
+        Assert.Contains(activeResult.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.required_tool_receipt_missing");
     }
 
     [Fact]
@@ -2688,6 +2949,54 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public void Runtime_readiness_rejects_required_browser_tool_when_agent_lacks_playwright_mcp()
+    {
+        var qaAgent = NewAgent(
+            "QA Capture",
+            "QA lead",
+            AgentWorkloadKind.Qa,
+            [
+                "qa-lead",
+                "browser"
+            ],
+            AgentWorkspaceToolProfileKind.QualityValidation);
+        var assignment = CreateManagedArtifactAssignment(
+            "capture-ui-screenshots",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]) with
+        {
+            RoleKey = "qa-lead",
+            RoleResourceKey = "qa-lead",
+            RoleDisplayName = "QA lead",
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "browser-proof",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot"
+                    }
+                ]
+            }
+        };
+
+        var request = CreateRuntimeReadinessRequest(assignment);
+        var readiness = AgentProcessReadinessEvaluator.Evaluate(qaAgent, request);
+
+        Assert.Contains("browser_take_screenshot", request.RequiredRuntimeToolNames ?? []);
+        Assert.True(readiness.HasRoleFit);
+        Assert.False(readiness.IsExecutionReady);
+        Assert.Contains(readiness.Findings, finding => finding.Code == "agent.readiness.required-browser-tool-missing");
+    }
+
+    [Fact]
     public void Runtime_readiness_rejects_required_project_structure_write_tool_when_agent_is_read_only()
     {
         var qaAgent = NewAgent(
@@ -4198,7 +4507,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     private static ProcessExecutionAdapterResult ToAdapterResult(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
+        Guid? currentExecutionRunId = null)
     {
         var adapterType = typeof(ProcessesModuleServiceCollectionExtensions)
             .Assembly
@@ -4209,7 +4519,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Process execution result mapper was not found.");
 
-        return Assert.IsType<ProcessExecutionAdapterResult>(method.Invoke(null, [assignment, output, "sha256:raw", toolReceipts]));
+        var effectiveExecutionRunId = currentExecutionRunId ?? toolReceipts?.FirstOrDefault()?.ExecutionRunId;
+        return Assert.IsType<ProcessExecutionAdapterResult>(method.Invoke(
+            null,
+            [assignment, output, "sha256:raw", toolReceipts, effectiveExecutionRunId]));
     }
 
     private static AgentProcessRoleReadinessRequest CreateRuntimeReadinessRequest(ProcessRuntimeStepAssignment assignment)
@@ -4342,10 +4655,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         string toolName,
         string requestSummary,
         string exitSummary,
-        string workingDirectory = ".")
+        string workingDirectory = ".",
+        Guid? executionRunId = null)
         => new(
             Guid.NewGuid(),
-            Guid.NewGuid(),
+            executionRunId ?? Guid.NewGuid(),
             "workspace-file",
             toolName,
             "ReadOnlyWorkspace",

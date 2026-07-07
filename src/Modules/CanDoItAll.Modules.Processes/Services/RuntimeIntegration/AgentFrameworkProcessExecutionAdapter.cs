@@ -261,7 +261,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                 assignment,
                 materialization.Output,
                 validation.RawOutputHash,
-                completionToolReceipts);
+                completionToolReceipts,
+                result.ExecutionRunId);
         }
         catch (ProcessRuntimeDispatchDeferredException)
         {

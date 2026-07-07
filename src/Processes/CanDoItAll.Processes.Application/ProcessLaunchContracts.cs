@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
@@ -84,6 +85,10 @@ public sealed record ProcessLaunchStepView(
     public string RoleResourceKey { get; init; } = string.Empty;
 
     public string RoleDisplayName { get; init; } = string.Empty;
+
+    public ProcessCapabilityScope CapabilityScope { get; init; } = ProcessCapabilityScope.Empty;
+
+    public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
 }
 
 public sealed record ProcessLaunchReadinessFinding(

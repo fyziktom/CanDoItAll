@@ -111,11 +111,13 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             return subprocessResult;
         }
 
+        var subprocessLaunchReceipt = CreateCoordinatedSubprocessLaunchReceipt(assignment, launch);
         return ToAdapterResult(
             assignment,
             validation.Output,
             validation.RawOutputHash,
-            [CreateCoordinatedSubprocessLaunchReceipt(assignment, launch)]);
+            [subprocessLaunchReceipt],
+            subprocessLaunchReceipt.ExecutionRunId);
     }
 
     private static bool IsActiveSubprocessLaunchStage(string stage)
@@ -154,7 +156,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             assignment,
             materialization.Output,
             completedChildOutcome.RawOutputHash,
-            materialization.ToolReceipts);
+            materialization.ToolReceipts,
+            completedChildOutcome.SyntheticExecutionRunId);
     }
 
     private async ValueTask<ProcessExecutionAdapterResult?> TryResolveDeferredOrCompletedSubprocessOutputAsync(

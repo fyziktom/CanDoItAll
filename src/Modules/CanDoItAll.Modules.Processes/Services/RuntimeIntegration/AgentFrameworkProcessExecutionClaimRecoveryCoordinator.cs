@@ -272,7 +272,8 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             assignment,
             validation.Output,
             validation.RawOutputHash,
-            toolReceipts);
+            toolReceipts,
+            executionRun.Id);
         var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var commit = await engine.SubmitStrategyResultAsync(

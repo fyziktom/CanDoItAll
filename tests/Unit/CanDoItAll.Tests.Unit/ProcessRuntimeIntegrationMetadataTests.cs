@@ -279,6 +279,17 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
                         },
                         Reason = "The management step still needs read-only workspace evidence."
                     }
+                ],
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "qa-browser-screenshot",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "browser_take_screenshot",
+                        Activation = ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool,
+                        Reason = "QA proof requires current-run screenshot evidence when UI proof is active."
+                    }
                 ]
             }
         };
@@ -301,6 +312,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.NotNull(options.ContextIntent!.CapabilityScopeOverride);
         Assert.Equal(resolvedScope!.Policies.Count, options.ContextIntent.CapabilityScopeOverride!.Policies.Count);
         Assert.Equal(resolvedScope.RequiredCapabilities.Count, options.ContextIntent.CapabilityScopeOverride.RequiredCapabilities.Count);
+        Assert.Equal(resolvedScope.RequiredReceipts.Count, options.ContextIntent.CapabilityScopeOverride.RequiredReceipts.Count);
         var policy = Assert.Single(resolvedScope.Policies);
         Assert.Equal(Capabilities.CapabilityAccessDefaultEffect.DenyAll, policy.DefaultEffect);
         Assert.Contains(policy.Rules, rule =>
@@ -317,6 +329,10 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         var required = Assert.Single(resolvedScope.RequiredCapabilities);
         Assert.Equal(Capabilities.CapabilityKind.Tool, required.Kind);
         Assert.Equal(Capabilities.CapabilityKey.Create("workspace-read-file"), required.Key);
+        var requiredReceipt = Assert.Single(resolvedScope.RequiredReceipts);
+        Assert.Equal("qa-browser-screenshot", requiredReceipt.Key);
+        Assert.Equal("browser_take_screenshot", requiredReceipt.ToolName);
+        Assert.Equal(AgentRuntimeRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, requiredReceipt.Activation);
     }
 
     [Fact]

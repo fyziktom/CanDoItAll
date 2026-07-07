@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -413,7 +414,23 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             role?.DisplayName ?? roleKey,
             NormalizeOperations(templateStep.AllowedOperations),
             NormalizeOptional(templateStep.OperationTargetScope),
-            ResolveLaunchRequiredRuntimeToolNames(variables, stepKey));
+            ResolveLaunchReadinessRequiredRuntimeToolNames(variables, stepKey, templateStep.CapabilityScope));
+    }
+
+    private static IReadOnlyList<string> ResolveLaunchReadinessRequiredRuntimeToolNames(
+        IReadOnlyDictionary<string, string> variables,
+        string stepKey,
+        ProcessCapabilityScope capabilityScope)
+    {
+        var launchContextToolNames = ResolveLaunchRequiredRuntimeToolNames(variables, stepKey)
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return launchContextToolNames
+            .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(capabilityScope, launchContextToolNames))
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static IReadOnlyList<string> ResolveLaunchRequiredRuntimeToolNames(

@@ -31,7 +31,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         string rawOutputHash,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
+        Guid? currentExecutionRunId = null)
     {
         output = RemoveNonCitableSourceMetadataFromOutcome(output);
 
@@ -86,6 +87,20 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 assignment,
                 rawOutputHash,
                 requiredToolReceiptBlockedIssue);
+        }
+
+        if (outcome == StrategyOutcome.NeedsManager &&
+            TryCreateProcessRequiredToolReceiptBlockedRetryIssue(
+                assignment,
+                output,
+                toolReceipts,
+                currentExecutionRunId,
+                out var processRequiredToolReceiptBlockedIssue))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                processRequiredToolReceiptBlockedIssue);
         }
 
         if (outcome == StrategyOutcome.NeedsManager &&
@@ -150,6 +165,12 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             ValidateRequiredProductToolReceipts(assignment, toolReceipts) is { } requiredToolReceiptIssue)
         {
             return NeedsManagerForCompletionIssue(assignment, rawOutputHash, requiredToolReceiptIssue);
+        }
+
+        if (outcome == StrategyOutcome.Succeeded &&
+            ValidateRequiredProcessToolReceipts(assignment, toolReceipts, currentExecutionRunId) is { } processRequiredToolReceiptIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, processRequiredToolReceiptIssue);
         }
 
         if (outcome == StrategyOutcome.Succeeded &&

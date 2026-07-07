@@ -602,6 +602,73 @@
       "Title": "Run QA validation",
       "Subtitle": "Regression, build, test, and handoff evidence",
         "Notes": "Execute targeted regression validation and defect triage against the reviewed implementation package. This step has RunValidation; missing restore/build/test receipts are not a reason to route repair until this step has attempted the commands itself. For .NET targets, record a current-run validation chain from the product root: dotnet restore, dotnet build --no-restore, and dotnet test --no-restore when a test project exists or tests are expected. When DotNetSolutionFile or DotNetSolutionFileAlias is present, target that solution file for restore and build. When DotNetTestProjectFileAlias or DotNetTestProjectFile is present, target that test project for workspace_dotnet_test, preferably with noBuild=true after a successful solution build; use the solution target for tests only when no test project target exists. Do not infer <SolutionName>.sln from DotNetSolutionName, and do not report a missing .sln as a defect when the canonical .slnx target exists or already has successful current-run restore/build receipts. If the canonical target is absent, inspect DotNetSolutionFileCandidates and the product-root file listing, then use the existing candidate, preferring .slnx when both exist. Do not accept upstream build or test claims alone as QA proof. If validation tools, product-root alias, or permissions are unavailable, return Blocked with the concrete missing tool or capability; do not select repair-required for missing validation access. External generated product roots may not be Git repositories. Do not call workspace_git_status as a validation precondition for a grounded product root, and do not treat a not a git repository result as a product-root, validation-tool, or repair blocker. If Git status was already attempted and failed only because the product root is not a Git repository, record Git status as not applicable and continue immediately with product-root file listing plus the restore/build/test validation chain. If --no-restore fails because restore assets are stale or missing, run restore and then rerun build/test; select repair-required only when the restored validation chain still fails or product evidence does not satisfy the accepted scope. Write the QA managed artifact with grounded external-target aliases, managed refs, project-structure node ids, and tool receipt refs instead of native absolute product paths. Final submit_process_step_outcome evidenceRefs must include the QA artifact ref plus exact current-run restore/build/test receipt refs when those tools ran. Inspect the shipped entrypoint, referenced runtime commands, project files, and stale or unreferenced artifacts. When a visible UI workflow or source ImageAsset target exists and this step has LaunchRuntime plus CaptureRuntimeProof, start the app with workspace_dotnet_run against DotNetAppProjectFileAlias when present, otherwise DotNetAppProjectFile, interact with the primary workflow, capture current-run screenshot, browser state, and console evidence, compare source visual targets with workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images when available, stop the app with workspace_dotnet_stop, and use those results for the QA branch decision. Record the ImageAsset node ids, media paths, comparison method, screenshot refs, runtime command hints, and screenshot/browser proof requirements for the downstream runtime-command and screenshot writeback subprocesses. Select repair-required for unresolved visual-target mismatch, stock scaffold UI on a product route, missing interaction proof, unstyled custom UI, or any concrete product defect implementation can repair. Return Blocked only for a confirmed tool, policy, environment, access, product-root, provider-capability, or process-contract failure that prevents QA from executing validation or collecting enough evidence to choose quality-accepted or repair-required; cite the failed tool or missing capability.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "qa-ui-runtime-start",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA must start the app before collecting current-run UI proof when the launch context requires browser validation."
+          },
+          {
+            "Key": "qa-browser-navigate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA browser proof must navigate to a concrete route before accepting UI evidence."
+          },
+          {
+            "Key": "qa-browser-state",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_snapshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA browser proof must include durable browser state for the validated route."
+          },
+          {
+            "Key": "qa-browser-screenshot",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_take_screenshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA browser proof must include a current-run screenshot when UI evidence is required."
+          },
+          {
+            "Key": "qa-browser-console",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_console_messages",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA browser proof must include console diagnostics for the validated route."
+          },
+          {
+            "Key": "qa-ui-runtime-stop",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_stop",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA must clean up any app process started for browser validation."
+          },
+          {
+            "Key": "qa-inspect-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_inspect_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA visual comparison must inspect screenshot images before accepting visual evidence."
+          },
+          {
+            "Key": "qa-analyze-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA visual claims must be grounded in provider-backed image analysis."
+          },
+          {
+            "Key": "qa-compare-images",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_images",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA must compare delivered screenshots with source visual targets when target images exist."
+          }
+        ]
+      },
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -824,6 +891,73 @@
       "Title": "Re-run QA validation after repair",
       "Subtitle": "Repair verification",
         "Notes": "Re-run targeted regression validation against the repaired package and select an explicit accepted or unresolved-repair branch. This step has RunValidation; missing restore/build/test receipts are not a reason to escalate until this step has attempted the commands itself. For .NET targets, record a current-run validation chain from the product root: dotnet restore, dotnet build --no-restore, and dotnet test --no-restore when a test project exists or tests are expected. When DotNetSolutionFile or DotNetSolutionFileAlias is present, target that solution file for restore and build. When DotNetTestProjectFileAlias or DotNetTestProjectFile is present, target that test project for workspace_dotnet_test, preferably with noBuild=true after a successful solution build; use the solution target for tests only when no test project target exists. Do not infer <SolutionName>.sln from DotNetSolutionName, and do not report a missing .sln as a defect when the canonical .slnx target exists or already has successful current-run restore/build receipts. If the canonical target is absent, inspect DotNetSolutionFileCandidates and the product-root file listing, then use the existing candidate, preferring .slnx when both exist. Do not accept repair notes or upstream build claims alone as recheck proof. If validation tools, product-root alias, or permissions are unavailable, return Blocked with the concrete missing tool or capability; do not select repair-escalation for missing validation access. External generated product roots may not be Git repositories. Do not call workspace_git_status as a validation precondition for a grounded product root, and do not treat a not a git repository result as a product-root, validation-tool, or repair blocker. If Git status was already attempted and failed only because the product root is not a Git repository, record Git status as not applicable and continue immediately with product-root file listing plus the restore/build/test validation chain. If --no-restore fails because restore assets are stale or missing, run restore and then rerun build/test; select repair-escalation only when the restored validation chain still fails or product evidence does not satisfy the repair target. Write the QA recheck managed artifact with grounded external-target aliases, managed refs, project-structure node ids, and tool receipt refs instead of native absolute product paths. Final submit_process_step_outcome evidenceRefs must include the QA recheck artifact ref plus exact current-run restore/build/test receipt refs when those tools ran. Inspect the repaired shipped entrypoint, referenced runtime commands, project files, and stale or unreferenced artifacts. When a visible UI workflow or source ImageAsset target exists and this step has LaunchRuntime plus CaptureRuntimeProof, start the app with workspace_dotnet_run against DotNetAppProjectFileAlias when present, otherwise DotNetAppProjectFile, interact with the primary workflow, capture current-run screenshot, browser state, and console evidence, compare source visual targets with workspace_inspect_image, workspace_analyze_image, and workspace_analyze_images when available, stop the app with workspace_dotnet_stop, and use those results for the QA branch decision. Record the ImageAsset node ids, media paths, comparison method, screenshot refs, runtime command hints, and screenshot/browser proof requirements for downstream repaired runtime-command and screenshot writeback subprocesses. Select repair-escalation for unresolved visual-target mismatch, stock scaffold UI on a product route, missing interaction proof, unstyled custom UI, or another release-blocking defect that remains after repair. Return Blocked only for a confirmed tool, policy, environment, access, product-root, provider-capability, or process-contract failure that prevents QA from executing validation or collecting enough evidence to choose quality-accepted or repair-escalation; cite the failed tool or missing capability.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "qa-recheck-ui-runtime-start",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck must start the repaired app before collecting current-run UI proof when the launch context requires browser validation."
+          },
+          {
+            "Key": "qa-recheck-browser-navigate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck browser proof must navigate to a concrete route before accepting UI evidence."
+          },
+          {
+            "Key": "qa-recheck-browser-state",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_snapshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck browser proof must include durable browser state for the validated route."
+          },
+          {
+            "Key": "qa-recheck-browser-screenshot",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_take_screenshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck browser proof must include a current-run screenshot when UI evidence is required."
+          },
+          {
+            "Key": "qa-recheck-browser-console",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_console_messages",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck browser proof must include console diagnostics for the validated route."
+          },
+          {
+            "Key": "qa-recheck-ui-runtime-stop",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_stop",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck must clean up any app process started for browser validation."
+          },
+          {
+            "Key": "qa-recheck-inspect-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_inspect_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck visual comparison must inspect screenshot images before accepting visual evidence."
+          },
+          {
+            "Key": "qa-recheck-analyze-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck visual claims must be grounded in provider-backed image analysis."
+          },
+          {
+            "Key": "qa-recheck-compare-images",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_images",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "Reason": "QA recheck must compare repaired screenshots with source visual targets when target images exist."
+          }
+        ]
+      },
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,

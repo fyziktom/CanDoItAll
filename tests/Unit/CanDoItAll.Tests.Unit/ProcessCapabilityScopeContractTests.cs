@@ -35,6 +35,15 @@ public sealed class ProcessCapabilityScopeContractTests
                         "title": "Management-only scope",
                         "content": "Coordinate status and staffing. Do not implement product changes."
                       }
+                    ],
+                    "requiredReceipts": [
+                      {
+                        "key": "browser-proof",
+                        "kind": "runtimeToolName",
+                        "toolName": "browser_take_screenshot",
+                        "activation": "whenLaunchContextDeclaresTool",
+                        "reason": "Browser proof is required only for UI launches."
+                      }
                     ]
                   }
                 }
@@ -50,11 +59,16 @@ public sealed class ProcessCapabilityScopeContractTests
         var step = Assert.Single(definition!.Steps);
         var directive = Assert.Single(step.CapabilityScope.Directives);
         var instruction = Assert.Single(step.CapabilityScope.InstructionFragments);
+        var receipt = Assert.Single(step.CapabilityScope.RequiredReceipts);
         Assert.Equal(ProcessCapabilityScopeDirectiveKind.AllowOnly, directive.Kind);
         Assert.Equal(ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey, directive.Target.Kind);
         Assert.Equal("management.provider", directive.Target.Value);
         Assert.Equal("Management-only scope", instruction.Title);
         Assert.Contains("Do not implement product changes", instruction.Content, StringComparison.Ordinal);
+        Assert.Equal("browser-proof", receipt.Key);
+        Assert.Equal(ProcessRequiredToolReceiptKind.RuntimeToolName, receipt.Kind);
+        Assert.Equal("browser_take_screenshot", receipt.ToolName);
+        Assert.Equal(ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, receipt.Activation);
     }
 
     [Fact]
@@ -92,5 +106,47 @@ public sealed class ProcessCapabilityScopeContractTests
         Assert.Equal("development-ui-screenshot-image-analysis", instruction.Key);
         Assert.Contains("software-delivery visual evidence", instruction.Content, StringComparison.Ordinal);
         Assert.Contains("Do not treat this as generic image interpretation", instruction.Content, StringComparison.Ordinal);
+
+        var storageReceiptTools = storageStep.CapabilityScope.RequiredReceipts
+            .Select(receipt => receipt.ToolName)
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Contains("workspace_inspect_image", storageReceiptTools);
+        Assert.Contains("workspace_analyze_image", storageReceiptTools);
+        Assert.Contains("workspace_analyze_images", storageReceiptTools);
+        Assert.Contains("project_structure_node_create", storageReceiptTools);
+        Assert.Contains("project_structure_asset_create", storageReceiptTools);
+        Assert.All(storageStep.CapabilityScope.RequiredReceipts, receipt =>
+            Assert.Equal(ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, receipt.Activation));
+    }
+
+    [Fact]
+    public void Software_delivery_qa_steps_declare_conditional_browser_and_image_receipts()
+    {
+        var definition = new ProcessTemplatePackLoader().LoadDefinition("software-delivery");
+        var qaValidationStep = definition.Steps.Single(step =>
+            string.Equals(step.Key, "qa-validation", StringComparison.Ordinal));
+        var qaRecheckStep = definition.Steps.Single(step =>
+            string.Equals(step.Key, "qa-recheck", StringComparison.Ordinal));
+
+        AssertRequiredReceiptTools(qaValidationStep.CapabilityScope.RequiredReceipts);
+        AssertRequiredReceiptTools(qaRecheckStep.CapabilityScope.RequiredReceipts);
+    }
+
+    private static void AssertRequiredReceiptTools(IReadOnlyList<ProcessRequiredToolReceipt> receipts)
+    {
+        var receiptTools = receipts
+            .Select(receipt => receipt.ToolName)
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Contains("workspace_dotnet_run", receiptTools);
+        Assert.Contains("browser_navigate", receiptTools);
+        Assert.Contains("browser_snapshot", receiptTools);
+        Assert.Contains("browser_take_screenshot", receiptTools);
+        Assert.Contains("browser_console_messages", receiptTools);
+        Assert.Contains("workspace_dotnet_stop", receiptTools);
+        Assert.Contains("workspace_inspect_image", receiptTools);
+        Assert.Contains("workspace_analyze_image", receiptTools);
+        Assert.Contains("workspace_analyze_images", receiptTools);
+        Assert.All(receipts, receipt =>
+            Assert.Equal(ProcessRequiredToolReceiptActivation.WhenLaunchContextDeclaresTool, receipt.Activation));
     }
 }

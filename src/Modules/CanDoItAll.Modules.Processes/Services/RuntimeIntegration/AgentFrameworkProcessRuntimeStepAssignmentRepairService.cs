@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -143,7 +144,20 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
                 ? string.Empty
                 : assignment.OperationTargetScope.Trim(),
-            ResolveRequiredRuntimeToolNames(assignment.LaunchVariables, assignment.StepKey));
+            ResolveRepairReadinessRequiredRuntimeToolNames(assignment));
+    }
+
+    private static IReadOnlyList<string> ResolveRepairReadinessRequiredRuntimeToolNames(ProcessRuntimeStepAssignment assignment)
+    {
+        var launchContextToolNames = ResolveRequiredRuntimeToolNames(assignment.LaunchVariables, assignment.StepKey)
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return launchContextToolNames
+            .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static IReadOnlyList<string> ResolveRequiredRuntimeToolNames(

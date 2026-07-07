@@ -198,6 +198,12 @@ public static class AgentProcessReadinessEvaluator
                 continue;
             }
 
+            if (IsBrowserRuntimeToolName(requiredToolName))
+            {
+                AddRequiredBrowserToolReadinessFindings(agent, request, requiredToolName, findings);
+                continue;
+            }
+
             if (!AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(requiredToolName, out var permission))
             {
                 if (requiredToolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase))
@@ -232,6 +238,23 @@ public static class AgentProcessReadinessEvaluator
                 $"agent.readiness.required-tool-{summary.Code}-missing",
                 $"{summary.Description} for required runtime tool '{requiredToolName}'"));
         }
+    }
+
+    private static void AddRequiredBrowserToolReadinessFindings(
+        AgentDefinition agent,
+        AgentProcessRoleReadinessRequest request,
+        string requiredToolName,
+        List<AgentProcessReadinessFinding> findings)
+    {
+        if (HasRequiredBrowserRuntimeToolCapability(agent, requiredToolName))
+        {
+            return;
+        }
+
+        findings.Add(new AgentProcessReadinessFinding(
+            AgentProcessReadinessFindingSeverity.Error,
+            "agent.readiness.required-browser-tool-missing",
+            $"Step '{request.StepKey}' requires browser runtime tool '{requiredToolName}', but agent '{agent.Name}' does not have a Playwright/browser MCP capability assignment that can expose it."));
     }
 
     private static void AddRequiredProjectStructureToolReadinessFindings(
@@ -289,6 +312,40 @@ public static class AgentProcessReadinessEvaluator
             string.Equals(capability.CapabilityKey, normalizedCapabilityKey, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(capability.CapabilityKey.Replace('-', '_'), normalizedToolName, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool HasRequiredBrowserRuntimeToolCapability(AgentDefinition agent, string requiredToolName)
+    {
+        var normalizedToolName = requiredToolName.Trim().Replace('-', '_');
+        var normalizedToolKey = normalizedToolName.Replace('_', '-');
+        return agent.Capabilities.Any(capability =>
+            capability.Kind switch
+            {
+                CapabilityKind.McpServer => IsBrowserMcpServerCapability(capability.CapabilityKey),
+                CapabilityKind.Tool => CapabilityKeyMatchesTool(capability.CapabilityKey, normalizedToolName, normalizedToolKey),
+                _ => false
+            });
+    }
+
+    private static bool IsBrowserMcpServerCapability(string capabilityKey)
+    {
+        return capabilityKey.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+               capabilityKey.Contains("browser-mcp", StringComparison.OrdinalIgnoreCase) ||
+               capabilityKey.Contains("browser_mcp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool CapabilityKeyMatchesTool(
+        string capabilityKey,
+        string normalizedToolName,
+        string normalizedToolKey)
+    {
+        var keyWithUnderscores = capabilityKey.Replace('-', '_');
+        return string.Equals(capabilityKey, normalizedToolKey, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(keyWithUnderscores, normalizedToolName, StringComparison.OrdinalIgnoreCase) ||
+               keyWithUnderscores.EndsWith($"_{normalizedToolName}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBrowserRuntimeToolName(string toolName)
+        => toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase);
 
     private static AgentProcessReadinessFinding MissingTool(
         AgentDefinition agent,
