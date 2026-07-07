@@ -27,6 +27,97 @@ internal sealed class WorkspaceFileQueryService
         this.textContentGuard = textContentGuard;
     }
 
+    public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100)
+    {
+        var startedAtUtc = DateTimeOffset.UtcNow;
+        const string operationName = "workspace_list_directory";
+        const string searchPattern = "*";
+        if (!pathPolicy.TryResolveWorkspacePath(relativePath, allowWorkspaceRoot: true, out var resolution, out var validationMessage))
+        {
+            return new WorkspaceFileListResult(
+                Succeeded: false,
+                Message: validationMessage,
+                Receipt: receiptWriter.CreateReceipt(operationName, false, "Denied", validationMessage, string.Empty, [], [], startedAtUtc),
+                RootPath: ".",
+                SearchPattern: searchPattern,
+                Entries: [],
+                IsTruncated: false);
+        }
+
+        if (File.Exists(resolution.FullPath))
+        {
+            var entry = CreateListEntry(resolution.FullPath);
+            var resolvedFileMessage = $"Resolved '{entry.RelativePath}' as a workspace file.";
+            return new WorkspaceFileListResult(
+                Succeeded: true,
+                Message: resolvedFileMessage,
+                Receipt: receiptWriter.CreateReceipt(operationName, false, "Succeeded", resolvedFileMessage, string.Empty, [entry.RelativePath], [], startedAtUtc),
+                RootPath: resolution.RelativePath,
+                SearchPattern: searchPattern,
+                Entries: [entry],
+                IsTruncated: false);
+        }
+
+        if (!Directory.Exists(resolution.FullPath))
+        {
+            var missingPathMessage = WorkspacePathPolicy.TryCreateManagedPathAliasCorrectionMessage(relativePath ?? resolution.RelativePath, out var aliasCorrectionMessage)
+                ? aliasCorrectionMessage
+                : $"Workspace path '{relativePath ?? "."}' does not exist.";
+            return new WorkspaceFileListResult(
+                Succeeded: false,
+                Message: missingPathMessage,
+                Receipt: receiptWriter.CreateReceipt(operationName, false, "Failed", missingPathMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
+                RootPath: resolution.RelativePath,
+                SearchPattern: searchPattern,
+                Entries: [],
+                IsTruncated: false);
+        }
+
+        var limit = Math.Clamp(maxResults, 1, 400);
+        var entries = new List<WorkspaceFileListEntry>();
+        var truncated = false;
+        foreach (var path in Directory.EnumerateFileSystemEntries(
+                     resolution.FullPath,
+                     searchPattern,
+                     new EnumerationOptions
+                     {
+                         RecurseSubdirectories = false,
+                         IgnoreInaccessible = true,
+                         AttributesToSkip = 0
+                     }))
+        {
+            if (ShouldIgnorePath(path))
+            {
+                continue;
+            }
+
+            if (entries.Count >= limit)
+            {
+                truncated = true;
+                break;
+            }
+
+            entries.Add(CreateListEntry(path));
+        }
+
+        entries = entries
+            .OrderBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var listMessage = entries.Count == 0
+            ? $"No workspace paths exist directly under '{resolution.RelativePath}'."
+            : $"Listed {entries.Count} direct workspace path(s) under '{resolution.RelativePath}'.";
+
+        return new WorkspaceFileListResult(
+            Succeeded: true,
+            Message: listMessage,
+            Receipt: receiptWriter.CreateReceipt(operationName, false, "Succeeded", listMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
+            RootPath: resolution.RelativePath,
+            SearchPattern: searchPattern,
+            Entries: entries,
+            IsTruncated: truncated);
+    }
+
     public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;

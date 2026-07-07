@@ -317,7 +317,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
         }
 
         Assert.Equal(
-            "2026-07-capability-template-pack-v8",
+            "2026-07-capability-template-pack-v9",
             ReadManagedSeedVersion(firstByKey["workspace-read-file"].ConfigurationJson));
         Assert.Null(ReadManagedSeedVersion(firstByKey["mail-triage-inline-skill"].ConfigurationJson));
     }

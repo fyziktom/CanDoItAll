@@ -73,6 +73,19 @@
     },
     {
       "kind": "tool",
+      "key": "workspace-list-directory",
+      "displayName": "Workspace List Directory",
+      "description": "Lists direct child files and directories from the managed workspace or a grounded external-target alias without recursive traversal. Use before recursive browsing when the folder shape is unknown.",
+      "stableId": "tool:workspace-list-directory:v1",
+      "stableGuidKey": "capabilities/workspace-list-directory",
+      "endpointOrPath": "sandbox://workspace-list-directory",
+      "runtimeToolName": "workspace_list_directory",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
       "key": "workspace-list-files",
       "displayName": "Workspace List Files",
       "description": "Lists files and directories from the managed workspace or a grounded external-target alias. Supports simple patterns and recursive globstar patterns such as **/* and **/*.cs. In external-target process runs, broad managed-root browsing is denied; list current-run artifacts or the grounded product alias instead.",
@@ -119,6 +132,19 @@
       "stableGuidKey": "capabilities/workspace-stat-path",
       "endpointOrPath": "sandbox://workspace-stat-path",
       "runtimeToolName": "workspace_stat_path",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-hash-path",
+      "displayName": "Workspace Hash Path",
+      "description": "Computes a bounded SHA-256 hash for a workspace file or a deterministic manifest hash for a workspace directory.",
+      "stableId": "tool:workspace-hash-path:v1",
+      "stableGuidKey": "capabilities/workspace-hash-path",
+      "endpointOrPath": "sandbox://workspace-hash-path",
+      "runtimeToolName": "workspace_hash_path",
       "operationClassifications": [
         "read"
       ]
@@ -207,6 +233,36 @@
       "stableGuidKey": "capabilities/workspace-delete-path",
       "endpointOrPath": "sandbox://workspace-delete-path",
       "runtimeToolName": "workspace_delete_path",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-zip-path",
+      "displayName": "Workspace Zip Path",
+      "description": "Creates a bounded zip archive from an allowed workspace file or directory with receipt generation.",
+      "stableId": "tool:workspace-zip-path:v1",
+      "stableGuidKey": "capabilities/workspace-zip-path",
+      "endpointOrPath": "sandbox://workspace-zip-path",
+      "runtimeToolName": "workspace_zip_path",
+      "approvalRequired": true,
+      "operationClassifications": [
+        "write",
+        "mutation"
+      ]
+    },
+    {
+      "kind": "tool",
+      "key": "workspace-unzip-archive",
+      "displayName": "Workspace Unzip Archive",
+      "description": "Extracts a bounded workspace zip archive into an allowed destination directory with zip-slip protection and receipt generation.",
+      "stableId": "tool:workspace-unzip-archive:v1",
+      "stableGuidKey": "capabilities/workspace-unzip-archive",
+      "endpointOrPath": "sandbox://workspace-unzip-archive",
+      "runtimeToolName": "workspace_unzip_archive",
       "approvalRequired": true,
       "operationClassifications": [
         "write",

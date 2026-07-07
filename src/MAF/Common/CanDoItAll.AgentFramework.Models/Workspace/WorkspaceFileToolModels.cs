@@ -74,6 +74,7 @@ public sealed record WorkspacePathStatResult(
 public sealed record WorkspacePathHashResult(
     bool Succeeded,
     string Message,
+    WorkspaceToolReceipt Receipt,
     string Path,
     string PathKind,
     string Algorithm,
@@ -97,6 +98,7 @@ public sealed record WorkspaceFileMutationResult(
 public sealed record WorkspaceArchiveMutationResult(
     bool Succeeded,
     string Message,
+    WorkspaceToolReceipt Receipt,
     string SourcePath,
     string DestinationPath,
     int FileCount,

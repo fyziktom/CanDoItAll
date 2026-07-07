@@ -366,8 +366,10 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "workspace-git-status",
         "workspace-git-switch",
         "workspace-git-unstage",
+        "workspace-hash-path",
         "workspace-inspect-image",
         "workspace-inspect-spreadsheet",
+        "workspace-list-directory",
         "workspace-list-files",
         "workspace-move-path",
         "workspace-pwsh-run-script",
@@ -380,8 +382,10 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "workspace-spreadsheet-function-catalog",
         "workspace-spreadsheet-summary",
         "workspace-stat-path",
+        "workspace-unzip-archive",
         "workspace-write-file",
         "workspace-write-spreadsheet",
+        "workspace-zip-path",
         "writing-mstest-tests"
     ];
 

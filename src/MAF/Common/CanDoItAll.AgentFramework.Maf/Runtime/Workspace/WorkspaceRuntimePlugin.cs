@@ -7,7 +7,6 @@ using System.Text.Json.Serialization;
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class WorkspaceRuntimePlugin(
-    IWorkspaceFileService fileService,
     IWorkspaceCommandExecutionService commandExecutionService,
     IWorkspaceArtifactToolService artifactToolService,
     string workspaceRoot,
@@ -19,7 +18,6 @@ internal sealed class WorkspaceRuntimePlugin(
 {
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
-        private readonly IWorkspaceFileService fileService = fileService;
         private readonly IWorkspaceCommandExecutionService commandExecutionService = commandExecutionService;
         private readonly IWorkspaceArtifactToolService artifactToolService = artifactToolService;
         private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
@@ -31,91 +29,6 @@ internal sealed class WorkspaceRuntimePlugin(
         private readonly IMafProviderRuntimeGateway providerRuntimeGateway = providerRuntimeGateway;
         private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512,"think":false}}""";
         private static readonly JsonSerializerOptions ScriptManifestJsonOptions = CreateScriptManifestJsonOptions();
-        private static readonly HashSet<string> ProtectedExternalTargetDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "components",
-            "domain",
-            "features",
-            "models",
-            "pages",
-            "properties",
-            "services",
-            "source",
-            "src",
-            "test",
-            "tests",
-            "wwwroot"
-        };
-
-        public WorkspaceFileListResult ListWorkspaceFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
-        {
-            var allowedPath = PrepareFileReadPath(relativePath);
-            return fileService.ListFiles(allowedPath, searchPattern, maxResults);
-        }
-
-        public WorkspaceTextSearchResult SearchWorkspace(string query, string? relativePath = null, int maxResults = 20)
-        {
-            var allowedPath = PrepareFileReadPath(relativePath);
-            return fileService.SearchText(query, allowedPath, maxResults);
-        }
-
-        public WorkspaceTextFileReadResult ReadWorkspaceTextFile(string path, int maxCharacters = 12000)
-        {
-            var allowedPath = PrepareFileReadPath(path) ?? path;
-            return fileService.ReadTextFile(allowedPath, maxCharacters);
-        }
-
-        public WorkspacePathStatResult StatWorkspacePath(string path)
-        {
-            var allowedPath = PrepareFileReadPath(path) ?? path;
-            return fileService.StatPath(allowedPath);
-        }
-
-        public WorkspaceFileMutationResult CreateWorkspaceDirectory(string path)
-        {
-            var allowedPath = PrepareFileWritePath(path) ?? path;
-            return fileService.CreateDirectory(allowedPath);
-        }
-
-        public WorkspaceFileMutationResult WriteWorkspaceTextFile(string path, string content, bool overwrite = true)
-        {
-            var allowedPath = PrepareFileWritePath(path) ?? path;
-            return fileService.WriteTextFile(allowedPath, content, overwrite);
-        }
-
-        public WorkspaceFileMutationResult AppendWorkspaceTextFile(string path, string content)
-        {
-            var allowedPath = PrepareFileWritePath(path) ?? path;
-            return fileService.AppendTextFile(allowedPath, content);
-        }
-
-        public WorkspaceFileMutationResult CopyWorkspacePath(string sourcePath, string destinationPath, bool overwrite = false)
-        {
-            var allowedSourcePath = PrepareFileReadPath(sourcePath) ?? sourcePath;
-            var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
-            return fileService.CopyPath(allowedSourcePath, allowedDestinationPath, overwrite);
-        }
-
-        public WorkspaceFileMutationResult MoveWorkspacePath(string sourcePath, string destinationPath, bool overwrite = false)
-        {
-            var allowedSourcePath = PrepareFileWritePath(sourcePath) ?? sourcePath;
-            var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
-            return fileService.MovePath(allowedSourcePath, allowedDestinationPath, overwrite);
-        }
-
-        public WorkspaceFileMutationResult DeleteWorkspacePath(string path, bool recursive = false)
-        {
-            var allowedPath = PrepareFileWritePath(path) ?? path;
-            EnsureDeleteAllowed(allowedPath, recursive);
-            return fileService.DeletePath(allowedPath, recursive);
-        }
-
-        public WorkspaceTextDiffResult DiffWorkspaceTextFiles(string leftPath, string rightPath, int maxLines = 160)
-        {
-            var allowedLeftPath = PrepareFileReadPath(leftPath) ?? leftPath;
-            var allowedRightPath = PrepareFileReadPath(rightPath) ?? rightPath;
-            return fileService.DiffTextFiles(allowedLeftPath, allowedRightPath, maxLines);
-        }
 
         public WorkspaceCommandExecutionResult GetWorkspaceExecutionBoundary()
             => commandExecutionService.GetExecutionBoundary();
@@ -742,38 +655,6 @@ internal sealed class WorkspaceRuntimePlugin(
             }
         }
 
-        private void EnsureDeleteAllowed(string path, bool recursive)
-        {
-            var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-            if (string.IsNullOrWhiteSpace(normalizedAlias))
-            {
-                return;
-            }
-
-            var allowedAliases = ResolveAllowedExternalTargetAliases()
-                .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
-                .Where(alias => !string.IsNullOrWhiteSpace(alias))
-                .Select(alias => TrimExternalTargetAlias(alias!))
-                .ToArray();
-            var normalizedDeleteAlias = TrimExternalTargetAlias(normalizedAlias);
-
-            foreach (var allowedAlias in allowedAliases)
-            {
-                if (string.Equals(normalizedDeleteAlias, allowedAlias, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException(
-                        $"Refusing to delete grounded external target root '{normalizedDeleteAlias}'. Repair the scaffold in place or delete only explicit generated evidence files.");
-                }
-
-                if (recursive &&
-                    IsProtectedExternalTargetDirectoryDelete(normalizedDeleteAlias, allowedAlias))
-                {
-                    throw new InvalidOperationException(
-                        $"Refusing to recursively delete protected external product directory '{normalizedDeleteAlias}'. Repair source and test files in place instead.");
-                }
-            }
-        }
-
         private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) ||
@@ -883,33 +764,6 @@ internal sealed class WorkspaceRuntimePlugin(
             return segments.Any(segment => string.Equals(segment, ".", StringComparison.Ordinal) || string.Equals(segment, "..", StringComparison.Ordinal))
                 ? string.Empty
                 : normalizedName;
-        }
-
-        private static bool IsProtectedExternalTargetDirectoryDelete(string normalizedDeleteAlias, string allowedAlias)
-        {
-            var allowedAliasPrefix = EnsureExternalAliasTrailingSlash(allowedAlias);
-            if (!normalizedDeleteAlias.StartsWith(allowedAliasPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            var relativePath = normalizedDeleteAlias[allowedAliasPrefix.Length..].Trim('/');
-            var firstSegment = relativePath
-                .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .FirstOrDefault();
-            return !string.IsNullOrWhiteSpace(firstSegment) &&
-                   ProtectedExternalTargetDirectoryNames.Contains(firstSegment);
-        }
-
-        private static string TrimExternalTargetAlias(string alias)
-            => alias.Trim().TrimEnd('/');
-
-        private static string EnsureExternalAliasTrailingSlash(string alias)
-        {
-            var trimmedAlias = TrimExternalTargetAlias(alias);
-            return trimmedAlias.EndsWith('/')
-                ? trimmedAlias
-                : trimmedAlias + "/";
         }
 
         private static string? NormalizeScriptSideEffectManifest(object? sideEffectManifest)

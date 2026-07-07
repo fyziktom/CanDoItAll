@@ -154,16 +154,20 @@ public static class ToolCapabilityRegistry
     {
         var capabilities = new List<ToolCapabilityMetadata>
         {
+            Read(ToolContractCatalog.WorkspaceListDirectory, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceListFiles, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceSearch, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceReadFile, ToolCapabilitySideEffectKind.WorkspaceRead),
             Read(ToolContractCatalog.WorkspaceStatPath, ToolCapabilitySideEffectKind.WorkspaceRead),
+            Read(ToolContractCatalog.WorkspaceHashPath, ToolCapabilitySideEffectKind.WorkspaceRead),
             Mutation(ToolContractCatalog.WorkspaceCreateDirectory, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceWriteFile, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceAppendFile, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceCopyPath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceMovePath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Mutation(ToolContractCatalog.WorkspaceDeletePath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceZipPath, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
+            Mutation(ToolContractCatalog.WorkspaceUnzipArchive, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Read(ToolContractCatalog.WorkspaceDiffText, ToolCapabilitySideEffectKind.WorkspaceRead),
             Mutation(ToolContractCatalog.WorkspaceDotNetNew, ToolCapabilitySideEffectKind.WorkspaceWrite, ToolCapabilityOperationRequirementKind.WorkspaceFileMutation),
             Validation(ToolContractCatalog.WorkspaceDotNetRestore, ToolCapabilitySideEffectKind.LocalProcessExecution, StaticRequirement(ProcessOperationContractNames.RunValidation)),

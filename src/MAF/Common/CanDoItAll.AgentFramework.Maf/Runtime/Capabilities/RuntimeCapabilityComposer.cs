@@ -311,11 +311,17 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         RuntimeCapabilityAccessPlan capabilityAccessPlan)
     {
         var workspaceServices = dependencyResolver.ResolveWorkspaceServices(services, workspaceRoot, workspaceScope);
-        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceServices.FileService, workspaceServices.CommandExecutionService, workspaceServices.ArtifactToolService, workspaceRoot, contextIntent.WorkspaceScope ?? workspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
+        var effectiveWorkspaceScope = contextIntent.WorkspaceScope ?? workspaceScope;
+        var filesystemPlugin = new WorkspaceFilesystemRuntimePlugin(
+            workspaceServices.FileService,
+            workspaceRoot,
+            effectiveWorkspaceScope,
+            workspaceToolAccess);
+        var workspacePlugin = new WorkspaceRuntimePlugin(workspaceServices.CommandExecutionService, workspaceServices.ArtifactToolService, workspaceRoot, effectiveWorkspaceScope, workspaceToolAccess, provider, model, providerRuntimeGateway);
         var spreadsheetPlugin = new WorkspaceSpreadsheetRuntimePlugin(
             ResolveSpreadsheetDocumentService(),
             workspaceRoot,
-            contextIntent.WorkspaceScope ?? workspaceScope,
+            effectiveWorkspaceScope,
             workspaceToolAccess);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(workspaceRoot, services);
@@ -344,6 +350,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             workspaceRoot,
             workspaceScope,
             providerCredentialService,
+            filesystemPlugin,
             workspacePlugin,
             spreadsheetPlugin,
             storagePlugin,

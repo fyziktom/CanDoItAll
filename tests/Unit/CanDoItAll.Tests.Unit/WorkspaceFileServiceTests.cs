@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -192,6 +193,70 @@ public sealed class WorkspaceFileServiceTests
         Assert.Equal(executionRunId, receipt.ExecutionRunId);
         Assert.Equal(string.Empty, receipt.RuntimeToolProviderKey);
         Assert.Equal(string.Empty, receipt.RuntimeToolProviderName);
+    }
+
+    [Fact]
+    public void ZipPath_does_not_delete_existing_destination_when_source_validation_fails()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "archives"));
+        var existingArchivePath = Path.Combine(workspaceRoot, "archives", "docs.zip");
+        File.WriteAllText(existingArchivePath, "existing archive");
+
+        try
+        {
+            var service = new WorkspaceFileService(workspaceRoot);
+
+            var result = service.ZipPath("missing", "archives/docs.zip", overwrite: true);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("existing archive", File.ReadAllText(existingArchivePath));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void UnzipArchive_does_not_extract_partial_files_when_overwrite_conflict_exists()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        var sourceDirectory = Path.Combine(workspaceRoot, "source");
+        var destinationDirectory = Path.Combine(workspaceRoot, "expanded");
+        Directory.CreateDirectory(sourceDirectory);
+        Directory.CreateDirectory(destinationDirectory);
+        File.WriteAllText(Path.Combine(sourceDirectory, "a.txt"), "new a");
+        File.WriteAllText(Path.Combine(sourceDirectory, "b.txt"), "new b");
+        File.WriteAllText(Path.Combine(destinationDirectory, "b.txt"), "existing b");
+        ZipFile.CreateFromDirectory(sourceDirectory, Path.Combine(workspaceRoot, "archive.zip"));
+
+        try
+        {
+            var service = new WorkspaceFileService(workspaceRoot);
+
+            var result = service.UnzipArchive("archive.zip", "expanded", overwrite: false);
+
+            Assert.False(result.Succeeded);
+            Assert.False(File.Exists(Path.Combine(destinationDirectory, "a.txt")));
+            Assert.Equal("existing b", File.ReadAllText(Path.Combine(destinationDirectory, "b.txt")));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     private static ExecutionRunRecord CreateRun()

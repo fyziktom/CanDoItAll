@@ -2675,6 +2675,10 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Theory]
+    [InlineData("workspace_list_directory", ToolInvocationClassification.Read)]
+    [InlineData("workspace_hash_path", ToolInvocationClassification.Read)]
+    [InlineData("workspace_zip_path", ToolInvocationClassification.Mutation)]
+    [InlineData("workspace_unzip_archive", ToolInvocationClassification.Mutation)]
     [InlineData("workspace_write_file", ToolInvocationClassification.Mutation)]
     [InlineData("workspace_write_spreadsheet", ToolInvocationClassification.Mutation)]
     [InlineData("workspace_read_spreadsheet_range", ToolInvocationClassification.Read)]

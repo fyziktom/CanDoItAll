@@ -8,6 +8,24 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
     private readonly List<string> externalRoots = [];
 
     [Fact]
+    public void ListDirectory_returns_direct_children_without_recursive_traversal()
+    {
+        var appRoot = CreateDirectory("apps", "FolderShape");
+        WriteFile(appRoot, "Program.cs", "Console.WriteLine(\"ok\");");
+        WriteFile(appRoot, "Features", "ReportService.cs", "public sealed class ReportService {}");
+        var service = CreateService();
+
+        var result = service.ListDirectory("apps/FolderShape", 20);
+
+        Assert.True(result.Succeeded, result.Message);
+        Assert.Equal("workspace_list_directory", result.Receipt.Operation);
+        Assert.Equal("*", result.SearchPattern);
+        Assert.Contains(result.Entries, item => string.Equals(item.RelativePath, "apps/FolderShape/Program.cs", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Entries, item => string.Equals(item.RelativePath, "apps/FolderShape/Features", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(result.Entries, item => string.Equals(item.RelativePath, "apps/FolderShape/Features/ReportService.cs", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void ListFiles_supports_recursive_globstar_all_pattern()
     {
         var appRoot = CreateDirectory("apps", "TrailReport");
