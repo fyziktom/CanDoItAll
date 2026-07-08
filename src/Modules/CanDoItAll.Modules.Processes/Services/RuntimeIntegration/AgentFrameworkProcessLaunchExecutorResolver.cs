@@ -151,7 +151,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 ResolveAssignmentReason(profileAssignment, executorOverride, candidate, roleQuery, requestedExecutorKind)));
         }
 
-        if (findings.Count == 0)
+        if (findings.All(finding => finding.Severity != ProcessLaunchReadinessSeverity.Error))
         {
             findings.Add(new ProcessLaunchReadinessFinding(
                 ProcessLaunchReadinessSeverity.Info,

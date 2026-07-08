@@ -111,6 +111,9 @@ public sealed class ProcessLaunchExecutorResolverTests
             finding.Code == "process.launch.capability_suppressed" &&
             finding.Message.Contains("CapabilityKind:Skill", StringComparison.Ordinal) &&
             finding.Message.Contains("Management-only", StringComparison.Ordinal));
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Info &&
+            finding.Code == "process.launch.readiness_ok");
     }
 
     [Fact]

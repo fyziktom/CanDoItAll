@@ -517,8 +517,18 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             return;
         }
 
+        var requiresSkillScriptApproval =
+            !suppressApprovalRequirements &&
+            capabilities.Any(composition.SkillBuilder.RequiresSkillScriptApproval);
+
         var skillsBuilder = new AgentSkillsProviderBuilder()
-            .UseFileScriptRunner(composition.ToolBuilder.RunSkillScriptAsync);
+            .UseFileScriptRunner(composition.ToolBuilder.RunSkillScriptAsync)
+            .UseOptions(options =>
+            {
+                options.DisableLoadSkillApproval = true;
+                options.DisableReadSkillResourceApproval = true;
+                options.DisableRunSkillScriptApproval = !requiresSkillScriptApproval;
+            });
 
         foreach (var skillRoot in skillRoots)
         {
@@ -535,9 +545,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             skillsBuilder.UseSkills(serviceSkills);
         }
 
-        if (!suppressApprovalRequirements && capabilities.Any(composition.SkillBuilder.RequiresSkillScriptApproval))
+        if (requiresSkillScriptApproval)
         {
-            skillsBuilder.UseScriptApproval();
             composition.State.HasApprovalTools = true;
         }
 

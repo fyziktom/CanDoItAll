@@ -255,10 +255,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var catalog = document.ToCatalog();
             var executionState = document.ToExecutionState();
             var agent = EnsureAgentExists(catalog, agentId);
-            if (agent.ProviderProfileId != provider.Id)
+            if (!agent.ProviderProfileId.HasValue)
             {
                 throw new InvalidOperationException("The selected agent does not have a provider profile.");
             }
+
+            agent = CreateProviderCompatibleRuntimeAgent(agent, provider);
 
             var existingSession = chatSessionId.HasValue
                 ? EnsureAgentOwnsSession(executionState, agentId, chatSessionId.Value)
@@ -331,10 +333,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         var catalog = await store.LoadCatalogAsync(cancellationToken);
         var agent = EnsureAgentExists(catalog, agentId);
-        if (agent.ProviderProfileId != provider.Id)
+        if (!agent.ProviderProfileId.HasValue)
         {
             throw new InvalidOperationException("The selected agent does not have a provider profile.");
         }
+
+        agent = CreateProviderCompatibleRuntimeAgent(agent, provider);
 
         var existingSession = chatSessionId.HasValue
             ? EnsureAgentOwnsSession(

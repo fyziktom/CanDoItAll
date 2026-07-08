@@ -1,6 +1,7 @@
 {
   "capabilityKeys": [
     "concrete-deliverable-delivery-inline-skill",
+    "development-image-analysis-guidance-inline-skill",
     "frontend-skill",
     "workspace-list-files",
     "workspace-search",

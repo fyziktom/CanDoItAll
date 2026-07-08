@@ -932,6 +932,66 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeSkillsProvider_disables_read_only_and_script_approval_when_script_approval_is_not_required()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-skill-approval-test-" + Guid.NewGuid().ToString("N"));
+        var skillRoot = Path.Combine(workspaceRoot, "skills", "sample");
+        Directory.CreateDirectory(skillRoot);
+        await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
+        try
+        {
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var state = await InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateSkillCapability("skills/sample")],
+                AgentRuntimeContextIntent.Empty,
+                suppressApprovalRequirements: false);
+
+            var options = ReadAgentSkillsProviderOptions(state);
+            Assert.True(options.DisableLoadSkillApproval);
+            Assert.True(options.DisableReadSkillResourceApproval);
+            Assert.True(options.DisableRunSkillScriptApproval);
+            Assert.False(ReadHasApprovalTools(state));
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeSkillsProvider_keeps_script_approval_when_capability_requires_it()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-skill-script-approval-test-" + Guid.NewGuid().ToString("N"));
+        var skillRoot = Path.Combine(workspaceRoot, "skills", "sample");
+        Directory.CreateDirectory(skillRoot);
+        await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
+        try
+        {
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var state = await InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateSkillCapability("skills/sample", "{\"scriptExecution\":{\"approvalRequired\":true}}")],
+                AgentRuntimeContextIntent.Empty,
+                suppressApprovalRequirements: false);
+
+            var options = ReadAgentSkillsProviderOptions(state);
+            Assert.True(options.DisableLoadSkillApproval);
+            Assert.True(options.DisableReadSkillResourceApproval);
+            Assert.False(options.DisableRunSkillScriptApproval);
+            Assert.True(ReadHasApprovalTools(state));
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_reports_provider_failures_with_provider_type()
     {
         var services = new ServiceCollection();
@@ -961,6 +1021,25 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 state.GetType().GetProperty("RuntimeToolMetadata", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
             .ToList();
 
+    private static IReadOnlyList<AIContextProvider> ReadContextProviders(object state)
+        => Assert.IsAssignableFrom<IEnumerable<AIContextProvider>>(
+                state.GetType().GetProperty("ContextProviders", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
+            .ToList();
+
+    private static AgentSkillsProviderOptions ReadAgentSkillsProviderOptions(object state)
+    {
+        var provider = Assert.Single(ReadContextProviders(state), contextProvider =>
+            string.Equals(contextProvider.GetType().FullName, typeof(AgentSkillsProvider).FullName, StringComparison.Ordinal));
+
+        var options = EnumerateInstanceFields(provider.GetType())
+            .Where(field => typeof(AgentSkillsProviderOptions).IsAssignableFrom(field.FieldType))
+            .Select(field => field.GetValue(provider))
+            .OfType<AgentSkillsProviderOptions>()
+            .SingleOrDefault();
+
+        return Assert.IsType<AgentSkillsProviderOptions>(options);
+    }
+
     private static EffectiveCapabilitySet ReadEffectiveCapabilities(object state)
         => Assert.IsType<EffectiveCapabilitySet>(
             state.GetType().GetProperty("EffectiveCapabilities", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
@@ -979,6 +1058,21 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         => Assert.IsAssignableFrom<IEnumerable<IAsyncDisposable>>(
                 state.GetType().GetProperty("AsyncDisposables", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
             .ToList();
+
+    private static bool ReadHasApprovalTools(object state)
+        => Assert.IsType<bool>(
+            state.GetType().GetProperty("HasApprovalTools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+
+    private static IEnumerable<FieldInfo> EnumerateInstanceFields(Type type)
+    {
+        for (var currentType = type; currentType is not null; currentType = currentType.BaseType)
+        {
+            foreach (var field in currentType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                yield return field;
+            }
+        }
+    }
 
     private static AgentRuntimeToolProviderDescriptor CreateDescriptor(string providerKey)
         => new(
@@ -1015,7 +1109,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentRuntimeContextIntent contextIntent,
-        List<string>? progressMessages = null)
+        List<string>? progressMessages = null,
+        bool suppressApprovalRequirements = true)
     {
         return await composer.CreateCapabilityStateCoreAsync(
             agent,
@@ -1029,7 +1124,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 return Task.CompletedTask;
             },
             CancellationToken.None,
-            true,
+            suppressApprovalRequirements,
             WorkspaceScopeDescriptor.Sandbox,
             contextIntent);
     }
@@ -1109,7 +1204,9 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             WorkspaceScope: WorkspaceScopeDescriptor.Sandbox,
             AllowedOperations: allowedOperations);
 
-    private static CapabilityCatalogItem CreateSkillCapability(string endpointOrPath)
+    private static CapabilityCatalogItem CreateSkillCapability(
+        string endpointOrPath,
+        string configurationJson = "{}")
         => new(
             Id: Guid.NewGuid(),
             Kind: CapabilityKind.Skill,
@@ -1117,7 +1214,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             Name: "Sample skill",
             Description: "Sample skill.",
             EndpointOrPath: endpointOrPath,
-            ConfigurationJson: "{}",
+            ConfigurationJson: configurationJson,
             ProofStatus: CapabilityProofStatus.Verified,
             ProofNotes: string.Empty,
             LastVerifiedAtUtc: DateTimeOffset.UtcNow,
