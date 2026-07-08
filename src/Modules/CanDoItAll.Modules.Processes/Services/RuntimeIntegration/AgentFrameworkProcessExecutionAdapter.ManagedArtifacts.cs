@@ -623,6 +623,55 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 
+    private IReadOnlyDictionary<ArtifactSlotId, string> BuildProducedArtifactContentHashes(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        out ProcessCompletionIssue? issue)
+    {
+        issue = null;
+        if (assignment.ProducedArtifactSlotIds.Count == 0)
+        {
+            return new Dictionary<ArtifactSlotId, string>();
+        }
+
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        if (!output.EvidenceRefs.Any(evidenceRef =>
+                string.Equals(
+                    NormalizeManagedArtifactRef(evidenceRef),
+                    NormalizeManagedArtifactRef(primaryRef),
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            return new Dictionary<ArtifactSlotId, string>();
+        }
+
+        var readResult = workspaceFiles.ReadTextFile(primaryRef, maxCharacters: 200000);
+        if (!readResult.Succeeded)
+        {
+            issue = CreateManagedArtifactReadbackIssue(assignment, primaryRef, readResult.Message);
+            return new Dictionary<ArtifactSlotId, string>();
+        }
+
+        var contentHash = ComputeHash(readResult.Content);
+        return assignment.ProducedArtifactSlotIds
+            .Distinct()
+            .ToDictionary(slotId => slotId, _ => contentHash);
+    }
+
+    private static ProcessCompletionIssue CreateManagedArtifactReadbackIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string primaryRef,
+        string readbackMessage)
+    {
+        var summary = $"Step '{assignment.StepKey}' produced managed artifact evidence '{primaryRef}', but the runtime could not read it back to compute a content-grounded artifact hash: {readbackMessage}";
+        return new ProcessCompletionIssue(
+            "process.adapter.managed_artifact_readback_failed",
+            summary,
+            $"{assignment.RunId.Value:D}:{assignment.StepInstanceId.Value:D}:{primaryRef}:{readbackMessage}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
     private sealed record ManagedOutcomeArtifactMaterialization(
         ProcessStepOutcomeResult Output,
         IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts,
@@ -644,13 +693,5 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             ProcessCompletionIssue issue)
             => new(output, toolReceipts, issue);
     }
-
-    private sealed record CompletedSubprocessOutcome(
-        ProcessRunId ChildRunId,
-        DateTimeOffset ChildCompletedAtUtc,
-        IReadOnlyList<string> EvidenceRefs,
-        string RawOutputHash,
-        Guid SyntheticExecutionRunId,
-        IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts);
 
 }

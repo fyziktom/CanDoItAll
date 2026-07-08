@@ -42,6 +42,7 @@ internal static class ProcessTemplateStepSummaryBuilder
             CanDoItAll.Processes.Contracts.ProcessCapabilityScope.Normalize(step.CapabilityScope),
             NormalizeOptional(step.SubprocessProcessKey, string.Empty),
             NormalizeOptional(step.SubprocessDefinitionSnapshotName, string.Empty),
+            step.SubprocessContract,
             step.BranchOutcomes
                 .Select((outcome, index) => CreateBranchOutcomeSummary(stepKey, outcome, index))
                 .ToArray(),

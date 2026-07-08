@@ -54,6 +54,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessRuntimeBranchSignalRouter>(serviceProvider => serviceProvider.GetRequiredService<ProcessRuntimeBranchSignalApplicationService>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessPromptCompositionDriver, AgentFrameworkProcessStepBriefBuilder>());
         services.TryAddScoped<IProcessStepBriefBuilder, DriverProcessStepBriefBuilder>();
+        services.TryAddScoped<IProcessRuntimeToolPreflightService, ProcessRuntimeToolPreflightService>();
+        services.TryAddScoped<IParentSubprocessArtifactBridge, ParentSubprocessArtifactBridge>();
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
         services.TryAddScoped<IProcessStepExecutionDriver>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());

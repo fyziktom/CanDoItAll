@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -32,7 +33,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         ProcessStepOutcomeResult output,
         string rawOutputHash,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
-        Guid? currentExecutionRunId = null)
+        Guid? currentExecutionRunId = null,
+        IReadOnlyDictionary<ArtifactSlotId, string>? producedArtifactContentHashes = null)
     {
         output = RemoveNonCitableSourceMetadataFromOutcome(output);
 
@@ -202,7 +204,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 .Select(slotId => new ProducedArtifactRef(
                     ArtifactInstanceId.New(),
                     slotId,
-                    ComputeHash($"{rawOutputHash}:{assignment.StepInstanceId}:{slotId}")))
+                    ResolveProducedArtifactContentHash(
+                        slotId,
+                        producedArtifactContentHashes,
+                        rawOutputHash,
+                        assignment.StepInstanceId)))
                 .ToArray()
             : [];
         IReadOnlyList<RequestedArtifactRef> requestedArtifacts = outcome == StrategyOutcome.NeedsManager
@@ -364,6 +370,22 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
 
         branchOutcomeKey = declaredMatches[0];
         return true;
+    }
+
+    private static string ResolveProducedArtifactContentHash(
+        ArtifactSlotId slotId,
+        IReadOnlyDictionary<ArtifactSlotId, string>? producedArtifactContentHashes,
+        string rawOutputHash,
+        ProcessStepInstanceId stepInstanceId)
+    {
+        if (producedArtifactContentHashes is not null &&
+            producedArtifactContentHashes.TryGetValue(slotId, out var contentHash) &&
+            !string.IsNullOrWhiteSpace(contentHash))
+        {
+            return contentHash;
+        }
+
+        return ComputeHash($"{rawOutputHash}:{stepInstanceId}:{slotId}");
     }
 
     private static bool TryReadBranchOutcomeDecisionSection(
@@ -946,6 +968,34 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                    StringComparer.OrdinalIgnoreCase);
     }
 
+    private static IReadOnlyList<string> ResolvePreflightRequiredRuntimeToolNames(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepExecutionContract stepContract)
+    {
+        return stepContract.RequiredRuntimeToolNames
+            .Concat(ProcessRequiredToolReceiptGate.ResolveRequiredRuntimeToolNames(assignment.CapabilityScope))
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static ProcessCompletionIssue CreateRuntimeToolPreflightIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeToolPreflightResult result)
+    {
+        var missingSummary = result.MissingToolNames.Count == 0
+            ? "unknown"
+            : string.Join(", ", result.MissingToolNames);
+        return new ProcessCompletionIssue(
+            "process.adapter.runtime_tool_preflight_failed",
+            $"Step '{assignment.StepKey}' cannot be dispatched because required runtime tool(s) are not composed for the exact process-step context: {missingSummary}. {result.Summary}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-tool-preflight:{missingSummary}:{result.Summary}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
     private static bool HasChildProcessEvidenceRef(
         ProcessRuntimeStepAssignment assignment,
         IReadOnlyList<string> evidenceRefs)
@@ -1131,6 +1181,57 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.Unknown,
             ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessContractMissingIssue(
+        ProcessRuntimeStepAssignment assignment)
+    {
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_contract_missing",
+            $"Step '{assignment.StepKey}' is a subprocess parent, but the runtime assignment does not carry a typed subprocess contract and no compatibility contract could be resolved. Rework the run metadata or relaunch from a hardened template before retrying.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-contract-missing",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessChildNoGoIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRunId childRunId,
+        IReadOnlyList<string> evidenceRefs)
+    {
+        var evidenceSummary = evidenceRefs.Count == 0
+            ? "no no-go refs"
+            : string.Join("; ", evidenceRefs);
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_child_nogo_output",
+            $"Step '{assignment.StepKey}' has completed child run '{childRunId.Value:D}', but the child produced a typed no-go output. Treat this as blocker evidence, not accepted parent proof. No-go evidence: {evidenceSummary}.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-nogo:{childRunId}:{evidenceSummary}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessChildAcceptedOutputMissingIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRunId childRunId,
+        ProcessSubprocessContract contract)
+    {
+        var acceptedOutputs = contract.AcceptedChildOutputs.Count == 0
+            ? "none"
+            : string.Join(
+                ", ",
+                contract.AcceptedChildOutputs.Select(output =>
+                    string.IsNullOrWhiteSpace(output.ArtifactExpectationKey)
+                        ? output.StepKey
+                        : $"{output.StepKey}/{output.ArtifactExpectationKey}"));
+        return new ProcessCompletionIssue(
+            "process.adapter.subprocess_child_accepted_output_missing",
+            $"Step '{assignment.StepKey}' has completed child run '{childRunId.Value:D}', but none of the typed accepted child outputs were materialized. Expected one of: {acceptedOutputs}. Do not complete the parent from a generic child folder.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-accepted-output-missing:{childRunId}:{acceptedOutputs}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
     private static bool HasToolReceipt(

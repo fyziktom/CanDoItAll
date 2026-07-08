@@ -1069,7 +1069,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             Outcome = outcome,
             ResultSummary = response.PendingApprovals.Count > 0
                 ? $"Awaiting approval for {response.PendingApprovals.Count} tool request(s)."
-                : CreateExecutionSummary(response.ResponseText)
+                : CreateExecutionSummary(run, response)
         };
     }
 
@@ -1861,6 +1861,48 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             return false;
         }
+    }
+
+    private static string CreateExecutionSummary(
+        ExecutionRunRecord run,
+        AgentRuntimeResponse response)
+    {
+        if (IsProcessStepOutcomeContract(run) &&
+            TryCreateProcessStepOutcomeExecutionSummary(response.ResponseText, out var summary))
+        {
+            return summary;
+        }
+
+        return CreateExecutionSummary(response.ResponseText);
+    }
+
+    private static bool IsProcessStepOutcomeContract(ExecutionRunRecord run)
+    {
+        return string.Equals(
+                   run.StructuredOutputContractKey,
+                   AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
+                   StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(
+                   run.StructuredOutputTypeName,
+                   nameof(ProcessStepOutcomeResult),
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryCreateProcessStepOutcomeExecutionSummary(
+        string responseText,
+        out string summary)
+    {
+        summary = string.Empty;
+        var validation = AgentOutputJson.DeserializeAndValidate(
+            responseText,
+            new ProcessStepOutcomeValidator());
+        if (!validation.Succeeded || validation.Output is not ProcessStepOutcomeResult output)
+        {
+            return false;
+        }
+
+        summary = JsonSerializer.Serialize(output, AgentOutputJson.SerializerOptions);
+        return true;
     }
 
     private static void EnsureExecutionRunExists(

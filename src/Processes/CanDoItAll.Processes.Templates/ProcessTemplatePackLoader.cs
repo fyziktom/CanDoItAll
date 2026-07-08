@@ -37,7 +37,9 @@ public sealed class ProcessTemplatePackLoader
             Require(entry.RelativePath, "process relative path", loadedPack.RootPath),
             DefinitionFileName));
 
-        return ReadJson(definitionPath, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
+        var definition = ReadJson(definitionPath, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
+        ValidateDefinition(definition, definitionPath);
+        return definition;
     }
 
     public IReadOnlyList<ProcessTemplateLiveRunProfileDocument> LoadLiveRunProfiles()
@@ -73,6 +75,7 @@ public sealed class ProcessTemplatePackLoader
             var relativePath = Require(entry.RelativePath, "process relative path", manifestPath);
             var definitionPath = Path.GetFullPath(Path.Combine(root, relativePath, DefinitionFileName));
             var definition = ReadJson(definitionPath, ProcessTemplateJsonContext.Default.ProcessTemplateDefinitionDocument);
+            ValidateDefinition(definition, definitionPath);
             var key = Require(definition.Key, "definition key", definitionPath);
             if (!string.Equals(key, Require(entry.Key, "process key", manifestPath), StringComparison.OrdinalIgnoreCase))
             {
@@ -153,6 +156,104 @@ public sealed class ProcessTemplatePackLoader
             roles,
             roleTemplateActions,
             stepRoleBindings);
+    }
+
+    private static void ValidateDefinition(
+        ProcessTemplateDefinitionDocument definition,
+        string definitionPath)
+    {
+        foreach (var step in definition.Steps)
+        {
+            if (!string.Equals(step.StepKind, "Subprocess", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(step.SubprocessProcessKey))
+            {
+                continue;
+            }
+
+            ValidateSubprocessContract(definition, step, definitionPath);
+        }
+    }
+
+    private static void ValidateSubprocessContract(
+        ProcessTemplateDefinitionDocument definition,
+        ProcessTemplateDefinitionStepDocument step,
+        string definitionPath)
+    {
+        var stepPath = $"{definitionPath}:{definition.Key}.{step.Key}";
+        var contract = step.SubprocessContract
+            ?? throw new InvalidOperationException($"Process template subprocess step '{stepPath}' must define SubprocessContract.");
+        var childDefinitionKey = Require(contract.DefinitionKey, "subprocess contract definition key", stepPath);
+        var stepChildDefinitionKey = Require(step.SubprocessProcessKey, "subprocess step child process key", stepPath);
+        if (!string.Equals(childDefinitionKey, stepChildDefinitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' contract DefinitionKey '{childDefinitionKey}' does not match SubprocessProcessKey '{stepChildDefinitionKey}'.");
+        }
+
+        if (contract.LaunchMode != ProcessSubprocessLaunchMode.RuntimeOwned)
+        {
+            throw new InvalidOperationException($"Process template subprocess step '{stepPath}' must use RuntimeOwned subprocess launch mode.");
+        }
+
+        if (contract.MaterializationMode != ProcessSubprocessMaterializationMode.RuntimeSynthesizedParentHandoff)
+        {
+            throw new InvalidOperationException($"Process template subprocess step '{stepPath}' must use RuntimeSynthesizedParentHandoff materialization mode.");
+        }
+
+        var parentExpectationKey = Require(
+            contract.ParentProducedArtifactExpectationKey,
+            "subprocess parent produced artifact expectation key",
+            stepPath);
+        if (step.ArtifactExpectations.All(artifact =>
+                !string.Equals(artifact.Key, parentExpectationKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' contract parent expectation '{parentExpectationKey}' does not match any artifact expectation on the step.");
+        }
+
+        if (contract.AcceptedChildOutputs.Count == 0 && contract.AlreadySatisfiedOutput is null)
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' must define at least one accepted child output or an AlreadySatisfiedOutput.");
+        }
+
+        ValidateChildOutputs(contract.AcceptedChildOutputs, stepPath, "accepted child output");
+        ValidateChildOutputs(contract.NoGoChildOutputs, stepPath, "no-go child output");
+        if (contract.AlreadySatisfiedOutput is not null)
+        {
+            ValidateChildOutput(contract.AlreadySatisfiedOutput, stepPath, "already-satisfied output");
+        }
+
+        if (step.AllowsManualSkip && contract.AlreadySatisfiedOutput is null)
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' allows manual skip but does not define a typed AlreadySatisfiedOutput.");
+        }
+    }
+
+    private static void ValidateChildOutputs(
+        IReadOnlyList<ProcessSubprocessChildOutputContract> outputs,
+        string stepPath,
+        string outputKind)
+    {
+        foreach (var output in outputs)
+        {
+            ValidateChildOutput(output, stepPath, outputKind);
+        }
+    }
+
+    private static void ValidateChildOutput(
+        ProcessSubprocessChildOutputContract output,
+        string stepPath,
+        string outputKind)
+    {
+        Require(output.StepKey, $"{outputKind} step key", stepPath);
+        if (string.IsNullOrWhiteSpace(output.ArtifactExpectationKey) &&
+            string.IsNullOrWhiteSpace(output.ArtifactTitle))
+        {
+            throw new InvalidOperationException(
+                $"Process template subprocess step '{stepPath}' {outputKind} must define ArtifactExpectationKey or ArtifactTitle.");
+        }
     }
 
     private static ProcessTemplateDefinitionRoleSummary CreateRoleSummary(
@@ -438,6 +539,7 @@ public sealed record ProcessTemplateDefinitionStepAuthoringSummary(
     ProcessCapabilityScope CapabilityScope,
     string SubprocessProcessKey,
     string SubprocessDefinitionSnapshotName,
+    ProcessSubprocessContract? SubprocessContract,
     IReadOnlyList<ProcessTemplateDefinitionStepBranchOutcomeSummary> BranchOutcomes,
     IReadOnlyList<ProcessTemplateDefinitionStepRoleBindingSummary> RoleBindings,
     IReadOnlyList<ProcessTemplateDefinitionStepArtifactExpectationSummary> ArtifactExpectations);
@@ -671,6 +773,8 @@ public sealed class ProcessTemplateDefinitionStepDocument
     public string SubprocessProcessKey { get; set; } = string.Empty;
 
     public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
+
+    public ProcessSubprocessContract? SubprocessContract { get; set; }
 
     public double CanvasX { get; set; }
 

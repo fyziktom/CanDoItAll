@@ -124,6 +124,10 @@ public sealed class ProcessRuntimeStepEntity
 
     public string RequiredRuntimeToolNamesJson { get; set; } = "[]";
 
+    public string ArtifactDescriptorsJson { get; set; } = "[]";
+
+    public string SubprocessArtifactMappingsJson { get; set; } = "[]";
+
     public Guid? ActiveClaimToken { get; set; }
 
     public Guid? CompletedResultKey { get; set; }

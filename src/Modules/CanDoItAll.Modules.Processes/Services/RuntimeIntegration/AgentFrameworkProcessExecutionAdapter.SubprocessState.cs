@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -27,44 +28,16 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class AgentFrameworkProcessExecutionAdapter
 {
-    internal static async ValueTask<ProcessRunId?> TryResolvePendingChildRunAsync(
+    internal static ValueTask<ProcessRunId?> TryResolvePendingChildRunAsync(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         IProcessRuntimeStateStore stateStore,
         CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(assignment);
-        ArgumentNullException.ThrowIfNull(output);
-        ArgumentNullException.ThrowIfNull(stateStore);
-
-        if (output.Status is not (ProcessStepOutcomeStatus.Blocked or ProcessStepOutcomeStatus.WaitingApproval) ||
-            !CanWaitOnControlledChildRun(assignment))
-        {
-            return null;
-        }
-
-        var currentState = await stateStore.LoadAsync(assignment.RunId, cancellationToken).ConfigureAwait(false);
-        if (currentState is null)
-        {
-            return null;
-        }
-
-        foreach (var candidateRunId in ExtractReferencedRunIds(output))
-        {
-            var pendingRunId = await TryResolveNonTerminalProcessTreeRunAsync(
-                assignment,
-                currentState,
-                candidateRunId,
-                stateStore,
-                cancellationToken).ConfigureAwait(false);
-            if (pendingRunId is not null)
-            {
-                return pendingRunId;
-            }
-        }
-
-        return null;
-    }
+        => ParentSubprocessArtifactBridge.TryResolvePendingChildRunAsync(
+            assignment,
+            output,
+            stateStore,
+            cancellationToken);
 
     private static ProcessRuntimeDispatchDeferredException CreatePendingChildRunDeferredException(
         ProcessRuntimeStepAssignment assignment,
@@ -75,217 +48,16 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             pendingChildRunId);
     }
 
-    private async ValueTask<CompletedSubprocessOutcome?> TryResolveExistingCompletedChildOutcomeAsync(
+    internal static ValueTask<ProcessRunId?> TryResolveExistingPendingChildRunAsync(
         ProcessRuntimeStepAssignment assignment,
         IProcessRuntimeStepAssignmentStore assignmentStore,
         IProcessRuntimeStateStore stateStore,
         CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(assignment);
-        ArgumentNullException.ThrowIfNull(assignmentStore);
-        ArgumentNullException.ThrowIfNull(stateStore);
-
-        if (!RequiresSubprocessLaunch(assignment))
-        {
-            return null;
-        }
-
-        var currentState = await stateStore.LoadAsync(assignment.RunId, cancellationToken).ConfigureAwait(false);
-        if (currentState is null)
-        {
-            return null;
-        }
-
-        var childAssignments = await assignmentStore
-            .FindByLaunchVariablesAsync(
-                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
-                    assignment.RunId,
-                    assignment.StepInstanceId),
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        foreach (var childGroup in childAssignments
-            .GroupBy(childAssignment => childAssignment.RunId)
-            .OrderByDescending(group => group.Max(childAssignment => childAssignment.CreatedAtUtc)))
-        {
-            var childRunId = childGroup.Key;
-            var childState = await stateStore.LoadAsync(childRunId, cancellationToken).ConfigureAwait(false);
-            if (childState is null ||
-                !IsSameProcessTree(currentState, childState))
-            {
-                continue;
-            }
-
-            if (childState.Status != ProcessRuntimeStatus.Completed)
-            {
-                return null;
-            }
-
-            var evidenceRefs = ResolveCompletedChildEvidenceRefs(childRunId, childGroup);
-            var syntheticExecutionRunId = CreateSyntheticSubprocessExecutionRunId(
-                assignment,
-                childRunId,
-                childState.UpdatedAtUtc);
-            var rawOutputHash = ComputeHash(
-                $"{assignment.RunId}:{assignment.StepInstanceId}:completed-child:{childRunId}:{childState.UpdatedAtUtc:O}:{string.Join("|", evidenceRefs)}");
-            return new CompletedSubprocessOutcome(
-                childRunId,
-                childState.UpdatedAtUtc,
-                evidenceRefs,
-                rawOutputHash,
-                syntheticExecutionRunId,
-                [CreateSubprocessOutcomeReceipt(syntheticExecutionRunId, assignment, childRunId, evidenceRefs)]);
-        }
-
-        return null;
-    }
-
-    internal static async ValueTask<ProcessRunId?> TryResolveExistingPendingChildRunAsync(
-        ProcessRuntimeStepAssignment assignment,
-        IProcessRuntimeStepAssignmentStore assignmentStore,
-        IProcessRuntimeStateStore stateStore,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(assignment);
-        ArgumentNullException.ThrowIfNull(assignmentStore);
-        ArgumentNullException.ThrowIfNull(stateStore);
-
-        if (!CanWaitOnControlledChildRun(assignment))
-        {
-            return null;
-        }
-
-        var currentState = await stateStore.LoadAsync(assignment.RunId, cancellationToken).ConfigureAwait(false);
-        if (currentState is null)
-        {
-            return null;
-        }
-
-        var childAssignments = await assignmentStore
-            .FindByLaunchVariablesAsync(
-                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
-                    assignment.RunId,
-                    assignment.StepInstanceId),
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        foreach (var candidateRunId in childAssignments
-            .OrderByDescending(childAssignment => childAssignment.CreatedAtUtc)
-            .Select(childAssignment => childAssignment.RunId)
-            .Distinct())
-        {
-            var pendingRunId = await TryResolveNonTerminalProcessTreeRunAsync(
-                assignment,
-                currentState,
-                candidateRunId,
-                stateStore,
-                cancellationToken).ConfigureAwait(false);
-            if (pendingRunId is not null)
-            {
-                return pendingRunId;
-            }
-        }
-
-        return null;
-    }
-
-    private IReadOnlyList<string> ResolveCompletedChildEvidenceRefs(
-        ProcessRunId childRunId,
-        IEnumerable<ProcessRuntimeStepAssignment> childAssignments)
-    {
-        var childManagedArtifactRoot = $"artifacts/process-runs/{childRunId.Value:D}";
-        var refs = new List<string>();
-        foreach (var childAssignment in childAssignments.OrderBy(childAssignment => childAssignment.CreatedAtUtc))
-        {
-            if (string.IsNullOrWhiteSpace(childAssignment.StepKey))
-            {
-                continue;
-            }
-
-            var candidateRef = $"{childManagedArtifactRoot}/steps/{SanitizeManagedArtifactPathSegment(childAssignment.StepKey)}.md";
-            var stat = workspaceFiles.StatPath(candidateRef);
-            if (stat.Exists)
-            {
-                refs.Add(candidateRef);
-            }
-        }
-
-        if (refs.Count == 0)
-        {
-            refs.Add($"{childManagedArtifactRoot}/steps");
-        }
-
-        return refs
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static ProcessStepOutcomeResult BuildCompletedSubprocessProcessStepOutcome(
-        ProcessRuntimeStepAssignment assignment,
-        CompletedSubprocessOutcome completedChildOutcome)
-    {
-        var childRunId = completedChildOutcome.ChildRunId.Value.ToString("D");
-        var childCompletedAt = completedChildOutcome.ChildCompletedAtUtc.UtcDateTime.ToString("u", CultureInfo.InvariantCulture);
-        return new ProcessStepOutcomeResult
-        {
-            Status = ProcessStepOutcomeStatus.Completed,
-            Reason = $"Matching child process run {childRunId} completed at {childCompletedAt}; the parent subprocess step is completed from managed child evidence.",
-            BranchOutcomeKey = string.Empty,
-            BranchOutcomeTitle = string.Empty,
-            EvidenceRefs = completedChildOutcome.EvidenceRefs,
-            NextActions = [],
-            HumanReadableSummaryMarkdown = $"""
-            ## Subprocess handoff completed
-
-            The process runtime completed parent step `{assignment.StepKey}` from matching completed child process run `{childRunId}`.
-
-            ## Child evidence
-
-            {FormatMarkdownEvidenceList(completedChildOutcome.EvidenceRefs)}
-            """
-        };
-    }
-
-    private static string FormatMarkdownEvidenceList(IReadOnlyList<string> evidenceRefs)
-    {
-        if (evidenceRefs.Count == 0)
-        {
-            return "- No child managed evidence refs were available.";
-        }
-
-        return string.Join(
-            Environment.NewLine,
-            evidenceRefs.Select(evidenceRef => $"- `{evidenceRef}`"));
-    }
-
-    private static ToolExecutionReceiptRecord CreateSubprocessOutcomeReceipt(
-        Guid syntheticExecutionRunId,
-        ProcessRuntimeStepAssignment assignment,
-        ProcessRunId childRunId,
-        IReadOnlyList<string> evidenceRefs)
-    {
-        var childDefinitionKey = ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessDefinitionKey(
-            assignment.LaunchVariables,
-            out var definitionKey)
-            ? definitionKey
-            : "unknown";
-        var evidenceSummary = evidenceRefs.Count == 0
-            ? "no child evidence refs"
-            : string.Join("; ", evidenceRefs);
-        return new ToolExecutionReceiptRecord(
-            Guid.NewGuid(),
-            syntheticExecutionRunId,
-            "process-runtime",
-            SubprocessLaunchToolName,
-            "ProcessRuntime",
-            "NotRequired",
-            "Process runtime resolved a previously completed matching child subprocess.",
-            $"definitionKey={childDefinitionKey}; parentRunId={assignment.RunId.Value:D}; parentStepId={assignment.StepInstanceId.Value:D}; childRunId={childRunId.Value:D}",
-            ".",
-            $"Succeeded: matching child run {childRunId.Value:D} completed with evidence refs: {evidenceSummary}",
-            DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
-    }
+        => ParentSubprocessArtifactBridge.TryResolveExistingPendingChildRunAsync(
+            assignment,
+            assignmentStore,
+            stateStore,
+            cancellationToken);
 
     private static ToolExecutionReceiptRecord CreateCoordinatedSubprocessLaunchReceipt(
         ProcessRuntimeStepAssignment assignment,
@@ -310,18 +82,6 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             $"Succeeded: coordinated subprocess launch returned stage '{launch.Stage}' for child run '{childRunSummary}' with evidence refs: {evidenceSummary}",
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
-    }
-
-    private static Guid CreateSyntheticSubprocessExecutionRunId(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessRunId childRunId,
-        DateTimeOffset childUpdatedAtUtc)
-    {
-        var input = Encoding.UTF8.GetBytes(
-            $"completed-child:{assignment.RunId.Value:D}:{assignment.StepInstanceId.Value:D}:{childRunId.Value:D}:{childUpdatedAtUtc.UtcDateTime:O}");
-        Span<byte> hash = stackalloc byte[32];
-        SHA256.HashData(input, hash);
-        return new Guid(hash[..16]);
     }
 
     private static bool IsWaitingOnStoppedSubprocessOutcome(ProcessStepOutcomeResult output)

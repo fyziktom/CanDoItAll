@@ -273,7 +273,34 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-solution-setup",
       "SubprocessDefinitionSnapshotName": ".NET solution setup subprocess",
-      "AllowsManualSkip": true,
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-solution-setup",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "solution-skeleton-evidence",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "setup-handoff",
+            "ArtifactExpectationKey": "setup-handoff-packet",
+            "ArtifactTitle": "Setup handoff packet"
+          },
+          {
+            "StepKey": "setup-handoff-after-repair",
+            "ArtifactExpectationKey": "setup-handoff-packet-after-repair",
+            "ArtifactTitle": "Setup handoff packet after repair"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "setup-repair-escalation",
+            "ArtifactExpectationKey": "setup-repair-escalation-packet",
+            "ArtifactTitle": "Setup repair escalation packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
+      "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
@@ -352,6 +379,33 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-feature-function-implementation",
       "SubprocessDefinitionSnapshotName": ".NET feature/function implementation subprocess",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-feature-function-implementation",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "slice-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "feature-handoff",
+            "ArtifactExpectationKey": "feature-handoff-packet",
+            "ArtifactTitle": "Feature implementation handoff packet"
+          },
+          {
+            "StepKey": "feature-handoff-after-repair",
+            "ArtifactExpectationKey": "feature-handoff-packet-after-repair",
+            "ArtifactTitle": "Feature implementation handoff packet after repair"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "feature-repair-escalation",
+            "ArtifactExpectationKey": "feature-repair-escalation-packet",
+            "ArtifactTitle": "Feature repair escalation packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -635,6 +689,33 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-feature-function-implementation",
       "SubprocessDefinitionSnapshotName": ".NET feature/function implementation subprocess",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-feature-function-implementation",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "slice-repair-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "feature-handoff",
+            "ArtifactExpectationKey": "feature-handoff-packet",
+            "ArtifactTitle": "Feature implementation handoff packet"
+          },
+          {
+            "StepKey": "feature-handoff-after-repair",
+            "ArtifactExpectationKey": "feature-handoff-packet-after-repair",
+            "ArtifactTitle": "Feature implementation handoff packet after repair"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "feature-repair-escalation",
+            "ArtifactExpectationKey": "feature-repair-escalation-packet",
+            "ArtifactTitle": "Feature repair escalation packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,

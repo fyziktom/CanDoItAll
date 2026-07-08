@@ -39,6 +39,8 @@ internal static class ProcessPersistenceMappers
                 RequiredArtifactSlotIds = JoinGuids(step.RequiredArtifactSlots, id => id.Value),
                 ProducedArtifactSlotIds = JoinGuids(step.ProducedArtifactSlots, id => id.Value),
                 RequiredRuntimeToolNamesJson = SerializeStringList(step.RequiredRuntimeToolNames),
+                ArtifactDescriptorsJson = SerializeArtifactDescriptors(step.ArtifactDescriptors),
+                SubprocessArtifactMappingsJson = SerializeSubprocessArtifactMappings(step.SubprocessArtifactMappings),
                 ActiveClaimToken = step.ActiveClaimToken?.Value,
                 CompletedResultKey = step.CompletedResultKey?.Value
             });
@@ -122,7 +124,9 @@ internal static class ProcessPersistenceMappers
                 step.CompletedResultKey is null ? null : new StrategyResultIdempotencyKey(step.CompletedResultKey.Value))
             {
                 ProducedArtifactSlots = ParseArtifactSlotIds(step.ProducedArtifactSlotIds),
-                RequiredRuntimeToolNames = DeserializeStringList(step.RequiredRuntimeToolNamesJson)
+                RequiredRuntimeToolNames = DeserializeStringList(step.RequiredRuntimeToolNamesJson),
+                ArtifactDescriptors = DeserializeArtifactDescriptors(step.ArtifactDescriptorsJson),
+                SubprocessArtifactMappings = DeserializeSubprocessArtifactMappings(step.SubprocessArtifactMappingsJson)
             });
         }
 
@@ -437,6 +441,96 @@ internal static class ProcessPersistenceMappers
                 artifact.ContentHash)).ToArray(),
             ReceiptJsonOptions);
 
+    private static string SerializeArtifactDescriptors(IReadOnlyList<ProcessArtifactSlotDescriptor> descriptors)
+        => JsonSerializer.Serialize(
+            descriptors.Select(descriptor => new PersistedArtifactSlotDescriptor(
+                descriptor.SlotId.Value,
+                descriptor.SlotKey,
+                descriptor.StepKey,
+                descriptor.ArtifactExpectationKey,
+                descriptor.ArtifactTitle,
+                descriptor.ArtifactKind,
+                descriptor.PrimaryManagedRef,
+                descriptor.MaterializationMode)).ToArray(),
+            ReceiptJsonOptions);
+
+    private static IReadOnlyList<ProcessArtifactSlotDescriptor> DeserializeArtifactDescriptors(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        var descriptors = JsonSerializer.Deserialize<PersistedArtifactSlotDescriptor[]>(value, ReceiptJsonOptions) ?? [];
+        return descriptors
+            .Where(descriptor => descriptor.SlotId != Guid.Empty)
+            .Select(descriptor => new ProcessArtifactSlotDescriptor(
+                new ArtifactSlotId(descriptor.SlotId),
+                descriptor.SlotKey.Trim(),
+                descriptor.StepKey.Trim(),
+                descriptor.ArtifactExpectationKey.Trim(),
+                descriptor.ArtifactTitle.Trim(),
+                descriptor.ArtifactKind.Trim(),
+                descriptor.PrimaryManagedRef.Trim(),
+                descriptor.MaterializationMode))
+            .ToArray();
+    }
+
+    private static string SerializeSubprocessArtifactMappings(IReadOnlyList<SubprocessArtifactMappingDescriptor> mappings)
+        => JsonSerializer.Serialize(
+            mappings.Select(mapping => new PersistedSubprocessArtifactMappingDescriptor(
+                mapping.ParentSlotId.Value,
+                mapping.ParentArtifactExpectationKey,
+                mapping.ChildProcessDefinitionKey,
+                mapping.AcceptedChildOutputs.Select(ToPersistedChildMapping).ToArray(),
+                mapping.NoGoChildOutputs.Select(ToPersistedChildMapping).ToArray())).ToArray(),
+            ReceiptJsonOptions);
+
+    private static IReadOnlyList<SubprocessArtifactMappingDescriptor> DeserializeSubprocessArtifactMappings(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        var mappings = JsonSerializer.Deserialize<PersistedSubprocessArtifactMappingDescriptor[]>(value, ReceiptJsonOptions) ?? [];
+        return mappings
+            .Where(mapping => mapping.ParentSlotId != Guid.Empty)
+            .Select(mapping => new SubprocessArtifactMappingDescriptor(
+                new ArtifactSlotId(mapping.ParentSlotId),
+                mapping.ParentArtifactExpectationKey.Trim(),
+                mapping.ChildProcessDefinitionKey.Trim(),
+                DeserializeChildMappings(mapping.AcceptedChildOutputs),
+                DeserializeChildMappings(mapping.NoGoChildOutputs)))
+            .ToArray();
+    }
+
+    private static PersistedSubprocessChildArtifactMappingDescriptor ToPersistedChildMapping(
+        SubprocessChildArtifactMappingDescriptor mapping)
+        => new(
+            mapping.StepKey,
+            mapping.ArtifactExpectationKey,
+            mapping.ArtifactTitle,
+            mapping.BranchOutcomeKey);
+
+    private static IReadOnlyList<SubprocessChildArtifactMappingDescriptor> DeserializeChildMappings(
+        IReadOnlyList<PersistedSubprocessChildArtifactMappingDescriptor>? mappings)
+    {
+        if (mappings is null || mappings.Count == 0)
+        {
+            return [];
+        }
+
+        return mappings
+            .Where(mapping => !string.IsNullOrWhiteSpace(mapping.StepKey))
+            .Select(mapping => new SubprocessChildArtifactMappingDescriptor(
+                mapping.StepKey.Trim(),
+                mapping.ArtifactExpectationKey.Trim(),
+                mapping.ArtifactTitle.Trim(),
+                mapping.BranchOutcomeKey.Trim()))
+            .ToArray();
+    }
+
     private static IReadOnlyList<StrategyResultArtifactReceipt> DeserializeProducedArtifacts(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -520,6 +614,29 @@ internal static class ProcessPersistenceMappers
         Guid SlotId,
         Guid ArtifactId,
         string ContentHash);
+
+    private sealed record PersistedArtifactSlotDescriptor(
+        Guid SlotId,
+        string SlotKey,
+        string StepKey,
+        string ArtifactExpectationKey,
+        string ArtifactTitle,
+        string ArtifactKind,
+        string PrimaryManagedRef,
+        ProcessArtifactMaterializationMode MaterializationMode);
+
+    private sealed record PersistedSubprocessArtifactMappingDescriptor(
+        Guid ParentSlotId,
+        string ParentArtifactExpectationKey,
+        string ChildProcessDefinitionKey,
+        IReadOnlyList<PersistedSubprocessChildArtifactMappingDescriptor> AcceptedChildOutputs,
+        IReadOnlyList<PersistedSubprocessChildArtifactMappingDescriptor> NoGoChildOutputs);
+
+    private sealed record PersistedSubprocessChildArtifactMappingDescriptor(
+        string StepKey,
+        string ArtifactExpectationKey,
+        string ArtifactTitle,
+        string BranchOutcomeKey);
 
     private sealed record PersistedProcessRecoveryDecision(
         ProcessFailureCategory FailureCategory,

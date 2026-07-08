@@ -596,7 +596,13 @@ public sealed class ProcessLaunchApplicationService(
                 CompletedResultKey: null)
             {
                 ProducedArtifactSlots = assignment?.ProducedArtifactSlotIds.ToHashSet() ?? [],
-                RequiredRuntimeToolNames = assignment is null ? [] : ResolveLaunchPlanRequiredRuntimeToolNames(assignment)
+                RequiredRuntimeToolNames = assignment is null ? [] : ResolveLaunchPlanRequiredRuntimeToolNames(assignment),
+                ArtifactDescriptors = templateStep is null
+                    ? []
+                    : BuildRuntimeArtifactDescriptors(definition, templateStep, plan.ArtifactPlan.Slots, runId),
+                SubprocessArtifactMappings = templateStep is null
+                    ? []
+                    : BuildSubprocessArtifactMappings(templateStep, plan.ArtifactPlan.Slots)
             });
         }
 
@@ -798,6 +804,157 @@ public sealed class ProcessLaunchApplicationService(
         return string.IsNullOrWhiteSpace(branchDependency?.StepKey)
             ? null
             : new ProcessRuntimeBranchGate(branchDependency.StepKey, branchDependency.BranchOutcomeKey);
+    }
+
+    private static IReadOnlyList<ProcessArtifactSlotDescriptor> BuildRuntimeArtifactDescriptors(
+        ProcessTemplateDefinitionDocument definition,
+        ProcessTemplateDefinitionStepDocument step,
+        IReadOnlyList<ArtifactSlotPlan> artifactSlots,
+        ProcessRunId runId)
+    {
+        var descriptors = new Dictionary<ArtifactSlotId, ProcessArtifactSlotDescriptor>();
+        var stepByKey = definition.Steps.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
+        var slotByKey = artifactSlots.ToDictionary(slot => slot.SlotKey, StringComparer.OrdinalIgnoreCase);
+        var managedArtifactRoot = BuildManagedProcessArtifactRoot(runId);
+
+        foreach (var input in step.ArtifactInputs)
+        {
+            if (string.IsNullOrWhiteSpace(input.SourceStepKey) ||
+                string.IsNullOrWhiteSpace(input.ArtifactExpectationKey) ||
+                !stepByKey.TryGetValue(input.SourceStepKey, out var sourceStep) ||
+                !slotByKey.TryGetValue(BuildArtifactSlotKey(input.SourceStepKey, input.ArtifactExpectationKey), out var slot))
+            {
+                continue;
+            }
+
+            var expectation = sourceStep.ArtifactExpectations.FirstOrDefault(candidate =>
+                string.Equals(candidate.Key, input.ArtifactExpectationKey, StringComparison.OrdinalIgnoreCase));
+            descriptors[slot.SlotId] = CreateArtifactSlotDescriptor(
+                slot,
+                sourceStep.Key,
+                input.ArtifactExpectationKey,
+                expectation,
+                BuildManagedStepArtifactPath(managedArtifactRoot, sourceStep.Key),
+                ProcessArtifactMaterializationMode.AgentWritten);
+        }
+
+        foreach (var expectation in step.ArtifactExpectations)
+        {
+            if (!slotByKey.TryGetValue(BuildArtifactSlotKey(step.Key, expectation.Key), out var slot))
+            {
+                continue;
+            }
+
+            descriptors[slot.SlotId] = CreateArtifactSlotDescriptor(
+                slot,
+                step.Key,
+                expectation.Key,
+                expectation,
+                BuildManagedStepArtifactPath(managedArtifactRoot, step.Key),
+                ResolveProducedArtifactMaterializationMode(step, expectation));
+        }
+
+        return descriptors.Values
+            .OrderBy(descriptor => descriptor.StepKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(descriptor => descriptor.ArtifactExpectationKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static ProcessArtifactSlotDescriptor CreateArtifactSlotDescriptor(
+        ArtifactSlotPlan slot,
+        string stepKey,
+        string expectationKey,
+        ProcessTemplateDefinitionArtifactExpectationDocument? expectation,
+        string primaryManagedRef,
+        ProcessArtifactMaterializationMode materializationMode)
+    {
+        return new ProcessArtifactSlotDescriptor(
+            slot.SlotId,
+            slot.SlotKey,
+            stepKey,
+            expectationKey,
+            FirstNonEmpty(expectation?.Title, expectationKey),
+            FirstNonEmpty(expectation?.ArtifactKind, "Artifact"),
+            primaryManagedRef,
+            materializationMode);
+    }
+
+    private static ProcessArtifactMaterializationMode ResolveProducedArtifactMaterializationMode(
+        ProcessTemplateDefinitionStepDocument step,
+        ProcessTemplateDefinitionArtifactExpectationDocument expectation)
+    {
+        if (step.SubprocessContract is not { } contract ||
+            !string.Equals(
+                contract.ParentProducedArtifactExpectationKey,
+                expectation.Key,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactMaterializationMode.AgentWritten;
+        }
+
+        return contract.MaterializationMode == ProcessSubprocessMaterializationMode.RuntimeSynthesizedParentHandoff
+            ? ProcessArtifactMaterializationMode.RuntimeSynthesizedParentHandoff
+            : ProcessArtifactMaterializationMode.AgentWritten;
+    }
+
+    private static IReadOnlyList<SubprocessArtifactMappingDescriptor> BuildSubprocessArtifactMappings(
+        ProcessTemplateDefinitionStepDocument step,
+        IReadOnlyList<ArtifactSlotPlan> artifactSlots)
+    {
+        if (step.SubprocessContract is not { } contract ||
+            string.IsNullOrWhiteSpace(contract.ParentProducedArtifactExpectationKey))
+        {
+            return [];
+        }
+
+        var parentSlot = artifactSlots.FirstOrDefault(slot =>
+            string.Equals(slot.SlotKey, BuildArtifactSlotKey(step.Key, contract.ParentProducedArtifactExpectationKey), StringComparison.OrdinalIgnoreCase));
+        if (parentSlot is null)
+        {
+            return [];
+        }
+
+        return
+        [
+            new SubprocessArtifactMappingDescriptor(
+                parentSlot.SlotId,
+                contract.ParentProducedArtifactExpectationKey,
+                contract.DefinitionKey,
+                contract.AcceptedChildOutputs.Select(CreateSubprocessChildMappingDescriptor).ToArray(),
+                contract.NoGoChildOutputs.Select(CreateSubprocessChildMappingDescriptor).ToArray())
+        ];
+    }
+
+    private static SubprocessChildArtifactMappingDescriptor CreateSubprocessChildMappingDescriptor(
+        ProcessSubprocessChildOutputContract output)
+        => new(
+            output.StepKey,
+            output.ArtifactExpectationKey,
+            output.ArtifactTitle,
+            output.BranchOutcomeKey);
+
+    private static string BuildArtifactSlotKey(
+        string stepKey,
+        string expectationKey)
+        => $"{stepKey}:{expectationKey}";
+
+    private static string BuildManagedStepArtifactPath(
+        string managedArtifactRoot,
+        string stepKey)
+        => $"{managedArtifactRoot}/steps/{SanitizeManagedArtifactPathSegment(stepKey)}.md";
+
+    private static string SanitizeManagedArtifactPathSegment(string value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value)
+            ? "step"
+            : value.Trim();
+        var builder = new StringBuilder(normalized.Length);
+        foreach (var character in normalized)
+        {
+            builder.Append(char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '-');
+        }
+
+        return builder.Length == 0 ? "step" : builder.ToString();
     }
 
     private static string ResolvePrimaryRoleKey(ProcessTemplateDefinitionStepDocument step)
@@ -1044,6 +1201,7 @@ public sealed class ProcessLaunchApplicationService(
             enriched,
             ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepKind);
+        RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
@@ -1060,6 +1218,14 @@ public sealed class ProcessLaunchApplicationService(
                 enriched,
                 ProcessRuntimeLaunchVariables.ProcessStepSubprocessDefinitionKey,
                 step.SubprocessProcessKey.Trim());
+        }
+
+        if (step.SubprocessContract is not null)
+        {
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson,
+                ProcessRuntimeLaunchVariables.SerializeProcessStepSubprocessContract(step.SubprocessContract));
         }
 
         if (TryResolveStepProductCompletionRequiredPaths(enriched, step.Key, out var stepProductCompletionPaths))

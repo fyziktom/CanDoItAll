@@ -926,6 +926,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 ? new Dictionary<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId), ProcessExecutionObservation>()
                 : await LoadLatestExecutionObservationsByStepAsync(
                     [run],
+                    actionableSteps
+                        .Select(item => item.Step.StepInstanceId)
+                        .Distinct()
+                        .ToArray(),
                     nowUtc,
                     cancellationToken).ConfigureAwait(false);
             var actions = actionableSteps
@@ -955,6 +959,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
     private async Task<IReadOnlyDictionary<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId), ProcessExecutionObservation>> LoadLatestExecutionObservationsByStepAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        IReadOnlyList<ProcessStepInstanceId> stepInstanceIds,
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
@@ -978,7 +983,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 runIds,
                 windowStartUtc,
                 nowUtc,
-                OperatorActionObservationTakePerRun),
+                OperatorActionObservationTakePerRun)
+            {
+                StepInstanceIds = stepInstanceIds
+            },
             cancellationToken).ConfigureAwait(false);
 
         return observations
@@ -1349,10 +1357,17 @@ public sealed class ProcessRuntimeProjectionQueryService(
             .Where(item => item.StepInstanceId == step.StepInstanceId)
             .LastOrDefault();
         var diagnostic = ProcessRuntimeOperatorActionDiagnostics.Create(executionObservation);
+        var packet = ProcessBlockedStepPacketBuilder.Create(
+            stepKey,
+            step,
+            assignment,
+            receipt,
+            expiredClaim,
+            diagnostic);
         var capabilityHint = BuildOperatorCapabilityHint(assignment, diagnostic);
-        var problemSummary = $"{BuildOperatorProblemSummary(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim, diagnostic)} {capabilityHint}".Trim();
-        var requiredDecision = $"{BuildOperatorDecision(stepKey, step.Status, roleDisplayName, executorDisplayName, expiredClaim, diagnostic)} {capabilityHint}".Trim();
-        var recommendedInstruction = $"{BuildRecommendedOperatorInstruction(stepKey, step, roleDisplayName, executorDisplayName, receipt, expiredClaim, diagnostic)} {capabilityHint}".Trim();
+        var problemSummary = $"{packet.ProblemSummary} {capabilityHint}".Trim();
+        var requiredDecision = $"{packet.RequiredOperatorDecision} {capabilityHint}".Trim();
+        var recommendedInstruction = $"{packet.RecommendedInstruction} {capabilityHint}".Trim();
         return new ProcessRuntimeOperatorActionProjection(
             run.RunId.Value,
             step.StepInstanceId.Value,

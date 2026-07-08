@@ -66,6 +66,10 @@ public sealed record ProcessStepExecutionContract(
     string ContractHash)
 {
     public static ProcessStepExecutionContract Empty { get; } = new([], [], [], "sha256:empty-step-contract");
+
+    public IReadOnlyList<ProcessArtifactSlotDescriptor> ArtifactDescriptors { get; init; } = [];
+
+    public IReadOnlyList<SubprocessArtifactMappingDescriptor> SubprocessArtifactMappings { get; init; } = [];
 }
 
 public sealed record RequiredArtifactInputRef(
@@ -78,6 +82,37 @@ public sealed record RequiredArtifactInputRef(
 
 public sealed record ExpectedProducedArtifactRef(
     ArtifactSlotId SlotId);
+
+public sealed record ProcessArtifactSlotDescriptor(
+    ArtifactSlotId SlotId,
+    string SlotKey,
+    string StepKey,
+    string ArtifactExpectationKey,
+    string ArtifactTitle,
+    string ArtifactKind,
+    string PrimaryManagedRef,
+    ProcessArtifactMaterializationMode MaterializationMode);
+
+public sealed record SubprocessArtifactMappingDescriptor(
+    ArtifactSlotId ParentSlotId,
+    string ParentArtifactExpectationKey,
+    string ChildProcessDefinitionKey,
+    IReadOnlyList<SubprocessChildArtifactMappingDescriptor> AcceptedChildOutputs,
+    IReadOnlyList<SubprocessChildArtifactMappingDescriptor> NoGoChildOutputs);
+
+public sealed record SubprocessChildArtifactMappingDescriptor(
+    string StepKey,
+    string ArtifactExpectationKey,
+    string ArtifactTitle,
+    string BranchOutcomeKey);
+
+public enum ProcessArtifactMaterializationMode
+{
+    AgentWritten,
+    RuntimeSynthesizedParentHandoff,
+    RecoveredExistingProof,
+    RuntimeDiagnosticOnly
+}
 
 public enum ProcessArtifactInputAvailability
 {

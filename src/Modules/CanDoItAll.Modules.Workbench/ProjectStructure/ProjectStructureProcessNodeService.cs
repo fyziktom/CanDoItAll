@@ -67,6 +67,7 @@ public sealed class ProjectStructureProcessNodeService(
         ProcessStepTargetScopeVariableName,
         ProcessStepAllowsProductMutationVariableName,
         ProcessStepKindVariableName,
+        ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson,
         ProcessStepSubprocessDefinitionKeyVariableName,
         AgentProcessStepAllowedOperationsVariableName,
         AgentProcessStepTargetScopeVariableName,

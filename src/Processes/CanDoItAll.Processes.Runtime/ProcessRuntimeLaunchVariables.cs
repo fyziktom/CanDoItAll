@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Abstractions;
 
 namespace CanDoItAll.Processes.Runtime;
@@ -17,6 +18,7 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProcessDefinitionKey = "ProcessDefinitionKey";
     public const string ProcessDefinitionName = "ProcessDefinitionName";
     public const string ProcessStepKind = "ProcessStepKind";
+    public const string ProcessStepSubprocessContractJson = "ProcessStepSubprocessContractJson";
     public const string ProcessStepSubprocessDefinitionKey = "ProcessStepSubprocessDefinitionKey";
     public const string ProjectId = "ProjectId";
     public const string ProjectName = "ProjectName";
@@ -109,6 +111,41 @@ public static class ProcessRuntimeLaunchVariables
 
         definitionKey = value;
         return true;
+    }
+
+    public static string SerializeProcessStepSubprocessContract(ProcessSubprocessContract contract)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+        return JsonSerializer.Serialize(contract, ProcessRuntimeLaunchVariableJson.Options);
+    }
+
+    public static bool TryReadProcessStepSubprocessContract(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out ProcessSubprocessContract contract)
+    {
+        contract = new ProcessSubprocessContract();
+        if (!TryReadNonEmptyString(launchVariables, ProcessStepSubprocessContractJson, out var value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var deserialized = JsonSerializer.Deserialize<ProcessSubprocessContract>(
+                value,
+                ProcessRuntimeLaunchVariableJson.Options);
+            if (deserialized is null)
+            {
+                return false;
+            }
+
+            contract = deserialized;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     public static bool TryReadProjectId(
@@ -204,6 +241,11 @@ public static class ProcessRuntimeLaunchVariables
             return false;
         }
     }
+}
+
+internal static class ProcessRuntimeLaunchVariableJson
+{
+    public static JsonSerializerOptions Options { get; } = new(JsonSerializerDefaults.Web);
 }
 
 public readonly record struct ProcessRuntimeParentStepReference(

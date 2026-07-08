@@ -148,19 +148,37 @@ public static class ProcessRuntimeArtifactContracts
             .OrderBy(slotId => slotId.Value)
             .Select(slotId => new ExpectedProducedArtifactRef(slotId))
             .ToArray();
+        var artifactDescriptors = step.ArtifactDescriptors
+            .OrderBy(descriptor => descriptor.SlotId.Value)
+            .ThenBy(descriptor => descriptor.StepKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(descriptor => descriptor.ArtifactExpectationKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var subprocessArtifactMappings = step.SubprocessArtifactMappings
+            .OrderBy(mapping => mapping.ParentSlotId.Value)
+            .ThenBy(mapping => mapping.ParentArtifactExpectationKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var requiredToolNames = step.RequiredRuntimeToolNames
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Select(toolName => toolName.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var contractHash = ComputeStepContractHash(requiredArtifacts, expectedProducedArtifacts, requiredToolNames);
+        var contractHash = ComputeStepContractHash(
+            requiredArtifacts,
+            expectedProducedArtifacts,
+            requiredToolNames,
+            artifactDescriptors,
+            subprocessArtifactMappings);
 
         return new ProcessStepExecutionContract(
             requiredArtifacts,
             expectedProducedArtifacts,
             requiredToolNames,
-            contractHash);
+            contractHash)
+        {
+            ArtifactDescriptors = artifactDescriptors,
+            SubprocessArtifactMappings = subprocessArtifactMappings
+        };
     }
 
     public static ProcessStepInstanceId? FindResponsibleStepForMissingArtifact(
@@ -337,7 +355,9 @@ public static class ProcessRuntimeArtifactContracts
     private static string ComputeStepContractHash(
         IReadOnlyList<RequiredArtifactInputRef> requiredArtifacts,
         IReadOnlyList<ExpectedProducedArtifactRef> expectedProducedArtifacts,
-        IReadOnlyList<string> requiredToolNames)
+        IReadOnlyList<string> requiredToolNames,
+        IReadOnlyList<ProcessArtifactSlotDescriptor> artifactDescriptors,
+        IReadOnlyList<SubprocessArtifactMappingDescriptor> subprocessArtifactMappings)
     {
         var builder = new StringBuilder("step-contract");
         foreach (var artifact in requiredArtifacts)
@@ -371,7 +391,66 @@ public static class ProcessRuntimeArtifactContracts
                 .Append(toolName);
         }
 
+        foreach (var descriptor in artifactDescriptors)
+        {
+            builder
+                .Append("|artifact-descriptor:")
+                .Append(descriptor.SlotId.Value.ToString("N"))
+                .Append(':')
+                .Append(descriptor.SlotKey)
+                .Append(':')
+                .Append(descriptor.StepKey)
+                .Append(':')
+                .Append(descriptor.ArtifactExpectationKey)
+                .Append(':')
+                .Append(descriptor.ArtifactTitle)
+                .Append(':')
+                .Append(descriptor.ArtifactKind)
+                .Append(':')
+                .Append(descriptor.PrimaryManagedRef)
+                .Append(':')
+                .Append(descriptor.MaterializationMode);
+        }
+
+        foreach (var mapping in subprocessArtifactMappings)
+        {
+            builder
+                .Append("|subprocess-mapping:")
+                .Append(mapping.ParentSlotId.Value.ToString("N"))
+                .Append(':')
+                .Append(mapping.ParentArtifactExpectationKey)
+                .Append(':')
+                .Append(mapping.ChildProcessDefinitionKey);
+            foreach (var output in mapping.AcceptedChildOutputs)
+            {
+                AppendChildMapping(builder, "accepted", output);
+            }
+
+            foreach (var output in mapping.NoGoChildOutputs)
+            {
+                AppendChildMapping(builder, "nogo", output);
+            }
+        }
+
         return ComputeHash(builder.ToString());
+    }
+
+    private static void AppendChildMapping(
+        StringBuilder builder,
+        string kind,
+        SubprocessChildArtifactMappingDescriptor output)
+    {
+        builder
+            .Append(':')
+            .Append(kind)
+            .Append('=')
+            .Append(output.StepKey)
+            .Append('/')
+            .Append(output.ArtifactExpectationKey)
+            .Append('/')
+            .Append(output.ArtifactTitle)
+            .Append('/')
+            .Append(output.BranchOutcomeKey);
     }
 
     private static string ComputeHash(string value)

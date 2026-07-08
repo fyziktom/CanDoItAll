@@ -415,15 +415,15 @@ public sealed partial class ProcessRuntimeEngine
 
     private static IReadOnlyList<ProcessArtifactLedgerEvent> BuildArtifactLedgerEvents(
         RuntimeEventId eventId,
-        SubmitStrategyResultCommand command)
+        StrategyResultEnvelope result)
     {
-        if (command.Result.ProducedArtifacts.Count == 0)
+        if (result.ProducedArtifacts.Count == 0)
         {
             return [];
         }
 
-        var ledgerEvents = new List<ProcessArtifactLedgerEvent>(command.Result.ProducedArtifacts.Count);
-        foreach (var artifact in command.Result.ProducedArtifacts)
+        var ledgerEvents = new List<ProcessArtifactLedgerEvent>(result.ProducedArtifacts.Count);
+        foreach (var artifact in result.ProducedArtifacts)
         {
             ledgerEvents.Add(new ProcessArtifactLedgerEvent(
                 ArtifactLedgerEventId.New(),

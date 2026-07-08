@@ -3345,7 +3345,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             childRunId,
             parentRunId,
             assignment.StepInstanceId,
-            assignment.StepKey);
+            assignment.StepKey) with
+        {
+            StepKey = "slice-handoff"
+        };
         var assignmentStore = new InMemoryAssignmentStore(childAssignment);
         var stateStore = new InMemoryRuntimeStateStore(
             NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
@@ -3596,7 +3599,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             childRunId,
             parentRunId,
             assignment.StepInstanceId,
-            assignment.StepKey);
+            assignment.StepKey) with
+        {
+            StepKey = "slice-handoff"
+        };
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         var childEvidenceRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/{childAssignment.StepKey}.md";
         var writeChildEvidence = workspaceFiles.WriteTextFile(
@@ -3845,6 +3851,71 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.agent_transient_execution_retry");
             Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
             Assert.True(workspace.ExecuteRunCalled);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_blocks_missing_runtime_tool_preflight_before_invoking_agent()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("runtime-tool-preflight", agent.Id);
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The agent must not run when required runtime tools are missing."));
+        var preflight = new FakeRuntimeToolPreflightService(new ProcessRuntimeToolPreflightResult(
+            false,
+            ["workspace_dotnet_build"],
+            "Required runtime tool(s) are not composed for this process step: workspace_dotnet_build."));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles,
+                runtimeToolPreflightService: preflight);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    [])
+                {
+                    StepContract = new ProcessStepExecutionContract(
+                        RequiredArtifacts: [],
+                        ExpectedProducedArtifacts: [],
+                        RequiredRuntimeToolNames: ["workspace_dotnet_build"],
+                        ContractHash: "sha256:runtime-tool-preflight")
+                });
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.False(workspace.ExecuteRunCalled);
+            var request = Assert.Single(preflight.Requests);
+            Assert.Contains("workspace_dotnet_build", request.RequiredRuntimeToolNames);
+            var diagnostic = Assert.Single(result.Diagnostics);
+            Assert.Equal("process.adapter.runtime_tool_preflight_failed", diagnostic.Code.Value);
+            Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, diagnostic.RetrySafety);
+            Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+            Assert.Contains("workspace_dotnet_build", result.UserSafeSummary, StringComparison.Ordinal);
         }
         finally
         {
@@ -4576,7 +4647,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var effectiveExecutionRunId = currentExecutionRunId ?? toolReceipts?.FirstOrDefault()?.ExecutionRunId;
         return Assert.IsType<ProcessExecutionAdapterResult>(method.Invoke(
             null,
-            [assignment, output, "sha256:raw", toolReceipts, effectiveExecutionRunId]));
+            [assignment, output, "sha256:raw", toolReceipts, effectiveExecutionRunId, null]));
     }
 
     private static AgentProcessRoleReadinessRequest CreateRuntimeReadinessRequest(ProcessRuntimeStepAssignment assignment)
@@ -4944,6 +5015,19 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         public string GetWorkspaceRoot()
             => Path.GetTempPath();
+    }
+
+    private sealed class FakeRuntimeToolPreflightService(ProcessRuntimeToolPreflightResult result) : IProcessRuntimeToolPreflightService
+    {
+        public List<ProcessRuntimeToolPreflightRequest> Requests { get; } = [];
+
+        public ValueTask<ProcessRuntimeToolPreflightResult> EvaluateAsync(
+            ProcessRuntimeToolPreflightRequest request,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            return ValueTask.FromResult(result);
+        }
     }
 
     private sealed class ThrowingWorkspaceService(

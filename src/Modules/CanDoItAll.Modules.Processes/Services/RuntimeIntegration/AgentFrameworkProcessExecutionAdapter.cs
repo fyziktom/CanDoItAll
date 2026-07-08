@@ -28,13 +28,15 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessExecutionAdapter, IProcessStepExecutionDriver
 {
-    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
+    internal const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
     private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
     private readonly IAgentReferenceDataProvider agentReferenceDataProvider;
     private readonly IProcessRuntimeStepAssignmentStore assignmentStore;
     private readonly IProcessRuntimeStateStore stateStore;
     private readonly IWorkspaceFileService workspaceFiles;
     private readonly IReadOnlyList<IProcessSubprocessLaunchCoordinator> subprocessLaunchCoordinators;
+    private readonly IProcessRuntimeToolPreflightService? runtimeToolPreflightService;
+    private readonly IParentSubprocessArtifactBridge parentSubprocessArtifactBridge;
 
     public AgentFrameworkProcessExecutionAdapter(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
@@ -42,7 +44,9 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         IProcessRuntimeStepAssignmentStore assignmentStore,
         IProcessRuntimeStateStore stateStore,
         IWorkspaceFileService workspaceFiles,
-        IEnumerable<IProcessSubprocessLaunchCoordinator>? subprocessLaunchCoordinators = null)
+        IEnumerable<IProcessSubprocessLaunchCoordinator>? subprocessLaunchCoordinators = null,
+        IProcessRuntimeToolPreflightService? runtimeToolPreflightService = null,
+        IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null)
     {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
@@ -50,6 +54,9 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         this.stateStore = stateStore;
         this.workspaceFiles = workspaceFiles;
         this.subprocessLaunchCoordinators = subprocessLaunchCoordinators?.ToArray() ?? [];
+        this.runtimeToolPreflightService = runtimeToolPreflightService;
+        this.parentSubprocessArtifactBridge = parentSubprocessArtifactBridge ??
+            new ParentSubprocessArtifactBridge(assignmentStore, stateStore, workspaceFiles);
     }
 
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
@@ -81,24 +88,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
             return Failed("process.adapter.assignment_missing", $"No runtime assignment exists for step '{stepId}'.", stepId.ToString());
         }
 
-        if (await TryResolveExistingPendingChildRunAsync(
+        if (await TryResolveExistingSubprocessBridgeAsync(
                 assignment,
-                assignmentStore,
-                stateStore,
-                cancellationToken).ConfigureAwait(false) is { } existingPendingChildRunId)
+                cancellationToken).ConfigureAwait(false) is { } existingBridgeResult)
         {
-            throw new ProcessRuntimeDispatchDeferredException(
-                $"Step '{assignment.StepKey}' is waiting for active child process run '{existingPendingChildRunId}'.",
-                existingPendingChildRunId);
-        }
-
-        if (await TryResolveExistingCompletedChildOutcomeAsync(
-                assignment,
-                assignmentStore,
-                stateStore,
-                cancellationToken).ConfigureAwait(false) is { } completedChildOutcome)
-        {
-            return CompleteSynthesizedSubprocessOutcome(assignment, completedChildOutcome);
+            return existingBridgeResult;
         }
 
         if (await TryLaunchMappedSubprocessAsync(
@@ -140,6 +134,26 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                 $"{assignment.RunId}:{assignment.StepInstanceId}:{agentId}:{readiness.ReadinessHash}");
         }
 
+        if (runtimeToolPreflightService is not null)
+        {
+            var runtimeToolPreflight = await runtimeToolPreflightService
+                .EvaluateAsync(
+                    new ProcessRuntimeToolPreflightRequest(
+                        assignment,
+                        agent,
+                        ResolvePreflightRequiredRuntimeToolNames(assignment, request.StepContract)),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (!runtimeToolPreflight.IsSatisfied)
+            {
+                var issue = CreateRuntimeToolPreflightIssue(assignment, runtimeToolPreflight);
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash(issue.Evidence),
+                    issue);
+            }
+        }
+
         try
         {
             var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
@@ -148,7 +162,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                 .ExecuteRunAsync(
                     new ExecutionRunRequest(
                         agentId,
-                        ProcessStepContractPromptBuilder.Build(assignment.Prompt, request.StepContract),
+                        ProcessStepContractPromptBuilder.Build(
+                            assignment.Prompt,
+                            request.StepContract,
+                            assignment.LaunchVariables,
+                            assignment.StepKey),
                         Context: new ExecutionInvocationContext(
                             SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
                             SourceId: assignment.StepKey,
@@ -166,22 +184,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            if (await TryResolveExistingPendingChildRunAsync(
+            if (await TryResolveExistingSubprocessBridgeAsync(
                     assignment,
-                    assignmentStore,
-                    stateStore,
-                    cancellationToken).ConfigureAwait(false) is { } pendingChildRunAfterExecution)
+                    cancellationToken).ConfigureAwait(false) is { } bridgeResultAfterExecution)
             {
-                throw CreatePendingChildRunDeferredException(assignment, pendingChildRunAfterExecution);
-            }
-
-            if (await TryResolveExistingCompletedChildOutcomeAsync(
-                    assignment,
-                    assignmentStore,
-                    stateStore,
-                    cancellationToken).ConfigureAwait(false) is { } completedChildOutcomeAfterExecution)
-            {
-                return CompleteSynthesizedSubprocessOutcome(assignment, completedChildOutcomeAfterExecution);
+                return bridgeResultAfterExecution;
             }
 
             if (TryBuildRetryableAgentTransientExecutionIssue(assignment, result, out var transientExecutionIssue))
@@ -238,6 +245,13 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                 return materializedSubprocessResult;
             }
 
+            if (await TryResolveExistingSubprocessBridgeAsync(
+                    assignment,
+                    cancellationToken).ConfigureAwait(false) is { } materializedBridgeResult)
+            {
+                return materializedBridgeResult;
+            }
+
             var completionToolReceipts = await LoadStepCompletionToolReceiptsAsync(
                     workspaceService,
                     assignment,
@@ -257,12 +271,25 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                     ungroundedArtifactReferenceIssue);
             }
 
+            var producedArtifactContentHashes = BuildProducedArtifactContentHashes(
+                assignment,
+                materialization.Output,
+                out var producedArtifactReadbackIssue);
+            if (producedArtifactReadbackIssue is not null)
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    validation.RawOutputHash,
+                    producedArtifactReadbackIssue);
+            }
+
             return ToAdapterResult(
                 assignment,
                 materialization.Output,
                 validation.RawOutputHash,
                 completionToolReceipts,
-                result.ExecutionRunId);
+                result.ExecutionRunId,
+                producedArtifactContentHashes);
         }
         catch (ProcessRuntimeDispatchDeferredException)
         {
@@ -277,7 +304,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            if (await TryResolveExistingPendingChildRunAsync(
+            if (await ParentSubprocessArtifactBridge.TryResolveExistingPendingChildRunAsync(
                     assignment,
                     assignmentStore,
                     stateStore,

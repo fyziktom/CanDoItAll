@@ -112,12 +112,35 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         }
 
         var subprocessLaunchReceipt = CreateCoordinatedSubprocessLaunchReceipt(assignment, launch);
-        return ToAdapterResult(
+        var materialization = MaterializeManagedOutcomeArtifactIfNeeded(
             assignment,
             validation.Output,
+            subprocessLaunchReceipt.ExecutionRunId,
+            [subprocessLaunchReceipt]);
+        if (materialization.Issue is { } materializationIssue)
+        {
+            return NeedsManagerForCompletionIssue(assignment, validation.RawOutputHash, materializationIssue);
+        }
+
+        var producedArtifactContentHashes = BuildProducedArtifactContentHashes(
+            assignment,
+            materialization.Output,
+            out var producedArtifactReadbackIssue);
+        if (producedArtifactReadbackIssue is not null)
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                validation.RawOutputHash,
+                producedArtifactReadbackIssue);
+        }
+
+        return ToAdapterResult(
+            assignment,
+            materialization.Output,
             validation.RawOutputHash,
-            [subprocessLaunchReceipt],
-            subprocessLaunchReceipt.ExecutionRunId);
+            materialization.ToolReceipts,
+            subprocessLaunchReceipt.ExecutionRunId,
+            producedArtifactContentHashes);
     }
 
     private static bool IsActiveSubprocessLaunchStage(string stage)
@@ -126,14 +149,61 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                parsed is ProcessLaunchStage.Running or ProcessLaunchStage.Planned;
     }
 
+    private async ValueTask<ProcessExecutionAdapterResult?> TryResolveExistingSubprocessBridgeAsync(
+        ProcessRuntimeStepAssignment assignment,
+        CancellationToken cancellationToken)
+    {
+        var result = await parentSubprocessArtifactBridge
+            .ResolveExistingAsync(assignment, cancellationToken)
+            .ConfigureAwait(false);
+        return TranslateSubprocessBridgeResult(assignment, result);
+    }
+
+    private ProcessExecutionAdapterResult? TranslateSubprocessBridgeResult(
+        ProcessRuntimeStepAssignment assignment,
+        ParentSubprocessArtifactBridgeResult result)
+    {
+        return result.Kind switch
+        {
+            ParentSubprocessArtifactBridgeResultKind.NotSubprocess or
+                ParentSubprocessArtifactBridgeResultKind.NoMatchingChildRun => null,
+            ParentSubprocessArtifactBridgeResultKind.ChildActive when result.ChildRunId is { } childRunId =>
+                throw CreatePendingChildRunDeferredException(assignment, childRunId),
+            ParentSubprocessArtifactBridgeResultKind.AcceptedChildOutputBridged when result.AcceptedOutcome is { } acceptedOutcome =>
+                CompleteSynthesizedSubprocessOutcome(assignment, acceptedOutcome),
+            ParentSubprocessArtifactBridgeResultKind.ContractMissing =>
+                NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash($"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-contract-missing"),
+                    CreateSubprocessContractMissingIssue(assignment)),
+            ParentSubprocessArtifactBridgeResultKind.NoGoChildOutputFound when result.ChildRunId is { } childRunId =>
+                BuildSubprocessBridgeIssueResult(
+                    assignment,
+                    CreateSubprocessChildNoGoIssue(assignment, childRunId, result.EvidenceRefs)),
+            ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput
+                when result.ChildRunId is { } childRunId && result.Contract is { } contract =>
+                BuildSubprocessBridgeIssueResult(
+                    assignment,
+                    CreateSubprocessChildAcceptedOutputMissingIssue(assignment, childRunId, contract)),
+            _ => null
+        };
+    }
+
+    private ProcessExecutionAdapterResult BuildSubprocessBridgeIssueResult(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessCompletionIssue issue)
+        => NeedsManagerForCompletionIssue(
+            assignment,
+            ComputeHash(issue.Evidence),
+            issue);
+
     private ProcessExecutionAdapterResult CompleteSynthesizedSubprocessOutcome(
         ProcessRuntimeStepAssignment assignment,
-        CompletedSubprocessOutcome completedChildOutcome)
+        ParentSubprocessBridgedOutcome completedChildOutcome)
     {
-        var output = BuildCompletedSubprocessProcessStepOutcome(assignment, completedChildOutcome);
         var materialization = MaterializeManagedOutcomeArtifactIfNeeded(
             assignment,
-            output,
+            completedChildOutcome.Output,
             completedChildOutcome.SyntheticExecutionRunId,
             completedChildOutcome.ToolReceipts);
         if (materialization.Issue is { } materializationIssue)
@@ -152,12 +222,25 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 ungroundedArtifactReferenceIssue);
         }
 
+        var producedArtifactContentHashes = BuildProducedArtifactContentHashes(
+            assignment,
+            materialization.Output,
+            out var producedArtifactReadbackIssue);
+        if (producedArtifactReadbackIssue is not null)
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                completedChildOutcome.RawOutputHash,
+                producedArtifactReadbackIssue);
+        }
+
         return ToAdapterResult(
             assignment,
             materialization.Output,
             completedChildOutcome.RawOutputHash,
             materialization.ToolReceipts,
-            completedChildOutcome.SyntheticExecutionRunId);
+            completedChildOutcome.SyntheticExecutionRunId,
+            producedArtifactContentHashes);
     }
 
     private async ValueTask<ProcessExecutionAdapterResult?> TryResolveDeferredOrCompletedSubprocessOutputAsync(
@@ -167,51 +250,10 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         IProcessRuntimeStateStore stateStore,
         CancellationToken cancellationToken)
     {
-        if (output.Status is not (ProcessStepOutcomeStatus.Blocked or ProcessStepOutcomeStatus.WaitingApproval) ||
-            !CanWaitOnControlledChildRun(assignment))
-        {
-            return null;
-        }
-
-        if (await TryResolvePendingChildRunAsync(
-                assignment,
-                output,
-                stateStore,
-                cancellationToken).ConfigureAwait(false) is { } pendingChildRunId)
-        {
-            throw CreatePendingChildRunDeferredException(assignment, pendingChildRunId);
-        }
-
-        if (IsWaitingOnStoppedSubprocessOutcome(output) &&
-            await TryResolveExistingCompletedChildOutcomeAsync(
-                assignment,
-                assignmentStore,
-                stateStore,
-                cancellationToken).ConfigureAwait(false) is { } completedChildOutcome)
-        {
-            return CompleteSynthesizedSubprocessOutcome(assignment, completedChildOutcome);
-        }
-
-        if (await TryResolveExistingPendingChildRunAsync(
-                assignment,
-                assignmentStore,
-                stateStore,
-                cancellationToken).ConfigureAwait(false) is { } existingPendingChildRunId)
-        {
-            throw CreatePendingChildRunDeferredException(assignment, existingPendingChildRunId);
-        }
-
-        if (IsWaitingOnStoppedSubprocessOutcome(output) &&
-            await TryResolveExistingCompletedChildOutcomeAsync(
-                assignment,
-                assignmentStore,
-                stateStore,
-                cancellationToken).ConfigureAwait(false) is { } existingCompletedChildOutcome)
-        {
-            return CompleteSynthesizedSubprocessOutcome(assignment, existingCompletedChildOutcome);
-        }
-
-        return null;
+        var bridgeResult = await parentSubprocessArtifactBridge
+            .ResolveFromOutputAsync(assignment, output, cancellationToken)
+            .ConfigureAwait(false);
+        return TranslateSubprocessBridgeResult(assignment, bridgeResult);
     }
 
 }

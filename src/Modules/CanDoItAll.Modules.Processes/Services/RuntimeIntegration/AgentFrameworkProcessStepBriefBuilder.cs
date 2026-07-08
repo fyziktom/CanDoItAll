@@ -381,6 +381,19 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         var snapshotName = string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName)
             ? "not supplied"
             : step.SubprocessDefinitionSnapshotName.Trim();
+        if (step.SubprocessContract?.LaunchMode == ProcessSubprocessLaunchMode.RuntimeOwned)
+        {
+            return $"""
+            - Child process definition key: {subprocessKey}
+            - Child definition snapshot name: {snapshotName}
+            - Launch ownership: process runtime owned
+            - Completion rule: the process runtime launches, defers, and completes this parent step from typed child evidence. Do not call {SubprocessLaunchToolName} and do not hand-author a parent handoff from a generic child folder.
+            - Accepted evidence rule: the runtime accepts only the typed child output rows listed in the subprocess parent bridge contract. Repaired accepted outputs and no-go outputs are machine-readable contract rows, not prose-only guidance.
+            - No-go rule: if a completed child has a typed no-go output, the runtime propagates that concrete blocker to the parent step and does not retry blindly.
+            - Parent artifact rule: the parent artifact is runtime-synthesized from accepted child evidence using the materialization mode in the typed contract.
+            """;
+        }
+
         var launchInstruction = !hasSubprocessKey
             ? "This step is marked as a subprocess but has no child process definition key. Return Blocked unless upstream evidence already supplies the missing child run."
             : $"Use {SubprocessLaunchToolName} with DefinitionKey \"{subprocessKey}\" when {ProcessOperationContractNames.ExecuteExternalAction} is allowed. Do not mark Completed until the child run receipt and required child evidence are available. If a stopped child run has Blocked status or escalation/no-go evidence, propagate that concrete blocker with child run and artifact refs instead of launching another child. Relaunch only when the stopped child has no blocker/escalation evidence, required evidence is recoverable by another child attempt, and launch is allowed. Return Blocked only for a concrete missing tool, input, policy, environment, or irrecoverable evidence problem.";

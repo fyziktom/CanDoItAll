@@ -89,7 +89,7 @@ public sealed partial class ProcessRuntimeEngine
         return Applied(
             next,
             events,
-            BuildArtifactLedgerEvents(resultEventId, command));
+            BuildArtifactLedgerEvents(resultEventId, appliedResult));
     }
 
     private static ProcessRuntimeMutation RequestCancellation(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context)

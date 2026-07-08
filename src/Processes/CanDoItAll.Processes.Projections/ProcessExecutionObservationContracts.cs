@@ -20,7 +20,10 @@ public sealed record ProcessExecutionObservationQuery(
     IReadOnlyList<ProcessRunId> RunIds,
     DateTimeOffset FromUtc,
     DateTimeOffset ToUtc,
-    int TakePerRun);
+    int TakePerRun)
+{
+    public IReadOnlyList<ProcessStepInstanceId> StepInstanceIds { get; init; } = [];
+}
 
 public sealed record ProcessRuntimeUsageTelemetryQuery(
     IReadOnlyList<ProcessRunId> RunIds,

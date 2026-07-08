@@ -99,6 +99,8 @@ internal sealed class ProcessRuntimeStepEntityConfiguration : IEntityTypeConfigu
         builder.Property(step => step.RequiredArtifactSlotIds).IsRequired();
         builder.Property(step => step.ProducedArtifactSlotIds).IsRequired();
         builder.Property(step => step.RequiredRuntimeToolNamesJson).IsRequired();
+        builder.Property(step => step.ArtifactDescriptorsJson).IsRequired();
+        builder.Property(step => step.SubprocessArtifactMappingsJson).IsRequired();
         builder.HasIndex(step => new { step.RunId, step.Status });
         builder.HasIndex(step => new { step.RunId, step.ActiveClaimToken });
     }

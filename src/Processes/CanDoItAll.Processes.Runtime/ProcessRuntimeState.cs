@@ -81,6 +81,10 @@ public sealed record ProcessRuntimeStepState(
     public IReadOnlySet<ArtifactSlotId> ProducedArtifactSlots { get; init; } = new HashSet<ArtifactSlotId>();
 
     public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
+
+    public IReadOnlyList<ProcessArtifactSlotDescriptor> ArtifactDescriptors { get; init; } = [];
+
+    public IReadOnlyList<SubprocessArtifactMappingDescriptor> SubprocessArtifactMappings { get; init; } = [];
 }
 
 public sealed record ProcessRuntimeInputArtifactReceipt(

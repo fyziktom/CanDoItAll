@@ -377,7 +377,28 @@
       ],
       "OperationTargetScope": "ExternalActionControlled",
       "SubprocessProcessKey": "dotnet-architecture-design-review",
-      "SubprocessDefinitionSnapshotName": ".NET architecture design and review subprocess"
+      "SubprocessDefinitionSnapshotName": ".NET architecture design and review subprocess",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-architecture-design-review",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "architecture-decision-record",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "classify-dotnet-application",
+            "ArtifactExpectationKey": "dotnet-application-classification",
+            "ArtifactTitle": ".NET application classification and project context"
+          },
+          {
+            "StepKey": "architecture-handoff",
+            "ArtifactExpectationKey": "architecture-design-review-handoff",
+            "ArtifactTitle": ".NET architecture design and review handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      }
     },
     {
       "Order": 2,
@@ -496,7 +517,34 @@
       ],
       "OperationTargetScope": "ExternalActionControlled",
       "SubprocessProcessKey": "dotnet-development-slice",
-      "SubprocessDefinitionSnapshotName": ".NET implementation slice with atomic validation"
+      "SubprocessDefinitionSnapshotName": ".NET implementation slice with atomic validation",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-development-slice",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "implementation-change-set",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "slice-handoff",
+            "ArtifactExpectationKey": "slice-handoff-packet",
+            "ArtifactTitle": "Implementation slice handoff packet"
+          },
+          {
+            "StepKey": "slice-handoff-after-repair",
+            "ArtifactExpectationKey": "slice-handoff-packet-after-repair",
+            "ArtifactTitle": "Implementation slice handoff packet after repair"
+          }
+        ],
+        "NoGoChildOutputs": [
+          {
+            "StepKey": "slice-repair-escalation",
+            "ArtifactExpectationKey": "slice-repair-escalation-packet",
+            "ArtifactTitle": "Implementation slice repair escalation packet"
+          }
+        ],
+        "RequiredChildReceipts": [],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      }
     },
     {
       "Order": 3,
@@ -1179,6 +1227,28 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-runtime-command-writeback",
       "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-runtime-command-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "runtime-command-writeback",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "runtime-command-handoff",
+            "ArtifactExpectationKey": "runtime-command-handoff",
+            "ArtifactTitle": ".NET runtime command handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [
+          {
+            "ToolName": "project_structure_node_create",
+            "RuntimeToolProviderKey": "project-structure.runtime-tools",
+            "Description": "Runtime command writeback must create or update launcher-compatible project-structure command nodes."
+          }
+        ],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -1266,6 +1336,33 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-ui-screenshot-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "ui-screenshot-writeback",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [
+          {
+            "ToolName": "workspace_analyze_image",
+            "RuntimeToolProviderKey": "",
+            "Description": "Required when screenshot acceptance depends on visual image content."
+          },
+          {
+            "ToolName": "workspace_analyze_images",
+            "RuntimeToolProviderKey": "",
+            "Description": "Required when comparing source target images or ordered screenshot states."
+          }
+        ],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -1740,6 +1837,28 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-runtime-command-writeback",
       "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-runtime-command-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "runtime-command-writeback-after-repair",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "runtime-command-handoff",
+            "ArtifactExpectationKey": "runtime-command-handoff",
+            "ArtifactTitle": ".NET runtime command handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [
+          {
+            "ToolName": "project_structure_node_create",
+            "RuntimeToolProviderKey": "project-structure.runtime-tools",
+            "Description": "Repaired runtime command writeback must create or update launcher-compatible project-structure command nodes."
+          }
+        ],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -1831,6 +1950,33 @@
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
       "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
+      "SubprocessContract": {
+        "DefinitionKey": "dotnet-ui-screenshot-writeback",
+        "LaunchMode": "RuntimeOwned",
+        "ParentProducedArtifactExpectationKey": "ui-screenshot-writeback-after-repair",
+        "AcceptedChildOutputs": [
+          {
+            "StepKey": "screenshot-handoff",
+            "ArtifactExpectationKey": "ui-screenshot-writeback-handoff",
+            "ArtifactTitle": ".NET UI screenshot writeback handoff"
+          }
+        ],
+        "NoGoChildOutputs": [],
+        "RequiredChildReceipts": [
+          {
+            "ToolName": "workspace_analyze_image",
+            "RuntimeToolProviderKey": "",
+            "Description": "Required when repaired screenshot acceptance depends on visual image content."
+          },
+          {
+            "ToolName": "workspace_analyze_images",
+            "RuntimeToolProviderKey": "",
+            "Description": "Required when comparing source target images or ordered repaired screenshot states."
+          }
+        ],
+        "AlreadySatisfiedOutput": null,
+        "MaterializationMode": "RuntimeSynthesizedParentHandoff"
+      },
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
