@@ -164,6 +164,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
             ContainsVisualTargetAssetSummary(contextSummary))
         {
             lines.Add("The project-structure context lists visual target assets. For visible UI implementation, preserve the listed ImageAsset node ids and media paths as source design inputs. For QA or repair validation, fetch or analyze the relevant image asset content and compare the delivered screenshot against that visual target before accepting visual alignment. Do not accept visual quality from generated app screenshots in isolation when a source target image is listed.");
+            lines.Add("Exact visual target media path rule: when ProjectStructureContextSummary lists a visual target with media=managed-files/project-media/..., copy that exact media value into workspace_inspect_image, workspace_analyze_image, or workspace_analyze_images. Do not replace the project-media directory segment with the agent id, process id, project title, or a guessed folder. If an image tool fails for a different project-media path, retry once with the exact media= value from ProjectStructureContextSummary or resolve the ImageAsset content with project-structure tools before returning Blocked.");
         }
 
         if (TryResolveLaunchVariable(request.LaunchVariables, "ProductRoot", out _) ||

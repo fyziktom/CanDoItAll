@@ -54,6 +54,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             return null;
         }
 
+        if (AllowsCompletedNoGoEscalationOutcome(assignment))
+        {
+            return null;
+        }
+
         var blockerLines = EnumerateOutcomeText(output)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .SelectMany(value => SplitOutcomeLines(value!))
@@ -145,5 +150,20 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             "without missing receipt",
             "blockers: none");
 
+    private static bool AllowsCompletedNoGoEscalationOutcome(ProcessRuntimeStepAssignment assignment)
+        => IsNoGoEscalationKey(assignment.StepKey) ||
+           IsNoGoEscalationKey(assignment.BranchGate?.RequiredOutcomeKey);
+
+    private static bool IsNoGoEscalationKey(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Contains("repair-escalation", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("unresolved-repair", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("no-go", StringComparison.OrdinalIgnoreCase);
+    }
 
 }

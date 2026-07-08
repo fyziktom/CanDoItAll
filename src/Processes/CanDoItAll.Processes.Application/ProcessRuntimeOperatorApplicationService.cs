@@ -2,6 +2,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -18,6 +19,10 @@ public sealed class ProcessRuntimeOperatorApplicationService(
 {
     private const string OperatorActorId = "process-runtime-operator";
     private const string ReworkInstructionHeading = "Operator rework instruction";
+    private const string ManagerRecoveryInstructionHeading = "Runtime manager recovery instruction";
+    private static readonly Regex PriorReworkInstructionBlockRegex = new(
+        $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}):\s*|\z)",
+        RegexOptions.CultureInvariant);
     private readonly IReadOnlyList<IProcessRuntimeRunCancellationObserver> cancellationObservers =
         (cancellationObservers ?? []).ToArray();
 
@@ -263,7 +268,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
 
     private static string AppendReworkInstruction(string prompt, string reason)
     {
-        var normalizedPrompt = prompt.TrimEnd();
+        var normalizedPrompt = RemovePriorReworkInstructionBlocks(prompt).TrimEnd();
         var normalizedReason = reason.Trim();
         return $"""
         {normalizedPrompt}
@@ -272,6 +277,9 @@ public sealed class ProcessRuntimeOperatorApplicationService(
         {normalizedReason}
         """;
     }
+
+    private static string RemovePriorReworkInstructionBlocks(string prompt)
+        => PriorReworkInstructionBlockRegex.Replace(prompt, string.Empty).TrimEnd();
 
     private static string BuildInstructionReason(
         string reason,

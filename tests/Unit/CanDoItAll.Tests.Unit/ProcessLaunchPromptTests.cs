@@ -349,6 +349,10 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("The project-structure context lists visual target assets", prompt, StringComparison.Ordinal);
         Assert.Contains("compare the delivered screenshot against that visual target", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not accept visual quality from generated app screenshots in isolation", prompt, StringComparison.Ordinal);
+        Assert.Contains("Exact visual target media path rule", prompt, StringComparison.Ordinal);
+        Assert.Contains("copy that exact media value into workspace_inspect_image, workspace_analyze_image, or workspace_analyze_images", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not replace the project-media directory segment with the agent id", prompt, StringComparison.Ordinal);
+        Assert.Contains("retry once with the exact media= value from ProjectStructureContextSummary", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not call workspace_read_file", prompt, StringComparison.Ordinal);
         Assert.Contains("with native absolute ProductRoot or OutputRoot paths", prompt, StringComparison.Ordinal);
         Assert.Contains("retry the same structured workspace tool with that alias before returning Blocked", prompt, StringComparison.Ordinal);

@@ -565,8 +565,10 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
 
     private static IReadOnlySet<string> ResolveActiveLaunchContextToolNameSet(ProcessRuntimeStepAssignment assignment)
     {
-        return ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey)
-            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+        return ProcessRequiredRuntimeToolNames
+            .FromProductCompletionRequiredToolReceipts(ResolveProductCompletionRequiredToolReceipts(
+                assignment.LaunchVariables,
+                assignment.StepKey))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 

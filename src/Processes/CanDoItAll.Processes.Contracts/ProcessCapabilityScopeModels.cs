@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Processes.Contracts;
@@ -185,6 +186,60 @@ public static class ProcessRequiredRuntimeToolNames
             .ToArray();
     }
 
+    public static IReadOnlyList<string> FromProductCompletionRequiredToolReceipts(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return FromProductCompletionRequiredToolReceipts(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return NormalizeRuntimeToolNameCandidates(
+                value.Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+    }
+
+    public static IReadOnlyList<string> FromProductCompletionRequiredToolReceipts(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return FromProductCompletionRequiredToolReceipts(element.GetString());
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return NormalizeRuntimeToolNameCandidates(element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString() ?? string.Empty));
+    }
+
+    public static IReadOnlyList<string> FromProductCompletionRequiredToolReceipts(IEnumerable<string>? requiredToolReceipts)
+        => NormalizeRuntimeToolNameCandidates(requiredToolReceipts);
+
+    public static IReadOnlyList<string> NormalizeRuntimeToolNameCandidates(IEnumerable<string>? candidates)
+    {
+        if (candidates is null)
+        {
+            return [];
+        }
+
+        return candidates
+            .Select(ResolveRuntimeToolNameCandidate)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private static string ResolveRuntimeToolName(ProcessRequiredToolReceipt receipt)
     {
         return receipt.Kind switch
@@ -194,6 +249,56 @@ public static class ProcessRequiredRuntimeToolNames
             ProcessRequiredToolReceiptKind.McpToolName => receipt.ToolName,
             _ => string.Empty
         };
+    }
+
+    private static string ResolveRuntimeToolNameCandidate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var candidate = value.Trim();
+        var predicateIndex = candidate.IndexOf('|');
+        if (predicateIndex >= 0)
+        {
+            candidate = candidate[..predicateIndex].Trim();
+        }
+
+        candidate = candidate.Replace('-', '_');
+        if (candidate.Contains('=') ||
+            !LooksLikeConcreteRuntimeToolName(candidate))
+        {
+            return string.Empty;
+        }
+
+        return candidate;
+    }
+
+    private static bool LooksLikeConcreteRuntimeToolName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            !char.IsLetter(value[0]))
+        {
+            return false;
+        }
+
+        var hasSeparator = false;
+        foreach (var character in value)
+        {
+            if (character == '_')
+            {
+                hasSeparator = true;
+                continue;
+            }
+
+            if (!char.IsLetterOrDigit(character))
+            {
+                return false;
+            }
+        }
+
+        return hasSeparator;
     }
 
     public static bool IsActive(

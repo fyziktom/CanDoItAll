@@ -613,7 +613,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         if (variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, out var direct) &&
             !string.IsNullOrWhiteSpace(direct))
         {
-            return ParseLaunchRequiredRuntimeToolNames(direct);
+            return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(direct);
         }
 
         if (!variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep, out var byStep) ||
@@ -635,7 +635,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             {
                 if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
                 {
-                    return ParseLaunchRequiredRuntimeToolNames(property.Value);
+                    return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(property.Value);
                 }
             }
         }
@@ -645,48 +645,6 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         }
 
         return [];
-    }
-
-    private static IReadOnlyList<string> ParseLaunchRequiredRuntimeToolNames(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.String)
-        {
-            return ParseLaunchRequiredRuntimeToolNames(element.GetString() ?? string.Empty);
-        }
-
-        if (element.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        return element.EnumerateArray()
-            .Where(item => item.ValueKind == JsonValueKind.String)
-            .Select(item => item.GetString()?.Trim() ?? string.Empty)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> ParseLaunchRequiredRuntimeToolNames(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(value);
-            return ParseLaunchRequiredRuntimeToolNames(document.RootElement);
-        }
-        catch (JsonException)
-        {
-            return value
-                .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
     }
 
     private static bool ValidateStepOperationContract(

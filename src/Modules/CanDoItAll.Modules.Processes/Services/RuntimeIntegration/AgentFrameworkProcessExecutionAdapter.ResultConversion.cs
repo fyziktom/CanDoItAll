@@ -36,6 +36,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         Guid? currentExecutionRunId = null,
         IReadOnlyDictionary<ArtifactSlotId, string>? producedArtifactContentHashes = null)
     {
+        var rawOutput = output;
         output = RemoveNonCitableSourceMetadataFromOutcome(output);
 
         var outcome = output.Status switch
@@ -252,6 +253,28 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 : $"{userSafeSummary}{Environment.NewLine}{Environment.NewLine}{managerRequest}";
         }
 
+        if (outcome == StrategyOutcome.NeedsManager &&
+            diagnostics.Count == 0)
+        {
+            var blockedSummary = BuildGenericBlockedDiagnosticSummary(assignment, output, rawOutput);
+            var blockedHash = ComputeHash($"{rawOutputHash}:agent-blocked:{blockedSummary}");
+            diagnostics.Add(new ProcessExecutionAdapterDiagnostic(
+                new StrategyDiagnosticCode("process.adapter.agent_blocked"),
+                StrategyDiagnosticSensitivity.Normal,
+                blockedHash,
+                blockedSummary,
+                RestrictedEvidenceReference: null,
+                ProcessDiagnosticRetrySafety.Unknown,
+                ProcessDiagnosticIdempotencyClassification.Unknown));
+            managerSignals.Add(new ManagerSignal(
+                new ManagerSignalCode("process.adapter.agent_blocked"),
+                blockedHash,
+                blockedSummary));
+            userSafeSummary = string.IsNullOrWhiteSpace(userSafeSummary)
+                ? blockedSummary
+                : userSafeSummary;
+        }
+
         return new ProcessExecutionAdapterResult(
             outcome,
             artifacts,
@@ -260,6 +283,39 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             managerSignals,
             userSafeSummary,
             rawOutputHash);
+    }
+
+    private static string BuildGenericBlockedDiagnosticSummary(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        ProcessStepOutcomeResult rawOutput)
+    {
+        var reason = CompactDiagnosticText(FirstNonEmpty(
+            RemoveNonCitableSourceMetadataFragments(rawOutput.Reason),
+            output.Reason,
+            output.HumanReadableSummaryMarkdown,
+            "The agent returned a blocked process-step outcome without a classified adapter diagnostic."));
+        var nextActions = rawOutput.NextActions
+            .Select(RemoveNonCitableSourceMetadataFragments)
+            .Concat(output.NextActions)
+            .Where(action => !string.IsNullOrWhiteSpace(action))
+            .Take(2)
+            .Select(action => CompactDiagnosticText(action, 400))
+            .ToArray();
+        var nextActionSummary = nextActions.Length == 0
+            ? string.Empty
+            : $" Next action(s): {string.Join(" ", nextActions)}";
+        return CompactDiagnosticText(
+            $"Step '{assignment.StepKey}' returned {output.Status}: {reason}{nextActionSummary}",
+            1600);
+    }
+
+    private static string CompactDiagnosticText(string value, int maxLength = 800)
+    {
+        var compact = Regex.Replace(value.Trim(), @"\s+", " ");
+        return compact.Length <= maxLength
+            ? compact
+            : compact[..maxLength].TrimEnd() + "...";
     }
 
     private static bool ShouldRouteBlockedBranchOutcome(
@@ -972,8 +1028,12 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         ProcessRuntimeStepAssignment assignment,
         ProcessStepExecutionContract stepContract)
     {
-        return stepContract.RequiredRuntimeToolNames
+        return ProcessRequiredRuntimeToolNames.NormalizeRuntimeToolNameCandidates(stepContract.RequiredRuntimeToolNames)
             .Concat(ProcessRequiredToolReceiptGate.ResolveRequiredRuntimeToolNames(assignment.CapabilityScope))
+            .Concat(ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(
+                ResolveProductCompletionRequiredToolReceipts(
+                    assignment.LaunchVariables,
+                    assignment.StepKey)))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)

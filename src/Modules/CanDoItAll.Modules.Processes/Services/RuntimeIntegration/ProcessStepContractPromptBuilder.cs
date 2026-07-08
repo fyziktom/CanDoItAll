@@ -96,6 +96,11 @@ internal static class ProcessStepContractPromptBuilder
                     .Append("- ")
                     .AppendLine(toolName);
             }
+
+            builder.AppendLine(
+                "Required runtime tool receipt rule: each listed tool must produce a current execution-run tool receipt before this step may submit Completed. A managed artifact, markdown statement, upstream artifact, launch variable, or prior run log that names the tool is not a receipt. If a listed tool is unavailable, denied, or fails before a branch decision can be made, submit Blocked or the applicable repair branch with the concrete current-run tool failure evidence instead of claiming Completed.");
+            builder.AppendLine(
+                "For validation tools, invoke the concrete workspace validation tools such as workspace_dotnet_restore, workspace_dotnet_build, and workspace_dotnet_test in this step before writing final success evidence. Do not replace those invocations with manual shell commands, prose summaries, or upstream artifact readbacks when the tools are listed above.");
         }
 
         if (subprocessContract is not null)
@@ -105,7 +110,7 @@ internal static class ProcessStepContractPromptBuilder
 
         AppendSubprocessArtifactMappings(builder, stepContract.SubprocessArtifactMappings);
 
-        builder.Append("Do not return Completed until every available required input is reflected in the work, every required runtime tool has the needed receipt, and every expected output artifact is produced.");
+        builder.Append("Do not return Completed until every available required input is reflected in the work, every required runtime tool has a current execution-run receipt from invoking that exact tool, and every expected output artifact is produced.");
         return builder.ToString();
     }
 

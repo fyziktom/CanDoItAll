@@ -167,7 +167,7 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
         var direct = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
         if (!string.IsNullOrWhiteSpace(direct))
         {
-            return ParseRequiredRuntimeToolNames(direct);
+            return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(direct);
         }
 
         var byStep = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep);
@@ -189,7 +189,7 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             {
                 if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
                 {
-                    return ParseRequiredRuntimeToolNames(property.Value);
+                    return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(property.Value);
                 }
             }
         }
@@ -199,48 +199,6 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
         }
 
         return [];
-    }
-
-    private static IReadOnlyList<string> ParseRequiredRuntimeToolNames(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.String)
-        {
-            return ParseRequiredRuntimeToolNames(element.GetString() ?? string.Empty);
-        }
-
-        if (element.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        return element.EnumerateArray()
-            .Where(item => item.ValueKind == JsonValueKind.String)
-            .Select(item => item.GetString()?.Trim() ?? string.Empty)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> ParseRequiredRuntimeToolNames(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(value);
-            return ParseRequiredRuntimeToolNames(document.RootElement);
-        }
-        catch (JsonException)
-        {
-            return value
-                .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
     }
 
     private static string ResolveAssignmentLaunchVariable(

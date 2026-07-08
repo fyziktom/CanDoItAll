@@ -1,15 +1,15 @@
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.AgentFramework.Tooling;
 
-namespace CanDoItAll.AgentFramework.Maf;
+namespace CanDoItAll.AgentFramework.Core;
 
-internal static class RuntimeToolProcessIntentPolicy
+public static class RuntimeToolProcessIntentPolicy
 {
     public static bool IsToolCapabilityAllowedForProcessIntent(
         ToolCapabilityMetadata capability,
         AgentRuntimeContextIntent contextIntent)
     {
+        ArgumentNullException.ThrowIfNull(capability);
+
         if (capability.Classification == ToolInvocationClassification.Read)
         {
             return true;
@@ -41,6 +41,29 @@ internal static class RuntimeToolProcessIntentPolicy
                 ProcessOperationContractNames.RecoverArtifactsOnly),
             _ => false
         };
+    }
+
+    public static bool ShouldExposeConfiguredWorkspaceToolsForProcessIntent(
+        AgentRuntimeContextIntent contextIntent)
+    {
+        if (!contextIntent.IsGovernedProcessStep)
+        {
+            return true;
+        }
+
+        return contextIntent.ScaffoldToolOnly ||
+               HasAnyOperation(
+                   contextIntent,
+                   ProcessOperationContractNames.MutateProductTarget,
+                   ProcessOperationContractNames.WriteExternalArtifactDestination,
+                   ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                   ProcessOperationContractNames.RecoverArtifactsOnly,
+                   ProcessOperationContractNames.RunValidation,
+                   ProcessOperationContractNames.LaunchRuntime,
+                   ProcessOperationContractNames.CaptureRuntimeProof,
+                   ProcessOperationContractNames.ExecuteExternalAction,
+                   ProcessOperationContractNames.StartProjectNodeProcess,
+                   ProcessOperationContractNames.ReadUpstreamArtifacts);
     }
 
     public static bool HasAnyOperation(
@@ -76,11 +99,18 @@ internal static class RuntimeToolProcessIntentPolicy
             return true;
         }
 
-        return RuntimeToolCapabilityDescriptorFactory.IsWorkspaceManagedArtifactWriteTool(capability.Name) &&
+        return IsWorkspaceManagedArtifactWriteTool(capability.Name) &&
                HasAnyOperation(
                    contextIntent,
                    ProcessOperationContractNames.WriteManagedProcessArtifacts,
                    ProcessOperationContractNames.WriteExternalArtifactDestination,
                    ProcessOperationContractNames.RecoverArtifactsOnly);
+    }
+
+    private static bool IsWorkspaceManagedArtifactWriteTool(string runtimeToolName)
+    {
+        return string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceWriteFile, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceAppendFile, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(runtimeToolName, ToolContractCatalog.WorkspaceWriteSpreadsheet, StringComparison.OrdinalIgnoreCase);
     }
 }

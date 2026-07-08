@@ -122,8 +122,10 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
 
     private static IReadOnlyList<string> ResolveRuntimeReadinessRequiredToolNames(ProcessRuntimeStepAssignment assignment)
     {
-        var launchContextToolNames = ResolveProductCompletionRequiredToolReceipts(assignment.LaunchVariables, assignment.StepKey)
-            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+        var launchContextToolNames = ProcessRequiredRuntimeToolNames
+            .FromProductCompletionRequiredToolReceipts(ResolveProductCompletionRequiredToolReceipts(
+                assignment.LaunchVariables,
+                assignment.StepKey))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return launchContextToolNames
             .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))

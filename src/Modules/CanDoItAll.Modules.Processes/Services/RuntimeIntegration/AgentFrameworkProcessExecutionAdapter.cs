@@ -158,13 +158,14 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         {
             var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
             var metadataJson = BuildProcessExecutionMetadata(assignment);
+            var promptStepContract = ResolvePromptStepContract(assignment, request.StepContract);
             var result = await workspaceService
                 .ExecuteRunAsync(
                     new ExecutionRunRequest(
                         agentId,
                         ProcessStepContractPromptBuilder.Build(
                             assignment.Prompt,
-                            request.StepContract,
+                            promptStepContract,
                             assignment.LaunchVariables,
                             assignment.StepKey),
                         Context: new ExecutionInvocationContext(
@@ -334,6 +335,19 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                 $"Agent execution failed for step '{assignment.StepKey}': {exception.Message}",
                 ComputeHash(exception.GetType().FullName + ":" + exception.Message));
         }
+    }
+
+    private static ProcessStepExecutionContract ResolvePromptStepContract(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepExecutionContract stepContract)
+    {
+        var requiredRuntimeToolNames = ResolvePreflightRequiredRuntimeToolNames(assignment, stepContract);
+        return requiredRuntimeToolNames.SequenceEqual(stepContract.RequiredRuntimeToolNames, StringComparer.OrdinalIgnoreCase)
+            ? stepContract
+            : stepContract with
+            {
+                RequiredRuntimeToolNames = requiredRuntimeToolNames
+            };
     }
 
 }

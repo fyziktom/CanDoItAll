@@ -37,7 +37,7 @@ internal static class RuntimeCapabilityAccessPolicyBuilder
         {
             var templatePath = TemplatePath.Create(
                 $"runtime/context/{NormalizeTemplatePathSegment(contextIntent.SourceKind)}/{NormalizeTemplatePathSegment(contextIntent.SourceId)}");
-            if (ShouldExcludeConfiguredWorkspaceToolsForProcessStep(contextIntent))
+            if (!RuntimeToolProcessIntentPolicy.ShouldExposeConfiguredWorkspaceToolsForProcessIntent(contextIntent))
             {
                 policies.Add(new CapabilityAccessPolicy(
                 [
@@ -70,28 +70,6 @@ internal static class RuntimeCapabilityAccessPolicyBuilder
         }
 
         return policies;
-    }
-
-    private static bool ShouldExcludeConfiguredWorkspaceToolsForProcessStep(AgentRuntimeContextIntent contextIntent)
-    {
-        if (!contextIntent.IsGovernedProcessStep)
-        {
-            return false;
-        }
-
-        return !contextIntent.ScaffoldToolOnly &&
-               !RuntimeToolProcessIntentPolicy.HasAnyOperation(
-                   contextIntent,
-                   ProcessOperationContractNames.MutateProductTarget,
-                   ProcessOperationContractNames.WriteExternalArtifactDestination,
-                   ProcessOperationContractNames.WriteManagedProcessArtifacts,
-                   ProcessOperationContractNames.RecoverArtifactsOnly,
-                   ProcessOperationContractNames.RunValidation,
-                   ProcessOperationContractNames.LaunchRuntime,
-                   ProcessOperationContractNames.CaptureRuntimeProof,
-                   ProcessOperationContractNames.ExecuteExternalAction,
-                   ProcessOperationContractNames.StartProjectNodeProcess,
-                   ProcessOperationContractNames.ReadUpstreamArtifacts);
     }
 
     private static CapabilityAccessPolicy BuildWorkspaceToolAccessPolicy(AgentWorkspaceToolAccessSettings workspaceToolAccess)

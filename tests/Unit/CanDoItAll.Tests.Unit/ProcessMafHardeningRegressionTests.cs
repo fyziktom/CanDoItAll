@@ -122,6 +122,29 @@ public sealed class ProcessMafHardeningRegressionTests
     }
 
     [Fact]
+    public void Step_contract_prompt_distinguishes_required_runtime_tool_receipts_from_markdown_claims()
+    {
+        var stepContract = new ProcessStepExecutionContract(
+            RequiredArtifacts: [],
+            ExpectedProducedArtifacts: [],
+            RequiredRuntimeToolNames:
+            [
+                "workspace_dotnet_restore",
+                "workspace_dotnet_build",
+                "workspace_dotnet_test"
+            ],
+            ContractHash: "sha256:validation-tools");
+
+        var prompt = ProcessStepContractPromptBuilder.Build("Validate the scaffold.", stepContract);
+
+        Assert.Contains("workspace_dotnet_restore", prompt, StringComparison.Ordinal);
+        Assert.Contains("each listed tool must produce a current execution-run tool receipt", prompt, StringComparison.Ordinal);
+        Assert.Contains("markdown statement", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not replace those invocations with manual shell commands", prompt, StringComparison.Ordinal);
+        Assert.Contains("current execution-run receipt from invoking that exact tool", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Parent_subprocess_bridge_accepts_only_typed_child_outputs()
     {
         var parentRunId = ProcessRunId.New();

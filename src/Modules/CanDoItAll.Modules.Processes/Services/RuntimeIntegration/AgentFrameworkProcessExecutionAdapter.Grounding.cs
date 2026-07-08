@@ -82,7 +82,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         var ungroundedRefs = FindUngroundedPathReferences(
             assignment,
             EnumerateTextPathReferences(content),
-            toolReceipts);
+            toolReceipts,
+            ReadTrustedManagedArtifactGroundingTexts(assignment));
         if (ungroundedRefs.Length == 0)
         {
             return null;
@@ -164,6 +165,27 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             : normalized;
     }
 
+    private static string RemoveNonCitableSourceMetadataFragments(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        var withoutNativeWorkspacePaths = Regex.Replace(
+            normalized,
+            @"[A-Za-z]:\\[^\s`""'<>]*\\CanDoItAll\\workspace\\[^\s`""'<>]*",
+            "[non-citable source path removed]",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var withoutStoragePaths = Regex.Replace(
+            withoutNativeWorkspacePaths,
+            @"(?:artifacts/scopes|managed-files|project-media|tool-runs)[/\\][^\s`""'<>]*",
+            "[non-citable source path removed]",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return Regex.Replace(withoutStoragePaths, @"\s+", " ").Trim();
+    }
+
     private static string RemoveNonCitableEvidenceRef(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -194,7 +216,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
     private static string[] FindUngroundedPathReferences(
         ProcessRuntimeStepAssignment assignment,
         IEnumerable<string> candidateRefs,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        IEnumerable<string>? additionalGroundingTexts = null)
     {
         var distinctRefs = candidateRefs
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -204,7 +227,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             return [];
         }
 
-        var groundingTexts = BuildOutcomeReferenceGroundingTexts(assignment, toolReceipts);
+        var groundingTexts = BuildOutcomeReferenceGroundingTexts(assignment, toolReceipts, additionalGroundingTexts);
         return distinctRefs
             .Where(candidateRef => !IsOutcomeReferenceGrounded(assignment, candidateRef, groundingTexts))
             .Take(5)
@@ -213,7 +236,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
 
     private static IReadOnlyList<string> BuildOutcomeReferenceGroundingTexts(
         ProcessRuntimeStepAssignment assignment,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        IEnumerable<string>? additionalGroundingTexts = null)
     {
         var groundingTexts = new List<string>
         {
@@ -238,6 +262,11 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 }));
         }
 
+        if (additionalGroundingTexts is not null)
+        {
+            groundingTexts.AddRange(additionalGroundingTexts);
+        }
+
         return groundingTexts
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(NormalizeOutcomeReferenceText)
@@ -245,6 +274,50 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
+
+    private IReadOnlyList<string> ReadTrustedManagedArtifactGroundingTexts(ProcessRuntimeStepAssignment assignment)
+    {
+        var primaryRef = NormalizeManagedArtifactRef(BuildManagedStepArtifactPath(assignment));
+        return EnumerateTrustedManagedArtifactRefs(assignment, primaryRef)
+            .Select(ReadManagedArtifactGroundingText)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToArray();
+    }
+
+    private string ReadManagedArtifactGroundingText(string artifactRef)
+    {
+        var readResult = workspaceFiles.ReadTextFile(artifactRef, maxCharacters: 200000);
+        return readResult.Succeeded && !string.IsNullOrWhiteSpace(readResult.Content)
+            ? readResult.Content
+            : string.Empty;
+    }
+
+    private static IEnumerable<string> EnumerateTrustedManagedArtifactRefs(
+        ProcessRuntimeStepAssignment assignment,
+        string primaryRef)
+    {
+        var trustedTexts = new List<string?> { assignment.Prompt };
+        trustedTexts.AddRange(assignment.LaunchVariables.SelectMany(item => new[] { item.Key, item.Value }));
+
+        foreach (var trustedText in trustedTexts)
+        {
+            foreach (var candidateRef in EnumerateTextPathReferences(trustedText))
+            {
+                var normalizedRef = NormalizeManagedArtifactRef(candidateRef);
+                if (IsManagedMarkdownArtifactRef(normalizedRef) &&
+                    !string.Equals(normalizedRef, primaryRef, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return normalizedRef;
+                }
+            }
+        }
+    }
+
+    private static bool IsManagedMarkdownArtifactRef(string value)
+        => Regex.IsMatch(
+            NormalizeManagedArtifactRef(value),
+            @"^artifacts/process-runs/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/steps/[^/\\]+\.md$",
+            RegexOptions.CultureInvariant);
 
     private static bool IsOutcomeReferenceGrounded(
         ProcessRuntimeStepAssignment assignment,

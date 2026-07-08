@@ -707,45 +707,8 @@ public sealed class ProcessLaunchApplicationService(
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
-        return ParseLaunchPlanRequiredRuntimeToolNames(value)
+        return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyList<string> ParseLaunchPlanRequiredRuntimeToolNames(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(value);
-            if (document.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                return document.RootElement
-                    .EnumerateArray()
-                    .Where(item => item.ValueKind == JsonValueKind.String)
-                    .Select(item => item.GetString()?.Trim() ?? string.Empty)
-                    .Where(item => !string.IsNullOrWhiteSpace(item))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-            }
-
-            if (document.RootElement.ValueKind == JsonValueKind.String)
-            {
-                return ParseLaunchPlanRequiredRuntimeToolNames(document.RootElement.GetString() ?? string.Empty);
-            }
-        }
-        catch (JsonException)
-        {
-        }
-
-        return value
-            .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
     }
 
     private static IReadOnlyList<ArtifactSlotId> ResolveRequiredSlots(

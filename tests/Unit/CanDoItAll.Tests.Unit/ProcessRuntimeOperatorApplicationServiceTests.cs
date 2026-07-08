@@ -56,6 +56,71 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
     }
 
     [Fact]
+    public async Task Request_rework_removes_prior_recovery_prompt_blocks_before_appending_fresh_instruction()
+    {
+        var runId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stalePrompt = """
+            Repair the generated app and return structured process output.
+
+            Runtime manager recovery instruction:
+            The previous result blocked the step and must be reviewed by the process manager before any rework is dispatched.
+            Diagnostics:
+            - process.adapter.runtime_tool_preflight_failed: browser tools were unavailable in an old attempt.
+
+            Operator rework instruction:
+            Old operator note that is no longer the current repair instruction.
+
+            Runtime manager recovery instruction:
+            Diagnostics:
+            - process.adapter.product_required_tool_receipt_blocked_retry: Original reason: The runtime preflight explicitly reported browser tools unavailable.
+            Requested artifacts:
+            - old-slot: sha256:old
+            """;
+        var assignmentStore = new RecordingAssignmentStore(CreateAssignment(runId, planId, stepId) with
+        {
+            Prompt = stalePrompt
+        });
+        var dispatchQueue = new RecordingDispatchQueue();
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var stateStore = new InMemoryRuntimeStateStore(CreateFailedState(runId, planId, stepId));
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            new RecordingUnitOfWork(stateStore),
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(projectionStore, ProcessProjectionJsonCodec.Default, clock),
+                clock),
+            []);
+
+        var result = await service.ExecuteAsync(new ProcessRuntimeOperatorActionCommand(
+            runId,
+            stepId,
+            ProcessRuntimeOperatorActionKind.RequestRework,
+            "unit-test",
+            "Runtime preflight is now satisfied; invoke the current browser and validation tools."));
+
+        Assert.True(result.Succeeded);
+        var saved = Assert.Single(assignmentStore.SavedAssignments);
+        Assert.StartsWith("Repair the generated app", saved.Prompt, StringComparison.Ordinal);
+        Assert.Contains("Operator rework instruction:", saved.Prompt, StringComparison.Ordinal);
+        Assert.Contains("Runtime preflight is now satisfied", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Runtime manager recovery instruction:", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Old operator note", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser tools were unavailable in an old attempt", saved.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("old-slot", saved.Prompt, StringComparison.Ordinal);
+        Assert.Single(dispatchQueue.Requests);
+    }
+
+    [Fact]
     public async Task Request_rework_expires_stale_active_claim_and_enqueues_dispatch()
     {
         var runId = ProcessRunId.New();
