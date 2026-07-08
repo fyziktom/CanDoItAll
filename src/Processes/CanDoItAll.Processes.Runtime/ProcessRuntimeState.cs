@@ -174,6 +174,16 @@ public sealed record ProcessRecoveryDecisionReceipt(
     public ProcessRecoveryRouteKind RouteKind { get; init; } = ProcessRecoveryRouteKind.ManagerAction;
 
     public ProcessStepInstanceId? ResponsibleStepInstanceId { get; init; }
+
+    public string DiagnosticFingerprint { get; init; } = string.Empty;
+
+    public int AutomaticRetryAttempt { get; init; }
+
+    public int MaximumAutomaticRetryAttempts { get; init; }
+
+    public int SameDiagnosticFingerprintAttempt { get; init; }
+
+    public int MaximumSameDiagnosticFingerprintAttempts { get; init; }
 }
 
 public enum ProcessFailureCategory
@@ -188,6 +198,7 @@ public enum ProcessFailureCategory
     ProviderFailure,
     ChildRunBlocked,
     InstructionNonCompliance,
+    ProductCompletionGate,
     AdapterRetryable
 }
 

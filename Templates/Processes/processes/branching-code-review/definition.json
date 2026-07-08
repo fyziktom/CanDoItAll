@@ -324,12 +324,12 @@
           "Description": "Send the change directly to the merge approval lane."
         },
         {
-          "Key": "__default__",
+          "Key": "default",
           "Title": "Default",
           "Description": "Continue when no explicit branch outcome is selected."
         },
         {
-          "Key": "__error__",
+          "Key": "error",
           "Title": "Error",
           "Description": "Escalate canvas or runtime authoring failures that prevent a safe routing decision."
         }
@@ -354,7 +354,8 @@
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 2,
@@ -1035,7 +1036,7 @@
       "ExceptionPolicySummary": "If the state is actually malformed or contradictory, use the error lane instead of normalization.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "route-review-disposition",
-      "DependsOnBranchOutcomeKey": "__default__",
+      "DependsOnBranchOutcomeKey": "default",
       "DecisionRoleKey": "",
       "CanvasX": 2420,
       "CanvasY": -5200,
@@ -1044,7 +1045,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "route-review-disposition",
-          "DependsOnBranchOutcomeKey": "__default__"
+          "DependsOnBranchOutcomeKey": "default"
         }
       ],
       "RoleAssignments": [
@@ -1119,7 +1120,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "route-review-disposition",
-          "DependsOnBranchOutcomeKey": "__default__"
+          "DependsOnBranchOutcomeKey": "default"
         },
         {
           "DependsOnStepKey": "normalize-default-lane",
@@ -1200,7 +1201,7 @@
       "ExceptionPolicySummary": "Do not guess a lane when the workflow state is broken; capture failure explicitly.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "route-review-disposition",
-      "DependsOnBranchOutcomeKey": "__error__",
+      "DependsOnBranchOutcomeKey": "error",
       "DecisionRoleKey": "",
       "CanvasX": 2420,
       "CanvasY": 6240,
@@ -1209,7 +1210,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "route-review-disposition",
-          "DependsOnBranchOutcomeKey": "__error__"
+          "DependsOnBranchOutcomeKey": "error"
         }
       ],
       "RoleAssignments": [
@@ -1469,7 +1470,7 @@
       "AntiPatterns": [
         "Approving because teams appear confident without checking the evidence.",
         "Conflating deployment success with business-release success.",
-        "Ignoring rollback realism because the change is \u0027small\u0027.",
+        "Ignoring rollback realism because the change is 'small'.",
         "Treating approval as ceremonial rather than consequential."
       ],
       "FitnessEvidence": [
@@ -1621,3 +1622,5 @@
     "prompt-review-normalization"
   ]
 }
+
+

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Templates;
@@ -192,11 +193,372 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
         Assert.Contains("key and relativePath", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Template_compatibility_strict_scan_rejects_prose_only_tool_plan()
+    {
+        var root = CreateTemplatePackRoot();
+        await WriteManifestAsync(root, "dotnet-setup");
+        await WriteDefinitionAsync(
+            root,
+            "dotnet-setup",
+            """
+            {
+              "key": "dotnet-setup",
+              "steps": [
+                {
+                  "key": "create-dotnet-project",
+                  "notes": "Run workspace_pwsh_run_script with sideEffectManifest before completion."
+                }
+              ]
+            }
+            """);
+
+        var report = await ProcessTemplateCompatibilityScanner.AnalyzeAsync(CreateStrictScanRequest(root));
+
+        Assert.Contains(
+            report.TemplateContractDiagnostics.Diagnostics,
+            diagnostic =>
+                diagnostic.Kind == ProcessTemplateContractDiagnosticKind.ProseOnlyHardGate &&
+                diagnostic.ProcessKey == "dotnet-setup" &&
+                diagnostic.StepKey == "create-dotnet-project");
+        Assert.Contains(
+            report.TemplateContractDiagnostics.Diagnostics,
+            diagnostic =>
+                diagnostic.Kind == ProcessTemplateContractDiagnosticKind.MissingExecutionContract &&
+                diagnostic.ProcessKey == "dotnet-setup" &&
+                diagnostic.StepKey == "create-dotnet-project");
+        Assert.True(report.RequiresManualReview);
+    }
+
+    [Fact]
+    public async Task Template_compatibility_strict_scan_rejects_tool_plan_with_unresolved_script_ref()
+    {
+        var root = CreateTemplatePackRoot();
+        await WriteManifestAsync(root, "dotnet-setup");
+        await WriteDefinitionAsync(
+            root,
+            "dotnet-setup",
+            """
+            {
+              "key": "dotnet-setup",
+              "steps": [
+                {
+                  "key": "create-dotnet-project",
+                  "executionClass": "AgentWithToolPlanGuard",
+                  "executionContract": {
+                    "executionClass": "AgentWithToolPlanGuard",
+                    "deterministicToolPlan": {
+                      "planKey": "dotnet-create",
+                      "planKind": "DotNetSolutionCreate",
+                      "scriptRef": "artifacts/process-runs/{CurrentProcessRunId}/scripts/create.ps1",
+                      "operations": [
+                        {
+                          "key": "run-helper",
+                          "toolName": "workspace_pwsh_run_script"
+                        }
+                      ],
+                      "requiredReceipts": [
+                        {
+                          "key": "run-helper",
+                          "toolName": "workspace_pwsh_run_script"
+                        }
+                      ],
+                      "readbackChecks": [
+                        {
+                          "pathCandidates": [
+                            "Calculator.slnx"
+                          ],
+                          "requiredTextAnyGroups": [
+                            [
+                              "src/Calculator/Calculator.csproj"
+                            ]
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+            """);
+
+        var report = await ProcessTemplateCompatibilityScanner.AnalyzeAsync(CreateStrictScanRequest(root));
+
+        var diagnostic = Assert.Single(
+            report.TemplateContractDiagnostics.Diagnostics,
+            item => item.Kind == ProcessTemplateContractDiagnosticKind.InvalidDeterministicToolPlan);
+        Assert.Contains("{CurrentProcessRunId}", diagnostic.Message, StringComparison.Ordinal);
+        Assert.True(report.RequiresManualReview);
+    }
+
+    [Fact]
+    public async Task Template_compatibility_strict_scan_rejects_runtime_owned_subprocess_with_unknown_child_output_step()
+    {
+        var root = CreateTemplatePackRoot();
+        await WriteManifestAsync(root, "parent-flow", "child-flow");
+        await WriteDefinitionAsync(
+            root,
+            "parent-flow",
+            """
+            {
+              "key": "parent-flow",
+              "steps": [
+                {
+                  "key": "prepare",
+                  "stepKind": "Subprocess",
+                  "subprocessProcessKey": "child-flow",
+                  "executionClass": "RuntimeOwnedSubprocess",
+                  "artifactExpectations": [
+                    {
+                      "key": "handoff",
+                      "title": "Handoff"
+                    }
+                  ],
+                  "subprocessContract": {
+                    "definitionKey": "child-flow",
+                    "parentProducedArtifactExpectationKey": "handoff",
+                    "launchMode": "RuntimeOwned",
+                    "materializationMode": "RuntimeSynthesizedParentHandoff",
+                    "acceptedChildOutputs": [
+                      {
+                        "stepKey": "missing-step",
+                        "artifactExpectationKey": "child-handoff"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+            """);
+        await WriteDefinitionAsync(
+            root,
+            "child-flow",
+            """
+            {
+              "key": "child-flow",
+              "steps": [
+                {
+                  "key": "actual-step",
+                  "artifactExpectations": [
+                    {
+                      "key": "child-handoff",
+                      "title": "Child handoff"
+                    }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        var report = await ProcessTemplateCompatibilityScanner.AnalyzeAsync(CreateStrictScanRequest(root));
+
+        var diagnostic = Assert.Single(
+            report.TemplateContractDiagnostics.Diagnostics,
+            item => item.Kind == ProcessTemplateContractDiagnosticKind.UnknownSubprocessChildOutputStep);
+        Assert.Equal("parent-flow", diagnostic.ProcessKey);
+        Assert.Equal("prepare", diagnostic.StepKey);
+        Assert.Contains("missing-step", diagnostic.Message, StringComparison.Ordinal);
+        Assert.True(report.RequiresManualReview);
+    }
+
+    [Fact]
+    public async Task Template_loader_materializes_typed_execution_contract()
+    {
+        var root = CreateTemplatePackRoot();
+        await WriteManifestAsync(root, "typed-flow");
+        await WriteDefinitionAsync(
+            root,
+            "typed-flow",
+            """
+            {
+              "key": "typed-flow",
+              "displayName": "Typed Flow",
+              "summary": "Typed",
+              "steps": [
+                {
+                  "key": "create-dotnet-project",
+                  "executionClass": "AgentWithToolPlanGuard",
+                  "executionContract": {
+                    "executionClass": "AgentWithToolPlanGuard",
+                    "deterministicToolPlan": {
+                      "planKey": "dotnet-create",
+                      "planKind": "DotNetSolutionCreate",
+                      "scriptRefLaunchVariable": "DotNetCreateProjectScriptRef",
+                      "operations": [
+                        {
+                          "key": "run-helper",
+                          "toolName": "workspace_pwsh_run_script"
+                        }
+                      ],
+                      "requiredReceipts": [
+                        {
+                          "key": "run-helper",
+                          "toolName": "workspace_pwsh_run_script"
+                        }
+                      ],
+                      "readbackChecks": [
+                        {
+                          "pathCandidates": [
+                            "Calculator.slnx"
+                          ],
+                          "requiredTextAnyGroups": [
+                            [
+                              "src/Calculator/Calculator.csproj"
+                            ]
+                          ]
+                        }
+                      ]
+                    },
+                    "requiredReceipts": [
+                      {
+                        "key": "run-helper",
+                        "toolName": "workspace_pwsh_run_script"
+                      }
+                    ],
+                    "producedArtifactSlots": [
+                      {
+                        "artifactExpectationKey": "setup-evidence",
+                        "materializationMode": "RuntimeManaged"
+                      }
+                    ]
+                  },
+                  "artifactExpectations": [
+                    {
+                      "key": "setup-evidence",
+                      "title": "Setup Evidence"
+                    }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        var loader = new ProcessTemplatePackLoader(root);
+        var definition = loader.LoadDefinition("typed-flow");
+
+        var step = Assert.Single(definition.Steps);
+        Assert.Equal(ProcessTemplateStepExecutionClasses.AgentWithToolPlanGuard, step.ExecutionClass);
+        Assert.NotNull(step.ExecutionContract);
+        Assert.NotNull(step.ExecutionContract.DeterministicToolPlan);
+        Assert.Equal("dotnet-create", step.ExecutionContract.DeterministicToolPlan.PlanKey);
+        Assert.Equal("DotNetCreateProjectScriptRef", step.ExecutionContract.DeterministicToolPlan.ScriptRefLaunchVariable);
+        Assert.Single(step.ExecutionContract.RequiredReceipts);
+        Assert.Single(step.ExecutionContract.ProducedArtifactSlots);
+    }
+
+    [Fact]
+    public async Task Template_compatibility_strict_scan_accepts_full_migrated_template_pack()
+    {
+        var root = ProcessTemplatePackLoader.FindPackRoot();
+
+        var report = await ProcessTemplateCompatibilityScanner.AnalyzeAsync(CreateStrictScanRequest(root));
+
+        Assert.Empty(report.TemplateContractDiagnostics.Diagnostics);
+    }
+
+    [Fact]
+    public async Task Template_compatibility_strict_scan_rejects_full_pack_when_required_typed_contract_removed()
+    {
+        var sourceRoot = ProcessTemplatePackLoader.FindPackRoot();
+        var root = CreateTemplatePackRoot();
+        await WriteManifestAsync(root, "dotnet-solution-setup");
+        var processRoot = Path.Combine(root, "processes", "dotnet-solution-setup");
+        Directory.CreateDirectory(processRoot);
+
+        var sourceDefinitionPath = Path.Combine(
+            sourceRoot,
+            "processes",
+            "dotnet-solution-setup",
+            "definition.json");
+        var definition = JsonNode.Parse(await File.ReadAllTextAsync(sourceDefinitionPath))!.AsObject();
+        var createProjectStep = definition["Steps"]!
+            .AsArray()
+            .Select(node => node!.AsObject())
+            .Single(step => string.Equals((string?)step["Key"], "create-dotnet-project", StringComparison.Ordinal));
+        createProjectStep.Remove("ExecutionContract");
+        await File.WriteAllTextAsync(
+            Path.Combine(processRoot, "definition.json"),
+            definition.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        var report = await ProcessTemplateCompatibilityScanner.AnalyzeAsync(CreateStrictScanRequest(root));
+
+        Assert.Contains(
+            report.TemplateContractDiagnostics.Diagnostics,
+            diagnostic =>
+                diagnostic.Kind == ProcessTemplateContractDiagnosticKind.MissingExecutionContract &&
+                diagnostic.ProcessKey == "dotnet-solution-setup" &&
+                diagnostic.StepKey == "create-dotnet-project");
+    }
+
+    [Fact]
+    public void Business_artifact_templates_declare_semantic_acceptance_contract()
+    {
+        var root = ProcessTemplatePackLoader.FindPackRoot();
+        var artifactDirectory = Path.Combine(root, "processes", "business-plan-development", "artifacts");
+        var files = Directory.GetFiles(artifactDirectory, "*.json");
+
+        Assert.Equal(6, files.Length);
+        foreach (var file in files)
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(file));
+            var contract = document.RootElement.GetProperty("SemanticAcceptanceContract");
+
+            Assert.Equal("SemanticReview", contract.GetProperty("AcceptanceMode").GetString());
+            Assert.False(contract.GetProperty("FileExistenceIsSufficient").GetBoolean());
+            Assert.False(string.IsNullOrWhiteSpace(contract.GetProperty("RequiredArtifactSlotKey").GetString()));
+            Assert.True(contract.GetProperty("RequiredEvidenceKinds").GetArrayLength() >= 3);
+        }
+    }
+
     private static string CreateTemplatePackRoot()
     {
         var root = Path.Combine(Path.GetTempPath(), "candoitall-template-compatibility", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         return root;
+    }
+
+    private static ProcessTemplateCompatibilityScanRequest CreateStrictScanRequest(string root)
+        => new(
+            root,
+            ProcessTemplateSchemaMarker.ProcessDefinitionSchemaV1,
+            new ProcessTemplateMigrationRegistry(
+                [ProcessTemplateCompatibilityScanner.LegacyCurrentModuleSchemaVersion, ProcessTemplateSchemaMarker.ProcessDefinitionSchemaV1],
+                [new IdentityTemplateMigration(
+                    "legacy-current-module-to-v1",
+                    ProcessTemplateCompatibilityScanner.LegacyCurrentModuleSchemaVersion,
+                    ProcessTemplateSchemaMarker.ProcessDefinitionSchemaV1)]),
+            new DateTimeOffset(2026, 6, 15, 0, 0, 0, TimeSpan.Zero))
+        {
+            StrictExecutionContractValidation = true
+        };
+
+    private static async Task WriteManifestAsync(string root, params string[] processKeys)
+    {
+        var entries = string.Join(
+            ",",
+            processKeys.Select(key =>
+                $$"""
+                  {
+                    "key": "{{key}}",
+                    "relativePath": "processes/{{key}}"
+                  }
+                """));
+        await File.WriteAllTextAsync(
+            Path.Combine(root, "manifest.json"),
+            $$"""
+            {
+              "processes": [
+            {{entries}}
+              ]
+            }
+            """);
+    }
+
+    private static async Task WriteDefinitionAsync(string root, string processKey, string definitionJson)
+    {
+        var processRoot = Path.Combine(root, "processes", processKey);
+        Directory.CreateDirectory(processRoot);
+        await File.WriteAllTextAsync(Path.Combine(processRoot, "definition.json"), definitionJson);
     }
 
     private sealed class IdentityTemplateMigration : IProcessTemplateMigration

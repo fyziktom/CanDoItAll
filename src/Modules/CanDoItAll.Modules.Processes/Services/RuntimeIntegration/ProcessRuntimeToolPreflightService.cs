@@ -23,6 +23,10 @@ internal sealed record ProcessRuntimeToolPreflightResult(
     string Summary)
 {
     public static ProcessRuntimeToolPreflightResult Satisfied { get; } = new(true, [], string.Empty);
+
+    public IReadOnlyList<ProcessRuntimeToolPlanGuardIssue> PlanIssues { get; init; } = [];
+
+    public IReadOnlyList<AgentCapabilityDiagnostic> CapabilityDiagnostics { get; init; } = [];
 }
 
 internal sealed class ProcessRuntimeToolPreflightService(
@@ -64,7 +68,22 @@ internal sealed class ProcessRuntimeToolPreflightService(
             .ToArray();
         if (requiredToolNames.Length == 0)
         {
-            return ProcessRuntimeToolPreflightResult.Satisfied;
+            var emptyToolPlanGuard = DotNetSolutionSetupToolPlanGuard.Evaluate(request.Assignment);
+            return emptyToolPlanGuard.IsSatisfied
+                ? ProcessRuntimeToolPreflightResult.Satisfied
+                : CreateToolPlanFailure(emptyToolPlanGuard);
+        }
+
+        var toolPlanGuard = DotNetSolutionSetupToolPlanGuard.Evaluate(request.Assignment);
+        if (!toolPlanGuard.IsSatisfied)
+        {
+            return CreateToolPlanFailure(toolPlanGuard);
+        }
+
+        var capabilityDiagnostics = EvaluateRequiredRuntimeToolCapabilities(request, requiredToolNames);
+        if (capabilityDiagnostics.Count > 0)
+        {
+            return CreateCapabilityFailure(capabilityDiagnostics);
         }
 
         var contextIntent = CreateContextIntent(request.Assignment);
@@ -110,6 +129,126 @@ internal sealed class ProcessRuntimeToolPreflightService(
             false,
             missingToolNames,
             $"Required runtime tool(s) are not composed for this process step: {string.Join(", ", missingToolNames)}.{providerErrorSummary}");
+    }
+
+    private static ProcessRuntimeToolPreflightResult CreateToolPlanFailure(
+        DotNetSolutionSetupToolPlanGuardResult guardResult)
+    {
+        var summary = string.Join(" ", guardResult.Issues.Select(issue => issue.SafeSummary));
+        return new ProcessRuntimeToolPreflightResult(
+            false,
+            [],
+            $"Deterministic .NET setup tool-plan guard failed. {summary}")
+        {
+            PlanIssues = guardResult.Issues
+        };
+    }
+
+    private static ProcessRuntimeToolPreflightResult CreateCapabilityFailure(
+        IReadOnlyList<AgentCapabilityDiagnostic> diagnostics)
+    {
+        var missingCapabilities = diagnostics
+            .Select(diagnostic => $"{diagnostic.Kind}:{diagnostic.CapabilityKey}")
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return new ProcessRuntimeToolPreflightResult(
+            false,
+            [],
+            $"Required runtime tool capability assignment(s) are missing for this process step: {string.Join(", ", missingCapabilities)}.")
+        {
+            CapabilityDiagnostics = diagnostics
+        };
+    }
+
+    private static IReadOnlyList<AgentCapabilityDiagnostic> EvaluateRequiredRuntimeToolCapabilities(
+        ProcessRuntimeToolPreflightRequest request,
+        IReadOnlyList<string> requiredToolNames)
+    {
+        var diagnostics = new List<AgentCapabilityDiagnostic>();
+        foreach (var requiredToolName in requiredToolNames)
+        {
+            var normalizedToolName = ToolContractCatalog.NormalizeToolName(requiredToolName);
+            if (string.IsNullOrWhiteSpace(normalizedToolName))
+            {
+                continue;
+            }
+
+            if (normalizedToolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase))
+            {
+                AddMissingBrowserCapabilityDiagnostic(request, normalizedToolName, diagnostics);
+                continue;
+            }
+
+            if (!normalizedToolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) ||
+                !AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(normalizedToolName, out _))
+            {
+                continue;
+            }
+
+            AddMissingWorkspaceToolCapabilityDiagnostic(request, normalizedToolName, diagnostics);
+        }
+
+        return diagnostics
+            .DistinctBy(diagnostic => (diagnostic.Kind, diagnostic.CapabilityKey))
+            .ToArray();
+    }
+
+    private static void AddMissingWorkspaceToolCapabilityDiagnostic(
+        ProcessRuntimeToolPreflightRequest request,
+        string normalizedToolName,
+        List<AgentCapabilityDiagnostic> diagnostics)
+    {
+        var capabilityKey = normalizedToolName.Replace('_', '-');
+        if (request.Agent.Capabilities.Any(capability =>
+                capability.Kind == CapabilityKind.Tool &&
+                CapabilityKeyMatchesTool(capability.CapabilityKey, normalizedToolName, capabilityKey)))
+        {
+            return;
+        }
+
+        diagnostics.Add(CreateMissingCapabilityDiagnostic(
+            request,
+            CapabilityKind.Tool,
+            capabilityKey,
+            $"Step '{request.Assignment.StepKey}' requires runtime tool '{normalizedToolName}', but agent '{request.Agent.Name}' does not have matching tool capability '{capabilityKey}'."));
+    }
+
+    private static void AddMissingBrowserCapabilityDiagnostic(
+        ProcessRuntimeToolPreflightRequest request,
+        string normalizedToolName,
+        List<AgentCapabilityDiagnostic> diagnostics)
+    {
+        if (HasRequiredBrowserRuntimeToolCapability(request.Agent, normalizedToolName))
+        {
+            return;
+        }
+
+        diagnostics.Add(CreateMissingCapabilityDiagnostic(
+            request,
+            CapabilityKind.McpServer,
+            "playwright-local-mcp",
+            $"Step '{request.Assignment.StepKey}' requires browser runtime tool '{normalizedToolName}', but agent '{request.Agent.Name}' does not have a Playwright/browser MCP capability or matching browser tool capability."));
+    }
+
+    private static AgentCapabilityDiagnostic CreateMissingCapabilityDiagnostic(
+        ProcessRuntimeToolPreflightRequest request,
+        CapabilityKind kind,
+        string capabilityKey,
+        string message)
+    {
+        return new AgentCapabilityDiagnostic(
+            AgentCapabilityDiagnosticCode.MissingRequiredCapability,
+            AgentCapabilityDiagnosticSeverity.Error,
+            request.Agent.Id,
+            request.Agent.Name,
+            string.IsNullOrWhiteSpace(request.Assignment.RoleKey)
+                ? request.Assignment.StepKey
+                : request.Assignment.RoleKey,
+            request.Agent.RoleTitle,
+            kind,
+            capabilityKey,
+            message);
     }
 
     private static AgentRuntimeContextIntent CreateContextIntent(

@@ -243,12 +243,12 @@
       "ArtifactInputs": [],
       "BranchOutcomes": [
         {
-          "Key": "__default__",
+          "Key": "default",
           "Title": "Default",
           "Description": "Route to the governed default lane."
         },
         {
-          "Key": "__error__",
+          "Key": "error",
           "Title": "Error",
           "Description": "Route to explicit failure handling."
         }
@@ -520,3 +520,4 @@
     }
   }
 ]
+

@@ -608,7 +608,8 @@
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],
-      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+      "OperationTargetScope": "ManagedProcessArtifactsOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 6,
@@ -758,3 +759,4 @@
     }
   ]
 }
+

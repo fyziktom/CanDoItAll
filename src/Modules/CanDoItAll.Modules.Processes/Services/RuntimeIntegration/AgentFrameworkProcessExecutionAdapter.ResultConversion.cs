@@ -146,58 +146,17 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 CreateSubprocessLaunchSkippedRetryIssue(assignment, output));
         }
 
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateGroundedOutcomeReferences(assignment, output, toolReceipts) is { } ungroundedReferenceIssue)
+        if (outcome == StrategyOutcome.Succeeded)
         {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, ungroundedReferenceIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateProductMutationCompletion(assignment, output) is { } productMutationIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, productMutationIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateProductMutationWriteReceipt(assignment, output, toolReceipts) is { } productMutationWriteIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, productMutationWriteIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateRequiredProductToolReceipts(assignment, toolReceipts) is { } requiredToolReceiptIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, requiredToolReceiptIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateRequiredProcessToolReceipts(assignment, toolReceipts, currentExecutionRunId) is { } processRequiredToolReceiptIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, processRequiredToolReceiptIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateRequiredProductStateCompletion(assignment, output) is { } requiredProductStateIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, requiredProductStateIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateCompletedOutcomeDoesNotDeclareBlockers(assignment, output) is { } declaredBlockerIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, declaredBlockerIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateManagedArtifactCompletion(assignment, output) is { } managedArtifactIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, managedArtifactIssue);
-        }
-
-        if (outcome == StrategyOutcome.Succeeded &&
-            ValidateManagedArtifactWriteReceipt(assignment, toolReceipts) is { } managedArtifactWriteIssue)
-        {
-            return NeedsManagerForCompletionIssue(assignment, rawOutputHash, managedArtifactWriteIssue);
+            var completionGateEvaluation = EvaluateCompletionGates(
+                assignment,
+                output,
+                toolReceipts,
+                currentExecutionRunId);
+            if (!completionGateEvaluation.IsSatisfied)
+            {
+                return NeedsManagerForCompletionIssues(assignment, rawOutputHash, completionGateEvaluation);
+            }
         }
 
         IReadOnlyList<ProducedArtifactRef> artifacts = outcome == StrategyOutcome.Succeeded
@@ -1045,12 +1004,27 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         ProcessRuntimeToolPreflightResult result)
     {
         var missingSummary = result.MissingToolNames.Count == 0
-            ? "unknown"
+            ? result.PlanIssues.Count == 0
+                ? result.CapabilityDiagnostics.Count == 0
+                    ? "unknown"
+                    : string.Join(", ", result.CapabilityDiagnostics.Select(diagnostic => $"{diagnostic.Kind}:{diagnostic.CapabilityKey}"))
+                : string.Join(", ", result.PlanIssues.Select(issue => issue.Code))
             : string.Join(", ", result.MissingToolNames);
+        var detailSummary = result.Summary;
+        if (result.PlanIssues.Count > 0)
+        {
+            detailSummary = $"{detailSummary} Plan guard issue(s): {string.Join(" | ", result.PlanIssues.Select(issue => $"{issue.Code}: {issue.SafeSummary}"))}";
+        }
+
+        if (result.CapabilityDiagnostics.Count > 0)
+        {
+            detailSummary = $"{detailSummary} Capability issue(s): {string.Join(" | ", result.CapabilityDiagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))}";
+        }
+
         return new ProcessCompletionIssue(
             "process.adapter.runtime_tool_preflight_failed",
-            $"Step '{assignment.StepKey}' cannot be dispatched because required runtime tool(s) are not composed for the exact process-step context: {missingSummary}. {result.Summary}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-tool-preflight:{missingSummary}:{result.Summary}",
+            $"Step '{assignment.StepKey}' cannot be dispatched because runtime tool preflight failed for the exact process-step context: {missingSummary}. {detailSummary}",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-tool-preflight:{missingSummary}:{detailSummary}",
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
@@ -1289,6 +1263,36 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             "process.adapter.subprocess_child_accepted_output_missing",
             $"Step '{assignment.StepKey}' has completed child run '{childRunId.Value:D}', but none of the typed accepted child outputs were materialized. Expected one of: {acceptedOutputs}. Do not complete the parent from a generic child folder.",
             $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-accepted-output-missing:{childRunId}:{acceptedOutputs}",
+            assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static ProcessCompletionIssue CreateSubprocessChildStoppedIssue(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRunId childRunId,
+        ParentSubprocessStoppedChild stoppedChild,
+        bool failed)
+    {
+        var diagnosticSummary = stoppedChild.Diagnostics.Count == 0
+            ? "no child diagnostics were recorded"
+            : string.Join(
+                " | ",
+                stoppedChild.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.SafeSummary}"));
+        var recoverySummary = stoppedChild.RecoveryDecision is null
+            ? "no child recovery decision was recorded"
+            : $"child recovery decision {stoppedChild.RecoveryDecision.DecisionKind}/{stoppedChild.RecoveryDecision.RouteKind}; policy {stoppedChild.RecoveryDecision.Policy}; retry {stoppedChild.RecoveryDecision.AutomaticRetryAttempt}/{stoppedChild.RecoveryDecision.MaximumAutomaticRetryAttempts}; same fingerprint {stoppedChild.RecoveryDecision.SameDiagnosticFingerprintAttempt}/{stoppedChild.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts}; reason {stoppedChild.RecoveryDecision.SafeReason}";
+        var childStepId = stoppedChild.ChildStepInstanceId?.Value.ToString("D") ?? "unknown";
+        var code = failed
+            ? "process.adapter.subprocess_child_failed"
+            : "process.adapter.subprocess_child_blocked";
+        var statusLabel = failed ? "failed" : "blocked";
+        var summary = $"Step '{assignment.StepKey}' has {statusLabel} child process run '{childRunId.Value:D}' at child step '{stoppedChild.ChildStepKey}' ({childStepId}); child runtime status {stoppedChild.ChildStatus}; child step status {stoppedChild.ChildStepStatus?.ToString() ?? "unknown"}. Child diagnostic(s): {diagnosticSummary}. {recoverySummary}.";
+        var evidence = $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-{statusLabel}:{childRunId}:{stoppedChild.ChildStatus}:{stoppedChild.ChildStepKey}:{childStepId}:{string.Join("|", stoppedChild.Diagnostics.Select(diagnostic => $"{diagnostic.Code}:{diagnostic.EvidenceHash}"))}:{recoverySummary}";
+        return new ProcessCompletionIssue(
+            code,
+            summary,
+            evidence,
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);

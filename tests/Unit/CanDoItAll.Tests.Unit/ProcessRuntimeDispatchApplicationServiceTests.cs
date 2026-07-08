@@ -771,7 +771,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_blocks_retryable_adapter_contract_violation_for_manager_review()
+    public async Task ExecuteReady_auto_reworks_safe_adapter_contract_violation_before_manager_review()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -802,34 +802,79 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
-        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
-        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(1, strategyResolver.ExecutionCount);
+        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, stepId).Status);
+        Assert.Equal(2, strategyResolver.ExecutionCount);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
-                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready &&
                        receipt.RecoveryDecision is
                        {
-                           DecisionKind: ProcessRecoveryDecisionKind.ManagerRequired,
-                           RouteKind: ProcessRecoveryRouteKind.ManagerAction
+                           DecisionKind: ProcessRecoveryDecisionKind.SafeRetry,
+                           RouteKind: ProcessRecoveryRouteKind.CurrentStepRetry
                        });
-        Assert.Contains(
+        Assert.DoesNotContain(
             "Runtime manager recovery instruction",
             assignmentStore.Assignments.Single().Prompt,
             StringComparison.Ordinal);
-        Assert.Contains(
-            "must be reviewed by the process manager",
-            assignmentStore.Assignments.Single().Prompt,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            AdapterContractRetryDiagnosticSummary,
-            assignmentStore.Assignments.Single().Prompt,
-            StringComparison.Ordinal);
+        Assert.Contains(stateStore.State.AppliedResults, receipt => receipt.Outcome == StrategyOutcome.Succeeded);
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
-            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
+    }
+
+    [Fact]
+    public async Task ExecuteReady_auto_rework_appends_diagnostic_specific_packet()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var plan = NewSingleStepPlan(stepId, "create-dotnet-project");
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Ready)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var assignmentStore = new InMemoryAssignmentStore(
+        [
+            NewAssignment(
+                stepId,
+                "create-dotnet-project",
+                launchVariables: CreateDotNetCreateProjectLaunchVariables())
+        ]);
+        var strategyResolver = new RetryableAdapterViolationThenSuccessStrategyFactoryResolver(
+            "process.adapter.product_required_tool_receipt_missing",
+            "Step 'create-dotnet-project' claimed completion but required current-run product tool receipt(s) are missing: workspace_pwsh_run_script.",
+            "sha256:missing-pwsh-receipt");
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            assignmentStore,
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
+        Assert.Equal(2, strategyResolver.ExecutionCount);
+        var prompt = assignmentStore.Assignments.Single().Prompt;
+        Assert.Contains("Runtime diagnostic rework instruction:", prompt, StringComparison.Ordinal);
+        Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
+        Assert.Contains("scripts/create-dotnet-project.ps1", prompt, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_new", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Runtime manager recovery instruction:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("{CurrentProcessRunId}", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -970,7 +1015,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_blocks_adapter_manager_result_even_with_prior_retry_receipts()
+    public async Task ExecuteReady_auto_reworks_adapter_manager_result_once_before_same_fingerprint_block()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1004,12 +1049,27 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
-        Assert.Single(strategyResolver.ExecutionContexts);
+        Assert.Equal(2, strategyResolver.ExecutionContexts.Count);
+        Assert.Contains(
+            stateStore.State.AppliedResults,
+            receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready &&
+                       receipt.RecoveryDecision is
+                       {
+                           DecisionKind: ProcessRecoveryDecisionKind.SafeRetry,
+                           RouteKind: ProcessRecoveryRouteKind.CurrentStepRetry
+                       });
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
                        receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
-                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal) &&
+                       receipt.RecoveryDecision is
+                       {
+                           DecisionKind: ProcessRecoveryDecisionKind.ManagerRequired,
+                           RouteKind: ProcessRecoveryRouteKind.ManagerAction,
+                           Policy: "process.current-step-safe-retry-budget-exhausted"
+                       });
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
@@ -1019,7 +1079,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_blocks_adapter_manager_result_when_result_hash_changes()
+    public async Task ExecuteReady_auto_reworks_adapter_manager_result_with_new_hash_before_same_fingerprint_block()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1058,12 +1118,27 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
-        Assert.Single(strategyResolver.ExecutionContexts);
+        Assert.Equal(2, strategyResolver.ExecutionContexts.Count);
+        Assert.Contains(
+            stateStore.State.AppliedResults,
+            receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready &&
+                       receipt.RecoveryDecision is
+                       {
+                           DecisionKind: ProcessRecoveryDecisionKind.SafeRetry,
+                           RouteKind: ProcessRecoveryRouteKind.CurrentStepRetry
+                       });
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
                        receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
-                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal));
+                       string.Equals(receipt.ResultHash, retryHash, StringComparison.Ordinal) &&
+                       receipt.RecoveryDecision is
+                       {
+                           DecisionKind: ProcessRecoveryDecisionKind.ManagerRequired,
+                           RouteKind: ProcessRecoveryRouteKind.ManagerAction,
+                           Policy: "process.current-step-safe-retry-budget-exhausted"
+                       });
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
@@ -1411,7 +1486,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     private static ProcessRuntimeStepAssignment NewAssignment(
         ProcessStepInstanceId stepId,
         string stepKey,
-        ProcessRuntimeBranchGate? branchGate = null)
+        ProcessRuntimeBranchGate? branchGate = null,
+        IReadOnlyDictionary<string, string>? launchVariables = null)
     {
         return new ProcessRuntimeStepAssignment(
             RunId,
@@ -1431,9 +1507,23 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             [],
             [],
             "ExternalProductTargetReadOnly",
-            new Dictionary<string, string>(),
+            launchVariables ?? new Dictionary<string, string>(),
             branchGate,
             Now);
+    }
+
+    private static IReadOnlyDictionary<string, string> CreateDotNetCreateProjectLaunchVariables()
+    {
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = "workspace_pwsh_run_script",
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                """[{"pathCandidates":["Calculator.slnx"],"requiredTextAnyGroups":[["src/Calculator/Calculator.csproj"]]}]""",
+            ["DotNetCreateProjectScript"] = "$ErrorActionPreference = 'Stop'",
+            ["DotNetCreateProjectScriptRef"] = $"artifacts/process-runs/{RunId.Value:D}/scripts/create-dotnet-project.ps1",
+            ["DotNetCreateProjectSideEffectManifest"] = """{"version":1,"mode":"ProductMutation"}""",
+            ["WorkspaceAlias"] = "external-target/C/repositories/calculator"
+        };
     }
 
     private static ProcessRuntimeProjectionCatchupService NewNoOpCatchupService()

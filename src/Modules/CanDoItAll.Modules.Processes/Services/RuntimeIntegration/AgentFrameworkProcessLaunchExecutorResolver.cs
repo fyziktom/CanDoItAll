@@ -586,19 +586,25 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             role?.DisplayName ?? roleKey,
             NormalizeOperations(templateStep.AllowedOperations),
             NormalizeOptional(templateStep.OperationTargetScope),
-            ResolveLaunchReadinessRequiredRuntimeToolNames(variables, stepKey, templateStep.CapabilityScope),
+            ResolveLaunchReadinessRequiredRuntimeToolNames(
+                variables,
+                stepKey,
+                templateStep.CapabilityScope,
+                templateStep.ExecutionContract?.RequiredRuntimeToolNames),
             AgentFrameworkProcessCapabilityScopeTranslator.Translate(templateStep.CapabilityScope).RequiredCapabilities);
     }
 
     private static IReadOnlyList<string> ResolveLaunchReadinessRequiredRuntimeToolNames(
         IReadOnlyDictionary<string, string> variables,
         string stepKey,
-        ProcessCapabilityScope capabilityScope)
+        ProcessCapabilityScope capabilityScope,
+        IReadOnlyList<string>? templateRequiredRuntimeToolNames)
     {
         var launchContextToolNames = ResolveLaunchRequiredRuntimeToolNames(variables, stepKey)
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return launchContextToolNames
+            .Concat(ProcessRequiredRuntimeToolNames.NormalizeRuntimeToolNameCandidates(templateRequiredRuntimeToolNames))
             .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(capabilityScope, launchContextToolNames))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)

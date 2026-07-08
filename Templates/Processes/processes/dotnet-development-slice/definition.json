@@ -368,7 +368,8 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 3,
@@ -482,7 +483,8 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 4,
@@ -596,7 +598,8 @@
             "Reason": "Slice validation must run tests in the current execution when a test project exists or tests are expected."
           }
         ]
-      }
+      },
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 5,
@@ -792,7 +795,8 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "RuntimeOwnedSubprocess"
     },
     {
       "Order": 7,
@@ -921,7 +925,8 @@
             "Reason": "Repaired slice validation must run tests in the current execution when a test project exists or tests are expected."
           }
         ]
-      }
+      },
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 8,
@@ -1097,3 +1102,4 @@
     }
   ]
 }
+

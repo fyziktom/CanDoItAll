@@ -24,7 +24,8 @@ public sealed class ProcessLaunchApplicationService(
     IProcessLaunchArtifactInitializer artifactInitializer,
     IProcessStepBriefBuilder stepBriefBuilder,
     IProcessRuntimeDispatchQueue dispatchQueue,
-    ProcessRuntimeProjectionCatchupService projectionCatchupService)
+    ProcessRuntimeProjectionCatchupService projectionCatchupService,
+    ILaunchVariableTemplateResolver launchVariableTemplateResolver)
 {
     private const string ProcessRunNodePrefix = "process-run:";
     private const string ProcessRunIdVariableName = "ProcessRunId";
@@ -335,22 +336,30 @@ public sealed class ProcessLaunchApplicationService(
                 ExecutorOverrides = request.ExecutorOverrides
             },
             cancellationToken).ConfigureAwait(false);
-        var assignments = BuildAssignments(
+        var assignmentBuild = BuildAssignments(
             request,
             selected,
             kernelBuild,
             plan,
             executorResolution,
             nowUtc);
+        var assignments = assignmentBuild.Assignments;
+        var readinessFindings = executorResolution.Findings
+            .Concat(assignmentBuild.Findings)
+            .ToArray();
         var launchPlan = CreateLaunchPlanView(
             selected,
             plan,
             assignments,
-            executorResolution.Findings);
-        var blockingFindings = executorResolution.Findings
+            readinessFindings);
+        var blockingFindings = readinessFindings
             .Where(finding => finding.Severity == ProcessLaunchReadinessSeverity.Error)
             .ToArray();
-        if (request.RunReadiness && blockingFindings.Length > 0)
+        var assignmentBlockingFindings = assignmentBuild.Findings
+            .Where(finding => finding.Severity == ProcessLaunchReadinessSeverity.Error)
+            .ToArray();
+        if (assignmentBlockingFindings.Length > 0 ||
+            (request.RunReadiness && blockingFindings.Length > 0))
         {
             return new ProcessLaunchPreparation(
                 new ProcessLaunchResult(
@@ -480,7 +489,7 @@ public sealed class ProcessLaunchApplicationService(
             Subprocesses: []);
     }
 
-    private IReadOnlyList<ProcessRuntimeStepAssignment> BuildAssignments(
+    private ProcessLaunchAssignmentBuildResult BuildAssignments(
         ProcessLaunchRequest request,
         ProcessTemplateSelection selection,
         ProcessTemplateKernelBuildResult kernelBuild,
@@ -501,6 +510,7 @@ public sealed class ProcessLaunchApplicationService(
         var managedArtifactRoot = BuildManagedProcessArtifactRoot(runId);
         var effectiveLaunchVariables = EnrichRunLaunchVariables(launchVariables, runId, managedArtifactRoot);
         var assignments = new List<ProcessRuntimeStepAssignment>();
+        var findings = new List<ProcessLaunchReadinessFinding>();
 
         foreach (var planStep in plan.Steps.Where(step => step.IsExecutable))
         {
@@ -516,6 +526,9 @@ public sealed class ProcessLaunchApplicationService(
             var roleKey = binding?.RoleKey ?? ResolvePrimaryRoleKey(templateStep);
             roleByKey.TryGetValue(roleKey, out var role);
             var stepLaunchVariables = EnrichStepLaunchVariables(effectiveLaunchVariables, templateStep);
+            var resolution = launchVariableTemplateResolver.Resolve(stepLaunchVariables);
+            stepLaunchVariables = resolution.Variables;
+            findings.AddRange(CreateLaunchVariableReadinessFindings(planStep.StepKey, roleKey, resolution.Diagnostics));
             assignments.Add(new ProcessRuntimeStepAssignment(
                 runId,
                 plan.Header.PlanId,
@@ -554,10 +567,36 @@ public sealed class ProcessLaunchApplicationService(
 
         if (assignments.Count == 0)
         {
-            return assignments;
+            return new ProcessLaunchAssignmentBuildResult(assignments, findings);
         }
 
-        return assignments;
+        return new ProcessLaunchAssignmentBuildResult(assignments, findings);
+    }
+
+    private static IReadOnlyList<ProcessLaunchReadinessFinding> CreateLaunchVariableReadinessFindings(
+        string stepKey,
+        string roleKey,
+        IReadOnlyList<LaunchVariableTemplateDiagnostic> diagnostics)
+    {
+        return diagnostics
+            .Where(diagnostic => diagnostic.IsBlocking)
+            .Select(diagnostic => new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                MapLaunchVariableDiagnosticCode(diagnostic.Kind),
+                diagnostic.Message,
+                stepKey,
+                roleKey))
+            .ToArray();
+    }
+
+    private static string MapLaunchVariableDiagnosticCode(LaunchVariableTemplateDiagnosticKind kind)
+    {
+        return kind switch
+        {
+            LaunchVariableTemplateDiagnosticKind.Cycle => "process.launch.variable_placeholder_cycle",
+            LaunchVariableTemplateDiagnosticKind.MaximumPassesExceeded => "process.launch.variable_placeholder_max_passes",
+            _ => "process.launch.variable_placeholder_unresolved"
+        };
     }
 
     private static ProcessRuntimeStateSnapshot BuildInitialState(
@@ -596,7 +635,9 @@ public sealed class ProcessLaunchApplicationService(
                 CompletedResultKey: null)
             {
                 ProducedArtifactSlots = assignment?.ProducedArtifactSlotIds.ToHashSet() ?? [],
-                RequiredRuntimeToolNames = assignment is null ? [] : ResolveLaunchPlanRequiredRuntimeToolNames(assignment),
+                RequiredRuntimeToolNames = assignment is null
+                    ? []
+                    : ResolveLaunchPlanRequiredRuntimeToolNames(assignment, templateStep),
                 ArtifactDescriptors = templateStep is null
                     ? []
                     : BuildRuntimeArtifactDescriptors(definition, templateStep, plan.ArtifactPlan.Slots, runId),
@@ -664,7 +705,7 @@ public sealed class ProcessLaunchApplicationService(
                     RoleResourceKey = FirstNonEmpty(assignment?.RoleResourceKey, role?.RoleResourceKey),
                     RoleDisplayName = FirstNonEmpty(assignment?.RoleDisplayName, role?.DisplayName, assignment?.RoleKey),
                     CapabilityScope = ProcessCapabilityScope.Normalize(templateStep?.CapabilityScope),
-                    RequiredRuntimeToolNames = ResolveLaunchPlanRequiredRuntimeToolNames(assignment)
+                    RequiredRuntimeToolNames = ResolveLaunchPlanRequiredRuntimeToolNames(assignment, templateStep)
                 };
             })
             .ToArray();
@@ -682,7 +723,9 @@ public sealed class ProcessLaunchApplicationService(
             findings);
     }
 
-    private static IReadOnlyList<string> ResolveLaunchPlanRequiredRuntimeToolNames(ProcessRuntimeStepAssignment? assignment)
+    private static IReadOnlyList<string> ResolveLaunchPlanRequiredRuntimeToolNames(
+        ProcessRuntimeStepAssignment? assignment,
+        ProcessTemplateDefinitionStepDocument? templateStep)
     {
         if (assignment is null)
         {
@@ -691,6 +734,7 @@ public sealed class ProcessLaunchApplicationService(
 
         var launchContextToolNames = ResolveLaunchPlanRequiredRuntimeToolNameSet(assignment.LaunchVariables);
         return launchContextToolNames
+            .Concat(ProcessRequiredRuntimeToolNames.NormalizeRuntimeToolNameCandidates(templateStep?.ExecutionContract?.RequiredRuntimeToolNames))
             .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1654,6 +1698,10 @@ public sealed class ProcessLaunchApplicationService(
         IReadOnlyList<ProcessRuntimeStepAssignment> Assignments,
         ProcessLaunchPlanView? LaunchPlan,
         IReadOnlyList<ProcessLaunchReadinessFinding> BlockingFindings);
+
+    private sealed record ProcessLaunchAssignmentBuildResult(
+        IReadOnlyList<ProcessRuntimeStepAssignment> Assignments,
+        IReadOnlyList<ProcessLaunchReadinessFinding> Findings);
 
     private sealed record ProcessTemplateSelection(
         ProcessTemplatePack Pack,

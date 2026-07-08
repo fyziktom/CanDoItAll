@@ -355,7 +355,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-        "ValidationRequirementSummary": "Must be a Markdown evidence pack that includes dotnet restore/build/test results as applicable, app startup receipt, URL or entrypoint, Playwright screenshot paths, workspace_inspect_image results, workspace_analyze_image provider/model/token results for visual claims when the tool is available, workspace_analyze_images provider/model/token results for screenshot comparisons when the tool is available, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, before/after proof for time-dependent behavior when applicable, and cleanup receipt."
+          "ValidationRequirementSummary": "Must be a Markdown evidence pack that includes dotnet restore/build/test results as applicable, app startup receipt, URL or entrypoint, Playwright screenshot paths, workspace_inspect_image results, workspace_analyze_image provider/model/token results for visual claims when the tool is available, workspace_analyze_images provider/model/token results for screenshot comparisons when the tool is available, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, before/after proof for time-dependent behavior when applicable, and cleanup receipt."
         },
         {
           "Key": "validation-self-review",
@@ -367,7 +367,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-        "ValidationRequirementSummary": "Must be a Markdown summary that states validated routes or APIs, screenshots captured, console status, failed assertions if any, and whether acceptance criteria are satisfied."
+          "ValidationRequirementSummary": "Must be a Markdown summary that states validated routes or APIs, screenshots captured, console status, failed assertions if any, and whether acceptance criteria are satisfied."
         }
       ],
       "ArtifactInputs": [
@@ -403,7 +403,113 @@
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "ExecutionContract": {
+        "ExecutionClass": "BranchDecision",
+        "RequiredRuntimeToolNames": [
+          "workspace_dotnet_restore",
+          "workspace_dotnet_build",
+          "workspace_dotnet_test",
+          "workspace_dotnet_run",
+          "browser_take_screenshot",
+          "browser_snapshot",
+          "browser_console_messages",
+          "workspace_inspect_image",
+          "workspace_analyze_image",
+          "workspace_analyze_images",
+          "workspace_dotnet_stop"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "restore",
+            "ToolName": "workspace_dotnet_restore",
+            "Predicate": "current-run restore receipt when applicable",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "build",
+            "ToolName": "workspace_dotnet_build",
+            "Predicate": "current-run build receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "test",
+            "ToolName": "workspace_dotnet_test",
+            "Predicate": "current-run test receipt when a test target exists",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "start-app",
+            "ToolName": "workspace_dotnet_run",
+            "Predicate": "current-run app startup receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "screenshot",
+            "ToolName": "browser_take_screenshot",
+            "Predicate": "fresh screenshot receipt for visible UI surfaces",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "snapshot",
+            "ToolName": "browser_snapshot",
+            "Predicate": "browser state snapshot or evaluate output receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "console",
+            "ToolName": "browser_console_messages",
+            "Predicate": "browser console receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "inspect-image",
+            "ToolName": "workspace_inspect_image",
+            "Predicate": "screenshot inspection receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "analyze-image",
+            "ToolName": "workspace_analyze_image",
+            "Predicate": "provider-backed image analysis receipt when available",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "compare-images",
+            "ToolName": "workspace_analyze_images",
+            "Predicate": "ordered screenshot comparison receipt when applicable",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "stop-app",
+            "ToolName": "workspace_dotnet_stop",
+            "Predicate": "cleanup receipt for app process started by this step",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "blazor-runtime-evidence-pack",
+            "MaterializationMode": "RuntimeManaged"
+          },
+          {
+            "ArtifactExpectationKey": "validation-self-review",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ]
+      }
     },
     {
       "Order": 3,
@@ -583,7 +689,109 @@
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "ExecutionContract": {
+        "ExecutionClass": "BranchDecision",
+        "RequiredRuntimeToolNames": [
+          "workspace_dotnet_restore",
+          "workspace_dotnet_build",
+          "workspace_dotnet_test",
+          "workspace_dotnet_run",
+          "browser_take_screenshot",
+          "browser_snapshot",
+          "browser_console_messages",
+          "workspace_inspect_image",
+          "workspace_analyze_image",
+          "workspace_analyze_images",
+          "workspace_dotnet_stop"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "restore",
+            "ToolName": "workspace_dotnet_restore",
+            "Predicate": "current-run restore receipt when applicable",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "build",
+            "ToolName": "workspace_dotnet_build",
+            "Predicate": "current-run build receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "test",
+            "ToolName": "workspace_dotnet_test",
+            "Predicate": "current-run test receipt when a test target exists",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "start-app",
+            "ToolName": "workspace_dotnet_run",
+            "Predicate": "current-run app startup receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "screenshot",
+            "ToolName": "browser_take_screenshot",
+            "Predicate": "fresh screenshot receipt for visible UI surfaces",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "snapshot",
+            "ToolName": "browser_snapshot",
+            "Predicate": "browser state snapshot or evaluate output receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "console",
+            "ToolName": "browser_console_messages",
+            "Predicate": "browser console receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "inspect-image",
+            "ToolName": "workspace_inspect_image",
+            "Predicate": "screenshot inspection receipt",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "analyze-image",
+            "ToolName": "workspace_analyze_image",
+            "Predicate": "provider-backed image analysis receipt when available",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "compare-images",
+            "ToolName": "workspace_analyze_images",
+            "Predicate": "ordered screenshot comparison receipt when applicable",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "stop-app",
+            "ToolName": "workspace_dotnet_stop",
+            "Predicate": "cleanup receipt for app process started by this step",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "repaired-blazor-runtime-evidence-pack",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ]
+      }
     },
     {
       "Order": 5,
@@ -871,3 +1079,4 @@
     }
   ]
 }
+

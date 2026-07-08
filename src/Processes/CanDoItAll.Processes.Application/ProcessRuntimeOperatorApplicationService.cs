@@ -15,16 +15,20 @@ public sealed class ProcessRuntimeOperatorApplicationService(
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
     IEnumerable<IProcessRuntimeStepAssignmentRepairService> assignmentRepairServices,
-    IEnumerable<IProcessRuntimeRunCancellationObserver>? cancellationObservers = null)
+    IEnumerable<IProcessRuntimeRunCancellationObserver>? cancellationObservers = null,
+    IProcessStepRecoveryInstructionBuilder? recoveryInstructionBuilder = null)
 {
     private const string OperatorActorId = "process-runtime-operator";
-    private const string ReworkInstructionHeading = "Operator rework instruction";
-    private const string ManagerRecoveryInstructionHeading = "Runtime manager recovery instruction";
+    private const string ReworkInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.OperatorRework;
+    private const string ManagerRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.ManagerRecovery;
+    private const string RuntimeDiagnosticRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery;
     private static readonly Regex PriorReworkInstructionBlockRegex = new(
-        $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}):\s*|\z)",
+        $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*|\z)",
         RegexOptions.CultureInvariant);
     private readonly IReadOnlyList<IProcessRuntimeRunCancellationObserver> cancellationObservers =
         (cancellationObservers ?? []).ToArray();
+    private readonly IProcessStepRecoveryInstructionBuilder recoveryInstructionBuilder =
+        recoveryInstructionBuilder ?? ProcessStepRecoveryInstructionBuilder.Instance;
 
     public async Task<ProcessRuntimeOperatorActionResult> ExecuteAsync(
         ProcessRuntimeOperatorActionCommand command,
@@ -196,6 +200,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
             state = expireCommit.State;
         }
 
+        var stateBeforeRework = state;
         var commit = await engine.RequestStepReworkAsync(
             state,
             CreateContext(command.RequestedBy),
@@ -204,7 +209,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
 
         if (commit.Succeeded)
         {
-            await ApplyReworkInstructionAsync(command, reason, cancellationToken).ConfigureAwait(false);
+            await ApplyReworkInstructionAsync(command, reason, stateBeforeRework, cancellationToken).ConfigureAwait(false);
             await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
             await dispatchQueue.EnqueueAsync(
                 new ProcessRuntimeDispatchQueueRequest(command.RunId, NormalizeRequestedBy(command.RequestedBy)),
@@ -223,6 +228,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
     private async Task ApplyReworkInstructionAsync(
         ProcessRuntimeOperatorActionCommand command,
         string reason,
+        ProcessRuntimeStateSnapshot state,
         CancellationToken cancellationToken)
     {
         var assignment = await assignmentStore.LoadAsync(command.RunId, command.StepInstanceId, cancellationToken)
@@ -234,7 +240,15 @@ public sealed class ProcessRuntimeOperatorApplicationService(
 
         var repair = await RepairAssignmentAsync(assignment, reason, cancellationToken).ConfigureAwait(false);
         var nextAssignment = repair.Assignment;
-        var prompt = AppendReworkInstruction(nextAssignment.Prompt, BuildInstructionReason(reason, repair));
+        var recoveryInstruction = recoveryInstructionBuilder.Build(new ProcessStepRecoveryInstructionBuildRequest(
+            command.RunId,
+            command.StepInstanceId,
+            nextAssignment.StepKey,
+            nextAssignment,
+            StrategyResult: null,
+            FindLatestReceipt(state, command.StepInstanceId),
+            reason));
+        var prompt = AppendReworkInstruction(nextAssignment.Prompt, BuildInstructionReason(reason, repair, recoveryInstruction));
         if (string.Equals(prompt, nextAssignment.Prompt, StringComparison.Ordinal) && !repair.Repaired)
         {
             return;
@@ -283,20 +297,33 @@ public sealed class ProcessRuntimeOperatorApplicationService(
 
     private static string BuildInstructionReason(
         string reason,
-        ProcessRuntimeStepAssignmentRepairResult repair)
+        ProcessRuntimeStepAssignmentRepairResult repair,
+        ProcessStepRecoveryInstruction recoveryInstruction)
     {
-        if (!repair.Repaired || string.IsNullOrWhiteSpace(repair.Summary))
+        var builder = new List<string> { reason };
+        if (recoveryInstruction.HasInstruction)
         {
-            return reason;
+            builder.Add($"""
+            Diagnostic recovery packet:
+            {recoveryInstruction.Text.Trim()}
+            """);
         }
 
-        return $"""
-        {reason}
+        if (repair.Repaired && !string.IsNullOrWhiteSpace(repair.Summary))
+        {
+            builder.Add($"""
+            Assignment repair:
+            {repair.Summary.Trim()}
+            """);
+        }
 
-        Assignment repair:
-        {repair.Summary.Trim()}
-        """;
+        return string.Join(Environment.NewLine + Environment.NewLine, builder);
     }
+
+    private static StrategyResultReceipt? FindLatestReceipt(
+        ProcessRuntimeStateSnapshot state,
+        ProcessStepInstanceId stepInstanceId)
+        => state.AppliedResults.LastOrDefault(receipt => receipt.StepInstanceId == stepInstanceId);
 
     private RuntimeCommandContext CreateContext(string requestedBy)
     {

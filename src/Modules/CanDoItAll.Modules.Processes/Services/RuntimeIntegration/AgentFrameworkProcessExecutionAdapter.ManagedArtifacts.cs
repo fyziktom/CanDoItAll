@@ -27,6 +27,9 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class AgentFrameworkProcessExecutionAdapter
 {
+    internal const string ManagedOutcomeArtifactCapturedHeading = "## Runtime Captured Structured Outcome";
+    internal const string ManagedOutcomeArtifactAcceptedHeading = "## Runtime Accepted Completion Gates";
+
     private static async Task<IReadOnlyList<ToolExecutionReceiptRecord>> LoadStepCompletionToolReceiptsAsync(
         IAgentExecutionHistoryReader workspaceService,
         ProcessRuntimeStepAssignment assignment,
@@ -123,9 +126,10 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 return ManagedOutcomeArtifactMaterialization.Failed(
                     output,
                     toolReceipts,
+                    primaryRef,
                     new ProcessCompletionIssue(
                         "process.adapter.managed_artifact_outcome_append_failed",
-                        $"Step '{assignment.StepKey}' recovered a completed primary managed artifact, but the runtime could not append the validated outcome to '{primaryRef}': {appendResult.Message}",
+                        $"Step '{assignment.StepKey}' recovered a completed primary managed artifact, but the runtime could not append the staged structured outcome to '{primaryRef}': {appendResult.Message}",
                         $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-outcome-append-failed:{primaryRef}:{appendResult.Message}",
                         assignment.ProducedArtifactSlotIds,
                         ProcessDiagnosticRetrySafety.SafeToRetry,
@@ -151,6 +155,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 return ManagedOutcomeArtifactMaterialization.Failed(
                     output,
                     toolReceipts,
+                    primaryRef,
                     new ProcessCompletionIssue(
                         "process.adapter.managed_artifact_materialization_failed",
                         $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not persist the primary managed artifact '{primaryRef}': {writeResult.Message}",
@@ -174,9 +179,10 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 return ManagedOutcomeArtifactMaterialization.Failed(
                     output,
                     toolReceipts,
+                    primaryRef,
                     new ProcessCompletionIssue(
                         "process.adapter.managed_artifact_outcome_append_failed",
-                        $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not append the validated outcome to primary managed artifact '{primaryRef}': {appendResult.Message}",
+                        $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not append the staged structured outcome to primary managed artifact '{primaryRef}': {appendResult.Message}",
                         $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-outcome-append-failed:{primaryRef}:{appendResult.Message}",
                         assignment.ProducedArtifactSlotIds,
                         ProcessDiagnosticRetrySafety.SafeToRetry,
@@ -197,7 +203,47 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             : hasManagedEvidence
                 ? output
                 : CopyWithEvidenceRef(output, primaryRef);
-        return ManagedOutcomeArtifactMaterialization.Succeeded(effectiveOutput, effectiveReceipts);
+        return ManagedOutcomeArtifactMaterialization.Staged(effectiveOutput, effectiveReceipts, primaryRef);
+    }
+
+    private ProcessCompletionIssue? AcceptManagedOutcomeArtifactIfNeeded(
+        ProcessRuntimeStepAssignment assignment,
+        ManagedOutcomeArtifactMaterialization materialization,
+        Guid executionRunId,
+        IReadOnlyList<ToolExecutionReceiptRecord> completionToolReceipts,
+        out IReadOnlyList<ToolExecutionReceiptRecord> acceptedToolReceipts)
+    {
+        acceptedToolReceipts = completionToolReceipts;
+        if (!materialization.Lifecycle.RequiresCompletionGateAcceptance ||
+            string.IsNullOrWhiteSpace(materialization.Lifecycle.PrimaryRef))
+        {
+            return null;
+        }
+
+        var primaryRef = materialization.Lifecycle.PrimaryRef;
+        var appendResult = workspaceFiles.AppendTextFile(
+            primaryRef,
+            BuildManagedOutcomeArtifactAcceptanceContent(assignment, materialization.Output, primaryRef));
+        if (!appendResult.Succeeded)
+        {
+            return new ProcessCompletionIssue(
+                "process.adapter.managed_artifact_acceptance_append_failed",
+                $"Step '{assignment.StepKey}' passed completion gates, but the runtime could not append managed artifact acceptance proof to '{primaryRef}': {appendResult.Message}",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-acceptance-append-failed:{primaryRef}:{appendResult.Message}",
+                assignment.ProducedArtifactSlotIds,
+                ProcessDiagnosticRetrySafety.SafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Idempotent);
+        }
+
+        acceptedToolReceipts = completionToolReceipts
+            .Append(CreateManagedOutcomeArtifactReceipt(
+                executionRunId,
+                primaryRef,
+                appendResult.Message,
+                "workspace_append_file",
+                "Process runtime accepted staged managed artifact after completion gates passed."))
+            .ToArray();
+        return null;
     }
 
     private bool TryReadCompletedPrimaryManagedArtifactOutcome(
@@ -331,7 +377,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         return new ProcessStepOutcomeResult
         {
             Status = ProcessStepOutcomeStatus.Completed,
-            Reason = $"Runtime accepted the completed primary managed artifact after the finalizer returned a nonterminal retry outcome. Original reason: {originalReason}",
+            Reason = $"Runtime staged the completed primary managed artifact after the finalizer returned a nonterminal retry outcome. Original reason: {originalReason}",
             BranchOutcomeKey = output.BranchOutcomeKey,
             BranchOutcomeTitle = output.BranchOutcomeTitle,
             EvidenceRefs = output.EvidenceRefs
@@ -478,7 +524,9 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         var builder = new StringBuilder();
         builder.AppendLine($"# {assignment.StepKey} Process Step Outcome");
         builder.AppendLine();
-        builder.AppendLine("Runtime persisted this managed artifact from the validated structured process step outcome.");
+        builder.AppendLine(ManagedOutcomeArtifactCapturedHeading);
+        builder.AppendLine();
+        builder.AppendLine("The process runtime captured this managed artifact from a schema-valid structured process step outcome. Completion gates have not accepted this output yet.");
         builder.AppendLine();
         builder.AppendLine($"- Run id: {assignment.RunId.Value:D}");
         builder.AppendLine($"- Step id: {assignment.StepInstanceId.Value:D}");
@@ -486,7 +534,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         builder.AppendLine($"- Executor: {assignment.ExecutorDisplayName}");
         builder.AppendLine($"- Status: {output.Status}");
         builder.AppendLine($"- Primary managed ref: {primaryRef}");
-        builder.AppendLine($"- Persisted at UTC: {DateTimeOffset.UtcNow:u}");
+        builder.AppendLine($"- Staged at UTC: {DateTimeOffset.UtcNow:u}");
         builder.AppendLine();
         builder.AppendLine("## Reason");
         builder.AppendLine();
@@ -532,9 +580,9 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         builder.AppendLine();
         builder.AppendLine("---");
         builder.AppendLine();
-        builder.AppendLine("## Runtime Validated Structured Outcome");
+        builder.AppendLine(ManagedOutcomeArtifactCapturedHeading);
         builder.AppendLine();
-        builder.AppendLine("The process runtime appended this section after validating the structured process step outcome.");
+        builder.AppendLine("The process runtime appended this section after capturing a schema-valid structured process step outcome. Completion gates must pass before this artifact is accepted as a produced slot.");
         builder.AppendLine();
         builder.AppendLine($"- Run id: {assignment.RunId.Value:D}");
         builder.AppendLine($"- Step id: {assignment.StepInstanceId.Value:D}");
@@ -580,6 +628,30 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         return builder.ToString();
     }
 
+    private static string BuildManagedOutcomeArtifactAcceptanceContent(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        string primaryRef)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine();
+        builder.AppendLine("---");
+        builder.AppendLine();
+        builder.AppendLine(ManagedOutcomeArtifactAcceptedHeading);
+        builder.AppendLine();
+        builder.AppendLine("The process runtime appended this section after all completion gates accepted the staged structured outcome. Produced artifact slots may now be promoted to parent and consumer contexts.");
+        builder.AppendLine();
+        builder.AppendLine($"- Run id: {assignment.RunId.Value:D}");
+        builder.AppendLine($"- Step id: {assignment.StepInstanceId.Value:D}");
+        builder.AppendLine($"- Step key: {assignment.StepKey}");
+        builder.AppendLine($"- Status: {output.Status}");
+        builder.AppendLine($"- Primary managed ref: {primaryRef}");
+        builder.AppendLine($"- Accepted at UTC: {DateTimeOffset.UtcNow:u}");
+        builder.AppendLine();
+        AppendList(builder, "Accepted Produced Artifact Slots", assignment.ProducedArtifactSlotIds.Select(slotId => slotId.Value.ToString("D")).ToArray());
+        return builder.ToString();
+    }
+
     private static void AppendList(
         StringBuilder builder,
         string heading,
@@ -608,7 +680,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         Guid executionRunId,
         string primaryRef,
         string writeMessage,
-        string toolName = "workspace_write_file")
+        string toolName = "workspace_write_file",
+        string requestSummary = "Process runtime staged schema-valid structured step outcome.")
         => new(
             Guid.NewGuid(),
             executionRunId,
@@ -616,7 +689,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             toolName,
             "ManagedProcessArtifact",
             "NotRequired",
-            "Process runtime persisted validated structured step outcome.",
+            requestSummary,
             primaryRef,
             ".",
             $"Succeeded: {writeMessage}",
@@ -675,23 +748,55 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
     private sealed record ManagedOutcomeArtifactMaterialization(
         ProcessStepOutcomeResult Output,
         IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts,
+        ManagedOutcomeArtifactLifecycle Lifecycle,
         ProcessCompletionIssue? Issue)
     {
         public static ManagedOutcomeArtifactMaterialization Unchanged(
             ProcessStepOutcomeResult output,
             IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
-            => new(output, toolReceipts, null);
+            => new(output, toolReceipts, ManagedOutcomeArtifactLifecycle.Unchanged, null);
 
-        public static ManagedOutcomeArtifactMaterialization Succeeded(
+        public static ManagedOutcomeArtifactMaterialization Staged(
             ProcessStepOutcomeResult output,
-            IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
-            => new(output, toolReceipts, null);
+            IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+            string primaryRef)
+            => new(
+                output,
+                toolReceipts,
+                new ManagedOutcomeArtifactLifecycle(
+                    ManagedOutcomeArtifactLifecycleState.StructuredOutcomeStaged,
+                    primaryRef),
+                null);
 
         public static ManagedOutcomeArtifactMaterialization Failed(
             ProcessStepOutcomeResult output,
             IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+            string primaryRef,
             ProcessCompletionIssue issue)
-            => new(output, toolReceipts, issue);
+            => new(
+                output,
+                toolReceipts,
+                new ManagedOutcomeArtifactLifecycle(
+                    ManagedOutcomeArtifactLifecycleState.MaterializationFailed,
+                    primaryRef),
+                issue);
     }
 
+    private sealed record ManagedOutcomeArtifactLifecycle(
+        ManagedOutcomeArtifactLifecycleState State,
+        string? PrimaryRef)
+    {
+        public static ManagedOutcomeArtifactLifecycle Unchanged { get; } = new(
+            ManagedOutcomeArtifactLifecycleState.Unchanged,
+            PrimaryRef: null);
+
+        public bool RequiresCompletionGateAcceptance => State == ManagedOutcomeArtifactLifecycleState.StructuredOutcomeStaged;
+    }
+
+    private enum ManagedOutcomeArtifactLifecycleState
+    {
+        Unchanged,
+        StructuredOutcomeStaged,
+        MaterializationFailed
+    }
 }

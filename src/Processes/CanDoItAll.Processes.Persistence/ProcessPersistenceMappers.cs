@@ -560,7 +560,12 @@ internal static class ProcessPersistenceMappers
                     decision.Policy,
                     decision.SafeReason,
                     decision.RouteKind,
-                    decision.ResponsibleStepInstanceId?.Value),
+                    decision.ResponsibleStepInstanceId?.Value,
+                    decision.DiagnosticFingerprint,
+                    decision.AutomaticRetryAttempt,
+                    decision.MaximumAutomaticRetryAttempts,
+                    decision.SameDiagnosticFingerprintAttempt,
+                    decision.MaximumSameDiagnosticFingerprintAttempts),
                 ReceiptJsonOptions);
     }
 
@@ -586,7 +591,12 @@ internal static class ProcessPersistenceMappers
                     : decision.RouteKind,
                 ResponsibleStepInstanceId = decision.ResponsibleStepInstanceId is null
                     ? null
-                    : new ProcessStepInstanceId(decision.ResponsibleStepInstanceId.Value)
+                    : new ProcessStepInstanceId(decision.ResponsibleStepInstanceId.Value),
+                DiagnosticFingerprint = decision.DiagnosticFingerprint ?? string.Empty,
+                AutomaticRetryAttempt = decision.AutomaticRetryAttempt,
+                MaximumAutomaticRetryAttempts = decision.MaximumAutomaticRetryAttempts,
+                SameDiagnosticFingerprintAttempt = decision.SameDiagnosticFingerprintAttempt,
+                MaximumSameDiagnosticFingerprintAttempts = decision.MaximumSameDiagnosticFingerprintAttempts
             };
     }
 
@@ -645,5 +655,10 @@ internal static class ProcessPersistenceMappers
         string Policy,
         string SafeReason,
         ProcessRecoveryRouteKind RouteKind,
-        Guid? ResponsibleStepInstanceId);
+        Guid? ResponsibleStepInstanceId,
+        string? DiagnosticFingerprint = null,
+        int AutomaticRetryAttempt = 0,
+        int MaximumAutomaticRetryAttempts = 0,
+        int SameDiagnosticFingerprintAttempt = 0,
+        int MaximumSameDiagnosticFingerprintAttempts = 0);
 }

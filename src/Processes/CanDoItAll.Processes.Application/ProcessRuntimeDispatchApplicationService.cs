@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Contracts;
@@ -35,16 +36,23 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
     ProcessRuntimeDispatchOptions? options = null,
     IProcessRuntimeDispatchQueue? dispatchQueue = null,
-    IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null)
+    IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null,
+    IProcessStepRecoveryInstructionBuilder? recoveryInstructionBuilder = null)
 {
     private const int MaximumDispatchIterations = 200;
     private const int MaximumStepDispatchAttempts = 20;
     private const int MaximumClaimCleanupConcurrencyRetries = 3;
     private const string DispatcherActorId = "process-runtime-dispatcher";
     private const string ClaimReleaseFailureExceptionDataKey = "ProcessDispatchClaimReleaseFailure";
-    private const string ManagerRecoveryInstructionHeading = "Runtime manager recovery instruction";
+    private const string ManagerRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.ManagerRecovery;
+    private const string RuntimeDiagnosticRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery;
+    private static readonly Regex PriorRuntimeRecoveryInstructionBlockRegex = new(
+        $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*|\z)",
+        RegexOptions.CultureInvariant);
     private static readonly TimeSpan ClaimCleanupConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
     private readonly ProcessRuntimeDispatchOptions dispatchOptions = NormalizeOptions(options);
+    private readonly IProcessStepRecoveryInstructionBuilder recoveryInstructionBuilder =
+        recoveryInstructionBuilder ?? ProcessStepRecoveryInstructionBuilder.Instance;
     private readonly IProcessRuntimeBranchSignalRouter branchSignalRouter =
         branchSignalRouterOverride ?? new ProcessRuntimeBranchSignalApplicationService(
             clock,
@@ -338,9 +346,10 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     resultSubmitted = true;
                     AddBlockedManagerResultDiagnostics(diagnostics, resultCommit.State, workItem.StepInstanceId, result);
 
-                    await ApplyManagerRecoveryInstructionAsync(
+                    await ApplyStrategyRecoveryInstructionAsync(
                         workItem.RunId,
                         workItem.StepInstanceId,
+                        resultCommit.State,
                         result,
                         cancellationToken).ConfigureAwait(false);
 
@@ -957,13 +966,20 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         return $"Dispatch claim release failed for run '{runId}', step '{stepInstanceId}', token '{claimToken}': state changed after {MaximumClaimCleanupConcurrencyRetries} retries.";
     }
 
-    private async Task ApplyManagerRecoveryInstructionAsync(
+    private async Task ApplyStrategyRecoveryInstructionAsync(
         ProcessRunId runId,
         ProcessStepInstanceId stepInstanceId,
+        ProcessRuntimeStateSnapshot state,
         StrategyResultEnvelope result,
         CancellationToken cancellationToken)
     {
         if (result.Outcome != StrategyOutcome.NeedsManager)
+        {
+            return;
+        }
+
+        var stepStatus = state.Steps.FirstOrDefault(step => step.StepInstanceId == stepInstanceId)?.Status;
+        if (stepStatus is not (ProcessRuntimeStepStatus.Ready or ProcessRuntimeStepStatus.Blocked))
         {
             return;
         }
@@ -974,21 +990,64 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             return;
         }
 
-        var instruction = BuildManagerRecoveryInstruction(result);
-        if (assignment.Prompt.Contains(instruction, StringComparison.Ordinal))
+        var receipt = FindLatestReceipt(state, stepInstanceId, result.ResultHash);
+        var recoveryInstruction = recoveryInstructionBuilder.Build(new ProcessStepRecoveryInstructionBuildRequest(
+            runId,
+            stepInstanceId,
+            assignment.StepKey,
+            assignment,
+            result,
+            receipt,
+            OperatorReason: string.Empty));
+        if (stepStatus == ProcessRuntimeStepStatus.Ready &&
+            !recoveryInstruction.HasInstruction)
+        {
+            return;
+        }
+
+        var instruction = stepStatus == ProcessRuntimeStepStatus.Blocked
+            ? BuildManagerRecoveryInstruction(result, recoveryInstruction)
+            : BuildRuntimeDiagnosticRecoveryInstruction(result, recoveryInstruction);
+        var normalizedPrompt = RemovePriorRuntimeRecoveryInstructionBlocks(assignment.Prompt).TrimEnd();
+        if (normalizedPrompt.Contains(instruction, StringComparison.Ordinal))
         {
             return;
         }
 
         var prompt = $"""
-        {assignment.Prompt.TrimEnd()}
+        {normalizedPrompt}
 
         {instruction}
         """;
         await assignmentStore.SaveAsync([assignment with { Prompt = prompt }], cancellationToken).ConfigureAwait(false);
     }
 
-    private static string BuildManagerRecoveryInstruction(StrategyResultEnvelope result)
+    private static StrategyResultReceipt? FindLatestReceipt(
+        ProcessRuntimeStateSnapshot state,
+        ProcessStepInstanceId stepInstanceId,
+        string resultHash)
+        => state.AppliedResults
+            .LastOrDefault(receipt =>
+                receipt.StepInstanceId == stepInstanceId &&
+                string.Equals(receipt.ResultHash, resultHash, StringComparison.Ordinal));
+
+    private static string BuildRuntimeDiagnosticRecoveryInstruction(
+        StrategyResultEnvelope result,
+        ProcessStepRecoveryInstruction recoveryInstruction)
+    {
+        var packetText = recoveryInstruction.HasInstruction
+            ? recoveryInstruction.Text.Trim()
+            : "Retry the current step only after resolving the runtime diagnostic that rejected the previous result.";
+        return $"""
+        {RuntimeDiagnosticRecoveryInstructionHeading}:
+        The previous result was safe and idempotent to rework, so the runtime reopened this same step instead of escalating to the process manager. Result hash: {result.ResultHash}
+        {packetText}
+        """;
+    }
+
+    private static string BuildManagerRecoveryInstruction(
+        StrategyResultEnvelope result,
+        ProcessStepRecoveryInstruction recoveryInstruction)
     {
         var diagnostics = result.Diagnostics
             .Select(diagnostic => $"- {diagnostic.Code.Value}: {diagnostic.SafeSummary}")
@@ -1008,10 +1067,20 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         Confirm every required input artifact, requested artifact slot, tool receipt, and expected output artifact before requesting rework. If a diagnostic points to a missing upstream artifact, rework the responsible producer step first; do not retry this step until the connected input receipt is available. Do not satisfy missing evidence by only rewriting summaries or deferring required work to a later step.
         Diagnostics:
         {diagnosticText}
+        Diagnostic repair packet:
+        {ResolveDiagnosticRepairPacketText(recoveryInstruction)}
         Requested artifacts:
         {requestedArtifactText}
         """;
     }
+
+    private static string ResolveDiagnosticRepairPacketText(ProcessStepRecoveryInstruction recoveryInstruction)
+        => recoveryInstruction.HasInstruction
+            ? recoveryInstruction.Text.Trim()
+            : "- No diagnostic-specific repair packet was available for this result; manager review must name the concrete evidence or contract change before redispatch.";
+
+    private static string RemovePriorRuntimeRecoveryInstructionBlocks(string prompt)
+        => PriorRuntimeRecoveryInstructionBlockRegex.Replace(prompt, string.Empty).TrimEnd();
 
     private static void AddBlockedManagerResultDiagnostics(
         List<string> diagnostics,

@@ -12,5 +12,17 @@
   "AllowedFutureUsageSummary": "Reusable for launch planning and campaign creation.",
   "ValidationRequirementSummary": "Must tie audience, promise, proof needs, channels, budget dependency, metrics, and experiments together.",
   "OwnerRoleKey": "marketing-specialist",
-  "DocPath": "processes/business-plan-development/artifacts/go-to-market-plan.md"
+  "DocPath": "processes/business-plan-development/artifacts/go-to-market-plan.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "go-to-market-plan",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must tie audience, promise, proof needs, channels, budget dependency, metrics, and experiments together."
+  }
 }
+

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
@@ -10,7 +11,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessRuntimeToolPreflightServiceTests
 {
     [Fact]
-    public async Task EvaluateAsync_satisfies_workspace_script_from_software_development_profile_without_registered_provider()
+    public async Task EvaluateAsync_rejects_workspace_script_when_profile_can_expose_tool_but_agent_lacks_capability()
     {
         var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
         var assignment = CreateAssignment(
@@ -26,14 +27,45 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 ["workspace_pwsh_run_script"]),
             CancellationToken.None);
 
-        Assert.True(result.IsSatisfied);
+        Assert.False(result.IsSatisfied);
         Assert.Empty(result.MissingToolNames);
+        var diagnostic = Assert.Single(result.CapabilityDiagnostics);
+        Assert.Equal(AgentCapabilityDiagnosticCode.MissingRequiredCapability, diagnostic.Code);
+        Assert.Equal(CapabilityKind.Tool, diagnostic.Kind);
+        Assert.Equal("workspace-pwsh-run-script", diagnostic.CapabilityKey);
+        Assert.Contains("capability", result.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_satisfies_workspace_script_from_assigned_tool_capability()
+    {
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [CreateCapability("workspace-pwsh-run-script", CapabilityKind.Tool)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.MutateProductTarget],
+            ProcessOperationContractNames.ExternalProductTargetMutable);
+        var service = new ProcessRuntimeToolPreflightService([]);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["workspace_pwsh_run_script"]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        Assert.Empty(result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
     }
 
     [Fact]
     public async Task EvaluateAsync_missing_workspace_script_when_agent_profile_disables_local_scripts()
     {
-        var agent = CreateAgent(AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            [CreateCapability("workspace-pwsh-run-script", CapabilityKind.Tool)]);
         var assignment = CreateAssignment(
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
@@ -49,12 +81,15 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
 
         Assert.False(result.IsSatisfied);
         Assert.Equal(["workspace_pwsh_run_script"], result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
     }
 
     [Fact]
     public async Task EvaluateAsync_missing_workspace_script_when_operation_contract_disallows_scripts()
     {
-        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [CreateCapability("workspace-pwsh-run-script", CapabilityKind.Tool)]);
         var assignment = CreateAssignment(
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
@@ -70,12 +105,15 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
 
         Assert.False(result.IsSatisfied);
         Assert.Equal(["workspace_pwsh_run_script"], result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
     }
 
     [Fact]
     public async Task EvaluateAsync_satisfies_managed_artifact_write_without_product_mutation()
     {
-        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [CreateCapability("workspace-write-file", CapabilityKind.Tool)]);
         var assignment = CreateAssignment(
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
@@ -91,6 +129,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
 
         Assert.True(result.IsSatisfied);
         Assert.Empty(result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
     }
 
     [Fact]
@@ -124,6 +163,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
 
         Assert.True(result.IsSatisfied);
         Assert.Empty(result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
     }
 
     [Fact]
@@ -147,6 +187,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
 
         Assert.False(result.IsSatisfied);
         Assert.Equal(["browser_snapshot"], result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
     }
 
     [Fact]
@@ -167,7 +208,141 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             CancellationToken.None);
 
         Assert.False(result.IsSatisfied);
-        Assert.Equal(["browser_snapshot"], result.MissingToolNames);
+        Assert.Empty(result.MissingToolNames);
+        var diagnostic = Assert.Single(result.CapabilityDiagnostics);
+        Assert.Equal(CapabilityKind.McpServer, diagnostic.Kind);
+        Assert.Equal("playwright-local-mcp", diagnostic.CapabilityKey);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_rejects_dotnet_create_plan_when_helper_receipt_is_missing()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var assignment = CreateDotNetCreateProjectAssignment(
+            agent.Id,
+            CreateDotNetCreateProjectLaunchVariables(requiredReceipts:
+            [
+                "template=sln",
+                "template=blazorwasm"
+            ]));
+        var service = new ProcessRuntimeToolPreflightService([]);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                []),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Empty(result.MissingToolNames);
+        var issue = Assert.Single(
+            result.PlanIssues,
+            issue => issue.Code == "dotnet.setup.plan.required_receipt_missing");
+        Assert.Contains("workspace_pwsh_run_script", issue.SafeSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_rejects_dotnet_create_plan_with_unresolved_script_ref()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var assignment = CreateDotNetCreateProjectAssignment(
+            agent.Id,
+            CreateDotNetCreateProjectLaunchVariables(
+                scriptRef: "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.ps1"));
+        var service = new ProcessRuntimeToolPreflightService([]);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["workspace_pwsh_run_script"]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Contains(
+            result.PlanIssues,
+            issue => issue.Code == "dotnet.setup.plan.script_ref_unresolved");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_rejects_dotnet_create_plan_with_external_target_manifest_path()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var manifest = JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["version"] = 1,
+            ["mode"] = "ProductMutation",
+            ["declaredReadPaths"] = new[] { "external-target/calculator/Calculator.slnx" },
+            ["declaredWritePaths"] = new[] { "external-target/calculator/Calculator.slnx" },
+            ["allowShellDelegation"] = true
+        });
+        var assignment = CreateDotNetCreateProjectAssignment(
+            agent.Id,
+            CreateDotNetCreateProjectLaunchVariables(sideEffectManifest: manifest));
+        var service = new ProcessRuntimeToolPreflightService([]);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["workspace_pwsh_run_script"]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Contains(
+            result.PlanIssues,
+            issue => issue.Code == "dotnet.setup.plan.native_path_scope_invalid");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_rejects_dotnet_create_plan_with_required_path_outside_product_root()
+    {
+        var agent = CreateAgent(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var assignment = CreateDotNetCreateProjectAssignment(
+            agent.Id,
+            CreateDotNetCreateProjectLaunchVariables(requiredPaths:
+            [
+                @"C:\temp\Other\Calculator.slnx",
+                @"C:\temp\CanDoItAll\Calculator\src\Calculator\Calculator.csproj"
+            ]));
+        var service = new ProcessRuntimeToolPreflightService([]);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["workspace_pwsh_run_script"]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Contains(
+            result.PlanIssues,
+            issue => issue.Code == "dotnet.setup.plan.path_outside_product_root");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_satisfies_complete_dotnet_create_plan()
+    {
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [CreateCapability("workspace-pwsh-run-script", CapabilityKind.Tool)]);
+        var assignment = CreateDotNetCreateProjectAssignment(
+            agent.Id,
+            CreateDotNetCreateProjectLaunchVariables());
+        var service = new ProcessRuntimeToolPreflightService([]);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["workspace_pwsh_run_script"]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        Assert.Empty(result.MissingToolNames);
+        Assert.Empty(result.PlanIssues);
+        Assert.Empty(result.CapabilityDiagnostics);
     }
 
     private static AgentDefinition CreateAgent(
@@ -243,5 +418,80 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
             BranchGate: null,
             DateTimeOffset.UtcNow);
+    }
+
+    private static ProcessRuntimeStepAssignment CreateDotNetCreateProjectAssignment(
+        Guid agentId,
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        return CreateAssignment(
+            agentId,
+            [ProcessOperationContractNames.MutateProductTarget],
+            ProcessOperationContractNames.ExternalProductTargetMutable) with
+        {
+            LaunchVariables = new Dictionary<string, string>(launchVariables, StringComparer.OrdinalIgnoreCase)
+        };
+    }
+
+    private static IReadOnlyDictionary<string, string> CreateDotNetCreateProjectLaunchVariables(
+        IReadOnlyList<string>? requiredReceipts = null,
+        string? scriptRef = null,
+        string? sideEffectManifest = null,
+        IReadOnlyList<string>? requiredPaths = null)
+    {
+        var productRoot = @"C:\temp\CanDoItAll\Calculator";
+        var solutionFile = $@"{productRoot}\Calculator.slnx";
+        var appProjectFile = $@"{productRoot}\src\Calculator\Calculator.csproj";
+        scriptRef ??= "artifacts/process-runs/11111111-2222-3333-4444-555555555555/scripts/create-dotnet-project.wire-solution.ps1";
+        sideEffectManifest ??= JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["version"] = 1,
+            ["mode"] = "ProductMutation",
+            ["declaredReadPaths"] = new[] { solutionFile, appProjectFile },
+            ["declaredWritePaths"] = new[] { solutionFile },
+            ["allowShellDelegation"] = true
+        });
+
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ProductRoot"] = productRoot,
+            ["DotNetAppTemplate"] = "blazorwasm",
+            ["DotNetCreateProjectScriptRef"] = scriptRef,
+            ["DotNetCreateProjectScript"] = "dotnet sln $SolutionFile add $AppProjectFile; dotnet sln $SolutionFile list",
+            ["DotNetCreateProjectSideEffectManifest"] = sideEffectManifest,
+            ["DotNetCreateProjectExecutionPlan"] =
+                $"Invoke workspace_dotnet_new for template 'sln'. Invoke workspace_dotnet_new for template 'blazorwasm'. Invoke workspace_pwsh_run_script with path '{scriptRef}', workingDirectory 'external-target/calculator', sideEffectManifest from DotNetCreateProjectSideEffectManifest. Read back the solution file.",
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = JsonSerializer.Serialize(
+                new Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    ["create-dotnet-project"] = (requiredReceipts ??
+                    [
+                        "template=sln",
+                        "template=blazorwasm",
+                        "workspace_pwsh_run_script"
+                    ]).ToArray()
+                }),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep] = JsonSerializer.Serialize(
+                new Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    ["create-dotnet-project"] = (requiredPaths ??
+                    [
+                        solutionFile,
+                        appProjectFile
+                    ]).ToArray()
+                }),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep] = JsonSerializer.Serialize(
+                new Dictionary<string, object[]>(StringComparer.Ordinal)
+                {
+                    ["create-dotnet-project"] =
+                    [
+                        new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["pathCandidates"] = new[] { solutionFile },
+                            ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                        }
+                    ]
+                })
+        };
     }
 }

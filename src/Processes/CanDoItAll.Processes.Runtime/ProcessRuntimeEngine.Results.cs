@@ -42,7 +42,10 @@ public sealed partial class ProcessRuntimeEngine
         }
 
         var appliedResult = EnforceStepFinalizationContract(state, step, command.Result);
-        var nextStepStatus = ToStepStatus(appliedResult);
+        var resultStepStatus = ToStepStatus(appliedResult);
+        var diagnosticReceipts = BuildDiagnosticReceipts(appliedResult, resultStepStatus);
+        var recoveryDecision = BuildRecoveryDecision(appliedResult, resultStepStatus, state, step, diagnosticReceipts);
+        var nextStepStatus = ResolveStepStatusForRecoveryDecision(resultStepStatus, recoveryDecision);
         var receipt = new StrategyResultReceipt(
             step.StepInstanceId,
             appliedResult.StrategyId,
@@ -50,9 +53,9 @@ public sealed partial class ProcessRuntimeEngine
             appliedResult.Outcome,
             nextStepStatus,
             appliedResult.ResultHash,
-            BuildDiagnosticReceipts(appliedResult, nextStepStatus),
+            diagnosticReceipts,
             BuildProducedArtifactReceipts(appliedResult),
-            BuildRecoveryDecision(appliedResult, nextStepStatus, state, step));
+            recoveryDecision);
         var nextClaims = ReplaceClaim(
             state,
             claim with

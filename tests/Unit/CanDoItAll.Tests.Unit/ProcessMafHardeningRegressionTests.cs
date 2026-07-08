@@ -16,6 +16,7 @@ public sealed class ProcessMafHardeningRegressionTests
     private static readonly ProcessStepInstanceId ParentStepId = new(new Guid("22222222-2222-2222-2222-222222222222"));
     private static readonly ProcessStepDefinitionId ParentStepDefinitionId = new(new Guid("33333333-3333-3333-3333-333333333333"));
     private static readonly ArtifactSlotId ParentArtifactSlotId = new(new Guid("44444444-4444-4444-4444-444444444444"));
+    private static readonly ArtifactSlotId ChildArtifactSlotId = new(new Guid("55555555-5555-5555-5555-555555555555"));
 
     [Fact]
     public void Template_pack_loads_with_typed_subprocess_contracts()
@@ -150,13 +151,22 @@ public sealed class ProcessMafHardeningRegressionTests
         var parentRunId = ProcessRunId.New();
         var childRunId = ProcessRunId.New();
         var assignment = CreateParentAssignment(parentRunId);
-        var childAssignment = CreateChildAssignment(childRunId, assignment);
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
         var acceptedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
         var bridge = new ParentSubprocessArtifactBridge(
             new InMemoryAssignmentStore(childAssignment),
             new InMemoryStateStore(
                 NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
-                NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Completed)),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
             new FakeWorkspaceFileService([acceptedRef]));
 
         var result = await bridge.ResolveExistingAsync(assignment);
@@ -169,18 +179,93 @@ public sealed class ProcessMafHardeningRegressionTests
     }
 
     [Fact]
+    public async Task Parent_subprocess_bridge_rejects_physical_child_output_without_accepted_ledger()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = CreateParentAssignment(parentRunId);
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
+        var acceptedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Completed, childAssignment)),
+            new FakeWorkspaceFileService([acceptedRef]));
+
+        var result = await bridge.ResolveExistingAsync(assignment);
+
+        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput, result.Kind);
+        Assert.Equal(childRunId, result.ChildRunId);
+        Assert.Null(result.AcceptedOutcome);
+    }
+
+    [Fact]
+    public async Task Parent_subprocess_bridge_rejects_staged_child_output_without_gate_acceptance()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = CreateParentAssignment(parentRunId);
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
+        var stagedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
+            new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [stagedRef] = $"""
+                # setup-handoff Process Step Outcome
+
+                {AgentFrameworkProcessExecutionAdapter.ManagedOutcomeArtifactCapturedHeading}
+
+                Completion gates have not accepted this output yet.
+                """
+            }));
+
+        var result = await bridge.ResolveExistingAsync(assignment);
+
+        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput, result.Kind);
+        Assert.Equal(childRunId, result.ChildRunId);
+        Assert.Null(result.AcceptedOutcome);
+    }
+
+    [Fact]
     public async Task Parent_subprocess_bridge_rejects_typed_no_go_child_outputs()
     {
         var parentRunId = ProcessRunId.New();
         var childRunId = ProcessRunId.New();
         var assignment = CreateParentAssignment(parentRunId);
-        var childAssignment = CreateChildAssignment(childRunId, assignment);
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            StepKey = "setup-repair-escalation",
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
         var noGoRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-repair-escalation.md";
         var bridge = new ParentSubprocessArtifactBridge(
             new InMemoryAssignmentStore(childAssignment),
             new InMemoryStateStore(
                 NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
-                NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Completed)),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
             new FakeWorkspaceFileService([noGoRef]));
 
         var result = await bridge.ResolveExistingAsync(assignment);
@@ -189,6 +274,40 @@ public sealed class ProcessMafHardeningRegressionTests
         Assert.Equal(childRunId, result.ChildRunId);
         Assert.Contains(noGoRef, result.EvidenceRefs);
         Assert.Null(result.AcceptedOutcome);
+    }
+
+    [Fact]
+    public async Task Parent_subprocess_bridge_returns_child_stopped_blocked_with_latest_child_diagnostics()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = CreateParentAssignment(parentRunId);
+        var childAssignment = CreateChildAssignment(childRunId, assignment);
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Blocked,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Blocked,
+                    [CreateBlockedDiagnosticReceipt(childAssignment)])),
+            new FakeWorkspaceFileService([]));
+
+        var result = await bridge.ResolveExistingAsync(assignment);
+
+        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.ChildStoppedBlocked, result.Kind);
+        Assert.Equal(childRunId, result.ChildRunId);
+        var stoppedChild = Assert.IsType<ParentSubprocessStoppedChild>(result.StoppedChild);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, stoppedChild.ChildStatus);
+        Assert.Equal(childAssignment.StepKey, stoppedChild.ChildStepKey);
+        Assert.Equal(childAssignment.StepInstanceId, stoppedChild.ChildStepInstanceId);
+        var diagnostic = Assert.Single(stoppedChild.Diagnostics);
+        Assert.Equal("process.adapter.product_required_file_content_missing", diagnostic.Code);
+        Assert.Contains("workspace_pwsh_run_script", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(stoppedChild.RecoveryDecision);
     }
 
     private static ProcessRuntimeStepAssignment CreateParentAssignment(ProcessRunId runId)
@@ -271,7 +390,10 @@ public sealed class ProcessMafHardeningRegressionTests
     private static ProcessRuntimeStateSnapshot NewRuntimeState(
         ProcessRunId rootRunId,
         ProcessRunId runId,
-        ProcessRuntimeStatus status)
+        ProcessRuntimeStatus status,
+        ProcessRuntimeStepAssignment? stepAssignment = null,
+        ProcessRuntimeStepStatus stepStatus = ProcessRuntimeStepStatus.Completed,
+        IReadOnlyList<StrategyResultReceipt>? appliedResults = null)
         => new(
             rootRunId,
             runId,
@@ -280,20 +402,81 @@ public sealed class ProcessMafHardeningRegressionTests
             status,
             [
                 new ProcessRuntimeStepState(
-                    ParentStepId,
+                    stepAssignment?.StepInstanceId ?? ParentStepId,
                     ParentStepDefinitionId,
-                    ProcessRuntimeStepStatus.Completed,
+                    stepStatus,
                     IsExecutable: true,
                     AttemptNumber: 1,
                     DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
                     RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
                     ActiveClaimToken: null,
                     CompletedResultKey: null)
+                {
+                    ProducedArtifactSlots = stepAssignment?.ProducedArtifactSlotIds.ToHashSet() ?? new HashSet<ArtifactSlotId>()
+                }
             ],
             Claims: [],
-            AppliedResults: [],
-            AvailableArtifactSlots: new HashSet<ArtifactSlotId>(),
+            AppliedResults: appliedResults ?? [],
+            AvailableArtifactSlots: appliedResults?
+                .SelectMany(receipt => receipt.ProducedArtifacts)
+                .Select(artifact => artifact.SlotId)
+                .ToHashSet() ?? new HashSet<ArtifactSlotId>(),
             DateTimeOffset.UtcNow);
+
+    private static StrategyResultReceipt CreateProducedArtifactReceipt(
+        ProcessRuntimeStepAssignment assignment,
+        ArtifactSlotId slotId)
+        => new(
+            assignment.StepInstanceId,
+            new StrategyId("strategy.adapter.workflow.execute"),
+            StrategyResultIdempotencyKey.New(),
+            StrategyOutcome.Succeeded,
+            ProcessRuntimeStepStatus.Completed,
+            "sha256:accepted-child-output",
+            diagnostics: [],
+            producedArtifacts:
+            [
+                new StrategyResultArtifactReceipt(
+                    slotId,
+                    ArtifactInstanceId.New(),
+                    "sha256:child-artifact")
+            ]);
+
+    private static StrategyResultReceipt CreateBlockedDiagnosticReceipt(ProcessRuntimeStepAssignment assignment)
+        => new(
+            assignment.StepInstanceId,
+            new StrategyId("strategy.adapter.workflow.execute"),
+            StrategyResultIdempotencyKey.New(),
+            StrategyOutcome.NeedsManager,
+            ProcessRuntimeStepStatus.Blocked,
+            "sha256:blocked-child",
+            diagnostics:
+            [
+                new StrategyResultDiagnosticReceipt(
+                    "process.adapter.product_required_file_content_missing",
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:child-diagnostic",
+                    "Calculator.slnx does not contain src/Calculator/Calculator.csproj and the required workspace_pwsh_run_script receipt is missing.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            producedArtifacts: [],
+            recoveryDecision: new ProcessRecoveryDecisionReceipt(
+                ProcessFailureCategory.ProductCompletionGate,
+                ProcessRecoveryDecisionKind.ManagerRequired,
+                "process.adapter.product_required_file_content_missing",
+                "process.current-step-safe-retry-budget-exhausted",
+                "Child retry budget exhausted.")
+            {
+                RouteKind = ProcessRecoveryRouteKind.ManagerAction,
+                ResponsibleStepInstanceId = assignment.StepInstanceId,
+                DiagnosticFingerprint = "sha256:child-diagnostic",
+                AutomaticRetryAttempt = 3,
+                MaximumAutomaticRetryAttempts = 3,
+                SameDiagnosticFingerprintAttempt = 1,
+                MaximumSameDiagnosticFingerprintAttempts = 1
+            });
 
     private static string FindRepositoryRoot()
     {
@@ -355,9 +538,19 @@ public sealed class ProcessMafHardeningRegressionTests
                 assignment.StepInstanceId == stepInstanceId));
     }
 
-    private sealed class FakeWorkspaceFileService(IReadOnlyList<string> existingPaths) : IWorkspaceFileService
+    private sealed class FakeWorkspaceFileService : IWorkspaceFileService
     {
-        private readonly HashSet<string> existingPaths = existingPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        private readonly IReadOnlyDictionary<string, string> files;
+
+        public FakeWorkspaceFileService(IReadOnlyList<string> existingPaths)
+            : this(existingPaths.ToDictionary(path => path, _ => string.Empty, StringComparer.OrdinalIgnoreCase))
+        {
+        }
+
+        public FakeWorkspaceFileService(IReadOnlyDictionary<string, string> files)
+        {
+            this.files = files;
+        }
 
         public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100) => throw new NotSupportedException();
 
@@ -365,18 +558,40 @@ public sealed class ProcessMafHardeningRegressionTests
 
         public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20) => throw new NotSupportedException();
 
-        public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000) => throw new NotSupportedException();
+        public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
+        {
+            if (!files.TryGetValue(path, out var content))
+            {
+                return new WorkspaceTextFileReadResult(
+                    Succeeded: false,
+                    Message: "missing",
+                    Receipt: Receipt(),
+                    Path: path,
+                    Content: string.Empty,
+                    TotalCharacters: 0,
+                    IsTruncated: false);
+            }
+
+            return new WorkspaceTextFileReadResult(
+                Succeeded: true,
+                Message: "read",
+                Receipt: Receipt(),
+                Path: path,
+                Content: content,
+                TotalCharacters: content.Length,
+                IsTruncated: false);
+        }
 
         public WorkspacePathStatResult StatPath(string path)
             => new(
                 Succeeded: true,
-                Message: existingPaths.Contains(path) ? "exists" : "missing",
+                Message: files.ContainsKey(path) ? "exists" : "missing",
                 Receipt: Receipt(),
                 Path: path,
-                Exists: existingPaths.Contains(path),
-                PathKind: existingPaths.Contains(path) ? "file" : "missing",
-                SizeBytes: existingPaths.Contains(path) ? 1 : null,
-                LastWriteTimeUtc: existingPaths.Contains(path) ? DateTimeOffset.UtcNow : null,
+                Exists: files.ContainsKey(path),
+                PathKind: files.ContainsKey(path) ? "file" : "missing",
+                SizeBytes: files.ContainsKey(path) ? 1 : null,
+                LastWriteTimeUtc: files.ContainsKey(path) ? DateTimeOffset.UtcNow : null,
                 ChildCount: null);
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760) => throw new NotSupportedException();

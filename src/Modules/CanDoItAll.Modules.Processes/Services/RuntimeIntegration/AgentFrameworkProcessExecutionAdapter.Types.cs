@@ -78,6 +78,13 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
         ProcessDiagnosticRetrySafety RetrySafety,
         ProcessDiagnosticIdempotencyClassification Idempotency);
 
+    private sealed record ProcessCompletionGateEvaluation(IReadOnlyList<ProcessCompletionIssue> Issues)
+    {
+        public bool IsSatisfied => Issues.Count == 0;
+
+        public IReadOnlyList<ProcessCompletionIssue> OrderedIssues { get; } = OrderCompletionGateIssues(Issues);
+    }
+
     private sealed record ProductRootInspection(
         bool HasProductFiles,
         string Summary);

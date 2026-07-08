@@ -49,9 +49,6 @@
     "prompt-security-review",
     "prompt-ai-evaluation"
   ],
-  "SharedArtifactRefs": [
-    "implementation-change-set"
-  ],
   "LocalRoleRefs": [
     "ai-evaluation-lead",
     "ai-safety-reviewer",
@@ -113,7 +110,7 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "",
-"DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 260,
       "CanvasY": 0,
@@ -301,7 +298,8 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 2,
@@ -330,7 +328,7 @@
       "OperationTargetScope": "ExternalProductTargetMutable",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "delegation-design",
-"DependsOnBranchOutcomeKey": "delegate",
+      "DependsOnBranchOutcomeKey": "delegate",
       "DecisionRoleKey": "",
       "CanvasX": 2420,
       "CanvasY": 1040,
@@ -702,7 +700,8 @@
           "ArtifactExpectationKey": "evaluation-and-benchmarking-evaluation-benchmark-report",
           "SourceStepKey": "evaluation-and-benchmarking"
         }
-      ]
+      ],
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 5,
@@ -1450,3 +1449,4 @@
     "project-structure-context-brief"
   ]
 }
+

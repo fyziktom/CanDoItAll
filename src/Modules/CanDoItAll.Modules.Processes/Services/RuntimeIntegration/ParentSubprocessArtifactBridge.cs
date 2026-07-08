@@ -7,6 +7,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
@@ -31,6 +32,8 @@ internal enum ParentSubprocessArtifactBridgeResultKind
     AcceptedChildOutputBridged,
     NoGoChildOutputFound,
     ChildCompletedWithoutAcceptedOutput,
+    ChildStoppedBlocked,
+    ChildStoppedFailed,
     ContractMissing
 }
 
@@ -39,7 +42,8 @@ internal sealed record ParentSubprocessArtifactBridgeResult(
     ProcessRunId? ChildRunId = null,
     ProcessSubprocessContract? Contract = null,
     IReadOnlyList<string>? BridgeEvidenceRefs = null,
-    ParentSubprocessBridgedOutcome? AcceptedOutcome = null)
+    ParentSubprocessBridgedOutcome? AcceptedOutcome = null,
+    ParentSubprocessStoppedChild? StoppedChild = null)
 {
     public IReadOnlyList<string> EvidenceRefs { get; init; } = BridgeEvidenceRefs ?? [];
 
@@ -56,6 +60,21 @@ internal sealed record ParentSubprocessBridgedOutcome(
     string RawOutputHash,
     Guid SyntheticExecutionRunId,
     IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts);
+
+internal sealed record ParentSubprocessStoppedChild(
+    ProcessRuntimeStatus ChildStatus,
+    string ChildStepKey,
+    ProcessStepInstanceId? ChildStepInstanceId,
+    ProcessRuntimeStepStatus? ChildStepStatus,
+    IReadOnlyList<ParentSubprocessChildDiagnostic> Diagnostics,
+    ProcessRecoveryDecisionReceipt? RecoveryDecision);
+
+internal sealed record ParentSubprocessChildDiagnostic(
+    string Code,
+    string SafeSummary,
+    string EvidenceHash,
+    ProcessDiagnosticRetrySafety RetrySafety,
+    ProcessDiagnosticIdempotencyClassification Idempotency);
 
 internal sealed class ParentSubprocessArtifactBridge(
     IProcessRuntimeStepAssignmentStore assignmentStore,
@@ -115,10 +134,15 @@ internal sealed class ParentSubprocessArtifactBridge(
 
             if (childState.Status != ProcessRuntimeStatus.Completed)
             {
-                continue;
+                var stoppedChild = ResolveStoppedChild(childState, childGroup);
+                return new ParentSubprocessArtifactBridgeResult(
+                    ResolveStoppedChildResultKind(childState.Status),
+                    ChildRunId: childRunId,
+                    Contract: contract,
+                    StoppedChild: stoppedChild);
             }
 
-            if (TryResolveChildOutputRefs(childRunId, contract.NoGoChildOutputs, out var noGoEvidenceRefs))
+            if (TryResolveChildOutputRefs(childRunId, childGroup, childState, contract.NoGoChildOutputs, out var noGoEvidenceRefs))
             {
                 return new ParentSubprocessArtifactBridgeResult(
                     ParentSubprocessArtifactBridgeResultKind.NoGoChildOutputFound,
@@ -127,7 +151,7 @@ internal sealed class ParentSubprocessArtifactBridge(
                     BridgeEvidenceRefs: noGoEvidenceRefs);
             }
 
-            if (!TryResolveChildOutputRefs(childRunId, contract.AcceptedChildOutputs, out var acceptedEvidenceRefs))
+            if (!TryResolveChildOutputRefs(childRunId, childGroup, childState, contract.AcceptedChildOutputs, out var acceptedEvidenceRefs))
             {
                 return new ParentSubprocessArtifactBridgeResult(
                     ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput,
@@ -307,13 +331,62 @@ internal sealed class ParentSubprocessArtifactBridge(
             [CreateSubprocessOutcomeReceipt(syntheticExecutionRunId, assignment, childRunId, evidenceRefs)]);
     }
 
+    private static ParentSubprocessArtifactBridgeResultKind ResolveStoppedChildResultKind(ProcessRuntimeStatus childStatus)
+        => childStatus is ProcessRuntimeStatus.Blocked or ProcessRuntimeStatus.Escalated or ProcessRuntimeStatus.WaitingForUser
+            ? ParentSubprocessArtifactBridgeResultKind.ChildStoppedBlocked
+            : ParentSubprocessArtifactBridgeResultKind.ChildStoppedFailed;
+
+    private static ParentSubprocessStoppedChild ResolveStoppedChild(
+        ProcessRuntimeStateSnapshot childState,
+        IEnumerable<ProcessRuntimeStepAssignment> childAssignments)
+    {
+        var childAssignmentList = childAssignments.ToArray();
+        var receipt = childState.AppliedResults.LastOrDefault(result => result.Diagnostics.Count > 0) ??
+            childState.AppliedResults.LastOrDefault();
+        var stepState = receipt is null
+            ? childState.Steps.LastOrDefault(step =>
+                step.Status is ProcessRuntimeStepStatus.Blocked or
+                    ProcessRuntimeStepStatus.Failed or
+                    ProcessRuntimeStepStatus.Cancelled or
+                    ProcessRuntimeStepStatus.WaitingApproval)
+            : childState.Steps.FirstOrDefault(step => step.StepInstanceId == receipt.StepInstanceId);
+        var stepInstanceId = receipt?.StepInstanceId ?? stepState?.StepInstanceId;
+        var childAssignment = stepInstanceId is null
+            ? null
+            : childAssignmentList.FirstOrDefault(assignment => assignment.StepInstanceId == stepInstanceId);
+        var diagnostics = receipt?.Diagnostics
+            .Select(diagnostic => new ParentSubprocessChildDiagnostic(
+                diagnostic.Code,
+                diagnostic.SafeSummary,
+                diagnostic.EvidenceHash,
+                diagnostic.RetrySafety,
+                diagnostic.Idempotency))
+            .ToArray() ?? [];
+        var stepKey = childAssignment?.StepKey ??
+            childAssignmentList.FirstOrDefault()?.StepKey ??
+            "unknown";
+        return new ParentSubprocessStoppedChild(
+            childState.Status,
+            stepKey,
+            stepInstanceId,
+            stepState?.Status,
+            diagnostics,
+            receipt?.RecoveryDecision);
+    }
+
     private bool TryResolveChildOutputRefs(
         ProcessRunId childRunId,
+        IEnumerable<ProcessRuntimeStepAssignment> childAssignments,
+        ProcessRuntimeStateSnapshot childState,
         IReadOnlyList<ProcessSubprocessChildOutputContract> childOutputs,
         out IReadOnlyList<string> evidenceRefs)
     {
         evidenceRefs = [];
         var childManagedArtifactRoot = $"artifacts/process-runs/{childRunId.Value:D}";
+        var assignmentsByStepKey = childAssignments
+            .Where(childAssignment => !string.IsNullOrWhiteSpace(childAssignment.StepKey))
+            .GroupBy(childAssignment => childAssignment.StepKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.CreatedAtUtc).First(), StringComparer.OrdinalIgnoreCase);
         var refs = new List<string>();
         foreach (var childOutput in childOutputs)
         {
@@ -322,9 +395,14 @@ internal sealed class ParentSubprocessArtifactBridge(
                 continue;
             }
 
+            if (!assignmentsByStepKey.TryGetValue(childOutput.StepKey, out var childAssignment) ||
+                !HasAcceptedChildOutputLedger(childAssignment, childState))
+            {
+                continue;
+            }
+
             var candidateRef = $"{childManagedArtifactRoot}/steps/{SanitizeManagedArtifactPathSegment(childOutput.StepKey)}.md";
-            var stat = workspaceFiles.StatPath(candidateRef);
-            if (stat.Exists)
+            if (CanBridgeChildOutputArtifact(candidateRef))
             {
                 refs.Add(candidateRef);
             }
@@ -334,6 +412,45 @@ internal sealed class ParentSubprocessArtifactBridge(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         return evidenceRefs.Count > 0;
+    }
+
+    private static bool HasAcceptedChildOutputLedger(
+        ProcessRuntimeStepAssignment childAssignment,
+        ProcessRuntimeStateSnapshot childState)
+    {
+        var producedSlotIds = childAssignment.ProducedArtifactSlotIds
+            .Concat(childState.Steps
+                .Where(step => step.StepInstanceId == childAssignment.StepInstanceId)
+                .SelectMany(step => step.ProducedArtifactSlots))
+            .Distinct()
+            .ToArray();
+        return childState.AppliedResults.Any(receipt =>
+            receipt.StepInstanceId == childAssignment.StepInstanceId &&
+            receipt.ProducedArtifacts.Count > 0 &&
+            (producedSlotIds.Length == 0 ||
+             receipt.ProducedArtifacts.Any(artifact => producedSlotIds.Contains(artifact.SlotId))));
+    }
+
+    private bool CanBridgeChildOutputArtifact(string candidateRef)
+    {
+        var stat = workspaceFiles.StatPath(candidateRef);
+        if (!stat.Exists)
+        {
+            return true;
+        }
+
+        var readResult = workspaceFiles.ReadTextFile(candidateRef, maxCharacters: 200000);
+        if (!readResult.Succeeded)
+        {
+            return false;
+        }
+
+        return !readResult.Content.Contains(
+                   AgentFrameworkProcessExecutionAdapter.ManagedOutcomeArtifactCapturedHeading,
+                   StringComparison.Ordinal) ||
+               readResult.Content.Contains(
+                   AgentFrameworkProcessExecutionAdapter.ManagedOutcomeArtifactAcceptedHeading,
+                   StringComparison.Ordinal);
     }
 
     private static ProcessStepOutcomeResult BuildCompletedSubprocessProcessStepOutcome(

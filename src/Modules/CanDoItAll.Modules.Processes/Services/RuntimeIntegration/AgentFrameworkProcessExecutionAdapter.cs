@@ -37,6 +37,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
     private readonly IReadOnlyList<IProcessSubprocessLaunchCoordinator> subprocessLaunchCoordinators;
     private readonly IProcessRuntimeToolPreflightService? runtimeToolPreflightService;
     private readonly IParentSubprocessArtifactBridge parentSubprocessArtifactBridge;
+    private readonly IDotNetSolutionSetupRuntimeExecutor? dotNetSolutionSetupRuntimeExecutor;
 
     public AgentFrameworkProcessExecutionAdapter(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
@@ -46,7 +47,8 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         IWorkspaceFileService workspaceFiles,
         IEnumerable<IProcessSubprocessLaunchCoordinator>? subprocessLaunchCoordinators = null,
         IProcessRuntimeToolPreflightService? runtimeToolPreflightService = null,
-        IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null)
+        IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null,
+        IDotNetSolutionSetupRuntimeExecutor? dotNetSolutionSetupRuntimeExecutor = null)
     {
         this.workspaceFactory = workspaceFactory;
         this.agentReferenceDataProvider = agentReferenceDataProvider;
@@ -57,6 +59,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
         this.runtimeToolPreflightService = runtimeToolPreflightService;
         this.parentSubprocessArtifactBridge = parentSubprocessArtifactBridge ??
             new ParentSubprocessArtifactBridge(assignmentStore, stateStore, workspaceFiles);
+        this.dotNetSolutionSetupRuntimeExecutor = dotNetSolutionSetupRuntimeExecutor;
     }
 
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
@@ -152,6 +155,13 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                     ComputeHash(issue.Evidence),
                     issue);
             }
+        }
+
+        if (await TryExecuteRuntimeOwnedDotNetSetupAsync(
+                assignment,
+                cancellationToken).ConfigureAwait(false) is { } runtimeOwnedDotNetSetupResult)
+        {
+            return runtimeOwnedDotNetSetupResult;
         }
 
         try
@@ -272,6 +282,32 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                     ungroundedArtifactReferenceIssue);
             }
 
+            var completionGateEvaluation = EvaluateCompletionGates(
+                assignment,
+                materialization.Output,
+                completionToolReceipts,
+                result.ExecutionRunId);
+            if (!completionGateEvaluation.IsSatisfied)
+            {
+                return NeedsManagerForCompletionIssues(
+                    assignment,
+                    validation.RawOutputHash,
+                    completionGateEvaluation);
+            }
+
+            if (AcceptManagedOutcomeArtifactIfNeeded(
+                    assignment,
+                    materialization,
+                    result.ExecutionRunId,
+                    completionToolReceipts,
+                    out var acceptedCompletionToolReceipts) is { } acceptanceIssue)
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    validation.RawOutputHash,
+                    acceptanceIssue);
+            }
+
             var producedArtifactContentHashes = BuildProducedArtifactContentHashes(
                 assignment,
                 materialization.Output,
@@ -288,7 +324,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter : IProcessEx
                 assignment,
                 materialization.Output,
                 validation.RawOutputHash,
-                completionToolReceipts,
+                acceptedCompletionToolReceipts,
                 result.ExecutionRunId,
                 producedArtifactContentHashes);
         }

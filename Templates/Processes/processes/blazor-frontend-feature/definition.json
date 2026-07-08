@@ -402,7 +402,8 @@
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 3,
@@ -582,7 +583,8 @@
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 5,
@@ -870,3 +872,4 @@
     }
   ]
 }
+

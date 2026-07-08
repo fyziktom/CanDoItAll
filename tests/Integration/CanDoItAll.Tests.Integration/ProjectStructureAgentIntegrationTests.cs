@@ -1675,6 +1675,9 @@ public sealed class ProjectStructureAgentIntegrationTests
         var addTestProjectAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "add-test-project");
         var validateFirstBuildAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "validate-first-build");
         var revalidateFirstBuildAssignment = Assert.Single(childAssignments, assignment => assignment.StepKey == "validate-first-build-after-repair");
+        var expectedManagedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(subprocess.RunId!.Value));
+        var expectedCreateProjectScriptRef = $"{expectedManagedArtifactRoot}/scripts/create-dotnet-project.wire-solution.ps1";
+        var expectedAddTestProjectScriptRef = $"{expectedManagedArtifactRoot}/scripts/add-test-project.wire-solution.ps1";
         Assert.DoesNotContain(ProcessOperationContractNames.RunValidation, createProjectAssignment.AllowedOperations);
         Assert.DoesNotContain(ProcessOperationContractNames.RunValidation, addTestProjectAssignment.AllowedOperations);
         Assert.Contains(ProcessOperationContractNames.RunValidation, validateFirstBuildAssignment.AllowedOperations);
@@ -1723,15 +1726,17 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("DotNetCreateProjectScript", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Equal(
-            "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.wire-solution.ps1",
+            expectedCreateProjectScriptRef,
             scaffoldAssignment.LaunchVariables["DotNetCreateProjectScriptRef"]);
+        Assert.DoesNotContain("{CurrentProcessRunId}", scaffoldAssignment.LaunchVariables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Contains("DotNetCreateProjectScript", scaffoldAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetCreateProjectSideEffectManifest", scaffoldAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Equal(
-            "artifacts/process-runs/{CurrentProcessRunId}/scripts/add-test-project.wire-solution.ps1",
+            expectedAddTestProjectScriptRef,
             scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScriptRef"]);
         Assert.Contains("Add-test-project deterministic execution plan", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectExecutionPlan"], StringComparison.Ordinal);
+        Assert.DoesNotContain("{CurrentProcessRunId}", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Contains("$SolutionCandidates", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
         Assert.Contains("$newTestProjectArguments = @('new', $TestTemplate", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
         Assert.Contains("$newTestProjectArguments += @('--framework', $TargetFramework)", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
@@ -1742,6 +1747,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains(@"C:\\temp\\CanDoItAll\\TetrisGame\\tests\\TetrisGame.Tests", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectSideEffectManifest"], StringComparison.Ordinal);
         Assert.Contains("DotNetCreateProjectExecutionPlan", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetCreateProjectScriptRef", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
+        Assert.Equal(expectedCreateProjectScriptRef, createProjectAssignment.LaunchVariables["DotNetCreateProjectScriptRef"]);
         Assert.Contains("DotNetCreateProjectScript", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetCreateProjectSideEffectManifest", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.DoesNotContain("DotNetAddTestProjectScriptRef", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
@@ -1749,6 +1755,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.DoesNotContain("DotNetAddTestProjectExecutionPlan", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.DoesNotContain("DotNetAddTestProjectSideEffectManifest", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetAddTestProjectScriptRef", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
+        Assert.Equal(expectedAddTestProjectScriptRef, addTestProjectAssignment.LaunchVariables["DotNetAddTestProjectScriptRef"]);
         Assert.Contains("DotNetAddTestProjectScript", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetAddTestProjectExecutionPlan", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetAddTestProjectSideEffectManifest", addTestProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);

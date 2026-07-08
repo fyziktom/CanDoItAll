@@ -323,7 +323,166 @@
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionContract": {
+        "ExecutionClass": "AgentWithToolPlanGuard",
+        "RequiredRuntimeToolNames": [
+          "workspace_dotnet_run",
+          "browser_navigate",
+          "browser_snapshot",
+          "browser_take_screenshot",
+          "browser_console_messages",
+          "workspace_dotnet_stop"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "start-app",
+            "ToolName": "workspace_dotnet_run",
+            "Predicate": "current-run app startup receipt for UI targets",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "navigate",
+            "ToolName": "browser_navigate",
+            "Predicate": "browser navigation receipt for each required route",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "snapshot",
+            "ToolName": "browser_snapshot",
+            "Predicate": "browser state snapshot receipt for each required route",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "screenshot",
+            "ToolName": "browser_take_screenshot",
+            "Predicate": "fresh screenshot receipt for each required route and viewport",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "console",
+            "ToolName": "browser_console_messages",
+            "Predicate": "browser console receipt for each required route",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "stop-app",
+            "ToolName": "workspace_dotnet_stop",
+            "Predicate": "cleanup receipt for any app process started by this step",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "ui-screenshot-files",
+            "MaterializationMode": "RuntimeManaged"
+          },
+          {
+            "ArtifactExpectationKey": "ui-browser-evidence",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.ui-screenshot.capture",
+          "PlanKind": "RuntimeScreenshotCapture",
+          "Operations": [
+            {
+              "Key": "start-app",
+              "ToolName": "workspace_dotnet_run",
+              "RequiredReceiptKey": "start-app",
+              "ArgumentsSummary": "Start the app from the grounded app project file when needed.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "navigate",
+              "ToolName": "browser_navigate",
+              "RequiredReceiptKey": "navigate",
+              "ArgumentsSummary": "Navigate each required route.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "snapshot",
+              "ToolName": "browser_snapshot",
+              "RequiredReceiptKey": "snapshot",
+              "ArgumentsSummary": "Capture browser state for each route.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "screenshot",
+              "ToolName": "browser_take_screenshot",
+              "RequiredReceiptKey": "screenshot",
+              "ArgumentsSummary": "Capture fresh PNG screenshots.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "console",
+              "ToolName": "browser_console_messages",
+              "RequiredReceiptKey": "console",
+              "ArgumentsSummary": "Collect browser console messages.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "stop-app",
+              "ToolName": "workspace_dotnet_stop",
+              "RequiredReceiptKey": "stop-app",
+              "ArgumentsSummary": "Stop any process started by this step.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "start-app",
+              "ToolName": "workspace_dotnet_run",
+              "Predicate": "current-run app startup receipt for UI targets",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "navigate",
+              "ToolName": "browser_navigate",
+              "Predicate": "browser navigation receipt for each required route",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "snapshot",
+              "ToolName": "browser_snapshot",
+              "Predicate": "browser state snapshot receipt for each required route",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "screenshot",
+              "ToolName": "browser_take_screenshot",
+              "Predicate": "fresh screenshot receipt for each required route and viewport",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "console",
+              "ToolName": "browser_console_messages",
+              "Predicate": "browser console receipt for each required route",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "stop-app",
+              "ToolName": "workspace_dotnet_stop",
+              "Predicate": "cleanup receipt for any app process started by this step",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": []
+        }
+      }
     },
     {
       "Order": 2,
@@ -503,7 +662,140 @@
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalActionControlled"
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionContract": {
+        "ExecutionClass": "AgentWithToolPlanGuard",
+        "RequiredRuntimeToolNames": [
+          "workspace_inspect_image",
+          "workspace_analyze_image",
+          "workspace_analyze_images",
+          "project_structure_node_create",
+          "project_structure_asset_create"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "inspect-image",
+            "ToolName": "workspace_inspect_image",
+            "Predicate": "inspect every accepted or rejected screenshot",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "analyze-image",
+            "ToolName": "workspace_analyze_image",
+            "Predicate": "provider-backed analysis for visual acceptance claims when available",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "compare-images",
+            "ToolName": "workspace_analyze_images",
+            "Predicate": "ordered source-target comparison when source visual targets exist and are accessible",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "create-screenshots-node",
+            "ToolName": "project_structure_node_create",
+            "Predicate": "create or reuse the Screenshots project-structure parent when accepted UI screenshots exist",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "create-image-asset",
+            "ToolName": "project_structure_asset_create",
+            "Predicate": "create one image asset per accepted screenshot when project-structure writeback is available",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "screenshots-node-storage-receipts",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.ui-screenshot.store",
+          "PlanKind": "ScreenshotStorageWriteback",
+          "Operations": [
+            {
+              "Key": "inspect-image",
+              "ToolName": "workspace_inspect_image",
+              "RequiredReceiptKey": "inspect-image",
+              "ArgumentsSummary": "Inspect every screenshot before acceptance.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "analyze-image",
+              "ToolName": "workspace_analyze_image",
+              "RequiredReceiptKey": "analyze-image",
+              "ArgumentsSummary": "Analyze visual content when available.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "compare-images",
+              "ToolName": "workspace_analyze_images",
+              "RequiredReceiptKey": "compare-images",
+              "ArgumentsSummary": "Compare source targets when available.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "create-screenshots-node",
+              "ToolName": "project_structure_node_create",
+              "RequiredReceiptKey": "create-screenshots-node",
+              "ArgumentsSummary": "Create or reuse Screenshots parent node.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "create-image-asset",
+              "ToolName": "project_structure_asset_create",
+              "RequiredReceiptKey": "create-image-asset",
+              "ArgumentsSummary": "Create image assets for accepted screenshots.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "inspect-image",
+              "ToolName": "workspace_inspect_image",
+              "Predicate": "inspect every accepted or rejected screenshot",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "analyze-image",
+              "ToolName": "workspace_analyze_image",
+              "Predicate": "provider-backed analysis for visual acceptance claims when available",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "compare-images",
+              "ToolName": "workspace_analyze_images",
+              "Predicate": "ordered source-target comparison when source visual targets exist and are accessible",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "create-screenshots-node",
+              "ToolName": "project_structure_node_create",
+              "Predicate": "create or reuse the Screenshots project-structure parent when accepted UI screenshots exist",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "create-image-asset",
+              "ToolName": "project_structure_asset_create",
+              "Predicate": "create one image asset per accepted screenshot when project-structure writeback is available",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": []
+        }
+      }
     },
     {
       "Order": 3,
@@ -581,3 +873,4 @@
     }
   ]
 }
+

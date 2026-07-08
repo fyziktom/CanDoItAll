@@ -167,12 +167,45 @@ public sealed class ProcessTemplatePackLoader
             if (!string.Equals(step.StepKind, "Subprocess", StringComparison.OrdinalIgnoreCase) &&
                 string.IsNullOrWhiteSpace(step.SubprocessProcessKey))
             {
+                ValidateStepExecutionContract(definition, step, definitionPath);
                 continue;
             }
 
+            ValidateStepExecutionContract(definition, step, definitionPath);
             ValidateSubprocessContract(definition, step, definitionPath);
         }
     }
+
+    private static void ValidateStepExecutionContract(
+        ProcessTemplateDefinitionDocument definition,
+        ProcessTemplateDefinitionStepDocument step,
+        string definitionPath)
+    {
+        var stepPath = $"{definitionPath}:{definition.Key}.{step.Key}";
+        var executionClass = ResolveExecutionClass(step);
+        if (string.IsNullOrWhiteSpace(executionClass))
+        {
+            return;
+        }
+
+        if (!ProcessTemplateStepExecutionClasses.IsKnown(executionClass))
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' has unknown executionClass '{executionClass}'.");
+        }
+
+        if (ProcessTemplateStepExecutionClasses.RequiresDeterministicToolPlan(executionClass) &&
+            step.ExecutionContract?.DeterministicToolPlan is null)
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' executionClass '{executionClass}' requires ExecutionContract.DeterministicToolPlan.");
+        }
+    }
+
+    private static string ResolveExecutionClass(ProcessTemplateDefinitionStepDocument step)
+        => !string.IsNullOrWhiteSpace(step.ExecutionClass)
+            ? step.ExecutionClass.Trim()
+            : step.ExecutionContract?.ExecutionClass.Trim() ?? string.Empty;
 
     private static void ValidateSubprocessContract(
         ProcessTemplateDefinitionDocument definition,
@@ -775,6 +808,10 @@ public sealed class ProcessTemplateDefinitionStepDocument
     public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
 
     public ProcessSubprocessContract? SubprocessContract { get; set; }
+
+    public string ExecutionClass { get; set; } = string.Empty;
+
+    public ProcessTemplateStepExecutionContractDocument? ExecutionContract { get; set; }
 
     public double CanvasX { get; set; }
 

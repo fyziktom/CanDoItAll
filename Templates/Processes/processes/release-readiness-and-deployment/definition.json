@@ -508,7 +508,8 @@
         "WriteManagedProcessArtifacts",
         "EscalateOrDecide"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 4,
@@ -1051,3 +1052,4 @@
   ],
   "SharedArtifactRefs": []
 }
+

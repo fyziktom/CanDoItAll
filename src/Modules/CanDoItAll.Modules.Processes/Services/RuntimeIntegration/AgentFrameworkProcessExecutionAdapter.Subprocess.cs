@@ -122,6 +122,43 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             return NeedsManagerForCompletionIssue(assignment, validation.RawOutputHash, materializationIssue);
         }
 
+        if (ValidateManagedArtifactBodyReferences(
+                assignment,
+                materialization.Output,
+                materialization.ToolReceipts) is { } ungroundedArtifactReferenceIssue)
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                validation.RawOutputHash,
+                ungroundedArtifactReferenceIssue);
+        }
+
+        var completionGateEvaluation = EvaluateCompletionGates(
+            assignment,
+            materialization.Output,
+            materialization.ToolReceipts,
+            subprocessLaunchReceipt.ExecutionRunId);
+        if (!completionGateEvaluation.IsSatisfied)
+        {
+            return NeedsManagerForCompletionIssues(
+                assignment,
+                validation.RawOutputHash,
+                completionGateEvaluation);
+        }
+
+        if (AcceptManagedOutcomeArtifactIfNeeded(
+                assignment,
+                materialization,
+                subprocessLaunchReceipt.ExecutionRunId,
+                materialization.ToolReceipts,
+                out var acceptedToolReceipts) is { } acceptanceIssue)
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                validation.RawOutputHash,
+                acceptanceIssue);
+        }
+
         var producedArtifactContentHashes = BuildProducedArtifactContentHashes(
             assignment,
             materialization.Output,
@@ -138,7 +175,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             assignment,
             materialization.Output,
             validation.RawOutputHash,
-            materialization.ToolReceipts,
+            acceptedToolReceipts,
             subprocessLaunchReceipt.ExecutionRunId,
             producedArtifactContentHashes);
     }
@@ -185,6 +222,16 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 BuildSubprocessBridgeIssueResult(
                     assignment,
                     CreateSubprocessChildAcceptedOutputMissingIssue(assignment, childRunId, contract)),
+            ParentSubprocessArtifactBridgeResultKind.ChildStoppedBlocked
+                when result.ChildRunId is { } childRunId && result.StoppedChild is { } stoppedChild =>
+                BuildSubprocessBridgeIssueResult(
+                    assignment,
+                    CreateSubprocessChildStoppedIssue(assignment, childRunId, stoppedChild, failed: false)),
+            ParentSubprocessArtifactBridgeResultKind.ChildStoppedFailed
+                when result.ChildRunId is { } childRunId && result.StoppedChild is { } stoppedChild =>
+                BuildSubprocessBridgeIssueResult(
+                    assignment,
+                    CreateSubprocessChildStoppedIssue(assignment, childRunId, stoppedChild, failed: true)),
             _ => null
         };
     }
@@ -222,6 +269,32 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
                 ungroundedArtifactReferenceIssue);
         }
 
+        var completionGateEvaluation = EvaluateCompletionGates(
+            assignment,
+            materialization.Output,
+            materialization.ToolReceipts,
+            completedChildOutcome.SyntheticExecutionRunId);
+        if (!completionGateEvaluation.IsSatisfied)
+        {
+            return NeedsManagerForCompletionIssues(
+                assignment,
+                completedChildOutcome.RawOutputHash,
+                completionGateEvaluation);
+        }
+
+        if (AcceptManagedOutcomeArtifactIfNeeded(
+                assignment,
+                materialization,
+                completedChildOutcome.SyntheticExecutionRunId,
+                materialization.ToolReceipts,
+                out var acceptedToolReceipts) is { } acceptanceIssue)
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                completedChildOutcome.RawOutputHash,
+                acceptanceIssue);
+        }
+
         var producedArtifactContentHashes = BuildProducedArtifactContentHashes(
             assignment,
             materialization.Output,
@@ -238,7 +311,7 @@ internal sealed partial class AgentFrameworkProcessExecutionAdapter
             assignment,
             materialization.Output,
             completedChildOutcome.RawOutputHash,
-            materialization.ToolReceipts,
+            acceptedToolReceipts,
             completedChildOutcome.SyntheticExecutionRunId,
             producedArtifactContentHashes);
     }

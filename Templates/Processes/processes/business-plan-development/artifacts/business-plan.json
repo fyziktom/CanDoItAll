@@ -12,5 +12,17 @@
   "AllowedFutureUsageSummary": "Reusable for finance, marketing, funding, and execution planning.",
   "ValidationRequirementSummary": "Must include strategy spine, assumptions, risks, and next validation actions.",
   "OwnerRoleKey": "business-strategist",
-  "DocPath": "processes/business-plan-development/artifacts/business-plan.md"
+  "DocPath": "processes/business-plan-development/artifacts/business-plan.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "business-plan",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must include strategy spine, assumptions, risks, and next validation actions."
+  }
 }
+

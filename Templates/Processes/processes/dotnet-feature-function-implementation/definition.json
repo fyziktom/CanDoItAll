@@ -258,8 +258,8 @@
         {
           "ArtifactExpectationKey": "feature-scope-packet",
           "SourceStepKey": "feature-slice-intake"
-          }
-        ],
+        }
+      ],
       "BranchOutcomes": [],
       "ChecklistRefs": [],
       "ValidationRefs": [],
@@ -334,10 +334,10 @@
         }
       ],
       "ArtifactInputs": [
-          {
-            "ArtifactExpectationKey": "feature-scope-packet",
-            "SourceStepKey": "feature-slice-intake"
-          },
+        {
+          "ArtifactExpectationKey": "feature-scope-packet",
+          "SourceStepKey": "feature-slice-intake"
+        },
         {
           "ArtifactExpectationKey": "feature-implementation-plan",
           "SourceStepKey": "implementation-approach"
@@ -550,7 +550,8 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 5,
@@ -828,7 +829,8 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 8,
@@ -1004,3 +1006,4 @@
     }
   ]
 }
+

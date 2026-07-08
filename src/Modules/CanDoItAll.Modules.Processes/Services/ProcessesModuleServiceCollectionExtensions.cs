@@ -55,6 +55,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessPromptCompositionDriver, AgentFrameworkProcessStepBriefBuilder>());
         services.TryAddScoped<IProcessStepBriefBuilder, DriverProcessStepBriefBuilder>();
         services.TryAddScoped<IProcessRuntimeToolPreflightService, ProcessRuntimeToolPreflightService>();
+        services.TryAddScoped<IDotNetSolutionSetupRuntimeExecutor, DotNetSolutionSetupRuntimeExecutor>();
         services.TryAddScoped<IParentSubprocessArtifactBridge, ParentSubprocessArtifactBridge>();
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
@@ -67,6 +68,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessRuntimeRunCancellationObserver, AgentFrameworkProcessRuntimeCancellationObserver>());
         services.TryAddScoped<IProcessLaunchDriverCatalogProvider, StandardProcessLaunchDriverCatalogProvider>();
         services.TryAddScoped<IProcessLaunchExecutorResolver, AgentFrameworkProcessLaunchExecutorResolver>();
+        services.TryAddSingleton<ILaunchVariableTemplateResolver, LaunchVariableTemplateResolver>();
+        services.TryAddSingleton<IProcessStepRecoveryInstructionBuilder, ProcessStepRecoveryInstructionBuilder>();
         services.TryAddScoped<IProcessRuntimeStepAssignmentRepairService, AgentFrameworkProcessRuntimeStepAssignmentRepairService>();
         services.TryAddScoped<IProcessLaunchArtifactInitializer, WorkspaceProcessLaunchArtifactInitializer>();
         services.TryAddScoped<IProcessRuntimeStrategyFactoryResolver, StandardProcessRuntimeStrategyFactoryResolver>();

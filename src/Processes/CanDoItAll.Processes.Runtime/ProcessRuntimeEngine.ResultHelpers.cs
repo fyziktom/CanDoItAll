@@ -204,9 +204,10 @@ public sealed partial class ProcessRuntimeEngine
         StrategyResultEnvelope result,
         ProcessRuntimeStepStatus appliedStepStatus,
         ProcessRuntimeStateSnapshot state,
-        ProcessRuntimeStepState step)
+        ProcessRuntimeStepState step,
+        IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
     {
-        var primaryDiagnosticCode = result.Diagnostics.FirstOrDefault()?.Code.Value ?? string.Empty;
+        var primaryDiagnosticCode = diagnostics.FirstOrDefault()?.Code ?? string.Empty;
 
         if (appliedStepStatus is ProcessRuntimeStepStatus.Blocked)
         {
@@ -215,16 +216,14 @@ public sealed partial class ProcessRuntimeEngine
                 : primaryDiagnosticCode;
             var failureCategory = ClassifyFailureCategory(sourceCode);
             var routeKind = ResolveRecoveryRouteKind(state, step, result, failureCategory, out var responsibleStepId);
-            return new ProcessRecoveryDecisionReceipt(
+            return ProcessRecoveryClassifier.Default.ClassifyBlocked(new ProcessRecoveryClassificationInput(
+                step.StepInstanceId,
                 failureCategory,
-                ProcessRecoveryDecisionKind.ManagerRequired,
                 sourceCode,
-                ResolveRecoveryPolicy(routeKind),
-                ResolveRecoveryReason(routeKind))
-            {
-                RouteKind = routeKind,
-                ResponsibleStepInstanceId = responsibleStepId
-            };
+                routeKind,
+                responsibleStepId,
+                diagnostics,
+                state.AppliedResults.Where(receipt => receipt.StepInstanceId == step.StepInstanceId).ToArray()));
         }
 
         if (appliedStepStatus is ProcessRuntimeStepStatus.Failed)
@@ -245,6 +244,23 @@ public sealed partial class ProcessRuntimeEngine
         }
 
         return null;
+    }
+
+    private static ProcessRuntimeStepStatus ResolveStepStatusForRecoveryDecision(
+        ProcessRuntimeStepStatus resultStepStatus,
+        ProcessRecoveryDecisionReceipt? recoveryDecision)
+    {
+        if (resultStepStatus == ProcessRuntimeStepStatus.Blocked &&
+            recoveryDecision is
+            {
+                DecisionKind: ProcessRecoveryDecisionKind.SafeRetry,
+                RouteKind: ProcessRecoveryRouteKind.CurrentStepRetry
+            })
+        {
+            return ProcessRuntimeStepStatus.Ready;
+        }
+
+        return resultStepStatus;
     }
 
     private static ProcessRecoveryRouteKind ResolveRecoveryRouteKind(
@@ -322,6 +338,11 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessFailureCategory.AdapterRetryable;
         }
 
+        if (IsProductCompletionGateDiagnosticCode(code))
+        {
+            return ProcessFailureCategory.ProductCompletionGate;
+        }
+
         if (code.Contains("artifact", StringComparison.OrdinalIgnoreCase) ||
             code.Contains("receipt", StringComparison.OrdinalIgnoreCase))
         {
@@ -369,6 +390,15 @@ public sealed partial class ProcessRuntimeEngine
         }
 
         return ProcessFailureCategory.Unknown;
+    }
+
+    private static bool IsProductCompletionGateDiagnosticCode(string code)
+    {
+        return code.StartsWith("process.adapter.product_", StringComparison.OrdinalIgnoreCase) ||
+               code.StartsWith("process.adapter.produced_artifact_", StringComparison.OrdinalIgnoreCase) ||
+               code.StartsWith("process.adapter.ungrounded_", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(code, "process.adapter.required_tool_receipt_missing", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(code, "process.adapter.completed_outcome_declares_unresolved_blocker", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<ProcessRuntimeEventEnvelope> BuildResultEvents(

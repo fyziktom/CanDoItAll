@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 
@@ -97,6 +98,17 @@ public sealed class DotNetProcessLaunchVariableContributorTests
         Assert.Equal(
             "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.wire-solution.ps1",
             variables["DotNetCreateProjectScriptRef"]);
+        variables["CurrentProcessRunId"] = "9e544598-47f3-4a65-83e5-e28dc9cef38a";
+        var resolved = new LaunchVariableTemplateResolver().Resolve(variables);
+        Assert.False(resolved.HasBlockingDiagnostics);
+        Assert.Equal(
+            "artifacts/process-runs/9e544598-47f3-4a65-83e5-e28dc9cef38a/scripts/create-dotnet-project.wire-solution.ps1",
+            resolved.Variables["DotNetCreateProjectScriptRef"]);
+        Assert.Equal(
+            "artifacts/process-runs/9e544598-47f3-4a65-83e5-e28dc9cef38a/scripts/add-test-project.wire-solution.ps1",
+            resolved.Variables["DotNetAddTestProjectScriptRef"]);
+        Assert.DoesNotContain("{CurrentProcessRunId}", resolved.Variables["DotNetCreateProjectExecutionPlan"], StringComparison.Ordinal);
+        Assert.DoesNotContain("{CurrentProcessRunId}", resolved.Variables["DotNetAddTestProjectExecutionPlan"], StringComparison.Ordinal);
         Assert.Contains("Invoke-Dotnet @('sln', $SolutionFile, 'add', $AppProjectFile)", variables["DotNetCreateProjectScript"], StringComparison.Ordinal);
         Assert.Contains("\"mode\":\"ProductMutation\"", variables["DotNetCreateProjectSideEffectManifest"], StringComparison.Ordinal);
     }

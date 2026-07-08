@@ -326,7 +326,8 @@ public sealed class ProcessLaunchExecutorResolverTests
             "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
             AgentWorkloadKind.Programming,
             AgentWorkspaceToolProfileKind.SoftwareDevelopment,
-            ["dotnet", "programming", "blazor"]);
+            ["dotnet", "programming", "blazor"],
+            CreateDotNetSetupToolCapabilities());
         var workspace = new ResolverWorkspaceService([programmingAgent, dotnetDeveloperAgent], [CreateProvider(providerId)]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
@@ -344,6 +345,37 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Equal("software-engineer", binding.RoleKey);
         Assert.Equal(dotnetDeveloperAgent.Id.ToString("D"), binding.ExecutorId);
         Assert.NotEqual(programmingAgent.Id.ToString("D"), binding.ExecutorId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_dotnet_setup_template_when_agent_lacks_required_tool_capability()
+    {
+        var providerId = Guid.Parse("52ee790f-23d9-432c-8e8e-c15ca95115fb");
+        var dotnetDeveloperAgent = CreateAgent(
+            providerId,
+            Guid.Parse("95e9dcc1-577c-42b5-82e4-1d46414872a0"),
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
+            AgentWorkloadKind.Programming,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["dotnet", "programming", "blazor"]);
+        var workspace = new ResolverWorkspaceService([dotnetDeveloperAgent], [CreateProvider(providerId)]);
+        var workspaceFactory = new ResolverWorkspaceFactory(workspace);
+        var resolver = CreateResolver(workspaceFactory);
+        var definition = LoadTemplateDefinition("dotnet-solution-setup");
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan("create-dotnet-project"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "agent.readiness.required-tool-capability-missing" &&
+            finding.Message.Contains("workspace_pwsh_run_script", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -1502,6 +1534,30 @@ public sealed class ProcessLaunchExecutorResolverTests
             Tags: tags,
             CreatedAtUtc: Now,
             UpdatedAtUtc: Now);
+    }
+
+    private static IReadOnlyList<AgentCapabilityAssignment> CreateDotNetSetupToolCapabilities()
+    {
+        return
+        [
+            CreateToolCapability("workspace-create-directory"),
+            CreateToolCapability("workspace-dotnet-new"),
+            CreateToolCapability("workspace-write-file"),
+            CreateToolCapability("workspace-stat-path"),
+            CreateToolCapability("workspace-pwsh-run-script"),
+            CreateToolCapability("workspace-read-file")
+        ];
+    }
+
+    private static AgentCapabilityAssignment CreateToolCapability(string capabilityKey)
+    {
+        return new AgentCapabilityAssignment(
+            Guid.NewGuid(),
+            capabilityKey,
+            CapabilityKind.Tool,
+            CapabilityProofStatus.Verified,
+            Now,
+            "Capability is available in this unit-test fixture.");
     }
 
     private static ProviderProfile CreateProvider(

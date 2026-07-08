@@ -238,7 +238,158 @@
         "MutateProductTarget",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionContract": {
+        "ExecutionClass": "AgentWithToolPlanGuard",
+        "RequiredRuntimeToolNames": [
+          "workspace_create_directory",
+          "workspace_dotnet_new",
+          "workspace_write_file",
+          "workspace_stat_path",
+          "workspace_pwsh_run_script",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "create-solution",
+            "ToolName": "workspace_dotnet_new",
+            "Predicate": "template=sln at ProductRoot using contracted solution name",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "create-app-project",
+            "ToolName": "workspace_dotnet_new",
+            "Predicate": "contracted app template under productRoot/src",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "write-helper-script",
+            "ToolName": "workspace_write_file",
+            "Predicate": "DotNetCreateProjectScript written to DotNetCreateProjectScriptRef",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "run-helper-script",
+            "ToolName": "workspace_pwsh_run_script",
+            "Predicate": "DotNetCreateProjectScriptRef with DotNetCreateProjectSideEffectManifest in ProductMutation mode",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-membership-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution file readback contains the contracted app project",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "solution-skeleton-change-set",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.create-project",
+          "PlanKind": "DotNetSolutionCreate",
+          "ScriptRefLaunchVariable": "DotNetCreateProjectScriptRef",
+          "ScriptLaunchVariable": "DotNetCreateProjectScript",
+          "SideEffectManifestLaunchVariable": "DotNetCreateProjectSideEffectManifest",
+          "Operations": [
+            {
+              "Key": "create-solution",
+              "ToolName": "workspace_dotnet_new",
+              "RequiredReceiptKey": "create-solution",
+              "ArgumentsSummary": "Create or verify the solution file at the grounded product root.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "create-app-project",
+              "ToolName": "workspace_dotnet_new",
+              "RequiredReceiptKey": "create-app-project",
+              "ArgumentsSummary": "Create or verify the contracted app project from the selected template.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "RequiredReceiptKey": "write-helper-script",
+              "ArgumentsSummary": "Write the reviewed solution-membership helper script.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "RequiredReceiptKey": "run-helper-script",
+              "ArgumentsSummary": "Run the helper script with the product side-effect manifest.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "solution-membership-readback",
+              "ArgumentsSummary": "Read back solution membership after helper execution.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "create-solution",
+              "ToolName": "workspace_dotnet_new",
+              "Predicate": "template=sln at ProductRoot using contracted solution name",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "create-app-project",
+              "ToolName": "workspace_dotnet_new",
+              "Predicate": "contracted app template under productRoot/src",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "Predicate": "DotNetCreateProjectScript written to DotNetCreateProjectScriptRef",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "Predicate": "DotNetCreateProjectScriptRef with DotNetCreateProjectSideEffectManifest in ProductMutation mode",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "solution file readback contains the contracted app project",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": [
+            {
+              "PathCandidates": [
+                "DotNetSolutionFile",
+                "DotNetSolutionFileAlias",
+                "DotNetSolutionFileCandidates"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "DotNetAppProjectFile",
+                  "DotNetAppProjectRelativePath"
+                ]
+              ]
+            }
+          ]
+        }
+      }
     },
     {
       "Order": 2,
@@ -313,7 +464,148 @@
         "MutateProductTarget",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionContract": {
+        "ExecutionClass": "AgentWithToolPlanGuard",
+        "RequiredRuntimeToolNames": [
+          "workspace_write_file",
+          "workspace_stat_path",
+          "workspace_pwsh_run_script",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "write-helper-script",
+            "ToolName": "workspace_write_file",
+            "Predicate": "DotNetAddTestProjectScript written to DotNetAddTestProjectScriptRef",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "run-helper-script",
+            "ToolName": "workspace_pwsh_run_script",
+            "Predicate": "DotNetAddTestProjectScriptRef with DotNetAddTestProjectSideEffectManifest in ProductMutation mode",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-membership-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution file contains app and test project entries",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "project-reference-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "test project contains the contracted ProjectReference",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "test-project-change-set",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.add-test-project",
+          "PlanKind": "DotNetSolutionAddTestProject",
+          "ScriptRefLaunchVariable": "DotNetAddTestProjectScriptRef",
+          "ScriptLaunchVariable": "DotNetAddTestProjectScript",
+          "SideEffectManifestLaunchVariable": "DotNetAddTestProjectSideEffectManifest",
+          "Operations": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "RequiredReceiptKey": "write-helper-script",
+              "ArgumentsSummary": "Write the reviewed test-project wiring helper script.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "RequiredReceiptKey": "run-helper-script",
+              "ArgumentsSummary": "Run the helper script with the product side-effect manifest.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "solution-membership-readback",
+              "ArgumentsSummary": "Read back solution membership after helper execution.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "project-reference-readback",
+              "ArgumentsSummary": "Read back the test project reference after helper execution.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "Predicate": "DotNetAddTestProjectScript written to DotNetAddTestProjectScriptRef",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "Predicate": "DotNetAddTestProjectScriptRef with DotNetAddTestProjectSideEffectManifest in ProductMutation mode",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "solution file contains app and test project entries",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "test project contains the contracted ProjectReference",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": [
+            {
+              "PathCandidates": [
+                "DotNetSolutionFile",
+                "DotNetSolutionFileAlias",
+                "DotNetSolutionFileCandidates"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "DotNetAppProjectFile",
+                  "DotNetTestProjectFile"
+                ]
+              ]
+            },
+            {
+              "PathCandidates": [
+                "DotNetTestProjectFile",
+                "DotNetTestProjectFileAlias"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "ProjectReference",
+                  "DotNetAppProjectFile",
+                  "DotNetAppProjectRelativePath"
+                ]
+              ]
+            }
+          ]
+        }
+      }
     },
     {
       "Order": 3,
@@ -407,7 +699,53 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "ExecutionContract": {
+        "ExecutionClass": "BranchDecision",
+        "RequiredRuntimeToolNames": [
+          "workspace_dotnet_restore",
+          "workspace_dotnet_build",
+          "workspace_dotnet_test",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "restore",
+            "ToolName": "workspace_dotnet_restore",
+            "Predicate": "current-run restore against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "build",
+            "ToolName": "workspace_dotnet_build",
+            "Predicate": "current-run build against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "test",
+            "ToolName": "workspace_dotnet_test",
+            "Predicate": "current-run targeted test or test discovery receipt when a test target exists",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution membership readback confirms app and test entries",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "first-build-evidence",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ]
+      }
     },
     {
       "Order": 4,
@@ -482,7 +820,135 @@
         "MutateProductTarget",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetMutable",
+      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionContract": {
+        "ExecutionClass": "AgentWithToolPlanGuard",
+        "RequiredRuntimeToolNames": [
+          "workspace_write_file",
+          "workspace_stat_path",
+          "workspace_pwsh_run_script",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "write-helper-script",
+            "ToolName": "workspace_write_file",
+            "Predicate": "solution repair helper script written to DotNetAddTestProjectScriptRef or current-run managed script ref",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "run-helper-script",
+            "ToolName": "workspace_pwsh_run_script",
+            "Predicate": "repair helper script executed with ProductMutation side-effect manifest",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-membership-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "repaired solution membership readback confirms targeted fix",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "project-reference-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "repaired project reference readback confirms targeted fix when applicable",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "setup-repair-change-set",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.repair-solution-setup",
+          "PlanKind": "DotNetSolutionRepair",
+          "ScriptRefLaunchVariable": "DotNetAddTestProjectScriptRef",
+          "ScriptLaunchVariable": "DotNetAddTestProjectScript",
+          "SideEffectManifestLaunchVariable": "DotNetAddTestProjectSideEffectManifest",
+          "Operations": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "RequiredReceiptKey": "write-helper-script",
+              "ArgumentsSummary": "Write the reviewed repair helper script.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "RequiredReceiptKey": "run-helper-script",
+              "ArgumentsSummary": "Run the repair helper script with the product side-effect manifest.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "solution-membership-readback",
+              "ArgumentsSummary": "Read back repaired solution membership.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "RequiredReceiptKey": "project-reference-readback",
+              "ArgumentsSummary": "Read back repaired project references when applicable.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "write-helper-script",
+              "ToolName": "workspace_write_file",
+              "Predicate": "solution repair helper script written to DotNetAddTestProjectScriptRef or current-run managed script ref",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "run-helper-script",
+              "ToolName": "workspace_pwsh_run_script",
+              "Predicate": "repair helper script executed with ProductMutation side-effect manifest",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "solution-membership-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "repaired solution membership readback confirms targeted fix",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "project-reference-readback",
+              "ToolName": "workspace_read_file",
+              "Predicate": "repaired project reference readback confirms targeted fix when applicable",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": [
+            {
+              "PathCandidates": [
+                "DotNetSolutionFile",
+                "DotNetSolutionFileAlias",
+                "DotNetSolutionFileCandidates"
+              ],
+              "RequiredTextAnyGroups": [
+                [
+                  "DotNetAppProjectFile",
+                  "DotNetTestProjectFile"
+                ]
+              ]
+            }
+          ]
+        }
+      }
     },
     {
       "Order": 5,
@@ -572,7 +1038,53 @@
         "RunValidation",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "ExecutionContract": {
+        "ExecutionClass": "BranchDecision",
+        "RequiredRuntimeToolNames": [
+          "workspace_dotnet_restore",
+          "workspace_dotnet_build",
+          "workspace_dotnet_test",
+          "workspace_read_file"
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "restore",
+            "ToolName": "workspace_dotnet_restore",
+            "Predicate": "current-run restore against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "build",
+            "ToolName": "workspace_dotnet_build",
+            "Predicate": "current-run build against the contracted solution or product root",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "test",
+            "ToolName": "workspace_dotnet_test",
+            "Predicate": "current-run targeted test or test discovery receipt when a test target exists",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "solution-readback",
+            "ToolName": "workspace_read_file",
+            "Predicate": "solution membership readback confirms app and test entries",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "repaired-first-build-evidence",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ]
+      }
     },
     {
       "Order": 6,
@@ -822,3 +1334,4 @@
     }
   ]
 }
+

@@ -4,7 +4,10 @@ public sealed record ProcessTemplateCompatibilityScanRequest(
     string TemplatePackRoot,
     string TargetSchemaVersion,
     ProcessTemplateMigrationRegistry MigrationRegistry,
-    DateTimeOffset ObservedAtUtc);
+    DateTimeOffset ObservedAtUtc)
+{
+    public bool StrictExecutionContractValidation { get; init; }
+}
 
 public sealed record ProcessTemplateCompatibilityReport(
     string TemplatePackRoot,
@@ -16,7 +19,10 @@ public sealed record ProcessTemplateCompatibilityReport(
     public bool RequiresManualReview =>
         MigrationDryRun.Items.Any(item => item.Status is ProcessTemplateMigrationDryRunStatus.ManualReviewRequired or ProcessTemplateMigrationDryRunStatus.MigrationPlanFailed) ||
         SidecarDrift.Sidecars.Any(sidecar => sidecar.Status != ProcessTemplateSidecarDriftStatus.Aligned) ||
-        BranchDiagnostics.Diagnostics.Count > 0;
+        BranchDiagnostics.Diagnostics.Count > 0 ||
+        TemplateContractDiagnostics.Diagnostics.Count > 0;
+
+    public ProcessTemplateContractDiagnosticReport TemplateContractDiagnostics { get; init; } = ProcessTemplateContractDiagnosticReport.Empty;
 }
 
 public sealed record ProcessTemplateMigrationDryRunReport(
@@ -81,4 +87,33 @@ public enum ProcessBranchMigrationDiagnosticKind
 {
     MissingStableOutcomeKey,
     AmbiguousRouteTarget
+}
+
+public sealed record ProcessTemplateContractDiagnosticReport(
+    int DiagnosticCount,
+    IReadOnlyList<ProcessTemplateContractDiagnostic> Diagnostics)
+{
+    public static ProcessTemplateContractDiagnosticReport Empty { get; } = new(0, []);
+}
+
+public sealed record ProcessTemplateContractDiagnostic(
+    string ProcessKey,
+    string StepKey,
+    ProcessTemplateContractDiagnosticKind Kind,
+    string Message);
+
+public enum ProcessTemplateContractDiagnosticKind
+{
+    ProseOnlyHardGate,
+    MissingExecutionContract,
+    InvalidExecutionClass,
+    MissingDeterministicToolPlan,
+    InvalidDeterministicToolPlan,
+    MissingRequiredReceiptMetadata,
+    MissingReadbackChecks,
+    UnknownSubprocessDefinition,
+    UnknownSubprocessChildOutputStep,
+    UnknownSubprocessChildArtifactExpectation,
+    InvalidBranchOutcomeKey,
+    MissingProducedArtifactSlot
 }

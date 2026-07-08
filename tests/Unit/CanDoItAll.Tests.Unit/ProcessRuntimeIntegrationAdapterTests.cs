@@ -1082,11 +1082,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ]);
 
         Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
-        var diagnostic = Assert.Single(result.Diagnostics);
+        var diagnostic = result.Diagnostics.Single(
+            item => item.Code.Value == "process.adapter.product_required_tool_receipt_missing");
         Assert.Equal("process.adapter.product_required_tool_receipt_missing", diagnostic.Code.Value);
         Assert.Contains("workspace_dotnet_restore", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace_dotnet_build", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace_dotnet_test", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            result.Diagnostics,
+            item => item.Code.Value == "process.adapter.completed_outcome_declares_unresolved_blocker");
         Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.product_required_tool_receipt_missing");
         Assert.Empty(result.ProducedArtifacts);
     }
@@ -1340,8 +1344,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     diagnostic.Code.Value == "process.adapter.product_required_tool_receipt_missing");
                 var content = await File.ReadAllTextAsync(artifactPath);
                 Assert.Contains("# Solution skeleton change set", content, StringComparison.Ordinal);
-                Assert.Contains("Runtime Validated Structured Outcome", content, StringComparison.Ordinal);
-                Assert.Contains("accepted the completed primary managed artifact", content, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("Runtime Captured Structured Outcome", content, StringComparison.Ordinal);
+                Assert.Contains("Runtime Accepted Completion Gates", content, StringComparison.Ordinal);
+                Assert.Contains("staged the completed primary managed artifact", content, StringComparison.OrdinalIgnoreCase);
             }
             finally
             {
@@ -1462,6 +1467,79 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
             Assert.Contains("Calculator.slnx", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("src/Calculator/Calculator.csproj", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(result.ProducedArtifacts);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+        }
+    }
+
+    [Fact]
+    public void Completion_gate_evaluator_reports_missing_required_script_receipt_and_failed_solution_readback()
+    {
+        var outputRoot = CreateTempProductRoot();
+        try
+        {
+            var solutionFile = Path.Combine(outputRoot, "Calculator.slnx");
+            File.WriteAllText(solutionFile, "<Solution></Solution>");
+            var appProjectFile = Path.Combine(outputRoot, "src", "Calculator", "Calculator.csproj");
+            Directory.CreateDirectory(Path.GetDirectoryName(appProjectFile)!);
+            File.WriteAllText(appProjectFile, "<Project />");
+
+            var requiredFileContentChecks = JsonSerializer.Serialize(new object[]
+            {
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["pathCandidates"] = new[] { solutionFile },
+                    ["requiredTextAnyGroups"] = new[]
+                    {
+                        new[]
+                        {
+                            Path.Combine("src", "Calculator", "Calculator.csproj"),
+                            "src/Calculator/Calculator.csproj"
+                        }
+                    }
+                }
+            });
+            var baseAssignment = CreateProductMutationAssignment(outputRoot);
+            var assignment = baseAssignment with
+            {
+                StepKey = "create-dotnet-project",
+                LaunchVariables = WithLaunchVariables(
+                    baseAssignment,
+                    (ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks, requiredFileContentChecks),
+                    (ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, "workspace_pwsh_run_script"),
+                    ("DotNetCreateProjectScript", "$ErrorActionPreference = 'Stop'"),
+                    ("DotNetCreateProjectScriptRef", "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.ps1"),
+                    ("DotNetCreateProjectSideEffectManifest", """{"version":1,"mode":"ProductMutation"}"""))
+            };
+            var productAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot) ?? outputRoot;
+            var result = ToAdapterResult(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Created the app project and claimed the solution membership helper ran.",
+                    EvidenceRefs = [BuildStepArtifactRef(assignment)],
+                    NextActions = []
+                },
+                [
+                    CreateToolReceipt(
+                        "workspace_dotnet_new",
+                        "new blazorwasm -n Calculator",
+                        "Succeeded (exit 0)",
+                        productAlias),
+                    CreateToolReceipt("workspace_write_file", BuildStepArtifactRef(assignment), "Succeeded: Created file.")
+                ]);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Equal("process.adapter.product_required_tool_receipt_missing", result.Diagnostics[0].Code.Value);
+            Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code.Value == "process.adapter.product_required_file_content_missing");
+            Assert.Equal(2, result.Diagnostics.Count);
+            Assert.Contains("workspace_pwsh_run_script", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Calculator.slnx", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Additional completion gate", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(result.ProducedArtifacts);
         }
         finally
@@ -3654,13 +3732,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             RunId = parentRunId,
             ExecutorId = agent.Id.ToString("D")
         };
+        var childArtifactSlotId = ArtifactSlotId.New();
         var childAssignment = CreateChildAssignment(
             childRunId,
             parentRunId,
             assignment.StepInstanceId,
             assignment.StepKey) with
         {
-            StepKey = "slice-handoff"
+            StepKey = "slice-handoff",
+            ProducedArtifactSlotIds = [childArtifactSlotId]
         };
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         var childEvidenceRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/{childAssignment.StepKey}.md";
@@ -3678,7 +3758,13 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             new InMemoryAssignmentStore(assignment, childAssignment),
             new InMemoryRuntimeStateStore(
                 NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
-                NewRuntimeState(parentRunId, childRunId, ProcessRuntimeStatus.Completed)),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [CreateProducedArtifactReceipt(childAssignment, childArtifactSlotId)])),
             workspaceFiles);
 
         try
@@ -3700,6 +3786,81 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.True(parentArtifact.Succeeded);
             Assert.Contains(childRunId.Value.ToString("D"), parentArtifact.Content, StringComparison.Ordinal);
             Assert.Contains(childEvidenceRef, parentArtifact.Content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_reports_blocked_subprocess_child_root_cause_without_reinvoking_parent_agent()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var agent = NewAgent(
+            ".NET Application Developer",
+            ".NET implementation specialist",
+            AgentWorkloadKind.Programming,
+            [
+                "software-engineer",
+                "dotnet"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateSubprocessAssignment() with
+        {
+            RunId = parentRunId,
+            ExecutorId = agent.Id.ToString("D")
+        };
+        var childAssignment = CreateChildAssignment(
+            childRunId,
+            parentRunId,
+            assignment.StepInstanceId,
+            assignment.StepKey) with
+        {
+            StepKey = "slice-handoff"
+        };
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The parent agent should not be reinvoked for a blocked child run."));
+        var adapter = new AgentFrameworkProcessExecutionAdapter(
+            new FakeWorkspaceFactory(workspace),
+            CreateReferenceDataProvider(workspace),
+            new InMemoryAssignmentStore(assignment, childAssignment),
+            new InMemoryRuntimeStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Blocked,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Blocked,
+                    [CreateBlockedChildDiagnosticReceipt(childAssignment)])),
+            workspaceFiles);
+
+        try
+        {
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    parentRunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.False(workspace.ExecuteRunCalled);
+            var diagnostic = Assert.Single(
+                result.Diagnostics,
+                diagnostic => diagnostic.Code.Value == "process.adapter.subprocess_child_blocked");
+            Assert.Contains(childRunId.Value.ToString("D"), diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.Contains(childAssignment.StepKey, diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.Contains("process.adapter.product_required_file_content_missing", diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.Contains("workspace_pwsh_run_script", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(result.ProducedArtifacts);
         }
         finally
         {
@@ -4056,6 +4217,156 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_blocks_before_agent_when_dotnet_setup_plan_guard_fails()
+    {
+        var agent = NewAgent(
+            ".NET Application Developer",
+            ".NET developer",
+            AgentWorkloadKind.Programming,
+            [
+                "dotnet",
+                "developer",
+                "implementation"
+            ],
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var outputRoot = CreateTempProductRoot();
+        var assignment = CreateProductMutationAssignment(outputRoot) with
+        {
+            StepKey = "create-dotnet-project",
+            RoleKey = "dotnet-developer",
+            RoleResourceKey = "dotnet-developer",
+            RoleDisplayName = ".NET developer",
+            ExecutorId = agent.Id.ToString("D"),
+            ExecutorDisplayName = agent.Name,
+            LaunchVariables = CreateDotNetCreateProjectLaunchVariables(
+                outputRoot,
+                requiredReceipts:
+                [
+                    "template=sln",
+                    "template=blazorwasm"
+                ])
+        };
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The agent must not run when deterministic setup plan guard fails."));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles,
+                runtimeToolPreflightService: new ProcessRuntimeToolPreflightService([]));
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.False(workspace.ExecuteRunCalled);
+            var diagnostic = Assert.Single(result.Diagnostics);
+            Assert.Equal("process.adapter.runtime_tool_preflight_failed", diagnostic.Code.Value);
+            Assert.Contains("dotnet.setup.plan.required_receipt_missing", diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.Contains("workspace_pwsh_run_script", diagnostic.SafeSummary, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_uses_runtime_owned_dotnet_setup_executor_before_agent_execution()
+    {
+        var agent = NewAgent(
+            ".NET Application Developer",
+            ".NET developer",
+            AgentWorkloadKind.Programming,
+            [
+                "dotnet",
+                "developer",
+                "implementation"
+            ],
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var outputRoot = CreateTempProductRoot();
+        var assignment = CreateProductMutationAssignment(outputRoot) with
+        {
+            StepKey = "create-dotnet-project",
+            RoleKey = "dotnet-developer",
+            RoleResourceKey = "dotnet-developer",
+            RoleDisplayName = ".NET developer",
+            ExecutorId = agent.Id.ToString("D"),
+            ExecutorDisplayName = agent.Name
+        };
+        var executionRunId = Guid.NewGuid();
+        var runtimeExecutor = new FakeDotNetSolutionSetupRuntimeExecutor(new DotNetSolutionSetupRuntimeExecutionResult(
+            true,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "Runtime-owned .NET solution setup completed.",
+                EvidenceRefs = ["artifacts/process-runs/runtime-owned-dotnet-setup.json"],
+                NextActions = [],
+                HumanReadableSummaryMarkdown = "Runtime-owned .NET solution setup completed."
+            },
+            [
+                CreateToolReceipt(
+                    "workspace_pwsh_run_script",
+                    $"runtime-owned setup for {outputRoot}",
+                    "Succeeded (exit 0)",
+                    workingDirectory: outputRoot,
+                    executionRunId: executionRunId)
+            ],
+            executionRunId,
+            "Runtime-owned .NET setup completed.",
+            "runtime-owned-dotnet-setup:completed"));
+        await File.WriteAllTextAsync(Path.Combine(outputRoot, "Calculator.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The agent must not run when runtime-owned .NET setup handles the step."));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles,
+                dotNetSolutionSetupRuntimeExecutor: runtimeExecutor);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.False(workspace.ExecuteRunCalled);
+            Assert.Equal(1, runtimeExecutor.CallCount);
+            Assert.Contains("Runtime-owned .NET solution setup completed", result.UserSafeSummary, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public void Prompt_contract_includes_capability_scope_required_receipts()
     {
         var assignment = CreateManagedArtifactAssignment("feature-intake") with
@@ -4216,7 +4527,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 "feature-intake.md");
             Assert.True(File.Exists(artifactPath));
             var content = await File.ReadAllTextAsync(artifactPath);
-            Assert.Contains("Runtime persisted this managed artifact", content, StringComparison.Ordinal);
+            Assert.Contains("Runtime Captured Structured Outcome", content, StringComparison.Ordinal);
+            Assert.Contains("Runtime Accepted Completion Gates", content, StringComparison.Ordinal);
             Assert.Contains("Clarified the requested software scope.", content, StringComparison.Ordinal);
         }
         finally
@@ -4226,7 +4538,108 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_appends_validated_outcome_to_existing_managed_artifact()
+    public async Task ExecuteAsync_stages_managed_artifact_without_acceptance_when_completion_gate_fails()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [
+                new AgentCapabilityAssignment(
+                    Guid.NewGuid(),
+                    "workspace-dotnet-build",
+                    CapabilityKind.Tool,
+                    CapabilityProofStatus.Verified,
+                    DateTimeOffset.UtcNow,
+                    "Build tool is assigned.")
+            ]);
+        var baseAssignment = CreateManagedArtifactAssignment(
+            "feature-intake",
+            agent.Id,
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]);
+        var assignment = baseAssignment with
+        {
+            LaunchVariables = WithLaunchVariables(
+                baseAssignment,
+                (ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, "workspace_dotnet_build"))
+        };
+        var executionRunId = Guid.NewGuid();
+        var primaryRef = BuildStepArtifactRef(assignment);
+        var responseText = $$"""
+            {
+              "status": "Completed",
+              "reason": "Clarified the requested software scope.",
+              "branchOutcomeKey": "scope-clarified",
+              "branchOutcomeTitle": "Scope clarified",
+              "evidenceRefs": [
+                "{{primaryRef}}"
+              ],
+              "nextActions": [],
+              "humanReadableSummaryMarkdown": "The software scope is clarified and ready for architecture."
+            }
+            """;
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: CreateExecutionRunResult(agent.Id, executionRunId, responseText),
+            executionDetail: CreateExecutionRunDetail(agent.Id, executionRunId, responseText, []));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = new AgentFrameworkProcessExecutionAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Code.Value == "process.adapter.product_required_tool_receipt_missing");
+            Assert.Empty(result.ProducedArtifacts);
+            var artifactPath = Path.Combine(
+                workspaceRoot,
+                "artifacts",
+                "process-runs",
+                assignment.RunId.Value.ToString("D"),
+                "steps",
+                "feature-intake.md");
+            Assert.True(File.Exists(artifactPath));
+            var content = await File.ReadAllTextAsync(artifactPath);
+            Assert.Contains("Runtime Captured Structured Outcome", content, StringComparison.Ordinal);
+            Assert.Contains("Completion gates have not accepted this output yet", content, StringComparison.Ordinal);
+            Assert.DoesNotContain("Runtime Validated Structured Outcome", content, StringComparison.Ordinal);
+            Assert.DoesNotContain("Runtime Accepted Completion Gates", content, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_appends_staged_and_accepted_outcome_to_existing_managed_artifact()
     {
         var agent = NewAgent(
             ".NET Solution Architect",
@@ -4306,7 +4719,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
             var content = await File.ReadAllTextAsync(artifactPath);
             Assert.Contains("# Validate first build", content, StringComparison.Ordinal);
-            Assert.Contains("Runtime Validated Structured Outcome", content, StringComparison.Ordinal);
+            Assert.Contains("Runtime Captured Structured Outcome", content, StringComparison.Ordinal);
+            Assert.Contains("Runtime Accepted Completion Gates", content, StringComparison.Ordinal);
             Assert.Contains("Restore, build, and tests completed successfully", content, StringComparison.Ordinal);
             Assert.Contains("Restore, build, and test proof is green.", content, StringComparison.Ordinal);
         }
@@ -5063,6 +5477,65 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         return launchVariables;
     }
 
+    private static IReadOnlyDictionary<string, string> CreateDotNetCreateProjectLaunchVariables(
+        string productRoot,
+        IReadOnlyList<string>? requiredReceipts = null)
+    {
+        var solutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
+        var scriptRef = $"artifacts/process-runs/{Guid.NewGuid():D}/scripts/create-dotnet-project.wire-solution.ps1";
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["OutputRoot"] = productRoot,
+            ["ProductRoot"] = productRoot,
+            ["ExternalTargetRoot"] = productRoot,
+            ["DotNetAppTemplate"] = "blazorwasm",
+            ["DotNetCreateProjectScriptRef"] = scriptRef,
+            ["DotNetCreateProjectScript"] = "dotnet sln $SolutionFile add $AppProjectFile; dotnet sln $SolutionFile list",
+            ["DotNetCreateProjectSideEffectManifest"] = JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["version"] = 1,
+                ["mode"] = "ProductMutation",
+                ["declaredReadPaths"] = new[] { solutionFile, appProjectFile },
+                ["declaredWritePaths"] = new[] { solutionFile },
+                ["allowShellDelegation"] = true
+            }),
+            ["DotNetCreateProjectExecutionPlan"] =
+                $"Invoke workspace_dotnet_new for template 'sln'. Invoke workspace_dotnet_new for template 'blazorwasm'. Invoke workspace_pwsh_run_script with path '{scriptRef}', workingDirectory 'external-target/calculator', sideEffectManifest from DotNetCreateProjectSideEffectManifest. Read back the solution file.",
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = JsonSerializer.Serialize(
+                new Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    ["create-dotnet-project"] = (requiredReceipts ??
+                    [
+                        "template=sln",
+                        "template=blazorwasm",
+                        "workspace_pwsh_run_script"
+                    ]).ToArray()
+                }),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep] = JsonSerializer.Serialize(
+                new Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    ["create-dotnet-project"] =
+                    [
+                        solutionFile,
+                        appProjectFile
+                    ]
+                }),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep] = JsonSerializer.Serialize(
+                new Dictionary<string, object[]>(StringComparer.Ordinal)
+                {
+                    ["create-dotnet-project"] =
+                    [
+                        new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["pathCandidates"] = new[] { solutionFile },
+                            ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                        }
+                    ]
+                })
+        };
+    }
+
     private static ProcessRuntimeStepAssignment CreateManagedArtifactAssignment(
         string stepKey,
         Guid? agentId = null,
@@ -5285,7 +5758,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     private static ProcessRuntimeStateSnapshot NewRuntimeState(
         ProcessRunId rootRunId,
         ProcessRunId runId,
-        ProcessRuntimeStatus status)
+        ProcessRuntimeStatus status,
+        ProcessRuntimeStepAssignment? stepAssignment = null,
+        ProcessRuntimeStepStatus stepStatus = ProcessRuntimeStepStatus.Completed,
+        IReadOnlyList<StrategyResultReceipt>? appliedResults = null)
     {
         return new ProcessRuntimeStateSnapshot(
             rootRunId,
@@ -5293,12 +5769,87 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ProcessInstancePlanId.New(),
             "sha256:plan",
             status,
+            stepAssignment is null
+                ? []
+                :
+                [
+                    new ProcessRuntimeStepState(
+                        stepAssignment.StepInstanceId,
+                        ProcessStepDefinitionId.New(),
+                        stepStatus,
+                        IsExecutable: true,
+                        AttemptNumber: 1,
+                        DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                        RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                        ActiveClaimToken: null,
+                        CompletedResultKey: null)
+                    {
+                        ProducedArtifactSlots = stepAssignment.ProducedArtifactSlotIds.ToHashSet()
+                    }
+                ],
             [],
-            [],
-            [],
-            new HashSet<ArtifactSlotId>(),
+            appliedResults ?? [],
+            appliedResults?
+                .SelectMany(receipt => receipt.ProducedArtifacts)
+                .Select(artifact => artifact.SlotId)
+                .ToHashSet() ?? new HashSet<ArtifactSlotId>(),
             DateTimeOffset.UtcNow);
     }
+
+    private static StrategyResultReceipt CreateProducedArtifactReceipt(
+        ProcessRuntimeStepAssignment assignment,
+        ArtifactSlotId slotId)
+        => new(
+            assignment.StepInstanceId,
+            new StrategyId("strategy.adapter.workflow.execute"),
+            StrategyResultIdempotencyKey.New(),
+            StrategyOutcome.Succeeded,
+            ProcessRuntimeStepStatus.Completed,
+            "sha256:accepted-child-output",
+            diagnostics: [],
+            producedArtifacts:
+            [
+                new StrategyResultArtifactReceipt(
+                    slotId,
+                    ArtifactInstanceId.New(),
+                    "sha256:child-artifact")
+            ]);
+
+    private static StrategyResultReceipt CreateBlockedChildDiagnosticReceipt(ProcessRuntimeStepAssignment assignment)
+        => new(
+            assignment.StepInstanceId,
+            new StrategyId("strategy.adapter.workflow.execute"),
+            StrategyResultIdempotencyKey.New(),
+            StrategyOutcome.NeedsManager,
+            ProcessRuntimeStepStatus.Blocked,
+            "sha256:blocked-child",
+            diagnostics:
+            [
+                new StrategyResultDiagnosticReceipt(
+                    "process.adapter.product_required_file_content_missing",
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:child-diagnostic",
+                    "Calculator.slnx does not contain src/Calculator/Calculator.csproj and the required workspace_pwsh_run_script receipt is missing.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            producedArtifacts: [],
+            recoveryDecision: new ProcessRecoveryDecisionReceipt(
+                ProcessFailureCategory.ProductCompletionGate,
+                ProcessRecoveryDecisionKind.ManagerRequired,
+                "process.adapter.product_required_file_content_missing",
+                "process.current-step-safe-retry-budget-exhausted",
+                "Child retry budget exhausted.")
+            {
+                RouteKind = ProcessRecoveryRouteKind.ManagerAction,
+                ResponsibleStepInstanceId = assignment.StepInstanceId,
+                DiagnosticFingerprint = "sha256:child-diagnostic",
+                AutomaticRetryAttempt = 3,
+                MaximumAutomaticRetryAttempts = 3,
+                SameDiagnosticFingerprintAttempt = 1,
+                MaximumSameDiagnosticFingerprintAttempts = 1
+            });
 
     private static string CreateTempProductRoot()
     {
@@ -5382,6 +5933,19 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             CancellationToken cancellationToken)
         {
             Requests.Add(request);
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class FakeDotNetSolutionSetupRuntimeExecutor(DotNetSolutionSetupRuntimeExecutionResult? result) : IDotNetSolutionSetupRuntimeExecutor
+    {
+        public int CallCount { get; private set; }
+
+        public ValueTask<DotNetSolutionSetupRuntimeExecutionResult?> TryExecuteAsync(
+            ProcessRuntimeStepAssignment assignment,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
             return ValueTask.FromResult(result);
         }
     }

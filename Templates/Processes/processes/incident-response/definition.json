@@ -263,7 +263,8 @@
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+      "OperationTargetScope": "ManagedProcessArtifactsOnly",
+      "ExecutionClass": "BranchDecision"
     },
     {
       "Order": 2,
@@ -413,8 +414,8 @@
       "FitnessEvidence": [
         "Timelines accepted in post-incident review.",
         "Evidence packs with preserved provenance.",
-        "Root-cause records improved by the analyst\u2019s structured input.",
-        "Reduction in repeated \u0027we don\u2019t know what happened\u0027 incidents."
+        "Root-cause records improved by the analyst’s structured input.",
+        "Reduction in repeated 'we don’t know what happened' incidents."
       ],
       "DocPath": "processes/incident-response/roles/forensics-analyst.md"
     },
@@ -486,7 +487,7 @@
         "High-quality incident notes consumed after the event.",
         "Post-incident reviews that rely on the scribe record confidently.",
         "Evidence of improved action follow-through due to disciplined logging.",
-        "Trust from incident leaders in the scribe\u2019s accuracy."
+        "Trust from incident leaders in the scribe’s accuracy."
       ],
       "DocPath": "processes/incident-response/roles/incident-scribe.md"
     },
@@ -625,7 +626,7 @@
         "Support incident response with high-fidelity operational evidence."
       ],
       "AntiPatterns": [
-        "Treating platform concerns as someone else\u0027s problem until release day.",
+        "Treating platform concerns as someone else's problem until release day.",
         "Automating blindly without observability or rollback triggers.",
         "Using production-specific knowledge that is not documented or transferable.",
         "Assuming a successful build implies a safe deployment."
@@ -701,7 +702,7 @@
       "AntiPatterns": [
         "Approving because teams appear confident without checking the evidence.",
         "Conflating deployment success with business-release success.",
-        "Ignoring rollback realism because the change is \u0027small\u0027.",
+        "Ignoring rollback realism because the change is 'small'.",
         "Treating approval as ceremonial rather than consequential."
       ],
       "FitnessEvidence": [
@@ -906,3 +907,4 @@
     "prompt-mitigation-options"
   ]
 }
+
