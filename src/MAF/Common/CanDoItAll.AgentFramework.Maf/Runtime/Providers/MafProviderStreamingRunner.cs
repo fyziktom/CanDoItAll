@@ -30,62 +30,22 @@ internal sealed class MafProviderStreamingRunner(
         ChatClientAgentRunOptions runOptions,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        using var timeoutCancellation = new CancellationTokenSource(MafProviderRuntimeSettings.ResolveNetworkTimeout(provider));
-        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken,
-            timeoutCancellation.Token);
-        var providerCancellationToken = linkedCancellation.Token;
         await using var dispatchLease = await providerStreamingDispatchGate.EnterAsync(
             provider,
             model,
-            providerCancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false);
 
         var updates = RunStreamingCoreAsync(
             runtimeAgent,
             runtimeSession,
             inputMessages,
             runOptions,
-            providerCancellationToken);
-        await using var enumerator = updates.GetAsyncEnumerator(providerCancellationToken);
-        while (await MoveNextProviderStreamingUpdateAsync(
-                   enumerator,
-                   provider,
-                   model,
-                   timeoutCancellation,
-                   cancellationToken).ConfigureAwait(false))
+            cancellationToken);
+        await using var enumerator = updates.GetAsyncEnumerator(cancellationToken);
+        while (await enumerator.MoveNextAsync().ConfigureAwait(false))
         {
             yield return enumerator.Current;
         }
-    }
-
-    private static async Task<bool> MoveNextProviderStreamingUpdateAsync(
-        IAsyncEnumerator<AgentResponseUpdate> enumerator,
-        ProviderProfile provider,
-        string model,
-        CancellationTokenSource timeoutCancellation,
-        CancellationToken callerCancellationToken)
-    {
-        try
-        {
-            return await enumerator.MoveNextAsync().ConfigureAwait(false);
-        }
-        catch (OperationCanceledException exception)
-            when (timeoutCancellation.IsCancellationRequested &&
-                  !callerCancellationToken.IsCancellationRequested)
-        {
-            throw CreateProviderStreamingTimeoutException(provider, model, exception);
-        }
-    }
-
-    private static TimeoutException CreateProviderStreamingTimeoutException(
-        ProviderProfile provider,
-        string model,
-        Exception innerException)
-    {
-        var timeoutSeconds = Math.Round(MafProviderRuntimeSettings.ResolveNetworkTimeout(provider).TotalSeconds);
-        return new TimeoutException(
-            $"Provider '{provider.Name}' streaming chat for model '{model}' exceeded the configured timeout of {timeoutSeconds:N0} second(s).",
-            innerException);
     }
 
     private static IAsyncEnumerable<AgentResponseUpdate> RunStreamingCoreAsync(

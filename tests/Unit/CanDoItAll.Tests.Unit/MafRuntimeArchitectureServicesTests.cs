@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
@@ -32,6 +34,32 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.IsType<NoOpMafRuntimeCompositionMetrics>(provider.GetRequiredService<IMafRuntimeCompositionMetrics>());
         Assert.IsType<MafApprovalContinuationDriver>(provider.GetRequiredService<IMafApprovalContinuationDriver>());
         Assert.IsType<MafRuntimeSessionPersistenceDriver>(provider.GetRequiredService<IMafRuntimeSessionPersistenceDriver>());
+    }
+
+    [Fact]
+    public async Task MafProviderStreamingRunner_does_not_use_provider_timeout_as_runtime_agent_cancellation()
+    {
+        var runner = new MafProviderStreamingRunner(new TestMafProviderStreamingDispatchGate());
+        var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMilliseconds(1200));
+        var runtimeSession = await runtimeAgent.CreateSessionAsync();
+        var provider = CreateProviderProfile(configurationJson: "{\"timeoutSeconds\":1}");
+        var updates = new List<AgentResponseUpdate>();
+
+        await foreach (var update in runner.RunStreamingAsync(
+                           provider,
+                           "unit-model",
+                           runtimeAgent,
+                           runtimeSession,
+                           [new ChatMessage(ChatRole.User, "run")],
+                           new ChatClientAgentRunOptions(new ChatOptions()),
+                           CancellationToken.None))
+        {
+            updates.Add(update);
+        }
+
+        Assert.True(runtimeAgent.DelayCompleted);
+        Assert.False(runtimeAgent.DelayTokenWasCanceled);
+        Assert.Contains(updates, update => update.Text.Contains("completed", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -604,7 +632,8 @@ public sealed class MafRuntimeArchitectureServicesTests
             UpdatedAtUtc: DateTimeOffset.UtcNow);
 
     private static ProviderProfile CreateProviderProfile(
-        string apiKeyEnvironmentVariable = "OPENAI_API_KEY")
+        string apiKeyEnvironmentVariable = "OPENAI_API_KEY",
+        string configurationJson = "{}")
         => new(
             Guid.NewGuid(),
             "Unit Provider",
@@ -618,7 +647,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             true,
             false,
             true,
-            "{}",
+            configurationJson,
             string.Empty,
             "Not checked",
             null,
@@ -746,6 +775,53 @@ public sealed class MafRuntimeArchitectureServicesTests
             CancellationToken cancellationToken = default)
             => ValueTask.FromResult<IAsyncDisposable>(new NoOpAsyncDisposable());
     }
+
+    private sealed class DelayedStreamingAgent(TimeSpan delay) : AIAgent
+    {
+        public bool DelayCompleted { get; private set; }
+
+        public bool DelayTokenWasCanceled { get; private set; }
+
+        protected override ValueTask<AgentSession> CreateSessionCoreAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<AgentSession>(new DelayedStreamingAgentSession());
+
+        protected override ValueTask<JsonElement> SerializeSessionCoreAsync(
+            AgentSession session,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(JsonSerializer.SerializeToElement(new { ok = true }, jsonSerializerOptions));
+
+        protected override ValueTask<AgentSession> DeserializeSessionCoreAsync(
+            JsonElement serializedState,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<AgentSession>(new DelayedStreamingAgentSession());
+
+        protected override Task<AgentResponse> RunCoreAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+            => RunCoreStreamingAsync(messages, session, options, cancellationToken)
+                .ToAgentResponseAsync(cancellationToken);
+
+        protected override async IAsyncEnumerable<AgentResponseUpdate> RunCoreStreamingAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(delay, cancellationToken);
+            DelayCompleted = true;
+            DelayTokenWasCanceled = cancellationToken.IsCancellationRequested;
+
+            yield return new AgentResponseUpdate(
+                ChatRole.Assistant,
+                [new TextContent("completed")]);
+        }
+    }
+
+    private sealed class DelayedStreamingAgentSession : AgentSession;
 
     private sealed class NoOpAsyncDisposable : IAsyncDisposable
     {
